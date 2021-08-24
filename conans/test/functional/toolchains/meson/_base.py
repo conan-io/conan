@@ -21,7 +21,6 @@ def get_meson_version():
 
 @pytest.mark.toolchain
 @pytest.mark.tool_meson
-@pytest.mark.skipif(get_meson_version() < "0.56.0", reason="requires meson >= 0.56.0")
 class TestMesonBase(unittest.TestCase):
     def setUp(self):
         self.t = TestClient()

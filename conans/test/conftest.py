@@ -9,8 +9,6 @@ from conans.client.tools import vswhere, which
 tools_locations = {
     'visual_studio': {"default": "17",
                       "17": None},
-    'gcc': {"default": "system",
-            "system": None},
     'cmake': {
         "default": "3.15",
         "3.15": {
@@ -88,14 +86,14 @@ def _get_tool(name, version):
     # (path, env) = tool available
     cached = _cached_tools.setdefault(name, {}).get(version)
     if cached is None:
-        tool = tools_locations[name]
+        tool = tools_locations.get(name, {})
         if tool.get("disabled"):
             _cached_tools[name][version] = False
             return False
 
         tool_platform = platform.system()
-        version = version or tool["default"]
-        tool_version = tool[version]
+        version = version or tool.get("default")
+        tool_version = tool.get(version)
         if tool_version is not None:
             if tool_version.get("disabled"):
                 _cached_tools[name][version] = False
