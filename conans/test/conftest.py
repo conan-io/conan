@@ -34,6 +34,7 @@ tools_locations = {
 
 
 tools_locations = {
+    "meson": {"disabled": True},
     'visual_studio': {"default": "17",
                       "17": None},
     'pkg_config': {"exe": "pkg-config"},
@@ -67,18 +68,36 @@ tools_locations = {
             "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
         }
     },
-    'mingw32': {
-        "default": "system",
-        "exe": "mingw32-make",
-        "system": {"path": {'Windows': "TODO"}},
-    },
     'mingw64': {
+        "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
         "system": {"path": {'Windows': "TODO"}},
     },
-    'msys2': {'Windows': {'default': os.getenv('CONAN_MSYS2_PATH', 'C:/msys64/usr/bin')}},
-    'cygwin': {'Windows': {'default': os.getenv('CONAN_CYGWIN_PATH', 'C:/cygwin64/bin')}},
+    'msys2': {
+        "platform": "Windows",
+        "default": "system",
+        "exe": "make",
+        "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+    },
+    'msys2_mingw32': {
+        "platform": "Windows",
+        "default": "system",
+        "exe": "gcc",
+        "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
+    },
+    'msys2_mingw64': {
+        "platform": "Windows",
+        "default": "system",
+        "exe": "gcc",
+        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
+    },
+    'cygwin': {
+        "platform": "Windows",
+        "default": "system",
+        "exe": "make",
+        "system": {"path": {'Windows': "C:/cygwin64/bin"}},
+    },
     'bazel':  {
         "default": "system",
         "system": {"path": {'Windows': 'C:/bazel/bin',
@@ -102,8 +121,8 @@ except ImportError as e:
     user_tool_locations = None
 
 tools_environments = {
-    'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
-    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
+    'msys2_mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
+    'msys2_mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
 }
 
 
@@ -123,6 +142,10 @@ def _get_tool(name, version):
             return False
 
         tool_platform = platform.system()
+        if tool.get("platform", tool_platform) != tool_platform:
+            _cached_tools[name][version] = None, None
+            return None, None
+
         exe = tool.get("exe", name)
         version = version or tool.get("default")
         tool_version = tool.get(version)
@@ -133,11 +156,11 @@ def _get_tool(name, version):
             tool_path = tool_version.get("path", {}).get(tool_platform)
         else:
             tool_path = None
-        tool_env = None
+
         try:
             tool_env = tools_environments[name][tool_platform]
         except KeyError:
-            pass
+            tool_env = None
 
         cached = tool_path, tool_env
 
@@ -178,9 +201,6 @@ def add_tool(request):
             tool_name = mark.name[5:]
             tool_name = _tool_name_mapping(tool_name)
             tool_version = mark.kwargs.get('version')
-            tool_platform = mark.kwargs.get("platform")
-            if tool_platform is not None and tool_platform != platform.system():
-                continue
             result = _get_tool(tool_name, tool_version)
             if result is True:
                 version_msg = "Any" if tool_version is None else tool_version

@@ -136,7 +136,7 @@ int main(){{
 @pytest.mark.tool_cmake
 class CMakeMultiTest(unittest.TestCase):
 
-    @pytest.mark.tool_mingw64(platform="Windows")
+    @pytest.mark.tool_mingw64
     def test_cmake_multi_find(self):
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake
