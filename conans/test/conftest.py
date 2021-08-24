@@ -36,6 +36,8 @@ tools_locations = {
 tools_locations = {
     'visual_studio': {"default": "17",
                       "17": None},
+    'pkg_config': {"exe": "pkg-config"},
+    'autotools': {"exe": "autoconf"},
     'cmake': {
         "default": "3.15",
         "3.15": {
@@ -67,11 +69,13 @@ tools_locations = {
     },
     'mingw32': {
         "default": "system",
-        "system": {"path": {'Windows': 'C:/msys64/mingw32/bin'}},
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "TODO"}},
     },
     'mingw64': {
         "default": "system",
-        "system": {"path": {'Windows': 'C:/msys64/mingw64/bin'}},
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "TODO"}},
     },
     'msys2': {'Windows': {'default': os.getenv('CONAN_MSYS2_PATH', 'C:/msys64/usr/bin')}},
     'cygwin': {'Windows': {'default': os.getenv('CONAN_CYGWIN_PATH', 'C:/cygwin64/bin')}},
@@ -119,6 +123,7 @@ def _get_tool(name, version):
             return False
 
         tool_platform = platform.system()
+        exe = tool.get("exe", name)
         version = version or tool.get("default")
         tool_version = tool.get(version)
         if tool_version is not None:
@@ -145,7 +150,7 @@ def _get_tool(name, version):
             if tool_path is not None:
                 old_environ = dict(os.environ)
                 os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
-            if not which(name):  # TODO: This which doesn't detect version either
+            if not which(exe):  # TODO: This which doesn't detect version either
                 cached = True
             if old_environ is not None:
                 os.environ.clear()
@@ -161,10 +166,6 @@ def _tool_name_mapping(tool_name):
         tool_name = {"Windows": "visual_studio",
                      "Linux": "gcc",
                      "Darwin": "clang"}.get(platform.system())
-    elif tool_name == "pkg_config":
-        tool_name = "pkg-config"
-    elif tool_name == "autotools":
-        tool_name = "automake"
     return tool_name
 
 
@@ -177,6 +178,9 @@ def add_tool(request):
             tool_name = mark.name[5:]
             tool_name = _tool_name_mapping(tool_name)
             tool_version = mark.kwargs.get('version')
+            tool_platform = mark.kwargs.get("platform")
+            if tool_platform is not None and tool_platform != platform.system():
+                continue
             result = _get_tool(tool_name, tool_version)
             if result is True:
                 version_msg = "Any" if tool_version is None else tool_version
