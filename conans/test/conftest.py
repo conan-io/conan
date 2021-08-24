@@ -5,7 +5,6 @@ import uuid
 import pytest
 
 from conans.client.tools import vswhere, which
-from conans.errors import ConanException
 
 tools_default_version = {
     'cmake': '3.15',
@@ -54,74 +53,47 @@ tools_environments = {
     'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
 }
 
-tools_available = [
-    'cmake',
-    'gcc', 'clang', 'visual_studio', 'xcode',
-    'msys2', 'cygwin', 'mingw32', 'mingw64',
-    'autotools', 'pkg_config', 'premake', 'meson', 'ninja',
-    'bazel',
-    'file',
-    'git', 'svn',
-    'compiler',
-    'conan',  # Search the tool_conan test that needs conan itself
-]
 
-if not which("cmake"):
-    tools_available.remove("cmake")
-
-if not which("gcc"):
-    tools_available.remove("gcc")
-if not which("clang"):
-    tools_available.remove("clang")
-try:
-    if not vswhere():
-        tools_available.remove("visual_studio")
-except ConanException:
-    tools_available.remove("visual_studio")
-
-if not any([x for x in ("gcc", "clang", "visual_studio") if x in tools_available]):
-    tools_available.remove("compiler")
-
-if not which("xcodebuild"):
-    tools_available.remove("xcode")
-
-if not which("file"):
-    tools_available.remove("file")
-
-if not which("git"):
-    tools_available.remove("git")
-if not which("svn"):
-    tools_available.remove("svn")
-
-if not which("autoconf") or not which("automake"):
-    tools_available.remove("autotools")
-if not which("meson"):
-    tools_available.remove("meson")
-if not which("pkg-config"):
-    tools_available.remove("pkg_config")
-if not which("premake"):
-    tools_available.remove("premake")
-if not which("conan"):
-    tools_available.remove("conan")
+_cached_tools = {}
 
 
-def _get_tool_path(locations, name, version, tool_platform):
-    path = None
-    try:
-        path = locations[name][tool_platform][version]
-    except KeyError as exc:
-        if version in str(exc):
-            raise ConanException(exc)
-    return path
+def _get_tool(name, version):
+    cached = _cached_tools.setdefault(name, {}).get(version)
+    if cached is None:
+        tool_platform = platform.system()
+        version = version or tools_default_version.get(name)
+        tool_path = tool_env = None
+        if version is not None:  # Must be found in locations
+            try:
+                tool_path = tools_locations[name][tool_platform][version]
+            except KeyError:
+                _cached_tools[name][version] = False
+                return False
+        try:
+            tool_env = tools_environments[name][tool_platform]
+        except KeyError:
+            pass
 
+        cached = tool_path, tool_env
 
-def _get_tool_environment(environments, name, tool_platform):
-    env = None
-    try:
-        env = environments[name][tool_platform]
-    except KeyError:
-        pass
-    return env
+        # Check this particular tool is installed
+        if name == "visual_studio":
+            if not vswhere():  # TODO: Missing version detection
+                cached = False
+        else:  # which based detection
+            old_environ = None
+            if tool_path is not None:
+                old_environ = dict(os.environ)
+                os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
+            if not which(name):  # TODO: This which doesn't detect version either
+                cached = False
+            if old_environ is not None:
+                os.environ.clear()
+                os.environ.update(old_environ)
+
+        _cached_tools[name][version] = cached
+
+    return cached
 
 
 @pytest.fixture(autouse=True)
@@ -131,43 +103,32 @@ def add_tool(request):
     for mark in request.node.iter_markers():
         if mark.name.startswith("tool_"):
             tool_name = mark.name[5:]
-            version = mark.kwargs.get('version', None) or tools_default_version.get(tool_name)
-            if version:
-                try:
-                    tool_path = _get_tool_path(tools_locations, tool_name, version, platform.system())
-                    if tool_path:
-                        tools_paths.append(tool_path)
-                except ConanException:
-                    pytest.fail("Required {} version: '{}' is not available".format(tool_name, version))
+            if tool_name == "compiler":
+                tool_name = {"Windows": "visual_studio",
+                             "Linux": "gcc",
+                             "Darwin": "clang"}.get(platform.system())
+            tool_version = mark.kwargs.get('version')
+            tool_found = _get_tool(tool_name, tool_version)
+            if tool_found is False:
+                version_msg = "Any" if tool_version is None else tool_version
+                pytest.fail("Required '{}' tool version '{}' is not available".format(tool_name,
+                                                                                      version_msg))
 
-            tool_env = _get_tool_environment(tools_environments, tool_name, platform.system())
+            tool_path, tool_env = tool_found
+            if tool_path:
+                tools_paths.append(tool_path)
             if tool_env:
                 tools_env_vars.update(tool_env)
-        # To fix random failures in CI because of this: https://issues.jenkins.io/browse/JENKINS-9104
-        if "visual_studio" in mark.name:
-            tools_env_vars.update({'_MSPDBSRV_ENDPOINT_': str(uuid.uuid4())})
+            # Fix random failures CI because of this: https://issues.jenkins.io/browse/JENKINS-9104
+            if tool_name == "visual_studio":
+                tools_env_vars['_MSPDBSRV_ENDPOINT_'] = str(uuid.uuid4())
 
     if tools_paths or tools_env_vars:
-        tools_paths.append(os.environ["PATH"])
-        temp_env = {'PATH': os.pathsep.join(tools_paths)}
         old_environ = dict(os.environ)
-        os.environ.update(temp_env)
+        tools_env_vars['PATH'] = os.pathsep.join(tools_paths + [os.environ["PATH"]])
         os.environ.update(tools_env_vars)
         yield
         os.environ.clear()
         os.environ.update(old_environ)
     else:
         yield
-
-
-def tool_check(mark):
-    tool_name = mark.name[5:]
-    if tool_name not in tools_available:
-        pytest.fail("Required tool: '{}' is not available".format(tool_name))
-
-
-def pytest_runtest_setup(item):
-    # Every mark is a required tool, some specify a version
-    for mark in item.iter_markers():
-        if mark.name.startswith("tool_"):
-            tool_check(mark)
