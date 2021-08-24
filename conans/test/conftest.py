@@ -14,7 +14,8 @@ tools_default_version = {
     'mingw32': 'default',
     'mingw64': 'default',
     'ninja': '1.10.2',
-    'bazel': 'default'
+    'bazel': 'default',
+    'clang': "12"
 }
 
 tools_locations = {
@@ -22,6 +23,11 @@ tools_locations = {
     'cygwin': {'Windows': {'default': os.getenv('CONAN_CYGWIN_PATH', 'C:/cygwin64/bin')}},
     'mingw32': {'Windows': {'default': os.getenv('CONAN_MINGW32_PATH', 'C:/msys64/mingw32/bin')}},
     'mingw64': {'Windows': {'default': os.getenv('CONAN_MINGW64_PATH', 'C:/msys64/mingw64/bin')}},
+    'clang': {
+        'Windows': {
+            '12': 'C:/ws/LLVM/LLVM12/bin',
+        }
+    },
     'cmake': {
         'Windows': {
             '3.15': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
