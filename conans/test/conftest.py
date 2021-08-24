@@ -6,47 +6,71 @@ import pytest
 
 from conans.client.tools import vswhere, which
 
-tools_default_version = {
-    'cmake': '3.15',
-    'msys2': 'default',
-    'cygwin': 'default',
-    'mingw32': 'default',
-    'mingw64': 'default',
-    'ninja': '1.10.2',
-    'bazel': 'default'
-}
-
 tools_locations = {
-    'msys2': {'Windows': {'default': os.getenv('CONAN_MSYS2_PATH', 'C:/msys64/usr/bin')}},
-    'cygwin': {'Windows': {'default': os.getenv('CONAN_CYGWIN_PATH', 'C:/cygwin64/bin')}},
-    'mingw32': {'Windows': {'default': os.getenv('CONAN_MINGW32_PATH', 'C:/msys64/mingw32/bin')}},
-    'mingw64': {'Windows': {'default': os.getenv('CONAN_MINGW64_PATH', 'C:/msys64/mingw64/bin')}},
+    'visual_studio': {"default": "17",
+                      "17": None},
+    'gcc': {"default": "system",
+            "system": None},
     'cmake': {
-        'Windows': {
-            '3.15': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
-            '3.16': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
-            '3.17': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
-            '3.19': 'C:/cmake/cmake-3.19.7-win64-x64/bin'
+        "default": "3.15",
+        "3.15": {
+            "path": {'Windows': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
+                     'Darwin': '/Users/jenkins/cmake/cmake-3.15.7/bin',
+                     'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
-        'Darwin': {
-            '3.15': '/Users/jenkins/cmake/cmake-3.15.7/bin',
-            '3.16': '/Users/jenkins/cmake/cmake-3.16.9/bin',
-            '3.17': '/Users/jenkins/cmake/cmake-3.17.5/bin',
-            '3.19': '/Users/jenkins/cmake/cmake-3.19.7/bin'
+        "3.16": {
+            "path": {'Windows': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
+                     'Darwin': '/Users/jenkins/cmake/cmake-3.16.9/bin',
+                     'Linux': '/usr/share/cmake-3.16.9/bin'}
         },
-        'Linux': {
-            '3.15': '/usr/share/cmake-3.15.7/bin',
-            '3.16': '/usr/share/cmake-3.16.9/bin',
-            '3.17': '/usr/share/cmake-3.17.5/bin',
-            '3.19': '/usr/share/cmake-3.19.7/bin'
+        "3.17": {
+            "path": {'Windows': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
+                     'Darwin': '/Users/jenkins/cmake/cmake-3.17.5/bin',
+                     'Linux': '/usr/share/cmake-3.17.5/bin'}
+        },
+        "3.19": {
+            "path": {'Windows': 'C:/cmake/cmake-3.19.7-win64-x64/bin',
+                     'Darwin': '/Users/jenkins/cmake/cmake-3.19.7/bin',
+                     'Linux': '/usr/share/cmake-3.19.7/bin'}
         }
     },
-    'ninja': {'Windows': {'1.10.2': 'C:/Tools/ninja/1.10.2'}},
-    'bazel': {
-        'Darwin': {'default': '/Users/jenkins/bin'},
-        'Windows': {'default': 'C:/bazel/bin'},
+    'ninja': {
+        "default": "1.10.2",
+        "1.10.2": {
+            "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
+        }
+    },
+    'mingw32': {
+        "default": "system",
+        "system": {"path": {'Windows': 'C:/msys64/mingw32/bin'}},
+    },
+    'mingw64': {
+        "default": "system",
+        "system": {"path": {'Windows': 'C:/msys64/mingw64/bin'}},
+    },
+    'msys2': {'Windows': {'default': os.getenv('CONAN_MSYS2_PATH', 'C:/msys64/usr/bin')}},
+    'cygwin': {'Windows': {'default': os.getenv('CONAN_CYGWIN_PATH', 'C:/cygwin64/bin')}},
+    'bazel':  {
+        "default": "system",
+        "system": {"path": {'Windows': 'C:/bazel/bin',
+                            "Darwin": '/Users/jenkins/bin'}},
     }
 }
+
+try:
+    from conans.test.conftest_user import tools_locations as user_tool_locations
+
+    def update(d, u):
+        for k, v in u.items():
+            if isinstance(v, dict):
+                d[k] = update(d.get(k, {}), v)
+            else:
+                d[k] = v
+        return d
+
+    update(tools_locations, user_tool_locations)
+except ImportError as e:
+    user_tool_locations = None
 
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
@@ -58,17 +82,28 @@ _cached_tools = {}
 
 
 def _get_tool(name, version):
+    # None: not cached yet
+    # False = tool not available, legally skipped
+    # True = tool not available, test error
+    # (path, env) = tool available
     cached = _cached_tools.setdefault(name, {}).get(version)
     if cached is None:
+        tool = tools_locations[name]
+        if tool.get("disabled"):
+            _cached_tools[name][version] = False
+            return False
+
         tool_platform = platform.system()
-        version = version or tools_default_version.get(name)
-        tool_path = tool_env = None
-        if version is not None:  # Must be found in locations
-            try:
-                tool_path = tools_locations[name][tool_platform][version]
-            except KeyError:
+        version = version or tool["default"]
+        tool_version = tool[version]
+        if tool_version is not None:
+            if tool_version.get("disabled"):
                 _cached_tools[name][version] = False
                 return False
+            tool_path = tool_version.get("path", {}).get(tool_platform)
+        else:
+            tool_path = None
+        tool_env = None
         try:
             tool_env = tools_environments[name][tool_platform]
         except KeyError:
@@ -79,14 +114,14 @@ def _get_tool(name, version):
         # Check this particular tool is installed
         if name == "visual_studio":
             if not vswhere():  # TODO: Missing version detection
-                cached = False
+                cached = True
         else:  # which based detection
             old_environ = None
             if tool_path is not None:
                 old_environ = dict(os.environ)
                 os.environ["PATH"] = tool_path + os.pathsep + os.environ["PATH"]
             if not which(name):  # TODO: This which doesn't detect version either
-                cached = False
+                cached = True
             if old_environ is not None:
                 os.environ.clear()
                 os.environ.update(old_environ)
@@ -96,6 +131,18 @@ def _get_tool(name, version):
     return cached
 
 
+def _tool_name_mapping(tool_name):
+    if tool_name == "compiler":
+        tool_name = {"Windows": "visual_studio",
+                     "Linux": "gcc",
+                     "Darwin": "clang"}.get(platform.system())
+    elif tool_name == "pkg_config":
+        tool_name = "pkg-config"
+    elif tool_name == "autotools":
+        tool_name = "automake"
+    return tool_name
+
+
 @pytest.fixture(autouse=True)
 def add_tool(request):
     tools_paths = []
@@ -103,22 +150,19 @@ def add_tool(request):
     for mark in request.node.iter_markers():
         if mark.name.startswith("tool_"):
             tool_name = mark.name[5:]
-            if tool_name == "compiler":
-                tool_name = {"Windows": "visual_studio",
-                             "Linux": "gcc",
-                             "Darwin": "clang"}.get(platform.system())
-            elif tool_name == "pkg_config":
-                tool_name = "pkg-config"
-            elif tool_name == "autotools":
-                tool_name = "automake"
+            tool_name = _tool_name_mapping(tool_name)
             tool_version = mark.kwargs.get('version')
-            tool_found = _get_tool(tool_name, tool_version)
-            if tool_found is False:
+            result = _get_tool(tool_name, tool_version)
+            if result is True:
                 version_msg = "Any" if tool_version is None else tool_version
                 pytest.fail("Required '{}' tool version '{}' is not available".format(tool_name,
                                                                                       version_msg))
+            if result is False:
+                version_msg = "Any" if tool_version is None else tool_version
+                pytest.skip("Required '{}' tool version '{}' is not available".format(tool_name,
+                                                                                      version_msg))
 
-            tool_path, tool_env = tool_found
+            tool_path, tool_env = result
             if tool_path:
                 tools_paths.append(tool_path)
             if tool_env:
