@@ -107,6 +107,10 @@ def add_tool(request):
                 tool_name = {"Windows": "visual_studio",
                              "Linux": "gcc",
                              "Darwin": "clang"}.get(platform.system())
+            elif tool_name == "pkg_config":
+                tool_name = "pkg-config"
+            elif tool_name == "autotools":
+                tool_name = "automake"
             tool_version = mark.kwargs.get('version')
             tool_found = _get_tool(tool_name, tool_version)
             if tool_found is False:
