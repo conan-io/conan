@@ -11,20 +11,20 @@ To override these locations with your own in your dev machine:
 1. Create a conftest_user.py just besides this conftest.py file
 2. This file is .gitignored, it will not be committed
 3. Override the tools_locations, you can completely disabled some tools, tests will be skipped
-4. None values or empty dicts, without specifying the path, means the tool is already in the system
+4. Empty dicts, without specifying the path, means the tool is already in the system
    path
 
 
 tools_locations = {
     'svn': {"disabled": True},
     'cmake': {
-        "3.15": None,
+        "3.15": {},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
         "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin"}},
     },
     'ninja': {
-        "1.10.2": None
+        "1.10.2": {}
     },
     'bazel':  {
         "system": {"path": {'Windows': 'C:/ws/bazel/4.2.0'}},
@@ -35,8 +35,9 @@ tools_locations = {
 
 tools_locations = {
     "clang": {"disabled": True},
+    "meson": {"disabled": True},
     'visual_studio': {"default": "15",
-                      "15": None},
+                      "15": {}},
     'pkg_config': {"exe": "pkg-config"},
     'autotools': {"exe": "autoconf"},
     'cmake': {
@@ -149,6 +150,9 @@ def _get_tool(name, version):
                 return False
             tool_path = tool_version.get("path", {}).get(tool_platform)
         else:
+            if version is not None:  # if the version is specified, it should be in the conf
+                _cached_tools[name][version] = True
+                return True
             tool_path = None
 
         try:
