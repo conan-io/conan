@@ -11,11 +11,11 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
-@pytest.mark.tool_msys2()
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool_msys2
 def test_autotools_bash_complete():
     client = TestClient(path_with_spaces=False)
-    bash_path = tools_locations["msys2"]["Windows"]["default"] + "/bash.exe"
+    bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
     save(client.cache.new_config_path, textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path={}

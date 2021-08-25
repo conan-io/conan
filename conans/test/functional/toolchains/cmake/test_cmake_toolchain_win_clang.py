@@ -8,6 +8,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool_mingw64
 @pytest.mark.tool_clang(version="12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang():
@@ -22,7 +23,7 @@ def test_clang():
 
         [buildenv]
         CC=clang
-        CXX=clang
+        CXX=clang++
         RC=clang
         """)
     conanfile = textwrap.dedent("""
