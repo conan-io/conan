@@ -1,12 +1,10 @@
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.functional.toolchains.meson._base import get_meson_version
 from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool_meson
-@pytest.mark.skipif(get_meson_version() < "0.56.0", reason="requires meson >= 0.56.0")
 def test_env_vars_from_build_require():
     br = str(GenConanfile().with_name("hello_compiler").with_version("1.0").with_import("import os"))
     br += """
