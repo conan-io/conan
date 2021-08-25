@@ -37,7 +37,8 @@ tools_locations = {
     "clang": {"disabled": True},
     "meson": {"disabled": True},
     'visual_studio': {"default": "15",
-                      "15": {}},
+                      "15": {},
+                      "16": {"disabled": True}},
     'pkg_config': {"exe": "pkg-config"},
     'autotools': {"exe": "autoconf"},
     'cmake': {

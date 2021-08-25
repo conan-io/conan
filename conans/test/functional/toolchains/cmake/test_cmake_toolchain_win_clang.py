@@ -77,3 +77,26 @@ def test_clang_cmake_ninja(client):
     # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
     assert "main _MSC_VER19" in client.out
     assert "main _MSVC_LANG2014" in client.out
+
+
+@pytest.mark.tool_cmake
+@pytest.mark.tool_visual_studio(version="16")  # With Clang distributed in VS!
+@pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
+def test_clang_cmake_visual(client):
+    clang_profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        compiler=clang
+        compiler.version=11
+        """)
+    # TODO: Clang version is unused, it can change, still 11 from inside VS is used
+    client.save({"clang": clang_profile})
+    client.run("create . pkg/0.1@ -pr=clang "
+               '-c tools.cmake.cmaketoolchain:generator="Visual Studio 16"')
+    assert 'cmake -G "Visual Studio 16"' in client.out
+    assert "main __clang_major__11" in client.out
+    # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
+    assert "main _MSC_VER19" in client.out
+    assert "main _MSVC_LANG2014" in client.out

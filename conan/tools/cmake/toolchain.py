@@ -515,6 +515,11 @@ class GenericSystemBlock(Block):
                     return "version=14.{}".format(minor)
                 else:
                     return "v14{}".format(minor)
+        elif compiler == "clang":
+            if generator and "Visual" in generator:
+                if "Visual Studio 16" in generator:
+                    return "ClangCL"
+                # TODO: Handle other cases
         return None
 
     def _get_generator_platform(self, generator):
