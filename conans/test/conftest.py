@@ -34,6 +34,7 @@ tools_locations = {
 
 
 tools_locations = {
+    "meson": {"disabled": True},
     'visual_studio': {"default": "15",
                       "15": None},
     'pkg_config': {"exe": "pkg-config"},
@@ -148,6 +149,9 @@ def _get_tool(name, version):
                 return False
             tool_path = tool_version.get("path", {}).get(tool_platform)
         else:
+            if version is not None:  # if the version is specified, it should be in the conf
+                _cached_tools[name][version] = True
+                return True
             tool_path = None
 
         try:
