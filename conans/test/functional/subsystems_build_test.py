@@ -257,7 +257,7 @@ class TestSubsystemsCMakeBuild:
         """
         client = TestClient()
         # pacman -S mingw-w64-x86_64-gcc
-        self._build(client, generator="Unix Makefiles")
+        self._build(client, generator="MinGW Makefiles")
 
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
 
@@ -273,7 +273,7 @@ class TestSubsystemsCMakeBuild:
         """
         client = TestClient()
         # pacman -S mingw-w64-i686-gcc
-        self._build(client, generator="Unix Makefiles")
+        self._build(client, generator="MinGW Makefiles")
 
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None)
 
