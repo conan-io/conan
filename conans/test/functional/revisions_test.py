@@ -1072,7 +1072,7 @@ def test_necessary_update():
     # https://github.com/conan-io/conan/issues/7235
     c = TestClient(default_server_user=True)
     save(c.cache.new_config_path, "core:allow_explicit_revision_update=True")
-    c.run("config set general.revisions_enabled=True")
+
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . pkg/0.1@")
     rrev1 = "f3367e0e7d170aa12abccb175fee5f97"
@@ -1088,3 +1088,19 @@ def test_necessary_update():
     c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev2))})
     c.run("install .")
     assert rrev2 in c.out
+
+
+def test_touching_other_server():
+    # https://github.com/conan-io/conan/issues/9333
+    servers = OrderedDict([("remote1", TestServer()),
+                           ("remote2", None)])  # None server will crash if touched
+    c = TestClient(servers=servers, users={"remote1": [("conan", "password")]})
+    c.save({"conanfile.py": GenConanfile().with_settings("os")})
+    c.run("create . pkg/0.1@conan/channel -s os=Windows")
+    c.run("upload * --all -c -r=remote1")
+    c.run("remove * -f")
+
+    # This is OK, binary found
+    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Windows")
+    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
+    assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out

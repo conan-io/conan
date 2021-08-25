@@ -63,3 +63,26 @@ def test_test_package():
                "-s:h compiler.libcxx=libstdc++11 --build=missing")
     cmake_data = client.load("pkg-release-x86_64-data.cmake")
     assert "gtest" not in cmake_data
+
+
+def test_components_error():
+    # https://github.com/conan-io/conan/issues/9331
+    client = TestClient()
+
+    conan_hello = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+
+            def layout(self):
+                pass
+
+            def package_info(self):
+                self.cpp_info.components["say"].includedirs = ["include"]
+            """)
+
+    client.save({"conanfile.py": conan_hello})
+    client.run("create . hello/1.0@")

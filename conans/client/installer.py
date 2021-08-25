@@ -665,9 +665,14 @@ class BinaryInstaller(object):
 
                 if conanfile._conan_dep_cpp_info is None:
                     try:
-                        if not is_editable:
+                        if not is_editable and not hasattr(conanfile, "layout"):
                             # FIXME: The default for the cppinfo from build are not the same
                             #        so this check fails when editable
+                            # FIXME: Remove when new cppinfo model. If using the layout method
+                            #        the cppinfo object is filled from self.cpp.package new
+                            #        model and we cannot check if the defaults have been modified
+                            #        because it doesn't exist in the new model where the defaults
+                            #        for the components are always empty
                             conanfile.cpp_info._raise_incorrect_components_definition(
                                 conanfile.name, conanfile.requires)
                     except ConanException as e:

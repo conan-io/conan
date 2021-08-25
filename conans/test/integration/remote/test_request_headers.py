@@ -50,7 +50,7 @@ class RequestHeadersTestCase(unittest.TestCase):
 
     def _get_header(self, requester, header_name):
         hits = sum([header_name in headers for _, headers in requester.requests])
-        assert hits == 2
+        assert hits <= 2
         for url, headers in requester.requests:
             if header_name in headers:
                 self.assertTrue(url.endswith('/latest'), msg=url)
