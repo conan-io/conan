@@ -75,7 +75,7 @@ def test_components_error():
 
         from conan.tools.files import save
         class Pkg(ConanFile):
-            settings = "os", "arch", "compiler", "build_type"
+            settings = "os"
 
             def layout(self):
                 pass
@@ -85,4 +85,4 @@ def test_components_error():
             """)
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@")
+    client.run("create . hello/1.0@ -s os=Windows")

@@ -364,7 +364,7 @@ class GraphBinariesAnalyzer(object):
         try:
             conanfile.settings.validate()  # All has to be ok!
             conanfile.options.validate()
-        except ConanException:
+        except ConanException as e:
             conanfile.info.invalid = BINARY_INVALID, str(e)
 
         info = conanfile.info
