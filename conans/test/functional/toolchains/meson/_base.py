@@ -9,15 +9,6 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import decode_text
 from conans.util.runners import version_runner
 
-def get_meson_version():
-    try:
-        out = version_runner(["meson", "--version"])
-        version_line = decode_text(out).split('\n', 1)[0]
-        version_str = version_line.rsplit(' ', 1)[-1]
-        return Version(version_str)
-    except Exception:
-        return Version("0.0.0")
-
 
 @pytest.mark.tool_meson
 class TestMesonBase(unittest.TestCase):

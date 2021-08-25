@@ -34,7 +34,6 @@ tools_locations = {
 
 
 tools_locations = {
-    "meson": {"disabled": True},
     "clang": {"disabled": True},
     'visual_studio': {"default": "15",
                       "15": None},
