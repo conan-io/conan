@@ -34,7 +34,6 @@ tools_locations = {
 
 
 tools_locations = {
-    "meson": {"disabled": True},
     'visual_studio': {"default": "15",
                       "15": {}},
     'pkg_config': {"exe": "pkg-config"},
