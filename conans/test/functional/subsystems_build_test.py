@@ -25,14 +25,14 @@ class TestSubsystems:
         assert "CYGWIN" in client.out
 
     @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw32
+    @pytest.mark.tool_mingw32
     def test_mingw32_available(self):
         client = TestClient()
         client.run_command('uname')
         assert "MINGW32_NT" in client.out
 
     @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw64
+    @pytest.mark.tool_mingw64
     def test_mingw64_available(self):
         client = TestClient()
         client.run_command('uname')
@@ -73,7 +73,7 @@ class TestSubsystemsBuild:
         assert "__MSYS__" in client.out
 
     @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw64
+    @pytest.mark.tool_mingw64
     def test_mingw64(self):
         """
         64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -89,7 +89,7 @@ class TestSubsystemsBuild:
         assert "__MSYS__" not in client.out
 
     @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw32
+    @pytest.mark.tool_mingw32
     def test_mingw32(self):
         """
         32-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -165,7 +165,7 @@ class TestSubsystemsAutotoolsBuild:
         assert "__MSYS__" in client.out
 
     @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw64
+    @pytest.mark.tool_mingw64
     def test_mingw64(self):
         """
         64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -181,7 +181,7 @@ class TestSubsystemsAutotoolsBuild:
         assert "__MSYS__" not in client.out
 
     @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw32
+    @pytest.mark.tool_mingw32
     def test_mingw32(self):
         """
         32-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -250,7 +250,7 @@ class TestSubsystemsCMakeBuild:
         assert "__MSYS__" in client.out
 
     @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw64
+    @pytest.mark.tool_mingw64
     def test_mingw64(self):
         """
         64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -266,7 +266,7 @@ class TestSubsystemsCMakeBuild:
         assert "__MSYS__" not in client.out
 
     @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw32
+    @pytest.mark.tool_mingw32
     def test_mingw32(self):
         """
         32-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)

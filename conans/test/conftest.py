@@ -35,8 +35,8 @@ tools_locations = {
 
 tools_locations = {
     "meson": {"disabled": True},
-    'visual_studio': {"default": "17",
-                      "17": None},
+    'visual_studio': {"default": "15",
+                      "15": None},
     'pkg_config': {"exe": "pkg-config"},
     'autotools': {"exe": "autoconf"},
     'cmake': {
@@ -68,29 +68,23 @@ tools_locations = {
             "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
         }
     },
+    'mingw32': {
+        "platform": "Windows",
+        "default": "system",
+        "exe": "mingw32-make",
+        "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
+    },
     'mingw64': {
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
-        "system": {"path": {'Windows': "TODO"}},
+        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
     'msys2': {
         "platform": "Windows",
         "default": "system",
         "exe": "make",
         "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
-    },
-    'msys2_mingw32': {
-        "platform": "Windows",
-        "default": "system",
-        "exe": "gcc",
-        "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
-    },
-    'msys2_mingw64': {
-        "platform": "Windows",
-        "default": "system",
-        "exe": "gcc",
-        "system": {"path": {'Windows': "C:/msys64/mingw64/bin"}},
     },
     'cygwin': {
         "platform": "Windows",
@@ -121,8 +115,8 @@ except ImportError as e:
     user_tool_locations = None
 
 tools_environments = {
-    'msys2_mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
-    'msys2_mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
+    'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
+    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
 }
 
 

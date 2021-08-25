@@ -66,6 +66,7 @@ def editable_cmake(generator):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("generator", [None, "MinGW Makefiles"])
+@pytest.mark.tool_msys2
 @pytest.mark.tool_mingw64
 def test_editable_cmake_windows(generator):
     editable_cmake(generator)
@@ -130,7 +131,7 @@ def editable_cmake_exe(generator):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-@pytest.mark.parametrize("generator", [None, "MinGW Makefiles"])
+@pytest.mark.parametrize("generator", [None, "Unix Makefiles"])
 @pytest.mark.tool_mingw64
 def test_editable_cmake_windows_exe(generator):
     editable_cmake_exe(generator)
