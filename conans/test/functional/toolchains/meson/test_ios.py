@@ -12,7 +12,6 @@ from conans.test.functional.toolchains.meson._base import get_meson_version
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_meson
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 @pytest.mark.skipif(get_meson_version() < "0.56.0", reason="requires meson >= 0.56.0")

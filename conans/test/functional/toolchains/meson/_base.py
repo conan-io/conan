@@ -19,7 +19,6 @@ def get_meson_version():
         return Version("0.0.0")
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_meson
 class TestMesonBase(unittest.TestCase):
     def setUp(self):
