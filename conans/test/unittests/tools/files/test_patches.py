@@ -35,30 +35,33 @@ def mock_patch_ng(monkeypatch):
 
 def test_single_patch_file(mock_patch_ng):
     conanfile = ConanFileMock()
+    conanfile.folders.set_base_source("my_source")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_file='patch-file')
     assert mock_patch_ng.filename == 'patch-file'
     assert mock_patch_ng.string is None
-    assert mock_patch_ng.apply_args == (None, 0, False)
+    assert mock_patch_ng.apply_args == ("my_source", 0, False)
     assert len(str(conanfile.output)) == 0
 
 
 def test_single_patch_string(mock_patch_ng):
     conanfile = ConanFileMock()
+    conanfile.folders.set_base_source("my_folder")
     conanfile.display_name = 'mocked/ref'
     patch(conanfile, patch_string='patch_string')
     assert mock_patch_ng.string == b'patch_string'
     assert mock_patch_ng.filename is None
-    assert mock_patch_ng.apply_args == (None, 0, False)
+    assert mock_patch_ng.apply_args == ("my_folder", 0, False)
     assert len(str(conanfile.output)) == 0
 
 
 def test_single_patch_arguments(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.display_name = 'mocked/ref'
-    patch(conanfile, patch_file='patch-file', base_path='root', strip=23, fuzz=True)
+    conanfile.folders.set_base_source("/path/to/sources")
+    patch(conanfile, patch_file='patch-file', strip=23, fuzz=True)
     assert mock_patch_ng.filename == 'patch-file'
-    assert mock_patch_ng.apply_args == ('root', 23, True)
+    assert mock_patch_ng.apply_args == ("/path/to/sources", 23, True)
     assert len(str(conanfile.output)) == 0
 
 

@@ -1046,3 +1046,19 @@ class ServerRevisionsIndexes(unittest.TestCase):
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref4.revision])
+
+
+def test_touching_other_server():
+    # https://github.com/conan-io/conan/issues/9333
+    servers = OrderedDict([("remote1", TestServer()),
+                           ("remote2", None)])  # None server will crash if touched
+    c = TestClient(servers=servers, users={"remote1": [("conan", "password")]})
+    c.save({"conanfile.py": GenConanfile().with_settings("os")})
+    c.run("create . pkg/0.1@conan/channel -s os=Windows")
+    c.run("upload * --all -c -r=remote1")
+    c.run("remove * -f")
+
+    # This is OK, binary found
+    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Windows")
+    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
+    assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out

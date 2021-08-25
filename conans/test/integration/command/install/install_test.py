@@ -379,3 +379,21 @@ class TestCliOverride:
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . pkg/0.1@ --require-override=zlib/2.0")
         assert "zlib/2.0: Already installed" in client.out
+
+
+def test_install_bintray_warning():
+    server = TestServer(complete_urls=True)
+    from conans.client.graph import proxy
+    proxy.DEPRECATED_CONAN_CENTER_BINTRAY_URL = server.fake_url  # Mocking!
+    client = TestClient(servers={"conan-center": server},
+                        users={"conan-center": [("lasote", "mypass")]})
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . zlib/1.0@lasote/testing")
+    client.run("upload zlib/1.0@lasote/testing --all -r conan-center")
+    client.run("remove * -f")
+    client.run("install zlib/1.0@lasote/testing -r conan-center")
+    assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
+           "soon" in client.out
+    client.run("install zlib/1.0@lasote/testing -r conan-center -s build_type=Debug")
+    assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
+           "soon" not in client.out
