@@ -35,11 +35,15 @@ tools_locations = {
 
 tools_locations = {
     "clang": {"disabled": True},
-    "meson": {"disabled": True},
     'visual_studio': {"default": "15",
                       "15": {},
                       "16": {"disabled": True}},
-    'pkg_config': {"exe": "pkg-config"},
+
+    'pkg_config': {"exe": "pkg-config",
+                   "default": "system",
+                   # pacman -S pkg-config inside msys2-mingw64
+                   "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+                   },
     'autotools': {"exe": "autoconf"},
     'cmake': {
         "default": "3.15",
