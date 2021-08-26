@@ -1,4 +1,5 @@
 import platform
+import sys
 import unittest
 
 import pytest
@@ -7,6 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool_meson
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 class TestMesonBase(unittest.TestCase):
     def setUp(self):
         self.t = TestClient()

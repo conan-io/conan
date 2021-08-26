@@ -4,7 +4,6 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_meson
 def test_env_vars_from_build_require():
     br = str(GenConanfile().with_name("hello_compiler").with_version("1.0").with_import("import os"))
     br += """
