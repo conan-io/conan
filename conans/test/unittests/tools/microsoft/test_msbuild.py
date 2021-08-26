@@ -1,3 +1,4 @@
+import mock
 import os
 import textwrap
 from mock import Mock
@@ -67,5 +68,6 @@ def test_msbuild_standard():
     conanfile.settings.arch = "x86_64"
 
     msbuild = MSBuildToolchain(conanfile)
-    msbuild.generate()
+    with mock.patch("conan.tools.microsoft.visual.vcvars_path", mock.MagicMock(return_value=".")):
+        msbuild.generate()
     assert '<LanguageStandard>stdcpp20</LanguageStandard>' in load('conantoolchain_release_x64.props')
