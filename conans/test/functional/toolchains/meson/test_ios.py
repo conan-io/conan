@@ -1,5 +1,6 @@
 import os
 import platform
+import sys
 import textwrap
 import unittest
 
@@ -12,6 +13,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool_meson
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 class IOSMesonTestCase(unittest.TestCase):
 
