@@ -357,9 +357,6 @@ class GenConanfile(object):
                                 comp_name, comp_attr_name, str(comp_attr_value)))
                 else:
                     lines.append('        self.cpp_info.{} = {}'.format(k, str(v)))
-        if "env_info" in self._package_info:
-            for k, v in self._package_info["env_info"].items():
-                lines.append('        self.env_info.{} = {}'.format(k, str(v)))
 
         return """
     def package_info(self):

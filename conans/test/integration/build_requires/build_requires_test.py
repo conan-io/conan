@@ -15,7 +15,7 @@ class Tool(ConanFile):
     version = "0.1"
 
     def package_info(self):
-        self.env_info.TOOL_PATH.append("MyToolPath")
+        self.buildenv_info.define_path("TOOL_PATH", "MyToolPath")
 """
 
 tool_conanfile2 = tool_conanfile.replace("0.1", "0.3")
@@ -23,6 +23,7 @@ tool_conanfile2 = tool_conanfile.replace("0.1", "0.3")
 conanfile = """
 import os
 from conans import ConanFile, tools
+from conan.tools.env import VirtualBuildEnv
 
 class MyLib(ConanFile):
     name = "MyLib"
@@ -30,7 +31,9 @@ class MyLib(ConanFile):
     {}
 
     def build(self):
-        self.output.info("ToolPath: %s" % os.getenv("TOOL_PATH"))
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            self.output.info("ToolPath: %s" % os.getenv("TOOL_PATH"))
 """
 
 requires = conanfile.format('build_requires = "Tool/0.1@lasote/stable"')
@@ -189,18 +192,21 @@ class Lib(ConanFile):
         mingw = """from conans import ConanFile
 class Tool(ConanFile):
     def package_info(self):
-        self.env_info.PATH.append("mymingwpath")
+        self.buildenv_info.define_path("PATH", "mymingwpath")
 """
         myprofile = """
 [build_requires]
 consumer*: mingw/0.1@myuser/stable
 """
         app = """from conans import ConanFile
+from conan.tools.env import VirtualBuildEnv
 import os
 class App(ConanFile):
     name = "consumer"
     def build(self):
-        self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
 """
         client.save({CONANFILE: mingw})
         client.run("create . mingw/0.1@myuser/stable")
