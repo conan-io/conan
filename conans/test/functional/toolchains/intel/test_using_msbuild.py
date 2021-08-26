@@ -27,7 +27,6 @@ conanfile_py = textwrap.dedent("""
 """)
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_cmake
 @pytest.mark.tool_msbuild
 @pytest.mark.tool_icc
