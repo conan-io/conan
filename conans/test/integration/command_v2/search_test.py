@@ -78,7 +78,7 @@ class TestRemotes:
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
-         "ERROR: ConnectionError: Review your network!"),
+         "ERROR: Review your network!"),
         (ConanException("Boom!"), "ERROR: Boom!")
     ])
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):

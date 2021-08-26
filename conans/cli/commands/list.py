@@ -3,7 +3,8 @@ import json
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.output import cli_out_write
 from conans.client.output import Color
-from conans.errors import ConanException, InvalidNameException
+from conans.errors import ConanException, InvalidNameException, PackageNotFoundException, \
+    NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.dates import from_timestamp_to_iso8601
 
@@ -27,11 +28,7 @@ def list_recipes_cli_formatter(results):
     for result in results:
         _print_common_headers(result)
         if result.get("error"):
-            error = result['error']
-            if error.startswith("NotFoundError:"):
-                error = no_results_msg
-            else:
-                error = f"ERROR: {error}"
+            error = f"ERROR: {result['error']}"
             cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
@@ -52,11 +49,7 @@ def _list_revisions_cli_formatter(results, ref_type):
     for result in results:
         _print_common_headers(result)
         if result.get("error"):
-            error = result['error']
-            if error.startswith("NotFoundError:"):
-                error = no_results_msg
-            else:
-                error = f"ERROR: {error}"
+            error = f"ERROR: {result['error']}"
             cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
@@ -175,7 +168,7 @@ def list_recipes(conan_api, parser, subparser, *args):
         error = None
         try:
             result = conan_api.search_local_recipes(args.query)
-        except ConanException as e:
+        except Exception as e:
             error = str(e)
             result = []
 
@@ -189,7 +182,13 @@ def list_recipes(conan_api, parser, subparser, *args):
             error = None
             try:
                 result = conan_api.search_remote_recipes(args.query, remote)
-            except ConanException as e:
+            except (NotFoundException, PackageNotFoundException):
+                # This exception must be caught manually due to a server inconsistency:
+                # Artifactory API returns an empty result if the recipe doesn't exist, but
+                # Conan Server returns a 404. This probably should be fixed server side,
+                # but in the meantime we must handle it here
+                result = []
+            except Exception as e:
                 error = str(e)
                 result = []
 
@@ -225,7 +224,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         error = None
         try:
             result = conan_api.get_recipe_revisions(ref)
-        except ConanException as e:
+        except Exception as e:
             error = str(e)
             result = []
 
@@ -240,7 +239,13 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
             error = None
             try:
                 result = conan_api.get_recipe_revisions(ref, remote=remote)
-            except ConanException as e:
+            except (NotFoundException, PackageNotFoundException):
+                # This exception must be caught manually due to a server inconsistency:
+                # Artifactory API returns an empty result if the recipe doesn't exist, but
+                # Conan Server returns a 404. This probably should be fixed server side,
+                # but in the meantime we must handle it here
+                result = []
+            except Exception as e:
                 error = str(e)
                 result = []
 
@@ -281,7 +286,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         error = None
         try:
             result = conan_api.get_package_revisions(pref)
-        except ConanException as e:
+        except Exception as e:
             error = str(e)
             result = []
 
@@ -296,7 +301,13 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             error = None
             try:
                 result = conan_api.get_package_revisions(pref, remote=remote)
-            except ConanException as e:
+            except (NotFoundException, PackageNotFoundException):
+                # This exception must be caught manually due to a server inconsistency:
+                # Artifactory API returns an empty result if the recipe doesn't exist, but
+                # Conan Server returns a 404. This probably should be fixed server side,
+                # but in the meantime we must handle it here
+                result = []
+            except Exception as e:
                 error = str(e)
                 result = []
 
@@ -335,7 +346,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
         error = None
         try:
             result = conan_api.get_package_ids(ref)
-        except ConanException as e:
+        except Exception as e:
             error = str(e)
             result = {}
 
@@ -348,7 +359,13 @@ def list_package_ids(conan_api, parser, subparser, *args):
             error = None
             try:
                 result = conan_api.get_package_ids(ref, remote=remote)
-            except ConanException as e:
+            except (NotFoundException, PackageNotFoundException):
+                # This exception must be caught manually due to a server inconsistency:
+                # Artifactory API returns an empty result if the recipe doesn't exist, but
+                # Conan Server returns a 404. This probably should be fixed server side,
+                # but in the meantime we must handle it here
+                result = {}
+            except Exception as e:
                 error = str(e)
                 result = {}
 

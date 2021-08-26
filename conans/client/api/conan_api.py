@@ -26,8 +26,7 @@ from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
-from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
-    ConanConnectionError
+from conans.errors import ConanException
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_packages
@@ -103,16 +102,6 @@ def api_method(f):
             api.create_app()
             with environment_append(api.app.cache.config.env_vars):
                 return f(api, *args, **kwargs)
-        except (NotFoundException, PackageNotFoundException) as e:
-            # This exception must be caught manually due to a server inconsistency:
-            # Artifactory API returns an empty result if the recipe doesn't exist, but
-            # Conan Server returns a 404. This probably should be fixed server side,
-            # but in the meantime we must handle it here
-            raise ConanException(f"NotFoundError: {str(e)}")
-        except ConanConnectionError as e:
-            raise ConanException(f"ConnectionError: {str(e)}")
-        except BaseException as e:
-            raise ConanException(str(e))
         finally:
             if old_curdir:
                 os.chdir(old_curdir)
