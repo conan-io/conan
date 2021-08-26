@@ -1,4 +1,6 @@
 import os
+import platform
+
 import pytest
 import textwrap
 
@@ -7,6 +9,7 @@ from conans.test.functional.toolchains.meson._base import TestMesonBase
 
 
 @pytest.mark.tool_pkg_config
+@pytest.mark.skipif(platform.system() == "Windows", reason="Doesn't work in Windows")
 class MesonPkgConfigTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
     from conans import ConanFile, tools
