@@ -20,7 +20,8 @@ def vs_ide_version(conanfile):
             version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
             _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
                         '19.1': '15',
-                        '19.2': '16'}
+                        '19.2': '16',
+                        '19.3': '17'}
             visual_version = _visuals[version]
     else:
         visual_version = compiler_version
