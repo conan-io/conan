@@ -1,13 +1,9 @@
 import platform
-import pytest
 import unittest
 
 import pytest
 
-from conans.model.version import Version
 from conans.test.utils.tools import TestClient
-from conans.util.files import decode_text
-from conans.util.runners import version_runner
 
 
 @pytest.mark.tool_meson

@@ -36,7 +36,11 @@ tools_locations = {
 tools_locations = {
     'visual_studio': {"default": "15",
                       "15": {}},
-    'pkg_config': {"exe": "pkg-config"},
+    'pkg_config': {"exe": "pkg-config",
+                   "default": "system",
+                   # pacman -S pkg-config inside msys2-mingw64
+                   "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
+                   },
     'autotools': {"exe": "autoconf"},
     'cmake': {
         "default": "3.15",
