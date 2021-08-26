@@ -106,7 +106,8 @@ def test_patch(mock_patch_ng):
     client.save({"conanfile.py": conanfile})
     client.run('create .')
 
-    assert os.path.exists(mock_patch_ng.apply_args[0])
+    # Note: This cannot exist anymore, because the path is moved when prev is computed
+    # assert os.path.exists(mock_patch_ng.apply_args[0])
     assert mock_patch_ng.apply_args[1:] == (0, False)
     assert 'mypkg/1.0: Apply patch (security)' in str(client.out)
 
@@ -143,7 +144,6 @@ def test_apply_conandata_patches(mock_patch_ng):
                  'conandata.yml': conandata_yml})
     client.run('create .')
 
-
     assert mock_patch_ng.apply_args[0].endswith('source_subfolder')
     assert mock_patch_ng.apply_args[1:] == (0, False)
 
@@ -156,7 +156,6 @@ def test_apply_conandata_patches(mock_patch_ng):
 
     assert 'conanfile.py (mypkg/1.11.0): Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
-
 
 
 def test_no_patch_file_entry():

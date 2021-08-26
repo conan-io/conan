@@ -15,9 +15,6 @@ from conans.model.ref import ConanFileReference
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
-# TODO: Remove warning message when this URL is no longer available
-DEPRECATED_CONAN_CENTER_BINTRAY_URL = "https://conan.bintray.com"
-
 
 class ConanProxy(object):
     def __init__(self, cache, output, remote_manager):
