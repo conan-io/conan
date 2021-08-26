@@ -150,6 +150,7 @@ def _get_tool(name, version):
         version = version or tool.get("default")
         tool_version = tool.get(version)
         if tool_version is not None:
+            assert isinstance(tool_version, dict)
             if tool_version.get("disabled"):
                 _cached_tools[name][version] = False
                 return False
