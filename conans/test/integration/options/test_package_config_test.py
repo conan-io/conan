@@ -7,7 +7,7 @@ test_conanfile = """from conans import ConanFile
 class test_packageConan(ConanFile):
     name = "conan_test_package"
     options = {"shared": [True, False]}
-    default_options = "shared=False"
+    default_options = {"shared": False}
 
     def configure(self):
         self.output.info("shared (configure): %s" % (self.options.shared))
@@ -29,7 +29,7 @@ create_conanfile = """from conans import ConanFile
 
 class test_packageConan(ConanFile):
     options = {"shared": [True, False]}
-    default_options = "shared=False"
+    default_options = {"shared": False}
 
     def build(self):
         self.output.info("shared (build): %s" % (self.options["conan_package"].shared))
@@ -45,7 +45,7 @@ class PkgConan(ConanFile):
     name = "conan_package"
     version = "0.1"
     options = {"shared": [True, False]}
-    default_options = "shared=False"
+    default_options = {"shared": False}
 
     def configure(self):
         self.output.info("shared (configure): %s" % str(self.options.shared))

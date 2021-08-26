@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.toolchain
 class BasicTest(unittest.TestCase):
 
     def test_basic(self):

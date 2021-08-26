@@ -61,7 +61,6 @@ conanfile_py = textwrap.dedent("""
     """)
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_cmake
 @pytest.mark.tool_icc
 @pytest.mark.xfail(reason="Intel compiler not installed yet on CI")

@@ -91,7 +91,7 @@ class MockCppInfo(object):
         self.include_paths = []
         self.libs = []
         self.cflags = []
-        self.cppflags = []
+        self.cxxflags = []
         self.defines = []
         self.frameworks = []
         self.framework_paths = []

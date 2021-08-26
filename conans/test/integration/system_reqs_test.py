@@ -15,7 +15,7 @@ class TestSystemReqs(ConanFile):
     name = "Test"
     version = "0.1"
     options = {"myopt": [True, False]}
-    default_options = "myopt=True"
+    default_options = {"myopt": True}
 
     def system_requirements(self):
         self.output.info("*+Running system requirements+*")

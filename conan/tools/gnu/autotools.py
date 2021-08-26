@@ -1,3 +1,4 @@
+import os
 from conan.tools.files import load_toolchain_args
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.microsoft import unix_path
@@ -13,7 +14,7 @@ class Autotools(object):
         self._configure_args = toolchain_file_content.get("configure_args")
         self._make_args = toolchain_file_content.get("make_args")
 
-    def configure(self):
+    def configure(self, build_script_folder=None):
         """
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
@@ -22,7 +23,11 @@ class Autotools(object):
         if not self._conanfile.should_configure:
             return
 
-        configure_cmd = "{}/configure".format(self._conanfile.source_folder)
+        source = self._conanfile.source_folder
+        if build_script_folder:
+            source = os.path.join(self._conanfile.source_folder, build_script_folder)
+
+        configure_cmd = "{}/configure".format(source)
         configure_cmd = unix_path(self._conanfile, configure_cmd)
         cmd = "{} {}".format(configure_cmd, self._configure_args)
         self._conanfile.output.info("Calling:\n > %s" % cmd)

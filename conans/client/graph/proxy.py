@@ -14,6 +14,7 @@ from conans.model.ref import ConanFileReference
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
+
 class ConanProxy(object):
     def __init__(self, cache, output, remote_manager):
         # collaborators

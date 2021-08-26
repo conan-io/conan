@@ -24,7 +24,6 @@ class DepsCppInfoTestCase(unittest.TestCase):
         self.assertIsInstance(info_for_package.libs, list)
         self.assertIsInstance(info_for_package.defines, list)
         self.assertIsInstance(info_for_package.cflags, list)
-        self.assertIsInstance(info_for_package.cppflags, list)
         self.assertIsInstance(info_for_package.cxxflags, list)
         self.assertIsInstance(info_for_package.sharedlinkflags, list)
         self.assertIsInstance(info_for_package.exelinkflags, list)
