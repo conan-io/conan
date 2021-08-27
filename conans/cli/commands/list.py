@@ -79,11 +79,7 @@ def list_package_ids_cli_formatter(results):
     for result in results:
         _print_common_headers(result)
         if result.get("error"):
-            error = result['error']
-            if error.startswith("NotFoundError:"):
-                error = no_results_msg
-            else:
-                error = f"ERROR: {error}"
+            error = f"ERROR: {result['error']}"
             cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
