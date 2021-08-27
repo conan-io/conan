@@ -1,27 +1,14 @@
 import platform
-import pytest
+import sys
 import unittest
 
 import pytest
 
-from conans.model.version import Version
 from conans.test.utils.tools import TestClient
-from conans.util.files import decode_text
-from conans.util.runners import version_runner
-
-def get_meson_version():
-    try:
-        out = version_runner(["meson", "--version"])
-        version_line = decode_text(out).split('\n', 1)[0]
-        version_str = version_line.rsplit(' ', 1)[-1]
-        return Version(version_str)
-    except Exception:
-        return Version("0.0.0")
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_meson
-@pytest.mark.skipif(get_meson_version() < "0.56.0", reason="requires meson >= 0.56.0")
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 class TestMesonBase(unittest.TestCase):
     def setUp(self):
         self.t = TestClient()
@@ -41,7 +28,7 @@ class TestMesonBase(unittest.TestCase):
                             "build_type": "Release"}
 
         settings_linux = {"compiler": "gcc",
-                          "compiler.version": "5",
+                          "compiler.version": "9",
                           "compiler.libcxx": "libstdc++",
                           "arch": "x86_64",
                           "build_type": "Release"}
@@ -68,4 +55,4 @@ class TestMesonBase(unittest.TestCase):
             self.assertIn("main _MSVC_LANG2014", self.t.out)
         elif platform.system() == "Linux":
             self.assertIn("main __x86_64__ defined", self.t.out)
-            self.assertIn("main __GNUC__5", self.t.out)
+            self.assertIn("main __GNUC__9", self.t.out)

@@ -15,7 +15,6 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class Base(unittest.TestCase):
 
@@ -491,7 +490,6 @@ def test_msvc_vs_versiontoolset(version, vs_version):
     check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class CMakeInstallTest(unittest.TestCase):
 
@@ -547,7 +545,6 @@ class CMakeInstallTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class CMakeOverrideCacheTest(unittest.TestCase):
 
@@ -581,7 +578,6 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class TestCMakeFindPackagePreferConfig:
 

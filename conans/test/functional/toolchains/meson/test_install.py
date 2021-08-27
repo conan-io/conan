@@ -1,6 +1,8 @@
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.toolchains.meson._base import TestMesonBase
 
@@ -84,6 +86,7 @@ class MesonInstall(TestMesonBase):
         target_link_libraries(${PROJECT_NAME} ${CONAN_LIBS})
         """)
 
+    @pytest.mark.tool_meson
     def test_install(self):
         hello_cpp = gen_function_cpp(name="hello")
         hello_h = gen_function_h(name="hello")
