@@ -95,25 +95,34 @@ class BuildRequiresTest(unittest.TestCase):
     def test_create_with_tests_and_build_requires(self):
         client = TestClient()
         # Generate and export the build_require recipe
-        conanfile = """from conans import ConanFile
+        conanfile1 = """from conans import ConanFile
 class MyBuildRequire(ConanFile):
     def package_info(self):
-        self.env_info.MYVAR="1"
+        self.buildenv_info.define("MYVAR", "1")
 """
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": conanfile1})
         client.run("create . Build1/0.1@conan/stable")
-        client.save({"conanfile.py": conanfile.replace('MYVAR="1"', 'MYVAR2="2"')})
+        conanfile2 = """from conans import ConanFile
+class MyBuildRequire(ConanFile):
+    def package_info(self):
+        self.buildenv_info.define("MYVAR2", "2")
+"""
+        client.save({"conanfile.py": conanfile2})
         client.run("create . Build2/0.1@conan/stable")
 
         # Create a recipe that will use a profile requiring the build_require
-        client.save({"conanfile.py": """from conans import ConanFile
+        client.save({"conanfile.py": """
+from conan.tools.env import VirtualBuildEnv
+from conans import ConanFile
 import os
 
 class MyLib(ConanFile):
     build_requires = "Build2/0.1@conan/stable"
     def build(self):
-        assert(os.environ['MYVAR']=='1')
-        assert(os.environ['MYVAR2']=='2')
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            assert(os.environ['MYVAR']=='1')
+            assert(os.environ['MYVAR2']=='2')
 
 """, "myprofile": '''
 [build_requires]
@@ -121,10 +130,12 @@ Build1/0.1@conan/stable
 ''',
                     "test_package/conanfile.py": """from conans import ConanFile
 import os
-
+from conan.tools.env import VirtualBuildEnv
 class MyTest(ConanFile):
     def build(self):
-        assert(os.environ['MYVAR']=='1')
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            assert(os.environ['MYVAR']=='1')
     def test(self):
         self.output.info("TESTING!!!")
 """}, clean_first=True)
@@ -141,7 +152,7 @@ class MyTest(ConanFile):
         boost = """from conans import ConanFile
 class Boost(ConanFile):
     def package_info(self):
-        self.env_info.PATH.append("myboostpath")
+        self.buildenv_info.define_path("PATH", "myboostpath")
 """
         client.save({CONANFILE: boost})
         client.run("create . Boost/1.0@user/channel")
@@ -153,38 +164,6 @@ Boost/1.0@user/channel
 
         self.assertIn("""Build requirements
     Boost/1.0@user/channel""", client.out)
-
-    def test_dependents(self):
-        client = TestClient()
-        boost = """from conans import ConanFile
-class Boost(ConanFile):
-    def package_info(self):
-        self.env_info.PATH.append("myboostpath")
-"""
-        client.save({CONANFILE: boost})
-        client.run("create . Boost/1.0@user/channel")
-        other = """from conans import ConanFile
-import os
-class Other(ConanFile):
-    requires = "Boost/1.0@user/channel"
-    def build(self):
-        self.output.info("OTHER PATH FOR BUILD %s" % os.getenv("PATH"))
-    def package_info(self):
-        self.env_info.PATH.append("myotherpath")
-"""
-        client.save({CONANFILE: other})
-        client.run("create . Other/1.0@user/channel")
-        lib = """from conans import ConanFile
-import os
-class Lib(ConanFile):
-    build_requires = "Boost/1.0@user/channel", "Other/1.0@user/channel"
-    def build(self):
-        self.output.info("LIB PATH FOR BUILD %s" % os.getenv("PATH"))
-"""
-        client.save({CONANFILE: lib})
-        client.run("create . Lib/1.0@user/channel")
-        self.assertIn("LIB PATH FOR BUILD myotherpath%smyboostpath" % os.pathsep,
-                      client.out)
 
     def test_applyname(self):
         # https://github.com/conan-io/conan/issues/4135
@@ -223,24 +202,30 @@ class App(ConanFile):
         mingw = """from conans import ConanFile
 class Tool(ConanFile):
     def package_info(self):
-        self.env_info.PATH.append("mymingwpath")
+        self.buildenv_info.append("MYVAR", "mymingwpath")
 """
         myprofile = """
 [build_requires]
 mingw/0.1@lasote/stable
 """
         gtest = """from conans import ConanFile
+from conan.tools.env import VirtualBuildEnv
 import os
 class Gtest(ConanFile):
     def build(self):
-        self.output.info("GTEST PATH FOR BUILD %s" % os.getenv("PATH"))
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            self.output.info("GTEST PATH FOR BUILD %s" % os.getenv("MYVAR"))
 """
         app = """from conans import ConanFile
+from conan.tools.env import VirtualBuildEnv
 import os
 class App(ConanFile):
     build_requires = "gtest/0.1@lasote/stable"
     def build(self):
-        self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            self.output.info("APP PATH FOR BUILD %s" % os.getenv("MYVAR"))
 """
         client.save({CONANFILE: mingw})
         client.run("create . mingw/0.1@lasote/stable")
@@ -259,12 +244,12 @@ class App(ConanFile):
         mingw = """from conans import ConanFile
 class Tool(ConanFile):
     def package_info(self):
-        self.env_info.PATH.append("mymingwpath")
+        self.buildenv_info.append("MYVAR", "mymingwpath")
 """
         msys = """from conans import ConanFile
 class Tool(ConanFile):
     def package_info(self):
-        self.env_info.PATH.append("mymsyspath")
+        self.buildenv_info.append("MYVAR", "mymsyspath")
 """
         myprofile1 = """
 [build_requires]
@@ -278,10 +263,13 @@ mingw/0.1@lasote/stable
 """
 
         app = """from conans import ConanFile
+from conan.tools.env import VirtualBuildEnv
 import os
 class App(ConanFile):
     def build(self):
-        self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            self.output.info("FOR BUILD %s" % os.getenv("MYVAR"))
 """
         client.save({CONANFILE: mingw})
         client.run("create . mingw/0.1@lasote/stable")
@@ -291,11 +279,10 @@ class App(ConanFile):
                      "myprofile1": myprofile1,
                      "myprofile2": myprofile2})
         client.run("create . app/0.1@lasote/stable -pr=myprofile1")
-        self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymingwpath%smymsyspath"
-                      % os.pathsep, client.out)
+        # mingw being the first one, has priority and its "append" mandates it is the last appended
+        self.assertIn("app/0.1@lasote/stable: FOR BUILD mymsyspath mymingwpath", client.out)
         client.run("create . app/0.1@lasote/stable -pr=myprofile2")
-        self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymsyspath%smymingwpath"
-                      % os.pathsep, client.out)
+        self.assertIn("app/0.1@lasote/stable: FOR BUILD mymingwpath mymsyspath", client.out)
 
     def test_require_itself(self):
         client = TestClient()

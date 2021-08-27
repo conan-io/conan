@@ -153,12 +153,15 @@ class HelloPythonConan(ConanFile):
         conanfile = dedent("""
             import os
             from conans import ConanFile
+            from conan.tools.env import VirtualBuildEnv
             class HelloPythonConan(ConanFile):
                 def package(self):
-                    self.output.info("ENV-VALUE: %s!!!" % os.getenv("MYCUSTOMVAR"))
+                    build_env = VirtualBuildEnv(self).environment()
+                    with build_env.apply():
+                        self.output.info("ENV-VALUE: %s!!!" % os.getenv("MYCUSTOMVAR"))
             """)
         profile = dedent("""
-            [env]
+            [buildenv]
             MYCUSTOMVAR=MYCUSTOMVALUE
             """)
         client = TestClient()
