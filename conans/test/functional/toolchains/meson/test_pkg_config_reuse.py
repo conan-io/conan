@@ -18,7 +18,7 @@ class MesonPkgConfigTest(TestMesonBase):
 
     class App(ConanFile):
         settings = "os", "arch", "compiler", "build_type"
-        generators = "pkg_config"
+        generators = "PkgConfigDeps"
         requires = "hello/0.1"
 
         def generate(self):
@@ -51,7 +51,6 @@ class MesonPkgConfigTest(TestMesonBase):
 
         # Build in the cache
         self.t.run("install . %s" % self._settings_str)
-        self.assertIn("conanfile.py: Generator pkg_config created hello.pc", self.t.out)
 
         self.t.run("build .")
         self.t.run_command(os.path.join("build", "demo"))

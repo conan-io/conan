@@ -26,7 +26,7 @@ class MesonTest(TestMesonBase):
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            generators = "pkg_config"
+            generators = "PkgConfigDeps"
 
             def generate(self):
                 tc = MesonToolchain(self)
