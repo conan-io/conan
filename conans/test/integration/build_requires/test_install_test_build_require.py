@@ -169,7 +169,7 @@ def test_create_build_requires():
 def test_build_require_conanfile_text(client):
     client.save({"conanfile.txt": "[build_requires]\nmycmake/1.0"}, clean_first=True)
     client.run("install . -g VirtualBuildEnv")
-    cmd = ". ./conanbuildenv.bat && mycmake.sh" if platform.system() != "Windows" else \
+    cmd = ". ./conanbuildenv.sh && mycmake.sh" if platform.system() != "Windows" else \
         "conanbuildenv.bat && mycmake.bat"
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
