@@ -24,7 +24,6 @@ def _print_common_headers(result):
 
 
 def list_recipes_cli_formatter(results):
-    no_results_msg = "There are no matching recipe references"
     for result in results:
         _print_common_headers(result)
         if result.get("error"):
@@ -32,7 +31,7 @@ def list_recipes_cli_formatter(results):
             cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
-            cli_out_write(no_results_msg, indentation=2)
+            cli_out_write("There are no matching recipe references", indentation=2)
             continue
         current_recipe = None
         for recipe in result["results"]:
@@ -45,7 +44,6 @@ def list_recipes_cli_formatter(results):
 
 
 def _list_revisions_cli_formatter(results, ref_type):
-    no_results_msg = f"There are no matching {ref_type}"
     for result in results:
         _print_common_headers(result)
         if result.get("error"):
@@ -53,7 +51,7 @@ def _list_revisions_cli_formatter(results, ref_type):
             cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
-            cli_out_write(no_results_msg, indentation=2)
+            cli_out_write(f"There are no matching {ref_type}", indentation=2)
             continue
         reference = result["reference"]
         for revisions in result["results"]:
@@ -74,7 +72,6 @@ def list_package_ids_cli_formatter(results):
     # Artifactory uses field 'requires', conan_center 'full_requires'
     requires_fields = ("requires", "full_requires")
     general_fields = ("options", "settings")
-    no_results_msg = "There are no matching recipe references"
 
     for result in results:
         _print_common_headers(result)
@@ -83,7 +80,7 @@ def list_package_ids_cli_formatter(results):
             cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
-            cli_out_write(no_results_msg, indentation=2)
+            cli_out_write("There are no matching recipe references", indentation=2)
             continue
         reference = result["reference"]
         for pkg_id, props in result["results"].items():
