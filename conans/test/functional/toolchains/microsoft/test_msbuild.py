@@ -311,7 +311,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 def test_msvc_runtime_flag_vs2017():
     check_msvc_runtime_flag("15", "19.1")
 
-@pytest.mark.tool_visual_studio(version='16')
+@pytest.mark.tool_visual_studio(version='17')
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2022():
     check_msvc_runtime_flag("17", "19.3")
