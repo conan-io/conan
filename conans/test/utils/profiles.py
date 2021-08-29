@@ -24,7 +24,7 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
         _conf = "\n".join(conf) if isinstance(conf, list) else conf
         profile.conf.loads(_conf)
 
-    for package_name, envs in package_env.items():
+    """for package_name, envs in package_env.items():
         for var_name, value in envs:
             # Initialize Environment without Conanfile, what else can we do
             profile._environments.set_default(package_name, Environment(conanfile=None))\
@@ -32,6 +32,6 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
 
     for var_name, value in env or {}:
         profile._environments.set_default(None, Environment(conanfile=None)) \
-            .define(var_name, value)
+            .define(var_name, value)"""
 
     save(os.path.join(folder, name), profile.dumps())

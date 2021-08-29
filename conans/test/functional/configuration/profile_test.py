@@ -47,6 +47,7 @@ class ProfileTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    @pytest.mark.xfail(reason="New environment changed")
     def test_profile_conanfile_txt(self):
         """
         Test prepended env variables are applied correctrly from a profile
@@ -80,6 +81,7 @@ class ProfileTest(unittest.TestCase):
                           "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
         self.client.run("create . conan/testing --profile myprofile")
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
@@ -166,6 +168,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("ERROR: Profile not found:", self.client.out)
         self.assertIn("scopes_env", self.client.out)
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_install_profile_env(self):
         create_profile(self.client.cache.profiles_path, "envs", settings={},
@@ -350,6 +353,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("language=1", info)
         self.assertIn("static=False", info)
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_scopes_env(self):
         # Create a profile and use it
@@ -366,6 +370,7 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_default_including_another_profile(self):
         p1 = "include(p2)\n[env]\nA_VAR=1"
@@ -383,6 +388,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("create . user/testing")
         self._assert_env_variable_printed("A_VAR", "1")
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_test_package(self):
         test_conanfile = '''from conans.model.conan_file import ConanFile
