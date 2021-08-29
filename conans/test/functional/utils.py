@@ -14,7 +14,7 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
             assert "MSVC" not in client.out
             assert "VCRUNTIME" not in client.out
         else:
-            if vs_version == "15":
+            if vs_version in ["15", "16", "17"]:  # UCRT
                 debug = "D" if build_type == "Debug" else ""
                 assert "MSVCP140{}.dll".format(debug) in client.out
                 assert "VCRUNTIME140{}.dll".format(debug) in client.out

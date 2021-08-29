@@ -5,7 +5,7 @@ import textwrap
 import unittest
 
 import pytest
-from parameterized import parameterized
+from parameterized import parameterized, parameterized_class
 
 
 from conans.client.tools import chdir
@@ -13,6 +13,7 @@ from conans.util.files import mkdir
 from conan.tools.microsoft.visual import vcvars_command
 from conans.client.tools import vs_installation_path
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.conftest import tools_locations
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
 
@@ -305,10 +306,17 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 </Project>
 """
 
-
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool_visual_studio(version='15')
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-def test_msvc_runtime_flag():
+def test_msvc_runtime_flag_vs2017():
+    check_msvc_runtime_flag("15", "19.1")
+
+@pytest.mark.tool_visual_studio(version='16')
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+def test_msvc_runtime_flag_vs2022():
+    check_msvc_runtime_flag("17", "19.3")
+
+def check_msvc_runtime_flag(vs_version, msvc_version):
     client = TestClient()
     conanfile = textwrap.dedent("""
        from conans import ConanFile
@@ -320,16 +328,25 @@ def test_msvc_runtime_flag():
                self.output.info("MSVC FLAG={}!!".format(msvc_runtime_flag(self)))
         """)
     client.save({"conanfile.py": conanfile})
-    client.run('install . -s compiler="Visual Studio" -s compiler.version=15 -s compiler.runtime=MD')
+    client.run('install . -s compiler="Visual Studio" -s compiler.version={vs_version} '
+               '-s compiler.runtime=MD'.format(vs_version=vs_version))
     assert "MSVC FLAG=MD!!" in client.out
-    client.run('install . -s compiler=msvc -s compiler.version=19.1 -s compiler.runtime=static '
-               '-s compiler.runtime_type=Debug -s compiler.cppstd=14')
+    client.run('install . -s compiler=msvc -s compiler.version={msvc_version} '
+               '-s compiler.runtime=static '
+               '-s compiler.runtime_type=Debug '
+               '-s compiler.cppstd=14'.format(msvc_version=msvc_version))
     assert "MSVC FLAG=MTd!!" in client.out
-    client.run('install . -s compiler=msvc -s compiler.version=19.1 -s compiler.runtime=dynamic '
-               '-s compiler.cppstd=14')
+    client.run('install . -s compiler=msvc -s compiler.version={msvc_version} '
+               '-s compiler.runtime=dynamic '
+               '-s compiler.cppstd=14'.format(msvc_version=msvc_version))
     assert "MSVC FLAG=MD!!" in client.out
 
+vs_versions = [{"vs_version": "15", "msvc_version": "19.1", "ide_year": "2017", "toolset": "v141"}]
 
+if "17" in tools_locations['visual_studio']:
+    vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
+
+@parameterized_class(vs_versions)
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool_visual_studio
 class WinTest(unittest.TestCase):
@@ -408,7 +425,22 @@ class WinTest(unittest.TestCase):
                            ("msvc", "19.0", "static", "14")]
                           )
     @pytest.mark.tool_cmake
-    def test_toolchain_win(self, compiler, version, runtime, cppstd):
+    def test_toolchain_win_vs2017(self, compiler, version, runtime, cppstd):
+        if self.vs_version != "15":
+            pytest.skip("test for Visual Studio 2017")
+        else:
+            self.check_toolchain_win(compiler, version, runtime, cppstd)
+
+    @parameterized.expand([("Visual Studio", "17", "MT", "17"),
+                           ("msvc", "19.3", "static", "17")]
+                          )
+    def test_toolchain_win_vs2022(self, compiler, version, runtime, cppstd):
+        if self.vs_version != "17":
+            pytest.skip("test for Visual Studio 2022")
+        else:
+            self.check_toolchain_win(compiler, version, runtime, cppstd)
+
+    def check_toolchain_win(self, compiler, version, runtime, cppstd):
         client = TestClient(path_with_spaces=False)
         settings = [("compiler", compiler),
                     ("compiler.version", version),
@@ -422,8 +454,8 @@ class WinTest(unittest.TestCase):
             os=Windows
 
             [conf]
-            tools.microsoft.msbuild:vs_version=15
-            """)
+            tools.microsoft.msbuild:vs_version={vs_version}
+            """.format(vs_version=self.vs_version))
         client.save({"myprofile": profile})
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
@@ -444,12 +476,12 @@ class WinTest(unittest.TestCase):
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
         client.run("build . -if=conan")
-        self.assertIn("Visual Studio 2017", client.out)
+        self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
 
         self._run_app(client, "x86", "Release")
         self.assertIn("Hello World Release", client.out)
-        compiler_version = version if compiler == "msvc" else "19.1"
+        compiler_version = version if compiler == "msvc" else self.msvc_version
         check_exe_run(client.out, "main", "msvc", compiler_version, "Release", "x86", cppstd,
                       {"DEFINITIONS_BOTH": 'True',
                        "DEFINITIONS_BOTH2": "True",
@@ -458,14 +490,14 @@ class WinTest(unittest.TestCase):
                        "DEFINITIONS_CONFIG2": 'Release',
                        "DEFINITIONS_CONFIG_INT": "456"})
         static_runtime = True if runtime == "static" or "MT" in runtime else False
-        check_vs_runtime("Release/MyApp.exe", client, "15", build_type="Release",
+        check_vs_runtime("Release/MyApp.exe", client, self.vs_version, build_type="Release",
                          static_runtime=static_runtime)
 
     @pytest.mark.tool_cmake
     def test_toolchain_win_debug(self):
         client = TestClient(path_with_spaces=False)
         settings = [("compiler",  "Visual Studio"),
-                    ("compiler.version",  "15"),
+                    ("compiler.version",  self.vs_version),
                     ("compiler.toolset",  "v140"),
                     ("compiler.runtime",  "MDd"),
                     ("build_type",  "Debug"),
@@ -489,7 +521,7 @@ class WinTest(unittest.TestCase):
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props",
                       client.out)
         client.run("build . -if=conan")
-        self.assertIn("Visual Studio 2017", client.out)
+        self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
         self.assertIn("Hello World Debug", client.out)
@@ -500,14 +532,14 @@ class WinTest(unittest.TestCase):
                        "DEFINITIONS_CONFIG": 'Debug',
                        "DEFINITIONS_CONFIG2": 'Debug',
                        "DEFINITIONS_CONFIG_INT": "234"})
-        check_vs_runtime("x64/Debug/MyApp.exe", client, "15", build_type="Debug")
+        check_vs_runtime("x64/Debug/MyApp.exe", client, self.vs_version, build_type="Debug")
 
     @pytest.mark.tool_cmake
     def test_toolchain_win_multi(self):
         client = TestClient(path_with_spaces=False)
 
         settings = [("compiler", "Visual Studio"),
-                    ("compiler.version", "15"),
+                    ("compiler.version", self.vs_version),
                     ("compiler.cppstd", "17")]
 
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
@@ -533,7 +565,7 @@ class WinTest(unittest.TestCase):
             client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s -if=conan"
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
-        vs_path = vs_installation_path("15")
+        vs_path = vs_installation_path(self.vs_version)
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
         for build_type, arch, shared in configs:
@@ -548,16 +580,16 @@ class WinTest(unittest.TestCase):
                    '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
                    '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
             client.run_command(cmd)
-            self.assertIn("Visual Studio 2017", client.out)
+            self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
 
             self._run_app(client, arch, build_type, shared)
-            check_exe_run(client.out, "main", "msvc", "19.1", build_type, arch, "17",
+            check_exe_run(client.out, "main", "msvc", self.msvc_version, build_type, arch, "17",
                           {"DEFINITIONS_BOTH": "True",
                            "DEFINITIONS_CONFIG": build_type})
 
             new_cmd = "conan\\%s\\%s\\MyApp.exe" % (arch, configuration)
-            vcvars = vcvars_command(version="15", architecture="amd64")
+            vcvars = vcvars_command(version=self.vs_version, architecture="amd64")
             cmd = ('%s && dumpbin /dependents "%s"' % (vcvars, new_cmd))
             client.run_command(cmd)
             if shared:
