@@ -400,7 +400,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 
 vs_versions = [{"vs_version": "15", "msvc_version": "19.1", "ide_year": "2017", "toolset": "v141"}]
 
-if "17" in tools_locations['visual_studio']:
+if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
     vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
 
 @parameterized_class(vs_versions)
