@@ -436,7 +436,9 @@ class FindConfigFiles(Block):
                                        p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
                                  for p in cppinfo.builddirs])
 
-        build_paths = " ".join(['"{}"'.format(b) for b in build_paths])
+        build_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
+                                               .replace('$', '\\$')
+                                               .replace('"', '\\"')) for b in build_paths])
 
         return {"find_package_prefer_config": find_package_prefer_config,
                 "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
