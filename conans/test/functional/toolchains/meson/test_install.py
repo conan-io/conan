@@ -72,7 +72,7 @@ class MesonInstall(TestMesonBase):
 
             def test(self):
                 if not tools.cross_building(self):
-                    self.run(os.path.join("bin", "test_package"), run_environment=True)
+                    self.run(os.path.join("bin", "test_package"))
         """)
 
     _test_package_cmake_lists = textwrap.dedent("""

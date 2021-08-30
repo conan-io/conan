@@ -292,7 +292,7 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env=None):
+            ignore_errors=False, with_login=True, env=None):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
 
         def _run(cmd, _env):
@@ -308,19 +308,7 @@ class ConanFile(object):
             wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
-        if run_environment:
-            # When using_build_profile the required environment is already applied through
-            # 'conanfile.env' in the contextmanager 'get_env_context_manager'
-            if OSInfo().is_macos and isinstance(command, str):
-                # Security policy on macOS clears this variable when executing /bin/sh. To
-                # keep its value, set it again inside the shell when running the command.
-                command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
-                          (os.environ.get('DYLD_LIBRARY_PATH', ''),
-                           os.environ.get("DYLD_FRAMEWORK_PATH", ''),
-                           command)
-            retcode = _run(command, env)
-        else:
-            retcode = _run(command, env)
+        retcode = _run(command, env)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
