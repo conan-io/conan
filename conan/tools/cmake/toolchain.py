@@ -319,7 +319,8 @@ class AppleSystemBlock(Block):
         # but full path is necessary for others
         set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
         {% if CMAKE_OSX_DEPLOYMENT_TARGET is defined %}
-        set(CMAKE_OSX_DEPLOYMENT_TARGET {{ CMAKE_OSX_DEPLOYMENT_TARGET }})
+        # Setting CMAKE_OSX_DEPLOYMENT_TARGET if "os.version" is defined by the used conan profile
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "{{ CMAKE_OSX_DEPLOYMENT_TARGET }}" CACHE STRING "")
         {% endif %}
         """)
 
