@@ -98,7 +98,10 @@ MSVC_TO_VS_VERSION = {800: (1, 0),
                       1924: (16, 4),
                       1925: (16, 5),
                       1926: (16, 6),
-                      1927: (16, 7)}
+                      1927: (16, 7),
+                      1928: (16, 8),
+                      1929: (16, 10),
+                      1930: (17, 0)}
 
 
 def _parse_compiler_version(defines):
@@ -138,6 +141,14 @@ def _parse_compiler_version(defines):
             # currently, conan uses major only, but here we store minor for the future as well
             # https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019
             major, minor = MSVC_TO_VS_VERSION.get(version)
+            # special cases 19.8 and 19.9, 19.10 and 19.11
+            full_version = 0
+            if '_MSC_FULL_VER' in defines:
+                full_version = int(defines['_MSC_FULL_VER'])
+            if (major, minor) == (16, 8) and full_version >= 192829500:
+                major, minor = 16, 9
+            if (major, minor) == (16, 10) and full_version >= 192930100:
+                major, minor = 16, 11
             patch = 0
         # GCC must be the last try, as other compilers may define __GNUC__ for compatibility
         elif '__GNUC__' in defines:

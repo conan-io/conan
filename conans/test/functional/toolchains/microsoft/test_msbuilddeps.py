@@ -4,11 +4,13 @@ import textwrap
 import unittest
 
 import pytest
+from parameterized import parameterized_class
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.assets.visual_project_files import get_vs_project_files
+from conans.test.conftest import tools_locations
 from conans.test.utils.tools import TestClient
 
 sln_file = r"""
@@ -396,6 +398,12 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
+vs_versions = [{"vs_version": "15", "msvc_version": "19.1", "ide_year": "2017", "toolset": "v141"}]
+
+if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
+    vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
+
+@parameterized_class(vs_versions)
 @pytest.mark.tool_visual_studio
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
@@ -470,8 +478,9 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
-                   ' -s compiler.runtime=MD')
+        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version={vs_version}'
+                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version))
         self.assertIn("conanfile.py: Generator 'MSBuildDeps' calling 'generate()'", client.out)
         props = client.load("conan_pkg_release_x64.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
@@ -508,12 +517,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
-                   ' -s compiler.runtime=MD')
+        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version={vs_version}'
+                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version))
         props = client.load("conan_pkg_myrelease_myx86_64.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
-        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
-                   ' -s compiler.runtime=MD -s arch=x86 -s build_type=Debug')
+        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version={vs_version}'
+                   ' -s compiler.runtime=MD -s arch=x86 '
+                   '-s build_type=Debug'.format(vs_version=self.vs_version))
         props = client.load("conan_pkg_mydebug_myx86.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
         props = client.load("conan_pkg.props")
@@ -538,13 +550,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
-                   ' -s compiler.runtime=MD', assert_error=True)
+        client.run('install . -s os=Windows -s compiler="Visual Studio"'
+                   ' -s compiler.version={vs_version}'
+                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version), assert_error=True)
         self.assertIn("MSBuildDeps.configuration is None, it should have a value", client.out)
         client.save({"conanfile.py": conanfile.replace("configuration", "platform")})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
-                   ' -s compiler.runtime=MD', assert_error=True)
+        client.run('install . -s os=Windows -s compiler="Visual Studio"'
+                   ' -s compiler.version={vs_version}'
+                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version), assert_error=True)
         self.assertIn("MSBuildDeps.platform is None, it should have a value", client.out)
 
     def test_install_transitive(self):
@@ -684,10 +698,19 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
         assert "CAExcludePath" not in depb
 
 
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool_visual_studio(version="15")
 @pytest.mark.tool_cmake
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-def test_build_vs_project_with_a():
+def test_build_vs_project_with_a_vs2017():
+    check_build_vs_project_with_a("15")
+
+@pytest.mark.tool_visual_studio(version="17")
+@pytest.mark.tool_cmake
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+def test_build_vs_project_with_a_vs2022():
+    check_build_vs_project_with_a("17")
+
+def check_build_vs_project_with_a(vs_version):
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . updep.pkg.team/0.1@")
@@ -726,7 +749,8 @@ def test_build_vs_project_with_a():
                  "CMakeLists.txt": cmake,
                  "hello.cpp": hello_cpp,
                  "hello.h": hello_h})
-    client.run('create . mydep.pkg.team/0.1@ -s compiler="Visual Studio" -s compiler.version=15')
+    client.run('create . mydep.pkg.team/0.1@ -s compiler="Visual Studio"'
+               ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
 
     consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -749,7 +773,8 @@ def test_build_vs_project_with_a():
     new = old + '<Import Project="{props}" />'.format(props=props)
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
-    client.run('install . -s compiler="Visual Studio" -s compiler.version=15')
+    client.run('install . -s compiler="Visual Studio"'
+               ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
     client.run("build .")
     client.run_command(r"x64\Release\MyProject.exe")
     assert "hello: Release!" in client.out
@@ -757,17 +782,26 @@ def test_build_vs_project_with_a():
     # assert "main: Release!" in client.out
 
 
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool_visual_studio(version="15")
 @pytest.mark.tool_cmake
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-def test_build_vs_project_with_test_requires():
+def test_build_vs_project_with_test_requires_vs2017():
+    check_build_vs_project_with_test_requires("15")
+
+@pytest.mark.tool_visual_studio(version="17")
+@pytest.mark.tool_cmake
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+def test_build_vs_project_with_test_requires_vs2022():
+    check_build_vs_project_with_test_requires("17")
+
+def check_build_vs_project_with_test_requires(vs_version):
     client = TestClient()
     client.save(pkg_cmake("updep.pkg.team", "0.1"))
-    client.run("create .  -s compiler.version=15")
+    client.run("create .  -s compiler.version={vs_version}".format(vs_version=vs_version))
 
     client.save(pkg_cmake("mydep.pkg.team", "0.1", requires=["updep.pkg.team/0.1"]),
                 clean_first=True)
-    client.run("create .  -s compiler.version=15")
+    client.run("create .  -s compiler.version={vs_version}".format(vs_version=vs_version))
 
     consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -793,7 +827,7 @@ def test_build_vs_project_with_test_requires():
     new = old + '<Import Project="{props}" />'.format(props=props)
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
-    client.run('install .  -s compiler.version=15')
+    client.run('install .  -s compiler.version={vs_version}'.format(vs_version=vs_version))
     client.run("build .")
     client.run_command(r"x64\Release\MyProject.exe")
     assert "mydep_pkg_team: Release!" in client.out

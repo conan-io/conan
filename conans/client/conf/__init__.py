@@ -78,20 +78,21 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         Visual Studio: &visual_studio
             runtime: [MD, MT, MTd, MDd]
-            version: ["8", "9", "10", "11", "12", "14", "15", "16"]
+            version: ["8", "9", "10", "11", "12", "14", "15", "16", "17"]
             toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
                       v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
                       LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                       LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
-                      llvm, ClangCL]
+                      llvm, ClangCL, v143]
             cppstd: [None, 14, 17, 20]
         msvc:
             version: ["19.0",
                       "19.1", "19.10", "19.11", "19.12", "19.13", "19.14", "19.15", "19.16",
-                      "19.2", "19.20", "19.21", "19.22", "19.23", "19.24", "19.25", "19.26", "19.27", "19.28"]
+                      "19.2", "19.20", "19.21", "19.22", "19.23", "19.24", "19.25", "19.26", "19.27", "19.28", "19.29",
+                      "19.3", "19.30"]
             runtime: [static, dynamic]
             runtime_type: [Debug, Release]
-            cppstd: [14, 17, 20]
+            cppstd: [14, 17, 20, 23]
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",

@@ -37,8 +37,8 @@ tools_locations = {
     "clang": {"disabled": True},
     'visual_studio': {"default": "15",
                       "15": {},
-                      "16": {"disabled": True}},
-
+                      "16": {"disabled": True},
+                      "17": {"disabled": True}},
     'pkg_config': {"exe": "pkg-config",
                    "default": "system",
                    # pacman -S pkg-config inside msys2-mingw64

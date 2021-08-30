@@ -100,7 +100,13 @@ class CompilerIdTest(unittest.TestCase):
                            ("MSC_CMD_FLAGS=-D_MSC_VER=1924", 16, 4, 0),
                            ("MSC_CMD_FLAGS=-D_MSC_VER=1925", 16, 5, 0),
                            ("MSC_CMD_FLAGS=-D_MSC_VER=1926", 16, 6, 0),
-                           ("MSC_CMD_FLAGS=-D_MSC_VER=1927", 16, 7, 0)])
+                           ("MSC_CMD_FLAGS=-D_MSC_VER=1927", 16, 7, 0),
+                           ("MSC_CMD_FLAGS=-D_MSC_VER=1928", 16, 8, 0),
+                           ("MSC_CMD_FLAGS=-D_MSC_VER=1928 -D_MSC_FULL_VER=192829500", 16, 9, 0),
+                           ("MSC_CMD_FLAGS=-D_MSC_VER=1929", 16, 10, 0),
+                           ("MSC_CMD_FLAGS=-D_MSC_VER=1929 -D_MSC_FULL_VER=192930100", 16, 11, 0),
+                           ("MSC_CMD_FLAGS=-D_MSC_VER=1930", 17, 0, 0),
+                           ])
     def test_msvc(self, line, major, minor, patch):
         runner = RunnerMock()
         runner.output = line

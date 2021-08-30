@@ -39,7 +39,8 @@ def _write_conanvcvars(conanfile, auto_activate=True):
             if toolset is not None:
                 vcvars_ver = {"v140": "14.0",
                               "v141": "14.1",
-                              "v142": "14.2"}.get(toolset)
+                              "v142": "14.2",
+                              "v143": "14.3"}.get(toolset)
         else:
             # Code similar to CMakeToolchain toolset one
             compiler_version = str(conanfile.settings.compiler.version)
@@ -74,7 +75,8 @@ def vs_ide_version(conanfile):
             version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
             _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
                         '19.1': '15',
-                        '19.2': '16'}
+                        '19.2': '16',
+                        '19.3': '17'}
             visual_version = _visuals[version]
     else:
         visual_version = compiler_version
