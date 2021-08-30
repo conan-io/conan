@@ -40,6 +40,9 @@ def client():
                 self.copy("*.a", dst="lib", keep_path=False)
 
             def package_info(self):
+
+                self.cpp_info.set_property("cmake_find_mode", "both")
+
                 self.cpp_info.set_property("cmake_file_name", "MyDep")
                 self.cpp_info.set_property("cmake_target_name", "MyDepTarget")
 
