@@ -467,6 +467,7 @@ def test_dependents_new_buildenv():
             requires = "boost/1.0"
             def package_info(self):
                 self.buildenv_info.append_path("PATH", "myotherpath")
+                self.buildenv_info.prepend_path("PATH", "myotherprepend")
         """)
     consumer = textwrap.dedent("""
        from conans import ConanFile
@@ -488,18 +489,19 @@ def test_dependents_new_buildenv():
     client.run("create boost boost/1.0@")
     client.run("create other other/1.0@")
     client.run("install consumer")
-    assert "LIB PATH myboostpath%smyotherpath" % os.pathsep in client.out
+    result = os.pathsep.join(["myotherprepend", "myboostpath", "myotherpath"])
+    assert "LIB PATH {}".format(result) in client.out
 
     # Now test if we declare in different order, still topological order should be respected
     client.save({"consumer/conanfile.py": consumer.format('"other/1.0", "boost/1.0"')})
     client.run("install consumer")
-    assert "LIB PATH myboostpath%smyotherpath" % os.pathsep in client.out
+    assert "LIB PATH {}".format(result) in client.out
 
     client.run("install consumer -pr=profile_define")
     assert "LIB PATH profilepath" in client.out
     client.run("install consumer -pr=profile_append")
-    result = os.pathsep.join(["myboostpath", "myotherpath", "profilepath"])
+    result = os.pathsep.join(["myotherprepend", "myboostpath", "myotherpath", "profilepath"])
     assert "LIB PATH {}".format(result) in client.out
     client.run("install consumer -pr=profile_prepend")
-    result = os.pathsep.join(["profilepath", "myboostpath", "myotherpath"])
+    result = os.pathsep.join(["profilepath", "myotherprepend", "myboostpath", "myotherpath"])
     assert "LIB PATH {}".format(result) in client.out
