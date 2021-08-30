@@ -17,7 +17,8 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter, ConanInvalidConfiguration)
+                           conanfile_exception_formatter, ConanInvalidConfiguration,
+                           ConanReferenceDoesNotExistInDB)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
 from conans.model.graph_lock import GraphLockFile
@@ -392,24 +393,16 @@ class BinaryInstaller(object):
             assert node.prev, "PREV for %s is None" % str(node.pref)
             download_nodes.append(node)
 
-        def _download(n):
-            # We cannot embed the package_lock inside the remote.get_package()
-            # because the handle_node_cache has its own lock
-            # TODO: cache2.0 check locks
-            pkg_layout = self._cache.pkg_layout(n.pref)
-            with pkg_layout.package_lock():
-                self._download_pkg(n)
-
         parallel = self._cache.config.parallel_download
         if parallel is not None:
             self._out.info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
-            thread_pool.map(_download, [n for n in download_nodes])
+            thread_pool.map(self._download_pkg, [n for n in download_nodes])
             thread_pool.close()
             thread_pool.join()
         else:
             for node in download_nodes:
-                _download(node)
+                self._download_pkg(node)
 
     def _download_pkg(self, node):
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
@@ -448,8 +441,10 @@ class BinaryInstaller(object):
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
 
-                    package_layout = self._cache.create_temp_pkg_layout(node.pref) if \
-                        not node.pref.revision else self._cache.pkg_layout(node.pref)
+                    if not node.pref.revision:
+                        package_layout = self._cache.create_temp_pkg_layout(node.pref)
+                    else:
+                        package_layout = self._cache.get_or_create_pkg_layout(node.pref)
 
                     _handle_system_requirements(conan_file, package_layout, output)
                     self._handle_node_cache(node, processed_package_refs, remotes, package_layout)

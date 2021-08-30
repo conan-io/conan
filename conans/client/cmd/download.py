@@ -15,7 +15,7 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
 
     try:
         if not ref.revision:
-            ref = remote_manager.get_latest_recipe_revision(ref, remote)
+            ref, _ = remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref)
     else:

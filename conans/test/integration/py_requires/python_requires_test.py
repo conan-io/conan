@@ -464,7 +464,6 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: MyHelperOutput!", client.out)
         self.assertIn("Pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
 
-    @pytest.mark.xfail(reason="cache2.0: check --update flows")
     def test_update(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
@@ -497,6 +496,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . base/1.1@user/testing")
         client.run("upload * --confirm")
 
+        db = client2.cache.dump()
         client2.run("install . --update")
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
 

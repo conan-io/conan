@@ -275,7 +275,7 @@ class ConanAPIV1(object):
                     raise RecipeNotFoundException(ref)
                 else:
                     if not self.app.cache.exists_rrev(ref):
-                        ref = self.app.remote_manager.get_recipe(ref, remote)
+                        ref, _ = self.app.remote_manager.get_recipe(ref, remote)
 
             result = self.app.proxy.get_recipe(ref, False, False, remotes)
             conanfile_path, _, _, ref = result
@@ -512,6 +512,7 @@ class ConanAPIV1(object):
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
                 lockfile=None, lockfile_out=None, profile_build=None, conf=None,
                 require_overrides=None):
+
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         recorder = ActionRecorder()
@@ -952,9 +953,9 @@ class ConanAPIV1(object):
         for ref in self.app.cache.all_refs():
             result[ref] = self.app.cache.get_remote(ref)
         if no_remote:
-            return {str(r): remote_name for r, remote_name in result.items() if not remote_name}
+            return {r.full_str(): remote_name for r, remote_name in result.items() if not remote_name}
         else:
-            return {str(r): remote_name for r, remote_name in result.items() if remote_name}
+            return {r.full_str(): remote_name for r, remote_name in result.items() if remote_name}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
