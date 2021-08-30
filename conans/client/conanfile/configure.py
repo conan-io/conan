@@ -40,10 +40,6 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
 
         PackageType.compute_package_type(conanfile)
 
-        # Once the node is configured call the layout()
-        if hasattr(conanfile, "layout"):
-            conanfile.layout()
-
         if hasattr(conanfile, "requirements"):
             with conanfile_exception_formatter(str(conanfile), "requirements"):
                 conanfile.requirements()
@@ -54,3 +50,7 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
                 conanfile.build_requires = BuildRequirements(conanfile.requires)
                 conanfile.test_requires = TestRequirements(conanfile.requires)
                 conanfile.build_requirements()
+
+        if hasattr(conanfile, "layout"):
+            with conanfile_exception_formatter(str(conanfile), "layout"):
+                conanfile.layout()

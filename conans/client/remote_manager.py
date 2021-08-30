@@ -6,7 +6,8 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.client.cache.remote_registry import Remote
-from conans.errors import ConanConnectionError, ConanException, NotFoundException, PackageNotFoundException
+from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
+    PackageNotFoundException, ConanReferenceDoesNotExistInDB
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.search.search import filter_packages
 from conans.util import progress_bar
@@ -99,12 +100,16 @@ class RemoteManager(object):
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
 
         ref = self._resolve_latest_ref(ref, remote)
-        layout = self._cache.create_ref_layout(ref)
+
+        layout = self._cache.get_or_create_ref_layout(ref)
+
         layout.export_remove()
 
         t1 = time.time()
         download_export = layout.download_export()
         zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
+        remote_revisions = self._call_remote(remote, "get_recipe_revisions", ref)
+        ref_time = remote_revisions[0].get("time")
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
@@ -127,7 +132,7 @@ class RemoteManager(object):
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
-        return ref
+        return ref, ref_time
 
     def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
@@ -157,7 +162,9 @@ class RemoteManager(object):
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         latest_prev = self.get_latest_package_revision(pref, remote)
-        pkg_layout = self._cache.create_pkg_layout(latest_prev)
+
+        pkg_layout = self._cache.get_or_create_pkg_layout(latest_prev)
+
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)
@@ -248,6 +255,12 @@ class RemoteManager(object):
     def get_latest_recipe_revision(self, ref, remote):
         revision = self._call_remote(remote, "get_latest_recipe_revision", ref)
         return revision
+
+    # FIXME: fix in server side, get_latest_recipe_revision should return the time of the rev
+    def get_latest_recipe_revision_with_time(self, ref, remote):
+        revisions = self._call_remote(remote, "get_recipe_revisions", ref)
+        return {'reference': ref.copy_with_rev(revisions[0].get("revision")),
+                'time': revisions[0].get("time")} if revisions else {}
 
     def get_latest_package_revision(self, pref, remote, headers=None):
         revision = self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)

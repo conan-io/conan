@@ -768,7 +768,7 @@ class TurboTestClient(TestClient):
         return latest_rrev.revision
 
     def package_revision(self, pref):
-        latest_prev = self.cache.get_latest_rrev(pref)
+        latest_prev = self.cache.get_latest_prev(pref)
         return latest_prev.revision
 
     def search(self, pattern, remote=None, assert_error=False, args=None):

@@ -190,15 +190,6 @@ class SayConan(ConanFile):
         self.assertEqual(conan_info.settings.os,  "Windows")
         self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
-    def test_invalid_settings(self):
-        # Test wrong values and wrong constraints
-        client = TestClient()
-        # MISSING VALUE FOR A SETTING
-        client.save({CONANFILE: GenConanfile().with_settings("os", "build_type"),
-                     "profile": "[settings]\nbuild_type=Release"})
-        client.run("install . -pr=profile --build missing", assert_error=True)
-        self.assertIn(str(undefined_value("settings.os")), str(client.out))
-
     def test_invalid_settings2(self):
         # MISSING A DEFAULT VALUE BECAUSE ITS RESTRICTED TO OTHER, SO ITS REQUIRED
         content = """

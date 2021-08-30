@@ -1,13 +1,15 @@
 import os
+import time
 import unittest
 from collections import OrderedDict
 
-import pytest
+from mock import patch
 from parameterized.parameterized import parameterized
 
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
+from conans.server.revision_list import RevisionList
 from conans.test.utils.test_files import scan_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load, md5sum, save
@@ -18,7 +20,7 @@ from conans import ConanFile
 class HelloConan(ConanFile):
     name = "Hello"
     version = "0.1"
-    exports = "*.h", "*.cpp"
+    exports = "*.h", "*.cpp", "*.lic"
     def package(self):
         self.copy("*.h", "include")
 """
@@ -31,7 +33,7 @@ class HelloConan(ConanFile):
     name = "Hello"
     version = "0.1"
     exports_sources = "*.h", "*.cpp"
-    exports = "*.txt"
+    exports = "*.txt", "*.lic"
     def package(self):
         self.copy("*.h", "include")
         self.copy("data.txt", "docs")
@@ -45,7 +47,7 @@ class HelloConan(ConanFile):
     name = "Hello"
     version = "0.1"
     exports_sources = "src/*.h", "src/*.cpp"
-    exports = "src/*.txt"
+    exports = "src/*.txt", "src/*.lic"
     def package(self):
         self.copy("*.h", "include")
         self.copy("*data.txt", "docs")
@@ -59,7 +61,7 @@ class HelloConan(ConanFile):
     name = "Hello"
     version = "0.1"
     exports_sources = "src/*.h", "*.txt"
-    exports = "src/*.txt", "*.h"
+    exports = "src/*.txt", "*.h", "src/*.lic"
     def package(self):
         self.copy("*.h", "include")
         self.copy("*data.txt", "docs")
@@ -166,8 +168,8 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "src/data.txt"]
         if mode == "overlap":
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "src/data.txt", "src/hello.h"]
-        if updated:
-            expected_exports.append("license.txt")
+        if updated and mode not in ["exports_sources", "nested", "overlap"]:
+            expected_exports.append("license.lic")
 
         self.assertEqual(scan_folder(self.export_folder), sorted(expected_exports))
         self.assertFalse(os.path.exists(self.export_sources_folder))
@@ -328,7 +330,6 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    @pytest.mark.xfail(reason="cache2.0: check new --update behaviour for 2.0")
     def test_update(self, mode):
         self._create_code(mode)
 
@@ -341,16 +342,20 @@ class ExportsSourcesTest(unittest.TestCase):
         # upload to remote again, the folder remains as installed
         self.client.run("install Hello/0.1@lasote/testing --update")
         self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.out)
+        self._get_folders()
         self._check_export_installed_folder(mode)
 
-        rev = self.server.server_store.get_last_revision(self.ref)
-        ref = self.ref.copy_with_rev(rev.revision)
-        server_path = self.server.server_store.export(ref)
-        save(os.path.join(server_path, "license.txt"), "mylicense")
-        manifest = FileTreeManifest.load(server_path)
-        manifest.time += 1
-        manifest.file_sums["license.txt"] = md5sum(os.path.join(server_path, "license.txt"))
-        manifest.save(server_path)
+        self.client.save({f"license.lic": "mylicense"})
+        self.client.run("create . lasote/testing")
+
+        the_time = time.time() + 10
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            self.client.run("upload Hello/0.1@lasote/testing --all")
+
+        ref = ConanFileReference.loads('Hello/0.1@lasote/testing')
+        self.client.run(f"remove Hello/0.1@lasote/testing"
+                        f"#{self.client.cache.get_latest_rrev(ref).revision} -f")
 
         self.client.run("install Hello/0.1@lasote/testing --update")
+        self._get_folders()
         self._check_export_installed_folder(mode, updated=True)

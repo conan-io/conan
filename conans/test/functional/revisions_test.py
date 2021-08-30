@@ -5,11 +5,13 @@ import unittest
 from collections import OrderedDict
 
 import pytest
+from mock import patch
 
 from conans import load
 from conans.client.tools import environment_append
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference
+from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
 from conans.util.env_reader import get_env
 from conans.util.files import save
@@ -33,14 +35,17 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         conanfile = GenConanfile().with_package_file("file.txt", env_var="MY_VAR")
         with environment_append({"MY_VAR": "1"}):
             pref = self.c_v2.create(self.ref, conanfile=conanfile)
-        self.c_v2.upload_all(self.ref, remote="default")
+        the_time = time.time()
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            self.c_v2.upload_all(self.ref, remote="default")
         self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.id))
-
         # Same RREV, different PREV
         with environment_append({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
 
-        self.c_v2.upload_all(self.ref, remote="remote2")
+        the_time = the_time + 10.0
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            self.c_v2.upload_all(self.ref, remote="remote2")
         self.c_v2.remove_all()
 
         self.assertEqual(pref.ref.revision, pref2.ref.revision)
@@ -49,26 +54,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.id), self.c_v2.out)
 
-    def test_install_binary_iterating_remotes_different_rrev(self):
-        """We have two servers (remote1 and remote2), first with a recipe RREV1 but the
-        second one with other RREV2 a PREV of the binary.
-        If a client installs without specifying -r remote1, it wont find in remote2 the binary"""
-
-        pref = self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("REv1"))
-        self.c_v2.upload_all(self.ref, remote="default")
-        self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.id))
-
-        # Same RREV, different PREV
-        pref = self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("REv2"))
-        self.c_v2.upload_all(self.ref, remote="remote2")
-        self.c_v2.remove_all()
-
-        # Install, it will iterate remotes, resolving the package from remote2, but the recipe
-        # from default
-        self.c_v2.run("install {}".format(self.ref), assert_error=True)
-        self.assertIn("{} - Missing".format(pref), self.c_v2.out)
-
-    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_update_recipe_iterating_remotes(self):
         """We have two servers (remote1 and remote2), both with a recipe but the second one with a
         new RREV. If a client installs without specifying -r remote1, it WONT iterate
@@ -79,7 +64,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         with environment_append({"MY_VAR": "1"}):
             pref = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref, remote="default")
-
         time.sleep(1)
 
         other_v2 = TurboTestClient(servers=self.servers)
@@ -88,21 +72,17 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
             other_v2.create(self.ref, conanfile=conanfile)
         other_v2.upload_all(self.ref, remote="remote2")
 
-        # Install, it wont resolve the remote2 because it is in the registry, it will use the cache
+        remote2_latest_prev = other_v2.get_latest_prev(self.ref)
+
         self.c_v2.run("install {} --update".format(self.ref))
+        self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache (Updated date)", self.c_v2.out)
         self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
 
-        # If we force remote2, it will find an update
+        # Now with the remote specified it will retrieve the binary fromm the remote2:
+        # https://github.com/conan-io/conan/pull/9355
         self.c_v2.run("install {} --update -r remote2".format(self.ref))
-        self.assertIn("{} - Update".format(pref), self.c_v2.out)
-        self.assertIn("Retrieving package {} from remote 'remote2' ".format(pref.id),
-                      self.c_v2.out)
-
-        # This is not updating the remote in the registry with a --update
-        # Is this a bug?
-        # FIXME: 2.0: load_metadata() method does not exist anymore
-        metadata = self.c_v2.get_latest_pkg_layout(self.ref).load_metadata()
-        self.assertEqual("default", metadata.recipe.remote)
+        self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache", self.c_v2.out)
+        self.assertIn("lib/1.0@conan/testing:{} - Update".format(pref.id), self.c_v2.out)
 
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,
@@ -164,7 +144,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # Read current revision
         self.assertEqual(pref.ref.revision, self.c_v2.recipe_revision(self.ref))
 
-    @pytest.mark.xfail(reason="cache2.0 rewrite with db info instead of metadata")
     def test_revision_metadata_update_on_install(self):
         """If a clean v2 client installs a RREV/PREV from a server, it get
         the revision from upstream"""
@@ -174,7 +153,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Remove all from c_v2 local
         self.c_v2.remove_all()
-        self.assertRaises(RecipeNotFoundException, self.c_v2.recipe_revision, self.ref)
+        assert len(self.c_v2.cache.get_recipe_revisions(self.ref)) == 0
 
         self.c_v2.run("install {}".format(self.ref))
         local_rev = self.c_v2.recipe_revision(self.ref)
@@ -217,7 +196,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev = client.package_revision(pref2)
         self.assertIsNotNone(prev)
 
-    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_revision_update_on_package_update(self):
         """
         A client v2 upload RREV with PREV1
@@ -266,7 +244,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client.run(command, assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for '{}'".format(self.ref), client.out)
 
-    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_revision_install_explicit_mismatch_rrev(self):
         # If we have a recipe in local, but we request to install a different one with RREV
         # It fail and won't look the remotes unless --update
@@ -274,9 +251,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         ref = client.export(self.ref)
         command = "install {}#fakerevision".format(ref)
         client.run(command, assert_error=True)
-        self.assertIn("The 'f3367e0e7d170aa12abccb175fee5f97' revision recipe in the local "
-                      "cache doesn't match the requested 'lib/1.0@conan/testing#fakerevision'. "
-                      "Use '--update' to check in the remote", client.out)
+        self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
         command = "install {}#fakerevision --update".format(ref)
         client.run(command, assert_error=True)
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
@@ -1067,24 +1042,17 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.assertEqual(revs, [pref4.revision])
 
 
-@pytest.mark.xfail(reason="cache2.0: revisit when --update flows implemented")
-def test_necessary_update():
-    # https://github.com/conan-io/conan/issues/7235
-    c = TestClient(default_server_user=True)
-    save(c.cache.new_config_path, "core:allow_explicit_revision_update=True")
-    c.run("config set general.revisions_enabled=True")
-    c.save({"conanfile.py": GenConanfile()})
-    c.run("create . pkg/0.1@")
-    rrev1 = "f3367e0e7d170aa12abccb175fee5f97"
-    c.run("upload * --all -c")
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    c.run("create . ")
-    rrev2 = "27ec09effe18a84f465dbc350e496335"
-    c.run("upload * --all -c")
+def test_touching_other_server():
+    # https://github.com/conan-io/conan/issues/9333
+    servers = OrderedDict([("remote1", TestServer()),
+                           ("remote2", None)])  # None server will crash if touched
+    c = TestClient(servers=servers, users={"remote1": [("conan", "password")]})
+    c.save({"conanfile.py": GenConanfile().with_settings("os")})
+    c.run("create . pkg/0.1@conan/channel -s os=Windows")
+    c.run("upload * --all -c -r=remote1")
+    c.run("remove * -f")
 
-    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev1))})
-    c.run("install .")
-    assert rrev1 in c.out
-    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev2))})
-    c.run("install .")
-    assert rrev2 in c.out
+    # This is OK, binary found
+    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Windows")
+    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
+    assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out

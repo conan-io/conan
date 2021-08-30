@@ -3,12 +3,12 @@ import unittest
 from collections import OrderedDict
 
 import time
-import pytest
+from mock import patch
 
+from conans.model.ref import ConanFileReference
+from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
-    inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
-from conans.util.env_reader import get_env
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
 class RemoteChecksTest(unittest.TestCase):
@@ -28,7 +28,6 @@ class RemoteChecksTest(unittest.TestCase):
         self.assertIn("Uploading Pkg/0.1@lasote/testing to remote 'server1'", client.out)
         self.assertIn("Uploading Pkg2/0.1@lasote/testing to remote 'server2'", client.out)
 
-    @pytest.mark.xfail(reason="cache2.0 conan info and update revisit")
     def test_binary_packages_mixed(self):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer()),
@@ -42,13 +41,18 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Release")
         package_id_release = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
-        client.run("upload Pkg* --all -r=server1 --confirm")
+        the_time = time.time()
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run("upload Pkg* --all -r=server1 --confirm")
 
         # Built type Debug only in server2
         client.run('remove -f "*"')
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
         package_id_debug = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
-        client.run("upload Pkg* --all -r=server2 --confirm")
+        # the revision in server2 will have a date that's older
+        the_time = the_time - 10
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run("upload Pkg* --all -r=server2 --confirm")
 
         # Remove all, install a package for debug
         client.run('remove -f "*"')
@@ -57,11 +61,14 @@ class Pkg(ConanFile):
         # Force binary from server2
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug -r server2')
 
-        # Check registry, recipe should have been found from server1 and binary from server2
+        # Check registry, we will have the recipe from server1 because it had a newer date
+        # as we did not specify remote when installing conan checked all the latest revisions
+        # for each server and took the latest
         ref = "Pkg/0.1@lasote/testing"
+        rrev = "1b25ee13ed28ed6349426f272e44a1da"
         pref = f"%s#1b25ee13ed28ed6349426f272e44a1da:{package_id_debug}#2c2736de567a6e278851c9eebfd26fdb" % ref
         client.run("remote list_ref")
-        self.assertIn("%s: server1" % ref, client.out)
+        self.assertIn(f"{ref}#{rrev}: server1", client.out)
 
         client.run("remote list_pref Pkg/0.1@lasote/testing")
         self.assertIn("%s: server2" % pref, client.out)
@@ -76,42 +83,45 @@ class Pkg(ConanFile):
         tools.save("myfile.lib", "fake")
     """
         client2.save({"conanfile.py": conanfile})
-        time.sleep(1)
         client2.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
-        client2.run("upload Pkg/0.1@lasote/testing --all")
+        the_time = time.time()
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client2.run("upload Pkg/0.1@lasote/testing --all")
         self.assertIn("Uploading Pkg/0.1@lasote/testing to remote 'server1'", client2.out)
         # The upload is not done to server2 because in client2 we don't have the registry
         # with the entry
         self.assertIn(f"Uploading package 1/1: {package_id_debug} to 'server1'", client2.out)
 
         ref2 = "Pkg/0.1@lasote/testing"
+        rrev2 = "2f81612204de158d4448529e554ffdd6"
         pref2 = f"%s#2f81612204de158d4448529e554ffdd6:{package_id_debug}#2c2736de567a6e278851c9eebfd26fdb" % ref
         # Now the reference is associated with server1
         client2.run("remote list_ref")
-        self.assertIn("%s: server1" % ref2, client2.out)
+        self.assertIn(f"{ref2}#{rrev2}: server1", client2.out)
 
         client2.run("remote list_pref Pkg/0.1@lasote/testing")
         self.assertIn("%s: server1" % pref2, client2.out)
 
         # Force upload to server2
-        client2.run("upload Pkg/0.1@lasote/testing --all -r server2")
+        the_time = the_time + 100
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client2.run("upload Pkg/0.1@lasote/testing --all -r server2")
         # An upload doesn't modify a registry, so still server1
         client2.run("remote list_ref")
-        self.assertIn("%s: server1" % ref2, client2.out)
+        self.assertIn(f"{ref2}#{rrev2}: server1", client2.out)
 
         client2.run("remote list_pref Pkg/0.1@lasote/testing")
         self.assertIn("%s: server1" % pref2, client2.out)
 
         # Now go back to client and update, confirm that recipe=> server1, package=> server2
         client.run("remote list_ref")
-        self.assertIn("%s: server1" % ref, client.out)
+        self.assertIn(f"{ref}#{rrev}: server1", client.out)
         client.run("remote list_pref Pkg/0.1@lasote/testing")
         self.assertIn("%s: server2" % pref, client.out)
 
-        # install --update will install a new recipe revision from server1
-        # and the binary from server2
+        # install --update will both recipe and binary from server2 (the latest)
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug --update')
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving from remote 'server1'...", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Retrieving from remote 'server2'...", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
                       f"{package_id_debug} from remote 'server2' ", client.out)
 
@@ -124,7 +134,6 @@ class Pkg(ConanFile):
         tools.save("myfile.lib", "fake2")
     """
         client2.save({"conanfile.py": conanfile})
-        time.sleep(1)
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
         client.run("remote list_ref")
         # FIXME: Conan 2.0 the package should be cleared from the registry after a create
@@ -199,7 +208,9 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
                       "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
         client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
+        latest_rrev = client.cache.get_latest_rrev(
+            ConanFileReference.loads("Pkg/0.1@lasote/testing"))
+        self.assertIn(f"{latest_rrev.full_str()}: server2", client.out)
 
     def test_binaries_from_different_remotes(self):
         servers = OrderedDict()
@@ -222,7 +233,8 @@ class Pkg(ConanFile):
         client.run("remote list_ref")
 
         # It keeps associated to server1 even after a create FIXME: Conan 2.0
-        self.assertIn("Pkg/0.1@lasote/testing: server1", client.out)
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("Pkg/0.1@lasote/testing"))
+        self.assertIn(f"{latest_rrev.full_str()}: server1", client.out)
 
         # Trying to install from another remote fails
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2")
