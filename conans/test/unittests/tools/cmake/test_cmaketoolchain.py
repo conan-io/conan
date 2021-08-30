@@ -164,4 +164,4 @@ def conanfile_apple():
 def test_osx_deployment_target(conanfile_apple):
     toolchain = CMakeToolchain(conanfile_apple)
     content = toolchain.content
-    assert 'set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)' in content
+    assert 'set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "")' in content

@@ -548,7 +548,7 @@ class TestNoNamespaceTarget:
             t.run_command('cmake --build . --config Release')  # Compiles and links.
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
-    @pytest.mark.tool_xcode
+    @pytest.mark.tool_xcodebuild
     @pytest.mark.tool_cmake(version="3.19")
     def test_multi_generator_macos(self):
         t = self.t

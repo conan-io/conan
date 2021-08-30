@@ -2309,3 +2309,5 @@ settings_1_37_2 = settings_1_37_1
 settings_1_38_0 = settings_1_37_2
 
 settings_1_39_0 = settings_1_38_0
+
+settings_1_40_0 = settings_1_39_0

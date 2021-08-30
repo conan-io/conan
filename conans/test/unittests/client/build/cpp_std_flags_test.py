@@ -52,7 +52,8 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("gcc", "5", "11"), '-std=c++11')
         self.assertEqual(_make_cppstd_flag("gcc", "5", "14"), '-std=c++14')
         self.assertEqual(_make_cppstd_flag("gcc", "5", "gnu14"), '-std=gnu++14')
-        self.assertEqual(_make_cppstd_flag("gcc", "5", "17"), None)
+        self.assertEqual(_make_cppstd_flag("gcc", "5", "17"), '-std=c++1z')
+        self.assertEqual(_make_cppstd_flag("gcc", "5", "gnu17"), '-std=gnu++1z')
 
         self.assertEqual(_make_cppstd_flag("gcc", "5.1", "11"), '-std=c++11')
         self.assertEqual(_make_cppstd_flag("gcc", "5.1", "14"), '-std=c++14')

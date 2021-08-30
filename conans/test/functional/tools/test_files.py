@@ -106,7 +106,8 @@ def test_patch(mock_patch_ng):
     client.save({"conanfile.py": conanfile})
     client.run('create .')
 
-    assert mock_patch_ng.apply_args == (None, 0, False)
+    assert os.path.exists(mock_patch_ng.apply_args[0])
+    assert mock_patch_ng.apply_args[1:] == (0, False)
     assert 'mypkg/1.0: Apply patch (security)' in str(client.out)
 
 
@@ -119,6 +120,9 @@ def test_apply_conandata_patches(mock_patch_ng):
             name = "mypkg"
             version = "1.11.0"
 
+            def layout(self):
+                self.folders.source = "source_subfolder"
+
             def build(self):
                 apply_conandata_patches(self)
         """)
@@ -126,15 +130,12 @@ def test_apply_conandata_patches(mock_patch_ng):
         patches:
           "1.11.0":
             - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-              base_path: "source_subfolder"
             - patch_file: "patches/0002-implicit-copy-constructor.patch"
-              base_path: "source_subfolder"
               patch_type: backport
               patch_source: https://github.com/google/flatbuffers/pull/5650
               patch_description: Needed to build with modern clang compilers.
           "1.12.0":
             - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-              base_path: "source_subfolder"
     """)
 
     client = TestClient()
@@ -142,6 +143,49 @@ def test_apply_conandata_patches(mock_patch_ng):
                  'conandata.yml': conandata_yml})
     client.run('create .')
 
-    assert mock_patch_ng.apply_args == ('source_subfolder', 0, False)
+
+    assert mock_patch_ng.apply_args[0].endswith('source_subfolder')
+    assert mock_patch_ng.apply_args[1:] == (0, False)
+
     assert 'mypkg/1.11.0: Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
+
+    # Test local methods
+    client.run("install . -if=install")
+    client.run("build . -if=install")
+
+    assert 'conanfile.py (mypkg/1.11.0): Apply patch (backport): Needed to build with modern' \
+           ' clang compilers.' in str(client.out)
+
+
+
+def test_no_patch_file_entry():
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.files import apply_conandata_patches
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.11.0"
+
+            def layout(self):
+                self.folders.source = "source_subfolder"
+
+            def build(self):
+                apply_conandata_patches(self)
+        """)
+    conandata_yml = textwrap.dedent("""
+        patches:
+          "1.11.0":
+            - wrong_entry: "patches/0001-buildflatbuffers-cmake.patch"
+          "1.12.0":
+            - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
+    """)
+
+    client = TestClient()
+    client.save({'conanfile.py': conanfile,
+                 'conandata.yml': conandata_yml})
+    client.run('create .', assert_error=True)
+
+    assert "The 'conandata.yml' file needs a 'patch_file' entry for every patch to be applied" \
+           in str(client.out)

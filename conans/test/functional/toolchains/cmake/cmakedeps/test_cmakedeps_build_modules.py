@@ -173,9 +173,12 @@ class TestNoNamespaceTarget:
             exports_sources = ["src/*", "build-module.cmake"]
             generators = "cmake"
 
+            def layout(self):
+                self.folders.source = "src"
+
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure()
                 cmake.build()
 
             def package(self):
@@ -256,7 +259,7 @@ class TestNoNamespaceTarget:
             t.run_command('cmake --build . --config Release')  # Compiles and links.
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
-    @pytest.mark.tool_xcode
+    @pytest.mark.tool_xcodebuild
     @pytest.mark.tool_cmake(version="3.19")
     def test_multi_generator_macos(self):
         t = self.t

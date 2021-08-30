@@ -72,9 +72,12 @@ conanfile = textwrap.dedent("""
                 name = "mylibrary"
                 version = "1.0"
 
+                def layout(self):
+                    self.folders.source = "src"
+
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure()
                     cmake.build()
                     cmake.install()
                     self.run("otool -L '%s/hello.framework/hello'" % self.build_folder)
