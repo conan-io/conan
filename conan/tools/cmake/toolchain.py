@@ -515,6 +515,12 @@ class GenericSystemBlock(Block):
                     return "version=14.{}".format(minor)
                 else:
                     return "v14{}".format(minor)
+        elif compiler == "clang":
+            if generator and "Visual" in generator:
+                if "Visual Studio 16" in generator:
+                    return "ClangCL"
+                else:
+                    raise ConanException("CMakeToolchain compiler=clang only supported VS 16")
         return None
 
     def _get_generator_platform(self, generator):
