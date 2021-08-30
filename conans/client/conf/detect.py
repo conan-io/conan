@@ -163,7 +163,7 @@ def _get_profile_compiler_version(compiler, version, output):
     elif compiler == "msvc":
         # by default, drop the last digit of the minor (19.30 -> 19.3)
         if len(minor) == 2:
-            version = version[:len(version) - 1]
+            version = version[:-1]
     return version
 
 
