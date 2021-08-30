@@ -29,18 +29,17 @@ def list_recipes_cli_formatter(results):
         if result.get("error"):
             error = f"ERROR: {result['error']}"
             cli_out_write(error, fg=error_color, indentation=2)
-            continue
         elif not result.get("results"):
             cli_out_write("There are no matching recipe references", indentation=2)
-            continue
-        current_recipe = None
-        for recipe in result["results"]:
-            if recipe["name"] != current_recipe:
-                current_recipe = recipe["name"]
-                cli_out_write(current_recipe, fg=recipe_color, indentation=2)
+        else:
+            current_recipe = None
+            for recipe in result["results"]:
+                if recipe["name"] != current_recipe:
+                    current_recipe = recipe["name"]
+                    cli_out_write(current_recipe, fg=recipe_color, indentation=2)
 
-            reference = recipe["id"]
-            cli_out_write(reference, fg=reference_color, indentation=4)
+                reference = recipe["id"]
+                cli_out_write(reference, fg=reference_color, indentation=4)
 
 
 def _list_revisions_cli_formatter(results, ref_type):
@@ -49,15 +48,14 @@ def _list_revisions_cli_formatter(results, ref_type):
         if result.get("error"):
             error = f"ERROR: {result['error']}"
             cli_out_write(error, fg=error_color, indentation=2)
-            continue
         elif not result.get("results"):
             cli_out_write(f"There are no matching {ref_type}", indentation=2)
-            continue
-        reference = result["reference"]
-        for revisions in result["results"]:
-            rev = revisions["revision"]
-            date = from_timestamp_to_iso8601(revisions["time"])
-            cli_out_write(f"{reference}#{rev} ({date})", fg=recipe_color, indentation=2)
+        else:
+            reference = result["reference"]
+            for revisions in result["results"]:
+                rev = revisions["revision"]
+                date = from_timestamp_to_iso8601(revisions["time"])
+                cli_out_write(f"{reference}#{rev} ({date})", fg=recipe_color, indentation=2)
 
 
 def list_recipe_revisions_cli_formatter(results):
@@ -78,25 +76,24 @@ def list_package_ids_cli_formatter(results):
         if result.get("error"):
             error = f"ERROR: {result['error']}"
             cli_out_write(error, fg=error_color, indentation=2)
-            continue
         elif not result.get("results"):
             cli_out_write("There are no matching recipe references", indentation=2)
-            continue
-        reference = result["reference"]
-        for pkg_id, props in result["results"].items():
-            cli_out_write(f"{reference}:{pkg_id}",
-                          fg=reference_color, indentation=2)
-            for prop_name, values in props.items():
-                if not values:
-                    continue
-                elif prop_name in requires_fields:
-                    cli_out_write("requires:", fg=field_color, indentation=4)
-                    for req in values:
-                        cli_out_write(req, fg=value_color, indentation=6)
-                elif prop_name in general_fields:
-                    cli_out_write(f"{prop_name}:", fg=field_color, indentation=4)
-                    for name, val in values.items():
-                        cli_out_write(f"{name}={val}", fg=value_color, indentation=6)
+        else:
+            reference = result["reference"]
+            for pkg_id, props in result["results"].items():
+                cli_out_write(f"{reference}:{pkg_id}",
+                              fg=reference_color, indentation=2)
+                for prop_name, values in props.items():
+                    if not values:
+                        continue
+                    elif prop_name in requires_fields:
+                        cli_out_write("requires:", fg=field_color, indentation=4)
+                        for req in values:
+                            cli_out_write(req, fg=value_color, indentation=6)
+                    elif prop_name in general_fields:
+                        cli_out_write(f"{prop_name}:", fg=field_color, indentation=4)
+                        for name, val in values.items():
+                            cli_out_write(f"{name}={val}", fg=value_color, indentation=6)
 
 
 # FIXME: it's a general formatter, perhaps we should look for another module

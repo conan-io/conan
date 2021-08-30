@@ -211,6 +211,23 @@ class ConanAPIV2(object):
         return results
 
     def _get_revisions(self, ref, getter_name, remote=None):
+        """
+        Get all the recipe/package revisions given a reference from cache or remote.
+
+        :param ref: `PackageReference` or `ConanFileReference` without the revisions
+        :param getter_name: `string` method that should be called by either app.remote_manager
+                            or app.cache (remote or local search) to get all the revisions, e.g.:
+                                >> app.remote_manager.get_package_revisions(ref, remote=remote)
+                                >> app.cache.get_package_revisions(ref)
+        :param remote: `Remote` object
+        :return: `list` of `dict` with all the results, e.g.,
+                    [
+                      {
+                        "revision": "80b7cbe095ac7f38844b6511e69e453a",
+                        "time": "2021-07-20 00:56:25 UTC"
+                      }
+                    ]
+        """
         # Let's get all the revisions from a remote server
         if remote:
             results = getattr(self.app.remote_manager, getter_name)(ref, remote=remote)
@@ -230,7 +247,7 @@ class ConanAPIV2(object):
     @api_method
     def get_package_revisions(self, reference, remote=None):
         """
-        Get all the recipe revisions given a reference from cache or remote.
+        Get all the package revisions given a reference from cache or remote.
 
         :param reference: `PackageReference` without the revision
         :param remote: `Remote` object
