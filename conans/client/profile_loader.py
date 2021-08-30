@@ -242,13 +242,25 @@ def _apply_inner_profile(doc, base_profile):
         base_profile.buildenv.update_profile_env(buildenv)
 
 
-def profile_from_args(profiles, settings, options, env, conf, cwd, cache):
+def profile_from_args(profiles, settings, options, env, conf, cwd, cache, build_profile=False):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
-    default_profile = cache.default_profile  # Ensures a default profile creating
+    # Ensures a default profile creating
+    default_profile = cache.default_profile
+    create_profile = profiles or settings or options or env or conf or not build_profile
+
     if profiles is None:
-        result = default_profile
+        default_name = "core:default_build_profile" if build_profile else "core:default_profile"
+        default_conf = cache.new_config[default_name]
+        if default_conf is not None:
+            default_profile_path = default_conf if os.path.isabs(default_conf) \
+                else os.path.join(cache.profiles_path, default_conf)
+            result, _ = read_profile(default_profile_path, os.getcwd(), cache.profiles_path)
+        elif create_profile:
+            result = default_profile
+        else:
+            result = None
     else:
         result = Profile()
         for p in profiles:
@@ -260,7 +272,8 @@ def profile_from_args(profiles, settings, options, env, conf, cwd, cache):
     if result:
         result.compose_profile(args_profile)
     else:
-        result = args_profile
+        if create_profile:
+            result = args_profile
     return result
 
 
