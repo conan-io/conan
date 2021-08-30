@@ -319,7 +319,8 @@ class AppleSystemBlock(Block):
         # but full path is necessary for others
         set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
         {% if CMAKE_OSX_DEPLOYMENT_TARGET is defined %}
-        set(CMAKE_OSX_DEPLOYMENT_TARGET {{ CMAKE_OSX_DEPLOYMENT_TARGET }})
+        # Setting CMAKE_OSX_DEPLOYMENT_TARGET if "os.version" is defined by the used conan profile
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "{{ CMAKE_OSX_DEPLOYMENT_TARGET }}" CACHE STRING "")
         {% endif %}
         """)
 
@@ -515,6 +516,12 @@ class GenericSystemBlock(Block):
                     return "version=14.{}".format(minor)
                 else:
                     return "v14{}".format(minor)
+        elif compiler == "clang":
+            if generator and "Visual" in generator:
+                if "Visual Studio 16" in generator:
+                    return "ClangCL"
+                else:
+                    raise ConanException("CMakeToolchain compiler=clang only supported VS 16")
         return None
 
     def _get_generator_platform(self, generator):

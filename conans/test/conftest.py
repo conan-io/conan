@@ -34,8 +34,10 @@ tools_locations = {
 
 
 tools_locations = {
+    "clang": {"disabled": True},
     'visual_studio': {"default": "15",
                       "15": {},
+                      "16": {"disabled": True},
                       "17": {"disabled": True}},
     'pkg_config': {"exe": "pkg-config",
                    "default": "system",
@@ -148,6 +150,7 @@ def _get_tool(name, version):
         version = version or tool.get("default")
         tool_version = tool.get(version)
         if tool_version is not None:
+            assert isinstance(tool_version, dict)
             if tool_version.get("disabled"):
                 _cached_tools[name][version] = False
                 return False

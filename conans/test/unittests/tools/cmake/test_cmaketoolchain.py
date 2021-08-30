@@ -164,7 +164,7 @@ def conanfile_apple():
 def test_osx_deployment_target(conanfile_apple):
     toolchain = CMakeToolchain(conanfile_apple)
     content = toolchain.content
-    assert 'set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)' in content
+    assert 'set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "")' in content
 
 @pytest.fixture
 def conanfile_msvc():
@@ -191,3 +191,4 @@ def test_toolset(conanfile_msvc):
     assert 'CMAKE_GENERATOR_TOOLSET "v143"' in toolchain.content
     assert 'Visual Studio 17 2022' in toolchain.generator
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+
