@@ -160,6 +160,10 @@ def _get_profile_compiler_version(compiler, version, output):
         return major
     elif compiler == "intel" and (int(major) < 19 or (int(major) == 19 and int(minor) == 0)):
         return major
+    elif compiler == "msvc":
+        # by default, drop the last digit of the minor (19.30 -> 19.3)
+        if len(minor) == 2:
+            version = version[:len(version) - 1]
     return version
 
 
@@ -223,6 +227,13 @@ def _detect_compiler_version(result, output, profile_path):
     if not compiler or not version:
         output.error("Unable to find a working compiler")
         return
+
+    # Visual Studio 2022 onwards, detect as a new compiler "msvc"
+    if compiler == "Visual Studio":
+        version = Version(version)
+        if version == "17":
+            compiler = "msvc"
+            version = "19.3"
 
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version, output)))

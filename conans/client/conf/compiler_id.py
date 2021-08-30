@@ -11,10 +11,11 @@ LLVM_GCC = "llvm-gcc"  # GCC frontend with LLVM backend
 CLANG = "clang"
 APPLE_CLANG = "apple-clang"
 SUNCC = "suncc"
-MSVC = "Visual Studio"
+VISUAL_STUDIO = "Visual Studio"
 INTEL = "intel"
 QCC = "qcc"
 MCST_LCC = "mcst-lcc"
+MSVC = "msvc"
 
 
 class CompilerId(object):
@@ -135,21 +136,28 @@ def _parse_compiler_version(defines):
             patch = version & 0xF
         # MSVC goes after Clang and Intel, as they may define _MSC_VER
         elif '_MSC_VER' in defines:
-            compiler = MSVC
             version = int(defines['_MSC_VER'])
-            # map _MSC_VER into conan-friendly Visual Studio version
-            # currently, conan uses major only, but here we store minor for the future as well
-            # https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019
-            major, minor = MSVC_TO_VS_VERSION.get(version)
-            # special cases 19.8 and 19.9, 19.10 and 19.11
             full_version = 0
             if '_MSC_FULL_VER' in defines:
                 full_version = int(defines['_MSC_FULL_VER'])
-            if (major, minor) == (16, 8) and full_version >= 192829500:
-                major, minor = 16, 9
-            if (major, minor) == (16, 10) and full_version >= 192930100:
-                major, minor = 16, 11
-            patch = 0
+            # Visual Studio 2022 onwards, detect as a new compiler "msvc"
+            if version >= 1930:
+                compiler = MSVC
+                major = int(version / 100)
+                minor = int(version % 100)
+                patch = int(full_version % 100000)
+            else:
+                compiler = VISUAL_STUDIO
+                # map _MSC_VER into conan-friendly Visual Studio version
+                # currently, conan uses major only, but here we store minor for the future as well
+                # https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019
+                major, minor = MSVC_TO_VS_VERSION.get(version)
+                # special cases 19.8 and 19.9, 19.10 and 19.11
+                if (major, minor) == (16, 8) and full_version >= 192829500:
+                    major, minor = 16, 9
+                if (major, minor) == (16, 10) and full_version >= 192930100:
+                    major, minor = 16, 11
+                patch = 0
         # GCC must be the last try, as other compilers may define __GNUC__ for compatibility
         elif '__GNUC__' in defines:
             if '__llvm__' in defines:
