@@ -685,18 +685,21 @@ def test_profile_from_temp_absolute_path():
 
 def test_consumer_specific_settings():
     client = TestClient()
-    dep = str(GenConanfile().with_settings("build_type"))
+    dep = str(GenConanfile().with_settings("build_type").with_option("shared", [True, False])
+              .with_default_option("shared", False))
     configure = """
     def configure(self):
         self.output.warn("I'm {} and my build type is {}".format(self.name,
                                                                  self.settings.build_type))
+        self.output.warn("I'm {} and my shared is {}".format(self.name, self.options.shared))
     """
     dep += configure
     client.save({"conanfile.py": dep})
     client.run("create . dep/1.0@")
-    client.run("create . dep/1.0@ -s build_type=Debug")
+    client.run("create . dep/1.0@ -s build_type=Debug -o dep:shared=True")
 
-    consumer = str(GenConanfile().with_settings("build_type").with_requires("dep/1.0"))
+    consumer = str(GenConanfile().with_settings("build_type").with_requires("dep/1.0")
+                   .with_option("shared", [True, False]).with_default_option("shared", False))
     consumer += configure
     client.save({"conanfile.py": consumer})
 
@@ -704,16 +707,22 @@ def test_consumer_specific_settings():
     client.run("install . -s build_type=Release")
     assert "I'm dep and my build type is Release" in client.out
     assert "I'm None and my build type is Release" in client.out
+    assert "I'm dep and my shared is False" in client.out
+    assert "I'm None and my shared is False" in client.out
 
     # Now the dependency by name
-    client.run("install . -s dep:build_type=Debug")
+    client.run("install . -s dep:build_type=Debug -o dep:shared=True")
     assert "I'm dep and my build type is Debug" in client.out
     assert "I'm None and my build type is Release" in client.out
+    assert "I'm dep and my shared is True" in client.out
+    assert "I'm None and my shared is False" in client.out
 
     # Now the consumer using &
-    client.run("install . -s &:build_type=Debug")
+    client.run("install . -s &:build_type=Debug -o &:shared=True")
     assert "I'm dep and my build type is Release" in client.out
     assert "I'm None and my build type is Debug" in client.out
+    assert "I'm dep and my shared is False" in client.out
+    assert "I'm None and my shared is True" in client.out
 
     # Now use a conanfile.txt
     client.save({"conanfile.txt": textwrap.dedent("""
@@ -726,15 +735,17 @@ def test_consumer_specific_settings():
     assert "I'm dep and my build type is Release" in client.out
 
     # Now the dependency by name
-    client.run("install . -s dep:build_type=Debug")
+    client.run("install . -s dep:build_type=Debug -o dep:shared=True")
     assert "I'm dep and my build type is Debug" in client.out
+    assert "I'm dep and my shared is True" in client.out
 
     # Test that the generators take the setting
     if platform.system() != "Windows":  # Toolchain in windows is multiconfig
         # Now the consumer using &
-        client.run("install . -s &:build_type=Debug  -g CMakeToolchain")
+        client.run("install . -s &:build_type=Debug -g CMakeToolchain")
         assert "I'm dep and my build type is Release" in client.out
         # Verify the cmake toolchain takes Debug
+        assert "I'm dep and my shared is False" in client.out
         contents = client.load("conan_toolchain.cmake")
         assert 'set(CMAKE_BUILD_TYPE "Debug"' in contents
 
