@@ -436,9 +436,12 @@ class FindConfigFiles(Block):
                                        p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
                                  for p in cppinfo.builddirs])
 
-        build_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
-                                               .replace('$', '\\$')
-                                               .replace('"', '\\"')) for b in build_paths])
+        if self._toolchain.find_builddirs:
+            build_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
+                                                   .replace('$', '\\$')
+                                                   .replace('"', '\\"')) for b in build_paths])
+        else:
+            build_paths = ""
 
         return {"find_package_prefer_config": find_package_prefer_config,
                 "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
@@ -727,6 +730,9 @@ class CMakeToolchain(object):
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock)])
 
+        # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
+        self.find_builddirs = False
+
         check_using_build_profile(self._conanfile)
 
     def _context(self):
@@ -739,7 +745,7 @@ class CMakeToolchain(object):
             "variables_config": self.variables.configuration_types,
             "preprocessor_definitions": self.preprocessor_definitions,
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
-            "conan_blocks": blocks,
+            "conan_blocks": blocks
         }
 
         return ctxt_toolchain
