@@ -1,9 +1,8 @@
 import textwrap
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.core.graph_manager_test import _check_transitive
 from conans.test.utils.tools import TestClient
 
 
@@ -22,7 +21,7 @@ class TestAlias(GraphManagerTest):
         liba = app.dependencies[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[app])
-        self._check_node(app, "app/0.1", deps=[liba], closure=[liba])
+        self._check_node(app, "app/0.1", deps=[liba])
 
     def test_alias_diamond(self):
         # app -> ----------------------------------> liba/0.1
@@ -39,8 +38,14 @@ class TestAlias(GraphManagerTest):
         libb = app.dependencies[1].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[app, libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(app, "app/0.1", deps=[liba, libb], closure=[libb, liba])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(app, "app/0.1", deps=[liba, libb])
+
+        # node, include, link, build, run
+        # It seems they are in link order
+        _check_transitive(app, [(libb, True, True, False, None),
+                                (liba, True, True, False, None)])
+        _check_transitive(libb, [(liba, True, True, False, None)])
 
     def test_two_alias_diamond(self):
         # https://github.com/conan-io/conan/issues/3353
@@ -61,8 +66,14 @@ class TestAlias(GraphManagerTest):
         libb = app.dependencies[1].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[app, libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(app, "app/0.1", deps=[liba, libb], closure=[libb, liba])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(app, "app/0.1", deps=[liba, libb])
+
+        # node, include, link, build, run
+        # Seems reverse order
+        _check_transitive(app, [(libb, True, True, False, None),
+                                (liba, True, True, False, None)])
+        _check_transitive(libb, [(liba, True, True, False, None)])
 
     def test_full_two_branches_diamond(self):
         # https://github.com/conan-io/conan/issues/3353
@@ -86,9 +97,15 @@ class TestAlias(GraphManagerTest):
         liba = libb.dependencies[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(app, "app/0.1", deps=[libb, libc], closure=[libb, libc, liba])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, None),
+                                (libc, True, True, False, None),
+                                (liba, True, True, False, None)])
+        _check_transitive(libb, [(liba, True, True, False, None)])
 
     def test_alias_bug(self):
         # https://github.com/conan-io/conan/issues/2252
@@ -109,9 +126,15 @@ class TestAlias(GraphManagerTest):
         liba = libb.dependencies[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(app, "app/0.1", deps=[libb, libc], closure=[libb, libc, liba])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, None),
+                                (libc, True, True, False, None),
+                                (liba, True, True, False, None)])
+        _check_transitive(libb, [(liba, True, True, False, None)])
 
     def test_alias_tansitive(self):
         # app -> liba/giga -(alias)->-> liba/mega -(alias)-> liba/latest -(alias)->liba/0.1
@@ -129,12 +152,14 @@ class TestAlias(GraphManagerTest):
         liba = app.dependencies[0].dst
 
         self._check_node(liba, "liba/0.1#123", dependents=[app])
-        self._check_node(app, "app/0.1", deps=[liba], closure=[liba])
+        self._check_node(app, "app/0.1", deps=[liba])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(liba, True, True, False, None)])
 
 
 class AliasBuildRequiresTest(GraphManagerTest):
 
-    @pytest.mark.xfail(reason="This onely works with the build context")
     def test_non_conflicting_alias(self):
         # https://github.com/conan-io/conan/issues/5468
         # libc ----> libb -------------------> liba/0.1

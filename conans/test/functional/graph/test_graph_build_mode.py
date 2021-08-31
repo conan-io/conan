@@ -26,9 +26,9 @@ def build_all():
     return client
 
 
-foo_id = "4024617540c4f240a6a5e8911b0de9ef38a11a72"
-bar_id = "7839863d5a059fc6579f28026763e1021268c55e"
-foobar_id = "89636fbae346e3983af2dd63f2c5246505e74be7"
+foo_id = "e53d55fd33066c49eb97a4ede6cb50cd8036fe8b"
+bar_id = "1eb1d823cd7f59878ddfa73183c6f29ecf42ebfe"
+foobar_id = "b2e76a33737572a9e07c173b8ea3572520c3c2cb"
 
 
 def check_if_build_from_sources(refs_modes, output):

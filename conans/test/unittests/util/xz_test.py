@@ -7,6 +7,7 @@ from io import StringIO
 from conans.client.output import ConanOutput
 from conans.client.tools.files import save, unzip
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.test.utils.mocks import TestBufferConanOutput
@@ -22,13 +23,13 @@ class XZTest(TestCase):
         ref = ref.copy_with_rev("myreciperev")
         export = server.server_store.export(ref)
         server.server_store.update_last_revision(ref)
-        save_files(export, {"conanfile.py": "#",
+        save_files(export, {"conanfile.py": str(GenConanfile()),
                             "conanmanifest.txt": "#",
                             "conan_export.txz": "#"})
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
         client.run("install Pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("ERROR: This Conan version is not prepared to handle "
+        self.assertIn("This Conan version is not prepared to handle "
                       "'conan_export.txz' file format", client.out)
 
     def test_error_sources_xz(self):

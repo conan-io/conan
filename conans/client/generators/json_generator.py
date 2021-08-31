@@ -65,8 +65,8 @@ class JsonGenerator(Generator):
 
     def get_options(self):
         options = {}
-        for req in self.conanfile.requires:
-            options[req] = {}
+        for req in self.conanfile.requires.values():
+            options[req.ref.name] = {}
             for key, value in self.conanfile.options[req].items():
                 options[req][key] = value
         return options

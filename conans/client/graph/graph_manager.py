@@ -1,40 +1,10 @@
-import fnmatch
-from collections import OrderedDict, defaultdict
-
 from conans.client.conanfile.configure import run_configure_method
-from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_BUILD
-from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
-    BINARY_UNKNOWN
+from conans.client.graph.compute_pid import compute_package_id
+from conans.client.graph.graph import Node, CONTEXT_HOST
+from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.conan_file import get_env_context_manager
+from conans.errors import  conanfile_exception_formatter, ConanInvalidConfiguration
 from conans.model.ref import ConanFileReference
-
-
-class _RecipeBuildRequires(OrderedDict):
-    def __init__(self, conanfile, default_context):
-        super(_RecipeBuildRequires, self).__init__()
-        build_requires = getattr(conanfile, "build_requires", [])
-        if not isinstance(build_requires, (list, tuple)):
-            build_requires = [build_requires]
-        self._default_context = default_context
-        for build_require in build_requires:
-            self.add(build_require, context=self._default_context)
-
-    def add(self, build_require, context, force_host_context=False):
-        if not isinstance(build_require, ConanFileReference):
-            build_require = ConanFileReference.loads(build_require)
-        build_require.force_host_context = force_host_context  # Dirty, but will be removed in 2.0
-        self[(build_require.name, context)] = build_require
-
-    def __call__(self, build_require, force_host_context=False):
-        context = CONTEXT_HOST if force_host_context else self._default_context
-        self.add(build_require, context, force_host_context)
-
-    def __str__(self):
-        items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
-        return ", ".join(items)
 
 
 class GraphManager(object):
@@ -43,7 +13,6 @@ class GraphManager(object):
         self._output = output
         self._resolver = resolver
         self._cache = cache
-        self._remote_manager = remote_manager
         self._loader = loader
         self._binary_analyzer = binary_analyzer
 
@@ -81,11 +50,22 @@ class GraphManager(object):
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
                                          root_ref, lockfile_node_id, is_build_require,
                                          require_overrides)
-        deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
-                                         build_mode, check_updates, update, remotes, recorder,
-                                         apply_build_requires=apply_build_requires)
-        # Run some validations once the graph is built
-        self._validate_graph_provides(deps_graph)
+        profile_host_build_requires = profile_host.build_requires
+        builder = DepsGraphBuilder(self._proxy, self._loader, self._resolver)
+        deps_graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
+                                        profile_build, graph_lock)
+        version_ranges_output = self._resolver.output
+        if version_ranges_output:
+            self._output.success("Version ranges solved")
+            for msg in version_ranges_output:
+                self._output.info("    %s" % msg)
+            self._output.writeln("")
+            self._resolver.clear_output()
+
+        # TODO: Move binary_analyzer elsewhere
+        if not deps_graph.error:
+            self._binary_analyzer.evaluate_graph(deps_graph, build_mode, update, remotes)
+
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
@@ -194,173 +174,17 @@ class GraphManager(object):
         if not isinstance(test_type, (list, tuple)):
             test_type = (test_type, )
         if "build_requires" in test_type:
-            if getattr(conanfile, "build_requires", None):
-                # Injecting the tested reference
-                existing = conanfile.build_requires
-                if not isinstance(existing, (list, tuple)):
-                    existing = [existing]
-                conanfile.build_requires = list(existing) + [create_reference]
-            else:
-                conanfile.build_requires = str(create_reference)
+            conanfile.requires.build_require(str(create_reference))
         if "requires" in test_type:
-            require = conanfile.requires.get(create_reference.name)
+            require = False # conanfile.requires.get(create_reference.name)
             if require:
                 require.ref = require.range_ref = create_reference
             else:
                 conanfile.requires(repr(create_reference))
+
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         if graph_lock:
             graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
-
-    def _resolve_graph(self, root_node, profile_host, profile_build, graph_lock, build_mode,
-                       check_updates, update, remotes, recorder, apply_build_requires=True):
-        build_mode = BuildMode(build_mode, self._output)
-        deps_graph = self._load_graph(root_node, check_updates, update,
-                                      build_mode=build_mode, remotes=remotes,
-                                      recorder=recorder,
-                                      profile_host=profile_host,
-                                      profile_build=profile_build,
-                                      apply_build_requires=apply_build_requires,
-                                      graph_lock=graph_lock)
-
-        version_ranges_output = self._resolver.output
-        if version_ranges_output:
-            self._output.success("Version ranges solved")
-            for msg in version_ranges_output:
-                self._output.info("    %s" % msg)
-            self._output.writeln("")
-            self._resolver.clear_output()
-
-        build_mode.report_matches()
-        return deps_graph
-
-    @staticmethod
-    def _get_recipe_build_requires(conanfile, default_context):
-        conanfile.build_requires = _RecipeBuildRequires(conanfile, default_context)
-        if hasattr(conanfile, "build_requirements"):
-            with get_env_context_manager(conanfile):
-                with conanfile_exception_formatter(str(conanfile), "build_requirements"):
-                    conanfile.build_requirements()
-
-        return conanfile.build_requires
-
-    def _recurse_build_requires(self, graph, builder, check_updates,
-                                update, build_mode, remotes, profile_build_requires, recorder,
-                                profile_host, profile_build, graph_lock, apply_build_requires=True,
-                                nodes_subset=None, root=None):
-        """
-        :param graph: This is the full dependency graph with all nodes from all recursions
-        """
-        default_context = CONTEXT_BUILD
-        self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes, nodes_subset, root)
-        if not apply_build_requires:
-            return
-
-        for node in graph.ordered_iterate(nodes_subset):
-            # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
-            if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
-                    and node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)):
-                continue
-            package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
-            str_ref = str(node.ref)
-
-            #  Compute the update of the current recipe build_requires when updated with the
-            # downstream profile-defined build-requires
-            new_profile_build_requires = []
-            for pattern, build_requires in profile_build_requires.items():
-                if node.recipe == RECIPE_VIRTUAL:  # Virtual do not get profile build requires
-                    continue
-                if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                        (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                        fnmatch.fnmatch(str_ref, pattern)):
-                    for build_require in build_requires:
-                        br_key = (build_require.name, default_context)
-                        if br_key in package_build_requires:  # Override defined
-                            # this is a way to have only one package Name for all versions
-                            # (no conflicts)
-                            # but the dict key is not used at all
-                            package_build_requires[br_key] = build_require
-                        # Profile one or in different context
-                        elif build_require.name != node.name or default_context != node.context:
-                            new_profile_build_requires.append((build_require, default_context))
-
-            def _recurse_build_requires(br_list, transitive_build_requires):
-                nodessub = builder.extend_build_requires(graph, node, br_list, check_updates,
-                                                         update, remotes, profile_host,
-                                                         profile_build, graph_lock)
-                self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
-                                             remotes, transitive_build_requires, recorder,
-                                             profile_host, profile_build, graph_lock,
-                                             nodes_subset=nodessub, root=node)
-
-            if package_build_requires:
-                if default_context == CONTEXT_BUILD:
-                    br_build, br_host = [], []
-                    for (_, ctxt), it in package_build_requires.items():
-                        if ctxt == CONTEXT_BUILD:
-                            br_build.append((it, ctxt))
-                        else:
-                            br_host.append((it, ctxt))
-                    if br_build:
-                        _recurse_build_requires(br_build, profile_build.build_requires)
-                    if br_host:
-                        _recurse_build_requires(br_host, profile_build_requires)
-                else:
-                    br_all = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
-                    _recurse_build_requires(br_all, profile_build_requires)
-
-            if new_profile_build_requires:
-                _recurse_build_requires(new_profile_build_requires, {})
-
-            if graph_lock and node.recipe != RECIPE_VIRTUAL:
-                graph_lock.check_locked_build_requires(node, package_build_requires,
-                                                       new_profile_build_requires)
-
-    def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
-                    recorder, profile_host, profile_build, apply_build_requires,
-                    graph_lock):
-        assert isinstance(build_mode, BuildMode)
-        profile_host_build_requires = profile_host.build_requires
-        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
-                                   recorder)
-        graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
-                                   profile_build, graph_lock)
-
-        self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
-                                     remotes, profile_host_build_requires, recorder, profile_host,
-                                     profile_build, graph_lock,
-                                     apply_build_requires=apply_build_requires)
-
-        # Sort of closures, for linking order
-        inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
-        for node in graph.nodes:
-            node.public_closure.pop(node.name, context=node.context)
-            # List sort is stable, will keep the original order of closure, but prioritize levels
-            node.public_closure.sort(key_fn=lambda n: inverse_levels[n])
-
-        return graph
-
-    @staticmethod
-    def _validate_graph_provides(deps_graph):
-        # Check that two different nodes are not providing the same (ODR violation)
-        for node in deps_graph.nodes:
-            provides = defaultdict(list)
-            if node.conanfile.provides is not None:  # consumer conanfile doesn't initialize
-                for it in node.conanfile.provides:
-                    provides[it].append(node)
-
-            for item in filter(lambda u: u.context == CONTEXT_HOST, node.public_closure):
-                for it in item.conanfile.provides:
-                    provides[it].append(item)
-
-            # Check (and report) if any functionality is provided by several different recipes
-            conflicts = [it for it, nodes in provides.items() if len(nodes) > 1]
-            if conflicts:
-                msg_lines = ["At least two recipes provides the same functionality:"]
-                for it in conflicts:
-                    nodes_str = "', '".join([n.conanfile.display_name for n in provides[it]])
-                    msg_lines.append(" - '{}' provided by '{}'".format(it, nodes_str))
-                raise ConanException('\n'.join(msg_lines))

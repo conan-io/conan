@@ -1,4 +1,5 @@
 import os
+import re
 import stat
 import unittest
 
@@ -24,9 +25,9 @@ class TestSystemReqs(ConanFile):
 '''
 
 
+@pytest.mark.xfail(reason="cache2.0: check this for 2.0, nre chache will recreate sys_reqs"
+                   "every time")
 class SystemReqsTest(unittest.TestCase):
-    @pytest.mark.xfail(reason="cache2.0: check this for 2.0, nre chache will recreate sys_reqs"
-                              "every time")
     def test_force_system_reqs_rerun(self):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
@@ -55,17 +56,16 @@ class SystemReqsTest(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "Command failed"):
             client.run("install .")
 
-    @pytest.mark.xfail(reason="cache2.0: check this for 2.0, new chache will recreate sys_reqs"
-                              "every time")
     def test_per_package(self):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
         client.run("export . user/testing")
         client.run("install Test/0.1@user/testing --build missing")
+        package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
         self.assertIn("*+Running system requirements+*", client.out)
         ref = ConanFileReference.loads("Test/0.1@user/testing")
-        pref = PackageReference(ref, "f0ba3ca2c218df4a877080ba99b65834b9413798")
+        pref = PackageReference(ref, package_id)
         pkg_layout = client.get_latest_pkg_layout(pref)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs()))
         load_file = load(pkg_layout.system_reqs_package())
@@ -94,15 +94,13 @@ class SystemReqsTest(unittest.TestCase):
         layout1 = client.get_latest_pkg_layout(pref)
         layout2 = client.get_latest_pkg_layout(pref2)
         self.assertTrue(os.path.exists(layout1.system_reqs_package()))
-        client.run("remove Test* -f -p f0ba3ca2c218df4a877080ba99b65834b9413798")
+        client.run(f"remove Test* -f -p {package_id}")
         self.assertFalse(os.path.exists(layout1.system_reqs_package()))
         self.assertTrue(os.path.exists(layout2.system_reqs_package()))
         client.run("remove Test* -f -p %s" % NO_SETTINGS_PACKAGE_ID)
         self.assertFalse(os.path.exists(layout1.system_reqs_package()))
         self.assertFalse(os.path.exists(layout2.system_reqs_package()))
 
-    @pytest.mark.xfail(reason="cache2.0: check this for 2.0, new chache will recreate sys_reqs"
-                              "every time")
     def test_global(self):
         client = TestClient()
         files = {
@@ -156,16 +154,15 @@ class SystemReqsTest(unittest.TestCase):
         client.save(files)
         client.run("export . user/testing")
         client.run("install Test/0.1@user/testing --build missing")
+        package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
+
         self.assertIn("*+Running system requirements+*", client.out)
         ref = ConanFileReference.loads("Test/0.1@user/testing")
-        latest_rrev = client.cache.get_latest_rrev(ref)
-        pref = PackageReference(latest_rrev, "f0ba3ca2c218df4a877080ba99b65834b9413798")
-        latest_prev = client.cache.get_latest_prev(pref)
-        self.assertFalse(os.path.exists(client.cache.pkg_layout(latest_prev).system_reqs()))
-        load_file = load(client.cache.pkg_layout(latest_prev).system_reqs_package())
+        self.assertFalse(os.path.exists(client.cache.package_layout(ref).system_reqs()))
+        pref = PackageReference(ref, package_id)
+        load_file = load(client.cache.package_layout(pref.ref).system_reqs_package(pref))
         self.assertEqual('', load_file)
 
-    @pytest.mark.xfail(reason="cache2.0: will this be maintained with the new cache?")
     def test_remove_system_reqs(self):
         ref = ConanFileReference.loads("Test/0.1@user/channel")
         client = TestClient()
@@ -230,7 +227,6 @@ class SystemReqsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(system_reqs_path))
         self.assertFalse(os.path.exists(system_reqs_path_other))
 
-    @pytest.mark.xfail(reason="cache2.0: will this be maintained with the new cache?")
     def test_invalid_remove_reqs(self):
         client = TestClient()
 
@@ -249,7 +245,6 @@ class SystemReqsTest(unittest.TestCase):
             client.run("remove --system-reqs foo/bar@foo/bar "
                        "-p f0ba3ca2c218df4a877080ba99b65834b9413798")
 
-    @pytest.mark.xfail(reason="cache2.0: is remote --system-reqs maintained in 2.0?")
     def test_permission_denied_remove_system_reqs(self):
         ref = ConanFileReference.loads("Test/0.1@user/channel")
         client = TestClient()
@@ -276,8 +271,6 @@ class SystemReqsTest(unittest.TestCase):
         # restore write permission so the temporal folder can be deleted later
         os.chmod(system_reqs_path, current | stat.S_IWRITE)
 
-    @pytest.mark.xfail(reason="cache2.0: this does not make sense any more. We always create the "
-                              "package in a new folder")
     def test_duplicate_remove_system_reqs(self):
         ref = ConanFileReference.loads("Test/0.1@user/channel")
         client = TestClient()

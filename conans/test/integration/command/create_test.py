@@ -8,81 +8,42 @@ import pytest
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 class CreateTest(unittest.TestCase):
 
     def test_dependencies_order_matches_requires(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-from conans.tools import save
-import os
-class Pkg(ConanFile):
-    def package(self):
-        save(os.path.join(self.package_folder, "include/file.h"), "//file")
-    def package_info(self):
-        self.cpp_info.libs = ["Lib%s"]
-"""
-        client.save({"conanfile.py": conanfile % "A"})
+        save(client.cache.default_profile_path, "")
+        save(client.cache.settings_path, "build_type: [Release, Debug]\narch: [x86]")
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . PkgA/0.1@user/testing")
-        client.save({"conanfile.py": conanfile % "B"})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . PkgB/0.1@user/testing")
-        conanfile = """[requires]
-PkgB/0.1@user/testing
-PkgA/0.1@user/testing"""
+        conanfile = textwrap.dedent("""
+            [requires]
+            PkgB/0.1@user/testing
+            PkgA/0.1@user/testing
+            """)
         client.save({"conanfile.txt": conanfile}, clean_first=True)
-        client.run("install . -g cmake")
-        cmake = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS LibB LibA ${CONAN_LIBS})", cmake)
-
-    def test_can_override_even_versions_with_build_metadata(self):
-        # https://github.com/conan-io/conan/issues/5900
-
-        client = TestClient()
-        client.save({"conanfile.py":
-                    GenConanfile().with_name("libcore").with_version("1.0+abc")})
-        client.run("create .")
-        client.save({"conanfile.py":
-                    GenConanfile().with_name("libcore").with_version("1.0+xyz")})
-        client.run("create .")
-
-        client.save({"conanfile.py":
-                    GenConanfile().with_name("intermediate").
-                    with_version("1.0").with_require("libcore/1.0+abc")})
-        client.run("create .")
-
-        client.save({"conanfile.py":
-                    GenConanfile().with_name("consumer").
-                    with_version("1.0").with_require("intermediate/1.0").
-                    with_require("libcore/1.0+xyz")})
-        client.run("create .")
-        self.assertIn("WARN: intermediate/1.0: requirement libcore/1.0+abc "
-                      "overridden by consumer/1.0 to libcore/1.0+xyz", client.out)
+        client.run("install . -g MSBuildDeps -s build_type=Release -s arch=x86")
+        conandeps = client.load("conandeps.props")
+        assert conandeps.find("PkgB") < conandeps.find("PkgA")
 
     def test_transitive_same_name(self):
         # https://github.com/conan-io/conan/issues/1366
         client = TestClient()
-        conanfile = GenConanfile().with_name("HelloBar").with_version("0.1")
-        test_package = '''
-from conans import ConanFile
-
-class HelloTestConan(ConanFile):
-    requires = "HelloBar/0.1@lasote/testing"
-    def test(self):
-        pass
-'''
-        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
+        client.save({"conanfile.py": GenConanfile("HelloBar", "0.1"),
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . lasote/testing")
-        self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                      client.out)
-        conanfile = GenConanfile().with_name("Hello").with_version("0.1")\
-                                  .with_require("HelloBar/0.1@lasote/testing")
+        self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source", client.out)
+
+        conanfile = GenConanfile("Hello", "0.1").with_require("HelloBar/0.1@lasote/testing")
         client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . lasote/stable")
-        self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                         client.out)
+        self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source", client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
@@ -163,31 +124,7 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
-    def test_create_werror(self):
-        client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-        """})
-        client.run("export . LibA/0.1@user/channel")
-        client.run("export conanfile.py LibA/0.2@user/channel")
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "LibA/0.1@user/channel"
-        """})
-        client.run("export ./ LibB/0.1@user/channel")
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "LibA/0.2@user/channel"
-        """})
-        client.run("export . LibC/0.1@user/channel")
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
-        """})
-        client.run("create ./conanfile.py Consumer/0.1@lasote/testing", assert_error=True)
-        self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
-                      client.out)
+
 
     def test_error_create_name_version(self):
         client = TestClient()
@@ -264,12 +201,9 @@ class MyPkg(ConanFile):
         for r in self.requires.values():
             self.output.info("build() Requires: %s" % str(r.ref))
         import os
-        for dep in self.deps_cpp_info.deps:
+        for dep in self.dependencies.host.values():
             self.output.info("build() cpp_info dep: %s" % dep)
-        self.output.info("build() cpp_info: %s"
-                         % os.path.basename(self.deps_cpp_info["Pkg"].includedirs[0]))
-        self.output.info("build() cpp_info: %s"
-                         % os.path.basename(self.deps_cpp_info["Dep"].includedirs[0]))
+
     def test(self):
         pass
         """
@@ -278,8 +212,7 @@ class MyPkg(ConanFile):
                      "test_package/conanfile.py": test_conanfile})
 
         client.run("create . Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info: include",
-                      client.out)
+
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
                       "Requires: Other/1.0@user/channel", client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
@@ -421,8 +354,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("None", conaninfo)
         self.assertNotIn("_/", conaninfo)
         self.assertNotIn("/_", conaninfo)
-        self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
-                      conaninfo)
+        self.assertIn("[requires]\n    Hello/0.1\n", conaninfo)
 
     def test_compoents_json_output(self):
         self.client = TestClient()

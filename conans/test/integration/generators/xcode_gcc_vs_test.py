@@ -2,12 +2,15 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.graph_lock import LOCKFILE
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO_CMAKE, CONANFILE_TXT
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Generator cmake to be removed, XCode to be revisited")
 class VSXCodeGeneratorsTest(unittest.TestCase):
 
     def test_generators(self):

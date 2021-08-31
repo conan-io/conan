@@ -19,6 +19,7 @@ class GenConanfile(object):
         self._imports = ["from conans import ConanFile"]
         self._name = name
         self._version = version
+        self._package_type = None
         self._settings = None
         self._options = None
         self._generators = None
@@ -35,6 +36,7 @@ class GenConanfile(object):
         self._requirements = None
         self._build_requires = None
         self._build_requirements = None
+        self._test_requires = None
         self._revision_mode = None
         self._package_info = None
         self._package_id_lines = None
@@ -44,6 +46,10 @@ class GenConanfile(object):
         self._exports = None
         self._cmake_build = False
         self._class_attributes = None
+
+    def with_package_type(self, value):
+        self._package_type = value
+        return self
 
     def with_short_paths(self, value):
         self._short_paths = value
@@ -104,6 +110,7 @@ class GenConanfile(object):
 
     def with_requirement(self, ref, **kwargs):
         self._requirements = self._requirements or []
+
         ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
         self._requirements.append((ref_str, kwargs))
         return self
@@ -113,6 +120,13 @@ class GenConanfile(object):
         for ref in refs:
             ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
             self._build_requires.append(ref_str)
+        return self
+
+    def with_test_requires(self, *refs):
+        self._test_requires = self._test_requires or []
+        for ref in refs:
+            ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+            self._test_requires.append(ref_str)
         return self
 
     def with_build_requirement(self, ref, **kwargs):
@@ -220,6 +234,10 @@ class GenConanfile(object):
         return "version = '{}'".format(self._version)
 
     @property
+    def _package_type_render(self):
+        return "package_type = '{}'".format(self._package_type)
+
+    @property
     def _provides_render(self):
         line = ", ".join('"{}"'.format(provide) for provide in self._provides)
         return "provides = {}".format(line)
@@ -288,10 +306,16 @@ class GenConanfile(object):
         return "requires = ({}, )".format(", ".join(items))
 
     @property
+    def _test_requires_render(self):
+        line = ", ".join(['"{}"'.format(r) for r in self._test_requires])
+        tmp = "test_requires = {}".format(line)
+        return tmp
+
+    @property
     def _requirements_render(self):
         lines = ["", "    def requirements(self):"]
         for ref, kwargs in self._requirements:
-            args = ", ".join("{}={}".format(k,  f'"{v}"' if not isinstance(v, bool) else v)
+            args = ", ".join("{}={}".format(k, f'"{v}"' if isinstance(v, str) else v)
                              for k, v in kwargs.items())
             lines.append('        self.requires("{}", {})'.format(ref, args))
         return "\n".join(lines)
@@ -405,12 +429,11 @@ class GenConanfile(object):
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
 
-        # FIXME: This is all a mess. Replace with Jinja2
-        for member in ("name", "version", "provides", "deprecated", "short_paths", "exports_sources",
-                       "exports", "generators", "requires", "build_requires", "requirements",
-                       "build_requirements", "scm", "revision_mode", "settings", "options",
-                       "default_options", "package_method", "package_info",
-                       "package_id_lines", "test_lines"
+        for member in ("name", "version", "package_type", "provides", "deprecated", "short_paths",
+                       "exports_sources", "exports", "generators", "requires", "build_requires",
+                       "test_requires", "requirements", "build_requirements", "scm", "revision_mode",
+                       "settings", "options", "default_options", "build", "package_method",
+                       "package_info", "package_id_lines", "test_lines"
                        ):
             v = getattr(self, "_{}".format(member), None)
             if v is not None:

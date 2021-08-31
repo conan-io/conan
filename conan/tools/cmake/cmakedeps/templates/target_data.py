@@ -107,7 +107,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         global_cppinfo = self.conanfile.new_cpp_info.copy()
         global_cppinfo.aggregate_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        return DepsCppCmake(global_cppinfo, pfolder_var_name)
+        return DepsCppCmake(global_cppinfo, pfolder_var_name, self.require)
 
     def get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
@@ -152,7 +152,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
 class DepsCppCmake(object):
 
-    def __init__(self, cpp_info, pfolder_var_name):
+    def __init__(self, cpp_info, pfolder_var_name, require=None):
 
         def join_paths(paths):
             """
@@ -188,7 +188,8 @@ class DepsCppCmake(object):
             return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
 
         self.include_paths = join_paths(cpp_info.includedirs)
-        self.include_path = join_paths_single_var(cpp_info.includedirs)
+        if require and not require.headers:
+            self.include_paths = ""
         self.lib_paths = join_paths(cpp_info.libdirs)
         self.res_paths = join_paths(cpp_info.resdirs)
         self.bin_paths = join_paths(cpp_info.bindirs)
@@ -200,6 +201,11 @@ class DepsCppCmake(object):
         self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
+        if require and not require.libs:
+            self.lib_paths = ""
+            self.libs = ""
+            self.system_libs = ""
+            self.frameworks = ""
 
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
@@ -212,6 +218,14 @@ class DepsCppCmake(object):
         # frameworks should be declared with cppinfo.frameworks not "-framework Foundation"
         self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
+
+        if require and not require.libs and not require.headers:
+            self.defines = ""
+            self.compile_definitions = ""
+            self.cxxflags_list = ""
+            self.cflags_list = ""
+            self.sharedlinkflags_list = ""
+            self.exelinkflags_list = ""
 
         build_modules = cpp_info.get_property("cmake_build_modules", "CMakeDeps") or []
         self.build_modules_paths = join_paths(build_modules)

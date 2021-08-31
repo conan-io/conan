@@ -349,7 +349,8 @@ class WinTest(unittest.TestCase):
             def generate(self):
                 tc = MSBuildToolchain(self)
                 gen = MSBuildDeps(self)
-                if self.options["hello"].shared and self.settings.build_type == "Release":
+                shared_option = self.dependencies["hello"].options.get_safe("shared")
+                if shared_option and self.settings.build_type == "Release":
                     tc.configuration = "ReleaseShared"
                     gen.configuration = "ReleaseShared"
 
@@ -368,7 +369,8 @@ class WinTest(unittest.TestCase):
                 gen.generate()
 
             def imports(self):
-                if self.options["hello"].shared and self.settings.build_type == "Release":
+                shared_option = self.dependencies["hello"].options.get_safe("shared")
+                if shared_option and self.settings.build_type == "Release":
                     configuration = "ReleaseShared"
                 else:
                     configuration = self.settings.build_type

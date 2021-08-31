@@ -80,7 +80,7 @@ class Conf(object):
 
     @property
     def sha(self):
-        result = []
+        result = ["[conf]"]
         for k, v in sorted(self._values.items()):
             result.append("{}={}".format(k, v))
         return "\n".join(result)

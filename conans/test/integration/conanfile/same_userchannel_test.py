@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -85,7 +87,7 @@ class HelloConan(ConanFile):
 
     def test_local_commands(self):
         self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: Failed requirement 'Say/0.1' from 'conanfile.py (Hello/0.1)'",
+        self.assertIn("ERROR: Package 'Say/0.1' not resolved: No remote defined",
                       self.client.out)
 
         self.client.run("install . @lasote/stable")
@@ -120,6 +122,7 @@ class SayConan(ConanFile):
         self.assertIn("Building userfoo/channelbar", self.client.out)
 
 
+@pytest.mark.xfail(reason="Using env-vars to define user/channel will be removed")
 class BuildRequireUserChannelTest(unittest.TestCase):
     def test(self):
         # https://github.com/conan-io/conan/issues/2254

@@ -2,11 +2,14 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
+@pytest.mark.xfail(reason="Navigation of dependencies to be redefined")
 class TestPackageInfo(unittest.TestCase):
 
     def test_package_info_name(self):

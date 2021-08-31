@@ -3,9 +3,12 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Generator json to be revisited")
 class JsonTest(unittest.TestCase):
 
     def test_generate_json_info(self):

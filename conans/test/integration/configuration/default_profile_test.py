@@ -70,7 +70,7 @@ class BuildRequireConanfile(ConanFile):
     settings = "os", "compiler", "arch"
 
     def package_info(self):
-        self.env_info.MyVAR="from_build_require"
+        self.buildenv_info.define("MyVAR", "from_build_require")
 '''
 
         client = TestClient()
@@ -85,9 +85,6 @@ arch=x86
 
 [options]
 mypackage:option1=2
-
-[build_requires]
-br/1.0@lasote/stable
 """
         save(client.cache.default_profile_path, default_profile)
 
@@ -95,7 +92,7 @@ br/1.0@lasote/stable
         client.run("export . lasote/stable")
 
         cf = '''
-import os
+import os, platform
 from conans import ConanFile
 
 class MyConanfile(ConanFile):
@@ -104,6 +101,7 @@ class MyConanfile(ConanFile):
     settings = "os", "compiler", "arch"
     options = {"option1": ["1", "2"]}
     default_options = {"option1": 1}
+    generators = "VirtualBuildEnv"
 
     def configure(self):
         assert(self.settings.os=="Windows")
@@ -115,21 +113,31 @@ class MyConanfile(ConanFile):
 
     def build(self):
         # This has changed, the value from profile higher priority than build require
-        assert(os.environ["MyVAR"]=="%s")
+        if platform.system() == "Windows":
+            self.run("set MyVAR")
+        else:
+            self.run("printenv MyVAR")
 
         '''
 
         # First apply just the default profile, we should get the env MYVAR="from_build_require"
-        client.save({CONANFILE: cf % "from_build_require"}, clean_first=True)
+        profile_host = """include(default)
+[build_requires]
+br/1.0@lasote/stable"""
+        client.save({CONANFILE: cf,
+                     "profile_host": profile_host}, clean_first=True)
         client.run("export . lasote/stable")
-        client.run('install mypackage/0.1@lasote/stable --build missing')
+        client.run('install mypackage/0.1@lasote/stable -pr=profile_host --build missing')
+        assert "from_build_require" in client.out
 
         # Then declare in the default profile the var, it should be prioritized from the br
-        default_profile_2 = default_profile + "\n[env]\nMyVAR=23"
+        default_profile_2 = default_profile + "\n[buildenv]\nMyVAR=23"
         save(client.cache.default_profile_path, default_profile_2)
-        client.save({CONANFILE: cf % "23"}, clean_first=True)
+        client.save({CONANFILE: cf,
+                     "profile_host": profile_host}, clean_first=True)
         client.run("export . lasote/stable")
-        client.run('install mypackage/0.1@lasote/stable --build missing')
+        client.run('install mypackage/0.1@lasote/stable  -pr=profile_host --build')
+        assert "23" in client.out
 
     def test_env_default_profile(self):
         conanfile = '''

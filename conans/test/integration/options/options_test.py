@@ -1,6 +1,9 @@
 import textwrap
 import unittest
 
+
+import pytest
+
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -191,6 +194,7 @@ class MyConanFile(ConanFile):
             self.assertIn("conanfile.py: shared=True", client.out)
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
 
+    @pytest.mark.xfail(reason="info.shared_library_package_id() to be removed")
     def test_overridable_shared_option(self):
         client = TestClient()
         conanfile = GenConanfile().with_option("shared", [True, False])\
@@ -255,6 +259,7 @@ class MyConanFile(ConanFile):
         self.assertIn("pkg/0.1@user/testing:bf0155900ebfab70eaba45bb209cb719e180e3a4 - Build",
                       client.out)
 
+    @pytest.mark.xfail(reason="info.shared_library_package_id() to be removed")
     def test_overridable_no_shared_option(self):
         client = TestClient()
         conanfile = GenConanfile()
@@ -282,6 +287,7 @@ class MyConanFile(ConanFile):
             self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                           client.out)
 
+    @pytest.mark.xfail(reason="info.shared_library_package_id() to be removed")
     def test_missing_shared_option_package_id(self):
         client = TestClient()
 

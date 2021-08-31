@@ -13,9 +13,10 @@ from conans import ConanFile
 class AConan(ConanFile):
     settings = "os"
     build_requires = "Hello/0.1@lasote/testing"
+    generators = "VirtualBuildEnv"
 
     def build(self):
-        self.run("SET" if self.settings.os=="Windows" else "env")
+        self.run("SET" if self.settings.os=="Windows" else "export")
 """
 
 conanfile_dep = """
@@ -26,7 +27,7 @@ class AConan(ConanFile):
     version = "0.1"
 
     def package_info(self):
-        self.env_info.PATH=["/path/to/my/folder"]
+        self.buildenv_info.define_path("PATH", "/path/to/my/folder")
 """
 
 

@@ -43,6 +43,9 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
                                           recorder, lockfile_node_id=lockfile_node_id,
                                           is_build_require=is_build_require,
                                           require_overrides=require_overrides)
+
+    deps_graph.report_graph_error()
+
     graph_lock = graph_lock or GraphLock(deps_graph)  # After the graph is loaded it is defined
     root_node = deps_graph.root
     conanfile = root_node.conanfile
