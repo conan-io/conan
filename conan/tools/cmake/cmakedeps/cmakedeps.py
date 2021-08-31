@@ -33,9 +33,6 @@ class CMakeDeps(object):
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
 
-        # Patterns to be excluded
-        self.excluded_requirement_patterns = []
-
         check_using_build_profile(self._conanfile)
 
         # Enable/Disable checking if a component target exists or not
@@ -82,11 +79,6 @@ class CMakeDeps(object):
             # and will be used in Conan 2.0
             # Filter the build_requires not activated with cmakedeps.build_context_activated
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
-                continue
-
-            # Skip from the consumer
-            if any(fnmatch(str(dep.ref), pattern) for pattern in self.excluded_requirement_patterns):
-                self._conanfile.output.info("CMakeDeps: Skipped '{}'".format(dep.ref))
                 continue
 
             cmake_find_mode = dep.new_cpp_info.get_property("cmake_find_mode", "CMakeDeps") or FIND_MODE_CONFIG
