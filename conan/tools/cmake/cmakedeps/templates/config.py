@@ -26,7 +26,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
     def context(self):
         targets_include = "" if not self.find_module_mode else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
-        return {"file_name": self.file_name,
+        return {"is_module": self.find_module_mode,
+                "version": self.conanfile.ref.version,
+                "file_name": self.file_name,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
                 "target_namespace": self.target_namespace,
@@ -38,10 +40,22 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         return textwrap.dedent("""\
         ########## MACROS ###########################################################################
         #############################################################################################
+
         # Requires CMake > 3.15
         if(${CMAKE_VERSION} VERSION_LESS "3.15")
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
         endif()
+
+        {% if is_module %}
+        include(FindPackageHandleStandardArgs)
+        set({{ pkg_name }}_FOUND 1)
+        set({{ pkg_name }}_VERSION "{{ version }}")
+
+        find_package_handle_standard_args({{ pkg_name }}
+                                          REQUIRED_VARS {{ pkg_name }}_VERSION
+                                          VERSION_VAR {{ pkg_name }}_VERSION)
+        mark_as_advanced({{ pkg_name }}_FOUND {{ pkg_name }}_VERSION)
+        {% endif %}
 
         include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
         include(${CMAKE_CURRENT_LIST_DIR}/{{ targets_include_file }})
