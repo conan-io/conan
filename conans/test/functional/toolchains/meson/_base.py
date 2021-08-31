@@ -15,6 +15,7 @@ class TestMesonBase(unittest.TestCase):
 
     @property
     def _settings(self):
+        # FIXME: This is hardcoded for CI
         settings_macosx = {"compiler": "apple-clang",
                            "compiler.libcxx": "libc++",
                            "compiler.version": "12.0",
@@ -42,6 +43,7 @@ class TestMesonBase(unittest.TestCase):
         return " ".join('-s %s="%s"' % (k, v) for k, v in self._settings.items() if v)
 
     def _check_binary(self):
+        # FIXME: This is hardcoded for CI
         if platform.system() == "Darwin":
             self.assertIn("main __x86_64__ defined", self.t.out)
             self.assertIn("main __apple_build_version__", self.t.out)

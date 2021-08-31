@@ -30,9 +30,12 @@ def test_transitive_headers_not_public():
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps"
 
+           def layout(self):
+               self.folders.source = "src"
+
            def build(self):
                cmake = CMake(self)
-               cmake.configure(source_folder="src")
+               cmake.configure()
                cmake.build()
         """)
     cmake = gen_cmakelists(appsources=["main.cpp"], find_package=["libb"])
@@ -73,9 +76,12 @@ def test_shared_requires_static():
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps", "VirtualBuildEnv", "VirtualRunEnv"
 
+           def layout(self):
+               self.folders.source = "src"
+
            def build(self):
                cmake = CMake(self)
-               cmake.configure(source_folder="src")
+               cmake.configure()
                cmake.build()
         """)
     cmake = gen_cmakelists(appsources=["main.cpp"], find_package=["libb"])
@@ -113,9 +119,12 @@ def test_transitive_binary_skipped():
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps"
 
+           def layout(self):
+               self.folders.source = "src"
+
            def build(self):
                cmake = CMake(self)
-               cmake.configure(source_folder="src")
+               cmake.configure()
                cmake.build()
         """)
     cmake = gen_cmakelists(appsources=["main.cpp"], find_package=["libb"])
