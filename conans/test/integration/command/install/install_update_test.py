@@ -290,6 +290,7 @@ def test_fail_usefully_when_failing_retrieving_package():
     client.run("install {}".format(ref2), assert_error=True)
     assert "ERROR: Error downloading binary package: '{}'".format(pref1) in client.out
 
+
 def test_evil_insertions():
     ref = ConanFileReference.loads("lib1/1.0@conan/stable")
     ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")

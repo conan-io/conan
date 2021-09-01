@@ -1,18 +1,15 @@
 import os
-import os
 import platform
 
 from conan.tools.cmake.utils import is_multi_configuration
-from conan.tools.files import load_toolchain_args
+from conan.tools.files import load_toolchain_args, chdir, mkdir
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.meson.meson import ninja_jobs_cmd_line_arg
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg, \
     msbuild_max_cpu_count_cmd_line_arg
 from conans.client import tools
-from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
-from conans.util.files import mkdir
 
 
 def _validate_recipe(conanfile):
@@ -85,7 +82,7 @@ class CMake(object):
         build_folder = self._conanfile.build_folder
         generator_folder = self._conanfile.generators_folder
 
-        mkdir(build_folder)
+        mkdir(self._conanfile, build_folder)
 
         arg_list = [self._cmake_program]
         if self._generator:
@@ -105,7 +102,7 @@ class CMake(object):
 
         command = " ".join(arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
-        with chdir(build_folder):
+        with chdir(self, build_folder):
             self._conanfile.run(command)
 
     def _build(self, build_type=None, target=None):
@@ -142,7 +139,7 @@ class CMake(object):
     def install(self, build_type=None):
         if not self._conanfile.should_install:
             return
-        mkdir(self._conanfile.package_folder)
+        mkdir(self._conanfile, self._conanfile.package_folder)
         self._build(build_type=build_type, target="install")
 
     def test(self, build_type=None, target=None, output_on_failure=False):

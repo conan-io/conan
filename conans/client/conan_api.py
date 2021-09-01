@@ -1437,6 +1437,7 @@ class ConanAPIV1(object):
                     base=None, lockfile=None):
         # profile_host is mandatory
         profile_host = profile_host or ProfileData(None, None, None, None, None)
+        profile_build = profile_build or ProfileData(None, None, None, None, None)
         cwd = os.getcwd()
 
         if path and reference:
@@ -1467,11 +1468,11 @@ class ConanAPIV1(object):
                                       profile_host.options, profile_host.env, profile_host.conf,
                                       cwd, self.app.cache)
 
-        if profile_build and not pbuild:
+        if not pbuild:
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                        profile_build.options, profile_build.env, profile_build.conf,
-                                       cwd, self.app.cache)
+                                       cwd, self.app.cache, build_profile=True)
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         phost.process_settings(self.app.cache)
@@ -1557,14 +1558,14 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
         phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
                                   profile_host.env, profile_host.conf, cwd, cache)
         phost.process_settings(cache)
-        if profile_build:
-            # Only work on the profile_build if something is provided
-            pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                       profile_build.options, profile_build.env, profile_build.conf,
-                                       cwd, cache)
+
+        profile_build = profile_build or ProfileData(None, None, None, None, None)
+        # Only work on the profile_build if something is provided
+        pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                                   profile_build.options, profile_build.env, profile_build.conf,
+                                   cwd, cache, build_profile=True)
+        if pbuild is not None:
             pbuild.process_settings(cache)
-        else:
-            pbuild = None
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         graph_info = GraphInfo(profile_host=phost, profile_build=pbuild, root_ref=root_ref)

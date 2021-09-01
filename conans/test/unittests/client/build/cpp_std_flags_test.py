@@ -223,7 +223,8 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "11"), None)
         self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "14"), '/std:c++14')
         self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "17"), '/std:c++17')
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "20"), '/std:c++latest')
+        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "20"), '/std:c++20')
+        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "23"), '/std:c++latest')
 
     def test_visual_cppstd_defaults(self):
         self.assertEqual(_make_cppstd_default("Visual Studio", "11"), None)

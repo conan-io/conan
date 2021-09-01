@@ -4,7 +4,7 @@ import textwrap
 import pytest
 
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.conftest import tools_default_version
+from conans.test.conftest import tools_locations
 from conans.test.utils.tools import TestClient
 
 
@@ -14,7 +14,7 @@ class TestToolsCustomVersions:
     def test_default_cmake(self):
         client = TestClient()
         client.run_command('cmake --version')
-        default_cmake_version = tools_default_version.get("cmake")
+        default_cmake_version = tools_locations["cmake"]["default"]
         assert "cmake version {}".format(default_cmake_version) in client.out
 
     @pytest.mark.tool_cmake(version="3.16")

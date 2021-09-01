@@ -19,6 +19,9 @@ class ConanFileInterface:
         """
         return self._conanfile == other._conanfile
 
+    def __hash__(self):
+        return hash(self._conanfile)
+
     def __ne__(self, other):
         return not self.__eq__(other)
 

@@ -164,4 +164,31 @@ def conanfile_apple():
 def test_osx_deployment_target(conanfile_apple):
     toolchain = CMakeToolchain(conanfile_apple)
     content = toolchain.content
-    assert 'set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)' in content
+    assert 'set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "")' in content
+
+@pytest.fixture
+def conanfile_msvc():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.initialize(Settings({"os": ["Windows"],
+                           "compiler": {"msvc": {"version": ["19.3"], "cppstd": ["20"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86"]}), EnvValues())
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86"
+    c.settings.compiler = "msvc"
+    c.settings.compiler.version = "19.3"
+    c.settings.compiler.cppstd = "20"
+    c.settings.os = "Windows"
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    return c
+
+def test_toolset(conanfile_msvc):
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'CMAKE_GENERATOR_TOOLSET "v143"' in toolchain.content
+    assert 'Visual Studio 17 2022' in toolchain.generator
+    assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+
