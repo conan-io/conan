@@ -66,6 +66,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_DEFINITIONS{{ config_suffix }} {{ global_cpp.defines }})
               set({{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }} {{ global_cpp.sharedlinkflags_list }})
               set({{ pkg_name }}_EXE_LINK_FLAGS{{ config_suffix }} {{ global_cpp.exelinkflags_list }})
+              set({{ pkg_name }}_OBJECTS{{ config_suffix }} {{ global_cpp.objects_list }})
               set({{ pkg_name }}_COMPILE_DEFINITIONS{{ config_suffix }} {{ global_cpp.compile_definitions }})
               set({{ pkg_name }}_COMPILE_OPTIONS_C{{ config_suffix }} {{ global_cpp.cflags_list }})
               set({{ pkg_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }} {{ global_cpp.cxxflags_list}})
@@ -95,6 +96,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS{{ config_suffix }} {{ cpp.frameworks }})
               set({{ pkg_name }}_{{ comp_name }}_DEPENDENCIES{{ config_suffix }} {{ cpp.public_deps }})
               set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS{{ config_suffix }}
+                      {{ cpp.objects_list }}
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ cpp.sharedlinkflags_list }}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ cpp.sharedlinkflags_list }}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ cpp.exelinkflags_list }}>
@@ -212,6 +214,8 @@ class DepsCppCmake(object):
         # frameworks should be declared with cppinfo.frameworks not "-framework Foundation"
         self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
+
+        self.objects_list = join_paths(cpp_info.objects)
 
         build_modules = cpp_info.get_property("cmake_build_modules", "CMakeDeps") or []
         self.build_modules_paths = join_paths(build_modules)

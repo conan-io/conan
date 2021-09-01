@@ -85,3 +85,23 @@ def test_components_error():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@")
+
+
+def test_cpp_info_objects():
+    client = TestClient()
+    conan_hello = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.exelinkflags.append('-EXEMYSUPERLINKFLAG')
+                self.cpp_info.sharedlinkflags.append('-SHAREDMYSUPERLINKFLAG')
+                self.cpp_info.objects.append('myobject.o')
+            """)
+
+    client.save({"conanfile.py": conan_hello})
+    client.run("create . hello/1.0@")
+    client.run("install hello/1.0@ -g CMakeDeps")
+    client.run_command(f"open '{client.current_folder}'")
+    print("dasdadasd")
