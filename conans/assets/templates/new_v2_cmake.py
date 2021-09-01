@@ -39,12 +39,8 @@ class {package_name}Conan(ConanFile):
         cmake.build()
 
     def package(self):
-        self.copy("*.h", dst="include")
-        self.copy("*.lib", dst="lib", keep_path=False)
-        self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.dylib*", dst="lib", keep_path=False)
-        self.copy("*.so", dst="lib", keep_path=False)
-        self.copy("*.a", dst="lib", keep_path=False)
+        cmake = CMake(self)
+        cmake.install()
 
     def package_info(self):
         self.cpp_info.libs = ["{name}"]
@@ -94,6 +90,14 @@ cmake_v2 = """cmake_minimum_required(VERSION 3.15)
 project({name} CXX)
 
 add_library({name} {name}.cpp)
+
+set_target_properties({name} PROPERTIES PUBLIC_HEADER "{name}.h")
+install(TARGETS {name} DESTINATION "."
+        PUBLIC_HEADER DESTINATION include
+        RUNTIME DESTINATION bin
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        )
 """
 
 
@@ -256,13 +260,20 @@ class {package_name}Conan(ConanFile):
         cmake.build()
 
     def package(self):
-        self.copy("*", src=self.cpp.build.bindirs[0], dst="bin")
+        cmake = CMake(self)
+        cmake.install()
 """
 
 cmake_exe_v2 = """cmake_minimum_required(VERSION 3.15)
 project({name} CXX)
 
 add_executable({name} {name}.cpp main.cpp)
+
+install(TARGETS {name} DESTINATION "."
+        RUNTIME DESTINATION bin
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        )
 """
 
 test_conanfile_exe_v2 = """import os
