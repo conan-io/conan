@@ -48,6 +48,7 @@ def client():
 
                 self.cpp_info.set_property("cmake_module_file_name", "mi_dependencia")
                 self.cpp_info.set_property("cmake_module_target_name", "mi_dependencia_target")
+                self.cpp_info.set_property("cmake_module_target_namespace", "mi_dependencia_namespace")
 
                 self.cpp_info.components["crispin"].libs = ["mydep"]
                 self.cpp_info.components["crispin"].set_property("cmake_target_name", "MyCrispinTarget")
@@ -81,7 +82,7 @@ def test_reuse_with_modules_and_config(client):
 
     add_executable(myapp2 main.cpp)
     find_package(mi_dependencia) # This one will find the module
-    target_link_libraries(myapp2 mi_dependencia_target::mi_crispin_target)
+    target_link_libraries(myapp2 mi_dependencia_namespace::mi_crispin_target)
 
     """
     conanfile = GenConanfile().with_name("myapp")\
