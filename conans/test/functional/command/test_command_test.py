@@ -12,7 +12,7 @@ class ConanTestTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_conan_test(self):
         client = TestClient()
-        client.run("new hello/0.1 -m=v2_cmake")
+        client.run("new hello/0.1 -m=cmake_lib")
 
         client.run("create . lasote/stable -tf=None")
         time.sleep(1)  # Try to avoid windows errors in CI  (Cannot change permissions)
