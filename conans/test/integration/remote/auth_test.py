@@ -169,4 +169,4 @@ class AuthenticationTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
                       client.out)
         client.run("search pkg -r=default")
-        self.assertIn("There are no matching recipes", client.out)
+        self.assertIn("There are no matching recipe references", client.out)
