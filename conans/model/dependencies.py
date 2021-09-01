@@ -140,7 +140,7 @@ class ConanFileDependencies(UserRequirementsDict):
         expand(private, is_build=False, is_test=False, is_visible=False)
         expand(build, is_build=True, is_test=False, is_visible=False)
         expand(test, is_build=False, is_test=True, is_visible=False)
-        
+
         return ConanFileDependencies(d)
 
     def filter(self, require_filter):
