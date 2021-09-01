@@ -105,17 +105,20 @@ class ConanFileDependencies(UserRequirementsDict):
 
         d = OrderedDict()
 
+        def update_existing(req, conanfile):
+            existing = d.get(req)
+            if existing is not None:
+                _, existing_req = existing
+                existing_req.aggregate(req)
+                req = existing_req
+            d[req] = conanfile, req
+
         def expand(nodes, is_build, is_test, is_visible):
             all_nodes = set(nodes)
             for n in nodes:
                 conanfile = ConanFileInterface(n.conanfile)
                 req = Requirement(n.ref, build=is_build, test=is_test, visible=is_visible)
-                # TODO: Improve this repeated
-                existing = d.get(req)
-                if existing:
-                    existing.aggregate(req)
-                    req = existing
-                d[req] = conanfile
+                update_existing(req, conanfile)
 
             next_nodes = nodes
             while next_nodes:
@@ -130,17 +133,14 @@ class ConanFileDependencies(UserRequirementsDict):
                     conanfile = ConanFileInterface(n.conanfile)
                     req = Requirement(n.ref, build=is_build, test=is_test, direct=False,
                                       visible=is_visible)
-                    existing = d.get(req)
-                    if existing:
-                        existing.aggregate(req)
-                        req = existing
-                    d[req] = conanfile
+                    update_existing(req, conanfile)
 
         expand(host, is_build=False, is_test=False, is_visible=True)
         expand(private, is_build=False, is_test=False, is_visible=False)
         expand(build, is_build=True, is_test=False, is_visible=False)
         expand(test, is_build=False, is_test=True, is_visible=False)
 
+        d = OrderedDict([(k, v[0])for k, v in d.items()])
         return ConanFileDependencies(d)
 
     def filter(self, require_filter):
