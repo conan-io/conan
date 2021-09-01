@@ -21,6 +21,10 @@ class CMakeDepsFileTemplate(object):
         return get_target_namespace(self.conanfile) + self.suffix
 
     @property
+    def global_target_name(self):
+        return get_global_target_name(self.conanfile) + self.suffix
+
+    @property
     def file_name(self):
         return get_file_name(self.conanfile) + self.suffix
 
@@ -82,6 +86,11 @@ class CMakeDepsFileTemplate(object):
 
 
 def get_target_namespace(req):
+    ret = req.new_cpp_info.get_property("cmake_target_namespace", "CMakeDeps")
+    return ret or get_global_target_name(req)
+
+
+def get_global_target_name(req):
     ret = req.new_cpp_info.get_property("cmake_target_name", "CMakeDeps")
     if not ret:
         ret = req.cpp_info.get_name("cmake_find_package_multi", default_name=False)

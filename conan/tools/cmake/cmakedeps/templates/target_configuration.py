@@ -1,7 +1,7 @@
 import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate, get_component_alias, \
-    get_target_namespace
+    get_target_namespace, get_global_target_name
 
 """
 
@@ -23,6 +23,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             if not self.conanfile.is_build_context else []
         return {"pkg_name": self.pkg_name,
                 "target_namespace": self.target_namespace,
+                "global_target_name": self.global_target_name,
                 "config_suffix": self.config_suffix,
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names":  self.get_required_components_names(),
@@ -106,17 +107,17 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
 
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
-        set_property(TARGET {{target_namespace}}::{{target_namespace}}
+        set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
                                                    ${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{target_namespace}}::{{target_namespace}}
+        set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{target_namespace}}::{{target_namespace}}
+        set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_COMPILE_DEFINITIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{target_namespace}}::{{target_namespace}}
+        set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_COMPILE_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
 
@@ -173,6 +174,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 ret.append("{}::{}".format(dep_name, component_name))
         elif self.conanfile.dependencies.direct_host:
             # Regular external "conanfile.requires" declared, not cpp_info requires
-            ret = ["{p}::{p}".format(p=get_target_namespace(r))
+            ret = ["{p}::{n}".format(p=get_target_namespace(r), n=get_global_target_name(r))
                    for r in self.conanfile.dependencies.direct_host.values()]
         return ret
