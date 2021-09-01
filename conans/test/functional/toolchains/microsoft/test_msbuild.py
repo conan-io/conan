@@ -460,7 +460,7 @@ class WinTest(unittest.TestCase):
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
 
-        client.run("new hello/0.1 -m=v2_cmake")
+        client.run("new hello/0.1 -m=cmake_lib")
         client.run("create . hello/0.1@ %s" % (settings, ))
 
         # Prepare the actual consumer package
