@@ -839,6 +839,7 @@ def check_build_vs_project_with_test_requires(vs_version):
     assert "updep_pkg_team: Release!" in client.out
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_private_transitive():
     # https://github.com/conan-io/conan/issues/9514
     client = TestClient()
@@ -848,8 +849,11 @@ def test_private_transitive():
                                                         .with_settings("os", "build_type", "arch")})
     client.run("create dep dep/0.1@")
     client.run("create pkg pkg/0.1@")
-    client.run("install consumer -g MSBuildDeps")
+    client.run("install consumer -g MSBuildDeps -s arch=x86_64 -s build_type=Release")
     assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip" in client.out
     deps_props = client.load("conandeps.props")
     assert "conan_pkg.props" in deps_props
     assert "dep" not in deps_props
+
+    pkg_data_props = client.load("conan_pkg_release_x64.props")
+    assert "conan_dep.props" not in pkg_data_props
