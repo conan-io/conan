@@ -6,6 +6,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Uses deps_cpp_info information")
 class SymlinkPackageTest(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() not in ("Linux", "Darwin"), reason="Requires Symlinks")

@@ -292,10 +292,8 @@ class ConanFileLoader(object):
         for reference in parser.requirements:
             conanfile.requires(reference)
         for build_reference in parser.build_requirements:
-            ConanFileReference.loads(build_reference)
-            if not hasattr(conanfile, "build_requires"):
-                conanfile.build_requires = []
-            conanfile.build_requires.append(build_reference)
+            # TODO: Improve this interface
+            conanfile.requires.build_require(build_reference)
 
         conanfile.generators = parser.generators
 
@@ -321,7 +319,8 @@ class ConanFileLoader(object):
         conanfile.settings = profile_host.processed_settings.copy_values()
 
         if is_build_require:
-            conanfile.build_requires = [str(r) for r in references]
+            for reference in references:
+                conanfile.requires.build_require(repr(reference))
         else:
             for reference in references:
                 conanfile.requires(repr(reference))

@@ -10,6 +10,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="cmake old generator will be removed")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool_cmake
 class CMakeAppleFrameworksTestCase(unittest.TestCase):
@@ -61,6 +62,7 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
         self._check_frameworks_found(str(self.t.out))
 
 
+@pytest.mark.xfail(reason="cmake old generator will be removed")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""

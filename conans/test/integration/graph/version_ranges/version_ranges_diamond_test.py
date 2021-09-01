@@ -11,6 +11,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
 
 
+@pytest.mark.xfail(reason="Version ranges have changed")
 class VersionRangesUpdatingTest(unittest.TestCase):
 
     def test_update_remote(self):
@@ -137,6 +138,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("Pkg/1.2@lasote/testing: PACKAGE_INFO *1.2*", client.out)
 
 
+@pytest.mark.xfail(reason="Overrides Output have changed")
 class VersionRangesMultiRemoteTest(unittest.TestCase):
 
     def setUp(self):
@@ -180,6 +182,7 @@ class HelloReuseConan(ConanFile):
                           self.client.out)
 
 
+@pytest.mark.xfail(reason="Overrides Output have changed")
 class VersionRangesDiamondTest(unittest.TestCase):
 
     def setUp(self):

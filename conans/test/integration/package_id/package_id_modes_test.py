@@ -1,8 +1,11 @@
+import pytest
+
 from conans.client.tools import environment_append
-from conans.test.utils.tools import GenConanfile, TestClient
+from conans.test.utils.tools import GenConanfile, TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="package id computation has changed")
 def test_recipe_modes():
     configs = []
     mode = "semver_mode"
@@ -31,11 +34,12 @@ def test_recipe_modes():
         client.run("create libb")
         client.run("create app")
 
-        assert "{}:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache".format(liba_ref) in client.out
+        assert "{}:{} - Cache".format(liba_ref, NO_SETTINGS_PACKAGE_ID) in client.out
         assert "libb/0.1:{} - Cache".format(package_id_arg) in client.out
 
     for package_id_mode, ref, package_id in configs:
-        client.run("config set general.default_package_id_mode={}".format(package_id_mode))
+        # client.run("config set general.default_package_id_mode={}".format(package_id_mode))
+        save(client.cache.new_config_path, f"core.package_id:default_mode={package_id_mode}")
         _assert_recipe_mode(ref, package_id)
 
     for package_id_mode, ref, package_id in configs:
@@ -43,6 +47,7 @@ def test_recipe_modes():
             _assert_recipe_mode(ref, package_id)
 
 
+@pytest.mark.xfail(reason="package id computation has changed")
 def test_package_revision_mode():
     client = TestClient()
     # TODO: These 2 little simplifications can reduce test time by 30-40%, to do in test framework

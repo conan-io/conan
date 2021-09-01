@@ -47,7 +47,7 @@ def test_test_package():
     client.run("create . cmake/1.0@")
 
     client.save({"conanfile.py": GenConanfile().with_build_requires("cmake/1.0").
-                with_build_requirement("gtest/1.0", force_host_context=True)})
+                with_test_requires("gtest/1.0")})
 
     client.run("export . pkg/1.0@")
 

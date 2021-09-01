@@ -10,6 +10,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
+@pytest.mark.xfail(reason="cmake old generator will be removed")
 @pytest.mark.tool_cmake
 class CMakeGeneratorTest(unittest.TestCase):
 

@@ -6,7 +6,7 @@ from mock import patch
 from conans.model.ref import ConanFileReference
 from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class TestUpdateFlows:
@@ -99,7 +99,7 @@ class TestUpdateFlows:
         # first match that is rev1 from server0
         # --> result: install rev from server0
         assert "liba/1.0.0 from 'server0' - Downloaded" in self.client.out
-        assert "liba/1.0.0: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" \
+        assert f"liba/1.0.0: Retrieving package {NO_SETTINGS_PACKAGE_ID}" \
                " from remote 'server0'" in self.client.out
 
         latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0@"))
@@ -192,7 +192,7 @@ class TestUpdateFlows:
         # --> result: install rev from server2
         assert "liba/1.0.0 from 'server2' - Updated" in self.client2.out
         assert f"liba/1.0.0: Downloaded recipe revision {rev_to_upload.revision}" in self.client2.out
-        assert "liba/1.0.0: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" \
+        assert f"liba/1.0.0: Retrieving package {NO_SETTINGS_PACKAGE_ID}" \
                " from remote 'server2'" in self.client2.out
 
         assert self.client2.cache.get_timestamp(rev_to_upload) == self.server_times["server2"]
@@ -362,7 +362,7 @@ class TestUpdateFlows:
         # |                | 1.2 REV0 (1000)|                |                |                |
 
         self.client.run("install liba/[>0.9.0]@")
-        assert "Version range '>0.9.0' required by 'virtual' resolved to 'liba/1.0.0' " \
+        assert "Version range '>0.9.0' required by 'None' resolved to 'liba/1.0.0' " \
                "in local cache" in self.client.out
         assert "liba/1.0.0: Already installed!" in self.client.out
 
@@ -379,7 +379,7 @@ class TestUpdateFlows:
         # will not find versions for the recipe in cache -> search remotes by order and install the
         # first match that is 1.0 from server0
         # --> result: install 1.0 from server0
-        assert "Version range '>0.9.0' required by 'virtual' resolved to 'liba/1.0.0' " \
+        assert "Version range '>0.9.0' required by 'None' resolved to 'liba/1.0.0' " \
                "in remote 'server0'" in self.client.out
         assert "liba/1.0.0 from 'server0' - Downloaded" in self.client.out
 
@@ -395,7 +395,7 @@ class TestUpdateFlows:
         self.client.run("install liba/[>1.0.0]@")
         # first match that is 1.1 from server1
         # --> result: install 1.1 from server1
-        assert "Version range '>1.0.0' required by 'virtual' resolved to 'liba/1.1.0' " \
+        assert "Version range '>1.0.0' required by 'None' resolved to 'liba/1.1.0' " \
                "in remote 'server1'" in self.client.out
         assert "liba/1.1.0 from 'server1' - Downloaded" in self.client.out
 
@@ -408,7 +408,7 @@ class TestUpdateFlows:
         self.client.run("install liba/[>1.0.0]@ --update")
         # check all servers
         # --> result: install 1.2 from server2
-        assert "Version range '>1.0.0' required by 'virtual' resolved to 'liba/1.2.0' " \
+        assert "Version range '>1.0.0' required by 'None' resolved to 'liba/1.2.0' " \
                "in remote 'server2'" in self.client.out
         assert "liba/1.2.0 from 'server2' - Downloaded" in self.client.out
 
@@ -436,8 +436,8 @@ class TestUpdateFlows:
 
         self.client.run("install liba/[>1.0.0]@ --update")
         assert "liba/* versions found in 'server0' remote" in self.client.out
-        assert "Version range '>1.0.0' required by 'virtual' resolved to 'liba/1.2.0' " \
+        assert "Version range '>1.0.0' required by 'None' resolved to 'liba/1.2.0' " \
                "in remote 'server0'" in self.client.out
         assert "liba/1.2.0 from 'server2' - Downloaded" in self.client.out
-        assert "liba/1.2.0: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 " \
+        assert f"liba/1.2.0: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
                "from remote 'server2' " in self.client.out

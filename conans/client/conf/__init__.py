@@ -153,7 +153,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
     # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
     # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
-    # error_on_override = False           # environment CONAN_ERROR_ON_OVERRIDE
     # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
     # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
     # cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
@@ -244,7 +243,6 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_CPU_COUNT", "cpu_count", None),
             ("CONAN_READ_ONLY_CACHE", "read_only_cache", None),
             ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
-            ("CONAN_ERROR_ON_OVERRIDE", "error_on_override", False),
             # http://www.vtk.org/Wiki/CMake_Cross_Compiling
             ("CONAN_CMAKE_GENERATOR", "cmake_generator", None),
             ("CONAN_CMAKE_GENERATOR_PLATFORM", "cmake_generator_platform", None),
@@ -454,14 +452,6 @@ class ConanClientConfigParser(ConfigParser, object):
         except ConanException:
             return "minor_mode"
         return default_package_id_mode
-
-    @property
-    def full_transitive_package_id(self):
-        try:
-            fix_id = self.get_item("general.full_transitive_package_id")
-            return fix_id.lower() in ("1", "true")
-        except ConanException:
-            return None
 
     @property
     def storage_path(self):

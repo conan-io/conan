@@ -274,12 +274,12 @@ class GraphLock(object):
         for graph_node in deps_graph.nodes:
             if graph_node.recipe == RECIPE_VIRTUAL:
                 continue
-
+            assert graph_node.conanfile is not None
             # Creating a GraphLockNode from the existing DepsGraph node
             requires = []
             build_requires = []
             for edge in graph_node.dependencies:
-                if edge.build_require:
+                if edge.require.build:
                     build_requires.append(edge.dst.id)
                 else:
                     requires.append(edge.dst.id)

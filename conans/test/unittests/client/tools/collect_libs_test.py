@@ -28,16 +28,15 @@ class CollectLibsTest(unittest.TestCase):
         client.run("create . mylib/0.1@user/channel")
 
         # reusing the binary already in cache
-        client.save({"conanfile.py": GenConanfile().with_require("mylib/0.1@user/channel")},
+        client.save({"conanfile.py": GenConanfile().with_require("mylib/0.1@user/channel")
+                     .with_settings("build_type")},
                     clean_first=True)
-        client.run('install . -g cmake')
-        conanbuildinfo = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS_MYLIB mylibname)", conanbuildinfo)
-        self.assertIn("set(CONAN_LIBS mylibname ${CONAN_LIBS})", conanbuildinfo)
+        client.run('install . -g CMakeDeps')
+        conanbuildinfo = client.load("mylib-release-data.cmake")
+        self.assertIn("set(mylib_LIBS_RELEASE mylibname)", conanbuildinfo)
 
         # rebuilding the binary in cache
         client.run('remove "*" -p -f')
         client.run('install . --build -g cmake')
-        conanbuildinfo = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS_MYLIB mylibname)", conanbuildinfo)
-        self.assertIn("set(CONAN_LIBS mylibname ${CONAN_LIBS})", conanbuildinfo)
+        conanbuildinfo = client.load("mylib-release-data.cmake")
+        self.assertIn("set(mylib_LIBS_RELEASE mylibname)", conanbuildinfo)

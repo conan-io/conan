@@ -30,15 +30,16 @@ class DeployGenerator(Generator):
     def content(self):
         copied_files = []
 
-        for dep_name in self.conanfile.deps_cpp_info.deps:
-            rootpath = self.conanfile.deps_cpp_info[dep_name].rootpath
+        for transitive in self.conanfile.dependencies.host.values():
+
+            rootpath = transitive.folders.package_folder
             for root, dirs, files in os.walk(os.path.normpath(rootpath)):
                 files += [d for d in dirs if os.path.islink(os.path.join(root, d))]
                 for f in files:
                     if f in FILTERED_FILES:
                         continue
                     src = os.path.normpath(os.path.join(root, f))
-                    dst = os.path.join(self.output_path, dep_name,
+                    dst = os.path.join(self.output_path, transitive.ref.name,
                                        os.path.relpath(root, rootpath), f)
                     dst = os.path.normpath(dst)
                     mkdir(os.path.dirname(dst))

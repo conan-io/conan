@@ -104,9 +104,10 @@ class PyRequireLoader(object):
             if alias is not None:
                 ref = alias
             else:
-                self._range_resolver.resolve(requirement, "py_require", update=self._update,
-                                             remotes=self._remotes)
-                ref = requirement.ref
+                resolved_ref = self._range_resolver.resolve(requirement, "py_require",
+                                                            update=self._update,
+                                                            remotes=self._remotes)
+                ref = resolved_ref
         return ref
 
     def _load_pyreq_conanfile(self, loader, lock_python_requires, ref):

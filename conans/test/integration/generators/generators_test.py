@@ -2,8 +2,11 @@ import os
 import re
 import unittest
 
+
+import pytest
+
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.model.graph_lock import LOCKFILE
-from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
@@ -35,6 +38,7 @@ ycm
                                  LOCKFILE]),
                          sorted(os.listdir(client.current_folder)))
 
+    @pytest.mark.xfail(reason="Generator qmake generator to be revisited")
     def test_srcdirs(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -53,11 +57,5 @@ class TestConan(ConanFile):
 
         cmake = client.load("conanbuildinfo.cmake")
         src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)
-
-        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("mysrc/0.1@user/testing"))
-        pkgids = client.cache.get_package_ids(latest_rrev)
-        prev = client.cache.get_latest_prev(pkgids[0])
-        pkg_layout = client.cache.pkg_layout(prev)
-
-        src_folder = os.path.join(pkg_layout.package(), "src").replace("\\", "/")
-        self.assertIn(f"{src_folder}", src_dirs)
+        self.assertIn("mysrc/0.1/user/testing/package/%s/src" % NO_SETTINGS_PACKAGE_ID,
+                      src_dirs)

@@ -24,7 +24,7 @@ def conanfile():
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()
-    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
     return c
 
 
@@ -159,6 +159,7 @@ def conanfile_apple():
     c.folders.set_base_generators(".")
     c._conan_node = Mock()
     c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
     return c
 
 

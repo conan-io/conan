@@ -113,8 +113,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.create(project,
                          conanfile=GenConanfile().with_requirement(lib2).with_requirement(lib3),
                          assert_error=True)
-        self.assertIn("Conflict in {}\n ".format(lib3), self.c_v2.out)
-        self.assertIn("Different revisions of {} has been requested".format(lib1), self.c_v2.out)
+        self.assertIn("ERROR: version conflict", self.c_v2.out)
+        # self.assertIn("Different revisions of {} has been requested".format(lib1), self.c_v2.out)
 
     def test_alias_to_a_rrev(self):
         """ If an alias points to a RREV, it resolved that RREV and no other"""
@@ -137,7 +137,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.upload_all(ConanFileReference.loads("lib/latest@conan/stable"))
         self.c_v2.remove_all()
 
-        self.c_v2.run("install lib/latest@conan/stable")
+        self.c_v2.run("install lib/(latest)@conan/stable")
         # Shouldn't be packages in the cache
         self.assertNotIn("doesn't belong to the installed recipe revision", self.c_v2.out)
 

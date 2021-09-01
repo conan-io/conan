@@ -19,22 +19,6 @@ from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 
 
-def create_requirements(conanfile):
-    try:
-        # Actual requirements of this package
-        if not hasattr(conanfile, "requires"):
-            return Requirements()
-        else:
-            if not conanfile.requires:
-                return Requirements()
-            if isinstance(conanfile.requires, (tuple, list)):
-                return Requirements(*conanfile.requires)
-            else:
-                return Requirements(conanfile.requires, )
-    except Exception as e:
-        raise ConanException("Error while initializing requirements. %s" % str(e))
-
-
 def create_settings(conanfile, settings):
     try:
         defined_settings = getattr(conanfile, "settings", None)
@@ -91,6 +75,7 @@ class ConanFile(object):
     folders = None
     patterns = None
 
+    package_type = None
     # Run in windows bash
     win_bash = None
 
@@ -110,6 +95,11 @@ class ConanFile(object):
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
+
+        self.requires = Requirements(getattr(self, "requires", None),
+                                     getattr(self, "build_requires", None),
+                                     getattr(self, "test_requires", None))
+
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
 
@@ -168,8 +158,8 @@ class ConanFile(object):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
+
         self.options = Options.create_options(self.options, self.default_options)
-        self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
 
         # needed variables to pack the project

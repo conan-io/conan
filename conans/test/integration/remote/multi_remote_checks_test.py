@@ -1,16 +1,14 @@
+import re
 import unittest
 from collections import OrderedDict
 
 import time
 from mock import patch
-import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
-    inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
-from conans.util.env_reader import get_env
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
 class RemoteChecksTest(unittest.TestCase):
@@ -42,6 +40,7 @@ class Pkg(ConanFile):
     """
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Release")
+        package_id_release = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
         the_time = time.time()
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload Pkg* --all -r=server1 --confirm")
@@ -49,6 +48,7 @@ class Pkg(ConanFile):
         # Built type Debug only in server2
         client.run('remove -f "*"')
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
+        package_id_debug = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
         # the revision in server2 will have a date that's older
         the_time = the_time - 10
         with patch.object(RevisionList, '_now', return_value=the_time):
@@ -66,9 +66,7 @@ class Pkg(ConanFile):
         # for each server and took the latest
         ref = "Pkg/0.1@lasote/testing"
         rrev = "1b25ee13ed28ed6349426f272e44a1da"
-        pkgid = "5a67a79dbc25fd0fa149a0eb7a20715189a0d988"
-        prev = "2c2736de567a6e278851c9eebfd26fdb"
-        pref = f"{ref}#{rrev}:{pkgid}#{prev}"
+        pref = f"%s#1b25ee13ed28ed6349426f272e44a1da:{package_id_debug}#2c2736de567a6e278851c9eebfd26fdb" % ref
         client.run("remote list_ref")
         self.assertIn(f"{ref}#{rrev}: server1", client.out)
 
@@ -92,14 +90,11 @@ class Pkg(ConanFile):
         self.assertIn("Uploading Pkg/0.1@lasote/testing to remote 'server1'", client2.out)
         # The upload is not done to server2 because in client2 we don't have the registry
         # with the entry
-        self.assertIn("Uploading package 1/1: "
-                      "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 to 'server1'", client2.out)
+        self.assertIn(f"Uploading package 1/1: {package_id_debug} to 'server1'", client2.out)
 
         ref2 = "Pkg/0.1@lasote/testing"
         rrev2 = "2f81612204de158d4448529e554ffdd6"
-        pkgid2 = "5a67a79dbc25fd0fa149a0eb7a20715189a0d988"
-        prev2 = "2c2736de567a6e278851c9eebfd26fdb"
-        pref2 = f"{ref2}#{rrev2}:{pkgid2}#{prev2}"
+        pref2 = f"%s#2f81612204de158d4448529e554ffdd6:{package_id_debug}#2c2736de567a6e278851c9eebfd26fdb" % ref
         # Now the reference is associated with server1
         client2.run("remote list_ref")
         self.assertIn(f"{ref2}#{rrev2}: server1", client2.out)
@@ -128,7 +123,7 @@ class Pkg(ConanFile):
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug --update')
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving from remote 'server2'...", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
-                      "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 from remote 'server2' ", client.out)
+                      f"{package_id_debug} from remote 'server2' ", client.out)
 
         # Export new recipe, it should be non associated
         conanfile = """from conans import ConanFile, tools
@@ -232,6 +227,7 @@ class Pkg(ConanFile):
         client.run("upload Pkg* --all -r=server1 --confirm")
         client.run("remove * -p -f")
         client.run("create . Pkg/0.1@lasote/testing -o Pkg:opt=2")
+        package_id2 = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
         client.run("upload Pkg* --all -r=server2 --confirm")
         client.run("remove * -p -f")
         client.run("remote list_ref")
@@ -243,14 +239,14 @@ class Pkg(ConanFile):
         # Trying to install from another remote fails
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2")
         self.assertIn("Pkg/0.1@lasote/testing from 'server1' - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:b0c3b52601b7e36532a74a37c81bb432898a951b - Download", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package b0c3b52601b7e36532a74a37c81bb432898a951b "
+        self.assertIn(f"Pkg/0.1@lasote/testing:{package_id2} - Download", client.out)
+        self.assertIn(f"Pkg/0.1@lasote/testing: Retrieving package {package_id2} "
                       "from remote 'server2'", client.out)
 
         # Nothing to update
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2 -u")
         self.assertIn("Pkg/0.1@lasote/testing from 'server2' - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:b0c3b52601b7e36532a74a37c81bb432898a951b - Cache",
+        self.assertIn(f"Pkg/0.1@lasote/testing:{package_id2} - Cache",
                       client.out)
 
         # Build missing

@@ -2,11 +2,13 @@
 
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
+@pytest.mark.xfail(reason="overrides have changed")
 class VersionRangeOverrideTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -59,6 +61,7 @@ class VersionRangeOverrideTestCase(unittest.TestCase):
 
 class VersionRangeOverrideFailTestCase(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="overrides have changed")
     def test(self):
         # https://github.com/conan-io/conan/issues/7864
         t = TestClient()

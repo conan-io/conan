@@ -38,7 +38,7 @@ class DefaultCppTestCase(unittest.TestCase):
                 self.output.info(">>>> compiler.cppstd: {{}}".format(compiler_cppstd))
         """)
 
-    id_default = "d17189cfe7b11efbc5d701339a32d203745f8b81"
+    id_default = "827ab7c8bacdca7433f4463313dfe30219f13843"
 
     def run(self, *args, **kwargs):
         default_profile_path = os.path.join(temp_folder(), "default.profile")

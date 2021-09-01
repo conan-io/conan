@@ -89,3 +89,7 @@ class ConanFileInterface:
     @property
     def is_build_context(self):
         return self._conanfile.context == CONTEXT_BUILD
+
+    @property
+    def package_type(self):
+        return self._conanfile.package_type

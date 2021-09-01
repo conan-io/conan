@@ -198,17 +198,6 @@ class MultiRemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
-    def test_predefine_remote(self):
-        self.client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
-        self.client.run("export . lasote/stable")
-        self.client.run("upload Hello0/0.1@lasote/stable -r=remote0")
-        self.client.run("upload Hello0/0.1@lasote/stable -r=remote1")
-        self.client.run("upload Hello0/0.1@lasote/stable -r=remote2")
-        self.client.run('remove "*" -f')
-        self.client.run("remote add_ref Hello0/0.1@lasote/stable remote1", assert_error=True)
-        self.assertIn("Can't set the remote for Hello0/0.1@lasote/stable. "
-                      "It doesn't exist in the local cache", self.client.out)
-
     def test_upload(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         self.client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})

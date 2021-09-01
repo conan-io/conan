@@ -46,9 +46,7 @@ def test_auto_package_no_components():
         tools.save("build_frameworks/bframe1/include/include.h", "")
         tools.save("build_frameworks/bframe2/include/include.h", "")
 
-
     def layout(self):
-
         self.folders.source = "my_source"
         self.folders.build = "my_build"
         self.folders.generators = "my_build/generators"
@@ -94,12 +92,13 @@ def test_auto_package_no_components():
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
+    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
 
     ref = ConanFileReference.loads("lib/1.0@")
-
-    prev = get_latest_prev(client.cache, ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
+    prev = get_latest_prev(client.cache, ref, package_id)
 
     p_folder = client.cache.pkg_layout(prev).package()
+
     def p_path(path):
         return os.path.join(p_folder, path)
 
@@ -186,9 +185,11 @@ def test_auto_package_with_components():
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = get_latest_prev(client.cache, ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
+    pref = get_latest_prev(client.cache, ref, package_id)
     p_folder = client.cache.pkg_layout(pref).package()
+
     def p_path(path):
         return os.path.join(p_folder, path)
 
@@ -283,7 +284,7 @@ def test_auto_package_default_patterns():
     client.run("create . lib/1.0@")
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = get_latest_prev(client.cache, ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
+    pref = get_latest_prev(client.cache, ref, package_id)
     p_folder = client.cache.pkg_layout(pref).package()
 
     assert set(os.listdir(os.path.join(p_folder, "lib"))) == {"mylib.a", "mylib.so", "mylib.so.0",

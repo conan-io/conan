@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from conans.model.info import ConanInfo
 
 info_text = '''[settings]
@@ -44,6 +46,7 @@ info_text = '''[settings]
 '''
 
 
+@pytest.mark.xfail(reason="It is no longer possible to read a conaninfo.txt and execute over it")
 class ConanInfoTest(unittest.TestCase):
 
     def test_serialize(self):
