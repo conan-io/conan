@@ -119,7 +119,7 @@ class ProfileValueParser(object):
         if conf is not None:
             base_profile.conf.update_conf_definition(conf)
         if buildenv is not None:
-            base_profile.buildenv.compose(buildenv)
+            base_profile.buildenv.update_profile_env(buildenv)
         return base_profile
 
     @staticmethod
