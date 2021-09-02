@@ -1,3 +1,8 @@
+"""
+    Intel® oneAPI Toolkit (DPC++/C++ Compiler)
+        - Versioning: https://software.intel.com/content/www/us/en/develop/articles/oneapi-toolkit-version-to-compiler-version-mapping.html
+        - Compiler: https://software.intel.com/content/www/us/en/develop/documentation/oneapi-dpcpp-cpp-compiler-dev-guide-and-reference/top.html
+"""
 import os
 import platform
 from contextlib import contextmanager
@@ -6,6 +11,14 @@ from conans.client.tools.env import environment_append, env_diff
 from conans.client.tools.win import MSVS_YEAR
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
+
+
+def is_using_intel_oneapi(compiler_version):
+    """Check if the Intel compiler to be used belongs to Intel oneAPI
+
+    Note: Intel oneAPI Toolkit first version is 2021.1.1
+    """
+    return int(compiler_version.split(".")[0]) > 19
 
 
 def get_intel_installation_path(out):
