@@ -281,7 +281,9 @@ def test_buildirs_working():
 @pytest.mark.tool_cmake
 def test_cpp_info_link_objects():
     client = TestClient()
-    cpp_info = {"objects": ["lib/myobject.o"], "libs": ["hello"]}
+
+    obj_ext = "obj" if platform.system() == "Windows" else "o"
+    cpp_info = {"objects": ["lib/myobject.{}".format(obj_ext)], "libs": ["hello"]}
     object_cpp = gen_function_cpp(name="myobject")
     object_h = gen_function_h(name="myobject")
     lib_cpp = gen_function_cpp(name="hello")
