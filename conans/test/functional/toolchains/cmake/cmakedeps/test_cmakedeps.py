@@ -281,7 +281,7 @@ def test_buildirs_working():
 @pytest.mark.tool_cmake
 def test_cpp_info_link_objects():
     client = TestClient()
-    cpp_info = {"objects": ["myobject.o"], "libs": ["hello"]}
+    cpp_info = {"objects": ["lib/myobject.o"], "libs": ["hello"]}
     object_cpp = gen_function_cpp(name="myobject")
     object_h = gen_function_h(name="myobject")
     lib_cpp = gen_function_cpp(name="hello")
@@ -321,10 +321,12 @@ def test_cpp_info_link_objects():
                  "hello.cpp": lib_cpp,
                  "hello.h": lib_h,
                  "test_package/conanfile.py": GenConanfile().with_cmake_build()
-                                                            .with_test(['path = "{}".format(self.settings.build_type) if self.settings.os == "Windows" else "."',
-                                                                       'self.run("{}{}example".format(path, os.sep))']),
+                                                            .with_import("import os")
+                                                            .with_test('path = "{}".format(self.settings.build_type) '
+                                                                       'if self.settings.os == "Windows" else "."')
+                                                            .with_test('self.run("{}{}example".format(path, os.sep))'),
                  "test_package/example.cpp": test_package_cpp,
                  "test_package/CMakeLists.txt": test_package_cmakelists})
 
     client.run("create .")
-    print("...")
+    assert "myobject: Release!" in client.out
