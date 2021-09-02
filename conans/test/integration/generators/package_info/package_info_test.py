@@ -2,54 +2,15 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
+@pytest.mark.xfail(reason="Navigation of dependencies to be redefined")
 class TestPackageInfo(unittest.TestCase):
-
-    def test_package_info_called_in_local_cache(self):
-        client = TestClient()
-        conanfile_tmp = '''
-from conans import ConanFile
-import os
-
-class HelloConan(ConanFile):
-    name = "%s"
-    version = "1.0"
-    build_policy = "missing"
-    options = {"switch": ["1",  "0"]}
-    default_options = "switch=0"
-    %s
-
-    def build(self):
-        self.output.warn("Env var MYVAR={0}.".format(os.getenv("MYVAR", "")))
-
-    def package_info(self):
-        if self.options.switch == "0":
-            self.env_info.MYVAR = "foo"
-        else:
-            self.env_info.MYVAR = "bar"
-
-'''
-        for index in range(4):
-            requires = "requires = 'Lib%s/1.0@conan/stable'" % index if index > 0 else ""
-            conanfile = conanfile_tmp % ("Lib%s" % (index + 1), requires)
-            client.save({CONANFILE: conanfile}, clean_first=True)
-            client.run("create . conan/stable")
-
-        txt = "[requires]\nLib4/1.0@conan/stable"
-        client.save({CONANFILE_TXT: txt}, clean_first=True)
-        client.run("install . -o *:switch=1")
-        self.assertIn("Lib1/1.0@conan/stable: WARN: Env var MYVAR=.", client.out)
-        self.assertIn("Lib2/1.0@conan/stable: WARN: Env var MYVAR=bar.", client.out)
-        self.assertIn("Lib3/1.0@conan/stable: WARN: Env var MYVAR=bar.", client.out)
-        self.assertIn("Lib4/1.0@conan/stable: WARN: Env var MYVAR=bar.", client.out)
-
-        client.run("install . -o *:switch=0 --build Lib3")
-        self.assertIn("Lib3/1.0@conan/stable: WARN: Env var MYVAR=foo", client.out)
 
     def test_package_info_name(self):
         dep = textwrap.dedent("""
@@ -315,10 +276,10 @@ class HelloConan(ConanFile):
                      "iss_libs/libiss": "",
                      "bin/exelauncher": ""})
         dep_ref = ConanFileReference("dep", "1.0", "us", "ch")
-        dep_pref = PackageReference(dep_ref, NO_SETTINGS_PACKAGE_ID)
         client.run("create conanfile_dep.py dep/1.0@us/ch")
         client.run("create conanfile_consumer.py consumer/1.0@us/ch")
-        package_folder = client.cache.package_layout(dep_ref).package(dep_pref)
+        dep_pref = client.get_latest_prev(dep_ref, NO_SETTINGS_PACKAGE_ID)
+        package_folder = client.get_latest_pkg_layout(dep_pref).package()
 
         expected_comp_starlight_include_paths = [os.path.join(package_folder, "galaxy", "starlight")]
         expected_comp_planet_include_paths = [os.path.join(package_folder, "galaxy", "planet")]
@@ -487,6 +448,7 @@ class HelloConan(ConanFile):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Package(ConanFile):
+                settings = "build_type"
                 requires = 'gtest/1.0'
 
                 def build(self):
@@ -499,8 +461,6 @@ class HelloConan(ConanFile):
         client.run("create . pkg/1.0@")
         self.assertIn("pkg/1.0: GTEST_INFO: GTest", client.out)
         self.assertIn("pkg/1.0: GTEST_FILEINFO: GtesT", client.out)
-        client.run("install . pkg/1.0@")
-        client.run("build .")
+        client.run("build . --name=pkg --version=1.0")
         self.assertIn("conanfile.py (pkg/1.0): GTEST_INFO: GTest", client.out)
         self.assertIn("conanfile.py (pkg/1.0): GTEST_FILEINFO: GtesT", client.out)
-

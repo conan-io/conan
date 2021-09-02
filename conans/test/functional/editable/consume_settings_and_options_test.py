@@ -7,12 +7,12 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 
 
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 class HeaderOnlyLibTestClient(TestClient):
     header = """
         #include <iostream>
@@ -48,11 +48,6 @@ class Pkg(ConanFile):
 
     """
 
-    conan_package_layout = """
-[%sincludedirs]
-src/include/{{settings.build_type}}/{{options.shared}}
-"""
-
     def __init__(self, use_repo_file, *args, **kwargs):
         super(HeaderOnlyLibTestClient, self).__init__(*args, **kwargs)
 
@@ -66,18 +61,12 @@ src/include/{{settings.build_type}}/{{options.shared}}
                  "src/include/Release/False/hello.hpp": self.header.format(build_type="Release",
                                                                            shared="False"),
                  }
-
-        if use_repo_file:
-            files["mylayout"] = self.conan_package_layout % ""
-        else:
-            file_path = os.path.join(self.cache.cache_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
-            save(file_path,
-                 self.conan_package_layout % "MyLib/0.1@user/editable:")
-
         self.save(files)
 
 
+@pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
 @pytest.mark.tool_cmake
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 class SettingsAndOptionsTest(unittest.TestCase):
 
     @parameterized.expand(itertools.product(["Debug", "Release", ],  # build_type

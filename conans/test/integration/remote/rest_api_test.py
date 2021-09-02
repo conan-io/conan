@@ -1,13 +1,12 @@
 import os
 import platform
 import unittest
-from random import randrange
 
 import pytest
 import requests
 from mock import Mock
 
-from conans import DEFAULT_REVISION_V1
+from conans import REVISIONS
 from conans.client.conf import ConanClientConfigParser
 from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -20,7 +19,7 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
-from conans.test.assets.cpp_test_files import cpp_hello_source_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder
@@ -101,11 +100,11 @@ class RestApiTest(unittest.TestCase):
 
     def test_server_capabilities(self):
         capabilities = self.api.server_capabilities()
-        self.assertEqual(capabilities, ["ImCool", "TooCool"])
+        self.assertEqual(capabilities, ["ImCool", "TooCool", REVISIONS])
 
     def test_get_conan(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan1/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan1/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         # Get the conans
@@ -116,21 +115,21 @@ class RestApiTest(unittest.TestCase):
 
     def test_get_recipe_manifest(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         # Get the conans digest
         digest = self.api.get_recipe_manifest(ref)
-        self.assertEqual(digest.summary_hash, "0acb2be9768f174f223c81568da74fbe")
+        self.assertEqual(digest.summary_hash, "6fae00c91be4d09178af3c6fdc4d59e9")
         self.assertEqual(digest.time, 123123123)
 
     def test_get_package(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA2")
+        pref = PackageReference(ref, "1F23223EFDA2", "mypackagerev")
         self._upload_package(pref)
 
         # Get the package
@@ -140,11 +139,11 @@ class RestApiTest(unittest.TestCase):
 
     def test_get_package_info(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA")
+        pref = PackageReference(ref, "1F23223EFDA", "mypackagerev")
         conan_info = """[settings]
     arch=x86_64
     compiler=gcc
@@ -167,7 +166,7 @@ class RestApiTest(unittest.TestCase):
     def test_upload_huge_conan(self):
         if platform.system() != "Windows":
             # Upload a conans
-            ref = ConanFileReference.loads("conanhuge/1.0.0@private_user/testing")
+            ref = ConanFileReference.loads("conanhuge/1.0.0@private_user/testing#myreciperev")
             files = {"file%s.cpp" % name: "File conent" for name in range(1000)}
             self._upload_recipe(ref, files)
 
@@ -179,7 +178,7 @@ class RestApiTest(unittest.TestCase):
 
     def test_search(self):
         # Upload a conan1
-        conan_name1 = "HelloOnly/0.10@private_user/testing"
+        conan_name1 = "HelloOnly/0.10@private_user/testing#myreciperev"
         ref1 = ConanFileReference.loads(conan_name1)
         self._upload_recipe(ref1)
 
@@ -196,11 +195,11 @@ class RestApiTest(unittest.TestCase):
     Say/2.1@user/testing
     Chat/2.1@user/testing:SHA_ABC
 """
-        pref = PackageReference(ref1, "1F23223EFDA")
+        pref = PackageReference(ref1, "1F23223EFDA", "mypackagerev")
         self._upload_package(pref, {CONANINFO: conan_info})
 
         # Upload a conan2
-        conan_name2 = "helloonlyToo/2.1@private_user/stable"
+        conan_name2 = "helloonlyToo/2.1@private_user/stable#myreciperev"
         ref2 = ConanFileReference.loads(conan_name2)
         self._upload_recipe(ref2)
 
@@ -211,30 +210,27 @@ class RestApiTest(unittest.TestCase):
         # Search packages
         results = self.api.search("HelloOnly*", ignorecase=False)
         results = [r.copy_clear_rev() for r in results]
-        self.assertEqual(results, [ref1])
+        self.assertEqual(results, [ref1.copy_clear_rev()])
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="Not prepared with revs")
     def test_remove(self):
         # Upload a conans
-        ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
-        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
+        ref = ref.copy_with_rev("myreciperev")
         path1 = self.server.server_store.base_folder(ref)
         self.assertTrue(os.path.exists(path1))
         # Remove conans and packages
         self.api.remove_recipe(ref)
         self.assertFalse(os.path.exists(path1))
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="Not prepared with revs")
     def test_remove_packages(self):
-        ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#%s"
-                                       % DEFAULT_REVISION_V1)
+        ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         folders = {}
         for sha in ["1", "2", "3", "4", "5"]:
             # Upload an package
-            pref = PackageReference(ref, sha, DEFAULT_REVISION_V1)
+            pref = PackageReference(ref, sha, "mypackagerev")
             self._upload_package(pref, {CONANINFO: ""})
             folder = self.server.server_store.package(pref)
             self.assertTrue(os.path.exists(folder))
@@ -266,7 +262,8 @@ class RestApiTest(unittest.TestCase):
 
     def _upload_package(self, package_reference, base_files=None):
 
-        files = cpp_hello_source_files(3, [1, 12])
+        files = {"conanfile.py": GenConanfile("3").with_requires("1", "12").with_exports("*"),
+                 "hello.cpp": "hello"}
         if base_files:
             files.update(base_files)
 
@@ -274,14 +271,14 @@ class RestApiTest(unittest.TestCase):
         abs_paths = {}
         for filename, content in files.items():
             abs_path = os.path.join(tmp_dir, filename)
-            save(abs_path, content)
+            save(abs_path, str(content))
             abs_paths[filename] = abs_path
 
         self.api.upload_package(package_reference, abs_paths, None, retry=1, retry_wait=0)
 
     def _upload_recipe(self, ref, base_files=None, retry=1, retry_wait=0):
 
-        files = cpp_hello_source_files(3, [1, 12])
+        files = {"conanfile.py": GenConanfile("3").with_requires("1", "12")}
         if base_files:
             files.update(base_files)
         content = """

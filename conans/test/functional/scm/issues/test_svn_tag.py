@@ -50,11 +50,12 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
 
         # Export the recipe (be sure sources are retrieved from the repository)
         t.run("export . {ref}".format(ref=ref))
-        package_layout = t.cache.package_layout(ref)
-        exported_conanfile = load(package_layout.conanfile())
-        self.assertNotIn("auto", exported_conanfile)
-        self.assertIn('"revision": "3",', exported_conanfile)
-        self.assertIn('tags/release-1.0/level1@3', exported_conanfile)
+
+        scm_info = t.scm_info_cache(ref)
+        self.assertEqual(scm_info.revision, '3')
+        self.assertIn('tags/release-1.0/level1@3', scm_info.url)
+        self.assertNotIn('auto', scm_info.url)
+
         t.run("remove {} -f -sf".format(ref))  # Remove sources caching
 
         # Compile (it will clone the repo)

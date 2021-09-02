@@ -1,8 +1,6 @@
 import re
 from collections import namedtuple
 
-from six import string_types
-
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
@@ -93,7 +91,7 @@ def check_valid_ref(reference, strict_mode=True):
 class ConanName(object):
     _max_chars = 51
     _min_chars = 2
-    _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
+    _validation_pattern = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_+.-]{%s,%s}$"
                                      % (_min_chars - 1, _max_chars - 1))
 
     _validation_revision_pattern = re.compile("^[a-zA-Z0-9]{1,%s}$" % _max_chars)
@@ -120,7 +118,7 @@ class ConanName(object):
     @staticmethod
     def validate_string(value, reference_token=None):
         """Check for string"""
-        if not isinstance(value, string_types):
+        if not isinstance(value, str):
             message = "Value provided{ref_token}, '{value}' (type {type}), {reason}".format(
                 ref_token=" for {}".format(reference_token) if reference_token else "",
                 value=value, type=type(value).__name__,
@@ -135,7 +133,8 @@ class ConanName(object):
         if name == "*":
             return
         if ConanName._validation_pattern.match(name) is None:
-            if version and name.startswith("[") and name.endswith("]"):
+            if version and ((name.startswith("[") and name.endswith("]")) or
+                            (name.startswith("(") and name.endswith(")"))):
                 return
             ConanName.invalid_name_message(name, reference_token=reference_token)
 
@@ -197,15 +196,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         name, version, user, channel, revision = get_reference_fields(text)
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
-
-    @staticmethod
-    def load_dir_repr(dir_repr):
-        name, version, user, channel = dir_repr.split("/")
-        if user == "_":
-            user = None
-        if channel == "_":
-            channel = None
-        return ConanFileReference(name, version, user, channel)
 
     def __str__(self):
         if self.name is None and self.version is None:
@@ -300,7 +290,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         return tmp
 
     def copy_with_revs(self, revision, p_revision):
-        return PackageReference(self.ref.copy_with_rev(revision), self.id, p_revision)
+        return PackageReference(self.ref.copy_with_rev(revision), self.id, p_revision, validate=False)
 
     def copy_clear_prev(self):
         return self.copy_with_revs(self.ref.revision, None)

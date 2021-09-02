@@ -10,6 +10,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
+@pytest.mark.xfail(reason="cmake old generator will be removed")
 @pytest.mark.tool_cmake
 class CMakeGeneratorTest(unittest.TestCase):
 
@@ -41,36 +42,6 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run('install .')
         client.run('build .')
         self.assertIn("WARN: Disabled conan compiler checks", client.out)
-
-    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
-    def test_check_compiler_package_id(self):
-        # https://github.com/conan-io/conan/issues/6658
-        file_content = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-            class ConanFileToolsTest(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                generators = "cmake"
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                def package_id(self):
-                    self.info.settings.compiler.version = "SomeVersion"
-                """)
-
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8)
-            project(conanzlib)
-            include(conanbuildinfo.cmake)
-            conan_basic_setup()
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": file_content,
-                     "CMakeLists.txt": cmakelists})
-
-        client.run('install .')
-        client.run_command('cmake .')
-        self.assertIn("Conan: Checking correct version:", client.out)
 
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
@@ -110,9 +81,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         cmakelists_path = os.path.join(client.current_folder, "src", "CMakeLists.txt")
 
         # Test output works as expected
-        client.run("install .")
-        # No need to do a full create, the build --configure is good
-        client.run("build . --configure")
+        client.run("build . --should_configure")
         self.assertIn("Conan: Using cmake global configuration", client.out)
         self.assertIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertIn("Conan: Adjusting language standard", client.out)
@@ -122,7 +91,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                         "conan_basic_setup()",
                         "set(CONAN_CMAKE_SILENT_OUTPUT True)\nconan_basic_setup()",
                         output=client.out)
-        client.run("build . --configure")
+        client.run("build . --should_configure")
         self.assertNotIn("Conan: Using cmake global configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertNotIn("Conan: Adjusting language standard", client.out)
@@ -130,7 +99,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         # Use TARGETS
         replace_in_file(cmakelists_path, "conan_basic_setup()", "conan_basic_setup(TARGETS)",
                         output=client.out)
-        client.run("build . --configure")
+        client.run("build . --should_configure")
         self.assertNotIn("Conan: Using cmake targets configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertNotIn("Conan: Adjusting language standard", client.out)
@@ -382,128 +351,6 @@ class CMakeGeneratorTest(unittest.TestCase):
 
         client.run('create .')
         self.assertIn("POLICY CMP0054 IS OLD", client.out)
-
-    def test_do_not_mix_cflags_cxxflags(self):
-        client = TestClient()
-
-        def run_test(consumer_generator, consumer_cmakelists, with_components=True):
-
-            def generate_files(upstream_cpp_info, consumer_generator, consumer_cmakelists):
-                upstream_conanfile = GenConanfile().with_name("upstream").with_version("1.0")\
-                    .with_package_info(cpp_info=upstream_cpp_info, env_info={})
-                client.save({"conanfile.py": upstream_conanfile}, clean_first=True)
-                client.run("create .")
-                consumer_conanfile = textwrap.dedent("""
-                    from conans import ConanFile, CMake
-
-                    class Consumer(ConanFile):
-                        name = "consumer"
-                        version = "1.0"
-                        settings = "os", "compiler", "arch", "build_type"
-                        exports_sources = "CMakeLists.txt"
-                        requires = "upstream/1.0"
-                        generators = "{}"
-
-                        def build(self):
-                            cmake = CMake(self)
-                            cmake.configure()
-                    """)
-                client.save({"conanfile.py": consumer_conanfile.format(consumer_generator),
-                             "CMakeLists.txt": consumer_cmakelists})
-                client.run("create .")
-
-            if consumer_generator in ["cmake_find_package", "cmake_find_package_multi"]:
-                if with_components:
-                    cpp_info = {"components": {"comp": {"cflags": ["one", "two"],
-                                                        "cxxflags": ["three", "four"]}}}
-                else:
-                    cpp_info = {"cflags": ["one", "two"], "cxxflags": ["three", "four"]}
-                generate_files(cpp_info, consumer_generator, consumer_cmakelists)
-                self.assertIn("compile options: three;four;one;two", client.out)
-                self.assertIn("cflags: one;two", client.out)
-                self.assertIn("cxxflags: three;four", client.out)
-                if with_components:
-                    self.assertIn("comp cflags: one;two", client.out)
-                    self.assertIn("comp cxxflags: three;four", client.out)
-                    if consumer_generator == "cmake_find_package":
-                        self.assertIn("comp compile options: one;two;three;four", client.out)
-                    else:
-                        self.assertIn("$<$<CONFIG:Debug>:;>;"
-                                      "$<$<CONFIG:Release>:;one;two;three;four>;"
-                                      "$<$<CONFIG:RelWithDebInfo>:;>;"
-                                      "$<$<CONFIG:MinSizeRel>:;>"
-                                      , client.out)
-            else:
-                generate_files({"cflags": ["one", "two"], "cxxflags": ["three", "four"]},
-                               consumer_generator, consumer_cmakelists)
-                self.assertIn("global cflags: one two", client.out)
-                self.assertIn("global cxxflags: three four", client.out)
-                self.assertIn("upstream cflags: one two", client.out)
-                self.assertIn("upstream cxxflags: three four", client.out)
-
-        # Test cmake generator
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8)
-            set(CMAKE_CXX_COMPILER_WORKS 1)
-            project(consumer)
-            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            message("global cflags: ${CONAN_C_FLAGS}")
-            message("global cxxflags: ${CONAN_CXX_FLAGS}")
-            message("upstream cflags: ${CONAN_C_FLAGS_UPSTREAM}")
-            message("upstream cxxflags: ${CONAN_CXX_FLAGS_UPSTREAM}")
-            """)
-        run_test("cmake", cmakelists)
-
-        # Test cmake_multi generator
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8)
-            set(CMAKE_CXX_COMPILER_WORKS 1)
-            project(consumer)
-            include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
-            message("global cflags: ${CONAN_C_FLAGS_RELEASE}")
-            message("global cxxflags: ${CONAN_CXX_FLAGS_RELEASE}")
-            message("upstream cflags: ${CONAN_C_FLAGS_UPSTREAM_RELEASE}")
-            message("upstream cxxflags: ${CONAN_CXX_FLAGS_UPSTREAM_RELEASE}")
-            """)
-        run_test("cmake_multi", cmakelists)
-
-        # Test cmake_find_package generator
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8)
-            set(CMAKE_CXX_COMPILER_WORKS 1)
-            project(consumer)
-            find_package(upstream)
-            message("compile options: ${upstream_COMPILE_OPTIONS_LIST}")
-            message("cflags: ${upstream_COMPILE_OPTIONS_C}")
-            message("cxxflags: ${upstream_COMPILE_OPTIONS_CXX}")
-            message("comp cflags: ${upstream_comp_COMPILE_OPTIONS_C}")
-            message("comp cxxflags: ${upstream_comp_COMPILE_OPTIONS_CXX}")
-            get_target_property(tmp upstream::comp INTERFACE_COMPILE_OPTIONS)
-            message("comp compile options: ${tmp}")
-            """)
-        run_test("cmake_find_package", cmakelists)
-
-        # Test cmake_find_package generator without components
-        run_test("cmake_find_package", cmakelists, with_components=False)
-
-        # Test cmake_find_package_multi generator
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8)
-            set(CMAKE_CXX_COMPILER_WORKS 1)
-            project(consumer)
-            find_package(upstream)
-            message("compile options: ${upstream_COMPILE_OPTIONS_RELEASE_LIST}")
-            message("cflags: ${upstream_COMPILE_OPTIONS_C_RELEASE}")
-            message("cxxflags: ${upstream_COMPILE_OPTIONS_CXX_RELEASE}")
-            message("comp cflags: ${upstream_comp_COMPILE_OPTIONS_C_RELEASE}")
-            message("comp cxxflags: ${upstream_comp_COMPILE_OPTIONS_CXX_RELEASE}")
-            get_target_property(tmp upstream::comp INTERFACE_COMPILE_OPTIONS)
-            message("comp compile options: ${tmp}")
-            """)
-        run_test("cmake_find_package_multi", cmakelists)
-
-        # Test cmake_find_package_multi generator without components
-        run_test("cmake_find_package_multi", cmakelists, with_components=False)
 
     def test_build_modules_alias_target(self, use_components=False):
         client = TestClient()

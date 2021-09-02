@@ -1,8 +1,10 @@
 import textwrap
 import unittest
 
-from conans.paths import CONANINFO
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
+
+import pytest
+
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class OptionsTest(unittest.TestCase):
@@ -82,7 +84,7 @@ class EqualerrorConan(ConanFile):
     name = "equal"
     version = "1.0.0"
     options = {"opt": "ANY"}
-    default_options = ("opt=b=c",)
+    default_options = {"opt": "b=c"}
 
     def build(self):
         self.output.warn("OPTION %s" % self.options.opt)
@@ -99,39 +101,6 @@ equal:opt=a=b
         client.run("install . --build=missing")
         self.assertIn("OPTION a=b", client.out)
 
-    def test_basic_caching(self):
-        client = TestClient()
-        zlib = '''
-from conans import ConanFile
-
-class ConanLib(ConanFile):
-    name = "zlib"
-    version = "0.1"
-    options = {"shared": [True, False]}
-    default_options= "shared=False"
-'''
-
-        client.save({"conanfile.py": zlib})
-        client.run("export . lasote/testing")
-
-        project = """[requires]
-zlib/0.1@lasote/testing
-"""
-        client.save({"conanfile.txt": project}, clean_first=True)
-
-        client.run("install . -o zlib:shared=True --build=missing")
-        self.assertIn("zlib/0.1@lasote/testing:2a623e3082a38f90cd2c3d12081161412de331b0",
-                      client.out)
-        conaninfo = client.load(CONANINFO)
-        self.assertIn("zlib:shared=True", conaninfo)
-
-        # Options not cached anymore
-        client.run("install . --build=missing")
-        self.assertIn("zlib/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
-        conaninfo = client.load(CONANINFO)
-        self.assertNotIn("zlib:shared=True", conaninfo)
-
     def test_default_options(self):
         client = TestClient()
         conanfile = """
@@ -141,7 +110,7 @@ class MyConanFile(ConanFile):
     name = "MyConanFile"
     version = "1.0"
     options = {"config": %s}
-    default_options = "config%s"
+    default_options = {"config": %s}
 
     def configure(self):
         if self.options.config:
@@ -152,43 +121,28 @@ class MyConanFile(ConanFile):
             self.output.info("String evaluation")
 """
         # Using "ANY" as possible options
-        client.save({"conanfile.py": conanfile % ("\"ANY\"", "")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("Error while initializing options.", client.out)
-        client.save({"conanfile.py": conanfile % ("\"ANY\"", "=None")})
+        client.save({"conanfile.py": conanfile % ("\"ANY\"", "None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
         self.assertIn("String evaluation", client.out)
 
         # Using None as possible options
-        client.save({"conanfile.py": conanfile % ("[None]", "")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("Error while initializing options.", client.out)
-        client.save({"conanfile.py": conanfile % ("[None]", "=None")})
+        client.save({"conanfile.py": conanfile % ("[None]", "None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
         self.assertIn("String evaluation", client.out)
 
         # Using "None" as possible options
-        client.save({"conanfile.py": conanfile % ("[\"None\"]", "")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("Error while initializing options.", client.out)
-        client.save({"conanfile.py": conanfile % ("[\"None\"]", "=None")})
+        client.save({"conanfile.py": conanfile % ("[\"None\"]", "None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
         self.assertIn("String evaluation", client.out)
-        client.save({"conanfile.py": conanfile % ("[\"None\"]", "=\\\"None\\\"")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("'\"None\"' is not a valid 'options.config' value", client.out)
 
         # Using "ANY" as possible options and "otherstringvalue" as default
-        client.save({"conanfile.py": conanfile % ("[\"otherstringvalue\"]", "")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("Error while initializing options.", client.out)
-        client.save({"conanfile.py": conanfile % ("\"ANY\"", "=otherstringvalue")})
+        client.save({"conanfile.py": conanfile % ("\"ANY\"", '"otherstringvalue"')})
         client.run("create . danimtb/testing")
         self.assertIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
@@ -240,6 +194,7 @@ class MyConanFile(ConanFile):
             self.assertIn("conanfile.py: shared=True", client.out)
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
 
+    @pytest.mark.xfail(reason="info.shared_library_package_id() to be removed")
     def test_overridable_shared_option(self):
         client = TestClient()
         conanfile = GenConanfile().with_option("shared", [True, False])\
@@ -301,9 +256,10 @@ class MyConanFile(ConanFile):
         # Pkg SHARED, libA STATIC
         options = "-o pkg:shared=True  -o liba:shared=False"
         client.run("create . pkg/0.1@user/testing %s" % options)
-        self.assertIn("pkg/0.1@user/testing:5e7619965702ca25bdff1b2ce672a8236b8da689 - Build",
+        self.assertIn("pkg/0.1@user/testing:bf0155900ebfab70eaba45bb209cb719e180e3a4 - Build",
                       client.out)
 
+    @pytest.mark.xfail(reason="info.shared_library_package_id() to be removed")
     def test_overridable_no_shared_option(self):
         client = TestClient()
         conanfile = GenConanfile()
@@ -331,6 +287,7 @@ class MyConanFile(ConanFile):
             self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                           client.out)
 
+    @pytest.mark.xfail(reason="info.shared_library_package_id() to be removed")
     def test_missing_shared_option_package_id(self):
         client = TestClient()
 

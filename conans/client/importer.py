@@ -5,8 +5,8 @@ import stat
 from conans.client import tools
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
+from conans.client.tools import no_op
 from conans.errors import ConanException
-from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.dates import timestamp_now
 from conans.util.env_reader import get_env
@@ -76,7 +76,7 @@ def run_imports(conanfile):
     mkdir(conanfile.imports_folder)
     file_importer = _FileImporter(conanfile, conanfile.imports_folder)
     conanfile.copy = file_importer
-    with get_env_context_manager(conanfile):
+    with no_op():  # TODO: Remove this in a later refactor
         with tools.chdir(conanfile.imports_folder):
             conanfile.imports()
     copied_files = file_importer.copied_files
@@ -111,7 +111,7 @@ def run_deploy(conanfile, install_folder):
     conanfile.copy_deps = file_importer
     conanfile.copy = file_copier
     conanfile.folders.set_base_install(install_folder)
-    with get_env_context_manager(conanfile):
+    with no_op():  # TODO: Remove this in a later refactor
         with tools.chdir(install_folder):
             conanfile.deploy()
 
@@ -151,12 +151,17 @@ class _FileImporter(object):
         else:
             real_dst_folder = os.path.normpath(os.path.join(self._dst_folder, dst))
 
-        pkgs = (self._conanfile.deps_cpp_info.dependencies if not root_package else
-                [(pkg, cpp_info) for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
-                 if fnmatch.fnmatch(pkg, root_package)])
+        pkgs = []
+        for dep in self._conanfile.dependencies.host.values():
+            if root_package:
+                if fnmatch.fnmatch(dep.ref.name, root_package):
+                    pkgs.append((dep.ref.name, dep.cpp_info))
+            else:
+                pkgs.append((dep.ref.name, dep.cpp_info))
 
         symbolic_dir_name = src[1:] if src.startswith("@") else None
         src_dirs = [src]  # hardcoded src="bin" origin
+        # FIXME: access of cpp_info.rootpath, use package_folder better if possible.
         for pkg_name, cpp_info in pkgs:
             final_dst_path = os.path.join(real_dst_folder, pkg_name) if folder else real_dst_folder
             file_copier = FileCopier([cpp_info.rootpath], final_dst_path)

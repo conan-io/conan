@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client.importer import IMPORTS_MANIFESTS
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
@@ -88,6 +90,7 @@ class ConanLib(ConanFile):
         for filename in ["file1.txt", "file2.txt"]:
             self.assertFalse(os.path.exists(os.path.join(dst_global_folder, filename)))
 
+    @pytest.mark.xfail(reason="new Environment need global env arguments")
     def test_imports_env_var(self):
         conanfile2 = '''
 from conans import ConanFile
@@ -111,8 +114,7 @@ class ConanLib(ConanFile):
         self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
 
-        self.client.run("imports .")  # Automatic conanbuildinfo.txt
-        self.assertNotIn("conanbuildinfo.txt file not found", self.client.out)
+        self.client.run("imports .")
 
     def test_install_manifest(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
@@ -122,31 +124,10 @@ class ConanLib(ConanFile):
         self.assertIn("file2.txt", os.listdir(self.client.current_folder))
         self._check_manifest()
 
-    def test_install_manifest_without_install(self):
-        self.client.save({"conanfile.txt": test1}, clean_first=True)
-        self.client.run('imports . ', assert_error=True)
-        self.assertIn("You can generate it using 'conan install'", self.client.out)
-
     def test_install_dest(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
-        self.client.run("install ./ --no-imports")
-        self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
-        self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
-
         self.client.run("imports . -imf myfolder")
         files = os.listdir(os.path.join(self.client.current_folder, "myfolder"))
-        self.assertIn("file1.txt", files)
-        self.assertIn("file2.txt", files)
-
-    def test_imports_build_folder(self):
-        self.client.save({"conanfile.txt": test1}, clean_first=True)
-        tmp = self.client.current_folder
-        self.client.current_folder = os.path.join(self.client.current_folder, "build")
-        mkdir(self.client.current_folder)
-        self.client.run("install .. --no-imports")
-        self.client.current_folder = tmp
-        self.client.run("imports . --install-folder=build --import-folder=.")
-        files = os.listdir(self.client.current_folder)
         self.assertIn("file1.txt", files)
         self.assertIn("file2.txt", files)
 
@@ -183,9 +164,6 @@ class ConanLib(ConanFile):
 
     def test_imports(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
-        self.client.run("install . --no-imports -g txt")
-        self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
-        self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
         self.client.run("imports .")
         self.assertIn("imports(): Copied 2 '.txt' files", self.client.out)
         self.assertIn("file1.txt", os.listdir(self.client.current_folder))
@@ -196,10 +174,6 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.txt": test1,
                           "conanfile.py": test2,
                           "conanfile2.py": test3}, clean_first=True)
-        self.client.run("install . --no-imports")
-        self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
-        self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
-
         self.client.run("imports conanfile2.py")
         self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertIn("file2.txt", os.listdir(self.client.current_folder))
@@ -270,15 +244,9 @@ class SymbolicImportsTest(unittest.TestCase):
         self.assertIn("Import from unknown package folder '@unknown_unexisting_dir'",
                       self.consumer.out)
 
+    @pytest.mark.xfail(reason="cache2.0 editables not supported yet")
     def test_imports_symbolic_from_editable(self):
-        layout = textwrap.dedent("""
-            [libdirs]
-            .
-            [bindirs]
-            .
-            """)
-        self.client.save({"layout": layout})
-        self.client.run("editable add . pkg/0.1@ --layout=layout")
+        self.client.run("editable add . pkg/0.1@")
         self.consumer.run("install .")
         self.assertEqual("hello world", self.consumer.load("bin/myfile.bin"))
         self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))

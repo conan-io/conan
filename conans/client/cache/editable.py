@@ -34,10 +34,10 @@ class EditablePackages(object):
         ref = ref.copy_clear_rev()
         return self._edited_refs.get(ref)
 
-    def add(self, ref, path, layout):
+    def add(self, ref, path):
         assert isinstance(ref, ConanFileReference)
         ref = ref.copy_clear_rev()
-        self._edited_refs[ref] = {"path": path, "layout": layout}
+        self._edited_refs[ref] = {"path": path}
         self.save()
 
     def remove(self, ref):
@@ -47,9 +47,6 @@ class EditablePackages(object):
             self.save()
             return True
         return False
-
-    def override(self, workspace_edited):
-        self._edited_refs = workspace_edited
 
     @contextmanager
     def disable_editables(self):

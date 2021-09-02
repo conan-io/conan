@@ -1,7 +1,6 @@
 
 import fnmatch
 
-import six
 import yaml
 
 from conans.errors import ConanException
@@ -111,7 +110,7 @@ class PackageOptionValues(object):
         return sorted(list(self._dict.items()))
 
     def add(self, option_text):
-        assert isinstance(option_text, six.string_types)
+        assert isinstance(option_text, str)
         name, value = option_text.split("=")
         self._dict[name.strip()] = PackageOptionValue(value.strip())
 
@@ -158,14 +157,14 @@ class PackageOptionValues(object):
 
     @property
     def sha(self):
-        result = []
+        result = ["[options]"]
         for name, value in self.items():
             # It is important to discard None values, so migrations in settings can be done
             # without breaking all existing packages SHAs, by adding a first "None" option
             # that doesn't change the final sha
             if value:
                 result.append("%s=%s" % (name, value))
-        return sha1('\n'.join(result).encode())
+        return '\n'.join(result)
 
 
 class OptionsValues(object):
@@ -190,7 +189,7 @@ class OptionsValues(object):
         # handle list of tuples (name, value)
         for (k, v) in values:
             k = k.strip()
-            v = v.strip() if isinstance(v, six.string_types) else v
+            v = v.strip() if isinstance(v, str) else v
             tokens = k.split(":")
             if len(tokens) == 2:
                 package, option = tokens
@@ -275,9 +274,6 @@ class OptionsValues(object):
         for v in self._reqs_options.values():
             v.clear()
 
-    def filter_used(self, used_pkg_names):
-        self._reqs_options = {k: v for k, v in self._reqs_options.items() if k in used_pkg_names}
-
     def as_list(self):
         result = []
         options_list = self._package_values.items()
@@ -307,9 +303,9 @@ class OptionsValues(object):
     @property
     def sha(self):
         result = [self._package_values.sha]
-        for key in sorted(list(self._reqs_options.keys())):
-            result.append(self._reqs_options[key].sha)
-        return sha1('\n'.join(result).encode())
+        #for key in sorted(list(self._reqs_options.keys())):
+        #    result.append(self._reqs_options[key].sha)
+        return '\n'.join(result)
 
     def serialize(self):
         ret = {"options": self._package_values.serialize(),
@@ -656,3 +652,15 @@ class Options(object):
         existing_names = [pref.ref.name for pref in prefs]
         self._deps_package_values = {k: v for k, v in self._deps_package_values.items()
                                      if k in existing_names}
+
+    @staticmethod
+    def create_options(pkg_options, default_options):
+        try:
+            options = Options(PackageOptions(pkg_options))
+            if default_options is not None:
+                if not isinstance(default_options, dict):
+                    raise ConanException("default_options must be a dictionary")
+                options.values = OptionsValues(default_options)
+            return options
+        except Exception as e:
+            raise ConanException("Error while initializing options. %s" % str(e))

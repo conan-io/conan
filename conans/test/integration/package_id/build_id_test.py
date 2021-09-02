@@ -49,35 +49,49 @@ class MyTest(ConanFile):
         self.copy("*")
 """
 
+package_id_windows_release = "e3ae2a66a27043e92d6c3a54fca88b876036e4cf"
+package_id_windows_debug = "200b27f2d62a075edd25b8313648f6f53c619bfe"
+package_id_linux_release = "139ed6a9c0b2338ce5c491c593f88a5c328ea9e4"
+package_id_linux_debug = "38a0dd7a521153484cfb0cc06f11658dddccf92e"
+
 
 class BuildIdTest(unittest.TestCase):
+
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
-        pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
-                                            "f3989dcba0ab50dc5ed9b40ede202bdd7b421f09")
-        layout = client.cache.package_layout(pref_debug.ref)
-        conaninfo = load(os.path.join(layout.package(pref_debug), "conaninfo.txt"))
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("Pkg/0.1@user/channel"))
+        pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
+                                            f"{package_id_windows_debug}")
+        prev_debug = client.cache.get_latest_prev(pref_debug)
+        layout = client.cache.pkg_layout(prev_debug)
+        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
-        pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
-                                              "ab2e9f86b4109980930cdc685f4a320b359e7bb4")
-        conaninfo = load(os.path.join(layout.package(pref_release), "conaninfo.txt"))
+        pref_release = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
+                                              f"{package_id_windows_release}")
+        prev_release = client.cache.get_latest_prev(pref_release)
+        layout = client.cache.pkg_layout(prev_release)
+        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
 
-        pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
-                                            "322de4b4a41f905f6b18f454ab5f498690b39c2a")
-        conaninfo = load(os.path.join(layout.package(pref_debug), "conaninfo.txt"))
+        pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
+                                            f"{package_id_linux_debug}")
+        prev_debug = client.cache.get_latest_prev(pref_debug)
+        layout = client.cache.pkg_layout(prev_debug)
+        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
-        pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
-                                              "24c3aa2d6c5929d53bd86b31e020c55d96b265c7")
-        conaninfo = load(os.path.join(layout.package(pref_release), "conaninfo.txt"))
+        pref_release = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
+                                              f"{package_id_linux_release}")
+        prev_release = client.cache.get_latest_prev(pref_release)
+        layout = client.cache.pkg_layout(prev_release)
+        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
@@ -92,10 +106,12 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("Building my code!", client.out)
         self.assertIn("Packaging Release!", client.out)
         client.run("create . user/channel -s os=Windows -s build_type=Debug")
+
         self.assertNotIn("Pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Packaging Debug!", client.out)
 
         client.run("create . user/channel -s os=Linux -s build_type=Release")
+
         self.assertIn("Pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Building my code!", client.out)
         self.assertIn("Packaging Release!", client.out)
@@ -145,34 +161,35 @@ class BuildIdTest(unittest.TestCase):
         self.assertEqual("Release file1", content)
         self._check_conaninfo(client)
 
+        # TODO: cache2.0 check if we will maintain the remove -p
         # Check that repackaging works, not necessary to re-build
-        client.run("remove Pkg/0.1@user/channel -p -f")
-        # Windows Debug
-        client.run('install . -s os=Windows -s build_type=Debug')
-        self.assertNotIn("Building my code!", client.out)
-        self.assertIn("Packaging Debug!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Debug file1", content)
-        # Windows Release
-        client.run('install . -s os=Windows -s build_type=Release')
-        self.assertNotIn("Building my code!", client.out)
-        self.assertIn("Packaging Release!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Release file1", content)
-        # Now Linux
-        client.run('install . -s os=Linux -s build_type=Debug')
-        self.assertIn("Building package from source as defined by build_policy='missing'",
-                      client.out)
-        self.assertIn("Building my code!", client.out)
-        self.assertIn("Packaging Debug!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Debug file1", content)
-        client.run('install . -s os=Linux -s build_type=Release')
-        self.assertIn("Building my code!", client.out)
-        self.assertIn("Packaging Release!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Release file1", content)
-        self._check_conaninfo(client)
+        # client.run("remove Pkg/0.1@user/channel -p -f")
+        # # Windows Debug
+        # client.run('install . -s os=Windows -s build_type=Debug')
+        # self.assertNotIn("Building my code!", client.out)
+        # self.assertIn("Packaging Debug!", client.out)
+        # content = client.load("file1.txt")
+        # self.assertEqual("Debug file1", content)
+        # # Windows Release
+        # client.run('install . -s os=Windows -s build_type=Release')
+        # self.assertNotIn("Building my code!", client.out)
+        # self.assertIn("Packaging Release!", client.out)
+        # content = client.load("file1.txt")
+        # self.assertEqual("Release file1", content)
+        # # Now Linux
+        # client.run('install . -s os=Linux -s build_type=Debug')
+        # self.assertIn("Building package from source as defined by build_policy='missing'",
+        #               client.out)
+        # self.assertIn("Building my code!", client.out)
+        # self.assertIn("Packaging Debug!", client.out)
+        # content = client.load("file1.txt")
+        # self.assertEqual("Debug file1", content)
+        # client.run('install . -s os=Linux -s build_type=Release')
+        # self.assertIn("Building my code!", client.out)
+        # self.assertIn("Packaging Release!", client.out)
+        # content = client.load("file1.txt")
+        # self.assertEqual("Release file1", content)
+        # self._check_conaninfo(client)
 
         # But if the build folder is removed, the packages are there, do nothing
         client.run("remove Pkg/0.1@user/channel -b -f")
@@ -207,21 +224,29 @@ class BuildIdTest(unittest.TestCase):
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
 
         def _check_builds():
-            builds = client.cache.package_layout(ref).conan_builds()
-            self.assertEqual(1, len(builds))
-            pkgs = client.cache.package_layout(ref).package_ids()
-            self.assertEqual(2, len(pkgs))
-            self.assertNotIn(builds[0], pkgs)
-            return builds[0], pkgs
+            latest_rrev = client.cache.get_latest_rrev(ref)
+            pkg_ids = client.cache.get_package_ids(latest_rrev)
+            prevs = []
+            for pkg_id in pkg_ids:
+                prevs.extend(client.cache.get_package_revisions(pkg_id))
+            build_folders = []
+            for prev in prevs:
+                if os.path.exists(client.cache.pkg_layout(prev).build()):
+                    build_folders.append(client.cache.pkg_layout(prev).build())
+            self.assertEqual(1, len(build_folders))
+            self.assertEqual(2, len(pkg_ids))
+            return build_folders[0], pkg_ids
 
         build, packages = _check_builds()
-        client.run("remove Pkg/0.1@user/channel -b %s -f" % packages[0])
-        _check_builds()
-        client.run("remove Pkg/0.1@user/channel -b %s -f" % build)
-        cache_builds = client.cache.package_layout(ref).conan_builds()
-        self.assertEqual(0, len(cache_builds))
-        package_ids = client.cache.package_layout(ref).package_ids()
-        self.assertEqual(2, len(package_ids))
+        # TODO: cache2.0 remove -p and -b is not yet fully implemented
+        # we are commenting the first part of this until it is
+        #client.run("remove Pkg/0.1@user/channel -b %s -f" % packages[0])
+        #_check_builds()
+        #client.run("remove Pkg/0.1@user/channel -b %s -f" % build)
+        #cache_builds = client.cache.package_layout(ref).conan_builds()
+        #self.assertEqual(0, len(cache_builds))
+        #package_ids = client.cache.package_layout(ref).package_ids()
+        #self.assertEqual(2, len(package_ids))
 
     @parameterized.expand([(True, ), (False,)])
     def test_info(self, python_consumer):
@@ -234,10 +259,10 @@ class BuildIdTest(unittest.TestCase):
             client.save({"conanfile.txt": consumer}, clean_first=True)
         client.run('install . -s os=Windows -s build_type=Debug')
         client.run('install . -s os=Windows -s build_type=Release')
-        client.run("info .")  # Uses release
+        client.run("info . -s os=Windows -s build_type=Release")
 
         def _check():
-            build_ids = str(client.out).count("BuildID: 427f426a482a2b22a1744e9e949aa7f2544f5b7c")
+            build_ids = str(client.out).count("BuildID: 509127386afe264490c1c3484e6949f3b86d95f6")
             build_nones = str(client.out).count("BuildID: None")
             if python_consumer:
                 self.assertEqual(2, build_ids)
@@ -247,24 +272,24 @@ class BuildIdTest(unittest.TestCase):
                 self.assertEqual(1, build_nones)
 
         _check()
-        self.assertIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
-        self.assertNotIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
+        self.assertIn(f"ID: {package_id_windows_release}", client.out)
+        self.assertNotIn(f"ID: {package_id_windows_debug}", client.out)
 
         client.run("info . -s os=Windows -s build_type=Debug")
         _check()
-        self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.out)
-        self.assertIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
+        self.assertNotIn(f"ID: {package_id_windows_release}", client.out)
+        self.assertIn(f"ID: {package_id_windows_debug}", client.out)
 
         if python_consumer:
             client.run("export . user/channel")
             client.run("info MyTest/0.1@user/channel -s os=Windows -s build_type=Debug")
             _check()
-            self.assertNotIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
-            self.assertIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
+            self.assertNotIn(f"ID: {package_id_windows_release}", client.out)
+            self.assertIn(f"ID: {package_id_windows_debug}", client.out)
             client.run("info MyTest/0.1@user/channel -s os=Windows -s build_type=Release")
             _check()
-            self.assertIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
-            self.assertNotIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
+            self.assertIn(f"ID: {package_id_windows_release}", client.out)
+            self.assertNotIn(f"ID: {package_id_windows_debug}", client.out)
 
     def test_failed_build(self):
         # Repeated failed builds keep failing

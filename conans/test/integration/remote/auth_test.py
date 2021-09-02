@@ -144,6 +144,8 @@ class AuthenticationTest(unittest.TestCase):
                     resp_basic_auth._content = b"TOKEN"
                     resp_basic_auth.headers = {"Content-Type": "text/plain"}
                 elif "ping" in url:
+                    resp_basic_auth.headers = {"Content-Type": "application/json",
+                                               "X-Conan-Server-Capabilities": "revisions"}
                     token = getattr(kwargs["auth"], "token", None)
                     password = getattr(kwargs["auth"], "password", None)
                     if token and token != "TOKEN":
@@ -167,4 +169,4 @@ class AuthenticationTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
                       client.out)
         client.run("search pkg -r=default")
-        self.assertIn("There are no packages matching the 'pkg' pattern", client.out)
+        self.assertIn("There are no matching recipe references", client.out)

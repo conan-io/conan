@@ -6,7 +6,6 @@ import time
 import unittest
 
 import pytest
-import six
 from mock import patch
 from parameterized import parameterized
 
@@ -117,7 +116,6 @@ class ConfigInstallTest(unittest.TestCase):
         hooks = config.get_item("hooks")
         self.assertIn("foo", hooks)
         self.assertIn("custom/custom", hooks)
-        self.assertIn("attribute_checker", hooks)
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
         content = load(client.cache.conan_conf_path)
@@ -175,7 +173,7 @@ class ConfigInstallTest(unittest.TestCase):
                          "full_package_mode")
         self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
-        with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
+        with self.assertRaisesRegex(ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
@@ -294,28 +292,6 @@ class Pkg(ConanFile):
         content = load(self.client.cache.config_install_file)
         self.assertEqual(1, content.count("subf"))
         self.assertEqual(1, content.count("other"))
-
-    def test_install_registry_txt_error(self):
-        folder = temp_folder()
-        save_files(folder, {"registry.txt": "myrepo1 https://myrepourl.net False"})
-        self.client.run('config install "%s"' % folder)
-        self.assertIn("WARN: registry.txt has been deprecated. Migrating to remotes.json",
-                      self.client.out)
-        self.client.run("remote list")
-        self.assertEqual("myrepo1: https://myrepourl.net [Verify SSL: False]\n", self.client.out)
-
-    def test_install_registry_json_error(self):
-        folder = temp_folder()
-        registry_json = {"remotes": [{"url": "https://server.conan.io",
-                                      "verify_ssl": True,
-                                      "name": "conan.io"
-                                      }]}
-        save_files(folder, {"registry.json": json.dumps(registry_json)})
-        self.client.run('config install "%s"' % folder)
-        self.assertIn("WARN: registry.json has been deprecated. Migrating to remotes.json",
-                      self.client.out)
-        self.client.run("remote list")
-        self.assertEqual("conan.io: https://server.conan.io [Verify SSL: True]\n", self.client.out)
 
     def test_install_remotes_json_error(self):
         folder = temp_folder()
@@ -662,6 +638,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.assertIn("Processing conan.conf", self.client.out)
         self.assertLess(os.path.getmtime(self.client.cache.config_install_file), time.time() + 1)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_sched_timeout(self):
         """ Conan config install must be executed when the scheduled time reaches
         """
@@ -752,7 +729,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
             last_change = os.path.getmtime(self.client.cache.config_install_file)
             # without a config in configs file, scheduler only emits a warning
             self.client.run("help")
-            self.assertIn("WARN: Skipping scheduled config install, "
+            self.assertIn("WARNING: Skipping scheduled config install, "
                           "no config listed in config_install file", self.client.out)
             self.assertNotIn("Repo cloned!", self.client.out)
             # ... and updates the next schedule

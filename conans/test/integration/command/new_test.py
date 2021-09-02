@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans import __version__ as client_version
@@ -120,6 +121,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("new hello/0.1 --template", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_new(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -t')
@@ -152,6 +154,7 @@ class NewCommandTest(unittest.TestCase):
                            ("my_package", "MyPackage"),
                            ("my.Package", "MyPackage"),
                            ("my+package", "MyPackage")])
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_naming(self, package_name, python_class_name):
         """ packages with dash
         """
@@ -171,6 +174,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("{}/1.3@myuser/testing".format(package_name), client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_new_header(self):
         client = TestClient()
         client.run('new MyPackage/1.3 -t -i')
@@ -189,6 +193,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_new_sources(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -t -s')
@@ -206,6 +211,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_new_purec(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -c -t --source')
@@ -251,8 +257,6 @@ class NewCommandTest(unittest.TestCase):
         appveyor = load(os.path.join(root, "appveyor.yml"))
         self.assertIn("CONAN_UPLOAD: \"myurl\"", appveyor)
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', appveyor)
-        self.assertIn('CONAN_USERNAME: "myuser"', appveyor)
-        self.assertIn('CONAN_CHANNEL: "testing"', appveyor)
         self.assertIn(r'PYTHON: "C:\\Python37"', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 12', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 14', appveyor)
@@ -261,23 +265,17 @@ class NewCommandTest(unittest.TestCase):
         travis = load(os.path.join(root, ".travis.yml"))
         self.assertIn("- CONAN_UPLOAD: \"myurl\"", travis)
         self.assertIn('- CONAN_REFERENCE: "MyPackage/1.3"', travis)
-        self.assertIn('- CONAN_USERNAME: "myuser"', travis)
-        self.assertIn('- CONAN_CHANNEL: "testing"', travis)
         self.assertIn('env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=conanio/gcc5',
                       travis)
 
         gitlab = load(os.path.join(root, ".gitlab-ci.yml"))
         self.assertIn("CONAN_UPLOAD: \"myurl\"", gitlab)
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', gitlab)
-        self.assertIn('CONAN_USERNAME: "myuser"', gitlab)
-        self.assertIn('CONAN_CHANNEL: "testing"', gitlab)
         self.assertIn('CONAN_GCC_VERSIONS: "5"', gitlab)
 
         circleci = load(os.path.join(root, ".circleci", "config.yml"))
         self.assertIn("CONAN_UPLOAD: \"myurl\"", circleci)
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', circleci)
-        self.assertIn('CONAN_USERNAME: "myuser"', circleci)
-        self.assertIn('CONAN_CHANNEL: "testing"', circleci)
         self.assertIn('CONAN_GCC_VERSIONS: "5"', circleci)
 
     def test_new_ci_partial(self):

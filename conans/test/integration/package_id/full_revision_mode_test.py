@@ -1,11 +1,12 @@
+import textwrap
 import unittest
 from textwrap import dedent
 
 import pytest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
+from conans.test.utils.tools import TestClient, GenConanfile, NO_SETTINGS_PACKAGE_ID
+from conans.util.files import save
 
 
 class FullRevisionModeTest(unittest.TestCase):
@@ -15,7 +16,8 @@ class FullRevisionModeTest(unittest.TestCase):
         libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
 
         clienta = TestClient()
-        clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
+        # clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
+        save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfilea = dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -50,22 +52,19 @@ class FullRevisionModeTest(unittest.TestCase):
         # Now change only the package revision of liba
         clienta.run("create . liba/0.1@user/testing")
         clientc.run("install . user/testing")
-        clientc.run("config set general.default_package_id_mode=package_revision_mode")
+        # clientc.run("config set general.default_package_id_mode=package_revision_mode")
+        save(clientc.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientc.run("install . user/testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
         clientc.run("install . user/testing --build=libb")
-        clientc.run("info . --build-order=ALL")
 
         clienta.run("create . liba/0.1@user/testing")
         clientc.run("install . user/testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
 
-        clienta.run("create . liba/0.1@user/testing")
-        clientc.run("info . --build-order=ALL")
-
     def test_binary_id_recomputation_after_build(self):
         clienta = TestClient()
-        clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
+        save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfile = dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -81,16 +80,16 @@ class FullRevisionModeTest(unittest.TestCase):
 
         clientb = TestClient(cache_folder=clienta.cache_folder)
         clientb.save({"conanfile.py": conanfile % "requires = 'liba/0.1@user/testing'"})
-        clientb.run("config set general.default_package_id_mode=package_revision_mode")
+        save(clientb.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientb.run("create . libb/0.1@user/testing")
 
         clientc = TestClient(cache_folder=clienta.cache_folder)
         clientc.save({"conanfile.py": conanfile % "requires = 'libb/0.1@user/testing'"})
-        clientc.run("config set general.default_package_id_mode=package_revision_mode")
+        save(clientc.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientc.run("create . libc/0.1@user/testing")
 
         clientd = TestClient(cache_folder=clienta.cache_folder)
-        clientd.run("config set general.default_package_id_mode=package_revision_mode")
+        save(clientd.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientd.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
         clientd.run("install . libd/0.1@user/testing")
 
@@ -113,7 +112,7 @@ class FullRevisionModeTest(unittest.TestCase):
                                                                                  ["tool.lib"]},
                                                                        env_info={})})
         clienta.run("create . user/testing")
-        clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
+        save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfile = dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -121,8 +120,6 @@ class FullRevisionModeTest(unittest.TestCase):
             class Pkg(ConanFile):
                 build_requires = "Tool/0.1@user/testing"
                 %s
-                def build(self):
-                    self.output.info("TOOLS LIBS: {}".format(self.deps_cpp_info["Tool"].libs))
                 def package(self):
                     save(os.path.join(self.package_folder, "file.txt"),
                          str(uuid.uuid1()))
@@ -132,16 +129,16 @@ class FullRevisionModeTest(unittest.TestCase):
 
         clientb = TestClient(cache_folder=clienta.cache_folder)
         clientb.save({"conanfile.py": conanfile % "requires = 'liba/0.1@user/testing'"})
-        clientb.run("config set general.default_package_id_mode=package_revision_mode")
+        save(clientb.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientb.run("create . libb/0.1@user/testing")
 
         clientc = TestClient(cache_folder=clienta.cache_folder)
         clientc.save({"conanfile.py": conanfile % "requires = 'libb/0.1@user/testing'"})
-        clientc.run("config set general.default_package_id_mode=package_revision_mode")
+        save(clientc.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientc.run("create . libc/0.1@user/testing")
 
         clientd = TestClient(cache_folder=clienta.cache_folder)
-        clientd.run("config set general.default_package_id_mode=package_revision_mode")
+        save(clientd.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientd.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
         clientd.run("install . libd/0.1@user/testing")
 
@@ -161,7 +158,8 @@ class FullRevisionModeTest(unittest.TestCase):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream
         client = TestClient()
-        client.run("config set general.default_package_id_mode=package_revision_mode")
+        # client.run("config set general.default_package_id_mode=package_revision_mode")
+        save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . liba/0.1@user/testing")
 
@@ -181,21 +179,21 @@ class FullRevisionModeTest(unittest.TestCase):
             self.assertIn("%s/0.1@user/testing: Binary for updated ID from: Cache" % lib, client.out)
             self.assertIn("%s/0.1@user/testing: Already installed!" % lib, client.out)
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_download_artifacts_after_build(self):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream
         client = TestClient(default_server_user=True)
-        client.run("config set general.default_package_id_mode=package_revision_mode")
+        # client.run("config set general.default_package_id_mode=package_revision_mode")
+        save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . liba/0.1@user/testing")
-        self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+        self.assertIn(f"liba/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Build",
                       client.out)
         self.assertIn("liba/0.1@user/testing: Created package revision "
-                      "83c38d3b4e5f1b8450434436eec31b00", client.out)
+                      "cf924fbb5ed463b8bb960cf3a4ad4f3a", client.out)
         client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
         client.run("create . libb/0.1@user/testing")
-        self.assertIn("libb/0.1@user/testing:830b7cbbb4fc193a756c82b19904df775dc92204 - Build",
+        self.assertIn("libb/0.1@user/testing:75a50c09cb8f4a8a8185f56effe706e78d877ca0 - Build",
                       client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
@@ -207,7 +205,7 @@ class FullRevisionModeTest(unittest.TestCase):
         # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
         client.run("install . --build=liba")
         self.assertIn("liba/0.1@user/testing: Created package revision "
-                      "83c38d3b4e5f1b8450434436eec31b00", client.out)
+                      "cf924fbb5ed463b8bb960cf3a4ad4f3a", client.out)
         # So it is not necessary to build the downstream consumers of LibA
         for lib in ("libb", "libc"):
             self.assertIn("%s/0.1@user/testing: Unknown binary" % lib, client.out)
@@ -221,7 +219,8 @@ class PackageRevisionModeTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
-        self.client.run("config set general.default_package_id_mode=package_revision_mode")
+        # self.client.run("config set general.default_package_id_mode=package_revision_mode")
+        save(self.client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
 
     def _generate_graph(self, dependencies):
         for ref, deps in dependencies.items():
@@ -243,9 +242,9 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install Invent.py --build missing")
-        self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
+        self.assertIn("MccApi/3.0.9: Package 'ae4634464e7a1aafab0a567d91a1a1533519150f' created",
                       self.client.out)
-        self.assertIn("Util/0.3.5: Package 'ba438cd9d192b914edb1669b3e0149822290f7d8' created",
+        self.assertIn("Util/0.3.5: Package '0a00cf19df227fc11bdb70e2de131f6321f85b66' created",
                       self.client.out)
 
     def test_triangle_dependency_graph(self):
@@ -258,9 +257,9 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install GenericSU.py --build missing")
-        self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
+        self.assertIn("MccApi/3.0.9: Package 'ae4634464e7a1aafab0a567d91a1a1533519150f' created",
                       self.client.out)
-        self.assertIn("Util/0.3.5: Package 'ba438cd9d192b914edb1669b3e0149822290f7d8' created",
+        self.assertIn("Util/0.3.5: Package '0a00cf19df227fc11bdb70e2de131f6321f85b66' created",
                       self.client.out)
 
     def test_diamond_dependency_graph(self):
@@ -273,11 +272,12 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install GenericSU.py --build missing")
-        self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
+        self.assertIn("MccApi/3.0.9: Package 'ae4634464e7a1aafab0a567d91a1a1533519150f' created",
                       self.client.out)
-        self.assertIn("Util/0.3.5: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
+        self.assertIn("Util/0.3.5: Package 'ae4634464e7a1aafab0a567d91a1a1533519150f' created",
                       self.client.out)
 
+    @pytest.mark.xfail(reason="package id computation has changed")
     def test_full_dependency_graph(self):
         dependencies = {
             "Log4Qt/0.3.0": [],
@@ -295,20 +295,20 @@ class PackageRevisionModeTest(unittest.TestCase):
 
         # Obtained with with create and reevaluate_node
         ids = {"Log4Qt/0.3.0": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-               "MccApi/3.0.9": "484784c96c359def1283e7354eec200f9f9c5cd8",
-               "Util/0.3.5": "ba438cd9d192b914edb1669b3e0149822290f7d8",
-               "GenericSU/0.3.5": "c152f6964d097021edab4a508d8fa926bad976fb",
-               "ManagementModule/0.3.5": "c152f6964d097021edab4a508d8fa926bad976fb",
-               "StationInterfaceModule/0.13.0": "7184518aa4cb352204d8b00d5424d3e52e5819d8",
-               "PleniterGenericSuApp/0.1.8": "7184518aa4cb352204d8b00d5424d3e52e5819d8"}
+               "MccApi/3.0.9": "3c5ba9bba23b494f3ce0649fd32a8b997098f08e",
+               "Util/0.3.5": "3b8e8cc0ba9594e28d17856df15bc7287bb4b3eb",
+               "GenericSU/0.3.5": "e55df1a3e79765d0a29a0cc1630c3a56dfaeea8e",
+               "ManagementModule/0.3.5": "e55df1a3e79765d0a29a0cc1630c3a56dfaeea8e",
+               "StationInterfaceModule/0.13.0": "d24f5fea9cfbcb155f5be8fb061d6193ea0b62d9",
+               "PleniterGenericSuApp/0.1.8": "d24f5fea9cfbcb155f5be8fb061d6193ea0b62d9"}
 
-        rev = {"Log4Qt/0.3.0": "ce3408b2884c458b2bcdfeff92404c85",
-               "MccApi/3.0.9": "45aeac67977b1509a2d02f9a205baccb",
-               "Util/0.3.5": "f446fb8e24603baafacda66aadd2503f",
-               "GenericSU/0.3.5": "d5761d4d690ded2003c3cdab86e55d15",
-               "ManagementModule/0.3.5": "743935f4f5664b059d54d361a232bf94",
-               "StationInterfaceModule/0.13.0": "fc81fa83c3c134db6ba5af99fd8460cb",
-               "PleniterGenericSuApp/0.1.8": "7191e6b6eaf79194f1b083c8dc508518"}
+        rev = {"Log4Qt/0.3.0": "cf924fbb5ed463b8bb960cf3a4ad4f3a",
+               "MccApi/3.0.9": "ee083a6a3593fa42571f9973254cf97c",
+               "Util/0.3.5": "5c2c94edcdc5d46cd9a0c0c798791e9a",
+               "GenericSU/0.3.5": "defb3fe7ee1e093b18512555ba04fe7c",
+               "ManagementModule/0.3.5": "defb3fe7ee1e093b18512555ba04fe7c",
+               "StationInterfaceModule/0.13.0": "d96c69d1c47d66e6c7ed2ede43af3477",
+               "PleniterGenericSuApp/0.1.8": "d96c69d1c47d66e6c7ed2ede43af3477"}
 
         self.client.run("install StationinterfaceRpm.py --build missing")
         for pkg, id_ in ids.items():
@@ -324,15 +324,19 @@ class PackageRevisionModeTest(unittest.TestCase):
 def test_package_revision_mode_full_transitive_package_id():
     # https://github.com/conan-io/conan/issues/8310
     client = TestClient()
-    client.run("config set general.default_package_id_mode=package_revision_mode")
-    client.run("config set general.full_transitive_package_id=1")
+    save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
+
+    profile = textwrap.dedent("""
+        [build_requires]
+        tool/0.1
+        """)
     client.save({"tool/conanfile.py": GenConanfile(),
                  "pkga/conanfile.py": GenConanfile(),
                  "pkgb/conanfile.py": GenConanfile().with_requires("tool/0.1", "pkga/0.1"),
-                 "profile": "[build_requires]\ntool/0.1"})
+                 "profile": profile})
     client.run("export tool tool/0.1@")
     client.run("export pkga pkga/0.1@")
     client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
     assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
     assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
-    assert "pkgb/0.1: Package 'f524f1981a44932e1445e13ae4cf9e2ff8112027' created" in client.out
+    assert "pkgb/0.1: Package '39f1c1ba9af2b416a3da981070a5351b05be824c' created" in client.out

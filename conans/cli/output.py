@@ -153,3 +153,10 @@ class ConanOutput(object):
                 # TODO: check if colorama checks for stripping colors are enough
                 colorama.init()
             return True
+
+
+def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
+    fg_ = fg or ''
+    bg_ = bg or ''
+    data = f"{' ' * indentation}{fg_}{bg_}{data}{Style.RESET_ALL}{endline}"
+    sys.stdout.write(data)

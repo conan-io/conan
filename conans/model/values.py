@@ -1,5 +1,4 @@
 from conans.errors import ConanException
-from conans.util.sha import sha1
 
 
 class Values(object):
@@ -106,11 +105,11 @@ class Values(object):
 
     @property
     def sha(self):
-        result = []
+        result = ["[settings]"]
         for (name, value) in self.as_list(list_all=False):
             # It is important to discard None values, so migrations in settings can be done
             # without breaking all existing packages SHAs, by adding a first "None" option
             # that doesn't change the final sha
             if value != "None":
                 result.append("%s=%s" % (name, value))
-        return sha1('\n'.join(result).encode())
+        return '\n'.join(result)

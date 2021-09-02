@@ -21,12 +21,6 @@ def test_reuse_uploaded_tgz():
     assert "Compressing recipe" in client.out
     assert "Compressing package" in client.out
 
-    # UPLOAD TO A DIFFERENT CHANNEL WITHOUT COMPRESS AGAIN
-    client.run("copy %s user/testing --all" % str(ref))
-    client.run("upload Hello0/0.1@user/testing --all")
-    assert "Compressing recipe" not in client.out
-    assert "Compressing package" not in client.out
-
 
 def test_reuse_downloaded_tgz():
     # Download packages from a remote, then copy to another channel
@@ -72,21 +66,23 @@ def test_upload_only_tgz_if_needed():
     server_paths = client.servers["default"].server_store
     conan_path = server_paths.conan_revisions_root(ref)
     assert os.path.exists(conan_path)
-    package_ids = client.cache.package_layout(ref).package_ids()
-    pref = PackageReference(ref, package_ids[0])
+
+    latest_rrev = client.cache.get_latest_rrev(ref)
+    package_ids = client.cache.get_package_ids(latest_rrev)
+    pref = package_ids[0]
 
     # Upload package
-    client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+    client.run("upload %s -p %s" % (str(ref), str(pref.id)))
     assert "Compressing package" in client.out
 
     # Not needed to tgz again
-    client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+    client.run("upload %s -p %s" % (str(ref), str(pref.id)))
     assert "Compressing package" not in client.out
 
     # If we install the package again will be removed and re tgz
     client.run("install %s --build missing" % str(ref))
     # Upload package
-    client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+    client.run("upload %s -p %s" % (str(ref), str(pref.id)))
     assert "Compressing package" not in client.out
 
     # Check library on server

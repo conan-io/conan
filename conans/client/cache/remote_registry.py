@@ -3,12 +3,11 @@ import json
 import os
 import stat
 from collections import OrderedDict, namedtuple
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.config_parser import get_bool_from_text_value
 from conans.util.files import load, save
-from conans.model.ref import PackageReference, ConanFileReference
 
 
 CONAN_CENTER_REMOTE_NAME = "conancenter"
@@ -49,59 +48,6 @@ def load_registry_txt(contents):
     return remotes, refs
 
 
-def load_old_registry_json(contents):
-    """From json"""
-    data = json.loads(contents)
-    remotes = Remotes()
-    refs = data.get("references", {})
-    prefs = data.get("package_references", {})
-    for r in data["remotes"]:
-        remotes.add(r["name"], r["url"], r["verify_ssl"])
-    return remotes, refs, prefs
-
-
-def migrate_registry_file(cache, out):
-    folder = cache.cache_folder
-    reg_json_path = os.path.join(folder, "registry.json")
-    reg_txt_path = os.path.join(folder, "registry.txt")
-    remotes_path = cache.remotes_path
-
-    def add_ref_remote(reference, remotes_, remote_name_):
-        ref_ = ConanFileReference.loads(reference, validate=True)
-        remote = remotes_.get(remote_name_)
-        if remote:
-            with cache.package_layout(ref_).update_metadata() as metadata:
-                metadata.recipe.remote = remote.name
-
-    def add_pref_remote(pkg_ref, remotes_, remote_name_):
-        pref_ = PackageReference.loads(pkg_ref, validate=True)
-        remote = remotes_.get(remote_name_)
-        if remote:
-            with cache.package_layout(pref_.ref).update_metadata() as metadata:
-                metadata.packages[pref_.id].remote = remote.name
-
-    try:
-        if os.path.exists(reg_json_path):
-            out.warn("registry.json has been deprecated. Migrating to remotes.json")
-            remotes, refs, prefs = load_old_registry_json(load(reg_json_path))
-            remotes.save(remotes_path)
-            for ref, remote_name in refs.items():
-                add_ref_remote(ref, remotes, remote_name)
-            for pref, remote_name in prefs.items():
-                add_pref_remote(pref, remotes, remote_name)
-            os.remove(reg_json_path)
-        elif os.path.exists(reg_txt_path):
-            out.warn("registry.txt has been deprecated. Migrating to remotes.json")
-            remotes, refs = load_registry_txt(load(reg_txt_path))
-            remotes.save(remotes_path)
-            for ref, remote_name in refs.items():
-                add_ref_remote(ref, remotes, remote_name)
-            os.remove(reg_txt_path)
-
-    except Exception as e:
-        raise ConanException("Cannot migrate old registry: %s" % str(e))
-
-
 class Remotes(object):
     def __init__(self):
         self._remotes = OrderedDict()
@@ -112,8 +58,6 @@ class Remotes(object):
         result = Remotes()
         result._remotes[CONAN_CENTER_REMOTE_NAME] = Remote(CONAN_CENTER_REMOTE_NAME,
                                                            "https://center.conan.io", True, False)
-        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True,
-                                                 False)
         return result
 
     def select(self, remote_name):
@@ -221,11 +165,7 @@ class Remotes(object):
 
     def __getitem__(self, remote_name):
         try:
-            remote = self._remotes[remote_name]
-            if remote.disabled:
-                raise ConanException("Remote '%s' is disabled" % remote_name)
-            else:
-                return remote
+            return self._remotes[remote_name]
         except KeyError:
             raise NoRemoteAvailable("No remote '%s' defined in remotes" % remote_name)
 
@@ -337,13 +277,13 @@ class RemoteRegistry(object):
         remotes.save(self._filename)
         if renamed:
             with self._cache.editable_packages.disable_editables():
-                for ref in self._cache.all_refs():
-                    with self._cache.package_layout(ref).update_metadata() as metadata:
-                        if metadata.recipe.remote == renamed:
-                            metadata.recipe.remote = remote_name
-                        for pkg_metadata in metadata.packages.values():
-                            if pkg_metadata.remote == renamed:
-                                pkg_metadata.remote = remote_name
+                for rrev in self._cache.all_refs():
+                    if self._cache.get_remote(rrev) == renamed:
+                        self._cache.set_remote(rrev, remote_name)
+                    for pkg_id in self._cache.get_package_ids(rrev):
+                        for prev in self._cache.get_package_revisions(pkg_id):
+                            if self._cache.get_remote(prev) == renamed:
+                                self._cache.set_remote(prev, remote_name)
 
     def update(self, remote_name, url, verify_ssl=True, insert=None):
         self._validate_url(url)
@@ -355,24 +295,26 @@ class RemoteRegistry(object):
         remotes = self.load_remotes()
         remotes.clear()
         with self._cache.editable_packages.disable_editables():
-            for ref in self._cache.all_refs():
-                with self._cache.package_layout(ref).update_metadata() as metadata:
-                    metadata.recipe.remote = None
-                    for pkg_metadata in metadata.packages.values():
-                        pkg_metadata.remote = None
+            for rrev in self._cache.all_refs():
+                self._cache.set_remote(rrev, None)
+                for pkg_id in self._cache.get_package_ids(rrev):
+                    for prev in self._cache.get_package_revisions(pkg_id):
+                        self._cache.set_remote(prev, None)
+
             remotes.save(self._filename)
 
     def remove(self, remote_name):
         remotes = self.load_remotes()
         del remotes[remote_name]
+
         with self._cache.editable_packages.disable_editables():
-            for ref in self._cache.all_refs():
-                with self._cache.package_layout(ref).update_metadata() as metadata:
-                    if metadata.recipe.remote == remote_name:
-                        metadata.recipe.remote = None
-                    for pkg_metadata in metadata.packages.values():
-                        if pkg_metadata.remote == remote_name:
-                            pkg_metadata.remote = None
+            for rrev in self._cache.all_refs():
+                if self._cache.get_remote(rrev) == remote_name:
+                    self._cache.set_remote(rrev, None)
+                for pkg_id in self._cache.get_package_ids(rrev):
+                    for prev in self._cache.get_package_revisions(pkg_id):
+                        if self._cache.get_remote(prev) == remote_name:
+                            self._cache.set_remote(prev, None)
 
             remotes.save(self._filename)
 
@@ -380,12 +322,12 @@ class RemoteRegistry(object):
         # For definition from conan config install
         with self._cache.editable_packages.disable_editables():
             for ref in self._cache.all_refs():
-                with self._cache.package_layout(ref).update_metadata() as metadata:
-                    if metadata.recipe.remote not in remotes:
-                        metadata.recipe.remote = None
-                    for pkg_metadata in metadata.packages.values():
-                        if pkg_metadata.remote not in remotes:
-                            pkg_metadata.remote = None
+                if self._cache.get_remote(ref) not in remotes:
+                    self._cache.set_remote(ref, None)
+                for package_id in self._cache.get_package_ids(ref):
+                    for prev in self._cache.get_package_revisions(package_id):
+                        if self._cache.get_remote(prev) not in remotes:
+                            self._cache.set_remote(prev, None)
 
             remotes.save(self._filename)
 
@@ -393,13 +335,13 @@ class RemoteRegistry(object):
         remotes = self.load_remotes()
         remotes.rename(remote_name, new_remote_name)
         with self._cache.editable_packages.disable_editables():
-            for ref in self._cache.all_refs():
-                with self._cache.package_layout(ref).update_metadata() as metadata:
-                    if metadata.recipe.remote == remote_name:
-                        metadata.recipe.remote = new_remote_name
-                    for pkg_metadata in metadata.packages.values():
-                        if pkg_metadata.remote == remote_name:
-                            pkg_metadata.remote = new_remote_name
+            for rrev in self._cache.all_refs():
+                if self._cache.get_remote(rrev) == remote_name:
+                    self._cache.set_remote(rrev, new_remote_name)
+                for pkg_id in self._cache.get_package_ids(rrev):
+                    for prev in self._cache.get_package_revisions(pkg_id):
+                        if self._cache.get_remote(prev) == remote_name:
+                            self._cache.set_remote(prev, new_remote_name)
 
             remotes.save(self._filename)
 
@@ -407,22 +349,3 @@ class RemoteRegistry(object):
         remotes = self.load_remotes()
         remotes.set_disabled_state(remote_name, state)
         remotes.save(self._filename)
-
-    @property
-    def refs_list(self):
-        result = {}
-        for ref in self._cache.all_refs():
-            metadata = self._cache.package_layout(ref).load_metadata()
-            if metadata.recipe.remote:
-                result[ref] = metadata.recipe.remote
-        return result
-
-    @property
-    def prefs_list(self):
-        result = {}
-        for ref in self._cache.all_refs():
-            metadata = self._cache.package_layout(ref).load_metadata()
-            for pid, pkg_metadata in metadata.packages.items():
-                pref = PackageReference(ref, pid)
-                result[pref] = pkg_metadata.remote
-        return result

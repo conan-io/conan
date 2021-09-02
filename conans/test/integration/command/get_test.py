@@ -2,11 +2,14 @@ import unittest
 
 import mock
 import textwrap
+
+import pytest
 from parameterized import parameterized
 
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
+@pytest.mark.xfail(reason="cache2.0 get not yet considered")
 class ConanGetTest(unittest.TestCase):
 
     def setUp(self):
@@ -92,9 +95,6 @@ class ConanGetTest(unittest.TestCase):
             [full_options]
 
 
-            [recipe_hash]
-                07e4bf611af374672215a94d84146e2d
-
             """), self.client.out)
 
         # List package dir
@@ -143,14 +143,9 @@ class ConanGetTest(unittest.TestCase):
 
         self.client.run('get {} "." -r default {}'.format(args_reference, args_package),
                         assert_error=True)
-        if self.client.cache.config.revisions_enabled:
-            # It has to resolve the latest so it fails again with the recipe
-            self.assertIn("ERROR: Recipe not found: '{}'. [Remote: default]".format(self.reference),
-                          self.client.out)
-        else:
-            self.assertIn("ERROR: Binary package not found: "
-                          "'Hello0/0.1@lasote/channel:123123123123123'. "
-                          "[Remote: default]", self.client.out)
+        # It has to resolve the latest so it fails again with the recipe
+        self.assertIn("ERROR: Recipe not found: '{}'. [Remote: default]".format(self.reference),
+                      self.client.out)
 
     def test_duplicated_input(self):
         """ Fail if given the full reference and the `-p` argument (even if they are equal)"""

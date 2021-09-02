@@ -130,8 +130,7 @@ setup(
     entry_points={
         'console_scripts': [
             'conan=conans.conan:run',
-            'conan_server=conans.conan_server:run',
-            'conan_build_info=conans.build_info.command:run'
+            'conan_server=conans.conan_server:run'
         ],
     },
 )

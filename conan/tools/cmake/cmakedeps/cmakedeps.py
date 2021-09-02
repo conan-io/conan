@@ -1,5 +1,6 @@
 import os
 
+from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
 from conan.tools.cmake.cmakedeps.templates.config_version import ConfigVersionTemplate
 from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
@@ -26,7 +27,20 @@ class CMakeDeps(object):
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
 
+        check_using_build_profile(self._conanfile)
+
+        # Enable/Disable checking if a component target exists or not
+        self.check_components_exist = False
+
     def generate(self):
+        # FIXME: Remove this in 2.0
+        if not hasattr(self._conanfile, "settings_build") and \
+                      (self.build_context_activated or self.build_context_build_modules or
+                       self.build_context_suffix):
+            raise ConanException("The 'build_context_activated' and 'build_context_build_modules' of"
+                                 " the CMakeDeps generator cannot be used without specifying a build"
+                                 " profile. e.g: -pr:b=default")
+
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
@@ -39,6 +53,7 @@ class CMakeDeps(object):
 
         host_req = self._conanfile.dependencies.host
         build_req = self._conanfile.dependencies.direct_build
+        test_req = self._conanfile.dependencies.test
 
         # Check if the same package is at host and build and the same time
         activated_br = {r.ref.name for r in build_req.values()
@@ -53,7 +68,7 @@ class CMakeDeps(object):
                                      "generator.".format(common_name))
 
         # Iterate all the transitive requires
-        for require, dep in list(host_req.items()) + list(build_req.items()):
+        for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
             # Filter the build_requires not activated with cmakedeps.build_context_activated

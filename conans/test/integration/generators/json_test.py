@@ -3,9 +3,12 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Generator json to be revisited")
 class JsonTest(unittest.TestCase):
 
     def test_generate_json_info(self):
@@ -16,7 +19,7 @@ class HelloConan(ConanFile):
     def package(self):
         self.copy("*.h", dst="include")
     def package_info(self):
-        self.env_info.MY_ENV_VAR = "foo"
+
         self.user_info.my_var = "my_value"
 """
         client = TestClient()
@@ -27,7 +30,6 @@ class HelloConan(ConanFile):
         conan_json = client.load("conanbuildinfo.json")
         data = json.loads(conan_json)
 
-        self.assertEqual(data["deps_env_info"]["MY_ENV_VAR"], "foo")
         self.assertEqual(data["deps_user_info"]["Hello"]["my_var"], "my_value")
 
         hello_data = data["dependencies"][0]
@@ -45,7 +47,7 @@ class HelloConan(ConanFile):
     def package(self):
         self.copy("*.h", dst="include")
     def package_info(self):
-        self.env_info.MY_ENV_VAR = "foo"
+        self.buildenv_info.define("MY_ENV_VAR", "foo")
         self.user_info.my_var = "my_value"
 """
         client = TestClient()
@@ -71,7 +73,7 @@ class HelloConan(ConanFile):
                 generators = "json"
 
                 def package_info(self):
-                    self.env_info.MY_ENV_VAR = "foo"
+                    self.buildenv_info.define("MY_ENV_VAR", "foo")
                     self.user_info.my_var = "my_value"
 
                     self.cpp_info.debug.defines = ["LIB_DEBUG"]

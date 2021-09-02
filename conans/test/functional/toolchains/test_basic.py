@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.toolchain
 class BasicTest(unittest.TestCase):
 
     def test_basic(self):
@@ -104,7 +103,6 @@ class BasicTest(unittest.TestCase):
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("install .")
         client.run("build .", assert_error=True)  # No CMakeLists.txt
         toolchain_path = os.path.join(client.current_folder,
                                       "conan_toolchain.cmake").replace("\\", "/")
@@ -145,7 +143,7 @@ class BasicTest(unittest.TestCase):
                 name = "Pkg"
                 version = "0.1"
                 settings = "os", "compiler", "arch", "build_type"
-                generators = "msbuild"
+                generators = "MSBuildDeps"
 
                 def generate(self):
                     tc = MSBuildToolchain(self)

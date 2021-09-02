@@ -16,11 +16,13 @@ import bottle
 import requests
 from mock import Mock
 from requests.exceptions import HTTPError
-from six.moves.urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import load
-from conans.cli.cli import Cli
+from conan.cache.conan_reference import ConanReference
+from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
+from conans import load, REVISIONS
+from conans.cli.cli import Cli, CLI_V1_COMMANDS
 from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
@@ -50,12 +52,12 @@ from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
 
-NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
     ref = ConanFileReference.loads(reference)
-    path = cache.package_layout(ref).export()
+    path = cache.get_latest_rrev(ref).export()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -63,7 +65,7 @@ def inc_recipe_manifest_timestamp(cache, reference, inc_time):
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     pref = PackageReference.loads(package_reference)
-    path = cache.package_layout(pref.ref).package(pref)
+    path = cache.get_latest_prev(package_reference).package()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -257,6 +259,11 @@ class TestServer(object):
         if users is None:
             users = {"lasote": "mypass", "conan": "password"}
 
+        if server_capabilities is None:
+            server_capabilities = [REVISIONS]
+        elif REVISIONS not in server_capabilities:
+            server_capabilities.append(REVISIONS)
+
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         base_url = "%s/v1" % self.fake_url if complete_urls else "v1"
         self.test_server = TestServerLauncher(base_path, read_permissions,
@@ -363,7 +370,7 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 revisions_enabled=None, cpu_count=1, default_server_user=None,
+                 cpu_count=1, default_server_user=None,
                  cache_autopopulate=True):
         """
         current_folder: Current execution folder
@@ -415,7 +422,7 @@ class TestClient(object):
 
         # Once the client is ready, modify the configuration
         mkdir(self.current_folder)
-        self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
+        self.tune_conan_conf(cache_folder, cpu_count)
 
         self.out = RedirectedTestOutput()
 
@@ -459,19 +466,7 @@ class TestClient(object):
             else:
                 return TestRequester(self.servers)
 
-    def _set_revisions(self, value):
-        value = "1" if value else "0"
-        self.run("config set general.revisions_enabled={}".format(value))
-
-    def enable_revisions(self):
-        self._set_revisions(True)
-        assert self.cache.config.revisions_enabled
-
-    def disable_revisions(self):
-        self._set_revisions(False)
-        assert not self.cache.config.revisions_enabled
-
-    def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
+    def tune_conan_conf(self, cache_folder, cpu_count):
         # Create the default
         cache = self.cache
         _ = cache.config
@@ -480,12 +475,6 @@ class TestClient(object):
             replace_in_file(cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
                             output=Mock(), strict=not bool(cache_folder))
-
-        if revisions_enabled is not None:
-            self._set_revisions(revisions_enabled)
-        elif "TESTING_REVISIONS_ENABLED" in os.environ:
-            value = get_env("TESTING_REVISIONS_ENABLED", True)
-            self._set_revisions(value)
 
     def update_servers(self):
         cache = self.cache
@@ -526,28 +515,41 @@ class TestClient(object):
                       http_requester=self._http_requester, runner=self.runner)
         return conan
 
-    def get_conan_api(self):
-        if os.getenv("CONAN_V2_CLI"):
+    def get_conan_api(self, args=None):
+        if self.is_conan_cli_v2_command(args):
             return self.get_conan_api_v2()
         else:
             return self.get_conan_api_v1()
 
-    def run_cli(self, command_line, assert_error=False):
-        conan = self.get_conan_api()
-        self.api = conan
-        if os.getenv("CONAN_V2_CLI"):
-            command = Cli(conan)
+    def get_conan_command(self, args=None):
+        if self.is_conan_cli_v2_command(args):
+            return Cli(self.api)
         else:
-            command = Command(conan)
-        args = shlex.split(command_line)
+            return Command(self.api)
+
+    @staticmethod
+    def is_conan_cli_v2_command(args):
+        conan_command = args[0] if args else None
+        return conan_command not in CLI_V1_COMMANDS
+
+    def run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
         old_modules = list(sys.modules.keys())
 
+        args = shlex.split(command_line)
+
+        self.api = self.get_conan_api(args)
+        command = self.get_conan_command(args)
+
         try:
             error = command.run(args)
         finally:
+            try:
+                self.api.app.cache.closedb()
+            except AttributeError:
+                pass
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
@@ -616,7 +618,7 @@ class TestClient(object):
         if conanfile:
             self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_str(), args or ""))
-        rrev = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.get_latest_rrev(ref).revision
         return ref.copy_with_rev(rrev)
 
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
@@ -627,6 +629,75 @@ class TestClient(object):
         _, commit = create_local_git_repo(files, branch, submodules, folder=folder,
                                           origin_url=origin_url)
         return commit
+
+    @staticmethod
+    def _create_scm_info(data):
+        from collections import namedtuple
+
+        revision = None
+        scm_type = None
+        url = None
+        shallow = None
+        verify_ssl = None
+        if "scm" in data:
+            if "revision" in data["scm"]:
+                revision = data["scm"]["revision"]
+            if "type" in data["scm"]:
+                scm_type = data["scm"]["type"]
+            if "url" in data["scm"]:
+                url = data["scm"]["url"]
+            if "shallow" in data["scm"]:
+                shallow = data["scm"]["shallow"]
+            if "verify_ssl" in data["scm"]:
+                verify_ssl = data["scm"]["verify_ssl"]
+        SCMInfo = namedtuple('SCMInfo', ['revision', 'type', 'url', 'shallow', 'verify_ssl'])
+        return SCMInfo(revision, scm_type, url, shallow, verify_ssl)
+
+    def scm_info(self, reference):
+        self.run("inspect %s -a=scm --json=scm.json" % reference)
+        data = json.loads(self.load("scm.json"))
+        os.unlink(os.path.join(self.current_folder, "scm.json"))
+        return self._create_scm_info(data)
+
+    def scm_info_cache(self, reference):
+        import yaml
+
+        if not isinstance(reference, ConanFileReference):
+            reference = ConanFileReference.loads(reference)
+        layout = self.get_latest_ref_layout(reference)
+        content = load(layout.conandata())
+        data = yaml.safe_load(content)
+        if ".conan" in data:
+            return self._create_scm_info(data[".conan"])
+        else:
+            return self._create_scm_info(dict())
+
+    def get_latest_prev(self, ref: ConanReference or str, package_id=None) -> PackageReference:
+        """Get the latest PackageReference given a ConanReference"""
+        ref_ = ConanFileReference.loads(ref) if isinstance(ref, str) else ref
+        latest_rrev = self.cache.get_latest_rrev(ref_)
+        if package_id:
+            pref = PackageReference(latest_rrev, package_id)
+        else:
+            package_ids = self.cache.get_package_ids(latest_rrev)
+            # Let's check if there are several packages because we don't want random behaviours
+            assert len(package_ids) == 1, f"There are several packages for {latest_rrev}, please, " \
+                                          f"provide a single package_id instead"
+            pref = package_ids[0]
+        return self.cache.get_latest_prev(pref)
+
+    def get_latest_pkg_layout(self, pref: PackageReference) -> PackageLayout:
+        """Get the latest PackageLayout given a file reference"""
+        # Let's make it easier for all the test clients
+        latest_prev = self.cache.get_latest_prev(pref)
+        pkg_layout = self.cache.pkg_layout(latest_prev)
+        return pkg_layout
+
+    def get_latest_ref_layout(self, ref: ConanReference) -> RecipeLayout:
+        """Get the latest RecipeLayout given a file reference"""
+        latest_rrev = self.cache.get_latest_rrev(ref)
+        ref_layout = self.cache.ref_layout(latest_rrev)
+        return ref_layout
 
 
 class TurboTestClient(TestClient):
@@ -646,14 +717,19 @@ class TurboTestClient(TestClient):
         self.run("create . {} {} --json {}".format(full_str,
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
+
+        ref = self.cache.get_latest_rrev(ref)
+
         data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
         package_ref = PackageReference(ref, package_id)
-        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
-        return package_ref.copy_with_revs(rrev, prev)
+
+        prevs = self.cache.get_package_revisions(package_ref, only_latest_prev=True)
+        prev = prevs[0]
+
+        return prev
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
@@ -670,26 +746,30 @@ class TurboTestClient(TestClient):
         self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
                                                        args or "", self.tmp_json_name),
                  assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.get_latest_rrev(ref)
         data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
         package_ref = PackageReference(ref, package_id)
-        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        prev = self.cache.get_latest_prev(package_ref)
         return package_ref.copy_with_revs(rrev, prev)
 
     def recipe_exists(self, ref):
-        return self.cache.package_layout(ref).recipe_exists()
+        rrev = self.cache.get_recipe_revisions(ref)
+        return True if rrev else False
 
     def package_exists(self, pref):
-        return self.cache.package_layout(pref.ref).package_exists(pref)
+        prev = self.cache.get_package_revisions(pref)
+        return True if prev else False
 
     def recipe_revision(self, ref):
-        return self.cache.package_layout(ref).recipe_revision()
+        latest_rrev = self.cache.get_latest_rrev(ref)
+        return latest_rrev.revision
 
     def package_revision(self, pref):
-        return self.cache.package_layout(pref.ref).package_revision(pref)
+        latest_prev = self.cache.get_latest_prev(pref)
+        return latest_prev.revision
 
     def search(self, pattern, remote=None, assert_error=False, args=None):
         remote = " -r={}".format(remote) if remote else ""

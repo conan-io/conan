@@ -4,12 +4,9 @@ import textwrap
 import unittest
 from collections import OrderedDict
 
-import six
 from mock import Mock, call
 from parameterized import parameterized
-import pytest
 
-from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader, _parse_conanfile
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
@@ -25,7 +22,8 @@ from conans.util.files import save
 class ConanLoaderTest(unittest.TestCase):
 
     def test_inherit_short_paths(self):
-        loader = ConanFileLoader(None, Mock(), ConanPythonRequire(None, None))
+        loader = ConanFileLoader(None, Mock())
+
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from base_recipe import BasePackage
@@ -44,22 +42,6 @@ class BasePackage(ConanFile):
         result = loader.load_consumer(conanfile_path, profile_host=create_profile())
         self.assertEqual(result.short_paths, True)
 
-    def test_requires_init(self):
-        loader = ConanFileLoader(None, Mock(), ConanPythonRequire(None, None))
-        tmp_dir = temp_folder()
-        conanfile_path = os.path.join(tmp_dir, "conanfile.py")
-        conanfile = """from conans import ConanFile
-class MyTest(ConanFile):
-    requires = {}
-    def requirements(self):
-        self.requires("MyPkg/0.1@user/channel")
-"""
-        for requires in ("''", "[]", "()", "None"):
-            save(conanfile_path, conanfile.format(requires))
-            result = loader.load_consumer(conanfile_path, profile_host=create_profile())
-            result.requirements()
-            self.assertEqual("MyPkg/0.1@user/channel", str(result.requires))
-
     def test_package_settings(self):
         # CREATE A CONANFILE TO LOAD
         tmp_dir = temp_folder()
@@ -77,8 +59,7 @@ class MyTest(ConanFile):
         profile = Profile()
         profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
-        loader = ConanFileLoader(None, Mock(), ConanPythonRequire(None, None))
-
+        loader = ConanFileLoader(None, Mock())
         recipe = loader.load_consumer(conanfile_path, profile)
         self.assertEqual(recipe.settings.os, "Windows")
 
@@ -103,19 +84,19 @@ class ConanLoaderTxtTest(unittest.TestCase):
         file_content = '''[requires}
 OpenCV/2.4.10@phil/stable # My requirement for CV
 '''
-        with six.assertRaisesRegex(self, ConanException, "Bad syntax"):
+        with self.assertRaisesRegex(ConanException, "Bad syntax"):
             ConanFileTextLoader(file_content)
 
         file_content = '{hello}'
-        with six.assertRaisesRegex(self, ConanException, "Unexpected line"):
+        with self.assertRaisesRegex(ConanException, "Unexpected line"):
             ConanFileTextLoader(file_content)
 
         file_content = '[imports]\nhello'
-        with six.assertRaisesRegex(self, ConanException, "Invalid imports line: hello"):
+        with self.assertRaisesRegex(ConanException, "Invalid imports line: hello"):
             ConanFileTextLoader(file_content).imports_method(None)
 
         file_content = '[imports]\nbin, * -> bin @ kk=3 '
-        with six.assertRaisesRegex(self, ConanException, "Unknown argument kk"):
+        with self.assertRaisesRegex(ConanException, "Unknown argument kk"):
             ConanFileTextLoader(file_content).imports_method(None)
 
     def test_plain_text_parser(self):
@@ -175,13 +156,8 @@ OpenCV2:other_option=Cosa
 OpenCV:other_option=False
 OpenCV2:use_python2=1
 OpenCV2:other_option=Cosa""")
-        requirements = Requirements()
-        requirements.add("OpenCV/2.4.10@phil/stable")
-        requirements.add("OpenCV2/2.4.10@phil/stable")
-        build_requirements = ["MyPkg/1.0.0@phil/stable"]
 
-        self.assertEqual(ret.requires, requirements)
-        self.assertEqual(ret.build_requires, build_requirements)
+        self.assertEqual(len(ret.requires.values()), 3)
         self.assertEqual(ret.generators, ["one", "two"])
         self.assertEqual(ret.options.values.dumps(), options1.dumps())
 
@@ -199,7 +175,7 @@ OpenCV/2.4.104phil/stable
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, Mock(), None)
-        with six.assertRaisesRegex(self, ConanException, "The reference has too many '/'"):
+        with self.assertRaisesRegex(ConanException, "The reference has too many '/'"):
             loader.load_conanfile_txt(file_path, create_profile())
 
         file_content = '''[requires]
@@ -211,7 +187,7 @@ OpenCV/bin/* - ./bin
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, Mock(), None)
-        with six.assertRaisesRegex(self, ConanException, "is too long. Valid names must contain"):
+        with self.assertRaisesRegex(ConanException, "is too long. Valid names must contain"):
             loader.load_conanfile_txt(file_path, create_profile())
 
     def test_load_imports_arguments(self):
@@ -248,7 +224,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, ex
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, conanfile_txt)
         loader = ConanFileLoader(None, Mock(), None)
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    r"Error while parsing \[options\] in conanfile\n"
                                    "Options should be specified as 'pkg:option=value'"):
             loader.load_conanfile_txt(file_path, create_profile())
@@ -294,7 +270,6 @@ class ImportModuleLoaderTest(unittest.TestCase):
         return loaded, module_id, expected_return
 
     @parameterized.expand([(True, False), (False, True), (False, False)])
-    @pytest.mark.skipif(six.PY2, reason="Python 2 requires __init__.py file in modules")
     def test_py3_recipe_colliding_init_filenames(self, sub1, sub2):
         myfunc1, value1 = "recipe1", 42
         myfunc2, value2 = "recipe2", 23
@@ -320,11 +295,11 @@ class ImportModuleLoaderTest(unittest.TestCase):
         myfunc1, value1 = "recipe1", 42
 
         # Item imported does not exist, but file exists
-        with six.assertRaisesRegex(self, ConanException, "Unable to load conanfile in"):
+        with self.assertRaisesRegex(ConanException, "Unable to load conanfile in"):
             self._create_and_load(myfunc1, value1, "requests", add_subdir_init)
 
-        # File does not exist in already existing module
-        with six.assertRaisesRegex(self, ConanException, "Unable to load conanfile in"):
+        # File does not exists in already existing module
+        with self.assertRaisesRegex(ConanException, "Unable to load conanfile in"):
             self._create_and_load(myfunc1, value1, "conans", add_subdir_init)
 
     def test_helpers_python_library(self):

@@ -37,7 +37,6 @@ class JsonGenerator(Generator):
     @property
     def content(self):
         info = {}
-        info["deps_env_info"] = self.deps_env_info.vars
         info["deps_user_info"] = serialize_user_info(self.deps_user_info)
         info["dependencies"] = self.get_dependencies_info()
         info["settings"] = self.get_settings()
@@ -65,8 +64,8 @@ class JsonGenerator(Generator):
 
     def get_options(self):
         options = {}
-        for req in self.conanfile.requires:
-            options[req] = {}
+        for req in self.conanfile.requires.values():
+            options[req.ref.name] = {}
             for key, value in self.conanfile.options[req].items():
                 options[req][key] = value
         return options

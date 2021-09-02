@@ -133,5 +133,22 @@ class ConanfileErrorsTest(unittest.TestCase):
             ''')
         files = {"conanfile.py": conanfile}
         client.save(files)
-        client.run("install . --build", assert_error=True)
-        self.assertIn("Error while initializing requirements. Duplicated requirement", client.out)
+        client.run("export .", assert_error=True)
+        self.assertIn("Duplicated requirement", client.out)
+
+
+def test_notduplicate_requires_py():
+    client = TestClient()
+    conanfile = textwrap.dedent('''
+        from conans import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "Hello"
+            version = "0.1"
+            requires = "foo/0.1@user/testing"
+            build_requires = "foo/0.2@user/testing"
+        ''')
+    files = {"conanfile.py": conanfile}
+    client.save(files)
+    client.run("export .")
+    assert "Hello/0.1: Exported" in client.out

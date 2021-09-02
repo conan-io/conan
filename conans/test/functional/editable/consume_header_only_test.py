@@ -7,12 +7,12 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 
 
+@pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
 @pytest.mark.tool_cmake
 class HeaderOnlyLibTestClient(TestClient):
     header = textwrap.dedent("""\
@@ -45,16 +45,6 @@ class HeaderOnlyLibTestClient(TestClient):
                 self.cpp_info.includedirs = ["src/include-local", ]
         """)
 
-    conan_inrepo_layout = textwrap.dedent("""\
-        [includedirs]
-        src/include-inrepo
-        """)
-
-    conan_cache_layout = textwrap.dedent("""\
-        [MyLib/0.1@user/editable:includedirs]
-        src/include-cache
-        """)
-
     def __init__(self, use_repo_file, use_cache_file, *args, **kwargs):
         super(HeaderOnlyLibTestClient, self).__init__(*args, **kwargs)
 
@@ -67,13 +57,6 @@ class HeaderOnlyLibTestClient(TestClient):
                                                                      origin="local")
                    })
 
-        if use_repo_file:
-            self.save({"mylayout": self.conan_inrepo_layout, })
-
-        if use_cache_file:
-            file_path = os.path.join(self.cache.cache_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
-            save(file_path, self.conan_cache_layout)
-
     def update_hello_word(self, hello_word):
         self.save({"src/include-inrepo/hello.hpp": self.header.format(word=hello_word,
                                                                       origin='inrepo'),
@@ -82,7 +65,9 @@ class HeaderOnlyLibTestClient(TestClient):
                    "src/include-local/hello.hpp": self.header.format(word=hello_word,
                                                                      origin='local')})
 
+
 @pytest.mark.tool_cmake
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 class EditableReferenceTest(unittest.TestCase):
 
     @parameterized.expand([(False, True), (True, False), (True, True), (False, False)])

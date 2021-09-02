@@ -1,12 +1,10 @@
-import json
-
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
+from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
 from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import Environment
-from conan.tools.files import save
+from conan.tools.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conans.tools import args_to_string
 
@@ -62,6 +60,8 @@ class AutotoolsToolchain:
                 # -isysroot makes all includes for your library relative to the build directory
                 self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
 
+        check_using_build_profile(self._conanfile)
+
     def _cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
         # The default is libstdc++11, only specify the contrary '_GLIBCXX_USE_CXX11_ABI=0'
@@ -97,7 +97,7 @@ class AutotoolsToolchain:
             return "-Y _%s" % str(libcxx)
 
     def environment(self):
-        env = Environment()
+        env = Environment(conanfile=self._conanfile)
         # defines
         if self.ndebug:
             self.defines.append(self.ndebug)
@@ -138,9 +138,9 @@ class AutotoolsToolchain:
         env.append("LDFLAGS", self.ldflags)
         return env
 
-    def generate(self, env=None):
+    def generate(self, env=None, auto_activate=True):
         env = env or self.environment()
-        env.save_script("conanautotoolstoolchain")
+        env.save_script("conanautotoolstoolchain", auto_activate=auto_activate)
         self.generate_args()
 
     def generate_args(self):
@@ -165,4 +165,4 @@ class AutotoolsToolchain:
         args = {"configure_args": args_to_string(configure_args),
                 "make_args":  args_to_string(self.make_args)}
 
-        save(self._conanfile, CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(args))
+        save_toolchain_args(args)

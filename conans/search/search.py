@@ -3,39 +3,13 @@ import re
 from collections import OrderedDict
 from fnmatch import translate
 
-from conans.errors import ConanException, RecipeNotFoundException
+from conans.errors import ConanException
 from conans.model.info import ConanInfo
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import load
 from conans.util.log import logger
-
-
-def filter_outdated(packages_infos, recipe_hash):
-    if not recipe_hash:
-        return packages_infos
-    result = OrderedDict()
-    for package_id, info in packages_infos.items():
-        try:  # Existing package_info of old package might not have recipe_hash
-            if info["recipe_hash"] != recipe_hash:
-                result[package_id] = info
-        except KeyError:
-            pass
-    return result
-
-
-def filter_by_revision(metadata, packages_infos):
-    ok = OrderedDict()
-    recipe_revision = metadata.recipe.revision
-    for package_id, info in packages_infos.items():
-        try:
-            rec_rev = metadata.packages[package_id].recipe_revision
-            if rec_rev == recipe_revision:
-                ok[package_id] = info
-        except KeyError:
-            pass
-    return ok
 
 
 def filter_packages(query, package_infos):
@@ -50,6 +24,8 @@ def filter_packages(query, package_infos):
         result = OrderedDict()
         for package_id, info in package_infos.items():
             if _evaluate_postfix_with_info(postfix, info):
+                # TODO: cache2.0 maybe it would be better to make the key the full reference
+                #  but the remote will return a dict with the pkgid as the key so maintain this
                 result[package_id] = info
         return result
     except Exception as exc:
@@ -103,8 +79,12 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     refs = cache.all_refs()
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
-        refs = [r for r in refs if _partial_match(pattern, repr(r))]
-    refs = sorted(refs)
+        _refs = []
+        for r in refs:
+            match_ref = str(r) if not r.revision else repr(r)
+            if _partial_match(pattern, match_ref):
+                _refs.append(r)
+        refs = _refs
     return refs
 
 
@@ -123,7 +103,9 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def search_packages(package_layout, query):
+# TODO: cache2.0 for the moment we are passing here a list of layouts to later get the conaninfos
+#  we should refactor this to something better
+def search_packages(packages_layouts, packages_query):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
@@ -131,34 +113,26 @@ def search_packages(package_layout, query):
                            settings: {os: Windows}}}
     param package_layout: Layout for the given reference
     """
-    if not os.path.exists(package_layout.base_folder()) or (
-            package_layout.ref.revision and
-            package_layout.recipe_revision() != package_layout.ref.revision):
-        raise RecipeNotFoundException(package_layout.ref, print_rev=True)
-    infos = _get_local_infos_min(package_layout)
-    return filter_packages(query, infos)
+
+    infos = _get_local_infos_min(packages_layouts)
+    return filter_packages(packages_query, infos)
 
 
-def _get_local_infos_min(package_layout):
+def _get_local_infos_min(packages_layouts):
     result = OrderedDict()
 
-    package_ids = package_layout.package_ids()
-    for package_id in package_ids:
+    for pkg_layout in packages_layouts:
         # Read conaninfo
-        pref = PackageReference(package_layout.ref, package_id)
-        info_path = os.path.join(package_layout.package(pref), CONANINFO)
+        info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
             logger.error("There is no ConanInfo: %s" % str(info_path))
             continue
         conan_info_content = load(info_path)
 
         info = ConanInfo.loads(conan_info_content)
-        if package_layout.ref.revision:
-            metadata = package_layout.load_metadata()
-            recipe_revision = metadata.packages[package_id].recipe_revision
-            if recipe_revision and recipe_revision != package_layout.ref.revision:
-                continue
         conan_vars_info = info.serialize_min()
-        result[package_id] = conan_vars_info
+        # TODO: cache2.0 use the full ref or package rev as key
+        # FIXME: cache2.0 there will be several prevs with same package id
+        result[pkg_layout.reference.id] = conan_vars_info
 
     return result

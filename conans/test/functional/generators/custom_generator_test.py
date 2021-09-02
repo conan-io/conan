@@ -10,7 +10,6 @@ from conans.test.utils.tools import TestClient, TestServer
 
 generator = """
 from conans.model import Generator
-from conans.paths import BUILD_INFO
 from conans import ConanFile, CMake
 
 class MyCustom_Generator(Generator):
@@ -39,7 +38,6 @@ MyCustom_Generator
 
 generator_multi = """
 from conans.model import Generator
-from conans.paths import BUILD_INFO
 from conans import ConanFile, CMake
 
 class MyCustomMultiGenerator(Generator):

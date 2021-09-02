@@ -10,16 +10,13 @@ import pytest
 from mock import patch
 from requests import ConnectionError
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
                                      GenConanfile)
-from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir, save
 
 
@@ -58,7 +55,8 @@ def test_try_upload_bad_recipe():
     client.save({"conanfile.py": GenConanfile("Hello0", "1.2.1")})
     client.run("export . frodo/stable")
     ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-    os.unlink(os.path.join(client.cache.package_layout(ref).export(), CONAN_MANIFEST))
+    latest_rrev = client.cache.get_latest_rrev(ref)
+    os.unlink(os.path.join(client.cache.ref_layout(latest_rrev).export(), CONAN_MANIFEST))
     client.run("upload %s" % str(ref), assert_error=True)
     assert "Cannot upload corrupted recipe" in client.out
 
@@ -104,9 +102,7 @@ def test_check_upload_confirm_question():
     assert "Uploading Hello2/1.2.1@frodo/stable" not in client.out
 
 
-@pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
-                    reason="We cannot know the folder of the revision without knowing the hash of "
-                           "the contents")
+@pytest.mark.xfail(reason="cache2.0: adapt these tests in the future")
 class UploadTest(unittest.TestCase):
 
     def _get_client(self, requester=None):
@@ -122,27 +118,21 @@ class UploadTest(unittest.TestCase):
 
     def setUp(self):
         self.client = self._get_client()
-        self.ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#%s" % DEFAULT_REVISION_V1)
-        self.pref = PackageReference(self.ref, "myfakeid", DEFAULT_REVISION_V1)
-        reg_folder = self.client.cache.package_layout(self.ref).export()
+        self.ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#myreciperev")
+        self.pref = PackageReference(self.ref, "myfakeid", "mypackagerev")
+        reg_folder = self.client.get_latest_ref_layout(self.ref).export()
 
         self.client.run('upload %s' % str(self.ref), assert_error=True)
         self.assertIn("ERROR: Recipe not found: '%s'" % str(self.ref), self.client.out)
 
         files = {}
-
-        fake_metadata = PackageMetadata()
-        fake_metadata.recipe.revision = DEFAULT_REVISION_V1
-        fake_metadata.packages[self.pref.id].revision = DEFAULT_REVISION_V1
-        self.client.save({"metadata.json": fake_metadata.dumps()},
-                         path=self.client.cache.package_layout(self.ref).base_folder())
         self.client.save(files, path=reg_folder)
         self.client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("1.2.1"),
                           "include/math/lib1.h": "//copy",
                           "my_lib/debug/libd.a": "//copy",
                           "my_data/readme.txt": "//copy",
                           "my_bin/executable": "//copy"}, path=reg_folder)
-        mkdir(self.client.cache.package_layout(self.ref).export_sources())
+        mkdir(self.client.get_latest_ref_layout(self.ref).export_sources())
         manifest = FileTreeManifest.create(reg_folder)
         manifest.time = '123123123'
         manifest.save(reg_folder)
@@ -150,7 +140,7 @@ class UploadTest(unittest.TestCase):
 
         self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
-        package_folder = self.client.cache.package_layout(self.ref).package(self.pref)
+        package_folder = self.client.get_latest_pkg_layout(self.pref).package()
         save(os.path.join(package_folder, "include", "lib1.h"), "//header")
         save(os.path.join(package_folder, "lib", "my_lib", "libd.a"), "//lib")
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
@@ -278,10 +268,9 @@ class UploadTest(unittest.TestCase):
 
     def test_upload_same_package_dont_compress(self):
         # Create a manifest for the faked package
-        pack_path = self.client.cache.package_layout(self.pref.ref).package(self.pref)
-        package_path = self.client.cache.package_layout(self.pref.ref).package(self.pref)
+        package_path = self.client.get_latest_pkg_layout(self.pref).package()
         expected_manifest = FileTreeManifest.create(package_path)
-        expected_manifest.save(pack_path)
+        expected_manifest.save(package_path)
 
         self.client.run("upload %s --all" % str(self.ref))
         self.assertIn("Compressing recipe", self.client.out)
@@ -304,7 +293,6 @@ class UploadTest(unittest.TestCase):
             """)
         self.client.save({CONANFILE: conanfile})
         self.client.run("export . lasote/stable")
-        self.assertIn("WARN: Conanfile doesn't have 'license'", self.client.out)
         self.client.run("upload Hello/1.2@lasote/stable")
         self.assertIn("Uploading conanmanifest.txt", self.client.out)
 
@@ -319,8 +307,6 @@ class UploadTest(unittest.TestCase):
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
-        if not self.client.cache.config.revisions_enabled:
-            self.assertFalse(os.path.exists(self.server_pack_folder))
 
         # Upload package
         self.client.run('upload %s -p %s' % (str(self.ref), str(self.pref.id)))
@@ -375,12 +361,11 @@ class UploadTest(unittest.TestCase):
                                  "Uploading conaninfo.txt -> Hello/1.2.1@frodo/stable:myfa",
                                  "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable:myfa",
                                  ])
-        if self.client.cache.config.revisions_enabled:
-            layout = self.client.cache.package_layout(self.ref)
-            rev = layout.recipe_revision()
-            self.ref = self.ref.copy_with_rev(rev)
-            prev = layout.package_revision(self.pref)
-            self.pref = self.pref.copy_with_revs(rev, prev)
+
+        rev = self.client.cache.get_latest_rrev(self.ref).revision
+        prev = self.client.cache.get_latest_prev(self.ref).revision
+        self.ref = self.ref.copy_with_rev(rev)
+        self.pref = self.pref.copy_with_revs(rev, prev)
 
         server_reg_folder = self.test_server.server_store.export(self.ref)
         server_pack_folder = self.test_server.server_store.package(self.pref)
@@ -393,12 +378,10 @@ class UploadTest(unittest.TestCase):
         # Upload all recipes and packages
         self.client.run('upload %s --all' % str(self.ref))
 
-        if self.client.cache.config.revisions_enabled:
-            layout = self.client.cache.package_layout(self.ref)
-            rev = layout.recipe_revision()
-            self.ref = self.ref.copy_with_rev(rev)
-            prev = layout.package_revision(self.pref)
-            self.pref = self.pref.copy_with_revs(rev, prev)
+        rev = self.client.cache.get_latest_rrev(self.ref).revision
+        prev = self.client.cache.get_latest_prev(self.ref).revision
+        self.ref = self.ref.copy_with_rev(rev)
+        self.pref = self.pref.copy_with_revs(rev, prev)
 
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
         self.server_pack_folder = self.test_server.server_store.package(self.pref)
@@ -408,10 +391,10 @@ class UploadTest(unittest.TestCase):
 
         # Fake datetime from exported date and upload again
 
-        old_digest = self.client.cache.package_layout(self.ref).recipe_manifest()
+        old_digest = self.client.get_latest_ref_layout(self.ref).recipe_manifest()
         old_digest.file_sums["new_file"] = "012345"
         fake_digest = FileTreeManifest(2, old_digest.file_sums)
-        fake_digest.save(self.client.cache.package_layout(self.ref).export())
+        fake_digest.save(self.client.get_latest_ref_layout(self.ref).export())
 
         self.client.run('upload %s' % str(self.ref), assert_error=True)
         self.assertIn("Remote recipe is newer than local recipe", self.client.out)

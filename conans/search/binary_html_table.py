@@ -20,10 +20,6 @@ class RowResult(object):
     def package_id(self):
         return self._data['id']
 
-    @property
-    def outdated(self):
-        return self._data['outdated']
-
     def row(self, headers):
         """ Returns package data according to headers """
         assert isinstance(headers, Headers), "Wrong type: {}".format(type(headers))
@@ -133,7 +129,7 @@ class Results(object):
         self.options = list(_options)
         self.remotes = list(_remotes)
 
-    def get_headers(self, keys=('remote', 'reference', 'outdated', 'package_id')):
+    def get_headers(self, keys=('remote', 'reference', 'package_id')):
         return Headers(self.settings, self.options, self.requires, keys=keys)
 
     def packages(self):

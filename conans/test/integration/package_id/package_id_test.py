@@ -1,5 +1,7 @@
 import textwrap
 
+import pytest
+
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
@@ -28,7 +30,7 @@ def test_remove_option_setting():
         class TestConan(ConanFile):
             settings = "os"
             options = {"opt": [True, False]}
-            default_options = "opt=False"
+            default_options = {"opt": False}
 
             def package_id(self):
                 self.output.info("OPTION OPT=%s" % self.info.options.opt)
@@ -45,6 +47,7 @@ def test_remove_option_setting():
     assert "Pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
 
 
+@pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
 def test_value_parse():
     # https://github.com/conan-io/conan/issues/2816
     conanfile = textwrap.dedent("""
@@ -130,7 +133,7 @@ def test_build_type_remove_windows():
     client.save({"conanfile.py": conanfile})
     client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
                '-s compiler.version=14 -s build_type=Release')
-    assert "pkg/0.1:e1f7c8ffe5f9342d04ab704810faf93060ae3d70 - Build" in client.out
+    assert "pkg/0.1:1454da99f096a6347c915bbbd244d7137a96d1be - Build" in client.out
     client.run('install pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
                '-s compiler.version=14 -s build_type=Debug')
-    assert "pkg/0.1:e1f7c8ffe5f9342d04ab704810faf93060ae3d70 - Cache" in client.out
+    assert "pkg/0.1:1454da99f096a6347c915bbbd244d7137a96d1be - Cache" in client.out

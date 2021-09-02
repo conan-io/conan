@@ -32,8 +32,7 @@ def test_cmake_virtualenv():
             exports_sources = "CMakeLists.txt", "main.cpp"
             requires = "hello/0.1"
             build_requires = "cmakewrapper/0.1"
-            generators = "CMakeDeps", "CMakeToolchain", "VirtualEnv"
-            apply_env = False
+            generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
 
             def build(self):
                 cmake = CMake(self)
@@ -80,9 +79,8 @@ def test_complete():
             settings = "os", "arch", "compiler", "build_type"
             requires = "myopenssl/1.0"
             default_options = {"myopenssl:shared": True}
-            generators = "CMakeDeps", "CMakeToolchain", "VirtualEnv"
+            generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
             exports = "*"
-            apply_env = False
 
             def build(self):
                 cmake = CMake(self)
@@ -121,7 +119,7 @@ def test_complete():
             requires = "myopenssl/1.0"
             default_options = {"myopenssl:shared": True}
             exports_sources = "CMakeLists.txt", "main.cpp"
-            generators = "CMakeDeps", "CMakeToolchain", "VirtualEnv"
+            generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
 
             def build(self):
                 cmake = CMake(self)

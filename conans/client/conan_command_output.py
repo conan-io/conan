@@ -51,22 +51,6 @@ class CommandOutputer(object):
             pref = PackageReference.loads(package_reference)
             self._output.info("%s: %s" % (pref.full_str(), remote_name))
 
-    def build_order(self, info):
-        groups = [[ref.copy_clear_rev() for ref in group] for group in info]
-        msg = ", ".join(str(s) for s in groups)
-        self._output.info(msg)
-
-    def json_build_order(self, info, json_output, cwd):
-        data = {"groups": [[repr(ref.copy_clear_rev()) for ref in group] for group in info]}
-        json_str = json.dumps(data)
-        if json_output is True:  # To the output
-            self._output.write(json_str)
-        else:  # Path to a file
-            cwd = os.path.abspath(cwd or os.getcwd())
-            if not os.path.isabs(json_output):
-                json_output = os.path.join(cwd, json_output)
-            save(json_output, json_str)
-
     def json_output(self, info, json_output, cwd):
         cwd = os.path.abspath(cwd or os.getcwd())
         if not os.path.isabs(json_output):
@@ -87,7 +71,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self._cache.package_layout(ref).recipe_manifest()
+                manifest = self._cache.ref_layout(ref).recipe_manifest()
                 ret[ref] = manifest.time_str
         return ret
 
@@ -137,22 +121,27 @@ class CommandOutputer(object):
             item_data["display_name"] = conanfile.display_name
             item_data["id"] = package_id
             item_data["build_id"] = build_id(conanfile)
+            item_data["context"] = conanfile.context
+
+            python_requires = getattr(conanfile, "python_requires", None)
+            if python_requires and not isinstance(python_requires, dict):  # no old python requires
+                item_data["python_requires"] = [repr(r)
+                                                for r in conanfile.python_requires.all_refs()]
 
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
-                package_layout = self._cache.package_layout(ref, conanfile.short_paths)
-                item_data["export_folder"] = package_layout.export()
-                item_data["source_folder"] = package_layout.source()
+                # ref already has the revision ID, not needed to get it again
+                ref_layout = self._cache.ref_layout(ref)
+                item_data["export_folder"] = ref_layout.export()
+                item_data["source_folder"] = ref_layout.source()
                 pref_build_id = build_id(conanfile) or package_id
-                pref = PackageReference(ref, pref_build_id)
-                item_data["build_folder"] = package_layout.build(pref)
-
-                pref = PackageReference(ref, package_id)
-                item_data["package_folder"] = package_layout.package(pref)
+                pref_build = self._cache.get_latest_prev(PackageReference(ref, pref_build_id))
+                pref_package = self._cache.get_latest_prev(PackageReference(ref, package_id))
+                item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
+                item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
 
             try:
-                package_metadata = self._cache.package_layout(ref).load_metadata()
-                reg_remote = package_metadata.recipe.remote
+                reg_remote = self._cache.get_remote(ref)
                 reg_remote = remotes.get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
@@ -215,8 +204,7 @@ class CommandOutputer(object):
     def info(self, deps_graph, only, package_filter, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         Printer(self._output).print_info(data, only,  package_filter=package_filter,
-                                         show_paths=show_paths,
-                                         show_revisions=self._cache.config.revisions_enabled)
+                                         show_paths=show_paths)
 
     def info_graph(self, graph_filename, deps_graph, cwd, template):
         graph = Grapher(deps_graph)
@@ -247,13 +235,12 @@ class CommandOutputer(object):
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table, raw,
-                              template, outdated=False):
+                              template):
         if table:
             html_binary_graph(search_info, reference, table, template)
         else:
             printer = Printer(self._output)
-            printer.print_search_packages(search_info, reference, packages_query, raw,
-                                          outdated=outdated)
+            printer.print_search_packages(search_info, reference, packages_query, raw)
 
     def print_revisions(self, reference, revisions, raw, remote_name=None):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""

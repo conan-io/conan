@@ -1,5 +1,6 @@
 import os
-import pytest
+import sys
+
 import platform
 import textwrap
 import unittest
@@ -8,13 +9,11 @@ from parameterized import parameterized
 import pytest
 
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.functional.toolchains.meson._base import get_meson_version
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_meson
-@pytest.mark.skipif(get_meson_version() < "0.56.0", reason="requires meson >= 0.56.0")
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 class AndroidToolchainMesonTestCase(unittest.TestCase):
 
     _conanfile_py = textwrap.dedent("""
@@ -101,12 +100,14 @@ class AndroidToolchainMesonTestCase(unittest.TestCase):
         ar = self._tool('ar')
         cflags = '--target=%s' % self._target
         cxxflags = '--target=%s' % self._target
+        ldflags = '--target=%s' % self._target
 
         return {'CC': cc,
                 'CXX': cxx,
                 'AR': ar,
                 'CFLAGS': cflags,
-                'CXXFLAGS': cxxflags}
+                'CXXFLAGS': cxxflags,
+                'LDFLAGS': ldflags}
 
     def profile(self):
         template = textwrap.dedent("""

@@ -7,7 +7,6 @@ from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain import Block, GenericSystemBlock
 from conans import ConanFile, Settings
 from conans.model.conf import Conf
-from conans.model.env_info import EnvValues
 
 
 @pytest.fixture
@@ -17,7 +16,7 @@ def conanfile():
     c.initialize(Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}), EnvValues())
+                           "arch": ["x86"]}))
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "gcc"
@@ -25,7 +24,7 @@ def conanfile():
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()
-    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
     return c
 
 
@@ -140,3 +139,31 @@ def test_user_toolchain(conanfile):
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content
     assert 'include(' not in content
+
+
+@pytest.fixture
+def conanfile_apple():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.initialize(Settings({"os": {"Macos": {"version": ["10.15"]}},
+                           "compiler": {"apple-clang": {"libcxx": ["libc++"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86"]}))
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86"
+    c.settings.compiler = "apple-clang"
+    c.settings.compiler.libcxx = "libc++"
+    c.settings.os = "Macos"
+    c.settings.os.version = "10.15"
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    return c
+
+
+def test_osx_deployment_target(conanfile_apple):
+    toolchain = CMakeToolchain(conanfile_apple)
+    content = toolchain.content
+    assert 'set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)' in content

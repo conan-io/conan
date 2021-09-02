@@ -2,7 +2,6 @@ import os
 import time
 import traceback
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.downloaders.download import run_downloader
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
@@ -14,6 +13,7 @@ from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -58,14 +58,12 @@ class RestV2Methods(RestCommonMethods):
         if not ref.revision:
             ref = self.get_latest_recipe_revision(ref)
         url = self.router.recipe_manifest(ref)
-        cache = (ref.revision != DEFAULT_REVISION_V1)
-        content = self._get_remote_file_contents(url, use_cache=cache)
+        content = self._get_remote_file_contents(url, use_cache=True)
         return FileTreeManifest.loads(decode_text(content))
 
     def get_package_manifest(self, pref):
         url = self.router.package_manifest(pref)
-        cache = (pref.revision != DEFAULT_REVISION_V1)
-        content = self._get_remote_file_contents(url, use_cache=cache)
+        content = self._get_remote_file_contents(url, use_cache=True)
         try:
             return FileTreeManifest.loads(decode_text(content))
         except Exception as e:
@@ -77,8 +75,7 @@ class RestV2Methods(RestCommonMethods):
 
     def get_package_info(self, pref, headers):
         url = self.router.package_info(pref)
-        cache = (pref.revision != DEFAULT_REVISION_V1)
-        content = self._get_remote_file_contents(url, use_cache=cache, headers=headers)
+        content = self._get_remote_file_contents(url, use_cache=True, headers=headers)
         return ConanInfo.loads(decode_text(content))
 
     def get_recipe(self, ref, dest_folder):
@@ -91,8 +88,7 @@ class RestV2Methods(RestCommonMethods):
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        cache = (ref.revision != DEFAULT_REVISION_V1)
-        self._download_and_save_files(urls, dest_folder, files, use_cache=cache)
+        self._download_and_save_files(urls, dest_folder, files, use_cache=True)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -110,8 +106,7 @@ class RestV2Methods(RestCommonMethods):
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        cache = (ref.revision != DEFAULT_REVISION_V1)
-        self._download_and_save_files(urls, dest_folder, files, use_cache=cache)
+        self._download_and_save_files(urls, dest_folder, files, use_cache=True)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -122,8 +117,7 @@ class RestV2Methods(RestCommonMethods):
         check_compressed_files(PACKAGE_TGZ_NAME, files)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
-        cache = (pref.revision != DEFAULT_REVISION_V1)
-        self._download_and_save_files(urls, dest_folder, files, use_cache=cache)
+        self._download_and_save_files(urls, dest_folder, files, use_cache=True)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -134,8 +128,7 @@ class RestV2Methods(RestCommonMethods):
             return self._list_dir_contents(path, files)
         else:
             url = self.router.recipe_file(ref, path)
-            cache = (ref.revision != DEFAULT_REVISION_V1)
-            content = self._get_remote_file_contents(url, use_cache=cache)
+            content = self._get_remote_file_contents(url, use_cache=True)
             return decode_text(content)
 
     def get_package_path(self, pref, path):
@@ -146,8 +139,7 @@ class RestV2Methods(RestCommonMethods):
             return self._list_dir_contents(path, files)
         else:
             url = self.router.package_file(pref, path)
-            cache = (pref.revision != DEFAULT_REVISION_V1)
-            content = self._get_remote_file_contents(url, use_cache=cache)
+            content = self._get_remote_file_contents(url, use_cache=True)
             return decode_text(content)
 
     @staticmethod
@@ -302,21 +294,27 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe_revisions(self, ref):
         url = self.router.recipe_revisions(ref)
         tmp = self.get_json(url)["revisions"]
+        # FIXME: the server API is returning an iso date, we have to convert to timestamp
+        tmp = [{"revision": item.get("revision"),
+                "time": from_iso8601_to_timestamp(item.get("time"))} for item in tmp]
         if ref.revision:
             for r in tmp:
                 if r["revision"] == ref.revision:
                     return [r]
-            raise RecipeNotFoundException(ref, print_rev=True)
+            raise RecipeNotFoundException(ref)
         return tmp
 
     def get_package_revisions(self, pref):
         url = self.router.package_revisions(pref)
         tmp = self.get_json(url)["revisions"]
+        # FIXME: the server API is returning an iso date, we have to convert to timestamp
+        tmp = [{"revision": item.get("revision"),
+                "time": from_iso8601_to_timestamp(item.get("time"))} for item in tmp]
         if pref.revision:
             for r in tmp:
                 if r["revision"] == pref.revision:
                     return [r]
-            raise PackageNotFoundException(pref, print_rev=True)
+            raise PackageNotFoundException(pref)
         return tmp
 
     def get_latest_recipe_revision(self, ref):

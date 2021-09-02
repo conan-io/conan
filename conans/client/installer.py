@@ -4,33 +4,30 @@ import textwrap
 import time
 from multiprocessing.pool import ThreadPool
 
+from conan.cache.conan_reference import ConanReference
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
-from conans.client.generators import TXTGenerator, write_toolchain
+from conans.client.generators import write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID, \
+    BINARY_ERROR
 from conans.client.importer import remove_imports, run_imports
-from conans.client.packager import update_package_metadata
-from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
-    INSTALL_ERROR_MISSING_BUILD_FOLDER
+from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
-from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter, ConanInvalidConfiguration)
+                           conanfile_exception_formatter, ConanInvalidConfiguration,
+                           ConanReferenceDoesNotExistInDB)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
-from conans.model.editable_layout import EditableLayout
-from conans.model.env_info import EnvInfo
-from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.new_build_info import NewCppInfo, fill_old_cppinfo
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
-from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
+from conans.paths import CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger
@@ -50,14 +47,6 @@ def build_id(conan_file):
     return None
 
 
-def add_env_conaninfo(conan_file, subtree_libnames):
-    for package_name, env_vars in conan_file._conan_env_values.data.items():
-        for name, value in env_vars.items():
-            if not package_name or package_name in subtree_libnames or \
-                    package_name == conan_file.name:
-                conan_file.info.env_values.add(name, value, package_name)
-
-
 class _PackageBuilder(object):
     def __init__(self, cache, output, hook_manager, remote_manager, generators):
         self._cache = cache
@@ -66,42 +55,57 @@ class _PackageBuilder(object):
         self._remote_manager = remote_manager
         self._generator_manager = generators
 
-    def _get_build_folder(self, conanfile, package_layout, pref, keep_build, recorder):
+    def _get_build_folder(self, conanfile, package_layout):
         # Build folder can use a different package_ID if build_id() is defined.
         # This function decides if the build folder should be re-used (not build again)
         # and returns the build folder
-        new_id = build_id(conanfile)
-        build_pref = PackageReference(pref.ref, new_id) if new_id else pref
-        build_folder = package_layout.build(build_pref)
+        skip_build = False
+        build_folder = package_layout.build()
+        recipe_build_id = build_id(conanfile)
+        pref = package_layout.reference
+        if pref.id != recipe_build_id and hasattr(conanfile, "build_id"):
+            # check if we already have a package with the calculated build_id
+            recipe_ref = ConanFileReference.loads(ConanReference(pref).recipe_reference)
+            package_ids = self._cache.get_package_ids(recipe_ref)
+            build_prev = None
+            for pkg_id in package_ids:
+                prev = self._cache.get_latest_prev(pkg_id)
+                prev_build_id = self._cache.get_build_id(prev)
+                if prev_build_id == recipe_build_id:
+                    build_prev = prev
+                    break
+
+            build_prev = build_prev or pref
+
+            # We are trying to build a package id different from the one that has the
+            # build_folder but belongs to the same recipe revision, so reuse the build_folder
+            # from the one that is already build
+            if build_prev.id != pref.id:
+                other_pkg_layout = self._cache.pkg_layout(build_prev)
+                build_folder = other_pkg_layout.build()
+                skip_build = True
+            elif build_prev == pref:
+                self._cache.update_reference(build_prev, new_build_id=recipe_build_id)
 
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
             clean_dirty(build_folder)
 
-        # Decide if the build folder should be kept
-        skip_build = conanfile.develop and keep_build
-        if skip_build:
-            self._output.info("Won't be built as specified by --keep-build")
-            if not os.path.exists(build_folder):
-                msg = "--keep-build specified, but build folder not found"
-                recorder.package_install_error(pref, INSTALL_ERROR_MISSING_BUILD_FOLDER,
-                                               msg, remote_name=None)
-                raise ConanException(msg)
-        elif build_pref != pref and os.path.exists(build_folder) and hasattr(conanfile, "build_id"):
+        if skip_build and os.path.exists(build_folder):
             self._output.info("Won't be built, using previous build folder as defined in build_id()")
-            skip_build = True
 
         return build_folder, skip_build
 
-    def _prepare_sources(self, conanfile, pref, package_layout, remotes):
-        export_folder = package_layout.export()
-        export_source_folder = package_layout.export_sources()
-        scm_sources_folder = package_layout.scm_sources()
-        conanfile_path = package_layout.conanfile()
-        source_folder = package_layout.source()
+    def _prepare_sources(self, conanfile, pref, recipe_layout, remotes):
+        export_folder = recipe_layout.export()
+        export_source_folder = recipe_layout.export_sources()
+        scm_sources_folder = recipe_layout.scm_sources()
+        conanfile_path = recipe_layout.conanfile()
+        source_folder = recipe_layout.source()
 
-        retrieve_exports_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
+        retrieve_exports_sources(self._remote_manager, self._cache, recipe_layout, conanfile,
+                                 pref.ref, remotes)
 
         conanfile.folders.set_base_source(source_folder)
         conanfile.folders.set_base_build(None)
@@ -144,7 +148,8 @@ class _PackageBuilder(object):
         try:
             mkdir(conanfile.build_folder)
             with tools.chdir(conanfile.build_folder):
-                run_build_method(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
+                run_build_method(conanfile, self._hook_manager, reference=pref.ref,
+                                 package_id=pref.id)
             self._output.success("Package '%s' built" % pref.id)
             self._output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
@@ -158,17 +163,11 @@ class _PackageBuilder(object):
             # Now remove all files that were imported with imports()
             remove_imports(conanfile, copied_files, self._output)
 
-    def _package(self, conanfile, pref, package_layout, conanfile_path):
+    def _package(self, conanfile, pref, conanfile_path):
         # FIXME: Is weak to assign here the recipe_hash
-        manifest = package_layout.recipe_manifest()
-        conanfile.info.recipe_hash = manifest.summary_hash
-
         # Creating ***info.txt files
         save(os.path.join(conanfile.folders.base_build, CONANINFO), conanfile.info.dumps())
         self._output.info("Generated %s" % CONANINFO)
-        save(os.path.join(conanfile.folders.base_build, BUILD_INFO),
-             TXTGenerator(conanfile).content)
-        self._output.info("Generated %s" % BUILD_INFO)
 
         package_id = pref.id
         # Do the actual copy, call the conanfile.package() method
@@ -178,35 +177,39 @@ class _PackageBuilder(object):
         prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
                                   pref.ref)
 
-        update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
-
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(conanfile.folders.base_package)
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
 
-    def build_package(self, node, keep_build, recorder, remotes):
+    def build_package(self, node, recorder, remotes, package_layout):
         t1 = time.time()
 
         conanfile = node.conanfile
         pref = node.pref
 
-        package_layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
-        base_source = package_layout.source()
-        conanfile_path = package_layout.conanfile()
-        base_package = package_layout.package(pref)
+        # TODO: cache2.0 fix this
+        recipe_layout = self._cache.ref_layout(pref.ref)
 
-        base_build, skip_build = self._get_build_folder(conanfile, package_layout,
-                                                               pref, keep_build, recorder)
+        base_source = recipe_layout.source()
+        conanfile_path = recipe_layout.conanfile()
+        base_package = package_layout.package()
+
+        base_build, skip_build = self._get_build_folder(conanfile, package_layout)
+
         # PREPARE SOURCES
         if not skip_build:
-            with package_layout.conanfile_write_lock(self._output):
-                set_dirty(base_build)
-                self._prepare_sources(conanfile, pref, package_layout, remotes)
-                self._copy_sources(conanfile, base_source, base_build)
+            # TODO: cache2.0 check locks
+            # with package_layout.conanfile_write_lock(self._output):
+            set_dirty(base_build)
+            self._prepare_sources(conanfile, pref, recipe_layout, remotes)
+            self._copy_sources(conanfile, base_source, base_build)
+            mkdir(base_build)
 
         # BUILD & PACKAGE
-        with package_layout.conanfile_read_lock(self._output):
+        # TODO: cache2.0 check locks
+        # with package_layout.conanfile_read_lock(self._output):
+        with tools.chdir(base_build):
             self._output.info('Building your package in %s' % base_build)
             try:
                 if getattr(conanfile, 'no_copy_source', False):
@@ -226,7 +229,7 @@ class _PackageBuilder(object):
                     self._build(conanfile, pref)
                     clean_dirty(base_build)
 
-                prev = self._package(conanfile, pref, package_layout, conanfile_path)
+                prev = self._package(conanfile, pref, conanfile_path)
                 assert prev
                 node.prev = prev
                 log_file = os.path.join(base_build, RUN_LOG_NAME)
@@ -238,7 +241,7 @@ class _PackageBuilder(object):
                                                remote_name=None)
                 raise exc
 
-            return node.pref
+        return node.pref
 
 
 def _remove_folder_raising(folder):
@@ -249,7 +252,7 @@ def _remove_folder_raising(folder):
                              "Close any app using it, and retry" % str(e))
 
 
-def _handle_system_requirements(conan_file, pref, cache, out):
+def _handle_system_requirements(conan_file, package_layout, out):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
     check package/sha1/
 
@@ -260,11 +263,8 @@ def _handle_system_requirements(conan_file, pref, cache, out):
     if type(conan_file).system_requirements == ConanFile.system_requirements:
         return
 
-    package_layout = cache.package_layout(pref.ref)
     system_reqs_path = package_layout.system_reqs()
-    system_reqs_package_path = package_layout.system_reqs_package(pref)
-    if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
-        return
+    system_reqs_package_path = package_layout.system_reqs_package()
 
     ret = call_system_requirements(conan_file, out)
 
@@ -291,6 +291,7 @@ class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
+
     def __init__(self, app, recorder):
         self._cache = app.cache
         self._out = app.out
@@ -306,14 +307,15 @@ class BinaryInstaller(object):
             app.loader.load_generators(generator_path)
 
     def install(self, deps_graph, remotes, build_mode, update, profile_host, profile_build,
-                graph_lock, keep_build=False):
+                graph_lock):
+        assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
-        self._build(nodes_by_level, keep_build, root_node, profile_host, profile_build,
+        self._build(nodes_by_level, root_node, profile_host, profile_build,
                     graph_lock, remotes, build_mode, update)
 
     @staticmethod
@@ -323,7 +325,7 @@ class BinaryInstaller(object):
             for node in level:
                 if node.binary == BINARY_MISSING:
                     missing.append(node)
-                elif node.binary == BINARY_INVALID:
+                elif node.binary in (BINARY_INVALID, BINARY_ERROR):
                     invalid.append(node)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     downloads.append(node)
@@ -392,37 +394,29 @@ class BinaryInstaller(object):
             assert node.prev, "PREV for %s is None" % str(node.pref)
             download_nodes.append(node)
 
-        def _download(n):
-            npref = n.pref
-            layout = self._cache.package_layout(npref.ref, n.conanfile.short_paths)
-            # We cannot embed the package_lock inside the remote.get_package()
-            # because the handle_node_cache has its own lock
-            with layout.package_lock(pref):
-                self._download_pkg(layout, n)
-
         parallel = self._cache.config.parallel_download
         if parallel is not None:
             self._out.info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
-            thread_pool.map(_download, [n for n in download_nodes])
+            thread_pool.map(self._download_pkg, [n for n in download_nodes])
             thread_pool.close()
             thread_pool.join()
         else:
             for node in download_nodes:
-                _download(node)
+                self._download_pkg(node)
 
-    def _download_pkg(self, layout, node):
-        self._remote_manager.get_package(node.conanfile, node.pref, layout, node.binary_remote,
+    def _download_pkg(self, node):
+        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
                                          node.conanfile.output, self._recorder)
 
-    def _build(self, nodes_by_level, keep_build, root_node, profile_host, profile_build, graph_lock,
+    def _build(self, nodes_by_level, root_node, profile_host, profile_build, graph_lock,
                remotes, build_mode, update):
-        using_build_profile = bool(profile_build)
         missing, invalid, downloads = self._classify(nodes_by_level)
         if invalid:
             msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
             for node in invalid:
-                msg.append("{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid))
+                binary, reason = node.conanfile.info.invalid
+                msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
             raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
         processed_package_refs = {}
@@ -433,7 +427,6 @@ class BinaryInstaller(object):
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
 
-                self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, profile_host, profile_build, graph_lock)
                     # Need a temporary package revision for package_revision_mode
@@ -447,121 +440,101 @@ class BinaryInstaller(object):
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
-                    _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
-        # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node, using_build_profile)
+                    if not node.pref.revision:
+                        package_layout = self._cache.create_temp_pkg_layout(node.pref)
+                    else:
+                        package_layout = self._cache.get_or_create_pkg_layout(node.pref)
+
+                    _handle_system_requirements(conan_file, package_layout, output)
+                    self._handle_node_cache(node, processed_package_refs, remotes, package_layout)
 
     def _handle_node_editable(self, node, profile_host, profile_build, graph_lock):
         # Get source of information
         conanfile = node.conanfile
         ref = node.ref
-        package_layout = self._cache.package_layout(ref)
-        base_path = package_layout.base_folder()
+        conanfile_path = self._cache.editable_path(ref)
+        # TODO: Check, this assumes the folder is always the conanfile one
+        base_path = os.path.dirname(conanfile_path)
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
         # New editables mechanism based on Folders
-        if hasattr(conanfile, "layout"):
-            conanfile.folders.set_base_package(base_path)
-            conanfile.folders.set_base_source(base_path)
-            conanfile.folders.set_base_build(base_path)
-            conanfile.folders.set_base_install(base_path)
+        conanfile.folders.set_base_package(base_path)
+        conanfile.folders.set_base_source(base_path)
+        conanfile.folders.set_base_build(base_path)
+        conanfile.folders.set_base_install(base_path)
+        conanfile.folders.set_base_imports(base_path)
 
-            output = conanfile.output
-            output.info("Rewriting files of editable package "
-                        "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-            self._generator_manager.write_generators(conanfile, conanfile.install_folder,
-                                                     conanfile.generators_folder, output)
-            write_toolchain(conanfile, conanfile.generators_folder, output)
-            output.info("Generated toolchain")
-            graph_info_node = GraphInfo(profile_host, root_ref=node.ref)
-            graph_info_node.options = node.conanfile.options.values
-            graph_info_node.graph_lock = graph_lock
-            graph_info_node.save(base_path)
-            output.info("Generated conan.lock")
-            copied_files = run_imports(conanfile)
-            report_copied_files(copied_files, output)
-            return
+        output = conanfile.output
+        output.info("Rewriting files of editable package "
+                    "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
+        self._generator_manager.write_generators(conanfile, conanfile.install_folder,
+                                                 conanfile.generators_folder, output)
+        write_toolchain(conanfile, conanfile.generators_folder, output)
+        output.info("Generated toolchain")
+        graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
+        graph_lock_file.save(os.path.join(conanfile.install_folder, "conan.lock"))
+        output.info("Generated conan.lock")
+        copied_files = run_imports(conanfile)
+        report_copied_files(copied_files, output)
 
-        node.conanfile.cpp_info.filter_empty = False
-        # OLD EDITABLE LAYOUTS:
-        # Try with package-provided file
-        editable_cpp_info = package_layout.editable_cpp_info()
-        if editable_cpp_info:
-            editable_cpp_info.apply_to(ref,
-                                       conanfile.cpp_info,
-                                       settings=conanfile.settings,
-                                       options=conanfile.options)
-            build_folder = editable_cpp_info.folder(ref, EditableLayout.BUILD_FOLDER,
-                                                    settings=conanfile.settings,
-                                                    options=conanfile.options)
-            if build_folder is not None:
-                build_folder = os.path.join(base_path, build_folder)
-                output = conanfile.output
-                self._generator_manager.write_generators(conanfile, build_folder, build_folder, output)
-                write_toolchain(conanfile, build_folder, output)
-                save(os.path.join(build_folder, CONANINFO), conanfile.info.dumps())
-                output.info("Generated %s" % CONANINFO)
-
-                graph_info_node = GraphInfo(profile_host, root_ref=node.ref)
-                graph_info_node.options = node.conanfile.options.values
-                graph_info_node.graph_lock = graph_lock
-                graph_info_node.save(build_folder)
-                output.info("Generated graphinfo")
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-                graph_lock_file.save(os.path.join(build_folder, "conan.lock"))
-
-                save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conanfile).content)
-                output.info("Generated %s" % BUILD_INFO)
-                # Build step might need DLLs, binaries as protoc to generate source files
-                # So execute imports() before build, storing the list of copied_files
-                copied_files = run_imports(conanfile)
-                report_copied_files(copied_files, output)
-
-    def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
+    def _handle_node_cache(self, node, processed_package_references, remotes, pkg_layout):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         conanfile = node.conanfile
         output = conanfile.output
 
-        layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
+        bare_pref = PackageReference(pref.ref, pref.id)
+        processed_prev = processed_package_references.get(bare_pref)
+        if processed_prev is None:  # This package-id has not been processed before
+            if not pkg_layout:
+                if pref.revision:
+                    raise ConanException("should this happen?")
+                    pkg_layout = self._cache.pkg_layout(pref)
+                else:
+                    pkg_layout = self._cache.create_temp_pkg_layout(pref)
+        else:
+            # We need to update the PREV of this node, as its processing has been skipped,
+            # but it could be that another node with same PREF was built and obtained a new PREV
+            node.prev = processed_prev
+            pref = pref.copy_with_revs(pref.ref.revision, processed_prev)
+            pkg_layout = self._cache.pkg_layout(pref)
 
-        with layout.package_lock(pref):
-            bare_pref = PackageReference(pref.ref, pref.id)
-            processed_prev = processed_package_references.get(bare_pref)
+        with pkg_layout.package_lock():
             if processed_prev is None:  # This package-id has not been processed before
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
-                    layout.package_remove(pref)
-                    with layout.set_dirty_context_manager(pref):
-                        pref = self._build_package(node, output, keep_build, remotes)
+                    pkg_layout.package_remove()
+                    with pkg_layout.set_dirty_context_manager():
+                        pref = self._build_package(node, output, remotes, pkg_layout)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     # this can happen after a re-evaluation of packageID with Package_ID_unknown
-                    self._download_pkg(layout, node)
+                    # TODO: cache2.0. We can't pass the layout because we don't have the prev yet
+                    #  move the layout inside the get... method
+                    self._download_pkg(node)
                 elif node.binary == BINARY_CACHE:
                     assert node.prev, "PREV for %s is None" % str(pref)
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
                 processed_package_references[bare_pref] = node.prev
-            else:
-                # We need to update the PREV of this node, as its processing has been skipped,
-                # but it could be that another node with same PREF was built and obtained a new PREV
-                node.prev = processed_prev
 
-            package_folder = layout.package(pref)
+            # at this point the package reference should be complete
+            if pkg_layout.reference != pref:
+                self._cache.assign_prev(pkg_layout, ConanReference(pref))
+
+            package_folder = pkg_layout.package()
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                    % (str(pref), package_folder))
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
-    def _build_package(self, node, output, keep_build, remotes):
+    def _build_package(self, node, output, remotes, pkg_layout):
         conanfile = node.conanfile
         # It is necessary to complete the sources of python requires, which might be used
         # Only the legacy python_requires allow this
@@ -570,68 +543,15 @@ class BinaryInstaller(object):
             for python_require in python_requires.values():
                 assert python_require.ref.revision is not None, \
                     "Installer should receive python_require.ref always"
-                retrieve_exports_sources(self._remote_manager, self._cache,
+                retrieve_exports_sources(self._remote_manager, self._cache, pkg_layout,
                                          python_require.conanfile, python_require.ref, remotes)
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
                                   self._generator_manager)
-        pref = builder.build_package(node, keep_build, self._recorder, remotes)
+        pref = builder.build_package(node, self._recorder, remotes, pkg_layout)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision
         return pref
-
-    def _propagate_info(self, node, using_build_profile):
-        # it is necessary to recompute
-        # the node transitive information necessary to compute the package_id
-        # as it will be used by reevaluate_node() when package_revision_mode is used and
-        # PACKAGE_ID_UNKNOWN happens due to unknown revisions
-        self._binaries_analyzer.package_id_transitive_reqs(node)
-        # Get deps_cpp_info from upstream nodes
-        node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
-        # List sort is stable, will keep the original order of the closure, but prioritize levels
-        conan_file = node.conanfile
-        # FIXME: Not the best place to assign the _conan_using_build_profile
-        conan_file._conan_using_build_profile = using_build_profile
-        transitive = [it for it in node.transitive_closure.values()]
-
-        br_host = []
-        for it in node.dependencies:
-            if it.require.build_require_context == CONTEXT_HOST:
-                br_host.extend(it.dst.transitive_closure.values())
-
-        # Initialize some members if we are using different contexts
-        if using_build_profile:
-            conan_file.user_info_build = DepsUserInfo()
-
-        for n in node_order:
-            if n not in transitive:
-                conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
-
-            dep_cpp_info = n.conanfile._conan_dep_cpp_info
-
-            if not using_build_profile:  # Do not touch anything
-                conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                conan_file.deps_cpp_info.add(n.ref.name, dep_cpp_info)
-                conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
-            else:
-                if n in transitive or n in br_host:
-                    conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                    conan_file.deps_cpp_info.add(n.ref.name, dep_cpp_info)
-                else:
-                    conan_file.user_info_build[n.ref.name] = n.conanfile.user_info
-                    env_info = EnvInfo()
-                    env_info._values_ = n.conanfile.env_info._values_.copy()
-                    # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
-                    env_info.DYLD_LIBRARY_PATH.extend(dep_cpp_info.lib_paths)
-                    env_info.DYLD_FRAMEWORK_PATH.extend(dep_cpp_info.framework_paths)
-                    env_info.LD_LIBRARY_PATH.extend(dep_cpp_info.lib_paths)
-                    env_info.PATH.extend(dep_cpp_info.bin_paths)
-                    conan_file.deps_env_info.update(env_info, n.ref.name)
-
-        # Update the info but filtering the package values that not apply to the subtree
-        # of this current node and its dependencies.
-        subtree_libnames = [node.ref.name for node in node_order]
-        add_env_conaninfo(conan_file, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
         conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
@@ -643,67 +563,69 @@ class BinaryInstaller(object):
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_install(None)
 
-        conanfile.env_info = EnvInfo()
         conanfile.user_info = UserInfo()
 
         # Get deps_cpp_info from upstream nodes
-        public_deps = [name for name, req in conanfile.requires.items() if not req.private
-                       and not req.override]
+        # TODO public_deps = [req.ref.name for req in conanfile.requires if not req.private and not req.override]
+        public_deps = [req.ref.name for req in conanfile.requires.values()]
+        # FIXME: THIs public_deps doesn't make sense here, it is ConanFileDependencies
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
-        # Minimal pythonpath, not the whole context, make it 50% slower
-        # FIXME Conan 2.0, Remove old ways of reusing python code
-        with pythonpath(conanfile):
-            with tools.chdir(package_folder):
-                with conanfile_exception_formatter(str(conanfile), "package_info"):
-                    self._hook_manager.execute("pre_package_info", conanfile=conanfile,
-                                               reference=ref)
-                    if hasattr(conanfile, "layout"):
-                        # Old cpp info without defaults (the defaults are in the new one)
-                        conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
-                                                     default_values=CppInfoDefaultValues())
-                        if not is_editable:
-                            package_cppinfo = conanfile.cpp.package.copy()
-                            package_cppinfo.set_relative_base_folder(conanfile.folders.package)
-                            # Copy the infos.package into the old cppinfo
-                            fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
-                        else:
-                            conanfile.cpp_info.filter_empty = False
 
-                    conanfile.package_info()
+        with tools.chdir(package_folder):
+            with conanfile_exception_formatter(str(conanfile), "package_info"):
+                self._hook_manager.execute("pre_package_info", conanfile=conanfile,
+                                           reference=ref)
+                if hasattr(conanfile, "layout"):
+                    # Old cpp info without defaults (the defaults are in the new one)
+                    conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
+                                                 default_values=CppInfoDefaultValues())
+                    if not is_editable:
+                        package_cppinfo = conanfile.cpp.package.copy()
+                        package_cppinfo.set_relative_base_folder(conanfile.folders.package)
+                        # Copy the infos.package into the old cppinfo
+                        fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
+                    else:
+                        conanfile.cpp_info.filter_empty = False
 
-                    if hasattr(conanfile, "layout") and is_editable:
-                        # Adjust the folders of the layout to consolidate the rootfolder of the
-                        # cppinfos inside
-                        conanfile.folders.set_base_build(package_folder)
-                        conanfile.folders.set_base_source(package_folder)
-                        conanfile.folders.set_base_generators(package_folder)
+                conanfile.package_info()
 
-                        # convert directory entries to be relative to the declared folders.build
-                        build_cppinfo = conanfile.cpp.build.copy()
-                        build_cppinfo.set_relative_base_folder(conanfile.folders.build)
+                if hasattr(conanfile, "layout") and is_editable:
+                    # Adjust the folders of the layout to consolidate the rootfolder of the
+                    # cppinfos inside
+                    conanfile.folders.set_base_build(package_folder)
+                    conanfile.folders.set_base_source(package_folder)
+                    conanfile.folders.set_base_generators(package_folder)
 
-                        # convert directory entries to be relative to the declared folders.source
-                        source_cppinfo = conanfile.cpp.source.copy()
-                        source_cppinfo.set_relative_base_folder(conanfile.folders.source)
+                    # convert directory entries to be relative to the declared folders.build
+                    build_cppinfo = conanfile.cpp.build.copy()
+                    build_cppinfo.set_relative_base_folder(conanfile.folders.build)
 
-                        full_editable_cppinfo = NewCppInfo()
-                        full_editable_cppinfo.merge(source_cppinfo)
-                        full_editable_cppinfo.merge(build_cppinfo)
-                        # Paste the editable cpp_info but prioritizing it, only if a
-                        # variable is not declared at build/source, the package will keep the value
-                        fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
+                    # convert directory entries to be relative to the declared folders.source
+                    source_cppinfo = conanfile.cpp.source.copy()
+                    source_cppinfo.set_relative_base_folder(conanfile.folders.source)
 
-                    if conanfile._conan_dep_cpp_info is None:
-                        try:
-                            if not is_editable:
-                                # FIXME: The default for the cppinfo from build are not the same
-                                #        so this check fails when editable
-                                conanfile.cpp_info._raise_incorrect_components_definition(
-                                    conanfile.name, conanfile.requires)
-                        except ConanException as e:
-                            raise ConanException("%s package_info(): %s" % (str(conanfile), e))
-                        conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
-                    self._hook_manager.execute("post_package_info", conanfile=conanfile,
-                                               reference=ref)
+                    full_editable_cppinfo = NewCppInfo()
+                    full_editable_cppinfo.merge(source_cppinfo)
+                    full_editable_cppinfo.merge(build_cppinfo)
+                    # Paste the editable cpp_info but prioritizing it, only if a
+                    # variable is not declared at build/source, the package will keep the value
+                    fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
+
+                if conanfile._conan_dep_cpp_info is None:
+                    try:
+                        if not is_editable and not hasattr(conanfile, "layout"):
+                            # FIXME: Remove when new cppinfo model. If using the layout method
+                            #        the cppinfo object is filled from self.cpp.package new
+                            #        model and we cannot check if the defaults have been modified
+                            #        because it doesn't exist in the new model where the defaults
+                            #        for the components are always empty
+                            pass
+                            #conanfile.cpp_info._raise_incorrect_components_definition(
+                            #    conanfile.name, conanfile.requires)
+                    except ConanException as e:
+                        raise ConanException("%s package_info(): %s" % (str(conanfile), e))
+                    conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
+                self._hook_manager.execute("post_package_info", conanfile=conanfile,
+                                           reference=ref)

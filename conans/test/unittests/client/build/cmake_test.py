@@ -6,7 +6,6 @@ import sys
 import unittest
 
 import mock
-import six
 from parameterized.parameterized import parameterized
 import pytest
 
@@ -23,6 +22,7 @@ from conans.model.settings import Settings
 from conans.test.utils.mocks import MockSettings, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
+from conans.model.conf import ConfDefinition
 
 
 def _format_path_as_cmake(pathstr):
@@ -587,7 +587,7 @@ class CMakeTest(unittest.TestCase):
                                                                         flags=flags_in_local_cache)))
 
             # Raise mixing
-            with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
+            with self.assertRaisesRegex(ConanException, "Use 'build_folder'/'source_folder'"):
                 cmake = CMake(conanfile)
                 cmake.configure(source_folder="source", build_dir="build")
 
@@ -1604,3 +1604,13 @@ build_type: [ Release]
         cmake = CMake(conanfile, generator="Visual Studio 15 2017", generator_platform="x64", toolset="v141,host=x64")
         self.assertIn('-G "Visual Studio 15 2017 Win64"', cmake.command_line)
         self.assertIn('-T "v141,host=x64"', cmake.command_line)
+
+    def test_skip_test(self):
+        conf = ConfDefinition()
+        conf.loads("tools.build:skip_test=1")
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.conf = conf.get_conanfile_conf(None)
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake.test()
+        self.assertIsNone(conanfile.command)

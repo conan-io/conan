@@ -15,7 +15,6 @@ conanfile_py = textwrap.dedent("""
     class App(ConanFile):
         settings = 'os', 'arch', 'compiler', 'build_type'
         exports_sources = "MyProject.sln", "MyApp/MyApp.vcxproj", "MyApp/MyApp.cpp"
-        generators = "msbuild"
         requires = "hello/0.1"
 
         def generate(self):
@@ -28,7 +27,6 @@ conanfile_py = textwrap.dedent("""
 """)
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_cmake
 @pytest.mark.tool_msbuild
 @pytest.mark.tool_icc

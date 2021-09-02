@@ -12,6 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
 class JsonOutputTest(unittest.TestCase):
 
     def setUp(self):
@@ -26,8 +27,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertFalse(my_json["error"])
         tmp = ConanFileReference.loads(my_json["installed"][0]["recipe"]["id"])
         self.assertEqual(str(tmp), "CC/1.0@private_user/channel")
-        if self.client.cache.config.revisions_enabled:
-            self.assertIsNotNone(tmp.revision)
+        self.assertIsNotNone(tmp.revision)
         self.assertFalse(my_json["installed"][0]["recipe"]["dependency"])
         self.assertTrue(my_json["installed"][0]["recipe"]["exported"])
         self.assertFalse(my_json["installed"][0]["recipe"]["downloaded"])
@@ -78,7 +78,6 @@ class JsonOutputTest(unittest.TestCase):
         self.assertFalse(my_json["installed"][0]["packages"][0]["downloaded"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
-    @pytest.mark.tool_compiler
     def test_errors(self):
 
         # Missing recipe
@@ -169,8 +168,7 @@ AA*: CC/1.0@private_user/channel
         # Installed the build require CC with two options
         self.assertEqual(len(my_json["installed"][2]["packages"]), 2)
         tmp = ConanFileReference.loads(my_json["installed"][2]["recipe"]["id"])
-        if self.client.cache.config.revisions_enabled:
-            self.assertIsNotNone(tmp.revision)
+        self.assertIsNotNone(tmp.revision)
         self.assertEqual(str(tmp), "CC/1.0@private_user/channel")
         self.assertFalse(my_json["installed"][2]["recipe"]["downloaded"])
         self.assertFalse(my_json["installed"][2]["packages"][0]["downloaded"])

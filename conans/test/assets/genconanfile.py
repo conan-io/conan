@@ -19,6 +19,7 @@ class GenConanfile(object):
         self._imports = ["from conans import ConanFile"]
         self._name = name
         self._version = version
+        self._package_type = None
         self._settings = None
         self._options = None
         self._generators = None
@@ -35,6 +36,7 @@ class GenConanfile(object):
         self._requirements = None
         self._build_requires = None
         self._build_requirements = None
+        self._test_requires = None
         self._revision_mode = None
         self._package_info = None
         self._package_id_lines = None
@@ -44,6 +46,10 @@ class GenConanfile(object):
         self._exports = None
         self._cmake_build = False
         self._class_attributes = None
+
+    def with_package_type(self, value):
+        self._package_type = value
+        return self
 
     def with_short_paths(self, value):
         self._short_paths = value
@@ -102,10 +108,11 @@ class GenConanfile(object):
             self.with_require(ref)
         return self
 
-    def with_requirement(self, ref, private=False, override=False):
+    def with_requirement(self, ref, **kwargs):
         self._requirements = self._requirements or []
+
         ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
-        self._requirements.append((ref_str, private, override))
+        self._requirements.append((ref_str, kwargs))
         return self
 
     def with_build_requires(self, *refs):
@@ -115,10 +122,17 @@ class GenConanfile(object):
             self._build_requires.append(ref_str)
         return self
 
-    def with_build_requirement(self, ref, force_host_context=False):
+    def with_test_requires(self, *refs):
+        self._test_requires = self._test_requires or []
+        for ref in refs:
+            ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+            self._test_requires.append(ref_str)
+        return self
+
+    def with_build_requirement(self, ref, **kwargs):
         self._build_requirements = self._build_requirements or []
         ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
-        self._build_requirements.append((ref_str, force_host_context))
+        self._build_requirements.append((ref_str, kwargs))
         return self
 
     def with_import(self, i):
@@ -145,6 +159,9 @@ class GenConanfile(object):
         self._default_options = self._default_options or {}
         self._default_options[option_name] = value
         return self
+
+    def with_shared_option(self, default=False):
+        return self.with_option("shared", [True, False]).with_default_option("shared", default)
 
     def with_package_file(self, file_name, contents=None, env_var=None, link=None):
         if not contents and not env_var:
@@ -198,6 +215,7 @@ class GenConanfile(object):
         self._generators = self._generators or []
         self._generators.append("CMakeDeps")
         self._generators.append("CMakeToolchain")
+        self.with_settings("os", "compiler", "arch", "build_type")
         self._cmake_build = True
         return self
 
@@ -214,6 +232,10 @@ class GenConanfile(object):
     @property
     def _version_render(self):
         return "version = '{}'".format(self._version)
+
+    @property
+    def _package_type_render(self):
+        return "package_type = '{}'".format(self._package_type)
 
     @property
     def _provides_render(self):
@@ -259,9 +281,10 @@ class GenConanfile(object):
     @property
     def _build_requirements_render(self):
         lines = []
-        for ref, force_host_context in self._build_requirements:
-            force_host = ", force_host_context=True" if force_host_context else ""
-            lines.append('        self.build_requires("{}"{})'.format(ref, force_host))
+        for ref, kwargs in self._build_requirements:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, bool) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.build_requires("{}", {})'.format(ref, args))
         return "def build_requirements(self):\n{}\n".format("\n".join(lines))
 
     @property
@@ -280,21 +303,22 @@ class GenConanfile(object):
                 items.append('("{}"{}{})'.format(ref, private_str, override_str))
             else:
                 items.append('"{}"'.format(ref))
-        tmp = "requires = ({}, )".format(", ".join(items))
+        return "requires = ({}, )".format(", ".join(items))
+
+    @property
+    def _test_requires_render(self):
+        line = ", ".join(['"{}"'.format(r) for r in self._test_requires])
+        tmp = "test_requires = {}".format(line)
         return tmp
 
     @property
     def _requirements_render(self):
-        lines = []
-        for ref, private, override in self._requirements:
-            private_str = ", private=True" if private else ""
-            override_str = ", override=True" if override else ""
-            lines.append('        self.requires("{}"{}{})'.format(ref, private_str, override_str))
-
-        return """
-    def requirements(self):
-{}
-        """.format("\n".join(lines))
+        lines = ["", "    def requirements(self):"]
+        for ref, kwargs in self._requirements:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if isinstance(v, str) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.requires("{}", {})'.format(ref, args))
+        return "\n".join(lines)
 
     @property
     def _package_method(self):
@@ -357,9 +381,6 @@ class GenConanfile(object):
                                 comp_name, comp_attr_name, str(comp_attr_value)))
                 else:
                     lines.append('        self.cpp_info.{} = {}'.format(k, str(v)))
-        if "env_info" in self._package_info:
-            for k, v in self._package_info["env_info"].items():
-                lines.append('        self.env_info.{} = {}'.format(k, str(v)))
 
         return """
     def package_info(self):
@@ -405,12 +426,11 @@ class GenConanfile(object):
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
 
-        # FIXME: This is all a mess. Replace with Jinja2
-        for member in ("name", "version", "provides", "deprecated", "short_paths", "exports_sources",
-                       "exports", "generators", "requires", "build_requires", "requirements",
-                       "build_requirements", "scm", "revision_mode", "settings", "options",
-                       "default_options", "package_method", "package_info",
-                       "package_id_lines", "test_lines"
+        for member in ("name", "version", "package_type", "provides", "deprecated", "short_paths",
+                       "exports_sources", "exports", "generators", "requires", "build_requires",
+                       "test_requires", "requirements", "build_requirements", "scm", "revision_mode",
+                       "settings", "options", "default_options", "build", "package_method",
+                       "package_info", "package_id_lines", "test_lines"
                        ):
             v = getattr(self, "_{}".format(member), None)
             if v is not None:

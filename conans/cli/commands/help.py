@@ -1,6 +1,6 @@
 import textwrap
 
-from conans.cli.cli import cli_out_write
+from conans.cli.output import cli_out_write
 from conans.client.output import Color
 from conans.errors import ConanException
 from conans.cli.command import conan_command
@@ -11,13 +11,13 @@ def output_help_cli(commands, groups):
     Prints a summary of all commands.
     """
     max_len = max((len(c) for c in commands)) + 1
-    fmt = '  %-{}s'.format(max_len)
+    format = '{{: <{}}}'.format(max_len)
 
     for group_name, comm_names in groups.items():
         cli_out_write(group_name, Color.BRIGHT_MAGENTA)
         for name in comm_names:
             # future-proof way to ensure tabular formatting
-            cli_out_write(fmt % name, Color.GREEN)
+            cli_out_write(format.format(name), Color.GREEN, endline="")
 
             # Help will be all the lines up to the first empty one
             docstring_lines = commands[name].doc.split('\n')
@@ -36,10 +36,10 @@ def output_help_cli(commands, groups):
             cli_out_write(txt)
 
     cli_out_write("")
-    cli_out_write('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
+    cli_out_write('Conan commands. Type "conan help <command>" for help', Color.BRIGHT_YELLOW)
 
 
-@conan_command(group="Misc", formatters={"cli": output_help_cli})
+@conan_command(formatters={"cli": output_help_cli})
 def help(conan_api, parser, *args, commands, groups, **kwargs):
     """
     Shows help for a specific command.

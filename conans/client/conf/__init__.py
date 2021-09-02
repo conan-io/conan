@@ -3,7 +3,7 @@ import os
 import textwrap
 
 from jinja2 import Template
-from six.moves.configparser import ConfigParser, NoSectionError
+from configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
@@ -127,9 +127,6 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                     exceptions: [None]
 
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
-
-
-    cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]  # Deprecated, use compiler.cppstd
     """))
 
 
@@ -156,12 +153,9 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
     # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
     # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
-    # error_on_override = False           # environment CONAN_ERROR_ON_OVERRIDE
     # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
     # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
     # cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
-    # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
-    # use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
     # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
     # non_interactive = False             # environment CONAN_NON_INTERACTIVE
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
@@ -190,7 +184,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
     # cacert_path                         # environment CONAN_CACERT_PATH
-    # scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
 
     # config_install_interval = 1h
     # required_conan_version = >=1.26
@@ -215,10 +208,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     #   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
     # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
     # no_proxy_match = *bintray.com*, https://myserver.*
-
-    [hooks]    # environment CONAN_HOOKS
-    attribute_checker
-
     """))
 
 
@@ -253,10 +242,7 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_VS_INSTALLATION_PREFERENCE", "vs_installation_preference", None),
             ("CONAN_CPU_COUNT", "cpu_count", None),
             ("CONAN_READ_ONLY_CACHE", "read_only_cache", None),
-            ("CONAN_USER_HOME_SHORT", "user_home_short", None),
-            ("CONAN_USE_ALWAYS_SHORT_PATHS", "use_always_short_paths", None),
             ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
-            ("CONAN_ERROR_ON_OVERRIDE", "error_on_override", False),
             # http://www.vtk.org/Wiki/CMake_Cross_Compiling
             ("CONAN_CMAKE_GENERATOR", "cmake_generator", None),
             ("CONAN_CMAKE_GENERATOR_PLATFORM", "cmake_generator_platform", None),
@@ -428,16 +414,6 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("Specify a numeric parameter for 'request_timeout'")
 
     @property
-    def revisions_enabled(self):
-        try:
-            revisions_enabled = get_env("CONAN_REVISIONS_ENABLED")
-            if revisions_enabled is None:
-                revisions_enabled = self.get_item("general.revisions_enabled")
-            return revisions_enabled.lower() in ("1", "true")
-        except ConanException:
-            return False
-
-    @property
     def parallel_download(self):
         try:
             parallel = self.get_item("general.parallel_download")
@@ -458,16 +434,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
-    def scm_to_conandata(self):
-        try:
-            scm_to_conandata = get_env("CONAN_SCM_TO_CONANDATA")
-            if scm_to_conandata is None:
-                scm_to_conandata = self.get_item("general.scm_to_conandata")
-            return scm_to_conandata.lower() in ("1", "true")
-        except ConanException:
-            return False
-
-    @property
     def default_package_id_mode(self):
         try:
             default_package_id_mode = get_env("CONAN_DEFAULT_PACKAGE_ID_MODE")
@@ -486,28 +452,6 @@ class ConanClientConfigParser(ConfigParser, object):
         except ConanException:
             return "minor_mode"
         return default_package_id_mode
-
-    @property
-    def full_transitive_package_id(self):
-        try:
-            fix_id = self.get_item("general.full_transitive_package_id")
-            return fix_id.lower() in ("1", "true")
-        except ConanException:
-            return None
-
-    @property
-    def short_paths_home(self):
-        short_paths_home = get_env("CONAN_USER_HOME_SHORT")
-        if short_paths_home:
-            current_dir = os.path.dirname(os.path.normpath(os.path.normcase(self.filename)))
-            short_paths_dir = os.path.normpath(os.path.normcase(short_paths_home))
-            if current_dir == short_paths_dir  or \
-                    short_paths_dir.startswith(current_dir + os.path.sep):
-                raise ConanException("Short path home '{}' (defined by conan.conf variable "
-                                     "'user_home_short', or environment variable "
-                                     "'CONAN_USER_HOME_SHORT') cannot be a subdirectory of "
-                                     "the conan cache '{}'.".format(short_paths_home, current_dir))
-        return short_paths_home
 
     @property
     def storage_path(self):

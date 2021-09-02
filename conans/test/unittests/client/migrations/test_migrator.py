@@ -18,9 +18,6 @@ class FakeMigrator(Migrator):
         self.cache_folder = cache_folder
         super(FakeMigrator, self).__init__(cache_folder, current_version, out)
 
-    def _make_migrations(self, old_version):
-        pass
-
 
 class MigratorPermissionTest(unittest.TestCase):
 

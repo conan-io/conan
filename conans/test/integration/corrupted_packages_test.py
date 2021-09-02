@@ -1,8 +1,9 @@
 import os
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.env_reader import get_env
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 
 
@@ -14,7 +15,6 @@ class CorruptedPackagesTest(unittest.TestCase):
     """
 
     def setUp(self):
-        revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         self.client = TestClient(servers={"default": self.server})
         self.client.save({"conanfile.py": GenConanfile()})
@@ -25,9 +25,9 @@ class CorruptedPackagesTest(unittest.TestCase):
         order2 = str(self.client.out).find("Uploading conaninfo.txt", order1)
         order3 = str(self.client.out).find("Uploading conanmanifest.txt", order2)
         self.assertTrue(order1 < order2 < order3)
-        rrev = "f3367e0e7d170aa12abccb175fee5f97" if revisions_enabled else "0"
+        rrev = "f3367e0e7d170aa12abccb175fee5f97"
         pref_str = "Pkg/0.1@user/testing#%s" % rrev
-        prev = "83c38d3b4e5f1b8450434436eec31b00" if revisions_enabled else "0"
+        prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         self.pref = pref = PackageReference(ConanFileReference.loads(pref_str),
                                             NO_SETTINGS_PACKAGE_ID, prev)
         self.manifest_path = self.server.server_store.get_package_file_path(pref,
@@ -40,6 +40,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.info_path))
         self.assertTrue(os.path.exists(self.tgz_path))
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_info_manifest_missing(self):
         os.unlink(self.info_path)
         os.unlink(self.manifest_path)
@@ -50,18 +51,19 @@ class CorruptedPackagesTest(unittest.TestCase):
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
-        self.assertIn("Pkg/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Missing",
+        self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing",
                       self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm -r default")
         self._assert_all_package_files_in_server()
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_manifest_missing(self):
         os.unlink(self.manifest_path)
         # Try search
         self.client.run("search Pkg/0.1@user/testing -r default")
-        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+        self.assertIn(f"Package_ID: {NO_SETTINGS_PACKAGE_ID}", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
@@ -72,6 +74,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm")
         self._assert_all_package_files_in_server()
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_tgz_info_missing(self):
         os.unlink(self.tgz_path)
         os.unlink(self.info_path)
@@ -82,8 +85,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
-        self.assertIn("Pkg/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Missing",
-                      self.client.out)
+        self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm")
@@ -105,12 +107,13 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("Uploading conan_package.tgz", self.client.out)
         self._assert_all_package_files_in_server()
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_tgz_manifest_missing(self):
         os.unlink(self.tgz_path)
         os.unlink(self.manifest_path)
         # Try search
         self.client.run("search Pkg/0.1@user/testing -r default")
-        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+        self.assertIn(f"Package_ID: {NO_SETTINGS_PACKAGE_ID}", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
@@ -120,6 +123,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm")
         self._assert_all_package_files_in_server()
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_tgz_manifest_info_missing(self):
         os.unlink(self.tgz_path)
         os.unlink(self.manifest_path)
@@ -131,8 +135,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
-        self.assertIn("Pkg/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Missing",
-                      self.client.out)
+        self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm")

@@ -15,6 +15,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.runners import check_output_runner
 
 
+@pytest.mark.xfail(reason="RunEnvironment test will be removed next PR")
 @pytest.mark.tool_cmake
 class RunEnvironmentTest(unittest.TestCase):
 
@@ -44,11 +45,11 @@ class RunEnvironmentTest(unittest.TestCase):
         """)
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install . --build missing")
-        client.run("build .")
+        client.run("build . --build missing")
         self.assertIn("Hello Hello0", client.out)
 
 
+@pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
 @pytest.mark.tool_cmake
 class RunEnvironmentSharedTest(unittest.TestCase):
 
@@ -97,14 +98,13 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class HelloConan(ConanFile):
-                requires = "Pkg/0.1@lasote/testing"
+                build_requires = "Pkg/0.1@lasote/testing"
 
                 def build(self):
                     self.run("say_hello", run_environment=True)
         """)
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install .")
         client.run("build .")
         self.assertIn("Hello Tool!", client.out)
 
@@ -115,7 +115,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class HelloConan(ConanFile):
-                requires = "Pkg/0.1@lasote/testing"
+                build_requires = "Pkg/0.1@lasote/testing"
                 options = {"cmd_list": [True, False]}
                 default_options = {"cmd_list": False}
 
@@ -130,14 +130,12 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         client.run("config set log.print_run_commands=1")
 
         # Using a string, a new shell is expanded, DYLD_... paths has to be informed
-        client.run("install . -o cmd_list=False")
-        client.run("build .")
+        client.run("build . -o cmd_list=False")
         self.assertIn("> DYLD_LIBRARY_PATH=", client.out)
         self.assertIn("Hello Tool!", client.out)
 
         # Using a list, no new shell, DYLD_... are already in the environment
-        client.run("install . -o cmd_list=True")
-        client.run("build .")
+        client.run("build . -o cmd_list=True")
         self.assertNotIn("DYLD_LIBRARY_PATH", client.out)
         self.assertIn("Hello Tool!", client.out)
 
@@ -177,7 +175,6 @@ class RunEnvironmentSharedTest(unittest.TestCase):
 
         client.save({"conanfile.py": reuse,
                      "CMakeLists.txt": cmake}, clean_first=True)
-        client.run("install .")
         client.run("build .")
         self.assertIn("Hello Tool!", client.out)
 

@@ -1,10 +1,9 @@
-import json
 import platform
 from os import chdir
 
 import pytest
 
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
+from conan.tools.files import load_toolchain_args
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
@@ -19,6 +18,7 @@ def test_modify_environment():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
+    conanfile.folders.set_base_install(f)
     be = AutotoolsToolchain(conanfile)
     env = be.environment()
     env.define("foo", "var")
@@ -44,9 +44,7 @@ def test_target_triple():
     be = AutotoolsToolchain(conanfile)
     be.make_args = ["foo", "var"]
     be.generate_args()
-    with open(CONAN_TOOLCHAIN_ARGS_FILE) as f:
-        obj = json.load(f)
-
+    obj = load_toolchain_args()
     assert "--host=x86_64-linux-gnu" in obj["configure_args"]
     assert "--build=i686-solaris" in obj["configure_args"]
     assert obj["make_args"].replace("'", "") == "foo var"
@@ -74,7 +72,7 @@ def test_cppstd():
          "cppstd": "17"})
     be = AutotoolsToolchain(conanfile)
     env = be.environment()
-    assert not "-std=c++17" in env["CXXFLAGS"]
+    assert "-std=c++17" not in env["CXXFLAGS"]
 
     # Using "compiler.cppstd" works
     conanfile.settings = MockSettings(

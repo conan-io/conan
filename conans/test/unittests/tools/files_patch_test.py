@@ -5,7 +5,6 @@ from textwrap import dedent
 from mock import Mock
 from parameterized.parameterized import parameterized
 
-from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, create_profile
@@ -266,7 +265,7 @@ Just the wind that smells fresh before the storm."""), foo_content)
         return tmp_dir, file_path, text_file
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
-        loader = ConanFileLoader(None, Mock(), ConanPythonRequire(None, None))
+        loader = ConanFileLoader(None, Mock())
         ret = loader.load_consumer(file_path, create_profile())
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)

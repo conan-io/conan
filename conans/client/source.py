@@ -1,13 +1,11 @@
 import os
 import shutil
 
-import six
-
 from conans.client import tools
 from conans.client.cmd.export import export_recipe, export_source
+from conans.client.tools import no_op
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
     conanfile_exception_formatter
-from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.conan_v2_mode import conan_v2_property
@@ -15,13 +13,12 @@ from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager
                                merge_directories, clean_dirty)
 
 
-def retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes):
+def retrieve_exports_sources(remote_manager, cache, recipe_layout, conanfile, ref, remotes):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
-    package_layout = cache.package_layout(ref, conanfile.short_paths)
-    export_sources_folder = package_layout.export_sources()
+    export_sources_folder = recipe_layout.export_sources()
     if os.path.exists(export_sources_folder):
         return None
 
@@ -29,9 +26,10 @@ def retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes):
         mkdir(export_sources_folder)
         return None
 
+    # TODO: cache2.0 check what behaviour for this in 2.0
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = package_layout.load_metadata().recipe.remote
+    current_remote = cache.get_remote(recipe_layout.reference)
     if current_remote:
         current_remote = remotes[current_remote]
     if not current_remote:
@@ -41,7 +39,7 @@ def retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes):
         raise ConanException(msg)
 
     try:
-        remote_manager.get_recipe_sources(ref, package_layout, current_remote)
+        remote_manager.get_recipe_sources(ref, recipe_layout, current_remote)
     except Exception as e:
         msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
                "Probably it was installed from a remote that is no longer available.\n"
@@ -82,10 +80,8 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
             rmdir(conanfile.folders.base_source)
         except BaseException as e_rm:
             msg = str(e_rm)
-            if six.PY2:
-                msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1
-            output.error("Unable to remove source folder %s\n%s" %
-                         (conanfile.folders.base_source, msg))
+            output.error("Unable to remove source folder %s\n%s"
+                         % (conanfile.folders.base_source, msg))
             output.warn("**** Please delete it manually ****")
             raise ConanException("Unable to remove source folder")
 
@@ -124,13 +120,12 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
         - Calling post_source hook
     """
 
-
     src_folder = conanfile.folders.base_source
     mkdir(src_folder)
 
     with tools.chdir(src_folder):
         try:
-            with get_env_context_manager(conanfile):
+            with no_op():  # TODO: Remove this in a later refactor
                 hook_manager.execute("pre_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
                                      reference=reference)

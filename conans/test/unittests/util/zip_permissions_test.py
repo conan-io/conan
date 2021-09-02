@@ -5,7 +5,7 @@ import zipfile
 from os.path import basename
 from unittest import TestCase
 
-from six import StringIO
+from io import StringIO
 
 from conans.client.output import ConanOutput
 from conans.client.tools.files import unzip

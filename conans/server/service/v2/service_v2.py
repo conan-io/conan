@@ -24,7 +24,7 @@ class ConanServiceV2(CommonService):
         except NotFoundException:
             raise RecipeNotFoundException(ref)
         if not file_list:
-            raise RecipeNotFoundException(ref, print_rev=True)
+            raise RecipeNotFoundException(ref)
 
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list}}
@@ -48,14 +48,14 @@ class ConanServiceV2(CommonService):
         self._authorizer.check_read_conan(auth_user, ref)
         root = self._server_store.conan_revisions_root(ref.copy_clear_rev())
         if not self._server_store.path_exists(root):
-            raise RecipeNotFoundException(ref, print_rev=True)
+            raise RecipeNotFoundException(ref)
         return self._server_store.get_recipe_revisions(ref)
 
     def get_package_revisions(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)
         root = self._server_store.conan_revisions_root(pref.ref.copy_clear_rev())
         if not self._server_store.path_exists(root):
-            raise RecipeNotFoundException(pref.ref, print_rev=True)
+            raise RecipeNotFoundException(pref.ref)
 
         ret = self._server_store.get_package_revisions(pref)
         return ret
@@ -64,14 +64,14 @@ class ConanServiceV2(CommonService):
         self._authorizer.check_read_conan(auth_user, ref)
         tmp = self._server_store.get_last_revision(ref)
         if not tmp:
-            raise RecipeNotFoundException(ref, print_rev=True)
+            raise RecipeNotFoundException(ref)
         return tmp
 
     def get_latest_package_revision(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)
         tmp = self._server_store.get_last_package_revision(pref)
         if not tmp:
-            raise PackageNotFoundException(pref, print_rev=True)
+            raise PackageNotFoundException(pref)
         return tmp
 
     # PACKAGE METHODS
@@ -79,7 +79,7 @@ class ConanServiceV2(CommonService):
         self._authorizer.check_read_conan(auth_user, pref.ref)
         file_list = self._server_store.get_package_file_list(pref)
         if not file_list:
-            raise PackageNotFoundException(pref, print_rev=True)
+            raise PackageNotFoundException(pref)
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list}}
 

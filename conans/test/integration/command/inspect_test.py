@@ -3,6 +3,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
@@ -37,7 +39,9 @@ class ConanInspectTest(unittest.TestCase):
         client.run("inspect pkg/0.1@user/channel -r=default -a settings")
         self.assertIn("settings: os", client.out)
         client.run("inspect pkg/0.1@user/channel -a settings")
-        self.assertIn("settings: os", client.out)
+        # we got in cache the revision from the remote but still the latest
+        # revision in cache is the last we created
+        self.assertIn("settings: ('os', 'arch')", client.out)
         client.run("remove * -f")
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: os", client.out)
@@ -55,50 +59,6 @@ class ConanInspectTest(unittest.TestCase):
 
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: os", client.out)
-
-    def test_python_requires(self):
-        server = TestServer()
-        client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    _my_var = 123
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("export . Base/0.1@lasote/testing")
-        conanfile = """from conans import python_requires
-base = python_requires("Base/0.1@lasote/testing")
-class Pkg(base.Pkg):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("export . Pkg/0.1@lasote/testing")
-        client.run("upload * --all --confirm")
-        client.run("remove * -f")
-        client.run("inspect Pkg/0.1@lasote/testing -a=_my_var -r=default")
-        self.assertIn("_my_var: 123", client.out)
-        # Inspect fetch recipes into local cache
-        client.run("search")
-        self.assertIn("Base/0.1@lasote/testing", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing", client.out)
-
-    def test_python_requires_not_found(self):
-        server = TestServer()
-        client = TestClient(servers={"default": server}, users={"default": [("user", "channel")]})
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, python_requires
-
-            base = python_requires("name/version@user/channel")
-
-            class MyLib(ConanFile):
-                pass
-            """)
-
-        client.save({'conanfile.py': conanfile})
-        client.run("inspect . -a options", assert_error=True)
-        self.assertIn("Error loading conanfile at ", client.out)
-        self.assertIn('Unable to find python_requires("name/version@user/channel")'
-                      ' in remotes', client.out)
-        self.assertEqual(3, len(str(client.out).splitlines()))
 
     def test_name_version(self):
         server = TestServer()
@@ -230,11 +190,10 @@ license: None
 author: None
 description: None
 topics: None
-generators: ['txt']
+generators: []
 exports: None
 exports_sources: None
 short_paths: False
-apply_env: True
 build_policy: None
 revision_mode: hash
 settings: None
@@ -279,7 +238,6 @@ generators: cmake
 exports: None
 exports_sources: None
 short_paths: False
-apply_env: True
 build_policy: None
 revision_mode: scm
 settings: ('os', 'arch', 'build_type', 'compiler')
@@ -320,11 +278,10 @@ deprecated: suggestion
             author: None
             description: OpenSSL is an open source project that provides a robust, commercial-grade
             topics: None
-            generators: ['txt']
+            generators: []
             exports: None
             exports_sources: None
             short_paths: False
-            apply_env: True
             build_policy: None
             revision_mode: hash
             settings: ('os', 'compiler', 'arch', 'build_type')
@@ -373,7 +330,6 @@ generators: cmake
 exports: None
 exports_sources: None
 short_paths: False
-apply_env: True
 build_policy: None
 revision_mode: hash
 settings: ('os', 'arch', 'build_type', 'compiler')
@@ -401,7 +357,6 @@ generators: cmake
 exports: None
 exports_sources: None
 short_paths: False
-apply_env: True
 build_policy: None
 revision_mode: hash
 settings: ('os', 'arch', 'build_type', 'compiler')
@@ -514,3 +469,15 @@ class InspectRawTest(unittest.TestCase):
         client.run("inspect . --json=file.json")
         contents = client.load("file.json")
         self.assertIn('"settings": ["compiler", "os"]', contents)
+
+    def test_inspect_alias(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . pkg/0.1@")
+        client.run("alias pkg/latest@ pkg/0.1@")
+        client.run("inspect pkg/latest@ -a alias")
+        assert "alias: pkg/0.1" in client.out
+
+        client.run("inspect pkg/latest@ -a alias --json=myinspect")
+        myinspect = json.loads(client.load("myinspect"))
+        assert myinspect["alias"] == "pkg/0.1"

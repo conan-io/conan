@@ -18,16 +18,17 @@ class Pkg(ConanFile):
 
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
-    build_requires = "sysroot/0.1@user/testing"
+    requires = "sysroot/0.1@user/testing"
     def build(self):
-        self.output.info("PKG SYSROOT: %s" % self.deps_cpp_info.sysroot)
+        self.output.info("PKG SYSROOT: %s" % self.dependencies["sysroot"].cpp_info.sysroot)
     def package_info(self):
         self.cpp_info.sysroot = "HelloSysRoot"
 """
         test_conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     def build(self):
-        self.output.info("Test SYSROOT: %s" % self.deps_cpp_info.sysroot)
+        self.output.info("Test SYSROOT: %s"
+                          % self.dependencies["sysroot"].cpp_info.sysroot)
     def test(self):
         pass
 """
@@ -37,8 +38,4 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@user/testing: PKG SYSROOT: HelloSysRoot", client.out)
         self.assertIn("Pkg/0.1@user/testing (test package): Test SYSROOT: HelloSysRoot", client.out)
 
-        # Install conanfile and check conaninfo.txt
         client.run("install .")
-        bili = client.load("conanbuildinfo.txt")
-        self.assertIn(os.linesep.join(["[sysroot_sysroot]", "HelloSysRoot"]), bili)
-        self.assertIn(os.linesep.join(["[sysroot]", "HelloSysRoot"]), bili)

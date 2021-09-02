@@ -6,6 +6,7 @@ import unittest
 import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -124,8 +125,8 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                      "FindFindModule.cmake": find_module})
         client.run("create .")
         ref = ConanFileReference("test", "1.0", None, None)
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
-        package_path = client.cache.package_layout(ref).package(pref)
+        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
+        package_path = client.get_latest_pkg_layout(pref).package()
         modules_path = os.path.join(package_path, "share", "cmake")
         self.assertEqual(set(os.listdir(modules_path)),
                          {"FindFindModule.cmake", "my-module.cmake"})
@@ -172,9 +173,12 @@ class TestNoNamespaceTarget:
             exports_sources = ["src/*", "build-module.cmake"]
             generators = "cmake"
 
+            def layout(self):
+                self.folders.source = "src"
+
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure()
                 cmake.build()
 
             def package(self):
@@ -255,7 +259,7 @@ class TestNoNamespaceTarget:
             t.run_command('cmake --build . --config Release')  # Compiles and links.
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
-    @pytest.mark.tool_xcode
+    @pytest.mark.tool_xcodebuild
     @pytest.mark.tool_cmake(version="3.19")
     def test_multi_generator_macos(self):
         t = self.t
@@ -266,3 +270,4 @@ class TestNoNamespaceTarget:
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
             assert '>> nonamespace libs: library::library' in t.out
             t.run_command('cmake --build . --config Release')  # Compiles and links.
+

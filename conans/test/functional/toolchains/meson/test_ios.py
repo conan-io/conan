@@ -1,22 +1,20 @@
 import os
 import platform
-import pytest
+import sys
 import textwrap
 import unittest
 
-from parameterized import parameterized
 import pytest
+from parameterized import parameterized
 
 from conans.client.tools.apple import XCRun, apple_deployment_target_flag, to_apple_arch
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.functional.toolchains.meson._base import get_meson_version
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.toolchain
 @pytest.mark.tool_meson
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
-@pytest.mark.skipif(get_meson_version() < "0.56.0", reason="requires meson >= 0.56.0")
 class IOSMesonTestCase(unittest.TestCase):
 
     _conanfile_py = textwrap.dedent("""
@@ -67,26 +65,27 @@ class IOSMesonTestCase(unittest.TestCase):
         cc = self.xcrun.cc
         cxx = self.xcrun.cxx
 
-        cflags = apple_deployment_target_flag(self.os, self.os_version)
-        cflags += " -isysroot " + self.xcrun.sdk_path
-        cflags += " -arch " + to_apple_arch(self.arch)
-        cxxflags = cflags
+        deployment_flag = apple_deployment_target_flag(self.os, self.os_version)
+        sysroot_flag = " -isysroot " + self.xcrun.sdk_path
+        arch_flag = " -arch " + to_apple_arch(self.arch)
+        flags = deployment_flag + sysroot_flag + arch_flag
 
         return {'CC': cc,
                 'CXX': cxx,
-                'CFLAGS': cflags,
-                'CXXFLAGS': cxxflags}
+                'CFLAGS': flags,
+                'CXXFLAGS': flags,
+                'LDFLAGS': flags}
 
     def profile(self):
         template = textwrap.dedent("""
             include(default)
             [settings]
             {settings}
-            [env]
+            [buildenv]
             {env}
             """)
         settings = '\n'.join(["%s = %s" % (s[0], s[1]) for s in self.settings()])
-        env = '\n'.join(["%s = %s" % (k, v) for k, v in self.env().items()])
+        env = '\n'.join(["%s=%s" % (k, v) for k, v in self.env().items()])
         return template.format(settings=settings, env=env)
 
     @parameterized.expand([('armv8', 'iOS', '10.0', 'iphoneos'),
@@ -114,9 +113,7 @@ class IOSMesonTestCase(unittest.TestCase):
                      "main.cpp": app,
                      "profile_host": self.profile()})
 
-        self.t.run("install . --profile:build=default --profile:host=profile_host")
-
-        self.t.run("build .")
+        self.t.run("build . --profile:build=default --profile:host=profile_host")
 
         libhello = os.path.join(self.t.current_folder, "build", "libhello.a")
         self.assertTrue(os.path.isfile(libhello))

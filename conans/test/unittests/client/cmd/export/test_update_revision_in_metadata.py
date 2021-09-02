@@ -4,35 +4,37 @@
 import unittest
 from collections import namedtuple
 
-import six
+import pytest
 from mock import mock
 
-from conans.client.cmd.export import _update_revision_in_metadata
-from conans.model.ref import ConanFileReference
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
-from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import TestBufferConanOutput
 
+
+# TODO: 2.0: add some unittests for the new cache on getting the fields that replace the metadata
 
 class UpdateRevisionInMetadataTests(unittest.TestCase):
 
     def setUp(self):
         ref = ConanFileReference.loads("lib/version@user/channel")
-        self.package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref,
-                                                 short_paths=False, no_lock=True)
+        # FIXME: 2.0: PackageCacheLayout does not exist anymore
+        # self.package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref,
+        #                                          short_paths=False, no_lock=True)
         self.output = TestBufferConanOutput()
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_scm_warn_not_pristine(self):
         with mock.patch("conans.client.cmd.export._detect_scm_revision",
                         return_value=("revision", "git", False)):
             path = None
             digest = namedtuple("Digest", "summary_hash")
-            _update_revision_in_metadata(self.package_layout, True, self.output,
+            _update_revision_in_metadata(self.package_layout, self.output,
                                          path, digest, "scm")
             self.assertIn("WARN: Repo status is not pristine: there might be modified files",
                           self.output)
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_scm_behavior(self):
         revision_mode = "scm"
 
@@ -40,26 +42,28 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
         path = None
         with mock.patch("conans.client.cmd.export._detect_scm_revision",
                         return_value=("1234", "git", True)):
-            rev = _update_revision_in_metadata(self.package_layout, True, self.output,
+            rev = _update_revision_in_metadata(self.package_layout, self.output,
                                                path, digest, revision_mode)
         self.assertEqual(rev, "1234")
         self.assertIn("Using git commit as the recipe revision", self.output)
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_hash_behavior(self):
         revision_mode = "hash"
 
         digest = namedtuple("Digest", "summary_hash")
         digest.summary_hash = "1234"
         path = None
-        rev = _update_revision_in_metadata(self.package_layout, True, self.output,
+        rev = _update_revision_in_metadata(self.package_layout, self.output,
                                            path, digest, revision_mode)
         self.assertEqual(rev, "1234")
         self.assertIn("Using the exported files summary hash as the recipe revision", self.output)
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_invalid_behavior(self):
         revision_mode = "auto"
         digest = path = None
 
-        with six.assertRaisesRegex(self, ConanException, "Revision mode should be"):
-            _update_revision_in_metadata(self.package_layout, True, self.output,
+        with self.assertRaisesRegex(ConanException, "Revision mode should be"):
+            _update_revision_in_metadata(self.package_layout, self.output,
                                            path, digest, revision_mode)

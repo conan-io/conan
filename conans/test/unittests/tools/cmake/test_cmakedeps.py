@@ -7,10 +7,10 @@ from conans import ConanFile, Settings
 from conans.model.build_info import CppInfo
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
-from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 
 
+@pytest.mark.xfail(reason="ConanFile.dependencies has changed")
 @pytest.mark.parametrize("using_properties", [True, False])
 def test_cpp_info_name_cmakedeps(using_properties):
     conanfile = ConanFile(Mock(), None)
@@ -20,7 +20,7 @@ def test_cpp_info_name_cmakedeps(using_properties):
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}), EnvValues())
+                                   "arch": ["x86"]}))
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -51,6 +51,7 @@ def test_cpp_info_name_cmakedeps(using_properties):
                in files["ComplexFileName1-release-x86-data.cmake"]
 
 
+@pytest.mark.xfail(reason="ConanFile.dependencies has changed")
 @pytest.mark.parametrize("using_properties", [True, False])
 def test_cpp_info_name_cmakedeps_components(using_properties):
     conanfile = ConanFile(Mock(), None)
@@ -60,7 +61,7 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release", "Debug"],
-                                   "arch": ["x86", "x64"]}), EnvValues())
+                                   "arch": ["x86", "x64"]}))
     conanfile.settings.build_type = "Debug"
     conanfile.settings.arch = "x64"
 
@@ -96,6 +97,7 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
                in files["ComplexFileName1-debug-x64-data.cmake"]
 
 
+@pytest.mark.xfail(reason="ConanFile.dependencies has changed")
 def test_cmake_deps_links_flags():
     # https://github.com/conan-io/conan/issues/8703
     conanfile = ConanFile(Mock(), None)
@@ -105,7 +107,7 @@ def test_cmake_deps_links_flags():
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}), EnvValues())
+                                   "arch": ["x86"]}))
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -143,7 +145,7 @@ def test_component_name_same_package():
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}), EnvValues())
+                                   "arch": ["x86"]}))
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 

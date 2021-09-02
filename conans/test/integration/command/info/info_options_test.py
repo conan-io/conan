@@ -1,12 +1,15 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
 class InfoOptionsTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_info_options(self):
         # packages with dash
         client = TestClient()
@@ -37,7 +40,7 @@ class InfoOptionsTest(unittest.TestCase):
             from conans import ConanFile
             class Pkg(ConanFile):
                 options = {{"option{0}1": "ANY", "option{0}2": "ANY"}}
-                default_options = "option{0}1=1", "option{0}2=2"
+                default_options = {{"option{0}1": 1, "option{0}2": 2}}
             """)
         client.save({"conanfile.py": conanfile.format("A")})
         client.run("create . PkgA/0.1@user/testing")

@@ -45,7 +45,7 @@ class Printer(object):
                 else:
                     self._out.writeln("%s: %s" % (k, str(v)))
 
-    def print_info(self, data, _info, package_filter=None, show_paths=False, show_revisions=False):
+    def print_info(self, data, _info, package_filter=None, show_paths=False):
         """ Print in console the dependency information for a conan file
         """
         if _info is None:  # No filter
@@ -74,6 +74,7 @@ class Printer(object):
             self._out.writeln(it["display_name"], Color.BRIGHT_CYAN)
             _print("id", name="ID")
             _print("build_id", name="BuildID")
+            _print("context", name="Context")
             if show_paths:
                 _print("export_folder")
                 _print("source_folder")
@@ -108,9 +109,8 @@ class Printer(object):
             _print("deprecated", name="Deprecated")
 
             _print("recipe", name="Recipe", color=None)
-            if show_revisions:
-                _print("revision", name="Revision", color=None)
-                _print("package_revision", name="Package revision", color=None)
+            _print("revision", name="Revision", color=None)
+            _print("package_revision", name="Package revision", color=None)
             _print("binary", name="Binary", color=None)
 
             if show("binary_remote") and is_ref:
@@ -122,6 +122,11 @@ class Printer(object):
             _print("creation_date", show_field="date", name="Creation date")
 
             _print("scm", show_field="scm", name="scm")
+
+            if show("python_requires") and "python_requires" in it:
+                self._out.writeln("    Python-requires:", Color.BRIGHT_GREEN)
+                for d in it["python_requires"]:
+                    self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
 
             if show("required") and "required_by" in it:
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
@@ -167,7 +172,7 @@ class Printer(object):
                     ref = ConanFileReference.loads(reference)
                     self._out.writeln(ref.full_str())
 
-    def print_search_packages(self, search_info, ref, packages_query, raw, outdated=False):
+    def print_search_packages(self, search_info, ref, packages_query, raw):
         assert(isinstance(ref, ConanFileReference))
         if not raw:
             self._out.info("Existing packages for recipe %s:\n" % str(ref))
@@ -177,11 +182,11 @@ class Printer(object):
 
             if not remote_info["items"][0]["packages"]:
                 if packages_query:
-                    warn_msg = "There are no %spackages for reference '%s' matching the query '%s'" \
-                               % ("outdated " if outdated else "", str(ref), packages_query)
+                    warn_msg = "There are no packages for reference '%s' matching the query '%s'" \
+                               % (str(ref), packages_query)
                 elif remote_info["items"][0]["recipe"]:
-                    warn_msg = "There are no %spackages for reference '%s', but package recipe " \
-                               "found." % ("outdated " if outdated else "", str(ref))
+                    warn_msg = "There are no packages for reference '%s', but package recipe " \
+                               "found." % (str(ref))
                 if not raw:
                     self._out.info(warn_msg)
                 continue
@@ -204,11 +209,6 @@ class Printer(object):
                         elif isinstance(attr, list):  # full requires
                             for key in sorted(attr):
                                 self._print_colored_line(key, indent=3)
-                # Always compare outdated with local recipe, simplification,
-                # if a remote check is needed install recipe first
-                if "outdated" in package:
-                    self._print_colored_line("Outdated from recipe: %s" % package["outdated"],
-                                             indent=2)
                 self._out.writeln("")
 
     def print_profile(self, name, profile):
@@ -220,11 +220,7 @@ class Printer(object):
                                                        for key, values in
                                                        profile.build_requires.items()])
 
-        envs = []
-        for package, env_vars in profile.env_values.data.items():
-            for name, value in env_vars.items():
-                key = "%s:%s" % (package, name) if package else name
-                envs.append((key, value))
+        envs = profile.buildenv.dumps()
         self._print_profile_section("env", envs, separator='=')
 
     def _print_profile_section(self, name, items, indent=0, separator=": "):

@@ -349,7 +349,8 @@ class WinTest(unittest.TestCase):
             def generate(self):
                 tc = MSBuildToolchain(self)
                 gen = MSBuildDeps(self)
-                if self.options["hello"].shared and self.settings.build_type == "Release":
+                shared_option = self.dependencies["hello"].options.get_safe("shared")
+                if shared_option and self.settings.build_type == "Release":
                     tc.configuration = "ReleaseShared"
                     gen.configuration = "ReleaseShared"
 
@@ -368,7 +369,8 @@ class WinTest(unittest.TestCase):
                 gen.generate()
 
             def imports(self):
-                if self.options["hello"].shared and self.settings.build_type == "Release":
+                shared_option = self.dependencies["hello"].options.get_safe("shared")
+                if shared_option and self.settings.build_type == "Release":
                     configuration = "ReleaseShared"
                 else:
                     configuration = self.settings.build_type
@@ -426,10 +428,11 @@ class WinTest(unittest.TestCase):
             """)
         client.save({"myprofile": profile})
         # Build the profile according to the settings provided
-        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
+        settings_h = " ".join('-s:h %s="%s"' % (k, v) for k, v in settings if v)
+        settings_b = " ".join('-s:b %s="%s"' % (k, v) for k, v in settings if v)
 
         client.run("new hello/0.1 -m=v2_cmake")
-        client.run("create . hello/0.1@ %s" % (settings, ))
+        client.run("create . hello/0.1@ %s" % settings_h)
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -440,10 +443,9 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("install . %s -if=conan -pr=myprofile" % (settings, ))
+        client.run("build . %s %s -if=conan -pr:h=myprofile " % (settings_h, settings_b))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
-        client.run("build . -if=conan")
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
 
@@ -485,10 +487,9 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("install . %s -if=conan" % (settings, ))
+        client.run("build . %s -if=conan" % (settings, ))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props",
                       client.out)
-        client.run("build . -if=conan")
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")

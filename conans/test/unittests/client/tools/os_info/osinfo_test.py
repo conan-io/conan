@@ -200,7 +200,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertIsNone(OSInfo.detect_windows_subsystem())
 
     def test_wsl(self):
-        from six.moves import builtins
+        import builtins
 
         with mock.patch("platform.system", mock.MagicMock(return_value='Linux')):
             with mock.patch.object(OSInfo, '_get_linux_distro_info'):

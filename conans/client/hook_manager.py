@@ -10,16 +10,6 @@ from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException
 from conans.util.files import save
 
-attribute_checker_hook = """
-def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
-    # Check basic meta-data
-    for field in ["url", "license", "description"]:
-        field_value = getattr(conanfile, field, None)
-        if not field_value:
-            output.warn("Conanfile doesn't have '%s'. It is recommended to add it as attribute"
-                        % field)
-"""
-
 valid_hook_methods = ["pre_export", "post_export",
                       "pre_source", "post_source",
                       "pre_build", "post_build",
@@ -40,7 +30,6 @@ class HookManager(object):
         self._hook_names = hook_names
         self.hooks = defaultdict(list)
         self.output = output
-        self._attribute_checker_path = os.path.join(self._hooks_folder, "attribute_checker.py")
         self._mutex = Lock()
 
     def execute(self, method_name, **kwargs):
@@ -48,8 +37,6 @@ class HookManager(object):
         # concurrent (e.g. upload --parallel)
         self._mutex.acquire()
         try:
-            if not os.path.exists(self._attribute_checker_path):
-                save(self._attribute_checker_path, attribute_checker_hook)
             if not self.hooks:
                 self.load_hooks()
         finally:

@@ -1,10 +1,11 @@
-import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.files import mkdir
+
 
 conanfile_parent = """
 from conans import ConanFile
@@ -16,7 +17,7 @@ class parentLib(ConanFile):
     def package_info(self):
         self.cpp_info.cxxflags.append("-myflag")
         self.user_info.MyVar = "MyVarValue"
-        self.env_info.MyEnvVar = "MyEnvVarValue"
+        self.buildenv_info.define("MyEnvVar", "MyEnvVarValue")
 """
 
 
@@ -55,19 +56,10 @@ class AConan(ConanFile):
         assert(self.source_folder is not None)
         self.copy_source_folder = self.source_folder
 
-        if %(source_with_infos)s:
-            self.assert_deps_infos()
-
-    def assert_deps_infos(self):
-        assert(self.deps_user_info["parent"].MyVar == "MyVarValue")
-        assert(self.deps_cpp_info["parent"].cxxflags[0] == "-myflag")
-        assert(self.deps_env_info["parent"].MyEnvVar == "MyEnvVarValue")
-
     def build(self):
         assert(self.build_folder == os.getcwd())
 
         self.assert_in_local_cache()
-        self.assert_deps_infos()
 
         if self.no_copy_source and self.in_local_cache:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
@@ -83,7 +75,6 @@ class AConan(ConanFile):
         assert(self.install_folder is not None)
         assert(self.build_folder == os.getcwd())
         self.assert_in_local_cache()
-        self.assert_deps_infos()
 
         if self.in_local_cache:
             assert(self.copy_build_folder == self.build_folder)
@@ -132,70 +123,22 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("source .")
 
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("source .", assert_error=True)
-        self.assertIn("self.deps_user_info not defined. If you need it for a "
-                      "local command run 'conan install'", self.client.out)
-
-        # Now use infos to get the deps_cpp_info
-        self.client.run("install . --build missing")
-        self.client.run("source .")  # Default folder, not needed to specify --install-folder
-
-        # Install in different location
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        old_dir = self.client.current_folder
-        build_dir = os.path.join(self.client.current_folder, "build1")
-        mkdir(build_dir)
-        self.client.current_folder = build_dir
-        self.client.run("install .. ")
-        self.client.current_folder = old_dir
-        self.client.run("source . --install-folder=build1")
-
     def test_build_local_command(self):
 
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("build .", assert_error=True)
-        self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
 
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("install . --build missing")
-        self.client.run("build .")
+        self.client.run("build . --build missing")
 
         c1 = conanfile % {"no_copy_source": True, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("install . --build missing")
-        self.client.run("build .")
-
-    def test_package_local_command(self):
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("package .", assert_error=True)
-        self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
-
-        self.client.run("install . --build missing")
-
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("install . --build missing")
-        self.client.run("package .")
-
-    def test_imports_local(self):
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("imports .", assert_error=True)
-        self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
+        self.client.run("build . --build missing")
 
     def test_deploy(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
@@ -278,6 +221,7 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("conanfile.py: CONFIGURE: MYFILE!", client.out)
         self.assertIn("conanfile.py: REQUIREMENTS: MYFILE!", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 editables not considered yet")
     def test_editable(self):
         client = TestClient()
         client.save({"pkg/conanfile.py": self.recipe_conanfile,

@@ -1,16 +1,16 @@
 import os
 import shutil
 import unittest
+
+import pytest
 from mock import Mock
 
 from conans.client.conanfile.package import run_package_method
-from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
-from conans.test.assets.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.tools import TestClient, create_profile
-from conans.test.utils.mocks import TestBufferConanOutput
+
 
 myconan1 = """
 from conans import ConanFile
@@ -38,16 +38,13 @@ class HelloConan(ConanFile):
 
 class ExporterTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_complete(self):
-        """ basic installation of a new conans
-        """
         client = TestClient()
-        files = cpp_hello_source_files()
 
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        reg_folder = client.cache.package_layout(ref).export()
+        reg_folder = client.get_latest_ref_layout(ref).export()
 
-        client.save(files, path=reg_folder)
         client.save({CONANFILE: myconan1,
                      "infos/%s" % CONANINFO: "//empty",
                      "include/no_copy/lib0.h":                     "NO copy",
@@ -72,13 +69,14 @@ class ExporterTest(unittest.TestCase):
 
         conanfile_path = os.path.join(reg_folder, CONANFILE)
         pref = PackageReference(ref, "myfakeid")
-        build_folder = client.cache.package_layout(pref.ref).build(pref)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        pkg_layout = client.get_latest_pkg_layout(pref)
+        build_folder = pkg_layout.build()
+        package_folder = pkg_layout.package()
         install_folder = os.path.join(build_folder, "infos")
 
         shutil.copytree(reg_folder, build_folder)
 
-        loader = ConanFileLoader(None, Mock(), ConanPythonRequire(None, None))
+        loader = ConanFileLoader(None, Mock())
         conanfile = loader.load_consumer(conanfile_path, create_profile())
 
         conanfile.folders.set_base_build(build_folder)

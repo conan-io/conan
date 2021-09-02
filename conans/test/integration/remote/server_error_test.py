@@ -1,6 +1,6 @@
 import unittest
 
-
+from conans import REVISIONS
 from conans.test.utils.tools import TestClient, TestServer
 from collections import namedtuple
 
@@ -14,7 +14,8 @@ class Error200NoJson(unittest.TestCase):
 
             def get(self, *args, **kwargs):  # @UnusedVariable
                 # Response must be binary, it is decoded in RestClientCommon
-                return namedtuple("Response", "status_code headers content ok")(200, {}, b'<>',
+                headers = {"X-Conan-Server-Capabilities": REVISIONS}
+                return namedtuple("Response", "status_code headers content ok")(200, headers, b'<>',
                                                                                 True)
 
         # https://github.com/conan-io/conan/issues/3432
@@ -23,7 +24,6 @@ class Error200NoJson(unittest.TestCase):
                             users={"default": [("lasote", "mypass")]})
 
         client.run("install pkg/ref@user/testing", assert_error=True)
-        self.assertIn("ERROR: <>", client.out)
         self.assertIn("Response from remote is not json, but 'None'", client.out)
 
     def test_error_broken_json(self):
@@ -33,7 +33,8 @@ class Error200NoJson(unittest.TestCase):
 
             def get(self, *args, **kwargs):  # @UnusedVariable
                 # Response must be binary, it is decoded in RestClientCommon
-                headers = {"Content-Type": "application/json"}
+                headers = {"Content-Type": "application/json",
+                           "X-Conan-Server-Capabilities": REVISIONS}
                 return namedtuple("Response", "status_code headers content ok")(200, headers,
                                                                                 b'<>', True)
 
@@ -52,7 +53,8 @@ class Error200NoJson(unittest.TestCase):
 
             def get(self, *args, **kwargs):  # @UnusedVariable
                 # Response must be binary, it is decoded in RestClientCommon
-                headers = {"Content-Type": "application/json"}
+                headers = {"Content-Type": "application/json",
+                           "X-Conan-Server-Capabilities": REVISIONS}
                 return namedtuple("Response", "status_code headers content ok")(200, headers,
                                                                                 b'[1, 2, 3]', True)
 
@@ -62,4 +64,4 @@ class Error200NoJson(unittest.TestCase):
                             users={"default": [("lasote", "mypass")]})
 
         client.run("install pkg/ref@user/testing", assert_error=True)
-        self.assertIn("ERROR: Unexpected server response [1, 2, 3]", client.out)
+        self.assertIn("Unexpected server response [1, 2, 3]", client.out)

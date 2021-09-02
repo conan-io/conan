@@ -11,6 +11,7 @@ from conans.test.utils.tools import TestClient
 class TestPackageTestCase(unittest.TestCase):
     conanfile_tpl = Template(textwrap.dedent("""
         from conans import ConanFile, tools
+        from conan.tools.env import VirtualBuildEnv
 
         class Recipe(ConanFile):
             settings = "os"
@@ -20,10 +21,12 @@ class TestPackageTestCase(unittest.TestCase):
             def build(self):
                 self.output.info(">> settings.os: {}".format(self.settings.os))
                 self.output.info(">> settings_build.os: {}".format(self.settings_build.os))
-                self.output.info(">> tools.get_env('INFO'): {}".format(tools.get_env("INFO")))
+                build_env = VirtualBuildEnv(self).environment()
+                with build_env.apply():
+                    self.output.info(">> tools.get_env('INFO'): {}".format(tools.get_env("INFO")))
 
             def package_info(self):
-                setattr(self.env_info, "INFO", "{}-{}".format(self.name, self.settings.os))
+                self.buildenv_info.define("INFO", "{}-{}".format(self.name, self.settings.os))
 
             def test(self):
                 pass
@@ -61,18 +64,14 @@ class TestPackageTestCase(unittest.TestCase):
         # Build requires are built in the 'build' context:
         self.assertIn("br1/version: >> settings.os: Build", t.out)
         self.assertIn("br1/version: >> settings_build.os: Build", t.out)
-        self.assertIn("br1/version: >> tools.get_env('INFO'): None", t.out)
 
         self.assertIn("br2/version: >> settings.os: Build", t.out)
         self.assertIn("br2/version: >> settings_build.os: Build", t.out)
-        self.assertIn("br2/version: >> tools.get_env('INFO'): None", t.out)
 
         # Package 'name' is built for the 'host' context (br1 as build_requirement)
         self.assertIn("name/version: >> settings.os: Host", t.out)
         self.assertIn("name/version: >> settings_build.os: Build", t.out)
-        self.assertIn("name/version: >> tools.get_env('INFO'): br1-Build", t.out)
 
         # Test_package is executed with the same profiles as the package itself
         self.assertIn("name/version (test package): >> settings.os: Host", t.out)
         self.assertIn("name/version (test package): >> settings_build.os: Build", t.out)
-        self.assertIn("name/version (test package): >> tools.get_env('INFO'): br2-Build", t.out)

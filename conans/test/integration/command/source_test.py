@@ -1,9 +1,7 @@
 import os
 import unittest
 
-import six
-
-from conans.paths import BUILD_INFO, CONANFILE
+from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
@@ -93,18 +91,11 @@ class ConanLib(ConanFile):
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
         # Path with conanfile.txt
-        client.run("source conanfile.txt --install-folder subdir", assert_error=True)
+        client.run("source conanfile.txt", assert_error=True)
         self.assertIn(
             "A conanfile.py is needed, %s is not acceptable"
             % os.path.join(client.current_folder, "conanfile.txt"),
             client.out)
-
-        # Path with wrong conanfile path
-        client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
-                   assert_error=True)
-        self.assertIn("Conanfile not found at %s"
-                      % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
-                      client.out)
 
     def test_source_local_cwd(self):
         conanfile = '''
@@ -124,7 +115,7 @@ class ConanLib(ConanFile):
         subdir = os.path.join(client.current_folder, "subdir")
         os.mkdir(subdir)
         client.run("install . --install-folder subdir")
-        client.run("source . --install-folder subdir --source-folder subdir")
+        client.run("source . --source-folder subdir")
         self.assertIn("conanfile.py (Hello/0.1): Configuring sources", client.out)
         self.assertIn("conanfile.py (Hello/0.1): cwd=>%s" % subdir, client.out)
 
@@ -132,91 +123,15 @@ class ConanLib(ConanFile):
         conanfile = '''
 import os
 from conans import ConanFile
-
 class ConanLib(ConanFile):
     name = "Hello"
     version = "0.1"
-
-    def source(self):
-        pass
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
         # Automatically created
         client.run("source conanfile.py --source-folder=src")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "src")))
-
-    def test_build_folder_no_exists_crash(self):
-        conanfile = '''
-import os
-from conans import ConanFile
-
-class ConanLib(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def source(self):
-        pass
-'''
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        # Automatically created
-        client.run("source ./conanfile.py --install-folder=missing_folder", assert_error=True)
-        self.assertIn("Specified info-folder doesn't exist", client.out)
-
-    def test_build_folder_reading_infos(self):
-        conanfile = '''
-import os
-from conans import ConanFile
-
-class ConanLib(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def package_info(self):
-        self.cpp_info.cxxflags.append("FLAG")
-        self.env_info.MYVAR = "foo"
-        self.user_info.OTHERVAR = "bar"
-'''
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export . conan/testing")
-
-        conanfile = '''
-import os
-from conans import ConanFile
-from conans.util.files import save
-
-class ConanLib(ConanFile):
-
-    requires="Hello/0.1@conan/testing"
-
-    def source(self):
-        assert(os.getcwd() == self.source_folder)
-        self.output.info("FLAG=%s" % self.deps_cpp_info["Hello"].cxxflags[0])
-        self.output.info("MYVAR=%s" % self.deps_env_info["Hello"].MYVAR)
-        self.output.info("OTHERVAR=%s" % self.deps_user_info["Hello"].OTHERVAR)
-        self.output.info("CURDIR=%s" % os.getcwd())
-
-'''
-        # First, failing source()
-        client.save({CONANFILE: conanfile}, clean_first=True)
-        build_folder = os.path.join(client.current_folder, "build")
-        src_folder = os.path.join(client.current_folder, "src")
-        mkdir(build_folder)
-        mkdir(src_folder)
-        client.run("source . --install-folder='%s' --source-folder='%s'"
-                   % (build_folder, src_folder),
-                   assert_error=True)
-        self.assertIn("self.deps_cpp_info not defined.", client.out)
-
-        client.run("install . --install-folder build --build ")
-        client.run("source conanfile.py --install-folder='%s' --source-folder='%s'"
-                   % (build_folder, src_folder))
-        self.assertIn("FLAG=FLAG", client.out)
-        self.assertIn("MYVAR=foo", client.out)
-        self.assertIn("OTHERVAR=bar", client.out)
-        self.assertIn("CURDIR=%s" % src_folder, client.out)
 
     def test_repeat_args_fails(self):
         conanfile = '''
@@ -229,9 +144,10 @@ class ConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("source ./conanfile.py --source-folder sf")
-        with six.assertRaisesRegex(self, Exception, "Command failed"):
+        with self.assertRaisesRegex(Exception, "Command failed"):
             client.run("source . --source-folder sf --source-folder sf")
-        with six.assertRaisesRegex(self, Exception, "Command failed"):
+        with self.assertRaisesRegex(Exception, "Command failed"):
+
             client.run("source conanfile.py --source-folder sf --install-folder if "
                        "--install-folder rr")
 
@@ -249,8 +165,7 @@ class ConanLib(ConanFile):
 '''
         # First, failing source()
         client = TestClient()
-        client.save({CONANFILE: conanfile,
-                     BUILD_INFO: ""})
+        client.save({CONANFILE: conanfile})
 
         client.run("source .", assert_error=True)
         self.assertIn("conanfile.py: Running source!", client.out)

@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 import unittest
 
@@ -51,11 +52,11 @@ class TestConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing --build=missing")
+        package_id = re.search(r"Pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
         self.assertIn("Pkg/0.1@user/testing package(): Packaged 1 '.md' file: LICENSE.md",
                       client.out)
-        pref = PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing"),
-                                "e6f2dac07251ad9958120a7f7c324366fb3b6f2a")
-        pkg_folder = client.cache.package_layout(pref.ref).package(pref)
+        pref = client.get_latest_prev(ConanFileReference.loads("Pkg/0.1@user/testing"), package_id)
+        pkg_folder = client.get_latest_pkg_layout(pref).package()
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibA/LICENSE.txt")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibB/LICENSE.md")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibC/license.txt")))

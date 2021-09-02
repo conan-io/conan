@@ -33,7 +33,9 @@ def setup_client():
             @property
             def content(self):
                 info = []
-                for pkg_name, cpp_info in self.deps_build_info.dependencies:
+                for dep in self.conanfile.dependencies.values():
+                    pkg_name = dep.ref.name
+                    cpp_info = dep.cpp_info
                     info.append("{}:{}".format(pkg_name, cpp_info.get_property("custom_name", self.name)))
                     info.extend(self._get_components_custom_names(cpp_info))
                 return os.linesep.join(info)
@@ -50,8 +52,7 @@ def setup_client():
         """)
 
     client.save({"consumer.py": GenConanfile("consumer", "1.0").with_requires("mypkg/1.0").
-                with_generator("custom_generator").with_generator("cmake_find_package").
-                with_generator("cmake_find_package_multi").with_generator("pkg_config").
+                with_generator("custom_generator").with_generator("CMakeDeps").
                 with_setting("build_type"),
                 "mypkg_bm.cmake": build_module, "mypkg_anootherbm.cmake": another_build_module})
     return client
@@ -61,6 +62,7 @@ def get_files_contents(client, filenames):
     return [client.load(f) for f in filenames]
 
 
+@pytest.mark.xfail(reason="This depends on GeneratorComponentsMixin, which is to be removed")
 def test_same_results_components(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
@@ -88,9 +90,8 @@ def test_same_results_components(setup_client):
     my_generator = client.load("my-generator.txt")
     assert "mycomponent:mycomponent-name" in my_generator
 
-    files_to_compare = ["FindMyFileName.cmake", "MyFileNameConfig.cmake", "MyFileNameTargets.cmake",
-                        "MyFileNameTarget-release.cmake", "MyFileNameConfigVersion.cmake", "mypkg.pc",
-                        "mycomponent.pc"]
+    files_to_compare = ["MyFileNameConfig.cmake", "MyFileNameTargets.cmake",
+                        "MyFileNameTarget-release.cmake", "MyFileNameConfigVersion.cmake"]
     new_approach_contents = get_files_contents(client, files_to_compare)
 
     mypkg = textwrap.dedent("""
@@ -120,6 +121,7 @@ def test_same_results_components(setup_client):
     assert new_approach_contents == old_approach_contents
 
 
+@pytest.mark.xfail(reason="This depends on GeneratorComponentsMixin, which is to be removed")
 def test_same_results_without_components(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
@@ -148,8 +150,8 @@ def test_same_results_without_components(setup_client):
     with open(os.path.join(client.current_folder, "my-generator.txt")) as custom_gen_file:
         assert "mypkg:mypkg-name" in custom_gen_file.read()
 
-    files_to_compare = ["FindMyFileName.cmake", "MyFileNameConfig.cmake", "MyFileNameTargets.cmake",
-                        "MyFileNameTarget-release.cmake", "MyFileNameConfigVersion.cmake", "mypkg.pc"]
+    files_to_compare = ["MyFileNameConfig.cmake", "MyFileNameTargets.cmake",
+                        "MyFileNameTarget-release.cmake", "MyFileNameConfigVersion.cmake"]
     new_approach_contents = get_files_contents(client, files_to_compare)
 
     mypkg = textwrap.dedent("""
@@ -179,6 +181,7 @@ def test_same_results_without_components(setup_client):
     assert new_approach_contents == old_approach_contents
 
 
+@pytest.mark.xfail(reason="This depends on GeneratorComponentsMixin, which is to be removed")
 def test_same_results_specific_generators(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
@@ -208,7 +211,7 @@ def test_same_results_specific_generators(setup_client):
 
     client.run("install consumer.py --build missing -s build_type=Release")
 
-    files_to_compare = ["FindMyFileName.cmake", "MyFileNameMultiConfig.cmake", "MyFileNameMultiTargets.cmake",
+    files_to_compare = ["MyFileNameMultiConfig.cmake", "MyFileNameMultiTargets.cmake",
                         "MyFileNameMultiTarget-release.cmake", "MyFileNameMultiConfigVersion.cmake"]
     new_approach_contents = get_files_contents(client, files_to_compare)
 
@@ -238,25 +241,3 @@ def test_same_results_specific_generators(setup_client):
     old_approach_contents = get_files_contents(client, files_to_compare)
 
     assert new_approach_contents == old_approach_contents
-
-
-def test_pkg_config_names(setup_client):
-    client = setup_client
-    mypkg = textwrap.dedent("""
-        import os
-        from conans import ConanFile
-        class MyPkg(ConanFile):
-            settings = "build_type"
-            name = "mypkg"
-            version = "1.0"
-            def package_info(self):
-                self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
-                self.cpp_info.components["mycomponent"].set_property("pkg_config_name", "mypkg-config-name")
-        """)
-
-    client.save({"mypkg.py": mypkg})
-    client.run("export mypkg.py")
-    client.run("install consumer.py --build missing")
-
-    with open(os.path.join(client.current_folder, "mypkg-config-name.pc")) as gen_file:
-        assert "mypkg-config-name" in gen_file.read()

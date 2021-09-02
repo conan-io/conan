@@ -1,15 +1,15 @@
-import time
 import unittest
 from collections import OrderedDict
+import time
 from time import sleep
 
-import pytest
+from mock import patch
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
+from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.env_reader import get_env
 
 
 class ExportsSourcesMissingTest(unittest.TestCase):
@@ -40,7 +40,8 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client2.run("remove * -r=default -f")
         client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/testing: Upload recipe to 'new_server' failed: "
-                      "Recipe not found: 'pkg/0.1@user/testing'. [Remote: default]",
+                      "Recipe not found: 'pkg/0.1@user/testing#61bc64971c7f9e395cab628ca34202c5'."
+                      " [Remote: default]",
                       client2.out)
         self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
                       "not found in local cache.", client2.out)
@@ -64,9 +65,10 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("remote list_pref pkg/1.0@")
         self.assertNotIn("pkg", client.out)
         client.run("remote list_ref --no-remote")
-        self.assertIn("pkg/1.0: None", client.out)
+        latest_prev = client.get_latest_prev("pkg/1.0")
+        self.assertIn(f"{latest_prev.ref.full_str()}: None", client.out)
         client.run("remote list_pref pkg/1.0 --no-remote")
-        self.assertIn("pkg/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: None", client.out)
+        self.assertIn(f"{latest_prev.full_str()}: None", client.out)
 
     @staticmethod
     def _create(client, number, version, modifier=""):
@@ -103,9 +105,10 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Uploaded conan recipe 'Hello0/0.0@lasote/stable' to 'local'", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
-        client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Recipe: Update available", client_b.out)
-        self.assertIn("Binary: Cache", client_b.out)
+        # TODO: cache2.0 conan info not yet implemented with new cache
+        # client_b.run("info Hello0/0.0@lasote/stable -u")
+        # self.assertIn("Recipe: Update available", client_b.out)
+        # self.assertIn("Binary: Cache", client_b.out)
 
         # Now try to update the package with install -u
         client_b.run("remote list_ref")
@@ -122,14 +125,16 @@ class MultiRemotesTest(unittest.TestCase):
         client_a.run("upload Hello0/0.0@lasote/stable -r default")
 
         # Now client_b checks for updates without -r parameter
-        client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Remote: local", client_b.out)
-        self.assertIn("Recipe: Cache", client_b.out)
+        # TODO: cache2.0 conan info not yet implemented with new cache
+        # client_b.run("info Hello0/0.0@lasote/stable -u")
+        # self.assertIn("Remote: local", client_b.out)
+        # self.assertIn("Recipe: Cache", client_b.out)
 
         # But if we connect to default, should tell us that there is an update IN DEFAULT!
-        client_b.run("info Hello0/0.0@lasote/stable -r default -u")
-        self.assertIn("Remote: local", client_b.out)
-        self.assertIn("Recipe: Update available", client_b.out)
+        # TODO: cache2.0 conan info not yet implemented with new cache
+        # client_b.run("info Hello0/0.0@lasote/stable -r default -u")
+        # self.assertIn("Remote: local", client_b.out)
+        # self.assertIn("Recipe: Update available", client_b.out)
         client_b.run("remote list_ref")
         self.assertIn(": local", str(client_b.out))
 
@@ -137,11 +142,13 @@ class MultiRemotesTest(unittest.TestCase):
         client_b.run("install Hello0/0.0@lasote/stable -r default -u --build")
         self.assertIn("Hello0/0.0@lasote/stable: Calling build()",
                       str(client_b.out))
-        client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Recipe: Cache", client_b.out)
-        self.assertIn("Binary: Cache", client_b.out)
+        # TODO: cache2.0 conan info not yet implemented with new cache
+        # client_b.run("info Hello0/0.0@lasote/stable -u")
+        # self.assertIn("Recipe: Cache", client_b.out)
+        # self.assertIn("Binary: Cache", client_b.out)
         client_b.run("remote list_ref")
-        self.assertIn("Hello0/0.0@lasote/stable: default", client_b.out)
+        latest_rrev = client_b.cache.get_latest_rrev(ConanFileReference.loads("Hello0/0.0@lasote/stable"))
+        self.assertIn(f"{latest_rrev.full_str()}: default", client_b.out)
 
     def test_conan_install_update(self):
         """
@@ -160,13 +167,13 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("remove '*' -f")
 
         client.run("install Hello0/0.0@lasote/stable")
+        # If we don't set a remote we find between all remotes and get the first match
         self.assertIn("Hello0/0.0@lasote/stable from 'default' - Downloaded", client.out)
         client.run("install Hello0/0.0@lasote/stable --update")
-        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Cache", client.out)
-
-        # Check that it really updates from the indicated remote
-        client.run("install Hello0/0.0@lasote/stable --update -r local")
         self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
+
+        client.run("install Hello0/0.0@lasote/stable --update -r default")
+        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Cache", client.out)
 
         sleep(1)  # For timestamp and updates checks
         # Check that it really updates in case of newer package uploaded to the associated remote
@@ -179,7 +186,6 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
 
-@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MultiRemoteTest(unittest.TestCase):
 
     def setUp(self):
@@ -192,20 +198,6 @@ class MultiRemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
-    def test_predefine_remote(self):
-        self.client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
-        self.client.run("export . lasote/stable")
-        self.client.run("upload Hello0/0.1@lasote/stable -r=remote0")
-        self.client.run("upload Hello0/0.1@lasote/stable -r=remote1")
-        self.client.run("upload Hello0/0.1@lasote/stable -r=remote2")
-        self.client.run('remove "*" -f')
-        self.client.run("remote add_ref Hello0/0.1@lasote/stable remote1")
-        self.client.run("install Hello0/0.1@lasote/stable --build=missing")
-        self.assertIn("Hello0/0.1@lasote/stable: Retrieving from predefined remote 'remote1'",
-                      self.client.out)
-        self.client.run("remote list_ref")
-        self.assertIn(": remote1", self.client.out)
-
     def test_upload(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         self.client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
@@ -216,7 +208,9 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("remote0=http://", self.client.out)
 
         # The remote, once fixed does not change
-        self.client.run("upload %s -r=remote1" % str(ref))
+        the_time = time.time() - 10.0
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            self.client.run("upload %s -r=remote1" % str(ref))
         self.client.run("info %s" % str(ref))
         self.assertIn("remote0=http://", self.client.out)
 
@@ -254,8 +248,8 @@ class MultiRemoteTest(unittest.TestCase):
         client2 = TestClient(servers=servers, users=self.users)
         err = client2.run("install MyLib/0.1@conan/testing --build=missing", assert_error=True)
         self.assertTrue(err)
-        self.assertIn("MyLib/0.1@conan/testing: Trying with 's0'...", client2.out)
-        self.assertIn("MyLib/0.1@conan/testing: Trying with 's1'...", client2.out)
+        self.assertIn("MyLib/0.1@conan/testing: Checking remote: s0", client2.out)
+        self.assertIn("MyLib/0.1@conan/testing: Checking remote: s1", client2.out)
         self.assertIn("Unable to connect to s1=http://asdlhaljksdhlajkshdljakhsd.com", client2.out)
         # s2 is not even tried
         self.assertNotIn("MyLib/0.1@conan/testing: Trying with 's2'...", client2.out)
@@ -283,50 +277,3 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote0=http://", client2.out)
         self.assertIn("Remote: remote1=http://", client2.out)
         self.assertIn("Remote: remote2=http://", client2.out)
-
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
-                        reason="This test is not valid for revisions, where we keep iterating the "
-                               "remotes for searching a package for the same recipe revision")
-    def test_package_binary_remote(self):
-        # https://github.com/conan-io/conan/issues/3882
-        # Upload recipe + package to remote1 and remote2
-        reference = "Hello/0.1@lasote/stable"
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . %s" % reference)
-        self.client.run("upload %s -r=remote0 --all" % reference)
-        self.client.run("upload %s -r=remote2 --all" % reference)
-        ref = ConanFileReference.loads(reference)
-
-        # Remove only binary from remote1 and everything in local
-        self.client.run("remove -f %s -p -r remote0" % reference)
-        self.client.run('remove "*" -f')
-
-        self.servers.pop("remote1")
-        # Now install it from a client, it won't find the binary in remote2
-        self.client.run("install %s" % reference, assert_error=True)
-        self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
-        self.assertNotIn("remote2", self.client.out)
-
-        self.client.run("install %s -r remote2" % reference)
-        self.assertIn("Package installed 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
-        self.assertIn("Hello/0.1@lasote/stable from 'remote0' - Cache", self.client.out)
-
-        metadata = self.client.cache.package_layout(ref).load_metadata()
-        self.assertEqual(metadata.recipe.remote, "remote0")
-        self.assertEqual(metadata.packages["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"].remote,
-                         "remote2")
-
-        client2 = TestClient(servers=self.servers, users=self.users)
-        time.sleep(1)  # Make sure timestamps increase
-        client2.save({"conanfile.py": str(GenConanfile()) + " # Comment"})
-        client2.run("create . %s" % reference)
-        client2.run("upload %s -r=remote2 --all" % reference)
-
-        # Install from client, it should update the package from remote2
-        self.client.run("install %s --update" % reference)
-
-        self.assertNotIn("Hello/0.1@lasote/stable: WARN: Can't update, no package in remote",
-                         self.client.out)
-        self.assertIn("Hello/0.1@lasote/stable:"
-                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", self.client.out)
-        self.assertIn("Downloading conan_package.tgz", self.client.out)

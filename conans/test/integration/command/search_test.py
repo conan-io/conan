@@ -7,20 +7,16 @@ import time
 import unittest
 from collections import OrderedDict
 
-from mock import patch
 import pytest
+from mock import patch
 
-from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
-from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
-from conans.util.files import save
 from conans import __version__ as client_version
 
 
@@ -61,8 +57,6 @@ conan_vars1c = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
-[recipe_hash]
-  d41d8cd98f00b204e9800998ecf8427e
 '''  # The recipe_hash correspond to the faked conanmanifests in export
 
 conan_vars1d = '''
@@ -110,27 +104,8 @@ conan_vars4 = """[settings]
   HelloInfo1/0.45@myuser/testing:33333
 """
 
-conan_vars_tool_winx86 = """[settings]
-  os_build=Windows
-  arch_build=x86
-"""
 
-conan_vars_tool_winx64 = """[settings]
-  os_build=Windows
-  arch_build=x86_64
-"""
-
-conan_vars_tool_linx86 = """[settings]
-  os_build=Linux
-  arch_build=x86
-"""
-
-conan_vars_tool_linx64 = """[settings]
-  os_build=Linux
-  arch_build=x86_64
-"""
-
-
+@pytest.mark.xfail(reason="Completely re-design these tests for Cache 2.0")
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
@@ -186,39 +161,8 @@ class SearchTest(unittest.TestCase):
                                                        CONANINFO): conan_vars4,
                           "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder5,
                                                        PACKAGES_FOLDER,
-                                                       "hello.txt"): "Hello",
-                          "%s/%s/winx86/%s" % (root_folder_tool,
-                                               PACKAGES_FOLDER,
-                                               CONANINFO): conan_vars_tool_winx86,
-                          "%s/%s/winx64/%s" % (root_folder_tool,
-                                               PACKAGES_FOLDER,
-                                               CONANINFO): conan_vars_tool_winx64,
-                          "%s/%s/linx86/%s" % (root_folder_tool,
-                                               PACKAGES_FOLDER,
-                                               CONANINFO): conan_vars_tool_linx86,
-                          "%s/%s/linx64/%s" % (root_folder_tool,
-                                               PACKAGES_FOLDER,
-                                               CONANINFO): conan_vars_tool_linx64},
+                                                       "hello.txt"): "Hello"},
                          self.client.cache.store)
-        # Fake metadata
-
-        def create_metadata(folder, pids):
-            metadata = PackageMetadata()
-            metadata.recipe.revision = DEFAULT_REVISION_V1
-            for pid in pids:
-                metadata.packages[pid].revision = DEFAULT_REVISION_V1
-            save(os.path.join(self.client.cache.store, folder, "metadata.json"), metadata.dumps())
-
-        create_metadata(root_folder1, ["WindowsPackageSHA", "PlatformIndependantSHA",
-                                       "LinuxPackageSHA"])
-        create_metadata(root_folder11, ["WindowsPackageSHA"])
-        create_metadata(root_folder12, ["WindowsPackageSHA"])
-        create_metadata(root_folder2, ["a44f541cd44w57"])
-        create_metadata(root_folder3, ["e4f7vdwcv4w55d"])
-        create_metadata(root_folder4, ["e4f7vdwcv4w55d"])
-        create_metadata(root_folder5, ["e4f7vdwcv4w55d"])
-        create_metadata(root_folder6, ["LinuxPackageCustom"])
-        create_metadata(root_folder_tool, ["winx86", "winx64", "linx86", "linx64"])
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
@@ -391,20 +335,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>LinuxPackageSHA</td>"
-                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
                       "<td>libstdc++11</td>"
                       "<td>4.5</td>", html)
         self.assertIn("<td>WindowsPackageSHA</td>"
-                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
                       "<td></td>"
                       "<td>8.1</td>", html)
-        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> "
+                      "JFrog LTD. <a>https://conan.io</a>"
                       .format(client_version), html)
 
     def test_search_html_table_all(self):
@@ -418,11 +361,9 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<th>remote</th>"
-                      "<th>package_id</th>"
-                      "<th>outdated</th>", html)
+                      "<th>package_id</th>", html)
         self.assertIn("<td>local</td>"
                       "<td>LinuxPackageSHA</td>"
-                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
@@ -430,7 +371,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>4.5</td>", html)
         self.assertIn("<td>search_able</td>"
                       "<td>WindowsPackageSHA</td>"
-                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
@@ -471,7 +411,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
-        self.assertIn("Outdated from recipe: False", self.client.out)
         self.assertIn("LinuxPackageSHA", self.client.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
@@ -488,7 +427,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r all')
-        self.assertEqual(str(self.client.out).count("Outdated from recipe: False"), 2)
         self.assertEqual(str(self.client.out).count("LinuxPackageSHA"), 2)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
@@ -584,24 +522,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                 'os.distro.version="19.04" AND compiler.version="4.3" AND os="Linux"'
             self._assert_pkg_q(q, ["LinuxPackageCustom"], remote, ref="Hello/1.5.10@myuser/testing")
 
-            q = 'os_build="Windows"'
-            self._assert_pkg_query_tool(q, ["winx86", "winx64"], remote)
-
-            q = 'os_build="Linux"'
-            self._assert_pkg_query_tool(q, ["linx86", "linx64"], remote)
-
-            q = 'arch_build="x86"'
-            self._assert_pkg_query_tool(q, ["winx86", "linx86"], remote)
-
-            q = 'arch_build="x86_64"'
-            self._assert_pkg_query_tool(q, ["winx64", "linx64"], remote)
-
-            q = 'os_build="Windows" AND arch_build="x86_64"'
-            self._assert_pkg_query_tool(q, ["winx64"], remote)
-
-            q = 'os_build="Windoooows"'
-            self._assert_pkg_query_tool(q, [], remote)
-
         # test in local
         test_cases()
 
@@ -613,19 +533,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def _copy_to_server(self, cache, server_store):
         subdirs = list_folder_subdirs(basedir=cache.store, level=4)
-        refs = [ConanFileReference(*folder.split("/"), revision=DEFAULT_REVISION_V1)
+        refs = [ConanFileReference(*folder.split("/"), revision="myreciperev")
                 for folder in subdirs]
         for ref in refs:
-            origin_path = cache.package_layout(ref).export()
+            origin_path = self.client.get_latest_ref_layout(ref).export()
             dest_path = server_store.export(ref)
             shutil.copytree(origin_path, dest_path)
             server_store.update_last_revision(ref)
-            packages = cache.package_layout(ref).packages()
+            packages = cache.get_package_revisions(ref)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
-                pref = PackageReference(ref, package, DEFAULT_REVISION_V1)
-                origin_path = cache.package_layout(ref).package(pref)
+                pref = PackageReference(ref, package, "mypackagerev")
+                origin_path = self.client.get_latest_pkg_layout(pref).package()
                 dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)
                 server_store.update_last_package_revision(pref)
@@ -718,7 +638,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("LinuxPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10@myuser/testing -q "arch=x86"')
-        # One package will be outdated from recipe and another don't
         self.assertEqual("""Existing packages for recipe Hello/1.4.10@myuser/testing:
 
     Package_ID: LinuxPackageSHA
@@ -734,7 +653,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             Hello2/0.1@lasote/stable:11111
             HelloInfo1/0.45@myuser/testing:33333
             OpenSSL/2.10@lasote/testing:2222
-        Outdated from recipe: False
 
     Package_ID: PlatformIndependantSHA
         [options]
@@ -744,7 +662,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             compiler: gcc
             compiler.libcxx: libstdc++
             compiler.version: 4.3
-        Outdated from recipe: True
 
 """, self.client.out)
 
@@ -961,8 +878,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -973,8 +889,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -988,8 +903,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1027,8 +941,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -1039,8 +952,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -1054,8 +966,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1093,8 +1004,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -1105,8 +1015,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -1120,8 +1029,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1147,8 +1055,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -1159,8 +1066,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -1174,8 +1080,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1197,6 +1102,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchReferencesWithoutUserChannel(unittest.TestCase):
     conanfile = """from conans import ConanFile
 class Test(ConanFile):
@@ -1214,7 +1120,7 @@ class Test(ConanFile):
         # This searches by pattern
         client.run("search lib/1.0")
         self.assertIn("Existing package recipes:", client.out)
-        self.assertIn("lib/1.0\n", client.out)
+        self.assertIn("lib/1.0", client.out)
 
         #  Support for explicit ref without user/channel
         client.run("search lib/1.0@")
@@ -1238,6 +1144,7 @@ class Test(ConanFile):
         self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
 
+@pytest.mark.xfail(reason="cache2.0 order of search output is not implemented yet, check this")
 class SearchOrder(unittest.TestCase):
     def test_search(self):
         client = TestClient(default_server_user=True)
@@ -1266,46 +1173,10 @@ class SearchOrder(unittest.TestCase):
         self.assertIn(output, client.out)
 
 
-@pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-class SearchOutdatedTest(unittest.TestCase):
-    def test_search_outdated(self):
-        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        conanfile = """from conans import ConanFile
-class Test(ConanFile):
-    name = "Test"
-    version = "0.1"
-    settings = "os"
-    """
-        client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/testing")
-        client.run("install Test/0.1@lasote/testing --build -s os=Windows")
-        client.save({"conanfile.py": "# comment\n%s" % conanfile})
-        client.run("export . lasote/testing")
-        client.run("install Test/0.1@lasote/testing --build -s os=Linux")
-        client.run("upload * --all --confirm")
-        for remote in ("", "-r=default"):
-            client.run("search Test/0.1@lasote/testing %s" % remote)
-            self.assertIn("os: Windows", client.out)
-            self.assertIn("os: Linux", client.out)
-            client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
-            self.assertIn("os: Windows", client.out)
-            self.assertNotIn("os: Linux", client.out)
-
-    def test_exception_client_without_revs(self):
-        client = TestClient()
-        client.run("search whatever --revisions")
-        self.assertIn("There are no packages matching the 'whatever' pattern", client.out)
-
-        client.run("search lib/0.1@user/testing --revisions", assert_error=True)
-        self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
-
-
-@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False),
-                    reason="set TESTING_REVISIONS_ENABLED=1")
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchRevisionsTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0 revisit search command an --revisions for 2.0")
     def test_search_recipe_revisions(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
         servers = {"default": test_server}
@@ -1326,7 +1197,7 @@ class Test(ConanFile):
 
         # If the recipe doesn't have associated remote, there is no time
         client.run("search lib/1.0@user/testing --revisions")
-        self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
 
         # test that the pattern search with --revisions enabled works
         client.run("search li* --revisions")
@@ -1400,7 +1271,7 @@ class Test(ConanFile):
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c --all")  # For later remote test
         first_rrev = "bd761686d5c57b31f4cd85fd0329751f"
-        first_prev = "e928490f2e24da2ab391f0b289dd73c1"
+        first_prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         full_ref = "lib/1.0@user/testing#{rrev}:%s" % NO_SETTINGS_PACKAGE_ID
 
         # LOCAL CACHE CHECKS
@@ -1430,19 +1301,15 @@ class Test(ConanFile):
         self.assertIn("a94417fca6b55779c3b158f2ff50c40a", client.out)
 
         second_rrev = "a94417fca6b55779c3b158f2ff50c40a"
-        second_prev = "b520ef8bf841bad7639cea8d3c7d7fa1"
         client.run("search %s --revisions" % full_ref.format(rrev=second_rrev))
 
         # REMOTE CHECKS
         client.run("search %s -r default --revisions" % full_ref.format(rrev=first_rrev))
-
         self.assertIn("{} ({})".format(first_prev, time_str), client.out)
-        self.assertNotIn(second_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         client.run("search %s -r default --revisions" % full_ref.format(rrev=second_rrev))
-        self.assertNotIn(first_prev, client.out)
-        self.assertIn(second_prev, client.out)
+        self.assertIn(first_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         json_path = os.path.join(client.current_folder, "search.json")
@@ -1455,6 +1322,7 @@ class Test(ConanFile):
         self.assertIsNotNone(j[0]["time"])
         self.assertEqual(len(j), 1)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit search command an --revisions for 2.0")
     def test_search_not_found(self):
         # Search not found for both package and recipe
         test_server = TestServer(users={"conan": "password"})  # exported users and passwords
@@ -1517,14 +1385,6 @@ class Test(ConanFile):
                       "'lib/1.0@conan/stable#bd761686d5c57b31f4cd85fd0329751f:"
                       "234234234234234234'", client.out)
 
-    def test_search_revision_fail_if_v1_server(self):
-        # V1 server
-        test_server = TestServer(users={"conan": "password"}, server_capabilities=[])
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("conan", "password")]})
-        client.run("search missing/1.0@conan/stable --revisions -r default", assert_error=True)
-        self.assertIn("ERROR: The remote doesn't support revisions", client.out)
-
     def test_invalid_references(self):
         client = TestClient()
         # Local errors
@@ -1557,6 +1417,7 @@ class Test(ConanFile):
         self.assertIn("There are no packages", client.out)
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchRemoteAllTestCase(unittest.TestCase):
     def setUp(self):
         """ Create a remote called 'all' with some recipe in it """

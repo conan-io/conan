@@ -9,6 +9,7 @@
     elsewhere (mainly in conans.util or conans.client.tools) and ready to be used without
     the currification.
 """
+import sys
 
 import requests
 
@@ -205,14 +206,6 @@ msvs_toolset = tools_win.msvs_toolset
 def vcvars(*args, **kwargs):
     with tools_win.vcvars(output=_global_output, *args, **kwargs):
         yield
-
-
-def msvc_build_command(*args, **kwargs):
-    return tools_win.msvc_build_command(output=_global_output, *args, **kwargs)
-
-
-def build_sln_command(*args, **kwargs):
-    return tools_win.build_sln_command(output=_global_output, *args, **kwargs)
 
 
 def vcvars_command(*args, **kwargs):

@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conan.tools.files import load_toolchain_args
 from conans.client.tools.apple import XCRun, to_apple_arch
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp
@@ -65,13 +66,12 @@ def test_ios():
                  "Makefile.am": makefile_am,
                  "main.cpp": main,
                  "m1": profile}, clean_first=True)
-    client.run("install . --profile:build=default --profile:host=m1")
-    client.run("build .")
+    client.run("build . --profile:build=default --profile:host=m1")
     client.run_command("./main", assert_error=True)
     assert "Bad CPU type in executable" in client.out
     client.run_command("lipo -info main")
     assert "Non-fat file: main is architecture: arm64" in client.out
 
-    js = client.load("conanbuild.json")
-    assert '--host=aarch64-apple-ios' in js
-    assert '--build=x86_64-apple-darwin' in js
+    conanbuild = load_toolchain_args(client.current_folder)
+    configure_args = conanbuild["configure_args"]
+    assert configure_args == "'--host=aarch64-apple-ios' '--build=x86_64-apple-darwin'"

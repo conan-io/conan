@@ -1,8 +1,11 @@
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="the dependencies options effect will be via package_id and requires")
 class TransitiveOptionsAffectPackageIDTest(unittest.TestCase):
 
     def test_basic(self):
@@ -10,7 +13,7 @@ class TransitiveOptionsAffectPackageIDTest(unittest.TestCase):
         conanfile = '''from conans import ConanFile
 class Pkg(ConanFile):
     options = {"shared": [True, False], "num": [1, 2, 3]}
-    default_options= "shared=False", "num=1"
+    default_options= {"shared": False, "num": 1}
 '''
 
         client.save({"conanfile.py": conanfile})

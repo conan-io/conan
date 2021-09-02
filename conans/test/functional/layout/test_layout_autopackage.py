@@ -6,6 +6,13 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+def get_latest_prev(cache, ref, pkgid):
+    latest_rrev = cache.get_latest_rrev(ref)
+    pref = PackageReference(latest_rrev, pkgid)
+    prevs = cache.get_package_revisions(pref, only_latest_prev=True)
+    return prevs[0]
+
+
 def test_auto_package_no_components():
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
@@ -39,9 +46,7 @@ def test_auto_package_no_components():
         tools.save("build_frameworks/bframe1/include/include.h", "")
         tools.save("build_frameworks/bframe2/include/include.h", "")
 
-
     def layout(self):
-
         self.folders.source = "my_source"
         self.folders.build = "my_build"
         self.folders.generators = "my_build/generators"
@@ -88,9 +93,11 @@ def test_auto_package_no_components():
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, package_id)
-    p_folder = client.cache.package_layout(ref).package(pref)
+    prev = get_latest_prev(client.cache, ref, package_id)
+
+    p_folder = client.cache.pkg_layout(prev).package()
 
     def p_path(path):
         return os.path.join(p_folder, path)
@@ -178,9 +185,10 @@ def test_auto_package_with_components():
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, package_id)
-    p_folder = client.cache.package_layout(ref).package(pref)
+    pref = get_latest_prev(client.cache, ref, package_id)
+    p_folder = client.cache.pkg_layout(pref).package()
 
     def p_path(path):
         return os.path.join(p_folder, path)
@@ -276,8 +284,8 @@ def test_auto_package_default_patterns():
     client.run("create . lib/1.0@")
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, package_id)
-    p_folder = client.cache.package_layout(ref).package(pref)
+    pref = get_latest_prev(client.cache, ref, package_id)
+    p_folder = client.cache.pkg_layout(pref).package()
 
     assert set(os.listdir(os.path.join(p_folder, "lib"))) == {"mylib.a", "mylib.so", "mylib.so.0",
                                                               "mylib.dylib", "mylib.lib"}

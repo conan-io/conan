@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from requests.exceptions import ConnectionError
@@ -18,10 +19,11 @@ class BrokenDownloadTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
         client.run("export . lasote/stable")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        self.assertTrue(os.path.exists(client.cache.package_layout(ref).export()))
+        self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).export()))
         client.run("upload Hello/0.1@lasote/stable")
+        export_folder = client.get_latest_ref_layout(ref).export()
         client.run("remove Hello/0.1@lasote/stable -f")
-        self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
+        self.assertFalse(os.path.exists(export_folder))
 
         rev = server.server_store.get_last_revision(ref).revision
         ref = ref.copy_with_rev(rev)
@@ -29,17 +31,18 @@ class BrokenDownloadTest(unittest.TestCase):
         tgz = os.path.join(path, "conan_export.tgz")
         save(tgz, "contents")  # dummy content to break it, so the download decompress will fail
         client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
-        self.assertIn("ERROR: Error while downloading/extracting files to", client.out)
-        self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
+        self.assertIn("Error while downloading/extracting files to", client.out)
+        self.assertFalse(os.path.exists(client.get_latest_ref_layout(ref).export()))
 
     def test_client_retries(self):
         server = TestServer()
         servers = {"default": server}
-        conanfile = """from conans import ConanFile
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
 
-class ConanFileToolsTest(ConanFile):
-    pass
-"""
+        class ConanFileToolsTest(ConanFile):
+            pass
+        """)
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         client.save({"conanfile.py": conanfile})
         client.run("create . lib/1.0@lasote/stable")

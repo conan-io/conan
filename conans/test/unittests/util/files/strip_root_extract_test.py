@@ -4,7 +4,6 @@ import os
 import tarfile
 import unittest
 
-import six
 from mock import Mock
 
 from conans.client.tools import untargz, unzip
@@ -85,7 +84,7 @@ class ZipExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        with six.assertRaisesRegex(self, ConanException, "The zip file contains more than 1 folder "
+        with self.assertRaisesRegex(ConanException, "The zip file contains more than 1 folder "
                                                          "in the root"):
             unzip(zip_file, destination=extract_folder, strip_root=True, output=Mock())
 
@@ -100,7 +99,7 @@ class ZipExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        with six.assertRaisesRegex(self, ConanException, "The zip file contains a file in the root"):
+        with self.assertRaisesRegex(ConanException, "The zip file contains a file in the root"):
             unzip(zip_file, destination=extract_folder, strip_root=True, output=Mock())
 
 
@@ -200,7 +199,7 @@ class TarExtractPlainTest(unittest.TestCase):
         self._compress_folder(tmp_folder, tgz_file)
 
         extract_folder = temp_folder()
-        with six.assertRaisesRegex(self, ConanException, "The tgz file contains more than 1 folder "
+        with self.assertRaisesRegex(ConanException, "The tgz file contains more than 1 folder "
                                                          "in the root"):
             untargz(tgz_file, destination=extract_folder, strip_root=True)
 
@@ -215,5 +214,5 @@ class TarExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        with six.assertRaisesRegex(self, ConanException, "The tgz file contains a file in the root"):
+        with self.assertRaisesRegex(ConanException, "The tgz file contains a file in the root"):
             unzip(tgz_file, destination=extract_folder, strip_root=True, output=Mock())

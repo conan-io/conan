@@ -18,21 +18,6 @@ def client():
     return c
 
 
-def test_not_found_package_dirty_cache(client):
-    # Conan does a lock on the cache, and even if the package doesn't exist
-    # left a trailing folder with the filelocks. This test checks
-    # it will be cleared
-    client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
-    client.run("create . lasote/testing")
-    client.run("upload * --all --confirm")
-    client.run('remove "*" -f')
-    client.run(" install hello/0.1@lasote/testing", assert_error=True)
-    assert "Unable to find 'hello/0.1@lasote/testing'" in client.out
-    # This used to fail in Windows, because of the trailing lock
-    client.run("remove * -f")
-    client.run(" install Hello/0.1@lasote/testing")
-
-
 def test_install_reference_txt(client):
     # Test to check the "conan install <path> <reference>" command argument
     client.save({"conanfile.txt": ""})
@@ -44,53 +29,6 @@ def test_install_reference_error(client):
     # Test to check the "conan install <path> <reference>" command argument
     client.run("install Pkg/0.1@myuser/testing user/testing", assert_error=True)
     assert "ERROR: A full reference was provided as first argument" in client.out
-
-
-def test_install_reference(client):
-    # Test to check the "conan install <path> <reference>" command argument
-    conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        class Pkg(ConanFile):
-            def build(self):
-                self.output.info("REF: %s, %s, %s, %s"
-                                 % (self.name, self.version, self.user, self.channel))
-        """)
-    client.save({"conanfile.py": conanfile})
-    client.run(" install . Pkg/0.1@myuser/testing")
-    client.run(" info .")
-    assert "Pkg/0.1@myuser/testing" in client.out
-    client.run("build .")
-    assert "REF: Pkg, 0.1, myuser, testing" in client.out
-
-    # Trying with partial name
-    conanfile = conanfile + "    name = 'Other'\n"
-    client.save({"conanfile.py": conanfile})
-    # passing the wrong package name raises
-    client.run(" install . Pkg/0.1@myuser/testing", assert_error=True)
-    assert "ERROR: Package recipe with name Pkg!=Other" in client.out
-    # Partial reference works
-    client.run(" install . 0.1@myuser/testing")
-    client.run("build .")
-    assert "REF: Other, 0.1, myuser, testing" in client.out
-    # And also full reference matching
-    client.run(" install . Other/0.1@myuser/testing")
-    client.run("build .")
-    assert "REF: Other, 0.1, myuser, testing" in client.out
-
-    # Trying with partial name and version
-    conanfile = conanfile + "    version = '0.2'\n"
-    client.save({"conanfile.py": conanfile})
-    # passing the wrong package name raises
-    client.run(" install . Other/0.1@myuser/testing", assert_error=True)
-    assert "ERROR: Package recipe with version 0.1!=0.2" in client.out
-    # Partial reference works
-    client.run(" install . myuser/testing")
-    client.run("build .")
-    assert "REF: Other, 0.2, myuser, testing" in client.out
-    # And also full reference matching
-    client.run(" install . Other/0.2@myuser/testing")
-    client.run("build .")
-    assert "REF: Other, 0.2, myuser, testing" in client.out
 
 
 def test_four_subfolder_install(client):
@@ -124,7 +62,7 @@ def test_install_transitive_pattern(client):
         from conans import ConanFile
         class Pkg(ConanFile):
             options = {"shared": [True, False, "header"]}
-            default_options = "shared=False"
+            default_options = {"shared": False}
             def package_info(self):
                 self.output.info("PKG OPTION: %s" % self.options.shared)
         """)})
@@ -135,7 +73,7 @@ def test_install_transitive_pattern(client):
         class Pkg(ConanFile):
             requires = "Pkg/0.1@user/testing"
             options = {"shared": [True, False, "header"]}
-            default_options = "shared=False"
+            default_options = {"shared": False}
             def package_info(self):
                 self.output.info("PKG2 OPTION: %s" % self.options.shared)
         """)})
@@ -203,9 +141,8 @@ def test_install_package_folder(client):
                 self.output.info("Hello")
                 self.env_info.PATH = os.path.join(self.package_folder, "bin")
         """)})
-    client.run(" install .")
+    client.run("install .")
     assert "Hello" not in client.out
-    assert "conanfile.py: Generated conaninfo.txt" in client.out
 
 
 def test_install_cwd(client):
@@ -215,14 +152,6 @@ def test_install_cwd(client):
 
     client.run("install . --build=missing -s os_build=Windows --install-folder=win_dir")
     assert "Hello/0.1@lasote/stable from local cache" in client.out
-    client.run("install . --build=missing -s os=Macos -s os_build=Macos "
-               "--install-folder=os_dir")
-    conaninfo = client.load("win_dir/conaninfo.txt")
-    assert "os=Windows" in conaninfo
-    assert "os=Macos" not in conaninfo
-    conaninfo = client.load("os_dir/conaninfo.txt")
-    assert "os=Windows" not in conaninfo
-    assert "os=Macos" in conaninfo
 
 
 def test_install_reference_not_conanbuildinfo(client):
@@ -275,6 +204,7 @@ def test_install_with_path_errors(client):
     assert "Conanfile not found" in client.out
 
 
+@pytest.mark.xfail(reason="cache2.0: TODO: check this case for new cache")
 def test_install_broken_reference(client):
     client.save({"conanfile.py": GenConanfile()})
     client.run("export . Hello/0.1@lasote/stable")
@@ -282,16 +212,18 @@ def test_install_broken_reference(client):
     ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
     # Because the folder is removed, the metadata is removed and the
     # origin remote is lost
-    rmdir(os.path.join(client.cache.package_layout(ref).base_folder()))
+    rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
     client.run("install Hello/0.1@lasote/stable", assert_error=True)
-    assert "ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
+    assert "Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
 
     # If it was associated, it has to be desasociated
     client.run("remote remove_ref Hello/0.1@lasote/stable")
     client.run("install Hello/0.1@lasote/stable", assert_error=True)
-    assert "ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
+    assert "Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
 
 
+@pytest.mark.xfail(reason="cache2.0: outputs building will never be the same because the uuid "
+                          "of the folders")
 def test_install_argument_order(client):
     # https://github.com/conan-io/conan/issues/2520
     conanfile_boost = textwrap.dedent("""
@@ -363,16 +295,16 @@ def test_install_disabled_remote(client):
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload * --confirm --all -r default")
     client.run("remote disable default")
-    client.run("install Pkg/0.1@lasote/testing -r default", assert_error=True)
-    assert "ERROR: Remote 'default' is disabled" in client.out
+    client.run("install Pkg/0.1@lasote/testing -r default")
+    assert "Pkg/0.1@lasote/testing: Already installed!" in client.out
     client.run("remote enable default")
     client.run("install Pkg/0.1@lasote/testing -r default")
     client.run("remote disable default")
     client.run("install Pkg/0.1@lasote/testing --update", assert_error=True)
-    assert "ERROR: Remote 'default' is disabled" in client.out
+    assert "Remote 'default' is disabled" in client.out
 
 
-def test_install_skip_disabled_remote(client):
+def test_install_skip_disabled_remote():
     client = TestClient(servers=OrderedDict({"default": TestServer(),
                                              "server2": TestServer(),
                                              "server3": TestServer()}),
@@ -386,6 +318,17 @@ def test_install_skip_disabled_remote(client):
     client.run("remote disable default")
     client.run("install Pkg/0.1@lasote/testing", assert_error=False)
     assert "Trying with 'default'..." not in client.out
+
+
+def test_install_without_update_fail(client):
+    # https://github.com/conan-io/conan/issues/9183
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . zlib/1.0@")
+    client.run("upload * --confirm --all -r default")
+    client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
+    client.run("remote disable default")
+    client.run("install .")
+    assert "zlib/1.0: Already installed" in client.out
 
 
 def test_install_version_range_reference(client):
@@ -407,3 +350,32 @@ def test_install_error_never(client):
     assert "ERROR: --build=never not compatible with other options" in client.out
     client.run("install ./conanfile.py --build never --build outdated", assert_error=True)
     assert "ERROR: --build=never not compatible with other options" in client.out
+
+
+class TestCliOverride:
+
+    def test_install_cli_override(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/2.0@")
+        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
+        client.run("install . --require-override=zlib/2.0")
+        assert "zlib/2.0: Already installed" in client.out
+
+    def test_install_ref_cli_override(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/1.1@")
+        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
+        client.run("create . pkg/1.0@")
+        client.run("install pkg/1.0@ --require-override=zlib/1.1")
+        assert "zlib/1.1: Already installed" in client.out
+
+    def test_create_cli_override(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/2.0@")
+        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0"),
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
+        client.run("create . pkg/0.1@ --require-override=zlib/2.0")
+        assert "zlib/2.0: Already installed" in client.out

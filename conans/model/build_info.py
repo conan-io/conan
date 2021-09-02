@@ -266,17 +266,6 @@ class _CppInfo(object):
         except KeyError:
             pass
 
-    # Compatibility for 'cppflags' (old style property to allow decoration)
-    def get_cppflags(self):
-        conan_v2_error("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
-        return self.cxxflags
-
-    def set_cppflags(self, value):
-        conan_v2_error("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
-        self.cxxflags = value
-
-    cppflags = property(get_cppflags, set_cppflags)
-
 
 class Component(_CppInfo):
 
@@ -350,17 +339,6 @@ class CppInfo(_CppInfo):
 
     def get_name(self, generator, default_name=True):
         name = super(CppInfo, self).get_name(generator, default_name=default_name)
-
-        # Legacy logic for pkg_config generator
-        from conans.client.generators.pkg_config import PkgConfigGenerator
-        if generator == PkgConfigGenerator.name:
-            fallback = self._name.lower() if self._name != self._ref_name else self._ref_name
-            if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
-                conan_v2_error("Generated file and name for {gen} generator will change in"
-                               " Conan v2 to '{name}'. Use 'self.cpp_info.names[\"{gen}\"]"
-                               " = \"{fallback}\"' in your recipe to continue using current name."
-                               .format(gen=PkgConfigGenerator.name, name=name, fallback=fallback))
-            name = self.names.get(generator, fallback)
         return name
 
     @property

@@ -1,16 +1,16 @@
-import json
 import os
 import re
 import textwrap
 from collections import OrderedDict
 
-import six
 from jinja2 import Template
 
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
+from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration, get_file_name
-from conan.tools.microsoft.toolchain import write_conanvcvars, vs_ide_version
+from conan.tools.files import save_toolchain_args
+from conan.tools.microsoft import VCVars
+from conan.tools.microsoft.visual import vs_ide_version
 from conans.errors import ConanException
 from conans.util.files import load, save
 
@@ -39,11 +39,11 @@ class Variables(OrderedDict):
 
     def quote_preprocessor_strings(self):
         for key, var in self.items():
-            if isinstance(var, six.string_types):
+            if isinstance(var, str):
                 self[key] = '"{}"'.format(var)
         for config, data in self._configuration_types.items():
             for key, var in data.items():
-                if isinstance(var, six.string_types):
+                if isinstance(var, str):
                     data[key] = '"{}"'.format(var)
 
 
@@ -221,6 +221,7 @@ class CppStdBlock(Block):
         message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
+        set(CMAKE_CXX_STANDARD_REQUIRED ON)
         """)
 
     def context(self):
@@ -311,12 +312,14 @@ class AppleSystemBlock(Block):
         {% if CMAKE_SYSTEM_VERSION is defined %}
         set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
         {% endif %}
-        set(DEPLOYMENT_TARGET ${CONAN_SETTINGS_HOST_MIN_OS_VERSION})
         # Set the architectures for which to build.
         set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }} CACHE STRING "" FORCE)
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
         # but full path is necessary for others
         set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
+        {% if CMAKE_OSX_DEPLOYMENT_TARGET is defined %}
+        set(CMAKE_OSX_DEPLOYMENT_TARGET {{ CMAKE_OSX_DEPLOYMENT_TARGET }})
+        {% endif %}
         """)
 
     def _get_architecture(self):
@@ -356,9 +359,6 @@ class AppleSystemBlock(Block):
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
 
-        # TODO: Discuss how to handle CMAKE_OSX_DEPLOYMENT_TARGET to set min-version
-        #       add a setting? check an option and if not present set a default?
-        #       default to os.version?
         ctxt_toolchain = {}
         if host_sdk_name:
             ctxt_toolchain["CMAKE_OSX_SYSROOT"] = host_sdk_name
@@ -368,6 +368,12 @@ class AppleSystemBlock(Block):
         if os_ in ('iOS', "watchOS", "tvOS"):
             ctxt_toolchain["CMAKE_SYSTEM_NAME"] = os_
             ctxt_toolchain["CMAKE_SYSTEM_VERSION"] = host_os_version
+
+        if host_os_version:
+            # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_DEPLOYMENT_TARGET.html
+            # Despite the OSX part in the variable name(s) they apply also to other SDKs than
+            # macOS like iOS, tvOS, or watchOS.
+            ctxt_toolchain["CMAKE_OSX_DEPLOYMENT_TARGET"] = host_os_version
 
         return ctxt_toolchain
 
@@ -482,6 +488,8 @@ class GenericSystemBlock(Block):
         """)
 
     def _get_toolset(self, generator):
+        if generator is None or ("Visual" not in generator and "Xcode" not in generator):
+            return None
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
         compiler_base = settings.get_safe("compiler.base")
@@ -544,7 +552,8 @@ class GenericSystemBlock(Block):
             arch_build = settings_build.get_safe("arch")
 
             if system_name is None:  # Try to deduce
-                if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS'):  # Handled by AppleBlock
+                # Handled by AppleBlock, or AndroidBlock, not here
+                if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS', 'Android'):
                     cmake_system_name_map = {"Neutrino": "QNX",
                                              "": "Generic",
                                              None: "Generic"}
@@ -557,8 +566,7 @@ class GenericSystemBlock(Block):
                             system_name = cmake_system_name_map.get(os_, os_)
 
             if system_name is not None and system_version is None:
-                os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
-                system_version = settings.get_safe(os_ver_str)
+                system_version = settings.get_safe("os.version")
 
             if system_name is not None and system_processor is None:
                 if arch != arch_build:
@@ -695,6 +703,8 @@ class CMakeToolchain(object):
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock)])
 
+        check_using_build_profile(self._conanfile)
+
     def _context(self):
         """ Returns dict, the context for the template
         """
@@ -722,7 +732,7 @@ class CMakeToolchain(object):
             save(self.filename, self.content)
         # Generators like Ninja or NMake requires an active vcvars
         if self.generator is not None and "Visual" not in self.generator:
-            write_conanvcvars(self._conanfile)
+            VCVars(self._conanfile).generate()
         self._writebuild(toolchain_file)
 
     def _writebuild(self, toolchain_file):
@@ -734,7 +744,7 @@ class CMakeToolchain(object):
         result["cmake_toolchain_file"] = toolchain_file or self.filename
 
         if result:
-            save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(result))
+            save_toolchain_args(result)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

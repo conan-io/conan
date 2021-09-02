@@ -3,188 +3,49 @@ import os
 import textwrap
 import unittest
 
-from parameterized.parameterized import parameterized
+import pytest
 
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 class CreateTest(unittest.TestCase):
 
     def test_dependencies_order_matches_requires(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-from conans.tools import save
-import os
-class Pkg(ConanFile):
-    def package(self):
-        save(os.path.join(self.package_folder, "include/file.h"), "//file")
-    def package_info(self):
-        self.cpp_info.libs = ["Lib%s"]
-"""
-        client.save({"conanfile.py": conanfile % "A"})
+        save(client.cache.default_profile_path, "")
+        save(client.cache.settings_path, "build_type: [Release, Debug]\narch: [x86]")
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . PkgA/0.1@user/testing")
-        client.save({"conanfile.py": conanfile % "B"})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . PkgB/0.1@user/testing")
-        conanfile = """[requires]
-PkgB/0.1@user/testing
-PkgA/0.1@user/testing"""
+        conanfile = textwrap.dedent("""
+            [requires]
+            PkgB/0.1@user/testing
+            PkgA/0.1@user/testing
+            """)
         client.save({"conanfile.txt": conanfile}, clean_first=True)
-        client.run("install . -g txt -g cmake")
-        text = client.load("conanbuildinfo.txt")
-        txt = ";".join(text.splitlines())
-        self.assertIn("[libs];LibB;LibA", txt)
-        cmake = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS LibB LibA ${CONAN_LIBS})", cmake)
-
-    def test_can_override_even_versions_with_build_metadata(self):
-        # https://github.com/conan-io/conan/issues/5900
-
-        client = TestClient()
-        client.save({"conanfile.py":
-                    GenConanfile().with_name("libcore").with_version("1.0+abc")})
-        client.run("create .")
-        client.save({"conanfile.py":
-                    GenConanfile().with_name("libcore").with_version("1.0+xyz")})
-        client.run("create .")
-
-        client.save({"conanfile.py":
-                    GenConanfile().with_name("intermediate").
-                    with_version("1.0").with_require("libcore/1.0+abc")})
-        client.run("create .")
-
-        client.save({"conanfile.py":
-                    GenConanfile().with_name("consumer").
-                    with_version("1.0").with_require("intermediate/1.0").
-                    with_require("libcore/1.0+xyz")})
-        client.run("create .")
-        self.assertIn("WARN: intermediate/1.0: requirement libcore/1.0+abc "
-                      "overridden by consumer/1.0 to libcore/1.0+xyz", client.out)
+        client.run("install . -g MSBuildDeps -s build_type=Release -s arch=x86")
+        conandeps = client.load("conandeps.props")
+        assert conandeps.find("PkgB") < conandeps.find("PkgA")
 
     def test_transitive_same_name(self):
         # https://github.com/conan-io/conan/issues/1366
         client = TestClient()
-        conanfile = GenConanfile().with_name("HelloBar").with_version("0.1")
-        test_package = '''
-from conans import ConanFile
-
-class HelloTestConan(ConanFile):
-    requires = "HelloBar/0.1@lasote/testing"
-    def test(self):
-        pass
-'''
-        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
+        client.save({"conanfile.py": GenConanfile("HelloBar", "0.1"),
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . lasote/testing")
-        self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                      client.out)
-        conanfile = GenConanfile().with_name("Hello").with_version("0.1")\
-                                  .with_require("HelloBar/0.1@lasote/testing")
+        self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source", client.out)
+
+        conanfile = GenConanfile("Hello", "0.1").with_require("HelloBar/0.1@lasote/testing")
         client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . lasote/stable")
-        self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                         client.out)
+        self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source", client.out)
 
-    @parameterized.expand([(True, ), (False, )])
-    def test_keep_build(self, with_test):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class MyPkg(ConanFile):
-                exports_sources = "*.h"
-                def source(self):
-                    self.output.info("mysource!!")
-                def build(self):
-                    self.output.info("mybuild!!")
-                def package(self):
-                    self.output.info("mypackage!!")
-                    self.copy("*.h")
-            """)
-        if with_test:
-            client.save({"conanfile.py": conanfile,
-                         "header.h": "",
-                         "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        else:
-            client.save({"conanfile.py": conanfile,
-                         "header.h": ""})
-
-        client.run("create . Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h",
-                      client.out)
-        # keep the source
-        client.save({"conanfile.py": conanfile + " "})
-        client.run("create . Pkg/0.1@lasote/testing --keep-source")
-        self.assertIn("A new conanfile.py version was exported", client.out)
-        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h",
-                      client.out)
-        # keep build
-        client.run("create . Pkg/0.1@lasote/testing --keep-build")
-        self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build",
-                      client.out)
-        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
-        self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h",
-                      client.out)
-
-        # Changes in the recipe again
-        client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@lasote/testing --keep-build")
-        # The source folder is removed, but not necessary, as it will reuse build
-        self.assertNotIn("Pkg/0.1@lasote/testing: Removing 'source' folder", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build",
-                      client.out)
-        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
-        self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h",
-                      client.out)
-
-    def test_keep_build_error(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . Pkg/0.1@lasote/testing --keep-build", assert_error=True)
-        self.assertIn("ERROR: --keep-build specified, but build folder not found", client.out)
-
-    def test_keep_build_package_folder(self):
-        """
-        Package folder should be deleted always before a new conan create command, even with
-        --keep-build
-        """
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class MyPkg(ConanFile):
-                exports_sources = "*.h", "*.cpp"
-                def package(self):
-                    self.copy("*.h")
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "header.h": "",
-                     "source.cpp": ""})
-        client.run("create . pkg/0.1@danimtb/testing")
-        ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_files = os.listdir(client.cache.package_layout(pref.ref).package(pref))
-        self.assertIn("header.h", package_files)
-        self.assertNotIn("source.cpp", package_files)
-        client.save({"conanfile.py": conanfile.replace("self.copy(\"*.h\")",
-                                                       "self.copy(\"*.cpp\")")})
-        client.run("create . pkg/0.1@danimtb/testing -kb")
-        package_files = os.listdir(client.cache.package_layout(pref.ref).package(pref))
-        self.assertNotIn("header.h", package_files)
-        self.assertIn("source.cpp", package_files)
-
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
@@ -213,7 +74,8 @@ class MyPkg(ConanFile):
         self.output.info("Running system requirements!!")
 """})
         client.run("create . Pkg/0.1@lasote/testing")
-        self.assertIn("Configuration:[settings]", "".join(str(client.out).splitlines()))
+        self.assertIn("Configuration (profile_host):[settings]",
+                      "".join(str(client.out).splitlines()))
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("Running system requirements!!", client.out)
         client.run("search")
@@ -227,6 +89,7 @@ class MyPkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_name_command_line(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
@@ -261,31 +124,7 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
-    def test_create_werror(self):
-        client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-        """})
-        client.run("export . LibA/0.1@user/channel")
-        client.run("export conanfile.py LibA/0.2@user/channel")
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "LibA/0.1@user/channel"
-        """})
-        client.run("export ./ LibB/0.1@user/channel")
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "LibA/0.2@user/channel"
-        """})
-        client.run("export . LibC/0.1@user/channel")
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
-    requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
-        """})
-        client.run("create ./conanfile.py Consumer/0.1@lasote/testing", assert_error=True)
-        self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
-                      client.out)
+
 
     def test_error_create_name_version(self):
         client = TestClient()
@@ -296,6 +135,7 @@ class Pkg(ConanFile):
         client.run("create . Hello/1.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=1.2", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
@@ -308,6 +148,7 @@ class Pkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_in_subfolder(self):
         client = TestClient()
         client.save({"subfolder/conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
@@ -316,6 +157,7 @@ class Pkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_in_subfolder_with_different_name(self):
         # Now with a different name
         client = TestClient()
@@ -359,12 +201,9 @@ class MyPkg(ConanFile):
         for r in self.requires.values():
             self.output.info("build() Requires: %s" % str(r.ref))
         import os
-        for dep in self.deps_cpp_info.deps:
+        for dep in self.dependencies.host.values():
             self.output.info("build() cpp_info dep: %s" % dep)
-        self.output.info("build() cpp_info: %s"
-                         % os.path.basename(self.deps_cpp_info["Pkg"].includedirs[0]))
-        self.output.info("build() cpp_info: %s"
-                         % os.path.basename(self.deps_cpp_info["Dep"].includedirs[0]))
+
     def test(self):
         pass
         """
@@ -373,8 +212,7 @@ class MyPkg(ConanFile):
                      "test_package/conanfile.py": test_conanfile})
 
         client.run("create . Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info: include",
-                      client.out)
+
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
                       "Requires: Other/1.0@user/channel", client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
@@ -453,10 +291,10 @@ class MyPkg(ConanFile):
             """)
         client.save({"conanfile.py": conanfile})
         ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
         client.run("create . %s" % ref.full_str(), assert_error=True)
+        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertIn("Build error", client.out)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        package_folder = client.get_latest_pkg_layout(pref).package()
         self.assertFalse(os.path.exists(package_folder))
 
     def test_create_with_name_and_version(self):
@@ -505,15 +343,18 @@ class MyPkg(ConanFile):
         client.run("create .")
 
         ref = ConanFileReference.loads("Bye/0.1")
-        packages_folder = client.cache.package_layout(ref).packages()
-        p_folder = os.path.join(packages_folder, os.listdir(packages_folder)[0])
-        conaninfo = load(os.path.join(p_folder, "conaninfo.txt"))
+
+        refs = client.cache.get_latest_rrev(ref)
+        pkgs = client.cache.get_package_ids(refs)
+        prev = client.cache.get_latest_prev(pkgs[0])
+        package_folder = client.cache.pkg_layout(prev).package()
+
+        conaninfo = load(os.path.join(package_folder, "conaninfo.txt"))
         # The user and channel nor None nor "_/" appears in the conaninfo
         self.assertNotIn("None", conaninfo)
         self.assertNotIn("_/", conaninfo)
         self.assertNotIn("/_", conaninfo)
-        self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
-                      conaninfo)
+        self.assertIn("[requires]\n    Hello/0.1\n", conaninfo)
 
     def test_compoents_json_output(self):
         self.client = TestClient()

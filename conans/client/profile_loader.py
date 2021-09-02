@@ -1,10 +1,13 @@
 import os
+import platform
 from collections import OrderedDict, defaultdict
+
+from jinja2 import Environment, FileSystemLoader
 
 from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException, ConanV2Exception
 from conans.model.conf import ConfDefinition
-from conans.model.env_info import EnvValues, unquote
+from conans.model.env_info import unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
@@ -95,7 +98,7 @@ class ProfileValueParser(object):
         settings, package_settings = ProfileValueParser._parse_settings(doc)
         options = OptionsValues.loads(doc.options) if doc.options else None
         build_requires = ProfileValueParser._parse_build_requires(doc)
-        env_values = EnvValues.loads(doc.env)
+
         if doc.conf:
             conf = ConfDefinition()
             conf.loads(doc.conf, profile=True)
@@ -112,13 +115,6 @@ class ProfileValueParser(object):
             base_profile.build_requires.setdefault(pattern, []).extend(refs)
         if options is not None:
             base_profile.options.update(options)
-
-        # The env vars from the current profile (read in doc)
-        # are updated with the included profiles (base_profile)
-        # the current env values has priority
-        if env_values:
-            env_values.update(base_profile.env_values)
-            base_profile.env_values = env_values
 
         if conf is not None:
             base_profile.conf.update_conf_definition(conf)
@@ -207,6 +203,14 @@ def read_profile(profile_name, cwd, default_folder):
     logger.debug("PROFILE LOAD: %s" % profile_path)
     text = load(profile_path)
 
+    if profile_name.endswith(".jinja"):
+        base_path = os.path.dirname(profile_path)
+        context = {"platform": platform,
+                   "os": os,
+                   "profile_dir": base_path}
+        rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+        text = rtemplate.render(context)
+
     try:
         return _load_profile(text, profile_path, default_folder)
     except ConanV2Exception:
@@ -228,7 +232,7 @@ def _load_profile(text, profile_path, default_folder):
         for include in profile_parser.get_includes():
             # Recursion !!
             profile, included_vars = read_profile(include, cwd, default_folder)
-            inherited_profile.compose(profile)
+            inherited_profile.compose_profile(profile)
             profile_parser.update_vars(included_vars)
 
         # Apply the automatic PROFILE_DIR variable
@@ -259,12 +263,12 @@ def profile_from_args(profiles, settings, options, env, conf, cwd, cache):
         result = Profile()
         for p in profiles:
             tmp, _ = read_profile(p, cwd, cache.profiles_path)
-            result.compose(tmp)
+            result.compose_profile(tmp)
 
     args_profile = _profile_parse_args(settings, options, env, conf)
 
     if result:
-        result.compose(args_profile)
+        result.compose_profile(args_profile)
     else:
         result = args_profile
     return result
@@ -301,23 +305,11 @@ def _profile_parse_args(settings, options, envs, conf):
                 simple_items.append((name, value))
         return simple_items, package_items
 
-    def _get_env_values(_env, _package_env):
-        _env_values = EnvValues()
-        for name, value in _env:
-            _env_values.add(name, EnvValues.load_value(value))
-        for package, data in _package_env.items():
-            for name, value in data:
-                _env_values.add(name, EnvValues.load_value(value), package)
-        return _env_values
-
     options = _get_tuples_list_from_extender_arg(options)
-    env, package_env = _get_simple_and_package_tuples(envs)
-    env_values = _get_env_values(env, package_env)
     settings, package_settings = _get_simple_and_package_tuples(settings)
 
     result = Profile()
     result.options = OptionsValues(options)
-    result.env_values = env_values
     result.settings = OrderedDict(settings)
     if conf:
         result.conf = ConfDefinition()

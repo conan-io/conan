@@ -47,6 +47,7 @@ class ProfileTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    @pytest.mark.xfail(reason="New environment changed")
     def test_profile_conanfile_txt(self):
         """
         Test prepended env variables are applied correctrly from a profile
@@ -80,6 +81,7 @@ class ProfileTest(unittest.TestCase):
                           "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
         self.client.run("create . conan/testing --profile myprofile")
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
@@ -166,6 +168,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("ERROR: Profile not found:", self.client.out)
         self.assertIn("scopes_env", self.client.out)
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_install_profile_env(self):
         create_profile(self.client.cache.profiles_path, "envs", settings={},
@@ -218,13 +221,13 @@ class ProfileTest(unittest.TestCase):
         self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . lasote/stable")
         self.client.run("install . --build missing -pr vs_12_86")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         for setting, value in profile_settings.items():
             self.assertIn("%s=%s" % (setting, value), info)
 
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86 -s compiler.version=14")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         for setting, value in profile_settings.items():
             if setting != "compiler.version":
                 self.assertIn("%s=%s" % (setting, value), info)
@@ -242,7 +245,7 @@ class ProfileTest(unittest.TestCase):
                        package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         self.assertIn("compiler=gcc", info)
         self.assertIn("compiler.libcxx=libstdc++11", info)
 
@@ -251,11 +254,6 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.cache.profiles_path,
                        "vs_12_86_Hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
-        # Try to override some settings in install command
-        self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
-        info = self.client.load("conaninfo.txt")
-        self.assertIn("compiler=Visual Studio", info)
-        self.assertNotIn("compiler.libcxx", info)
 
         # Mix command line package settings with profile
         package_settings = {"Hello0": tmp_settings}
@@ -265,13 +263,24 @@ class ProfileTest(unittest.TestCase):
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc"
                         " -s compiler.version=14 -s Hello0:compiler.libcxx=libstdc++")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         self.assertIn("compiler=gcc", info)
         self.assertNotIn("compiler.libcxx=libstdc++11", info)
         self.assertIn("compiler.libcxx=libstdc++", info)
 
     def test_install_profile_package_settings(self):
-        self.client.save({"conanfile.py": conanfile_scope_env})
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class HelloConan(ConanFile):
+                name = 'Hello0'
+                version = '0.1'
+                settings = "os", "compiler", "arch", "build_type"
+                def configure(self):
+                    self.output.info(self.settings.compiler)
+                    self.output.info(self.settings.compiler.version)
+            """)
+        self.client.save({"conanfile.py": conanfile})
 
         # Create a profile and use it
         profile_settings = OrderedDict([("os", "Windows"),
@@ -291,10 +300,9 @@ class ProfileTest(unittest.TestCase):
                         package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . lasote/testing -pr myprofile")
-        info = self.client.load("conaninfo.txt")
-        self.assertIn("compiler=gcc", info)
-        self.assertIn("compiler.libcxx=libstdc++11", info)
-        self.assertIn("compiler.version=4.8", info)
+        info = self.client.out
+        self.assertIn("(Hello0/0.1@lasote/testing): gcc", info)
+        self.assertIn("(Hello0/0.1@lasote/testing): 4.8", info)
 
         package_settings = {"*@other/*": tmp_settings}
         _create_profile(self.client.cache.profiles_path,
@@ -302,12 +310,11 @@ class ProfileTest(unittest.TestCase):
                         package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . lasote/testing -pr myprofile")
-        info = self.client.load("conaninfo.txt")
-        self.assertIn("compiler=Visual Studio", info)
-        self.assertIn("compiler.runtime=MD", info)
-        self.assertIn("compiler.version=12", info)
-        self.assertNotIn("gcc", info)
-        self.assertNotIn("libcxx", info)
+        info = self.client.out
+        self.assertIn("(Hello0/0.1@lasote/testing): Visual Studio", info)
+        self.assertIn("(Hello0/0.1@lasote/testing): 12", info)
+        self.assertNotIn("(Hello0/0.1@lasote/testing): gcc", info)
+        self.assertNotIn("(Hello0/0.1@lasote/testing): 4.8", info)
 
     def test_package_settings_no_user_channel(self):
         conanfile = textwrap.dedent("""
@@ -342,10 +349,11 @@ class ProfileTest(unittest.TestCase):
         self.client.save({"conanfile.py": GenConanfile("Hello0", "1").with_option("language", [1, 2])
                           .with_option("static", [True, False])})
         self.client.run("install . --build missing -pr vs_12_86")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         self.assertIn("language=1", info)
         self.assertIn("static=False", info)
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_scopes_env(self):
         # Create a profile and use it
@@ -362,6 +370,7 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_default_including_another_profile(self):
         p1 = "include(p2)\n[env]\nA_VAR=1"
@@ -379,6 +388,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("create . user/testing")
         self._assert_env_variable_printed("A_VAR", "1")
 
+    @pytest.mark.xfail(reason="New environment changed")
     @pytest.mark.tool_compiler
     def test_test_package(self):
         test_conanfile = '''from conans.model.conan_file import ConanFile
@@ -389,7 +399,7 @@ class DefaultNameConan(ConanFile):
     name = "DefaultName"
     version = "0.1"
     settings = "os", "compiler", "arch", "build_type"
-    requires = "Hello0/0.1@lasote/stable"
+    generators = "VirtualBuildEnv"
 
     def build(self):
         # Print environment vars
@@ -467,9 +477,9 @@ class DefaultNameConan(ConanFile):
     version = "0.1"
     settings = "os", "compiler", "arch", "build_type"
 
-    def config(self):
+    def requirements(self):
         if self.settings.os == "Windows":
-            self.requires.add("WinRequire/0.1@lasote/stable")
+            self.requires("WinRequire/0.1@lasote/stable")
 
 '''
         files = {"conanfile.py": conanfile}
@@ -547,8 +557,8 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.save({CONANFILE: self.conanfile,
                           "profile1": self.profile1, "profile2": self.profile2})
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
-
         # The latest declared profile has priority
         self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
         self.assertIn(dedent("""
@@ -561,19 +571,14 @@ class ProfileAggregationTest(unittest.TestCase):
         self.assertIn("arch: x86", self.client.out)
 
     def test_info(self):
-
         # The latest declared profile has priority
         self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
 
         self.client.save({CONANFILE: self.consumer})
         self.client.run("info . --profile profile1 --profile profile2")
-        self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
+        self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
 
-        # Build order
-        self.client.run("info . --profile profile1 --profile profile2 "
-                        "--build-order lib/1.0@user/channel")
-        self.assertIn("[lib/1.0@user/channel]", self.client.out)
-
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_install(self):
         self.client.run("export . lib/1.0@user/channel")
         # Install ref
@@ -601,7 +606,7 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_export_pkg(self):
         self.client.run("export-pkg . lib/1.0@user/channel -pr profile1 -pr profile2")
         # ID for the expected settings applied: x86, Visual Studio 15,...
-        self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
+        self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
 
     def test_profile_crazy_inheritance(self):
         profile1 = dedent("""
@@ -621,7 +626,7 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.save({"profile1": profile1, "profile2": profile2})
         self.client.run("create . lib/1.0@user/channel --profile profile2 -pr profile1")
         self.assertIn(dedent("""
-                             Configuration:
+                             Configuration (profile_host):
                              [settings]
                              arch=x86_64
                              compiler=Visual Studio
@@ -681,3 +686,108 @@ def test_profile_from_temp_absolute_path():
     recipe_path = os.path.join(client.current_folder, "current", "conanfile.txt")
     client.run('install "{}" -pr="{}"'.format(recipe_path, profile_path))
     assert "os=AIX" in client.out
+
+
+def test_consumer_specific_settings():
+    client = TestClient()
+    dep = str(GenConanfile().with_settings("build_type"))
+    configure = """
+    def configure(self):
+        self.output.warn("I'm {} and my build type is {}".format(self.name,
+                                                                 self.settings.build_type))
+    """
+    dep += configure
+    client.save({"conanfile.py": dep})
+    client.run("create . dep/1.0@")
+    client.run("create . dep/1.0@ -s build_type=Debug")
+
+    consumer = str(GenConanfile().with_settings("build_type").with_requires("dep/1.0"))
+    consumer += configure
+    client.save({"conanfile.py": consumer})
+
+    # Regular install with release
+    client.run("install . -s build_type=Release")
+    assert "I'm dep and my build type is Release" in client.out
+    assert "I'm None and my build type is Release" in client.out
+
+    # Now the dependency by name
+    client.run("install . -s dep:build_type=Debug")
+    assert "I'm dep and my build type is Debug" in client.out
+    assert "I'm None and my build type is Release" in client.out
+
+    # Now the consumer using &
+    client.run("install . -s &:build_type=Debug")
+    assert "I'm dep and my build type is Release" in client.out
+    assert "I'm None and my build type is Debug" in client.out
+
+    # Now use a conanfile.txt
+    client.save({"conanfile.txt": textwrap.dedent("""
+            [requires]
+            dep/1.0
+    """)}, clean_first=True)
+
+    # Regular install with release
+    client.run("install . -s build_type=Release")
+    assert "I'm dep and my build type is Release" in client.out
+
+    # Now the dependency by name
+    client.run("install . -s dep:build_type=Debug")
+    assert "I'm dep and my build type is Debug" in client.out
+
+    # Test that the generators take the setting
+    if platform.system() != "Windows":  # Toolchain in windows is multiconfig
+        # Now the consumer using &
+        client.run("install . -s &:build_type=Debug  -g CMakeToolchain")
+        assert "I'm dep and my build type is Release" in client.out
+        # Verify the cmake toolchain takes Debug
+        contents = client.load("conan_toolchain.cmake")
+        assert 'set(CMAKE_BUILD_TYPE "Debug"' in contents
+
+
+def test_create_and_priority_of_consumer_specific_setting():
+    client = TestClient()
+    conanfile = str(GenConanfile().with_settings("build_type").with_name("foo").with_version("1.0"))
+    configure = """
+    def configure(self):
+        self.output.warn("I'm {} and my build type is {}".format(self.name,
+                                                                 self.settings.build_type))
+    """
+    conanfile += configure
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s foo:build_type=Debug")
+    assert "I'm foo and my build type is Debug" in client.out
+
+    client.run("create . -s foo:build_type=Debug -s &:build_type=Release")
+    assert "I'm foo and my build type is Release" in client.out
+
+    # The order doesn't matter
+    client.run("create . -s &:build_type=Release -s foo:build_type=Debug ")
+    assert "I'm foo and my build type is Release" in client.out
+
+    # With test_package also works
+    test = str(GenConanfile().with_test("pass").with_setting("build_type"))
+    test += configure
+    client.save({"test_package/conanfile.py": test})
+    client.run("create . -s &:build_type=Debug -s build_type=Release")
+    assert "I'm foo and my build type is Debug" in client.out
+    # the test package recipe has debug too
+    assert "I'm None and my build type is Debug" in client.out
+
+
+def test_consumer_specific_settings_from_profile():
+    client = TestClient()
+    conanfile = str(GenConanfile().with_settings("build_type").with_name("hello"))
+    configure = """
+    def configure(self):
+        self.output.warn("I'm {} and my build type is {}".format(self.name,
+                                                                 self.settings.build_type))
+    """
+    conanfile += configure
+    profile = textwrap.dedent("""
+        include(default)
+        [settings]
+        &:build_type=Debug
+    """)
+    client.save({"conanfile.py": conanfile, "my_profile.txt": profile})
+    client.run("install . --profile my_profile.txt")
+    assert "I'm hello and my build type is Debug" in client.out

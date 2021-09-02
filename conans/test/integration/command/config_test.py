@@ -1,9 +1,7 @@
 import json
 import os
-import pytest
 
 
-from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save_append
@@ -141,7 +139,7 @@ def test_config_home_default():
     client.run("config home")
     assert client.cache.cache_folder in client.out
     client.run("config home --json home.json")
-    _assert_dict_subset({"home": client.cache.cache_folder},json.loads(client.load("home.json")))
+    _assert_dict_subset({"home": client.cache.cache_folder}, json.loads(client.load("home.json")))
 
 
 def test_config_home_custom_home_dir():
@@ -165,27 +163,6 @@ def test_config_home_custom_install():
         client.save({"conanfile.py": GenConanfile()})
         client.run("install .")
         assert "conanfile.py: Installing package" in client.out
-
-
-def test_config_home_short_home_dir():
-    """ conan home MUST no be a conan cache sub folder
-    """
-    cache_folder = os.path.join(temp_folder(), "custom")
-    with environment_append({"CONAN_USER_HOME_SHORT": cache_folder}):
-        with pytest.raises(ConanException) as excinfo:
-            TestClient(cache_folder=cache_folder)
-            assert "cannot be a subdirectory of the conan cache" in str(excinfo.value)
-
-
-def test_config_home_short_home_dir_contains_cache_dir():
-    """ short path property for home MUST be equals to CONAN_USER_HOME_SHORT
-        https://github.com/conan-io/conan/issues/6273
-    """
-    cache_folder = os.path.join(temp_folder(), "custom")
-    short_path_home_folder = cache_folder + '_short'
-    with environment_append({"CONAN_USER_HOME_SHORT": short_path_home_folder}):
-        client = TestClient(cache_folder=cache_folder)
-        assert client.cache.config.short_paths_home == short_path_home_folder
 
 
 def test_init():

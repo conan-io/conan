@@ -48,10 +48,9 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         scm_data, _ = _capture_scm_auto_fields(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
-            package_layout=None,
+            recipe_layout=None,
             output=output,
-            ignore_dirty=True,
-            scm_to_conandata=False)
+            ignore_dirty=True)
 
         self.assertEqual(scm_data.url, url)
         self.assertEqual(scm_data.revision, self.rev)
@@ -75,10 +74,9 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         scm_data, _ = _capture_scm_auto_fields(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
-            package_layout=None,
+            recipe_layout=None,
             output=output,
-            ignore_dirty=False,
-            scm_to_conandata=False)
+            ignore_dirty=False)
 
         self.assertEqual(scm_data.url, url)
         if is_pristine:
@@ -105,10 +103,9 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         scm_data, _ = _capture_scm_auto_fields(
                     conanfile=conanfile,
                     conanfile_dir=self.conanfile_dir,
-                    package_layout=None,
+                    recipe_layout=None,
                     output=output,
-                    ignore_dirty=True,
-                    scm_to_conandata=False)
+                    ignore_dirty=True)
 
         self.assertEqual(scm_data.url, url)
         self.assertEqual(scm_data.revision, self.rev)

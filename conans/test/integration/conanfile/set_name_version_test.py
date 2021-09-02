@@ -4,7 +4,7 @@ import unittest
 
 from parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import mkdir
 
 
@@ -27,10 +27,10 @@ class SetVersionNameTest(unittest.TestCase):
                       client.out)
         # installing it doesn't break
         client.run("install pkg/2.1%s --build=missing" % (user_channel or "@"))
-        self.assertIn("pkg/2.1%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build" % user_channel,
+        self.assertIn(f"pkg/2.1%s:{NO_SETTINGS_PACKAGE_ID} - Build" % user_channel,
                       client.out)
         client.run("install pkg/2.1%s --build=missing" % (user_channel or "@"))
-        self.assertIn("pkg/2.1%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" % user_channel,
+        self.assertIn(f"pkg/2.1%s:{NO_SETTINGS_PACKAGE_ID} - Cache" % user_channel,
                       client.out)
 
         # Local flow should also work
@@ -53,10 +53,10 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("export . user/testing")
         self.assertIn("pkg/2.1@user/testing: A new conanfile.py version was exported", client.out)
         client.run("install pkg/2.1@user/testing --build=missing")
-        self.assertIn("pkg/2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+        self.assertIn(f"pkg/2.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Build",
                       client.out)
         client.run("install pkg/2.1@user/testing")
-        self.assertIn("pkg/2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+        self.assertIn(f"pkg/2.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Cache",
                       client.out)
         # Local flow should also work
         client.run("install .")
@@ -131,37 +131,6 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("export .", assert_error=True)
         self.assertIn("ERROR: conanfile.py: Error in set_version() method, line 5", client.out)
         self.assertIn("name 'error' is not defined", client.out)
-
-    def test_set_version_recipe_folder(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile, load
-            class Lib(ConanFile):
-                name = "pkg"
-                def set_version(self):
-                    self.version = load(os.path.join(self.recipe_folder, "version.txt"))
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "version.txt": "2.1"})
-        mkdir(os.path.join(client.current_folder, "build"))
-        with client.chdir("build"):
-            client.run("export .. user/testing")
-            self.assertIn("pkg/2.1@user/testing: A new conanfile.py version was exported",
-                          client.out)
-
-        # This is reusable with python_requires too
-        reuse = textwrap.dedent("""
-            from conans import python_requires
-            tool = python_requires("pkg/2.1@user/testing")
-            class Consumer(tool.Lib):
-                name = "consumer"
-            """)
-        client2 = TestClient(cache_folder=client.cache_folder)
-        client2.save({"conanfile.py": reuse,
-                      "version.txt": "8.3"})
-        client2.run("export .")
-        self.assertIn("consumer/8.3: A new conanfile.py version was exported", client2.out)
 
     def test_set_version_cwd(self):
         client = TestClient()
