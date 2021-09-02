@@ -99,7 +99,7 @@ def test_cpp_info_component_objects():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@ -s arch=x86_64 -s build_type=Release")
-    client.run(f"install hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release -if '{client.current_folder}'")
+    client.run("install hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release -if '{}'".format(client.current_folder))
     with open(os.path.join(client.current_folder, "helloTarget-release.cmake")) as f:
         content = f.read()
         assert """set_property(TARGET hello::say PROPERTY INTERFACE_LINK_LIBRARIES
