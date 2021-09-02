@@ -27,8 +27,11 @@ class TargetsTemplate(CMakeDepsFileTemplate):
 
         ret = {"pkg_name": self.pkg_name,
                "target_namespace": self.target_namespace,
+               "global_target_name": self.global_target_name,
+               "file_name": self.file_name,
                "data_pattern": data_pattern,
                "target_pattern": target_pattern}
+
         return ret
 
     @property
@@ -50,9 +53,9 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             endif()
         endforeach()
 
-        if(NOT TARGET {{ target_namespace }}::{{ target_namespace }})
-            add_library({{ target_namespace }}::{{ target_namespace }} INTERFACE IMPORTED)
-            conan_message(STATUS "Conan: Target declared '{{ target_namespace }}::{{ target_namespace }}'")
+        if(NOT TARGET {{ target_namespace }}::{{ global_target_name }})
+            add_library({{ target_namespace }}::{{ global_target_name }} INTERFACE IMPORTED)
+            conan_message(STATUS "Conan: Target declared '{{ target_namespace }}::{{ global_target_name }}'")
         endif()
 
         # Load the debug and release library finders
