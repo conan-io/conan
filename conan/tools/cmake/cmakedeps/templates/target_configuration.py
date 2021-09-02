@@ -44,7 +44,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             "$<$<COMPILE_LANGUAGE:C>{{ ':${' }}{{ pkg_name }}_COMPILE_OPTIONS_C{{ config_suffix }}}>")
 
         set({{ pkg_name }}_LINKER_FLAGS{{ config_suffix }}
-            "{{ '${' }}{{ pkg_name }}_OBJECTS{{ config_suffix }}}"
             "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
             "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>"
             "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>")
@@ -110,7 +109,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set_property(TARGET {{target_namespace}}::{{target_namespace}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
-                                                   ${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
+                                                   ${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}
+                                                   ${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}> APPEND)
         set_property(TARGET {{target_namespace}}::{{target_namespace}}
                      PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
@@ -128,7 +128,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
         set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config_suffix)}}
-                     {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', config_suffix)}}> APPEND)
+                     {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', config_suffix)}}
+                     {{tvalue(pkg_name, comp_name, 'OBJECTS', config_suffix)}}> APPEND)
         set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config_suffix)}}> APPEND)
         set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS

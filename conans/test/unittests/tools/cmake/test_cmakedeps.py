@@ -132,6 +132,7 @@ def test_cmake_deps_links_flags():
         assert "set(mypkg_EXE_LINK_FLAGS_RELEASE -OPT:NOICF)" in data_cmake
         assert 'set(mypkg_OBJECTS_RELEASE "/path/to/myobject.o")' in data_cmake
 
+
 def test_component_name_same_package():
     """
     When the package and the component are the same the variables declared in data and linked

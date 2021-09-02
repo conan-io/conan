@@ -100,7 +100,9 @@ def test_cpp_info_component_objects():
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@ -s arch=x86_64 -s build_type=Release")
     client.run("install hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
-    with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
+    with open(os.path.join(client.current_folder, "helloTarget-release.cmake")) as f:
         content = f.read()
-        assert """set(hello_say_LINKER_FLAGS_RELEASE
-        \"/path/to/mycomponent.o\"""" in content
+        assert """set_property(TARGET hello::say PROPERTY INTERFACE_LINK_LIBRARIES
+             $<$<CONFIG:Release>:${hello_say_LINK_LIBS_RELEASE}
+             ${hello_say_LINKER_FLAGS_RELEASE}
+             ${hello_say_OBJECTS_RELEASE}> APPEND)""" in content
