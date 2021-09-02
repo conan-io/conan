@@ -85,3 +85,22 @@ def test_components_error():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@")
+
+
+def test_cpp_info_component_objects():
+    client = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.components["say"].objects = ["/path/to/mycomponent.o"]
+            """)
+
+    client.save({"conanfile.py": conan_hello})
+    client.run("create . hello/1.0@ -s arch=x86_64 -s build_type=Release")
+    client.run("install hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
+    with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
+        content = f.read()
+        assert """set(hello_say_LINKER_FLAGS_RELEASE
+        \"/path/to/mycomponent.o\"""" in content
