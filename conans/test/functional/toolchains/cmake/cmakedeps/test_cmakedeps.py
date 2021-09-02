@@ -284,17 +284,29 @@ def test_cpp_info_link_objects():
     cpp_info = {"objects": ["myobject.o"], "libs": ["hello"]}
     object_cpp = gen_function_cpp(name="myobject")
     object_h = gen_function_h(name="myobject")
-    lib_cpp = gen_function_cpp(name="hello", calls=["hello"])
+    lib_cpp = gen_function_cpp(name="hello")
     lib_h = gen_function_h(name="hello")
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(HelloLib)
+        file(GLOB HEADERS *.h)
         add_library(myobject OBJECT myobject.cpp)
         add_library(hello hello.cpp hello.h)
-        install(TARGETS hello DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        install(TARGETS hello DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
         install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/myobject.dir/myobject.cpp${CMAKE_C_OUTPUT_EXTENSION}
-                DESTINATION "lib"
+                DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
                 RENAME myobject${CMAKE_C_OUTPUT_EXTENSION})
+        install(FILES ${HEADERS}
+                DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+    """)
+
+    test_package_cpp = gen_function_cpp(name="main", includes=["myobject"], calls=["myobject"])
+    test_package_cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(example)
+        find_package(hello REQUIRED)
+        add_executable(example example.cpp)
+        target_link_libraries(example hello::hello)
     """)
 
     client.save({"CMakeLists.txt": cmakelists,
@@ -307,5 +319,12 @@ def test_cpp_info_link_objects():
                  "myobject.cpp": object_cpp,
                  "myobject.h": object_h,
                  "hello.cpp": lib_cpp,
-                 "hello.h": lib_h})
+                 "hello.h": lib_h,
+                 "test_package/conanfile.py": GenConanfile().with_cmake_build()
+                                                            .with_test(['path = "{}".format(self.settings.build_type) if self.settings.os == "Windows" else "."',
+                                                                       'self.run("{}{}example".format(path, os.sep))']),
+                 "test_package/example.cpp": test_package_cpp,
+                 "test_package/CMakeLists.txt": test_package_cmakelists})
+
     client.run("create .")
+    print("...")
