@@ -160,19 +160,21 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         # Get a list of dependencies target names
         # Declared cppinfo.requires or .components[].requires
+        visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True})
+        visible_host_direct = visible_host.filter({"direct": True})
         if self.conanfile.new_cpp_info.required_components:
             for dep_name, component_name in self.conanfile.new_cpp_info.required_components:
                 if not dep_name:
                     # Internal dep (no another component)
                     req = self.conanfile
                 else:
-                    req = self.conanfile.dependencies.host[dep_name]
+                    req = visible_host[dep_name]
 
                 dep_name = self.get_target_namespace(req)
                 component_name = self.get_component_alias(req, component_name)
                 ret.append("{}::{}".format(dep_name, component_name))
-        elif self.conanfile.dependencies.direct_host:
+        elif visible_host_direct:
             # Regular external "conanfile.requires" declared, not cpp_info requires
             ret = ["{p}::{n}".format(p=self.get_target_namespace(r), n=self.get_global_target_name(r))
-                   for r in self.conanfile.dependencies.direct_host.values()]
+                   for r in visible_host_direct.values()]
         return ret
