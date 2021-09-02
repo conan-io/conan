@@ -90,6 +90,7 @@ class ConanLib(ConanFile):
         for filename in ["file1.txt", "file2.txt"]:
             self.assertFalse(os.path.exists(os.path.join(dst_global_folder, filename)))
 
+    @pytest.mark.xfail(reason="new Environment need global env arguments")
     def test_imports_env_var(self):
         conanfile2 = '''
 from conans import ConanFile

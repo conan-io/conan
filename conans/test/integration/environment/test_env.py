@@ -89,7 +89,6 @@ def test_complete(client):
         class Pkg(ConanFile):
             requires = "openssl/1.0"
             build_requires = "mycmake/1.0"
-            apply_env = False
 
             def build_requirements(self):
                 self.test_requires("mygtest/1.0")

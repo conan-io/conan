@@ -4,16 +4,9 @@ import platform
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conans.client.run_environment import RunEnvironment
 from conans.client.tools.files import _path_equals, which
 from conans.errors import ConanException
 from conans.util.runners import check_output_runner
-
-
-@contextmanager
-def run_environment(conanfile):
-    with environment_append(RunEnvironment(conanfile).vars):
-        yield
 
 
 @contextmanager

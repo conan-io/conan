@@ -1,13 +1,13 @@
 import os
-import platform
 import re
-import textwrap
 import unittest
+
 
 import pytest
 
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.model.graph_lock import LOCKFILE
+from conans.test.utils.tools import TestClient
 
 
 class GeneratorsTest(unittest.TestCase):
@@ -26,7 +26,6 @@ unknown
         base = '''
 [generators]
 cmake
-virtualenv
 ycm
     '''
         files = {"conanfile.txt": base}
@@ -34,14 +33,9 @@ ycm
         client.save(files)
         client.run("install . --build")
 
-        venv_files = ["activate.sh", "deactivate.sh", "environment.sh.env",
-                      "activate.ps1", "deactivate.ps1", "environment.ps1.env"]
-        if platform.system() == "Windows":
-            venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env"])
-
         self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
-                                 LOCKFILE] + venv_files),
+                                 LOCKFILE]),
                          sorted(os.listdir(client.current_folder)))
 
     @pytest.mark.xfail(reason="Generator qmake generator to be revisited")

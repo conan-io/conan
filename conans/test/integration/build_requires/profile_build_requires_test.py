@@ -2,7 +2,6 @@ import os
 import platform
 import unittest
 
-import pytest
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
@@ -21,7 +20,6 @@ class Tool(ConanFile):
         self.copy("mytool*")
 
     def package_info(self):
-        self.env_info.PATH.append(self.package_folder)
         self.buildenv_info.append_path("PATH", self.package_folder)
 """
 

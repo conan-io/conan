@@ -234,7 +234,7 @@ def test_apple_own_framework_cross_build(settings):
 
             def test(self):
                 if not tools.cross_building(self):
-                    self.run("timer", run_environment=True)
+                    self.run("timer", env="conanrunenv")
         """)
 
     client.save({'conanfile.py': conanfile,
@@ -297,7 +297,7 @@ def test_apple_own_framework_cmake_deps():
                 cmake.build()
 
             def test(self):
-                self.run(os.path.join(str(self.settings.build_type), "timer"), run_environment=True)
+                self.run(os.path.join(str(self.settings.build_type), "timer"), env="conanrunenv")
         """)
     client.save({'conanfile.py': conanfile,
                  "src/CMakeLists.txt": cmake,
@@ -352,7 +352,7 @@ def test_apple_own_framework_cmake_find_package_multi():
                 cmake.configure()
                 cmake.build()
             def test(self):
-                self.run("bin/timer", run_environment=True)
+                self.run("bin/timer", env="conanrunenv")
         """)
     client.save({'conanfile.py': conanfile,
                  "src/CMakeLists.txt": cmake,
@@ -451,7 +451,7 @@ class TestPackageConan(ConanFile):
 
     def test(self):
         if not tools.cross_building(self.settings):
-            self.run("test_package", run_environment=True)
+            self.run("test_package", env="conanrunenv")
         """)
     test_test_package_cpp = textwrap.dedent("""
 #include "hello.h"

@@ -24,14 +24,6 @@ os=Windows
                          OrderedDict([("os", "Windows"), ("OTHER", "2"),
                                       ("compiler", "2"), ("compiler.version", "3")]))
 
-    def test_env_vars_inheritance(self):
-        tmp_dir = temp_folder()
-        p1 = '''[env]\nVAR=1'''
-        p2 = '''include(p1)\n[env]\nVAR=2'''
-        save(os.path.join(tmp_dir, "p1"), p1)
-        new_profile, _ = _load_profile(p2, tmp_dir, tmp_dir)
-        self.assertEqual(new_profile.env_values.data[None]["VAR"], "2")
-
     def test_profile_subsettings_update(self):
         prof = '''[settings]
 os=Windows
@@ -98,16 +90,13 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
         profile.settings["compiler"] = "Visual Studio"
         profile.settings["compiler.version"] = "12"
 
-        profile.env_values.add("CXX", "path/to/my/compiler/g++")
-        profile.env_values.add("CC", "path/to/my/compiler/gcc")
-
         profile.update_settings(OrderedDict([("compiler.version", "14")]))
 
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio'
                          '\ncompiler.version=14\n'
                          '[options]\n'
                          '[build_requires]\n'
-                         '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
+                         '[env]\n',
                          profile.dumps())
 
 

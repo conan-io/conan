@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractproperty
 from conans.errors import ConanException
 from conans.model.build_info import COMPONENT_SCOPE
 
+
 class Generator(object, metaclass=ABCMeta):
     name = None
 
@@ -10,8 +11,6 @@ class Generator(object, metaclass=ABCMeta):
         self.conanfile = conanfile
         self.normalize = True
         self._deps_build_info = conanfile.deps_cpp_info
-        self._deps_env_info = conanfile.deps_env_info
-        self._env_info = conanfile.env_info
         self._deps_user_info = conanfile.deps_user_info
         self._user_info_build = getattr(conanfile, 'user_info_build', None)
 
@@ -24,16 +23,8 @@ class Generator(object, metaclass=ABCMeta):
         return self._deps_build_info
 
     @property
-    def deps_env_info(self):
-        return self._deps_env_info
-
-    @property
     def deps_user_info(self):
         return self._deps_user_info
-
-    @property
-    def env_info(self):
-        return self._env_info
 
     @property
     def settings(self):

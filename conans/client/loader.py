@@ -197,7 +197,7 @@ class ConanFileLoader(object):
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
 
-        conanfile.initialize(tmp_settings, profile.env_values, profile.buildenv)
+        conanfile.initialize(tmp_settings, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
@@ -278,7 +278,7 @@ class ConanFileLoader(object):
             pkg_settings = package_settings_values.get("&")
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
-        conanfile.initialize(Settings(), profile.env_values, profile.buildenv)
+        conanfile.initialize(Settings(), profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(None)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
@@ -314,8 +314,7 @@ class ConanFileLoader(object):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
-        conanfile.initialize(profile_host.processed_settings.copy(),
-                             profile_host.env_values, profile_host.buildenv)
+        conanfile.initialize(profile_host.processed_settings.copy(), profile_host.buildenv)
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
         conanfile.settings = profile_host.processed_settings.copy_values()
 

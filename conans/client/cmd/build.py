@@ -1,8 +1,8 @@
 import os
 
 from conans.client.conanfile.build import run_build_method
+from conans.client.tools import no_op
 from conans.errors import (ConanException, conanfile_exception_formatter)
-from conans.model.conan_file import get_env_context_manager
 from conans.util.files import mkdir
 from conans.util.log import logger
 
@@ -43,7 +43,7 @@ def cmd_build(app, conanfile_path, conan_file, base_path, source_folder, build_f
 
         run_build_method(conan_file, app.hook_manager, conanfile_path=conanfile_path)
         if test:
-            with get_env_context_manager(conan_file):
+            with no_op():  # TODO: Remove this in a later refactor
                 conan_file.output.highlight("Running test()")
                 with conanfile_exception_formatter(str(conan_file), "test"):
                     conan_file.test()

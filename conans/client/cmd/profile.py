@@ -65,12 +65,14 @@ def cmd_profile_update(profile_name, key, value, cache_profiles_path):
     elif first_key == "options":
         tmp = OptionsValues([(rest_key, value)])
         profile.options.update(tmp)
-    elif first_key == "env":
-        profile.env_values.update_replace(rest_key, value)
+    elif first_key == "buildenv":
+        raise ConanException("Edit the profile manually to change the buildenv")
     elif first_key == "conf":
         profile.conf.update(rest_key, value)
     elif first_key == "build_requires":
         raise ConanException("Edit the profile manually to change the build_requires")
+    else:
+        raise ConanException("Wrong key '{}' in profile update".format(first_key))
 
     contents = profile.dumps()
     profile_path = get_profile_path(profile_name, cache_profiles_path, os.getcwd())

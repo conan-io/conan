@@ -61,7 +61,6 @@ from conan.tools.cmake import CMake
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
-    apply_env = False
 
     def build(self):
         cmake = CMake(self)

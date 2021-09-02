@@ -271,7 +271,7 @@ class AConan(ConanFile):
     version = "1.0"
 
     def package_info(self):
-        self.env_info.MYVAR = "23"
+        self.buildenv_info.define("MYVAR", "23")
 
 """
         client.save({CONANFILE: conanfile})
@@ -279,12 +279,16 @@ class AConan(ConanFile):
 
         conanfile = """
 from conans import ConanFile
+from conan.tools.env import VirtualBuildEnv
+import os
 
 class AConan(ConanFile):
     build_requires = "lib/1.0@lasote/stable"
 
     def build(self):
-        assert(self.deps_env_info["lib"].MYVAR == "23")
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            assert(os.environ["MYVAR"] == "23")
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . --build missing")

@@ -7,7 +7,6 @@ from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain import Block, GenericSystemBlock
 from conans import ConanFile, Settings
 from conans.model.conf import Conf
-from conans.model.env_info import EnvValues
 
 
 @pytest.fixture
@@ -17,7 +16,7 @@ def conanfile():
     c.initialize(Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}), EnvValues())
+                           "arch": ["x86"]}))
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "gcc"
@@ -149,7 +148,7 @@ def conanfile_apple():
     c.initialize(Settings({"os": {"Macos": {"version": ["10.15"]}},
                            "compiler": {"apple-clang": {"libcxx": ["libc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}), EnvValues())
+                           "arch": ["x86"]}))
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "apple-clang"

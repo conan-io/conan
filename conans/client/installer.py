@@ -21,7 +21,6 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            ConanReferenceDoesNotExistInDB)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
-from conans.model.env_info import EnvInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.new_build_info import NewCppInfo, fill_old_cppinfo
@@ -564,7 +563,6 @@ class BinaryInstaller(object):
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_install(None)
 
-        conanfile.env_info = EnvInfo()
         conanfile.user_info = UserInfo()
 
         # Get deps_cpp_info from upstream nodes

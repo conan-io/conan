@@ -3,8 +3,6 @@ import unittest
 from collections import defaultdict, namedtuple
 
 from conans.model.build_info import DepsCppInfo
-from conans.model.env_info import DepsEnvInfo, EnvInfo
-from conans.model.user_info import DepsUserInfo
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 from conans.model.build_info import BuildModulesDict, CppInfo, DepCppInfo, dict_to_abs_paths

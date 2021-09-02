@@ -1,4 +1,3 @@
-import os
 import textwrap
 import unittest
 
@@ -6,7 +5,7 @@ import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.files import mkdir
+
 
 conanfile_parent = """
 from conans import ConanFile
@@ -18,7 +17,7 @@ class parentLib(ConanFile):
     def package_info(self):
         self.cpp_info.cxxflags.append("-myflag")
         self.user_info.MyVar = "MyVarValue"
-        self.env_info.MyEnvVar = "MyEnvVarValue"
+        self.buildenv_info.define("MyEnvVar", "MyEnvVarValue")
 """
 
 
