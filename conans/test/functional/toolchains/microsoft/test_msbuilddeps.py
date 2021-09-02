@@ -403,6 +403,7 @@ vs_versions = [{"vs_version": "15", "msvc_version": "19.1", "ide_year": "2017", 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
     vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
 
+
 @parameterized_class(vs_versions)
 @pytest.mark.tool_visual_studio
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
@@ -704,11 +705,13 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
 def test_build_vs_project_with_a_vs2017():
     check_build_vs_project_with_a("15")
 
+
 @pytest.mark.tool_visual_studio(version="17")
 @pytest.mark.tool_cmake
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2022():
     check_build_vs_project_with_a("17")
+
 
 def check_build_vs_project_with_a(vs_version):
     client = TestClient()
@@ -788,11 +791,13 @@ def check_build_vs_project_with_a(vs_version):
 def test_build_vs_project_with_test_requires_vs2017():
     check_build_vs_project_with_test_requires("15")
 
+
 @pytest.mark.tool_visual_studio(version="17")
 @pytest.mark.tool_cmake
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2022():
     check_build_vs_project_with_test_requires("17")
+
 
 def check_build_vs_project_with_test_requires(vs_version):
     client = TestClient()
@@ -832,3 +837,23 @@ def check_build_vs_project_with_test_requires(vs_version):
     client.run_command(r"x64\Release\MyProject.exe")
     assert "mydep_pkg_team: Release!" in client.out
     assert "updep_pkg_team: Release!" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+def test_private_transitive():
+    # https://github.com/conan-io/conan/issues/9514
+    client = TestClient()
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "pkg/conanfile.py": GenConanfile().with_require("dep/0.1", private=True),
+                 "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                        .with_settings("os", "build_type", "arch")})
+    client.run("create dep dep/0.1@")
+    client.run("create pkg pkg/0.1@")
+    client.run("install consumer -g MSBuildDeps -s arch=x86_64 -s build_type=Release")
+    assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip" in client.out
+    deps_props = client.load("conandeps.props")
+    assert "conan_pkg.props" in deps_props
+    assert "dep" not in deps_props
+
+    pkg_data_props = client.load("conan_pkg_release_x64.props")
+    assert "conan_dep.props" not in pkg_data_props
