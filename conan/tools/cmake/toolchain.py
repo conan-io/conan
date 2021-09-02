@@ -68,7 +68,16 @@ class Block(object):
         context = self.values
         if context is None:
             return
-        return Template(self.template, trim_blocks=True, lstrip_blocks=True).render(**context)
+
+        def cmake_value(value):
+            if isinstance(value, bool):
+                return "ON" if value else "OFF"
+            else:
+                return '"{}"'.format(value)
+
+        template = Template(self.template, trim_blocks=True, lstrip_blocks=True)
+        template.environment.filters["cmake_value"] = cmake_value
+        return template.render(**context)
 
     def context(self):
         return {}
@@ -387,10 +396,10 @@ class FindConfigFiles(Block):
         {% endif %}
         # To support the generators based on find_package()
         {% if cmake_module_path %}
-        set(CMAKE_MODULE_PATH "{{ cmake_module_path }}" ${CMAKE_MODULE_PATH})
+        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
         {% endif %}
         {% if cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH "{{ cmake_prefix_path }}" ${CMAKE_PREFIX_PATH})
+        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
         {% endif %}
         {% if android_prefix_path %}
         set(CMAKE_FIND_ROOT_PATH {{ android_prefix_path }} ${CMAKE_FIND_ROOT_PATH})
@@ -416,11 +425,28 @@ class FindConfigFiles(Block):
 
         host_req = self._conanfile.dependencies.host.values()
         find_names_needed = os_ in ('iOS', "watchOS", "tvOS")
-        find_names = [get_file_name(req) for req in host_req] if find_names_needed else []
+        find_names = [get_file_name(req)
+                      for req in host_req] if find_names_needed else []
+
+        # Read the buildirs
+        build_paths = []
+        for req in host_req:
+            cppinfo = req.new_cpp_info.copy()
+            cppinfo.aggregate_components()
+            build_paths.extend([os.path.join(req.package_folder,
+                                       p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
+                                 for p in cppinfo.builddirs])
+
+        if self._toolchain.find_builddirs:
+            build_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
+                                                   .replace('$', '\\$')
+                                                   .replace('"', '\\"')) for b in build_paths])
+        else:
+            build_paths = ""
 
         return {"find_package_prefer_config": find_package_prefer_config,
-                "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR}",
-                "cmake_module_path": "${CMAKE_CURRENT_LIST_DIR}",
+                "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
+                "cmake_module_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
                 "android_prefix_path": android_prefix,
                 "find_names": find_names,
                 "generators_folder": "${CMAKE_CURRENT_LIST_DIR}"}
@@ -674,7 +700,7 @@ class CMakeToolchain(object):
 
         # Variables
         {% for it, value in variables.items() %}
-        set({{ it }} "{{ value }}" CACHE STRING "Variable {{ it }} conan-toolchain defined")
+        set({{ it }} {{ value|cmake_value }} CACHE STRING "Variable {{ it }} conan-toolchain defined")
         {% endfor %}
         # Variables  per configuration
         {{ iterate_configs(variables_config, action='set') }}
@@ -711,6 +737,9 @@ class CMakeToolchain(object):
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock)])
 
+        # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
+        self.find_builddirs = True
+
         check_using_build_profile(self._conanfile)
 
     def _context(self):
@@ -723,7 +752,7 @@ class CMakeToolchain(object):
             "variables_config": self.variables.configuration_types,
             "preprocessor_definitions": self.preprocessor_definitions,
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
-            "conan_blocks": blocks,
+            "conan_blocks": blocks
         }
 
         return ctxt_toolchain

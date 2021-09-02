@@ -1,7 +1,6 @@
 import textwrap
 
-from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate, get_component_alias, \
-    get_target_namespace
+from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 
 """
 
@@ -14,8 +13,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        return "{}Target-{}.cmake".format(self.file_name,
-                                          self.cmakedeps.configuration.lower())
+        name = "" if not self.find_module_mode else "module-"
+        name += "{}-Target-{}.cmake".format(self.file_name, self.cmakedeps.configuration.lower())
+        return name
 
     @property
     def context(self):
@@ -23,6 +23,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             if not self.conanfile.is_build_context else []
         return {"pkg_name": self.pkg_name,
                 "target_namespace": self.target_namespace,
+                "global_target_name": self.global_target_name,
                 "config_suffix": self.config_suffix,
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names":  self.get_required_components_names(),
@@ -106,18 +107,18 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
 
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
-        set_property(TARGET {{target_namespace}}::{{target_namespace}}
+        set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
                                                    ${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}
                                                    ${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{target_namespace}}::{{target_namespace}}
+        set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{target_namespace}}::{{target_namespace}}
+        set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_COMPILE_DEFINITIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{target_namespace}}::{{target_namespace}}
+        set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_COMPILE_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
 
@@ -149,7 +150,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         ret = []
         sorted_comps = self.conanfile.new_cpp_info.get_sorted_components()
         for comp_name, comp in sorted_comps.items():
-            ret.append(get_component_alias(self.conanfile, comp_name))
+            ret.append(self.get_component_alias(self.conanfile, comp_name))
         ret.reverse()
         return ret
 
@@ -165,16 +166,15 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             for dep_name, component_name in self.conanfile.new_cpp_info.required_components:
                 if not dep_name:
                     # Internal dep (no another component)
-                    dep_name = get_target_namespace(self.conanfile)
                     req = self.conanfile
                 else:
                     req = self.conanfile.dependencies.host[dep_name]
-                    dep_name = get_target_namespace(req)
 
-                component_name = get_component_alias(req, component_name)
+                dep_name = self.get_target_namespace(req)
+                component_name = self.get_component_alias(req, component_name)
                 ret.append("{}::{}".format(dep_name, component_name))
         elif self.conanfile.dependencies.direct_host:
             # Regular external "conanfile.requires" declared, not cpp_info requires
-            ret = ["{p}::{p}".format(p=get_target_namespace(r))
+            ret = ["{p}::{n}".format(p=self.get_target_namespace(r), n=self.get_global_target_name(r))
                    for r in self.conanfile.dependencies.direct_host.values()]
         return ret

@@ -7,10 +7,11 @@ from conans.errors import ConanException
 
 class CMakeDepsFileTemplate(object):
 
-    def __init__(self, cmakedeps, require, conanfile):
+    def __init__(self, cmakedeps, require, conanfile, find_module_mode=False):
         self.cmakedeps = cmakedeps
         self.require = require
         self.conanfile = conanfile
+        self.find_module_mode = find_module_mode
 
     @property
     def pkg_name(self):
@@ -18,11 +19,15 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def target_namespace(self):
-        return get_target_namespace(self.conanfile) + self.suffix
+        return self.get_target_namespace(self.conanfile) + self.suffix
+
+    @property
+    def global_target_name(self):
+        return self.get_global_target_name(self.conanfile) + self.suffix
 
     @property
     def file_name(self):
-        return get_file_name(self.conanfile) + self.suffix
+        return get_file_name(self.conanfile, self.find_module_mode) + self.suffix
 
     @property
     def suffix(self):
@@ -74,29 +79,43 @@ class CMakeDepsFileTemplate(object):
     def config_suffix(self):
         return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
-    def get_target_namespace(self):
-        return get_target_namespace(self.conanfile)
-
     def get_file_name(self):
-        return get_file_name(self.conanfile)
+        return get_file_name(self.conanfile, find_module_mode=self.find_module_mode)
 
+    def get_target_namespace(self, req):
+        if self.find_module_mode:
+            ret = req.new_cpp_info.get_property("cmake_module_target_namespace", "CMakeDeps")
+            if ret:
+                return ret
 
-def get_target_namespace(req):
-    ret = req.new_cpp_info.get_property("cmake_target_name", "CMakeDeps")
-    if not ret:
-        ret = req.cpp_info.get_name("cmake_find_package_multi", default_name=False)
-    return ret or req.ref.name
+        ret = req.new_cpp_info.get_property("cmake_target_namespace", "CMakeDeps")
+        return ret or self.get_global_target_name(req)
 
+    def get_global_target_name(self, req):
+        if self.find_module_mode:
+            ret = req.new_cpp_info.get_property("cmake_module_target_name", "CMakeDeps")
+            if ret:
+                return ret
 
-def get_component_alias(req, comp_name):
-    if comp_name not in req.new_cpp_info.components:
-        # foo::foo might be referencing the root cppinfo
-        if req.ref.name == comp_name:
-            return get_target_namespace(req)
-        raise ConanException("Component '{name}::{cname}' not found in '{name}' "
-                             "package requirement".format(name=req.ref.name, cname=comp_name))
-    ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
-    if not ret:
-        ret = req.cpp_info.components[comp_name].get_name("cmake_find_package_multi",
-                                                          default_name=False)
-    return ret or comp_name
+        ret = req.new_cpp_info.get_property("cmake_target_name", "CMakeDeps")
+        if not ret:
+            ret = req.cpp_info.get_name("cmake_find_package_multi", default_name=False)
+        return ret or req.ref.name
+
+    def get_component_alias(self, req, comp_name):
+        if comp_name not in req.new_cpp_info.components:
+            # foo::foo might be referencing the root cppinfo
+            if req.ref.name == comp_name:
+                return self.get_target_namespace(req)
+            raise ConanException("Component '{name}::{cname}' not found in '{name}' "
+                                 "package requirement".format(name=req.ref.name, cname=comp_name))
+        if self.find_module_mode:
+            ret = req.new_cpp_info.components[comp_name].get_property("cmake_module_target_name",
+                                                                      "CMakeDeps")
+            if ret:
+                return ret
+        ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
+        if not ret:
+            ret = req.cpp_info.components[comp_name].get_name("cmake_find_package_multi",
+                                                              default_name=False)
+        return ret or comp_name
