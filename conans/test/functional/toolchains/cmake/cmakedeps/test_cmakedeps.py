@@ -154,14 +154,14 @@ def test_system_libs():
             target_libs = ("$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>")
+                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>")
         else:
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
             target_libs = ("$<$<CONFIG:Debug>:CONAN_LIB::Test_lib1_DEBUG;sys1d;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>")
+                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>")
         assert "Target libs: %s" % target_libs in client.out
 
 
