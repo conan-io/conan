@@ -7,7 +7,7 @@ import pytest
 from conans.client.tools import replace_in_file
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_cpp
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
 
@@ -276,3 +276,36 @@ def test_buildirs_working():
     c.save({"conanfile.py": consumer_conanfile, "CMakeLists.txt": cmake})
     c.run("create .")
     assert "MYVAR=>Like a Rolling Stone" in c.out
+
+
+@pytest.mark.tool_cmake
+def test_cpp_info_link_objects():
+    client = TestClient()
+    cpp_info = {"objects": ["myobject.o"], "libs": ["hello"]}
+    object_cpp = gen_function_cpp(name="myobject")
+    object_h = gen_function_h(name="myobject")
+    lib_cpp = gen_function_cpp(name="hello", calls=["hello"])
+    lib_h = gen_function_h(name="hello")
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(HelloLib)
+        add_library(myobject OBJECT myobject.cpp)
+        add_library(hello hello.cpp hello.h)
+        install(TARGETS hello DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/myobject.dir/myobject.cpp${CMAKE_C_OUTPUT_EXTENSION}
+                DESTINATION "lib"
+                RENAME myobject${CMAKE_C_OUTPUT_EXTENSION})
+    """)
+
+    client.save({"CMakeLists.txt": cmakelists,
+                 "conanfile.py": GenConanfile("hello", "1.0").with_package_info(cpp_info=cpp_info,
+                                                                                env_info={})
+                                                             .with_exports_sources("*")
+                                                             .with_cmake_build()
+                                                             .with_package("cmake = CMake(self)",
+                                                                           "cmake.install()"),
+                 "myobject.cpp": object_cpp,
+                 "myobject.h": object_h,
+                 "hello.cpp": lib_cpp,
+                 "hello.h": lib_h})
+    client.run("create .")
