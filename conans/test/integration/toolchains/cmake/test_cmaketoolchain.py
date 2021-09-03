@@ -196,12 +196,9 @@ def test_cross_build_conf():
 def test_find_builddirs(find_builddir):
     client = TestClient()
     conanfile = textwrap.dedent("""
-        import os
         from conans import ConanFile
-        from conan.tools.cmake import CMakeToolchain
 
         class Conan(ConanFile):
-            settings = "os", "arch", "compiler", "build_type"
 
             def package_info(self):
                 self.cpp_info.builddirs = ["/path/to/builddir"]
@@ -227,7 +224,8 @@ def test_find_builddirs(find_builddir):
         conanfile = conanfile.format('cmake.find_builddirs = {}'.format(str(find_builddir)))
 
     client.save({"conanfile.py": conanfile})
-    client.run("install . ")
+    client.run("install .  -s os=Linux -s compiler=gcc -s compiler.version=6 "
+               "-s compiler.libcxx=libstdc++11")
     contents = client.load("conan_toolchain.cmake")
     if find_builddir is True or find_builddir is None:
         assert "/path/to/builddir" in contents
