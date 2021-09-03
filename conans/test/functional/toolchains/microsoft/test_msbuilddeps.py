@@ -11,7 +11,7 @@ from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.assets.visual_project_files import get_vs_project_files
 from conans.test.conftest import tools_locations
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00
@@ -844,13 +844,13 @@ def test_private_transitive():
     # https://github.com/conan-io/conan/issues/9514
     client = TestClient()
     client.save({"dep/conanfile.py": GenConanfile(),
-                 "pkg/conanfile.py": GenConanfile().with_require("dep/0.1", private=True),
+                 "pkg/conanfile.py": GenConanfile().with_requirement("dep/0.1", visible=False),
                  "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
                                                         .with_settings("os", "build_type", "arch")})
     client.run("create dep dep/0.1@")
     client.run("create pkg pkg/0.1@")
     client.run("install consumer -g MSBuildDeps -s arch=x86_64 -s build_type=Release")
-    assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip" in client.out
+    assert f"dep/0.1:{NO_SETTINGS_PACKAGE_ID} - Skip" in client.out
     deps_props = client.load("conandeps.props")
     assert "conan_pkg.props" in deps_props
     assert "dep" not in deps_props
