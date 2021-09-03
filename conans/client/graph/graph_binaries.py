@@ -242,12 +242,6 @@ class GraphBinariesAnalyzer(object):
         remote = remotes.selected
         remote_selected = remote is not None
 
-        if not remote:
-            # If the remote_name is not given, follow the binary remote, or the recipe remote
-            # If it is defined it won't iterate (might change in conan2.0)
-            remote_name = self._cache.get_remote(latest_prev_for_pkg_id or pref.ref)
-            remote = remotes.get(remote_name)
-
         if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
             node.prev = latest_prev_for_pkg_id.revision
             self._evaluate_cache_pkg(node, latest_prev_for_pkg_id, remote, remotes, update)

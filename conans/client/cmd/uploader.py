@@ -88,13 +88,7 @@ class _UploadCollecter(object):
             #  that we want to upload, check if  we should move this to other place
             # get the latest revision for the reference
             remote = remotes.selected
-            if remote:
-                ref_remote = remote
-            else:
-                # FIXME: The ref has already been obtained before, no sense to ask for latest
-                rrev = self._cache.get_latest_rrev(ref)
-                ref_remote = self._cache.get_remote(rrev) if rrev else None
-                ref_remote = remotes.get_remote(ref_remote)
+            ref_remote = remote if remote else None
 
             upload = True
             if not confirm:
@@ -608,9 +602,6 @@ class CmdUpload(object):
 
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        cur_package_remote = self._cache.get_remote(pref)
-        if not cur_package_remote:
-            self._cache.set_remote(pref, p_remote.name)
         return pref
 
 
