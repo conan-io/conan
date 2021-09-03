@@ -2310,7 +2310,7 @@ settings_1_38_0 = settings_1_37_2
 
 settings_1_39_0 = settings_1_38_0
 
-settings_1_40_0 = settings_1_37_0 = """
+settings_1_40_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
 arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
