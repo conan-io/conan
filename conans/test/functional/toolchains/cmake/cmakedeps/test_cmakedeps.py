@@ -295,7 +295,7 @@ def test_cpp_info_link_objects():
         add_library(hello hello.cpp hello.h)
         install(TARGETS hello DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
         if( WIN32 )
-            set(OBJ_PATH "myobject.dir/${CMAKE_BUILD_TYPE}")
+            set(OBJ_PATH "myobject.dir/Release")
         else()
             set(OBJ_PATH "CMakeFiles/myobject.dir")
         endif()
