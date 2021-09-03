@@ -281,9 +281,8 @@ def test_buildirs_working():
 @pytest.mark.tool_cmake
 def test_cpp_info_link_objects():
     client = TestClient()
-
     obj_ext = "obj" if platform.system() == "Windows" else "o"
-    cpp_info = {"objects": ["lib/myobject.{}".format(obj_ext)], "libs": ["hello"]}
+    cpp_info = {"objects": [os.path.join("lib", "myobject.{}".format(obj_ext))], "libs": ["hello"]}
     object_cpp = gen_function_cpp(name="myobject")
     object_h = gen_function_h(name="myobject")
     lib_cpp = gen_function_cpp(name="hello")
@@ -295,7 +294,12 @@ def test_cpp_info_link_objects():
         add_library(myobject OBJECT myobject.cpp)
         add_library(hello hello.cpp hello.h)
         install(TARGETS hello DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/myobject.dir/myobject.cpp${CMAKE_C_OUTPUT_EXTENSION}
+        if( WIN32 )
+            set(OBJ_PATH "myobject.dir/${CMAKE_BUILD_TYPE}")
+        else()
+            set(OBJ_PATH "CMakeFiles/myobject.dir")
+        endif()
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${OBJ_PATH}/myobject.cpp${CMAKE_C_OUTPUT_EXTENSION}
                 DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
                 RENAME myobject${CMAKE_C_OUTPUT_EXTENSION})
         install(FILES ${HEADERS}
@@ -330,7 +334,7 @@ def test_cpp_info_link_objects():
                  "test_package/example.cpp": test_package_cpp,
                  "test_package/CMakeLists.txt": test_package_cmakelists})
 
-    client.run("create .")
+    client.run("create . -s build_type=Release")
     assert "myobject: Release!" in client.out
 
 
