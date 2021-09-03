@@ -8,7 +8,7 @@ from conans.client.tools import replace_in_file
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.fixture
@@ -282,12 +282,12 @@ def test_private_transitive():
     # https://github.com/conan-io/conan/issues/9514
     client = TestClient()
     client.save({"dep/conanfile.py": GenConanfile(),
-                 "pkg/conanfile.py": GenConanfile().with_require("dep/0.1", private=True),
+                 "pkg/conanfile.py": GenConanfile().with_requirement("dep/0.1", visible=False),
                  "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
                                                         .with_settings("os", "build_type", "arch")})
     client.run("create dep dep/0.1@")
     client.run("create pkg pkg/0.1@")
     client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release")
-    assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip" in client.out
+    assert f"dep/0.1:{NO_SETTINGS_PACKAGE_ID} - Skip" in client.out
     data_cmake = client.load("pkg-release-x86_64-data.cmake")
     assert "set(pkg_FIND_DEPENDENCY_NAMES ${pkg_FIND_DEPENDENCY_NAMES} )" in data_cmake
