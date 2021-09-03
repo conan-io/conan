@@ -20,7 +20,8 @@ def vs_ide_version(conanfile):
             version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
             _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
                         '19.1': '15',
-                        '19.2': '16'}
+                        '19.2': '16',
+                        '19.3': '17'}
             visual_version = _visuals[version]
     else:
         visual_version = compiler_version
@@ -66,7 +67,8 @@ class MSBuildToolchain(object):
             version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
             toolsets = {'19.0': 'v140',  # TODO: This is common to CMake, refactor
                         '19.1': 'v141',
-                        '19.2': 'v142'}
+                        '19.2': 'v142',
+                        "19.3": 'v143'}
             return toolsets[version]
         if compiler == "intel":
             compiler_version = compiler_version if "." in compiler_version else \
@@ -75,7 +77,8 @@ class MSBuildToolchain(object):
         if compiler == "Visual Studio":
             toolset = settings.get_safe("compiler.toolset")
             if not toolset:
-                toolsets = {"16": "v142",
+                toolsets = {"17": "v143",
+                            "16": "v142",
                             "15": "v141",
                             "14": "v140",
                             "12": "v120",

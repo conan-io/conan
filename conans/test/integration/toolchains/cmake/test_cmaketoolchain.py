@@ -1,4 +1,7 @@
 import textwrap
+import os
+
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -188,3 +191,50 @@ def test_cross_build_conf():
     assert "set(CMAKE_SYSTEM_NAME Custom)" in toolchain
     assert "set(CMAKE_SYSTEM_VERSION 42)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR myarm)" in toolchain
+
+
+@pytest.mark.parametrize("find_builddir", [True, False, None])
+def test_find_builddirs(find_builddir):
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            from conan.tools.cmake import CMakeToolchain
+
+            class Conan(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+
+                def package_info(self):
+                    self.cpp_info.builddirs = ["/path/to/builddir"]
+            """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . dep/1.0@")
+
+    conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            from conan.tools.cmake import CMakeToolchain
+
+            class Conan(ConanFile):
+                name = "mydep"
+                version = "1.0"
+                settings = "os", "arch", "compiler", "build_type"
+                requires = "dep/1.0@"
+
+                def generate(self):
+                    cmake = CMakeToolchain(self)
+                    {}
+                    cmake.generate()
+            """)
+
+    if find_builddir is not None:
+        conanfile = conanfile.format('cmake.find_builddirs = {}'.format(str(find_builddir)))
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . ")
+    with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
+        contents = f.read()
+        if find_builddir is True or find_builddir is None:
+            assert "/path/to/builddir" in contents
+        else:
+            assert "/path/to/builddir" not in contents

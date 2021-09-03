@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from conans.client import tools
@@ -193,3 +194,20 @@ class MyConanfile(ConanFile):
             client.run("create . name/version@user/channel", assert_error=True)
             self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
                           "an existing profile file.", client.out)
+
+
+def test_conf_default_two_profiles():
+    client = TestClient()
+    save(os.path.join(client.cache.profiles_path, "mydefault"), "[settings]\nos=FreeBSD")
+    save(os.path.join(client.cache.profiles_path, "mydefault_build"), "[settings]\nos=Android")
+    global_conf = textwrap.dedent("""
+        core:default_profile=mydefault
+        core:default_build_profile=mydefault_build
+        """)
+    save(client.cache.new_config_path, global_conf)
+    client.save({"conanfile.txt": ""})
+    client.run("install .")
+    assert "Configuration (profile_host):" in client.out
+    assert "os=FreeBSD" in client.out
+    assert "Configuration (profile_build):" in client.out
+    assert "os=Android" in client.out

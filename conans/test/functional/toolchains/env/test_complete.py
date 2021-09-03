@@ -66,7 +66,7 @@ def test_cmake_virtualenv():
 
 def test_complete():
     client = TestClient()
-    client.run("new myopenssl/1.0 -m=v2_cmake")
+    client.run("new myopenssl/1.0 -m=cmake_lib")
     client.run("create . -o myopenssl:shared=True")
     client.run("create . -o myopenssl:shared=True -s build_type=Debug")
 
