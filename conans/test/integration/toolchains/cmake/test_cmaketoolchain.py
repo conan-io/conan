@@ -1,5 +1,4 @@
 import textwrap
-import os
 
 import pytest
 
@@ -197,27 +196,24 @@ def test_cross_build_conf():
 def test_find_builddirs(find_builddir):
     client = TestClient()
     conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile
-            from conan.tools.cmake import CMakeToolchain
+        import os
+        from conans import ConanFile
+        from conan.tools.cmake import CMakeToolchain
 
-            class Conan(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
 
-                def package_info(self):
-                    self.cpp_info.builddirs = ["/path/to/builddir"]
-            """)
+            def package_info(self):
+                self.cpp_info.builddirs = ["/path/to/builddir"]
+        """)
     client.save({"conanfile.py": conanfile})
     client.run("create . dep/1.0@")
 
     conanfile = textwrap.dedent("""
-            import os
             from conans import ConanFile
             from conan.tools.cmake import CMakeToolchain
 
             class Conan(ConanFile):
-                name = "mydep"
-                version = "1.0"
                 settings = "os", "arch", "compiler", "build_type"
                 requires = "dep/1.0@"
 
@@ -232,9 +228,8 @@ def test_find_builddirs(find_builddir):
 
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
-    with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
-        contents = f.read()
-        if find_builddir is True or find_builddir is None:
-            assert "/path/to/builddir" in contents
-        else:
-            assert "/path/to/builddir" not in contents
+    contents = client.load("conan_toolchain.cmake")
+    if find_builddir is True or find_builddir is None:
+        assert "/path/to/builddir" in contents
+    else:
+        assert "/path/to/builddir" not in contents
