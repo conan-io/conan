@@ -291,6 +291,7 @@ class {package_name}TestConan(ConanFile):
     def test(self):
         if not tools.cross_building(self):
             filename = "conanrunenv-{{}}-{{}}".format(self.settings.build_type, self.settings.arch)
+            filename = filename.lower()
             self.run("{name}", env=[filename])
 """
 

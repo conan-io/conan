@@ -11,6 +11,7 @@ class VirtualBuildEnv:
         self._conanfile = conanfile
         self._conanfile.virtualbuildenv = False
         self.basename = "conanbuildenv"
+        # TODO: Make this use the settings_build
         self.configuration = conanfile.settings.get_safe("build_type")
         if self.configuration:
             self.configuration = self.configuration.lower()
