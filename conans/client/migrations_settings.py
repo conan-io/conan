@@ -2405,7 +2405,7 @@ compiler:
     intel:
         version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1",
                   "2021.1", "2021.2", "2021.3"]
-            update = [None, ANY]
+            update: [None, ANY]
         base:
             gcc:
                 <<: *gcc

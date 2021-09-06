@@ -2,7 +2,7 @@ import os
 import textwrap
 
 from conan.tools.env.environment import register_env_script
-from conan.tools.intel.oneapi import is_using_intel_oneapi, get_intel_setvars_command
+from conan.tools.intel.intel import get_intel_setvars_command, is_using_intel_oneapi
 from conans.client.tools import intel_compilervars_command
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException

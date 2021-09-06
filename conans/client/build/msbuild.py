@@ -2,7 +2,7 @@ import copy
 import os
 import re
 
-from conan.tools.intel.oneapi import is_using_intel_oneapi, intel_setvars
+from conan.tools.intel.intel import is_using_intel_oneapi, intel_setvars
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)

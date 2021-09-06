@@ -2,11 +2,10 @@ import os
 import platform
 import re
 from itertools import chain
-from json import tool
 
 from six import StringIO  # Python 2 and 3 compatible
 
-from conan.tools.intel.oneapi import is_using_intel_oneapi, get_intel_setvars_dict
+from conan.tools.intel.intel import is_using_intel_oneapi, get_intel_setvars_dict
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
