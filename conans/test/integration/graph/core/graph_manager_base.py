@@ -135,20 +135,23 @@ class GraphManagerTest(unittest.TestCase):
         return path
 
     def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None,
-                    install=True):
+                    install=True, options_build=None):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         save(path, str(content))
-        return self.build_consumer(path, profile_build_requires, ref, create_ref, install)
+        return self.build_consumer(path, profile_build_requires, ref, create_ref, install,
+                                   options_build=options_build)
 
     def build_consumer(self, path, profile_build_requires=None, ref=None, create_ref=None,
-                       install=True):
+                       install=True, options_build=None):
         profile_host = Profile()
         profile_host.settings["os"] = "Linux"
         profile_build = Profile()
         profile_build.settings["os"] = "Windows"
         if profile_build_requires:
             profile_host.build_requires = profile_build_requires
+        if options_build:
+            profile_build.options = options_build
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
         update = check_updates = False

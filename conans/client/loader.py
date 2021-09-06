@@ -218,12 +218,6 @@ class ConanFileLoader(object):
             conanfile.develop = True
             self._initialize_conanfile(conanfile, profile_host)
 
-            # The consumer specific
-            profile_host.user_options.descope_options(conanfile.name)
-            conanfile.options.initialize_upstream(profile_host.user_options,
-                                                  name=conanfile.name)
-            profile_host.user_options.clear_unscoped_options()
-
             if require_overrides is not None:
                 for req_override in require_overrides:
                     req_override = ConanFileReference.loads(req_override)
@@ -303,14 +297,12 @@ class ConanFileLoader(object):
             raise ConanException("Error while parsing [options] in conanfile\n"
                                  "Options should be specified as 'pkg:option=value'")
         conanfile.options.values = options
-        conanfile.options.initialize_upstream(profile.user_options)
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)
         return conanfile
 
-    def load_virtual(self, references, profile_host, scope_options=True,
-                     build_requires_options=None, is_build_require=False, require_overrides=None):
+    def load_virtual(self, references, profile_host, is_build_require=False, require_overrides=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
@@ -329,16 +321,6 @@ class ConanFileLoader(object):
             for req_override in require_overrides:
                 req_override = ConanFileReference.loads(req_override)
                 conanfile.requires.override(req_override)
-
-        # Allows options without package namespace in conan install commands:
-        #   conan install zlib/1.2.8@lasote/stable -o shared=True
-        if scope_options:
-            assert len(references) == 1
-            profile_host.user_options.scope_options(references[0].name)
-        if build_requires_options:
-            conanfile.options.initialize_upstream(build_requires_options)
-        else:
-            conanfile.options.initialize_upstream(profile_host.user_options)
 
         conanfile.generators = []  # remove the default txt generator
         return conanfile

@@ -6,7 +6,6 @@ from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
 from conans.client.output import ScopedOutput
 
-from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
@@ -67,6 +66,7 @@ class ConanFile(object):
     settings = None
     options = None
     default_options = None
+    default_build_options = None
 
     provides = None
     deprecated = None
@@ -99,6 +99,9 @@ class ConanFile(object):
         self.requires = Requirements(getattr(self, "requires", None),
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None))
+        # User defined options
+        self.options = Options.create_options(self.options, self.default_options)
+        self.build_options = Options.create_options(None, self.default_build_options)
 
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
@@ -157,9 +160,7 @@ class ConanFile(object):
         self._conan_buildenv = buildenv
         if isinstance(self.generators, str):
             self.generators = [self.generators]
-        # User defined options
 
-        self.options = Options.create_options(self.options, self.default_options)
         self.settings = create_settings(self, settings)
 
         # needed variables to pack the project
