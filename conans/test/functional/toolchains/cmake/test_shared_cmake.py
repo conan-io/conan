@@ -19,7 +19,8 @@ def test_shared_cmake_toolchain():
     client = TestClient(servers=client.servers, users=client.users)
     client.run("install app/0.1@ -o chat:shared=True -o hello:shared=True -g VirtualRunEnv")
     conanfile = ConanFileMock()
-    command = environment_wrap_command(conanfile, "conanrunenv", "app", cwd=client.current_folder)
+    command = environment_wrap_command(conanfile, "conanrunenv-release-x86_64",
+                                       "app", cwd=client.current_folder)
 
     client.run_command(command)
     assert "main: Release!" in client.out

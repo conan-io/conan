@@ -26,8 +26,8 @@ def client():
 
 @pytest.mark.parametrize("default_virtualenv", [True, False, None])
 def test_virtualenv_deactivated(client, default_virtualenv):
-    format_str = {True: "virtualenv = True",
-                  False: "virtualenv = False",
+    format_str = {True: "virtualbuildenv = True",
+                  False: "virtualbuildenv = False",
                   None: ""}[default_virtualenv]
     conanfile = textwrap.dedent("""
     from conans import ConanFile
@@ -41,7 +41,8 @@ def test_virtualenv_deactivated(client, default_virtualenv):
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
     extension = "bat" if platform.system() == "Windows" else "sh"
-    exists_file = os.path.exists(os.path.join(client.current_folder, "conanbuildenv.{}".format(extension)))
+    exists_file = os.path.exists(os.path.join(client.current_folder,
+                                              "conanbuildenv.{}".format(extension)))
     if default_virtualenv is True or default_virtualenv is None:
         assert exists_file
     elif default_virtualenv is False:
