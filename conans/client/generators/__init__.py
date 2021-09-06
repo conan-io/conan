@@ -236,14 +236,15 @@ def write_toolchain(conanfile, path, output):
                 conanfile.generate()
 
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
-    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
+    if conanfile.conf["tools.env.virtualenv:auto_use"]:
         with chdir(path):
-            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-            env = VirtualBuildEnv(conanfile)
-            env.generate()
-
-            env = VirtualRunEnv(conanfile)
-            env.generate()
+            if conanfile.virtualbuildenv:
+                from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+                env = VirtualBuildEnv(conanfile)
+                env.generate()
+            if conanfile.virtualrunenv:
+                env = VirtualRunEnv(conanfile)
+                env.generate()
 
     output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)

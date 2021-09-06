@@ -9,7 +9,23 @@ class VirtualBuildEnv:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._conanfile.virtualenv = False
+        self._conanfile.virtualbuildenv = False
+        self.basename = "conanbuildenv"
+        self.configuration = conanfile.settings.get_safe("build_type")
+        if self.configuration:
+            self.configuration = self.configuration.lower()
+        self.arch = conanfile.settings.get_safe("arch")
+        if self.arch:
+            self.arch = self.arch.lower()
+
+    @property
+    def _filename(self):
+        f = self.basename
+        if self.configuration:
+            f += "-" + self.configuration
+        if self.arch:
+            f += "-" + self.arch
+        return f
 
     def environment(self):
         """ collects the buildtime information from dependencies. This is the typical use case
@@ -45,4 +61,4 @@ class VirtualBuildEnv:
     def generate(self, auto_activate=True):
         build_env = self.environment()
         if build_env:  # Only if there is something defined
-            build_env.save_script("conanbuildenv", auto_activate=auto_activate)
+            build_env.save_script(self._filename, auto_activate=auto_activate)
