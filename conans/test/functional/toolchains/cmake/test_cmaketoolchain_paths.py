@@ -1,0 +1,57 @@
+import textwrap
+
+import pytest
+
+from conans.test.utils.tools import TestClient
+
+
+@pytest.mark.tool_cmake
+@pytest.mark.parametrize("package", ["hello", "ZLIB"])
+@pytest.mark.parametrize("find_package", ["module", "config"])
+def test_cmaketoolchain_path_find(package, find_package):
+    """Test with user "Hello" and also ZLIB one, to check that package ZLIB
+    has priority over the CMake system one
+
+    Also, that user cmake files in the root are accessible via CMake include()
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class TestConan(ConanFile):
+            exports = "*"
+            def layout(self):
+                pass
+            def package(self):
+                self.copy(pattern="*", keep_path=False)
+        """)
+    find = textwrap.dedent("""
+        SET({package}_FOUND 1)
+        MESSAGE("HELLO FROM THE {package} FIND PACKAGE!")
+        """).format(package=package)
+    myowncmake = textwrap.dedent("""
+        MESSAGE("MYOWNCMAKE FROM {package}!")
+        """).format(package=package)
+
+    filename = "{}Config.cmake" if find_package == "config" else "Find{}.cmake"
+    filename = filename.format(package)
+    client.save({"conanfile.py": conanfile,
+                 "{}".format(filename): find,
+                 "myowncmake.cmake": myowncmake})
+    client.run("create . hello/0.1@")
+
+    consumer = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        project(MyHello CXX)
+        cmake_minimum_required(VERSION 3.15)
+
+        find_package({package} REQUIRED)
+        include(myowncmake)
+        """).format(package=package)
+
+    client.save({"CMakeLists.txt": consumer}, clean_first=True)
+    client.run("install hello/0.1@ -g CMakeToolchain")
+    with client.chdir("build"):
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
+    assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) in client.out
+    assert "MYOWNCMAKE FROM {package}!".format(package=package) in client.out
