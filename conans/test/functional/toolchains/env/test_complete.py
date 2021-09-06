@@ -122,6 +122,7 @@ def test_complete():
             default_options = {"myopenssl:shared": True}
             exports_sources = "CMakeLists.txt", "main.cpp"
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
+            apply_env = False
 
             def build(self):
                 cmake = CMake(self)
@@ -129,11 +130,14 @@ def test_complete():
                 cmake.build()
                 self.run("mycmake")
                 self.output.info("RUNNING MYAPP")
+                filename = "conanrunenv-{}-{}".format(self.settings.build_type,
+                                                              self.settings.arch)
+                filename = filename.lower()
                 if self.settings.os == "Windows":
                     self.run(os.sep.join([".", str(self.settings.build_type), "myapp"]),
-                             env="conanrunenv")
+                             env=filename)
                 else:
-                    self.run(os.sep.join([".", "myapp"]), env="conanrunenv")
+                    self.run(os.sep.join([".", "myapp"]), env=[filename])
             """)
 
     cmakelists = textwrap.dedent("""
