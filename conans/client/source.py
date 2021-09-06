@@ -105,7 +105,7 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
                 _run_cache_scm(conanfile, scm_sources_folder, output)
                 # so self exported files have precedence over python_requires ones
-                merge_directories(export_folder, conanfile.source_folder)
+                merge_directories(export_folder, conanfile.folders.base_source)
                 # Now move the export-sources to the right location
                 merge_directories(export_source_folder, conanfile.folders.base_source)
 
@@ -139,7 +139,8 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                 get_sources_from_exports()
 
                 if cache:
-                    _clean_source_folder(src_folder)  # TODO: Why is it needed in cache?
+                    # Clear the conanfile.py to avoid errors cloning git repositories.
+                    _clean_source_folder(src_folder)
                 with conanfile_exception_formatter(conanfile.display_name, "source"):
 
                     with conan_v2_property(conanfile, 'settings',
