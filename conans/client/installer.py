@@ -315,8 +315,7 @@ class BinaryInstaller(object):
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
-        self._build(nodes_by_level, root_node, profile_host, profile_build,
-                    graph_lock, remotes, build_mode, update)
+        self._build(nodes_by_level, root_node, graph_lock, remotes, build_mode, update)
 
     @staticmethod
     def _classify(nodes_by_level):
@@ -409,7 +408,7 @@ class BinaryInstaller(object):
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
                                          node.conanfile.output, self._recorder)
 
-    def _build(self, nodes_by_level, root_node, profile_host, profile_build, graph_lock,
+    def _build(self, nodes_by_level, root_node, profile_host,
                remotes, build_mode, update):
         missing, invalid, downloads = self._classify(nodes_by_level)
         if invalid:
@@ -428,7 +427,7 @@ class BinaryInstaller(object):
                 output = conan_file.output
 
                 if node.binary == BINARY_EDITABLE:
-                    self._handle_node_editable(node, profile_host, profile_build, graph_lock)
+                    self._handle_node_editable(node, profile_host)
                     # Need a temporary package revision for package_revision_mode
                     # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
                     node.prev = "editable"
@@ -449,7 +448,7 @@ class BinaryInstaller(object):
                     _handle_system_requirements(conan_file, package_layout, output)
                     self._handle_node_cache(node, processed_package_refs, remotes, package_layout)
 
-    def _handle_node_editable(self, node, profile_host, profile_build, graph_lock):
+    def _handle_node_editable(self, node, profile_host):
         # Get source of information
         conanfile = node.conanfile
         ref = node.ref
@@ -472,7 +471,7 @@ class BinaryInstaller(object):
                                                  conanfile.generators_folder, output)
         write_toolchain(conanfile, conanfile.generators_folder, output)
         output.info("Generated toolchain")
-        graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
+        graph_lock_file = GraphLockFile(profile_host)
         graph_lock_file.save(os.path.join(conanfile.install_folder, "conan.lock"))
         output.info("Generated conan.lock")
         copied_files = run_imports(conanfile)
