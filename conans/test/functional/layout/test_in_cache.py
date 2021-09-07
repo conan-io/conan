@@ -287,7 +287,7 @@ def test_git_clone_with_source_layout():
 
                def source(self):
                    self.run('git clone "{}" src')
-       """).format(repo)
+       """).format(repo.replace("\\", "/"))
 
     client.save({"conanfile.py": conanfile,
                  "myfile.txt": "My file is copied"})
