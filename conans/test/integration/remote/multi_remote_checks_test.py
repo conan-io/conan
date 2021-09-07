@@ -49,7 +49,6 @@ class Pkg(ConanFile):
         client.run('remove -f "*"')
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
         package_id_debug = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
-
         # the revision in server2 will have a date that's older
         the_time = the_time - 10
         with patch.object(RevisionList, '_now', return_value=the_time):
