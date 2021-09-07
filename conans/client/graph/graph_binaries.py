@@ -101,6 +101,7 @@ class GraphBinariesAnalyzer(object):
         # We iterate the other remotes to find a binary. If we added --update we will
         # return the latest package among all remotes, otherwise return the first match
         if not remote_selected and (not remote or not remote_info):
+            all_remotes_results = []
             for r in remotes.values():
                 if r == remote:
                     continue
@@ -111,10 +112,21 @@ class GraphBinariesAnalyzer(object):
                 else:
                     if remote_info:
                         if update:
-                            print("......")
+                            # TODO: refactor _get_package_info and so to get time there
+                            #  here we should get always just one item corresponding with full pref
+                            revisions = self._remote_manager.get_package_revisions(pref, r)[0]
+                            all_remotes_results.append({'pref': pref, 'time': revisions.get('time'),
+                                                        'remote': r, 'remote_info': remote_info})
                         else:
                             remote = r
                             break
+
+        if update and len(all_remotes_results) > 0:
+            remotes_results = sorted(all_remotes_results, key=lambda k: k['time'], reverse=True)
+            result = remotes_results[0]
+            remote = result.get('remote')
+            remote_info = result.get('remote_info')
+            pref = result.get('pref')
 
         if remote_info:
             node.binary = BINARY_DOWNLOAD
