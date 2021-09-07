@@ -293,11 +293,7 @@ def test_git_clone_with_source_layout():
                  "myfile.txt": "My file is copied"})
     with client.chdir(repo):
         client.save({"cloned.txt": "foo"}, repo)
-        client.run_command("git init .")
-        client.run_command('git config user.email "you@example.com"')
-        client.run_command('git config user.name "Your Name"')
-        client.run_command("git add .")
-        client.run_command('git commit -m  "commiting"')
+        client.init_git_repo()
 
     client.run("create . hello/1.0@")
     sf = client.cache.package_layout(ConanFileReference.loads("hello/1.0@")).source()
