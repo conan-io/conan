@@ -127,8 +127,6 @@ class RemoteManager(object):
         touch_folder(export_folder)
         conanfile_path = layout.conanfile()
 
-        self._cache.set_remote(layout.reference, remote.name)
-
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
@@ -186,8 +184,6 @@ class RemoteManager(object):
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
-
-            self._cache.set_remote(layout.reference, remote.name)
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)

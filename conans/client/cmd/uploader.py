@@ -166,11 +166,9 @@ class _PackagePreparator(object):
         - compare and decide which files need to be uploaded (and deleted from server)
         """
         recipe_layout = self._cache.ref_layout(ref)
-        current_remote_name = self._cache.get_remote(ref)
 
-        if remote.name != current_remote_name:
-            retrieve_exports_sources(self._remote_manager, self._cache, recipe_layout, conanfile,
-                                     ref, remotes)
+        retrieve_exports_sources(self._remote_manager, self._cache, recipe_layout, conanfile,
+                                 ref, remotes)
 
         conanfile_path = recipe_layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
@@ -201,7 +199,7 @@ class _PackagePreparator(object):
 
         files_to_upload, deleted = self._recipe_files_to_upload(ref, policy, cache_files, remote,
                                                                 remote_manifest, local_manifest)
-        return (files_to_upload, deleted, cache_files, conanfile_path, t1, current_remote_name,
+        return (files_to_upload, deleted, cache_files, conanfile_path, t1, remote.name,
                 recipe_layout)
 
     def _check_recipe_date(self, ref, remote, local_manifest):
@@ -562,10 +560,6 @@ class CmdUpload(object):
         log_recipe_upload(ref, duration, cache_files, remote.name)
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
-
-        # The recipe wasn't in the registry or it has changed the revision field only
-        if not current_remote_name:
-            self._cache.set_remote(ref, remote.name)
 
         return ref
 

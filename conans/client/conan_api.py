@@ -1088,8 +1088,7 @@ class ConanAPIV1(object):
         if not remote_name:
             if not pkg_rev:
                 raise PackageNotFoundException(pref)
-            # Check the time in the associated remote if any
-            remote_name = self.app.cache.get_remote(pkg_rev)
+
             remote = self.app.cache.registry.load_remotes()[remote_name] if remote_name else None
             rev_time = None
             if remote:
