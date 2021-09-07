@@ -25,9 +25,6 @@ def client():
                     save("bin/myopenssl.bat", echo)
                     save("bin/myopenssl.sh", echo)
                     os.chmod("bin/myopenssl.sh", 0o777)
-
-            def package_info(self):
-                self.env_info.PATH = [os.path.join(self.package_folder, "bin")]
             """)
 
     cmake = textwrap.dedent(r"""
@@ -45,7 +42,6 @@ def client():
                     os.chmod("mycmake.sh", 0o777)
 
             def package_info(self):
-                self.env_info.PATH = [self.package_folder]
                 self.buildenv_info.append_path("PATH", self.package_folder)
             """)
 

@@ -20,23 +20,25 @@ class VirtualBuildEnv:
 
         # Top priority: profile
         profile_env = self._conanfile.buildenv
-        build_env.compose(profile_env)
+        build_env.compose_env(profile_env)
 
-        for require, build_require in self._conanfile.dependencies.build.items():
-            if require.direct:
+        build_requires = self._conanfile.dependencies.build.topological_sort
+        for require, build_require in reversed(build_requires.items()):
+            if require.direct:  # Only buildenv_info from direct deps is propagated
                 # higher priority, explicit buildenv_info
                 if build_require.buildenv_info:
-                    build_env.compose(build_require.buildenv_info)
+                    build_env.compose_env(build_require.buildenv_info)
             # Lower priority, the runenv of all transitive "requires" of the build requires
             if build_require.runenv_info:
-                build_env.compose(build_require.runenv_info)
+                build_env.compose_env(build_require.runenv_info)
             # Then the implicit
-            build_env.compose(runenv_from_cpp_info(self._conanfile, build_require.cpp_info))
+            build_env.compose_env(runenv_from_cpp_info(self._conanfile, build_require.cpp_info))
 
         # Requires in host context can also bring some direct buildenv_info
-        for require in self._conanfile.dependencies.host.values():
+        host_requires = self._conanfile.dependencies.host.topological_sort
+        for require in reversed(host_requires.values()):
             if require.buildenv_info:
-                build_env.compose(require.buildenv_info)
+                build_env.compose_env(require.buildenv_info)
 
         return build_env
 

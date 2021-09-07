@@ -1,10 +1,9 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_SKIP
+from conans.model.requires import Requirement
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.ref import ConanFileReference
-
-from conans.model.requires import Requirement
 
 
 class UserRequirementsDict(object):
@@ -63,13 +62,41 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @staticmethod
     def from_node(node):
+        # TODO: Probably the BINARY_SKIP should be filtered later at the user level, not forced here
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
                         for require, transitive in node.transitive_deps.items()
                         if transitive.node.binary != BINARY_SKIP)
         return ConanFileDependencies(d)
 
     def filter(self, require_filter):
-        return super(ConanFileDependencies, self).filter(require_filter)
+        # FIXME: Copy of hte above, to return ConanFileDependencies class object
+        def filter_fn(require):
+            for k, v in require_filter.items():
+                if getattr(require, k) != v:
+                    return False
+            return True
+
+        data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
+        return ConanFileDependencies(data, require_filter)
+
+    @property
+    def topological_sort(self):
+        # Return first independent nodes, final ones are the more direct deps
+        result = OrderedDict()
+        opened = self._data.copy()
+
+        while opened:
+            opened_values = set(opened.values())
+            new_opened = OrderedDict()
+            for req, conanfile in opened.items():
+                deps_in_opened = any(d in opened_values for d in conanfile.dependencies.values())
+                if deps_in_opened:
+                    new_opened[req] = conanfile  # keep it for next iteration
+                else:
+                    result[req] = conanfile  # No dependencies in open set!
+
+            opened = new_opened
+        return ConanFileDependencies(result)
 
     @property
     def direct_host(self):

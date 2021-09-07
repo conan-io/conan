@@ -7,12 +7,9 @@ from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
 from .cmake import CMakeGenerator
-from .cmake_paths import CMakePathsGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
 from .markdown import MarkdownGenerator
-from .virtualenv import VirtualEnvGenerator
-from .virtualrunenv import VirtualRunEnvGenerator
 from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
 
@@ -20,10 +17,7 @@ from ..tools import chdir
 class GeneratorManager(object):
     def __init__(self):
         self._generators = {"cmake": CMakeGenerator,
-                            "cmake_paths": CMakePathsGenerator,
                             "ycm": YouCompleteMeGenerator,
-                            "virtualenv": VirtualEnvGenerator,
-                            "virtualrunenv": VirtualRunEnvGenerator,
                             "json": JsonGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}

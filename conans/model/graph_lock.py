@@ -2,7 +2,10 @@ import json
 import os
 
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
-from conans.client.graph.range_resolver import range_satisfies
+
+from conans.client.graph.python_requires import PyRequires
+from conans.client.graph.range_resolver import satisfying, range_satisfies
+from conans.client.profile_loader import ProfileValueParser
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
@@ -46,6 +49,7 @@ class GraphLockFile(object):
                 raise ConanException("This lockfile was created with an incompatible "
                                      "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
+
         graph_lock = GraphLock.deserialize(graph_json["graph_lock"])
         graph_lock_file = GraphLockFile(graph_lock)
         return graph_lock_file

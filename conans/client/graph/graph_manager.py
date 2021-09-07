@@ -1,9 +1,7 @@
 from conans.client.conanfile.configure import run_configure_method
-from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import Node, CONTEXT_HOST
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.errors import  conanfile_exception_formatter, ConanInvalidConfiguration
 from conans.model.ref import ConanFileReference
 
 
@@ -29,7 +27,7 @@ class GraphManager(object):
                                                    profile_host=profile_host,
                                                    name=name, version=version,
                                                    user=user, channel=channel,
-                                                   graph_lock=graph_lock)
+                                                   graph_lock=None)
 
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:

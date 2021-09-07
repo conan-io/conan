@@ -1,9 +1,11 @@
 import re
 import textwrap
-from collections import OrderedDict
+from unittest.mock import patch, Mock
 
 import pytest
 
+from conans.client.api.helpers.search import Search
+from conans.errors import ConanConnectionError, ConanException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -55,13 +57,14 @@ class TestParams(TestListRecipesBase):
         self.client.run("list recipes --all-remotes --remote remote1 package", assert_error=True)
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
 
+
 class TestListRecipesFromRemotes(TestListRecipesBase):
     def test_by_default_search_only_in_cache(self):
         self._add_remote("remote1")
         self._add_remote("remote2")
 
         expected_output = ("Local Cache:\n"
-                           "  There are no matching recipes\n")
+                           "  There are no matching recipe references\n")
 
         self.client.run("list recipes whatever")
         assert expected_output == self.client.out
@@ -71,11 +74,11 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
         self._add_remote("remote2")
 
         expected_output = ("Local Cache:\n"
-                           "  There are no matching recipes\n"
+                           "  There are no matching recipe references\n"
                            "remote1:\n"
-                           "  There are no matching recipes\n"
+                           "  There are no matching recipe references\n"
                            "remote2:\n"
-                           "  There are no matching recipes\n")
+                           "  There are no matching recipe references\n")
 
         self.client.run("list recipes -c -a whatever")
         assert expected_output == self.client.out
@@ -86,9 +89,39 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
+        self._add_remote("remote2")
         self.client.run("remote disable remote1")
-        self.client.run("list recipes whatever -r remote1", assert_error=True)
-        assert "ERROR: Remote 'remote1' is disabled" in self.client.out
+        # He have to put both remotes instead of using "-a" because of the
+        # disbaled remote won't appear
+        self.client.run("list recipes whatever -r remote1 -r remote2")
+        expected_output = textwrap.dedent("""\
+        remote1:
+          ERROR: Remote 'remote1' is disabled
+        remote2:
+          There are no matching recipe references
+        """)
+        assert expected_output == self.client.out
+
+    @pytest.mark.parametrize("exc,output", [
+        (ConanConnectionError("Review your network!"),
+         "ERROR: Review your network!"),
+        (ConanException("Boom!"), "ERROR: Boom!")
+    ])
+    def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
+        self._add_remote("remote1")
+        self._add_remote("remote2")
+        with patch.object(Search, "search_remote_recipes",
+                          new=Mock(side_effect=exc)):
+            self.client.run("list recipes whatever -a -c")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          There are no matching recipe references
+        remote1:
+          {output}
+        remote2:
+          {output}
+        """)
+        assert expected_output == self.client.out
 
 
 class TestRemotes(TestListRecipesBase):
@@ -115,10 +148,10 @@ class TestRemotes(TestListRecipesBase):
         expected_output = (
             r"Local Cache:\n"
             r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
-            r"    test_recipe/1.1.0@user/channel#.*\n"
-            r"    test_recipe/2.0.0@user/channel#.*\n"
             r"    test_recipe/2.1.0@user/channel#.*\n"
+            r"    test_recipe/2.0.0@user/channel#.*\n"
+            r"    test_recipe/1.1.0@user/channel#.*\n"
+            r"    test_recipe/1.0.0@user/channel#.*\n"
             r"remote1:\n"
             r"  test_recipe\n"
             r"    test_recipe/1.0.0@user/channel\n"
@@ -213,14 +246,14 @@ class TestRemotes(TestListRecipesBase):
         expected_output = (
             r"Local Cache:\n"
             r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
             r"    test_recipe/1.1.0@user/channel#.*\n"
+            r"    test_recipe/1.0.0@user/channel#.*\n"
             r"remote1:\n"
             r"  test_recipe\n"
             r"    test_recipe/1.0.0@user/channel\n"
             r"    test_recipe/1.1.0@user/channel\n"
             r"remote2:\n"
-            r"  There are no matching recipes\n"
+            r"  There are no matching recipe references\n"
         )
 
         self._add_remote(remote1)
@@ -261,12 +294,12 @@ class TestRemotes(TestListRecipesBase):
 
         expected_output = (
             r"Local Cache:\n"
-            r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
-            r"    test_recipe/1.1.0@user/channel#.*\n"
             r"  test_another\n"
-            r"    test_another/2.1.0@user/channel#.*\n"
             r"    test_another/4.1.0@user/channel#.*\n"
+            r"    test_another/2.1.0@user/channel#.*\n"
+            r"  test_recipe\n"
+            r"    test_recipe/1.1.0@user/channel#.*\n"
+            r"    test_recipe/1.0.0@user/channel#.*\n"
             r"remote1:\n"
             r"  test_another\n"
             r"    test_another/2.1.0@user/channel\n"

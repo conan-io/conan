@@ -103,6 +103,7 @@ def _cppstd_visualstudio(visual_version, cppstd):
     v14 = None
     v17 = None
     v20 = None
+    v23 = None
 
     if Version(visual_version) >= "14":
         v14 = "c++14"
@@ -110,8 +111,11 @@ def _cppstd_visualstudio(visual_version, cppstd):
     if Version(visual_version) >= "15":
         v17 = "c++17"
         v20 = "c++latest"
+    if Version(visual_version) >= "17":
+        v20 = "c++20"
+        v23 = "c++latest"
 
-    flag = {"14": v14, "17": v17, "20": v20}.get(str(cppstd), None)
+    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
     return "/std:%s" % flag if flag else None
 
 
@@ -120,6 +124,7 @@ def _cppstd_msvc(visual_version, cppstd):
     v14 = None
     v17 = None
     v20 = None
+    v23 = None
 
     if Version(visual_version) >= "19.0":
         v14 = "c++14"
@@ -127,8 +132,11 @@ def _cppstd_msvc(visual_version, cppstd):
     if Version(visual_version) >= "19.1":
         v17 = "c++17"
         v20 = "c++latest"
+    if Version(visual_version) >= "19.3":
+        v20 = "c++20"
+        v23 = "c++latest"
 
-    flag = {"14": v14, "17": v17, "20": v20}.get(str(cppstd), None)
+    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
     return "/std:%s" % flag if flag else None
 
 
@@ -253,7 +261,7 @@ def _cppstd_gcc(gcc_version, cppstd):
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(gcc_version) >= "5.1":
+    if Version(gcc_version) >= "5":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 

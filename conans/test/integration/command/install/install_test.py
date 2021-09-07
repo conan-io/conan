@@ -18,21 +18,6 @@ def client():
     return c
 
 
-def test_not_found_package_dirty_cache(client):
-    # Conan does a lock on the cache, and even if the package doesn't exist
-    # left a trailing folder with the filelocks. This test checks
-    # it will be cleared
-    client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
-    client.run("create . lasote/testing")
-    client.run("upload * --all --confirm")
-    client.run('remove "*" -f')
-    client.run(" install hello/0.1@lasote/testing", assert_error=True)
-    assert "Unable to find 'hello/0.1@lasote/testing'" in client.out
-    # This used to fail in Windows, because of the trailing lock
-    client.run("remove * -f")
-    client.run(" install Hello/0.1@lasote/testing")
-
-
 def test_install_reference_txt(client):
     # Test to check the "conan install <path> <reference>" command argument
     client.save({"conanfile.txt": ""})
@@ -77,7 +62,7 @@ def test_install_transitive_pattern(client):
         from conans import ConanFile
         class Pkg(ConanFile):
             options = {"shared": [True, False, "header"]}
-            default_options = "shared=False"
+            default_options = {"shared": False}
             def package_info(self):
                 self.output.info("PKG OPTION: %s" % self.options.shared)
         """)})
@@ -88,7 +73,7 @@ def test_install_transitive_pattern(client):
         class Pkg(ConanFile):
             requires = "Pkg/0.1@user/testing"
             options = {"shared": [True, False, "header"]}
-            default_options = "shared=False"
+            default_options = {"shared": False}
             def package_info(self):
                 self.output.info("PKG2 OPTION: %s" % self.options.shared)
         """)})

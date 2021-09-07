@@ -17,10 +17,10 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter, ConanInvalidConfiguration)
+                           conanfile_exception_formatter, ConanInvalidConfiguration,
+                           ConanReferenceDoesNotExistInDB)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
-from conans.model.env_info import EnvInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.new_build_info import NewCppInfo, fill_old_cppinfo
@@ -394,24 +394,16 @@ class BinaryInstaller(object):
             assert node.prev, "PREV for %s is None" % str(node.pref)
             download_nodes.append(node)
 
-        def _download(n):
-            # We cannot embed the package_lock inside the remote.get_package()
-            # because the handle_node_cache has its own lock
-            # TODO: cache2.0 check locks
-            pkg_layout = self._cache.pkg_layout(n.pref)
-            with pkg_layout.package_lock():
-                self._download_pkg(n)
-
         parallel = self._cache.config.parallel_download
         if parallel is not None:
             self._out.info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
-            thread_pool.map(_download, [n for n in download_nodes])
+            thread_pool.map(self._download_pkg, [n for n in download_nodes])
             thread_pool.close()
             thread_pool.join()
         else:
             for node in download_nodes:
-                _download(node)
+                self._download_pkg(node)
 
     def _download_pkg(self, node):
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
@@ -449,8 +441,10 @@ class BinaryInstaller(object):
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
 
-                    package_layout = self._cache.create_temp_pkg_layout(node.pref) if \
-                        not node.pref.revision else self._cache.pkg_layout(node.pref)
+                    if not node.pref.revision:
+                        package_layout = self._cache.create_temp_pkg_layout(node.pref)
+                    else:
+                        package_layout = self._cache.get_or_create_pkg_layout(node.pref)
 
                     _handle_system_requirements(conan_file, package_layout, output)
                     self._handle_node_cache(node, processed_package_refs, remotes, package_layout)
@@ -569,7 +563,6 @@ class BinaryInstaller(object):
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_install(None)
 
-        conanfile.env_info = EnvInfo()
         conanfile.user_info = UserInfo()
 
         # Get deps_cpp_info from upstream nodes
@@ -622,9 +615,12 @@ class BinaryInstaller(object):
 
                 if conanfile._conan_dep_cpp_info is None:
                     try:
-                        if not is_editable:
-                            # FIXME: The default for the cppinfo from build are not the same
-                            #        so this check fails when editable
+                        if not is_editable and not hasattr(conanfile, "layout"):
+                            # FIXME: Remove when new cppinfo model. If using the layout method
+                            #        the cppinfo object is filled from self.cpp.package new
+                            #        model and we cannot check if the defaults have been modified
+                            #        because it doesn't exist in the new model where the defaults
+                            #        for the components are always empty
                             pass
                             #conanfile.cpp_info._raise_incorrect_components_definition(
                             #    conanfile.name, conanfile.requires)

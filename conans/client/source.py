@@ -3,9 +3,9 @@ import shutil
 
 from conans.client import tools
 from conans.client.cmd.export import export_recipe, export_source
+from conans.client.tools import no_op
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
     conanfile_exception_formatter
-from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.conan_v2_mode import conan_v2_property
@@ -101,7 +101,7 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
                 _run_cache_scm(conanfile, scm_sources_folder, output)
                 # so self exported files have precedence over python_requires ones
-                merge_directories(export_folder, conanfile.source_folder)
+                merge_directories(export_folder, conanfile.folders.base_source)
                 # Now move the export-sources to the right location
                 merge_directories(export_source_folder, conanfile.folders.base_source)
 
@@ -120,13 +120,12 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
         - Calling post_source hook
     """
 
-
     src_folder = conanfile.folders.base_source
     mkdir(src_folder)
 
     with tools.chdir(src_folder):
         try:
-            with get_env_context_manager(conanfile):
+            with no_op():  # TODO: Remove this in a later refactor
                 hook_manager.execute("pre_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
                                      reference=reference)
@@ -135,7 +134,8 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                 get_sources_from_exports()
 
                 if cache:
-                    _clean_source_folder(src_folder)  # TODO: Why is it needed in cache?
+                    # Clear the conanfile.py to avoid errors cloning git repositories.
+                    _clean_source_folder(src_folder)
                 with conanfile_exception_formatter(conanfile.display_name, "source"):
 
                     with conan_v2_property(conanfile, 'settings',

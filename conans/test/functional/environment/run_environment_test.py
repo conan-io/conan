@@ -15,7 +15,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.runners import check_output_runner
 
 
-@pytest.mark.xfail(reason="Environment management will be changed")
+@pytest.mark.xfail(reason="RunEnvironment test will be removed next PR")
 @pytest.mark.tool_cmake
 class RunEnvironmentTest(unittest.TestCase):
 

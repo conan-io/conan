@@ -8,7 +8,6 @@ from conans import ConanFile, Options
 from conans.client.output import ConanOutput
 from conans.client.userio import UserIO
 from conans.model.conf import ConfDefinition
-from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
 from conans.model.layout import Folders
 from conans.model.options import PackageOptions
 from conans.model.user_info import DepsUserInfo
@@ -92,7 +91,7 @@ class MockCppInfo(object):
         self.include_paths = []
         self.libs = []
         self.cflags = []
-        self.cppflags = []
+        self.cxxflags = []
         self.defines = []
         self.frameworks = []
         self.framework_paths = []
@@ -167,10 +166,7 @@ class ConanFileMock(ConanFile):
         self.should_test = True
         self.generators = []
         self.captured_env = {}
-        self.deps_env_info = DepsEnvInfo()
-        self.env_info = EnvInfo()
         self.deps_user_info = DepsUserInfo()
-        self._conan_env_values = EnvValues()
         self.folders = Folders()
         self.folders.set_base_source(".")
         self.folders.set_base_build(".")
@@ -179,7 +175,6 @@ class ConanFileMock(ConanFile):
         self.environment_scripts = []
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
-
 
     def run(self, command, win_bash=False, subsystem=None, env=None):
         assert win_bash is False

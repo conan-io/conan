@@ -204,33 +204,32 @@ class HelloConan(ConanFile):
     name = "Hello"
     version = "0.1"
     def package_info(self):
-        self.buildenv_info.append_path("PYTHONPATH", "new/pythonpath/value")
+        self.buildenv_info.define("MYVAR", "new/pythonpath/value")
+
         '''
         test_package = '''
 import os, platform
 from conans import ConanFile
+from conan.tools.env import VirtualBuildEnv
 
 class HelloTestConan(ConanFile):
     test_type = "build_requires"
     generators = "VirtualBuildEnv"
 
     def build(self):
-        if platform.system() == "Windows":
-            self.run("set PYTHONPATH")
-        else:
-            self.run("printenv PYTHONPATH")
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            assert("new/pythonpath/value" in os.environ["MYVAR"])
 
     def test(self):
-        if platform.system() == "Windows":
-            self.run("set PYTHONPATH")
-        else:
-            self.run("printenv PYTHONPATH")
+        build_env = VirtualBuildEnv(self).environment()
+        with build_env.apply():
+            assert("new/pythonpath/value" in os.environ["MYVAR"])
 '''
 
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
         client.run("export . lasote/testing")
         client.run("test test_package Hello/0.1@lasote/testing --build missing")
-        assert "new/pythonpath/value" in client.out
 
     def test_fail_test_package(self):
         client = TestClient()

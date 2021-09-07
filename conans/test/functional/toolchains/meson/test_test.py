@@ -1,4 +1,6 @@
 import os
+import platform
+
 import pytest
 import textwrap
 
@@ -7,6 +9,7 @@ from conans.test.functional.toolchains.meson._base import TestMesonBase
 
 
 @pytest.mark.tool_pkg_config
+@pytest.mark.skipif(platform.system() == "Windows", reason="Doesn't work in Windows")
 class MesonTest(TestMesonBase):
     _test_package_meson_build = textwrap.dedent("""
         project('test_package', 'cpp')
@@ -23,7 +26,7 @@ class MesonTest(TestMesonBase):
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            generators = "pkg_config"
+            generators = "PkgConfigDeps"
 
             def generate(self):
                 tc = MesonToolchain(self)

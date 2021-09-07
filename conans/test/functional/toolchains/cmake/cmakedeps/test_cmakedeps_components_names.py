@@ -36,7 +36,7 @@ def setup_client_with_greetings():
 
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure(build_script_folder="src")
                 cmake.build()
 
             def package(self):
@@ -142,7 +142,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
 
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure(build_script_folder="src")
                 cmake.build()
 
             def package(self):
@@ -310,6 +310,47 @@ def test_custom_names(setup_client_with_greetings):
     create_chat(client, "custom", package_info, cmake_find, test_cmake_find)
 
 
+def test_different_namespace(setup_client_with_greetings):
+    client = setup_client_with_greetings
+
+    package_info = textwrap.dedent("""
+        self.cpp_info.set_property("cmake_target_namespace", "MyChat")
+        self.cpp_info.set_property("cmake_target_name", "MyGlobalChat")
+        self.cpp_info.set_property("cmake_file_name", "MyChat")
+
+        self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MySay")
+
+        self.cpp_info.components["sayhello"].requires = ["greetings::hello"]
+        self.cpp_info.components["sayhello"].libs = ["sayhello"]
+        self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MySayBye")
+
+        self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::bye"]
+        self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
+        """)
+
+    cmake_find = textwrap.dedent("""
+        find_package(MYG COMPONENTS MyHello MyBye)
+
+        add_library(sayhello sayhello.cpp)
+        target_link_libraries(sayhello MyGreetings::MyHello)
+
+        add_library(sayhellobye sayhellobye.cpp)
+        target_link_libraries(sayhellobye sayhello MyGreetings::MyBye)
+        """)
+
+    test_cmake_find = textwrap.dedent("""
+        find_package(MyChat)
+
+        add_executable(example example.cpp)
+        target_link_libraries(example MyChat::MySayBye)
+
+        add_executable(example2 example.cpp)
+        target_link_libraries(example2 MyChat::MyGlobalChat)
+        """)
+    create_chat(client, "custom", package_info, cmake_find, test_cmake_find)
+
+
+
 def test_no_components(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -359,7 +400,7 @@ def test_same_names():
 
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure(build_script_folder="src")
                 cmake.build()
 
             def package(self):
@@ -531,7 +572,7 @@ class TestComponentsCMakeGenerators:
 
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure(build_script_folder="src")
                     cmake.build()
 
                 def package(self):
@@ -587,7 +628,7 @@ class TestComponentsCMakeGenerators:
 
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure(build_script_folder="src")
                     cmake.build()
 
                 def package(self):
@@ -616,7 +657,7 @@ class TestComponentsCMakeGenerators:
 
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure(build_script_folder="src")
                     cmake.build()
                     self.run(".%smain" % os.sep)
             """.format("CMakeDeps"))

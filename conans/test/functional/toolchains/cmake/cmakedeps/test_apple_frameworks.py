@@ -75,9 +75,12 @@ conanfile = textwrap.dedent("""
                 name = "mylibrary"
                 version = "1.0"
 
+                def layout(self):
+                    self.folders.source = "src"
+
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure()
                     cmake.build()
                     cmake.install()
                     self.run("otool -L '%s/hello.framework/hello'" % self.build_folder)
@@ -231,7 +234,7 @@ def test_apple_own_framework_cross_build(settings):
 
             def test(self):
                 if not tools.cross_building(self):
-                    self.run("timer", run_environment=True)
+                    self.run("timer", env="conanrunenv")
         """)
 
     client.save({'conanfile.py': conanfile,
@@ -294,7 +297,7 @@ def test_apple_own_framework_cmake_deps():
                 cmake.build()
 
             def test(self):
-                self.run(os.path.join(str(self.settings.build_type), "timer"), run_environment=True)
+                self.run(os.path.join(str(self.settings.build_type), "timer"), env="conanrunenv")
         """)
     client.save({'conanfile.py': conanfile,
                  "src/CMakeLists.txt": cmake,
@@ -349,7 +352,7 @@ def test_apple_own_framework_cmake_find_package_multi():
                 cmake.configure()
                 cmake.build()
             def test(self):
-                self.run("bin/timer", run_environment=True)
+                self.run("bin/timer", env="conanrunenv")
         """)
     client.save({'conanfile.py': conanfile,
                  "src/CMakeLists.txt": cmake,
@@ -448,7 +451,7 @@ class TestPackageConan(ConanFile):
 
     def test(self):
         if not tools.cross_building(self.settings):
-            self.run("test_package", run_environment=True)
+            self.run("test_package", env="conanrunenv")
         """)
     test_test_package_cpp = textwrap.dedent("""
 #include "hello.h"
@@ -502,7 +505,7 @@ def test_m1():
 
     client = TestClient(path_with_spaces=False)
     client.save({"m1": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=v2_cmake")
+    client.run("new hello/0.1 --template=cmake_lib")
     client.run("create . --profile:build=default --profile:host=m1 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])

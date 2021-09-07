@@ -1,5 +1,6 @@
 import os
 
+from conan.tools.env import Environment
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.util.files import save
@@ -23,11 +24,14 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
         _conf = "\n".join(conf) if isinstance(conf, list) else conf
         profile.conf.loads(_conf)
 
-    for package_name, envs in package_env.items():
+    """for package_name, envs in package_env.items():
         for var_name, value in envs:
-            profile.env_values.add(var_name, value, package_name)
+            # Initialize Environment without Conanfile, what else can we do
+            profile._environments.set_default(package_name, Environment(conanfile=None))\
+                .define(var_name, value)
 
     for var_name, value in env or {}:
-        profile.env_values.add(var_name, value)
+        profile._environments.set_default(None, Environment(conanfile=None)) \
+            .define(var_name, value)"""
 
     save(os.path.join(folder, name), profile.dumps())

@@ -275,7 +275,7 @@ class ConanAPIV1(object):
                     raise RecipeNotFoundException(ref)
                 else:
                     if not self.app.cache.exists_rrev(ref):
-                        ref = self.app.remote_manager.get_recipe(ref, remote)
+                        ref, _ = self.app.remote_manager.get_recipe(ref, remote)
 
             result = self.app.proxy.get_recipe(ref, False, False, remotes)
             conanfile_path, _, _, ref = result
@@ -288,7 +288,7 @@ class ConanAPIV1(object):
         if not attributes:
             attributes = ['name', 'version', 'url', 'homepage', 'license', 'author',
                           'description', 'topics', 'generators', 'exports', 'exports_sources',
-                          'short_paths', 'apply_env', 'build_policy', 'revision_mode', 'settings',
+                          'short_paths', 'build_policy', 'revision_mode', 'settings',
                           'options', 'default_options', 'deprecated']
         # TODO: Change this in Conan 2.0, cli stdout should display only fields with values,
         # json should contain all values for easy automation
@@ -512,6 +512,7 @@ class ConanAPIV1(object):
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
                 lockfile=None, lockfile_out=None, profile_build=None, conf=None,
                 require_overrides=None):
+
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         recorder = ActionRecorder()
@@ -952,9 +953,9 @@ class ConanAPIV1(object):
         for ref in self.app.cache.all_refs():
             result[ref] = self.app.cache.get_remote(ref)
         if no_remote:
-            return {str(r): remote_name for r, remote_name in result.items() if not remote_name}
+            return {r.full_str(): remote_name for r, remote_name in result.items() if not remote_name}
         else:
-            return {str(r): remote_name for r, remote_name in result.items() if remote_name}
+            return {r.full_str(): remote_name for r, remote_name in result.items() if remote_name}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
@@ -1374,6 +1375,7 @@ class ConanAPIV1(object):
                     lockfile=None):
         # profile_host is mandatory
         profile_host = profile_host or ProfileData(None, None, None, None, None)
+        profile_build = profile_build or ProfileData(None, None, None, None, None)
         cwd = os.getcwd()
 
         if path and reference:
@@ -1400,10 +1402,11 @@ class ConanAPIV1(object):
                                   profile_host.options, profile_host.env, profile_host.conf,
                                   cwd, self.app.cache)
 
-        # Only work on the profile_build if something is provided
-        pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                   profile_build.options, profile_build.env, profile_build.conf,
-                                   cwd, self.app.cache)
+        if not pbuild:
+            # Only work on the profile_build if something is provided
+            pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                                       profile_build.options, profile_build.env, profile_build.conf,
+                                       cwd, self.app.cache, build_profile=True)
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         phost.process_settings(self.app.cache)
@@ -1456,10 +1459,9 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
     # Only work on the profile_build if something is provided
     pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                profile_build.options, profile_build.env, profile_build.conf,
-                               cwd, cache)
+                               cwd, cache, build_profile=True)
     pbuild.process_settings(cache)
 
-    # Preprocess settings and convert to real settings
     # Apply the new_config to the profiles the global one, so recipes get it too
     # TODO: This means lockfiles contain whole copy of the config here?
     # FIXME: Apply to locked graph-info as well

@@ -1,6 +1,8 @@
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.toolchains.meson._base import TestMesonBase
 
@@ -56,12 +58,16 @@ class MesonInstall(TestMesonBase):
 
     _test_package_conanfile_py = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake, tools
-
+        from conans import ConanFile, tools
+        from conan.tools.cmake import CMake
+        from conan.tools.layout import cmake_layout
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            generators = "cmake"
+            generators = "CMakeToolchain", "CMakeDeps"
+
+            def layout(self):
+                cmake_layout(self)
 
             def build(self):
                 cmake = CMake(self)
@@ -70,20 +76,21 @@ class MesonInstall(TestMesonBase):
 
             def test(self):
                 if not tools.cross_building(self):
-                    self.run(os.path.join("bin", "test_package"), run_environment=True)
+                    cmd = os.path.join(self.cpp.build.bindirs[0], "test_package")
+                    self.run(cmd, env=["conanrunenv"])
         """)
 
     _test_package_cmake_lists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.1)
         project(test_package CXX)
 
-        include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-        conan_basic_setup()
+        find_package(hello REQUIRED)
 
         add_executable(${PROJECT_NAME} test_package.cpp)
-        target_link_libraries(${PROJECT_NAME} ${CONAN_LIBS})
+        target_link_libraries(${PROJECT_NAME} hello::hello)
         """)
 
+    @pytest.mark.tool_meson
     def test_install(self):
         hello_cpp = gen_function_cpp(name="hello")
         hello_h = gen_function_h(name="hello")
@@ -94,8 +101,8 @@ class MesonInstall(TestMesonBase):
                      "hello.cpp": hello_cpp,
                      "hello.h": hello_h,
                      os.path.join("test_package", "conanfile.py"): self._test_package_conanfile_py,
-                     os.path.join("test_package", "CMakeLists.txt"): self._test_package_cmake_lists,
-                     os.path.join("test_package", "test_package.cpp"): test_package_cpp})
+                     os.path.join("test_package", "src", "CMakeLists.txt"): self._test_package_cmake_lists,
+                     os.path.join("test_package", "src", "test_package.cpp"): test_package_cpp})
 
         self.t.run("create . hello/0.1@ %s" % self._settings_str)
 

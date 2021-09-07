@@ -272,7 +272,7 @@ class MSBuildDeps(object):
             dep_name = dep_name.replace(".", "_")
             cpp_info = DepCppInfo(dep.cpp_info)  # To account for automatic component aggregation
             public_deps = [d.ref.name.replace(".", "_")
-                           for d in dep.dependencies.direct_host.values()]
+                           for r, d in dep.dependencies.direct_host.items() if r.visible]
             # One file per configuration, with just the variables
             vars_props_name = "conan_%s_vars%s.props" % (dep_name, conf_name)
             result[vars_props_name] = self._vars_props_file(dep_name, cpp_info, public_deps)

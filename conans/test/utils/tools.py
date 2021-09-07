@@ -22,7 +22,7 @@ from webtest.app import TestApp
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import load, REVISIONS
-from conans.cli.cli import Cli, CLI_V2_COMMANDS
+from conans.cli.cli import Cli, CLI_V1_COMMANDS
 from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
@@ -530,7 +530,7 @@ class TestClient(object):
     @staticmethod
     def is_conan_cli_v2_command(args):
         conan_command = args[0] if args else None
-        return conan_command in CLI_V2_COMMANDS
+        return conan_command not in CLI_V1_COMMANDS
 
     def run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
@@ -768,7 +768,7 @@ class TurboTestClient(TestClient):
         return latest_rrev.revision
 
     def package_revision(self, pref):
-        latest_prev = self.cache.get_latest_rrev(pref)
+        latest_prev = self.cache.get_latest_prev(pref)
         return latest_prev.revision
 
     def search(self, pattern, remote=None, assert_error=False, args=None):

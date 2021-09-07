@@ -4,8 +4,8 @@ import shutil
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
 from conans.client.packager import report_files_from_manifest
+from conans.client.tools import no_op
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
 from conans.tools import chdir
@@ -31,7 +31,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref,
     output.info("Generating the package")
     output.info("Package folder %s" % conanfile.package_folder)
 
-    with get_env_context_manager(conanfile):
+    with no_op():  # TODO: Remove this in a later refactor
         return _call_package(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info)
 
 

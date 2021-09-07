@@ -18,7 +18,7 @@ Conan is a package manager for C and C++ developers:
 - Portable. Works across all platforms, including Linux, OSX, Windows (with native and first-class support, WSL, MinGW),
   Solaris, FreeBSD, embedded and cross-compiling, docker, WSL
 - Manage binaries. It can create, upload and download binaries for any configuration and platform,
-  even cross-compiling, saving lots of time in development and continuous integration. The binary compatibility can be configured 
+  even cross-compiling, saving lots of time in development and continuous integration. The binary compatibility can be configured
   and customized. Manage all your artifacts in the same way on all platforms.
 - Integrates with any build system, including any proprietary and custom one. Provides tested support for major build systems
   (CMake, MSBuild, Makefiles, Meson, etc).
@@ -59,7 +59,7 @@ You can run **Conan** client and server in Windows, MacOS, and Linux.
   .. code-block:: bash
 
       $ git clone https://github.com/conan-io/conan.git conan-io
-      
+
  NOTE: repository directory name matters, some directories are known to be problematic to run tests (e.g. `conan`). `conan-io` directory name was tested and guaranteed to be working.
 
 - **Install in editable mode**
@@ -250,4 +250,3 @@ License
 
 
 .. _`pip docs`: https://pip.pypa.io/en/stable/installation/
-

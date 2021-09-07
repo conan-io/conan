@@ -5,44 +5,18 @@ from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
 from conans.client.output import ScopedOutput
-from conans.client.tools.env import environment_append, no_op
+
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
-from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Folders, Patterns, Infos
 from conans.model.new_build_info import from_old_cppinfo
-from conans.model.options import Options, OptionsValues, PackageOptions
+from conans.model.options import Options
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-from conans.util.conan_v2_mode import conan_v2_error
-
-
-def create_options(conanfile):
-    try:
-        package_options = PackageOptions(getattr(conanfile, "options", None))
-        options = Options(package_options)
-
-        default_options = getattr(conanfile, "default_options", None)
-        if default_options:
-            if isinstance(default_options, dict):
-                default_values = OptionsValues(default_options)
-            elif isinstance(default_options, (list, tuple)):
-                conan_v2_error("Declare 'default_options' as a dictionary")
-                default_values = OptionsValues(default_options)
-            elif isinstance(default_options, str):
-                conan_v2_error("Declare 'default_options' as a dictionary")
-                default_values = OptionsValues.loads(default_options)
-            else:
-                raise ConanException("Please define your default_options as list, "
-                                     "multiline string or dictionary")
-            options.values = default_values
-        return options
-    except Exception as e:
-        raise ConanException("Error while initializing options. %s" % str(e))
 
 
 def create_settings(conanfile, settings):
@@ -56,13 +30,6 @@ def create_settings(conanfile, settings):
     except Exception as e:
         raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
                                         conanfile.display_name, str(e)))
-
-
-def get_env_context_manager(conanfile):
-    if not conanfile.apply_env:
-        return no_op()
-
-    return environment_append(conanfile.env)
 
 
 class ConanFile(object):
@@ -83,7 +50,6 @@ class ConanFile(object):
     homepage = None
     build_policy = None
     short_paths = False
-    apply_env = True  # Apply environment variables from requires deps_env_info and profiles
     exports = None
     exports_sources = None
     generators = []
@@ -187,12 +153,13 @@ class ConanFile(object):
             self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
         return self._conan_buildenv
 
-    def initialize(self, settings, env, buildenv=None):
+    def initialize(self, settings, buildenv=None):
         self._conan_buildenv = buildenv
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
-        self.options = create_options(self)
+
+        self.options = Options.create_options(self.options, self.default_options)
         self.settings = create_settings(self, settings)
 
         # needed variables to pack the project
@@ -200,17 +167,10 @@ class ConanFile(object):
         self._conan_dep_cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
 
-        # environment variables declared in the package_info
-        self.env_info = None  # Will be initialized at processing time
-        self.deps_env_info = DepsEnvInfo()
-
         # user declared variables
         self.user_info = None
         # Keys are the package names (only 'host' if different contexts)
         self.deps_user_info = DepsUserInfo()
-
-        # user specified env variables
-        self._conan_env_values = env.copy()  # user specified -e
 
         if self.description is not None and not isinstance(self.description, str):
             raise ConanException("Recipe 'description' must be a string.")
@@ -272,18 +232,6 @@ class ConanFile(object):
         self.folders.set_base_imports(folder)
 
     @property
-    def env(self):
-        """Apply the self.deps_env_info into a copy of self._conan_env_values (will prioritize the
-        self._conan_env_values, user specified from profiles or -e first, then inherited)"""
-        # Cannot be lazy cached, because it's called in configure node, and we still don't have
-        # the deps_env_info objects available
-        tmp_env_values = self._conan_env_values.copy()
-        tmp_env_values.update(self.deps_env_info)
-        ret, multiple = tmp_env_values.env_dicts(self.name, self.version)
-        ret.update(multiple)
-        return ret
-
-    @property
     def build_policy_missing(self):
         return self.build_policy == "missing"
 
@@ -334,7 +282,7 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env=None):
+            ignore_errors=False, with_login=True, env=None):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
 
         def _run(cmd, _env):
@@ -350,19 +298,7 @@ class ConanFile(object):
             wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
-        if run_environment:
-            # When using_build_profile the required environment is already applied through
-            # 'conanfile.env' in the contextmanager 'get_env_context_manager'
-            if OSInfo().is_macos and isinstance(command, str):
-                # Security policy on macOS clears this variable when executing /bin/sh. To
-                # keep its value, set it again inside the shell when running the command.
-                command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
-                          (os.environ.get('DYLD_LIBRARY_PATH', ''),
-                           os.environ.get("DYLD_FRAMEWORK_PATH", ''),
-                           command)
-            retcode = _run(command, env)
-        else:
-            retcode = _run(command, env)
+        retcode = _run(command, env)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))

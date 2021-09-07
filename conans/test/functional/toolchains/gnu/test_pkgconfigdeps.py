@@ -5,6 +5,7 @@ import unittest
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -251,6 +252,84 @@ def test_custom_content_components():
     client.save({"conanfile.py": conanfile})
     client.run("create . pkg/0.1@")
     client.run("install pkg/0.1@ -g PkgConfigDeps")
-
     pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
+
+
+def test_pkg_with_component_requires():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("other", "0.1").with_package_file("file.h", "0.1")})
+    client.run("create . user/channel")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            requires = "other/0.1@user/channel"
+
+            def package_info(self):
+                self.cpp_info.components["mycomponent"].requires.append("other::other")
+                self.cpp_info.components["myothercomp"].requires.append("mycomponent")
+
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . pkg/0.1@")
+
+    client2 = TestClient(cache_folder=client.cache_folder)
+    conanfile = textwrap.dedent("""
+        [requires]
+        pkg/0.1
+
+        [generators]
+        PkgConfigDeps
+        """)
+    client2.save({"conanfile.txt": conanfile})
+    client2.run("install .")
+    pc_content = client2.load("pkg-mycomponent.pc")
+    assert "Requires: other" in pc_content
+
+
+def test_pkg_getting_public_requires():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Recipe(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.components["cmp1"].libs = ["other_cmp1"]
+                self.cpp_info.components["cmp2"].libs = ["other_cmp2"]
+                self.cpp_info.components["cmp3"].requires.append("cmp1")
+
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . other/1.0@")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            requires = "other/1.0"
+
+            def package_info(self):
+                self.cpp_info.requires = ["other::cmp1"]
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . pkg/0.1@")
+
+    client2 = TestClient(cache_folder=client.cache_folder)
+    conanfile = textwrap.dedent("""
+        [requires]
+        pkg/0.1
+
+        [generators]
+        PkgConfigDeps
+        """)
+    client2.save({"conanfile.txt": conanfile})
+    client2.run("install .")
+    pc_content = client2.load("pkg.pc")
+    assert "Requires: cmp1" in pc_content
+    assert client2.load("other-cmp1.pc")
+    assert client2.load("other-cmp2.pc")
+    pc_content = client2.load("other-cmp3.pc")
+    assert "Requires: cmp1" in pc_content

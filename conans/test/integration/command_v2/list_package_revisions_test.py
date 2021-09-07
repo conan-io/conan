@@ -1,8 +1,11 @@
 import re
 import textwrap
+from unittest.mock import Mock, patch
 
 import pytest
 
+from conans.client.remote_manager import RemoteManager
+from conans.errors import ConanConnectionError, ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
@@ -37,15 +40,16 @@ class TestListPackageRevisionsBase:
 
 
 class TestParams(TestListPackageRevisionsBase):
-    def test_fail_if_reference_is_not_correct(self):
-        self.client.run("list package-revisions whatever", assert_error=True)
-        assert "ERROR: Specify the 'name' and the 'version'" in self.client.out
 
-        self.client.run("list package-revisions whatever/", assert_error=True)
-        assert "ERROR: Specify the 'name' and the 'version'" in self.client.out
-
-        self.client.run("list package-revisions whatever/1", assert_error=True)
-        assert "ERROR: Value provided for package version, '1' (type Version), is too short" in self.client.out
+    @pytest.mark.parametrize("ref", [
+        "whatever",
+        "whatever/",
+        "whatever/1"
+    ])
+    def test_fail_if_reference_is_not_correct(self, ref):
+        self.client.run(f"list package-revisions {ref}", assert_error=True)
+        assert f"ERROR: {ref} is not a valid package reference, provide a " \
+               f"reference in the form name/version[@user/channel]#RECIPE_REVISION:PACKAGE_ID" in self.client.out
 
     def test_fails_if_reference_has_already_the_revision(self):
         pref = self._get_fake_package_refence("whatever/1.0.0")
@@ -73,6 +77,12 @@ class TestParams(TestListPackageRevisionsBase):
         self.client.run("list package-revisions --all-remotes --remote remote1 package/1.0", assert_error=True)
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
 
+    def test_wildcard_not_accepted(self):
+        self.client.run("list package-revisions -a -c test_*", assert_error=True)
+        expected_output = "ERROR: test_* is not a valid package reference, provide a " \
+                          "reference in the form name/version[@user/channel]#RECIPE_REVISION:PACKAGE_ID"
+        assert expected_output in self.client.out
+
 
 class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
     def test_by_default_search_only_in_cache(self):
@@ -81,7 +91,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching packages
+          There are no matching package references
         """)
 
         self.client.run(f"list package-revisions {self._get_fake_package_refence('whatever/0.1')}")
@@ -93,11 +103,11 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching packages
+          There are no matching package references
         remote1:
-          There are no matching packages
+          There are no matching package references
         remote2:
-          There are no matching packages
+          There are no matching package references
         """)
 
         pref = self._get_fake_package_refence('whatever/0.1')
@@ -105,15 +115,47 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         assert expected_output == self.client.out
 
     def test_fail_if_no_configured_remotes(self):
-        self.client.run("list package-revisions -a whatever/1.0", assert_error=True)
+        pref = self._get_fake_package_refence('whatever/0.1')
+        self.client.run(f"list package-revisions -a {pref}", assert_error=True)
         assert "ERROR: The remotes registry is empty" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
+        self._add_remote("remote2")
         self.client.run("remote disable remote1")
+        # He have to put both remotes instead of using "-a" because of the
+        # disbaled remote won't appear
         pref = self._get_fake_package_refence('whatever/0.1')
-        self.client.run(f"list package-revisions -r remote1 {pref}", assert_error=True)
-        assert "ERROR: Remote 'remote1' is disabled" in self.client.out
+        self.client.run(f"list package-revisions {pref} -r remote1 -r remote2")
+        expected_output = textwrap.dedent("""\
+        remote1:
+          ERROR: Remote 'remote1' is disabled
+        remote2:
+          There are no matching package references
+        """)
+        assert expected_output == self.client.out
+
+    @pytest.mark.parametrize("exc,output", [
+        (ConanConnectionError("Review your network!"),
+         "ERROR: Review your network!"),
+        (ConanException("Boom!"), "ERROR: Boom!")
+    ])
+    def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
+        self._add_remote("remote1")
+        self._add_remote("remote2")
+        pref = self._get_fake_package_refence('whatever/0.1')
+        with patch.object(RemoteManager, "get_package_revisions",
+                          new=Mock(side_effect=exc)):
+            self.client.run(f"list package-revisions {pref} -a -c")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          There are no matching package references
+        remote1:
+          {output}
+        remote2:
+          {output}
+        """)
+        assert expected_output == self.client.out
 
 
 class TestRemotes(TestListPackageRevisionsBase):
@@ -152,7 +194,7 @@ class TestRemotes(TestListPackageRevisionsBase):
         remote1:
           {repr(pref)}#.*
         remote2:
-          There are no matching packages""")
+          There are no matching package references""")
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):
@@ -169,16 +211,4 @@ class TestRemotes(TestListPackageRevisionsBase):
 
         pref = self._get_fake_package_refence(remote1_recipe1)
         self.client.run(f"list package-revisions -r wrong_remote {pref}", assert_error=True)
-        assert expected_output in self.client.out
-
-    def test_wildcard_not_accepted(self):
-        remote1 = "remote1"
-        remote1_recipe1 = "test_recipe/1.0.0@user/channel"
-
-        expected_output = "is an invalid name. Valid names MUST begin with a letter, number or underscore"
-
-        self._add_remote(remote1)
-        self._upload_recipe(remote1, remote1_recipe1)
-        self.client.run("list package-revisions -a -c test_*", assert_error=True)
-
         assert expected_output in self.client.out

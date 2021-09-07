@@ -7,7 +7,6 @@ from conans import ConanFile, Settings
 from conans.model.build_info import CppInfo
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
-from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 
 
@@ -21,7 +20,7 @@ def test_cpp_info_name_cmakedeps(using_properties):
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}), EnvValues())
+                                   "arch": ["x86"]}))
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -46,7 +45,7 @@ def test_cpp_info_name_cmakedeps(using_properties):
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
-        assert "TARGET MySuperPkg1::MySuperPkg1" in files["ComplexFileName1Target-release.cmake"]
+        assert "TARGET MySuperPkg1::MySuperPkg1" in files["ComplexFileName1-Target-release.cmake"]
         assert 'set(OriginalDepName_INCLUDE_DIRS_RELEASE ' \
                '"${OriginalDepName_PACKAGE_FOLDER_RELEASE}/include")' \
                in files["ComplexFileName1-release-x86-data.cmake"]
@@ -62,7 +61,7 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release", "Debug"],
-                                   "arch": ["x86", "x64"]}), EnvValues())
+                                   "arch": ["x86", "x64"]}))
     conanfile.settings.build_type = "Debug"
     conanfile.settings.arch = "x64"
 
@@ -89,7 +88,7 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
-        assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1Target-debug.cmake"]
+        assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1-Target-debug.cmake"]
         assert 'set(OriginalDepName_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
@@ -108,7 +107,7 @@ def test_cmake_deps_links_flags():
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}), EnvValues())
+                                   "arch": ["x86"]}))
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -146,7 +145,7 @@ def test_component_name_same_package():
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}), EnvValues())
+                                   "arch": ["x86"]}))
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -168,7 +167,7 @@ def test_component_name_same_package():
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
-        target_cmake = files["mypkgTarget-release.cmake"]
+        target_cmake = files["mypkg-Target-release.cmake"]
         assert "$<$<CONFIG:Release>:${mypkg_mypkg_INCLUDE_DIRS_RELEASE}> APPEND)" in target_cmake
 
         data_cmake = files["mypkg-release-x86-data.cmake"]

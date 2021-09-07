@@ -1,5 +1,5 @@
+from conans.client.tools import no_op
 from conans.errors import conanfile_exception_formatter
-from conans.model.conan_file import get_env_context_manager
 from conans.model.pkg_type import PackageType
 from conans.model.requires import BuildRequirements, TestRequirements
 from conans.util.conan_v2_mode import conan_v2_error
@@ -10,7 +10,7 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
     """ Run all the config-related functions for the given conanfile object """
 
     # Avoid extra time manipulating the sys.path for python
-    with get_env_context_manager(conanfile):
+    with no_op():  # TODO: Remove this in a later refactor
         if hasattr(conanfile, "config"):
             conan_v2_error("config() has been deprecated. Use config_options() and configure()")
             with conanfile_exception_formatter(str(conanfile), "config"):
@@ -40,10 +40,6 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
 
         PackageType.compute_package_type(conanfile)
 
-        # Once the node is configured call the layout()
-        if hasattr(conanfile, "layout"):
-            conanfile.layout()
-
         if hasattr(conanfile, "requirements"):
             with conanfile_exception_formatter(str(conanfile), "requirements"):
                 conanfile.requirements()
@@ -54,3 +50,7 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
                 conanfile.build_requires = BuildRequirements(conanfile.requires)
                 conanfile.test_requires = TestRequirements(conanfile.requires)
                 conanfile.build_requirements()
+
+        if hasattr(conanfile, "layout"):
+            with conanfile_exception_formatter(str(conanfile), "layout"):
+                conanfile.layout()

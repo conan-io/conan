@@ -155,7 +155,6 @@ def test_locally_build_msvc_toolset(client):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool_mingw64
-@pytest.mark.tool_compiler
 @pytest.mark.tool_ninja
 def test_locally_build_gcc(build_type, shared, client):
     # FIXME: Note the gcc version is still incorrect

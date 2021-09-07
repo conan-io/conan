@@ -34,6 +34,7 @@ class DepsGraphBuilder(object):
 
         self._prepare_node(root_node, profile_host, profile_build, graph_lock, None, None)
         self._initialize_requires(root_node, dep_graph, check_updates, update, remotes, graph_lock)
+
         dep_graph.add_node(root_node)
 
         open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
@@ -48,6 +49,7 @@ class DepsGraphBuilder(object):
                 if new_node:
                     self._initialize_requires(new_node, dep_graph, check_updates, update, remotes,
                                               graph_lock)
+
                     open_requires.extendleft((r, new_node)
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
@@ -141,6 +143,9 @@ class DepsGraphBuilder(object):
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, graph_lock, down_ref, down_options):
+        if graph_lock:
+            graph_lock.pre_lock_node(node)
+
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 
@@ -167,6 +172,8 @@ class DepsGraphBuilder(object):
         for require in node.conanfile.requires.values():
             if graph_lock is not None:
                 graph_lock.resolve_locked(require)
+
+        for require in node.conanfile.requires.values():
             self._resolve_alias(node, require, graph, check_updates, update, remotes)
             node.transitive_deps[require] = TransitiveRequirement(require, None)
 
@@ -211,9 +218,9 @@ class DepsGraphBuilder(object):
                         update, remotes, profile, graph_lock):
         result = self._proxy.get_recipe(ref, check_updates, update, remotes)
         conanfile_path, recipe_status, remote, new_ref = result
-
         dep_conanfile = self._loader.load_conanfile(conanfile_path, profile, ref=ref,
                                                     graph_lock=graph_lock)
+
         if recipe_status == RECIPE_EDITABLE:
             dep_conanfile.in_local_cache = False
             dep_conanfile.develop = True

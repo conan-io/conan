@@ -7,6 +7,7 @@ import pytest
 from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 
@@ -257,3 +258,36 @@ def test_cpp_package():
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/include")' in cmake
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/libs")' in cmake
     assert 'set(hello_LIBS_RELEASE foo)' in cmake
+
+
+def test_git_clone_with_source_layout():
+    client = TestClient()
+    repo = temp_folder()
+    conanfile = textwrap.dedent("""
+           import os
+           from conans import ConanFile
+           class Pkg(ConanFile):
+               exports = "*.txt"
+
+               def layout(self):
+                   self.folders.source = "src"
+
+               def source(self):
+                   self.run('git clone "{}" src')
+       """).format(repo.replace("\\", "/"))
+
+    client.save({"conanfile.py": conanfile,
+                 "myfile.txt": "My file is copied"})
+    with client.chdir(repo):
+        client.save({"cloned.txt": "foo"}, repo)
+        client.init_git_repo()
+
+    client.run("create . hello/1.0@")
+    sf = client.cache.package_layout(ConanFileReference.loads("hello/1.0@")).source()
+    assert os.path.exists(os.path.join(sf, "myfile.txt"))
+    # The conanfile is cleared from the root before cloning
+    assert not os.path.exists(os.path.join(sf, "conanfile.py"))
+    assert not os.path.exists(os.path.join(sf, "cloned.txt"))
+
+    assert os.path.exists(os.path.join(sf, "src", "cloned.txt"))
+    assert not os.path.exists(os.path.join(sf, "src", "myfile.txt"))

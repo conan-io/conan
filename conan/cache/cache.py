@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 import uuid
 from io import StringIO
 
@@ -9,8 +10,7 @@ from io import StringIO
 from conan.cache.db.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conan.cache.db.references import ReferencesDbTable
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB
 from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
 from conans.util.files import md5, rmdir
 
@@ -102,28 +102,42 @@ class DataCache:
 
     def get_reference_layout(self, ref: ConanReference):
         assert ref.rrev, "Recipe revision must be known to get the reference layout"
-        reference_path = self._get_path(ref)
-        return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
+        ref_data = self._db.try_get_reference(ref)
+        ref_path = ref_data.get("path")
+        return RecipeLayout(ref, os.path.join(self.base_folder, ref_path))
 
     def get_package_layout(self, pref: ConanReference):
         assert pref.rrev, "Recipe revision must be known to get the package layout"
         assert pref.pkgid, "Package id must be known to get the package layout"
         assert pref.prev, "Package revision must be known to get the package layout"
-        package_path = self._get_path(pref)
-        return PackageLayout(pref, os.path.join(self.base_folder, package_path))
+        pref_data = self._db.try_get_reference(pref)
+        pref_path = pref_data.get("path")
+        return PackageLayout(pref, os.path.join(self.base_folder, pref_path))
+
+    def get_or_create_reference_layout(self, ref: ConanReference):
+        try:
+            return self.get_reference_layout(ref)
+        except ConanReferenceDoesNotExistInDB:
+            return self.create_reference_layout(ref)
+
+    def get_or_create_package_layout(self, ref: ConanReference):
+        try:
+            return self.get_package_layout(ref)
+        except ConanReferenceDoesNotExistInDB:
+            return self.create_package_layout(ref)
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
-        old_path = self._db.try_get_reference_directory(old_ref)
+        ref_data = self._db.try_get_reference(old_ref)
+        old_path = ref_data.get("path")
         new_path = self._get_path(new_ref)
 
         try:
-            self._db.update_reference(old_ref, new_ref, new_path=new_path)
-        except ReferencesDbTable.ReferenceAlreadyExist:
+            self._db.update_reference(old_ref, new_ref, new_path=new_path, new_timestamp=time.time())
+        except ConanReferenceAlreadyExistsInDB:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             self._db.delete_ref_by_path(old_path)
-            # TODO: cache2.0 should we update the timestamp here?
-            self._db.update_reference(new_ref)
+            self._db.update_reference(new_ref, new_timestamp=time.time())
 
         # TODO: Here we are always overwriting the contents of the rrev folder where
         #  we are putting the exported files for the reference, but maybe we could
@@ -139,7 +153,8 @@ class DataCache:
         return new_path
 
     def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference):
-        old_path = self._db.try_get_reference_directory(old_pref)
+        ref_data = self._db.try_get_reference(old_pref)
+        old_path = ref_data.get("path")
         new_path = self._get_path(new_pref)
         if os.path.exists(self._full_path(new_path)):
             try:
@@ -149,21 +164,21 @@ class DataCache:
                                      "Couldn't remove folder, might be busy or open\n"
                                      "Close any app using it, and retry")
         try:
-            self._db.update_reference(old_pref, new_pref, new_path=new_path)
-        except ReferencesDbTable.ReferenceAlreadyExist:
+            self._db.update_reference(old_pref, new_pref, new_path=new_path, new_timestamp=time.time())
+        except ConanReferenceAlreadyExistsInDB:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             # TODO: cache2.0 locks
             self._db.delete_ref_by_path(old_path)
-            self._db.update_reference(new_pref)
+            self._db.update_reference(new_pref, new_timestamp=time.time())
 
         shutil.move(self._full_path(old_path), self._full_path(new_path))
 
         return new_path
 
     def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_remote=None, new_build_id=None):
-        self._db.update_reference(old_ref, new_ref, new_path, new_remote, new_build_id)
+                         new_path=None, new_remote=None, new_timestamp=None, new_build_id=None):
+        self._db.update_reference(old_ref, new_ref, new_path, new_remote, new_timestamp, new_build_id)
 
     def list_references(self, only_latest_rrev=False):
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
@@ -180,18 +195,21 @@ class DataCache:
         for it in self._db.get_package_ids(ref):
             yield it
 
-    def get_build_id(self, ref):
-        return self._db.get_build_id(ref)
-
     def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
         for it in self._db.get_package_revisions(ref, only_latest_prev):
             yield it
 
+    def get_build_id(self, ref):
+        ref_data = self._db.try_get_reference(ref)
+        return ref_data.get("build_id")
+
     def get_remote(self, ref: ConanReference):
-        return self._db.get_remote(ref)
+        ref_data = self._db.try_get_reference(ref)
+        return ref_data.get("remote")
 
     def get_timestamp(self, ref):
-        return self._db.get_timestamp(ref)
+        ref_data = self._db.try_get_reference(ref)
+        return ref_data.get("timestamp")
 
     def set_remote(self, ref: ConanReference, new_remote):
         self._db.set_remote(ref, new_remote)

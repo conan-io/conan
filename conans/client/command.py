@@ -631,7 +631,7 @@ class Command(object):
         elif args.subcommand == 'init':
             return self._conan.config_init(force=args.force)
         elif args.subcommand == "list":
-            self._out.info("Supported Conan *experimental* conan.conf properties:")
+            self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
             for key, value in DEFAULT_CONFIGURATION.items():
                 self._out.writeln("{}: {}".format(key, value))
 
@@ -1026,8 +1026,8 @@ class Command(object):
         Copies the recipe (conanfile.py & associated files) to your local cache.
 
         Use the 'reference' param to specify a user and channel where to export
-        it. Once the recipe is in the local cache it can be shared, reused and
-        to any remote with the 'conan upload' command.
+        it. Once the recipe is in the local cache it can be shared and reused
+        with any remote with the 'conan upload' command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__,
                                          prog="conan export",
@@ -1123,8 +1123,20 @@ class Command(object):
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
-        return self._conan.remove(pattern=args.pattern_or_reference, query=args.query,
-                                  packages=args.packages, builds=args.builds, src=args.src,
+        try:
+            pref = PackageReference.loads(args.pattern_or_reference, validate=True)
+            packages = [pref.id]
+            pattern_or_reference = repr(pref.ref)
+        except ConanException:
+            pref = None
+            pattern_or_reference = args.pattern_or_reference
+            packages = args.packages
+
+        if pref and args.packages:
+            raise ConanException("Use package ID only as -p argument or reference, not both")
+
+        return self._conan.remove(pattern=pattern_or_reference, query=args.query,
+                                  packages=packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote)
 
     def user(self, *args):
