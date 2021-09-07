@@ -320,9 +320,10 @@ class RestV2Methods(RestCommonMethods):
     def get_latest_recipe_revision(self, ref):
         url = self.router.recipe_latest(ref)
         data = self.get_json(url)
-        return ref.copy_with_rev(data["revision"]), data["time"]
+        return ref.copy_with_rev(data.get("revision")), from_iso8601_to_timestamp(data.get("time"))
 
     def get_latest_package_revision(self, pref, headers):
         url = self.router.package_latest(pref)
         data = self.get_json(url, headers=headers)
-        return pref.copy_with_revs(pref.ref.revision, data["revision"]), data["time"]
+        return (pref.copy_with_revs(pref.ref.revision, data.get("revision")),
+                from_iso8601_to_timestamp(data.get("time")))
