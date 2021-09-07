@@ -55,3 +55,58 @@ def test_cmaketoolchain_path_find(package, find_package):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) in client.out
     assert "MYOWNCMAKE FROM {package}!".format(package=package) in client.out
+
+
+@pytest.mark.tool_cmake
+def test_cmaketoolchain_path_find_real_config():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            exports = "*"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                pass
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+        """)
+    cmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyHello NONE)
+
+        add_library(hello INTERFACE)
+        install(TARGETS hello EXPORT helloConfig)
+        export(TARGETS hello
+            NAMESPACE hello::
+            FILE "${CMAKE_CURRENT_BINARY_DIR}/helloConfig.cmake"
+        )
+        install(EXPORT helloConfig
+            DESTINATION "${CMAKE_INSTALL_PREFIX}/hello/cmake"
+            NAMESPACE hello::
+        )
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmake})
+    client.run("create . hello/0.1@")
+    package = "hello"
+    consumer = textwrap.dedent("""
+        project(MyHello NONE)
+        cmake_minimum_required(VERSION 3.15)
+
+        find_package({package} REQUIRED)
+        """).format(package=package)
+
+    client.save({"CMakeLists.txt": consumer}, clean_first=True)
+    client.run("install hello/0.1@ -g CMakeToolchain")
+    with client.chdir("build"):
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
+    # If it didn't fail, it found the helloConfig.cmake
