@@ -161,7 +161,7 @@ class RemoteManager(object):
                                    conanfile=conanfile)
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
-        latest_prev = self.get_latest_package_revision(pref, remote)
+        latest_prev, _ = self.get_latest_package_revision(pref, remote)
 
         pkg_layout = self._cache.get_or_create_pkg_layout(latest_prev)
 
@@ -253,27 +253,21 @@ class RemoteManager(object):
         return revisions
 
     def get_latest_recipe_revision(self, ref, remote):
-        revision = self._call_remote(remote, "get_latest_recipe_revision", ref)
-        return revision
-
-    # FIXME: fix in server side, get_latest_recipe_revision should return the time of the rev
-    def get_latest_recipe_revision_with_time(self, ref, remote):
-        revisions = self._call_remote(remote, "get_recipe_revisions", ref)
-        return {'reference': ref.copy_with_rev(revisions[0].get("revision")),
-                'time': revisions[0].get("time")} if revisions else {}
+        revision, rev_time = self._call_remote(remote, "get_latest_recipe_revision", ref)
+        return revision, rev_time
 
     def get_latest_package_revision(self, pref, remote, headers=None):
-        revision = self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)
-        return revision
+        revision, rev_time = self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)
+        return revision, rev_time
 
     def _resolve_latest_ref(self, ref, remote):
         if ref.revision is None:
-            ref = self.get_latest_recipe_revision(ref, remote)
+            ref, _ = self.get_latest_recipe_revision(ref, remote)
         return ref
 
     def _resolve_latest_pref(self, pref, remote, headers):
         if pref.revision is None:
-            pref = self.get_latest_package_revision(pref, remote, headers=headers)
+            pref, _ = self.get_latest_package_revision(pref, remote, headers=headers)
         return pref
 
     def _call_remote(self, remote, method, *args, **kwargs):

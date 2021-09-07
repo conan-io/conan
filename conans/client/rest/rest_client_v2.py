@@ -56,7 +56,7 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe_manifest(self, ref):
         # If revision not specified, check latest
         if not ref.revision:
-            ref = self.get_latest_recipe_revision(ref)
+            ref, _ = self.get_latest_recipe_revision(ref)
         url = self.router.recipe_manifest(ref)
         content = self._get_remote_file_contents(url, use_cache=True)
         return FileTreeManifest.loads(decode_text(content))
@@ -95,7 +95,7 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe_sources(self, ref, dest_folder):
         # If revision not specified, check latest
         if not ref.revision:
-            ref = self.get_latest_recipe_revision(ref)
+            ref, _ = self.get_latest_recipe_revision(ref)
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
@@ -320,13 +320,9 @@ class RestV2Methods(RestCommonMethods):
     def get_latest_recipe_revision(self, ref):
         url = self.router.recipe_latest(ref)
         data = self.get_json(url)
-        rev = data["revision"]
-        # Ignored data["time"]
-        return ref.copy_with_rev(rev)
+        return ref.copy_with_rev(data["revision"]), data["time"]
 
     def get_latest_package_revision(self, pref, headers):
         url = self.router.package_latest(pref)
         data = self.get_json(url, headers=headers)
-        prev = data["revision"]
-        # Ignored data["time"]
-        return pref.copy_with_revs(pref.ref.revision, prev)
+        return pref.copy_with_revs(pref.ref.revision, data["revision"]), data["time"]

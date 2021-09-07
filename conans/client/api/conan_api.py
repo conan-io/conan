@@ -305,7 +305,7 @@ class ConanAPIV2(object):
                   }
         """
         if remote:
-            rrev = reference if reference.revision else \
+            rrev, _ = reference, None if reference.revision else \
                 self.app.remote_manager.get_latest_recipe_revision(reference, remote)
             packages_props = self.app.remote_manager.search_packages(remote, rrev, None)
         else:
