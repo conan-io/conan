@@ -124,10 +124,13 @@ class ConanProxy(object):
             try:
                 output.info(f"Checking remote: {remote.name}")
 
-                remote_rrev, rev_time = self._remote_manager.get_latest_recipe_revision(reference,
+                remote_rrev = self._remote_manager.get_latest_recipe_revision_with_time(reference,
                                                                                         remote)
-                if remote_rrev:
-                    results.append({'remote': remote, 'reference': remote_rrev, 'time': rev_time})
+                if remote_rrev.get('reference'):
+                    results.append({'remote': remote,
+                                    'reference': remote_rrev.get("reference"),
+                                    'time': remote_rrev.get("time")})
+
                 if len(results) > 0 and not check_all_servers:
                     break
             except NotFoundException:
