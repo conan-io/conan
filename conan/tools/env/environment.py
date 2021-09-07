@@ -273,7 +273,7 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_script(self, name, auto_activate=True):
+    def save_script(self, name, group="build"):
         # FIXME: using platform is not ideal but settings might be incomplete
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
@@ -282,8 +282,8 @@ class Environment:
             path = os.path.join(self._conanfile.generators_folder, "{}.sh".format(name))
             self.save_sh(path)
 
-        if auto_activate:
-            register_environment_script(self._conanfile, path)
+        if group:
+            register_env_script(self._conanfile, path, group)
 
     def compose_env(self, other):
         """
@@ -427,6 +427,7 @@ class ProfileEnvironment:
         return result
 
 
-def register_environment_script(conanfile, path):
-    if path not in conanfile.environment_scripts:
-        conanfile.environment_scripts.append(path)
+def register_env_script(conanfile, path, group):
+    existing = conanfile.env_scripts.setdefault(group, [])
+    if path not in existing:
+        existing.append(path)

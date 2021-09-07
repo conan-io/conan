@@ -59,7 +59,7 @@ class VirtualBuildEnv:
 
         return build_env
 
-    def generate(self, auto_activate=True):
+    def generate(self, group="build"):
         build_env = self.environment()
         if build_env:  # Only if there is something defined
-            build_env.save_script(self._filename, auto_activate=auto_activate)
+            build_env.save_script(self._filename, group=group)

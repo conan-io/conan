@@ -252,23 +252,24 @@ def write_toolchain(conanfile, path, output):
 
 def _generate_aggregated_env(conanfile):
     from conan.tools.microsoft import unix_path
-    bats = []
-    shs = []
 
-    for s in conanfile.environment_scripts:
-        path = os.path.join(conanfile.generators_folder, s)
-        if path.lower().endswith(".bat"):
-            bats.append(path)
-        elif path.lower().endswith(".sh"):
-            shs.append(unix_path(conanfile, path))
-    if shs:
-        sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
-        save(os.path.join(conanfile.generators_folder, "conanenv.sh"), sh_content)
-    if bats:
-        lines = "\r\n".join('call "{}"'.format(b) for b in bats)
-        bat_content = textwrap.dedent("""\
-                        @echo off
-                        {}
-                        """.format(lines))
-        save(os.path.join(conanfile.generators_folder, "conanenv.bat"), bat_content)
+    for group, env_scripts in conanfile.env_scripts.items():
+        bats = []
+        shs = []
+        for env_script in env_scripts:
+            path = os.path.join(conanfile.generators_folder, env_script)
+            if env_script.endswith(".bat"):
+                bats.append(path)
+            elif env_script.endswith(".sh"):
+                shs.append(unix_path(conanfile, path))
+        if shs:
+            sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
+            save(os.path.join(conanfile.generators_folder, "conan{}.sh".format(group)), sh_content)
+        if bats:
+            lines = "\r\n".join('call "{}"'.format(b) for b in bats)
+            bat_content = textwrap.dedent("""\
+                            @echo off
+                            {}
+                            """.format(lines))
+            save(os.path.join(conanfile.generators_folder, "conan{}.bat".format(group)), bat_content)
 

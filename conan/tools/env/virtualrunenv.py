@@ -60,7 +60,7 @@ class VirtualRunEnv:
 
         return runenv
 
-    def generate(self, auto_activate=False):
+    def generate(self, group="run"):
         run_env = self.environment()
         if run_env:
-            run_env.save_script(self._filename, auto_activate=auto_activate)
+            run_env.save_script(self._filename, group)

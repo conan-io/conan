@@ -165,7 +165,7 @@ class ConanFile(object):
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
 
-        self.environment_scripts = []  # Accumulate the env scripts generated in order
+        self.env_scripts = {}  # Accumulate the env scripts generated in order
 
         # layout() method related variables:
         self.folders = Folders()
@@ -405,7 +405,8 @@ class ConanFile(object):
                 elif self.win_bash:  # New, Conan 2.0
                     from conan.tools.microsoft.subsystems import run_in_windows_bash
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
-            _env = _env or "conanenv"
+            if _env is None:
+                _env = "conanbuild"
             wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
