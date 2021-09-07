@@ -34,8 +34,7 @@ ycm
         client.run("install . --build")
 
         self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
-                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
-                                 LOCKFILE]),
+                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py']),
                          sorted(os.listdir(client.current_folder)))
 
     @pytest.mark.xfail(reason="Generator qmake generator to be revisited")

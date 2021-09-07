@@ -60,7 +60,7 @@ class PyRequireLoader(object):
         self._update = update
         self._remotes = remotes
 
-    def load_py_requires(self, conanfile, lock_python_requires, loader, graph_lock=None):
+    def load_py_requires(self, conanfile, loader, graph_lock=None):
         py_requires_refs = getattr(conanfile, "python_requires", None)
         if py_requires_refs is None:
             return

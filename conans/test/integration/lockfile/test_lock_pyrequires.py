@@ -48,7 +48,7 @@ def test_transitive_matching():
         class MyConanfileBase(ConanFile):
             python_requires = "{}/0.1"
             def configure(self):
-                for k, p in self.python_requires.all_items():
+                for k, p in self.python_requires.items():
                     self.output.info("%s: %s!!" % (k, p.ref))
         """)
     client.save({"dep/conanfile.py": GenConanfile(),
@@ -93,7 +93,7 @@ def test_transitive_matching_ranges():
         class MyConanfileBase(ConanFile):
             python_requires = "tool/{}"
             def configure(self):
-                for k, p in self.python_requires.all_items():
+                for k, p in self.python_requires.items():
                     self.output.info("%s: %s!!" % (k, p.ref))
         """)
     client.save({"dep/conanfile.py": GenConanfile(),

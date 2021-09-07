@@ -48,20 +48,11 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
                        conanfile.py
     """
     loader, cache, hook_manager, output = app.loader, app.cache, app.hook_manager, app.out
-    conanfile = loader.load_export(conanfile_path, name, version, user, channel)
+    conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock)
 
     ref = ConanFileReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
-
-    # If we receive lock information, python_requires could have been locked
-    if graph_lock:
-        # node_id = graph_lock.get_consumer(ref)
-        python_requires = graph_lock.python_requires
-        # TODO: check that the locked python_requires are different from the loaded ones
-        app.range_resolver.clear_output()  # invalidate previous version range output
-        conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
-                                       ref.user, ref.channel, python_requires)
 
     recipe_layout = cache.create_temp_ref_layout(ref)
 
@@ -132,7 +123,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
 
     output.info("Exported revision: %s" % revision)
     if graph_lock is not None:
-        graph_lock.update_ref(ref)
+        graph_lock.update_lock_export_ref(ref)
     return ref
 
 

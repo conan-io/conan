@@ -16,7 +16,7 @@ from conans.model.graph_lock import GraphLockFile, GraphLock
 
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, remotes=None, build_modes=None, update=False, generators=None,
-                 no_imports=False, create_reference=None, recorder=None, lockfile_node_id=None,
+                 no_imports=False, create_reference=None, recorder=None,
                  is_build_require=False, require_overrides=None):
 
     """ Fetch and build all dependencies for the given reference
@@ -40,13 +40,17 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host, profile_build,
                                           graph_lock, root_ref, build_modes, False, update, remotes,
-                                          recorder, lockfile_node_id=lockfile_node_id,
+                                          recorder,
                                           is_build_require=is_build_require,
                                           require_overrides=require_overrides)
 
     deps_graph.report_graph_error()
 
-    graph_lock = graph_lock or GraphLock(deps_graph)  # After the graph is loaded it is defined
+    if graph_lock:
+        graph_lock.update_lock(deps_graph)
+    else:
+        graph_lock = GraphLock(deps_graph)
+
     root_node = deps_graph.root
     conanfile = root_node.conanfile
     if root_node.recipe == RECIPE_VIRTUAL:

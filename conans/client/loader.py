@@ -53,7 +53,7 @@ class ConanFileLoader(object):
 
             # This is the new py_requires feature, to supersede the old python_requires
             if self._pyreq_loader:
-                self._pyreq_loader.load_py_requires(conanfile, graph_lock, self)
+                self._pyreq_loader.load_py_requires(conanfile, self, graph_lock)
 
             conanfile.recipe_folder = os.path.dirname(conanfile_path)
 

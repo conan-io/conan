@@ -166,6 +166,8 @@ class GraphLock(object):
             self.root = self.root or graph_node.ref.name
             requires.add(ConanLockReference.loads(repr(graph_node.ref)))
 
+        # Sorted, newer versions first, so first found is valid for version ranges
+        # TODO: Need to impmlement same ordering for revisions, based on revision time
         self.requires = list(reversed(sorted(requires)))
         self.python_requires = list(reversed(sorted(python_requires)))
         self.build_requires = list(reversed(sorted(build_requires)))
@@ -242,7 +244,7 @@ class GraphLock(object):
             # find exact
             pass
 
-    def update_ref(self, ref):
+    def update_lock_export_ref(self, ref):
         """ when the recipe is exported, it will complete the missing RREV, otherwise it should
         match the existing RREV
         """

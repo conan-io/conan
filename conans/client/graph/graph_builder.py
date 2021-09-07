@@ -25,8 +25,7 @@ class DepsGraphBuilder(object):
         assert profile_build is not None
         # print("Loading graph")
         check_updates = check_updates or update
-        initial = 0  # graph_lock.initial_counter if graph_lock else None
-        dep_graph = DepsGraph(initial_node_id=initial)
+        dep_graph = DepsGraph()
 
         # TODO: Why assign here the settings_build and settings_target?
         root_node.conanfile.settings_build = profile_build.processed_settings.copy()
@@ -143,9 +142,6 @@ class DepsGraphBuilder(object):
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, graph_lock, down_ref, down_options):
-        if graph_lock:
-            graph_lock.pre_lock_node(node)
-
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 

@@ -290,7 +290,6 @@ class Command(object):
         args = parser.parse_args(*args)
 
         self._warn_python_version()
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -340,7 +339,6 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
-        self._check_lockfile_args(args)
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -476,13 +474,10 @@ class Command(object):
                             'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        parser.add_argument("--lockfile-node-id", action=OnceArgument,
-                            help="NodeID of the referenced package in the lockfile")
         parser.add_argument("--require-override", action="append",
                             help="Define a requirement override")
 
         args = parser.parse_args(*args)
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -533,7 +528,6 @@ class Command(object):
                                                      install_folder=args.install_folder,
                                                      lockfile=args.lockfile,
                                                      lockfile_out=args.lockfile_out,
-                                                     lockfile_node_id=args.lockfile_node_id,
                                                      is_build_require=args.build_require,
                                                      require_overrides=args.require_override)
 
@@ -687,7 +681,6 @@ class Command(object):
                       "recipe if not using revisions)."
         _add_common_install_arguments(parser, update_help=update_help, build_help=build_help)
         args = parser.parse_args(*args)
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -850,7 +843,6 @@ class Command(object):
                             help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -982,7 +974,6 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
-        self._check_lockfile_args(args)
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -1812,6 +1803,7 @@ class Command(object):
                                 help="Path to lockfile to be used as a base")
         create_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                                 help="Filename of the created lockfile")
+        create_cmd.add_argument("--clean", action="store_true", help="remove unused")
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
@@ -1846,8 +1838,6 @@ class Command(object):
         if args.subcommand == "install":
             self._conan.lock_install(args.lockfile, generators=args.generator, recipes=args.recipes,
                                      lockfile_out=args.lockfile_out, build=args.build)
-        elif args.subcommand == "update":
-            self._conan.lock_update(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "bundle":
             if args.bundlecommand == "create":
                 self._conan.lock_bundle_create(args.lockfiles, args.bundle_out)
@@ -1890,7 +1880,8 @@ class Command(object):
                                     update=args.update,
                                     build=args.build,
                                     lockfile=args.lockfile,
-                                    lockfile_out=args.lockfile_out)
+                                    lockfile_out=args.lockfile_out,
+                                    clean=args.clean)
 
     def _show_help(self):
         """
@@ -1973,20 +1964,6 @@ class Command(object):
             self._out.writeln("    %s" % match)
 
         self._out.writeln("")
-
-    @staticmethod
-    def _check_lockfile_args(args):
-        return
-        if args.lockfile and (args.profile_build or args.settings_build or args.options_build or
-                              args.env_build or args.conf_build):
-            raise ConanException("Cannot use profile, settings, options, env or conf 'build' when "
-                                 "using lockfile")
-        if args.lockfile and (args.profile_host or args.settings_host or args.options_host or
-                              args.env_host or args.conf_host):
-            raise ConanException("Cannot use profile, settings, options, env or conf 'host' when "
-                                 "using lockfile")
-        if args.lockfile_out and not args.lockfile:
-            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
 
     def _warn_python_version(self):
         import textwrap
