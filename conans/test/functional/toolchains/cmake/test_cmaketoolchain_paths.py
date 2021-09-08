@@ -37,7 +37,7 @@ def test_cmaketoolchain_path_find(package, find_package):
     client.save({"conanfile.py": conanfile,
                  "{}".format(filename): find,
                  "myowncmake.cmake": myowncmake})
-    client.run("create . hello/0.1@")
+    client.run("create . {}/0.1@".format(package))
 
     consumer = textwrap.dedent("""
         set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -50,10 +50,20 @@ def test_cmaketoolchain_path_find(package, find_package):
         """).format(package=package)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install hello/0.1@ -g CMakeToolchain")
+    client.run("install {}/0.1@ -g CMakeToolchain".format(package))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
+    assert "Conan: Target declared" not in client.out
     assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) in client.out
+    assert "MYOWNCMAKE FROM {package}!".format(package=package) in client.out
+
+    # If using the CMakeDeps generator, the in-package .cmake will be ignored
+    # But it is still possible to include(owncmake)
+    client.run("install {}/0.1@ -g CMakeToolchain -g CMakeDeps".format(package))
+    with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
+    assert "Conan: Target declared '{package}::{package}'".format(package=package) in client.out
+    assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) not in client.out
     assert "MYOWNCMAKE FROM {package}!".format(package=package) in client.out
 
 
@@ -97,16 +107,25 @@ def test_cmaketoolchain_path_find_real_config():
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmake})
     client.run("create . hello/0.1@")
-    package = "hello"
+
     consumer = textwrap.dedent("""
         project(MyHello NONE)
         cmake_minimum_required(VERSION 3.15)
 
-        find_package({package} REQUIRED)
-        """).format(package=package)
+        find_package(hello REQUIRED)
+        """)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
     client.run("install hello/0.1@ -g CMakeToolchain")
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     # If it didn't fail, it found the helloConfig.cmake
+    assert "Conan: Target declared" not in client.out
+
+    # If using the CMakeDeps generator, the in-package .cmake will be ignored
+    # But it is still possible to include(owncmake)
+    client.run("install hello/0.1@ -g CMakeToolchain -g CMakeDeps")
+    with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
+    assert "Conan: Target declared 'hello::hello'" in client.out
+
