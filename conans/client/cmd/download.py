@@ -5,7 +5,7 @@ from conans.errors import NotFoundException, RecipeNotFoundException, PackageNot
 from multiprocessing.pool import ThreadPool
 
 
-def download(app, ref, package_ids, remote, recipe, recorder, remotes):
+def download(app, ref, package_ids, remote, recipe, recorder):
     out, remote_manager, cache, loader = app.out, app.remote_manager, app.cache, app.loader
     hook_manager = app.hook_manager
     assert(isinstance(ref, ConanFileReference))
@@ -27,7 +27,7 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     conanfile = loader.load_basic(conan_file_path)
 
     # Download the sources too, don't be lazy
-    retrieve_exports_sources(remote_manager, cache, layout, conanfile, ref, remotes)
+    retrieve_exports_sources(remote_manager, layout, conanfile, ref, remote)
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary

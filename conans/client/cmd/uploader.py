@@ -157,7 +157,7 @@ class _PackagePreparator(object):
         self._output = output
         self._hook_manager = hook_manager
 
-    def prepare_recipe(self, ref, conanfile, remote, remotes, policy):
+    def prepare_recipe(self, ref, conanfile, remote, policy):
         """ do a bunch of things that are necessary before actually executing the upload:
         - retrieve exports_sources to complete the recipe if necessary
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
@@ -167,8 +167,7 @@ class _PackagePreparator(object):
         """
         recipe_layout = self._cache.ref_layout(ref)
 
-        retrieve_exports_sources(self._remote_manager, self._cache, recipe_layout, conanfile,
-                                 ref, remotes)
+        retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, ref, remote)
 
         conanfile_path = recipe_layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
@@ -500,7 +499,7 @@ class CmdUpload(object):
                                    reference=ref, remote=recipe_remote)
         msg = "\rUploading %s to remote '%s'" % (str(ref), recipe_remote.name)
         self._output.info(left_justify_message(msg))
-        self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
+        self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote)
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
 
         # Now the binaries
@@ -542,8 +541,8 @@ class CmdUpload(object):
             self._hook_manager.execute("post_upload", conanfile_path=conanfile_path, reference=ref,
                                        remote=recipe_remote)
 
-    def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
-        prep = self._preparator.prepare_recipe(ref, conanfile, remote, remotes, policy)
+    def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote):
+        prep = self._preparator.prepare_recipe(ref, conanfile, remote, policy)
 
         if policy == UPLOAD_POLICY_SKIP:
             return ref

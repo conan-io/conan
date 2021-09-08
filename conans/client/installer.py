@@ -97,15 +97,14 @@ class _PackageBuilder(object):
 
         return build_folder, skip_build
 
-    def _prepare_sources(self, conanfile, pref, recipe_layout, remotes):
+    def _prepare_sources(self, conanfile, pref, recipe_layout, remotes, remote):
         export_folder = recipe_layout.export()
         export_source_folder = recipe_layout.export_sources()
         scm_sources_folder = recipe_layout.scm_sources()
         conanfile_path = recipe_layout.conanfile()
         source_folder = recipe_layout.source()
 
-        retrieve_exports_sources(self._remote_manager, self._cache, recipe_layout, conanfile,
-                                 pref.ref, remotes)
+        retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, pref.ref, remote)
 
         conanfile.folders.set_base_source(source_folder)
         conanfile.folders.set_base_build(None)
@@ -202,7 +201,7 @@ class _PackageBuilder(object):
             # TODO: cache2.0 check locks
             # with package_layout.conanfile_write_lock(self._output):
             set_dirty(base_build)
-            self._prepare_sources(conanfile, pref, recipe_layout, remotes)
+            self._prepare_sources(conanfile, pref, recipe_layout, remotes, node.remote)
             self._copy_sources(conanfile, base_source, base_build)
             mkdir(base_build)
 
@@ -543,8 +542,8 @@ class BinaryInstaller(object):
             for python_require in python_requires.values():
                 assert python_require.ref.revision is not None, \
                     "Installer should receive python_require.ref always"
-                retrieve_exports_sources(self._remote_manager, self._cache, pkg_layout,
-                                         python_require.conanfile, python_require.ref, remotes)
+                retrieve_exports_sources(self._remote_manager, pkg_layout,
+                                         python_require.conanfile, python_require.ref, node.remote)
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
                                   self._generator_manager)

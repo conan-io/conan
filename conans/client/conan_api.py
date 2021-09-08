@@ -460,7 +460,7 @@ class ConanAPIV1(object):
             remotes = self.app.load_remotes(remote_name=remote_name)
             remote = remotes.get_remote(remote_name)
             recorder = ActionRecorder()
-            download(self.app, ref, packages, remote, recipe, recorder, remotes=remotes)
+            download(self.app, ref, packages, remote, recipe, recorder)
         else:
             raise ConanException("Provide a valid full reference without wildcards.")
 
