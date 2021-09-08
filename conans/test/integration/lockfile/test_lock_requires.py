@@ -83,10 +83,12 @@ def test_conditional_os(requires):
 
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Windows"
                " -s:b os=Windows")
+    print(client.load("conan.lock"))
     assert "win/0.1 from local cache - Cache" in client.out
     assert "pkg/0.1 from local cache - Cache" in client.out
     client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Linux -s:b os=Linux")
+    print(client.load("conan.lock"))
     assert "nix/0.1 from local cache - Cache" in client.out
     assert "pkg/0.1 from local cache - Cache" in client.out
 
@@ -96,8 +98,8 @@ def test_conditional_os(requires):
     client.run("create pkg pkg/0.1@ -s os=Windows")
     client.run("create pkg pkg/0.1@ -s os=Linux")
 
-    client.run("install consumer --lockfile=conan.lock --lockfile-out=win.lock -s os=Windows"
-               " -s:b os=Windows")
+
+    client.run("install consumer --lockfile=conan.lock -s os=Windows -s:b os=Windows")
     assert "win/0.1 from local cache - Cache" in client.out
     assert "win/0.2" not in client.out
     client.run("install consumer -s os=Windows -s:b os=Windows")
@@ -105,8 +107,8 @@ def test_conditional_os(requires):
     assert "win/0.1" not in client.out
     assert "nix/0.1" not in client.out
 
-    client.run("install consumer --lockfile=conan.lock --lockfile-out=linux.lock -s os=Linux"
-               " -s:b os=Linux")
+    client.run("install consumer --lockfile=conan.lock -s os=Linux -s:b os=Linux")
+    print(client.out)
     assert "nix/0.1 from local cache - Cache" in client.out
     assert "nix/0.2" not in client.out
     client.run("install consumer -s os=Linux -s:b os=Linux")

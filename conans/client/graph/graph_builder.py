@@ -165,9 +165,9 @@ class DepsGraphBuilder(object):
     def _initialize_requires(self, node, graph, check_updates, update, remotes, graph_lock):
         # Introduce the current requires to define overrides
         # This is the first pass over one recip requires
-        for require in node.conanfile.requires.values():
-            if graph_lock is not None:
-                graph_lock.resolve_locked(require)
+        if graph_lock is not None:
+            for require in node.conanfile.requires.values():
+                graph_lock.resolve_locked(node, require)
 
         for require in node.conanfile.requires.values():
             self._resolve_alias(node, require, graph, check_updates, update, remotes)

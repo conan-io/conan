@@ -1,11 +1,8 @@
 import json
 import os
 
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
-
-from conans.client.graph.python_requires import PyRequires
-from conans.client.graph.range_resolver import satisfying, range_satisfies
-from conans.client.profile_loader import ProfileValueParser
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD
+from conans.client.graph.range_resolver import range_satisfies
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
@@ -164,7 +161,10 @@ class GraphLock(object):
             assert graph_node.conanfile is not None
 
             self.root = self.root or graph_node.ref.name
-            requires.add(ConanLockReference.loads(repr(graph_node.ref)))
+            if graph_node.context == CONTEXT_BUILD:
+                build_requires.add(ConanLockReference.loads(repr(graph_node.ref)))
+            else:
+                requires.add(ConanLockReference.loads(repr(graph_node.ref)))
 
         # Sorted, newer versions first, so first found is valid for version ranges
         # TODO: Need to impmlement same ordering for revisions, based on revision time
@@ -177,15 +177,26 @@ class GraphLock(object):
         """ add new things at the beginning, to give more priority
         """
         requires = set()
+        build_requires = set()
         for graph_node in deps_graph.nodes:
             if graph_node.recipe == RECIPE_VIRTUAL or graph_node.ref is None:
                 continue
             assert graph_node.conanfile is not None
 
-            requires.add(ConanLockReference.loads(repr(graph_node.ref)))
+            if graph_node.context == CONTEXT_BUILD:
+                build_requires.add(ConanLockReference.loads(repr(graph_node.ref)))
+            else:
+                requires.add(ConanLockReference.loads(repr(graph_node.ref)))
 
-        new_requires = sorted(r for r in requires if r not in self.requires)
-        self.requires = list(reversed(sorted(new_requires + self.requires)))
+        requires.update(self.requires)
+        self.requires = list(reversed(sorted(requires)))
+        build_requires.update(self.build_requires)
+        self.build_requires = list(reversed(sorted(build_requires)))
+        # TODO other members
+
+    def merge(self, other):
+        self.requires = list(reversed(sorted(set(other.requires + self.requires))))
+        self.build_requires = list(reversed(sorted(set(other.build_requires + self.build_requires))))
 
     @staticmethod
     def deserialize(data):
@@ -210,9 +221,12 @@ class GraphLock(object):
                 "python_requires": [repr(r) for r in self.python_requires],
                 "build_requires": [repr(r) for r in self.build_requires]}
 
-    def resolve_locked(self, require):
+    def resolve_locked(self, node, require):
         ref = require.ref
-        locked_refs = self.requires
+        if require.build or node.context == CONTEXT_BUILD:
+            locked_refs = self.build_requires
+        else:
+            locked_refs = self.requires
         version_range = require.version_range
         if version_range:
             matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and

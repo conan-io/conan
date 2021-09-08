@@ -661,6 +661,8 @@ class Command(object):
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
+        parser.add_argument("-bo", "--build-order", action=OnceArgument,
+                            help='Creates a build order json file')
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
                             help='Path to a json file where the information will be written')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
@@ -722,6 +724,13 @@ class Command(object):
                                     user=args.user,
                                     channel=args.channel)
             deps_graph, _ = data
+
+            if args.build_order:
+                result = deps_graph.build_order()
+                json_file = _make_abs_path(args.build_order)
+                save(json_file, json.dumps(result))
+                return
+
             only = args.only
             if args.only == ["None"]:
                 only = []
@@ -1762,6 +1771,10 @@ class Command(object):
         update_cmd.add_argument('new_lockfile', help='Path to lockfile containing the new '
                                 'information that is going to be updated into the first lockfile')
 
+        merge_cmd = subparsers.add_parser('merge', help="merge 2 or more lockfiles")
+        merge_cmd.add_argument('--lockfile', action="append", help='Path to lockfile to be merged')
+        merge_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
+                               help="Filename of the created lockfile")
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
         build_order_cmd.add_argument('lockfile', help='lockfile file')
         build_order_cmd.add_argument("--json", action=OnceArgument,
@@ -1835,9 +1848,8 @@ class Command(object):
         args = parser.parse_args(*args)
         self._warn_python_version()
 
-        if args.subcommand == "install":
-            self._conan.lock_install(args.lockfile, generators=args.generator, recipes=args.recipes,
-                                     lockfile_out=args.lockfile_out, build=args.build)
+        if args.subcommand == "merge":
+            self._conan.lock_merge(args.lockfile, args.lockfile_out)
         elif args.subcommand == "bundle":
             if args.bundlecommand == "create":
                 self._conan.lock_bundle_create(args.lockfiles, args.bundle_out)
@@ -1851,15 +1863,6 @@ class Command(object):
                 if args.json:
                     json_file = _make_abs_path(args.json)
                     save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "build-order":
-            build_order = self._conan.lock_build_order(args.lockfile, build=args.build,
-                                                       lockfile_out=args.lockfile_out)
-            self._out.writeln(build_order)
-            if args.json:
-                json_file = _make_abs_path(args.json)
-                save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "clean-modified":
-            self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build,

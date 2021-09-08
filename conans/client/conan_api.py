@@ -725,7 +725,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
+                graph_lock_file = GraphLockFile(graph_lock)
                 graph_lock_file.save(lockfile_out)
 
             conanfile = deps_info.root.conanfile
@@ -1224,102 +1224,6 @@ class ConanAPIV1(object):
         return {str(k): v for k, v in self.app.cache.editable_packages.edited_refs.items()}
 
     @api_method
-    def lock_build_order(self, lockfile, cwd=None, remote_name=None, build=None,
-                         lockfile_out=None):
-        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-        graph_info = get_graph_info(None, None, cwd,
-                                    self.app.cache, self.app.out, lockfile=lockfile)
-        phost, pbuild, graph_lock, root_ref = graph_info
-
-        remotes = self.app.load_remotes(remote_name=remote_name)
-        recorder = ActionRecorder()
-        root = graph_lock.root
-        for r in graph_lock.requires:
-            if root == r.name:
-                reference = ConanFileReference.loads(repr(r))
-                break
-        else:
-            raise ConanException("error")
-
-        graph = self.app.graph_manager.load_graph(reference, create_reference=None,
-                                                  profile_host=phost, profile_build=pbuild,
-                                                  graph_lock=graph_lock,
-                                                  root_ref=root_ref,
-                                                  build_mode=build,
-                                                  check_updates=False, update=None,
-                                                  remotes=remotes, recorder=recorder)
-        print_graph(graph, self.app.out)
-        graph_lock = GraphLock(graph)
-        if lockfile_out:
-            lockfile_out = _make_abs_path(lockfile_out, cwd)
-            graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
-            graph_lock_file.save(lockfile_out)
-
-        build_order = graph.build_order()
-        return build_order
-
-    @api_method
-    def lock_clean_modified(self, lockfile, cwd=None):
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd)
-
-        graph_lock_file = GraphLockFile.load(lockfile)
-        graph_lock = graph_lock_file.graph_lock
-        graph_lock.clean_modified()
-        graph_lock_file.save(lockfile)
-
-    @api_method
-    def lock_install(self, lockfile, remote_name=None, build=None,
-                     generators=None, install_folder=None, cwd=None,
-                     lockfile_out=None, recipes=None):
-        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
-        graph_info = get_graph_info(None, None, cwd,
-                                    self.app.cache, self.app.out, lockfile=lockfile)
-        phost, pbuild, graph_lock, root_ref = graph_info
-
-        if not generators:  # We don't want the default txt
-            generators = False
-
-        install_folder = _make_abs_path(install_folder, cwd)
-
-        mkdir(install_folder)
-        remotes = self.app.load_remotes(remote_name=remote_name)
-        recorder = ActionRecorder()
-        root = graph_lock.root
-        for r in graph_lock.requires:
-            if root == r.name:
-                reference = ConanFileReference.loads(repr(r))
-                break
-        else:
-            raise ConanException("error")
-
-        if recipes:
-            graph = self.app.graph_manager.load_graph(reference, create_reference=None,
-                                                      profile_host=phost, profile_build=pbuild,
-                                                      graph_lock=graph_lock,
-                                                      root_ref=root_ref,
-                                                      build_mode=build,
-                                                      check_updates=False, update=None,
-                                                      remotes=remotes, recorder=recorder)
-            print_graph(graph, self.app.out)
-        else:
-            deps_graph = deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
-                                      base_folder=cwd,
-                                      profile_host=phost, profile_build=pbuild,
-                                      graph_lock=graph_lock,
-                                      root_ref=root_ref, remotes=remotes, build_modes=build,
-                                      generators=generators, recorder=recorder)
-            graph_lock = GraphLock(deps_graph)
-
-        if lockfile_out:
-            lockfile_out = _make_abs_path(lockfile_out, cwd)
-            graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
-            graph_lock_file.save(lockfile_out)
-
-    @api_method
     def lock_bundle_create(self, lockfiles, lockfile_out, cwd=None):
         cwd = cwd or os.getcwd()
         result = LockBundle.create(lockfiles, cwd)
@@ -1346,6 +1250,20 @@ class ConanAPIV1(object):
         cwd = cwd or os.getcwd()
         lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
         LockBundle.clean_modified(lock_bundle_path)
+
+    @api_method
+    def lock_merge(self, lockfiles, lockfile_out):
+        result = GraphLock(None)
+        for lockfile in lockfiles:
+            lockfile = _make_abs_path(lockfile)
+            graph_lock_file = GraphLockFile.load(lockfile)
+            graph_lock = graph_lock_file.graph_lock
+            result.merge(graph_lock)
+
+        graph_lock_file = GraphLockFile(result)
+        lockfile_out = _make_abs_path(lockfile_out)
+        graph_lock_file.save(lockfile_out)
+        self.app.out.info("Generated lockfile: %s" % lockfile_out)
 
     @api_method
     def lock_create(self, path, lockfile_out,
