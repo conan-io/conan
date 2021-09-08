@@ -280,7 +280,7 @@ def test_single_config_decentralized(client_setup):
 
     # Now lets build the application, to see everything ok
     client.run("info app1/0.1@ --lockfile=app1_b_changed.lock --dry-build=missing "
-               "--build-order=build_order.json")
+               "--build-order=build_order.json -s os=Windows")
     json_file = client.load("build_order.json")
     assert "app1/0.1" in json_file
     assert "pkgc/0.1" in json_file
@@ -289,7 +289,8 @@ def test_single_config_decentralized(client_setup):
     to_build = json.loads(json_file)
 
     for ref, _, _, _ in to_build:
-        client.run("install %s --build=%s --lockfile=app1_b_changed.lock " % (ref, ref))
+        client.run("install %s --build=%s --lockfile=app1_b_changed.lock  -s os=Windows"
+                   % (ref, ref))
 
         assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in client.out
         assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in client.out
