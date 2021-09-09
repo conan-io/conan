@@ -103,7 +103,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("ERROR: Binary package not found", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm")
+        self.client.run("upload * --all --confirm -r default")
         self.assertIn("Uploading conan_package.tgz", self.client.out)
         self._assert_all_package_files_in_server()
 

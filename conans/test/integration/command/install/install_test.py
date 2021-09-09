@@ -50,7 +50,7 @@ def test_install_system_requirements(client):
     client.run("export . Pkg/0.1@lasote/testing")
     client.run(" install Pkg/0.1@lasote/testing --build")
     assert "Running system requirements!!" in client.out
-    client.run("upload * --all --confirm")
+    client.run("upload * --all --confirm -r default")
     client.run('remove "*" -f')
     client.run(" install Pkg/0.1@lasote/testing")
     assert "Running system requirements!!" in client.out
@@ -263,7 +263,7 @@ def test_install_anonymous(client):
     # https://github.com/conan-io/conan/issues/4871
     client.save({"conanfile.py": GenConanfile("Pkg", "0.1")})
     client.run("create . lasote/testing")
-    client.run("upload * --confirm --all")
+    client.run("upload * --confirm --all -r default")
 
     client2 = TestClient(servers=client.servers, users={})
     client2.run("install Pkg/0.1@lasote/testing")

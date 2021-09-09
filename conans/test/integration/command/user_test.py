@@ -129,14 +129,14 @@ class ConanLib(ConanFile):
         files = {"conanfile.py": base}
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("upload lib/0.1@lasote/stable")
+        client.run("upload lib/0.1@lasote/stable -r default")
         client.run("user")
         self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
         client.run("user --clean")
         client.run("user")
         self.assertNotIn("lasote", client.out)
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
-        client.run("upload lib/0.1@lasote/stable")
+        client.run("upload lib/0.1@lasote/stable -r default")
         client.run("user")
         self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
 

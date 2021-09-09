@@ -78,7 +78,7 @@ class CustomGeneratorTest(unittest.TestCase):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         client.run("export . lasote/stable")
-        client.run("upload %s" % str(ref))
+        client.run("upload %s -r default" % str(ref))
 
         gen_ref = ConanFileReference.loads("MyCustomGen/0.2@lasote/stable")
         files = {CONANFILE: generator}

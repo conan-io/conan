@@ -48,7 +48,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
 
-        client.run("upload * --all --confirm")
+        client.run("upload * --all --confirm -r default")
         client.run("remove * -f")
         client.run("install Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)

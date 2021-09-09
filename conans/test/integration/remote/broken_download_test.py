@@ -20,7 +20,7 @@ class BrokenDownloadTest(unittest.TestCase):
         client.run("export . lasote/stable")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).export()))
-        client.run("upload Hello/0.1@lasote/stable")
+        client.run("upload Hello/0.1@lasote/stable -r default")
         export_folder = client.get_latest_ref_layout(ref).export()
         client.run("remove Hello/0.1@lasote/stable -f")
         self.assertFalse(os.path.exists(export_folder))
@@ -46,7 +46,7 @@ class BrokenDownloadTest(unittest.TestCase):
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         client.save({"conanfile.py": conanfile})
         client.run("create . lib/1.0@lasote/stable")
-        client.run("upload lib/1.0@lasote/stable -c --all")
+        client.run("upload lib/1.0@lasote/stable -c --all -r default")
 
         class DownloadFilesBrokenRequester(TestRequester):
             def __init__(self, times_to_fail=1, *args, **kwargs):

@@ -29,7 +29,7 @@ def test_update_binaries():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . Pkg/0.1@lasote/testing")
-    client.run("upload Pkg/0.1@lasote/testing --all")
+    client.run("upload Pkg/0.1@lasote/testing --all -r default")
 
     client2 = TestClient(servers=client.servers, users=client.users)
     client2.run("install Pkg/0.1@lasote/testing")
@@ -37,7 +37,7 @@ def test_update_binaries():
 
     time.sleep(1)  # Make sure the new timestamp is later
     client.run("create . Pkg/0.1@lasote/testing")
-    client.run("upload Pkg/0.1@lasote/testing --all")
+    client.run("upload Pkg/0.1@lasote/testing --all -r default")
 
     client2.run("install Pkg/0.1@lasote/testing")
     new_value = load(os.path.join(client2.current_folder, "file.txt"))
@@ -51,7 +51,7 @@ def test_update_binaries():
     # Now check newer local modifications are not overwritten
     time.sleep(1)  # Make sure the new timestamp is later
     client.run("create . Pkg/0.1@lasote/testing")
-    client.run("upload Pkg/0.1@lasote/testing --all")
+    client.run("upload Pkg/0.1@lasote/testing --all -r default")
 
     client2.save({"conanfile.py": conanfile})
     client2.run("create . Pkg/0.1@lasote/testing")
@@ -72,7 +72,7 @@ def test_update_not_date():
                 with_requirement("Hello0/1.0@lasote/stable")},
                 clean_first=True)
     client.run("install . --build")
-    client.run("upload Hello0/1.0@lasote/stable --all")
+    client.run("upload Hello0/1.0@lasote/stable --all -r default")
 
     client.run("remote list_ref")
     assert "Hello0/1.0@lasote/stable" in client.out
@@ -132,7 +132,7 @@ def test_reuse():
                  "header.h": "content1"})
     client.run("export . lasote/stable")
     client.run("install Hello0/1.0@lasote/stable --build")
-    client.run("upload Hello0/1.0@lasote/stable --all")
+    client.run("upload Hello0/1.0@lasote/stable --all -r default")
 
     client2 = TestClient(servers=client.servers, users=client.users)
     client2.run("install Hello0/1.0@lasote/stable")
@@ -143,7 +143,7 @@ def test_reuse():
     sleep(1)
     client.run("export . lasote/stable")
     client.run("install Hello0/1.0@lasote/stable --build")
-    client.run("upload Hello0/1.0@lasote/stable --all")
+    client.run("upload Hello0/1.0@lasote/stable --all -r default")
 
     client2.run("install Hello0/1.0@lasote/stable --update")
     ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
@@ -170,7 +170,7 @@ def test_upload_doesnt_follow_pref():
     client.run("remote remove_ref Pkg/0.1@lasote/testing")
 
     # It should upload both to r1 (default), not taking into account the pref to r2
-    client.run("upload Pkg/0.1@lasote/testing --all")
+    client.run("upload Pkg/0.1@lasote/testing --all -r default")
     assert "Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID in client.out
 
 
@@ -227,7 +227,7 @@ def test_update_binaries_no_package_error():
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . Pkg/0.1@lasote/testing")
-    client.run("upload Pkg/0.1@lasote/testing")
+    client.run("upload Pkg/0.1@lasote/testing -r default")
     client.run("remote add_pref Pkg/0.1@lasote/testing:%s default" % NO_SETTINGS_PACKAGE_ID)
     client.run("install Pkg/0.1@lasote/testing --update")
     assert "Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote" in client.out

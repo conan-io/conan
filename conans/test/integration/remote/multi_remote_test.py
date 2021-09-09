@@ -19,7 +19,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "source.txt": "somesource"})
         client.run("create . pkg/0.1@user/testing")
-        client.run("upload pkg/0.1@user/testing --all")
+        client.run("upload pkg/0.1@user/testing --all -r default")
 
         # Failure because remote is removed
         servers = OrderedDict(client.servers)

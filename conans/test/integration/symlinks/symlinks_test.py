@@ -158,7 +158,7 @@ class TestConan(ConanFile):
         client.run("install conanfile.txt --build")
         pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
-        client.run("upload Hello/0.1@lasote/stable --all")
+        client.run("upload Hello/0.1@lasote/stable --all -r default")
         client.run('remove "*" -f')
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
         client.run("install conanfile.txt")

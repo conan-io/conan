@@ -28,7 +28,7 @@ class DownloadCacheTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "header.h": "header"})
         client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm")
+        client.run("upload * --all --confirm -r default")
         cache_folder = temp_folder()
         log_trace_file = os.path.join(temp_folder(), "mylog.txt")
         client.run('config set storage.download_cache="%s"' % cache_folder)
@@ -73,7 +73,7 @@ class DownloadCacheTest(unittest.TestCase):
         client.run('config set storage.download_cache="%s"' % cache_folder)
         client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
         client.run("create . pkg/0.1@")
-        client.run("upload * --all -c")
+        client.run("upload * --all -c -r default")
         client.run("remove * -f")
         client.run("install pkg/0.1@")
         for f in os.listdir(cache_folder):
@@ -176,7 +176,7 @@ class DownloadCacheTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "header.h": "header"})
         client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm")
+        client.run("upload * --all --confirm -r default")
 
         client2 = TestClient(servers=client.servers)
         cache_folder = temp_folder()
@@ -188,7 +188,7 @@ class DownloadCacheTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "header.h": "header2"})
         client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm")
+        client.run("upload * --all --confirm -r default")
 
         client2.run("remove * -f")
         client2.run("install mypkg/0.1@user/testing")

@@ -63,7 +63,7 @@ class AuthorizeBearerTest(unittest.TestCase):
             save(client.cache.artifacts_properties_path, "key=value")
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
-        errors = client.run("upload Hello/0.1@lasote/stable")
+        errors = client.run("upload Hello/0.1@lasote/stable -r default")
         self.assertFalse(errors)
 
         expected_calls = [('ping', None),

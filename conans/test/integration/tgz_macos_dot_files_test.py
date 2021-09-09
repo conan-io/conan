@@ -96,5 +96,5 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         export_download_folder = t.get_latest_ref_layout(pref).download_export()
         tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
         self.assertFalse(os.path.exists(tgz))
-        t.run("upload lib/version@user/channel")
+        t.run("upload lib/version@user/channel -r default")
         self._test_for_metadata_in_zip_file(tgz, 'file.txt', dot_file_expected=False)

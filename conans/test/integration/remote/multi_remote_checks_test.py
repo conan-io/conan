@@ -24,7 +24,7 @@ class RemoteChecksTest(unittest.TestCase):
         client.run("create . Pkg2/0.1@lasote/testing -s build_type=Release")
         client.run("remote add_ref Pkg/0.1@lasote/testing server1")
         client.run("remote add_ref Pkg2/0.1@lasote/testing server2")
-        client.run("upload Pkg* --all --confirm")
+        client.run("upload Pkg* --all --confirm -r default")
         self.assertIn("Uploading Pkg/0.1@lasote/testing to remote 'server1'", client.out)
         self.assertIn("Uploading Pkg2/0.1@lasote/testing to remote 'server2'", client.out)
 
@@ -86,7 +86,7 @@ class Pkg(ConanFile):
         client2.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
         the_time = time.time()
         with patch.object(RevisionList, '_now', return_value=the_time):
-            client2.run("upload Pkg/0.1@lasote/testing --all")
+            client2.run("upload Pkg/0.1@lasote/testing --all -r default")
         self.assertIn("Uploading Pkg/0.1@lasote/testing to remote 'server1'", client2.out)
         # The upload is not done to server2 because in client2 we don't have the registry
         # with the entry
