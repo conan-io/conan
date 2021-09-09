@@ -427,7 +427,12 @@ class ProfileEnvironment:
         return result
 
 
-def register_env_script(conanfile, path, group):
+def register_env_script(conanfile, env_script_path, group):
+    """
+    Add the "env_script_path" to the current list of registered scripts for defined "group"
+    These will be mapped to files:
+    - conan{group}.bat|sh = calls env_script_path1,... env_script_pathN
+    """
     existing = conanfile.env_scripts.setdefault(group, [])
-    if path not in existing:
-        existing.append(path)
+    if env_script_path not in existing:
+        existing.append(env_script_path)
