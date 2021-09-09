@@ -2,7 +2,6 @@ import copy
 import os
 import re
 
-from conan.tools.intel.intel import is_using_intel_oneapi, intel_setvars
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
@@ -100,11 +99,7 @@ class MSBuild(object):
             context = no_op()
             if self._conanfile.settings.get_safe("compiler") == "Intel" and \
                 self._conanfile.settings.get_safe("compiler.base") == "Visual Studio":
-                compiler_version = self._conanfile.settings.get_safe("compiler.version")
-                if is_using_intel_oneapi(compiler_version):
-                    context = intel_setvars(self._conanfile, arch)
-                else:
-                    context = intel_compilervars(self._conanfile, arch)
+                context = intel_compilervars(self._conanfile.settings, arch)
             with context:
                 return self._conanfile.run(command)
 
