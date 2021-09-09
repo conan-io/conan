@@ -32,13 +32,13 @@ def test_dependencies_visit():
     client.run("install .")
     assert "DefRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
     assert "DefPRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009:"\
-           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
-           "2b1f6d5048d8d32133ee0e0f01fdafaa!!!" in client.out
+           "1744785cb24e3bdca70e27041dc5abd20476f947#"\
+           "5c9041caa6737b80b91dae847ad118b2!!!" in client.out
 
     assert "DefRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
     assert "DefPRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009:" \
-           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
-           "2b1f6d5048d8d32133ee0e0f01fdafaa!!!" in client.out
+           "1744785cb24e3bdca70e27041dc5abd20476f947#"\
+           "5c9041caa6737b80b91dae847ad118b2!!!" in client.out
 
     assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
     assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out

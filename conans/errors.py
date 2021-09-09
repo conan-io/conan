@@ -148,7 +148,7 @@ class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
     pass
 
 
-class ConanErrorConfiguration(ConanExceptionInUserConanfileMethod):
+class ConanInvalidBuildConfiguration(ConanExceptionInUserConanfileMethod):
     """
     The binary might exist, and have a valid package-id, but can't be used with current config
     """

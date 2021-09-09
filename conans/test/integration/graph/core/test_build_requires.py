@@ -494,7 +494,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
-        assert lib.package_id == "7758859d93870e39affdbe5cd5f3dff28c9bc2a7"
+        assert lib.package_id == "acd4f7c8326a8c3c7c8375716e6e35febda1e441"
         assert lib.package_id != NO_SETTINGS_PACKAGE_ID
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
@@ -506,7 +506,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
         lib = app.dependencies[0].dst
-        assert lib.package_id == "be05cd51bae13fdd52ffeedb4efa6ae9d75c48f4"
+        assert lib.package_id == "3cb5d569ba52f152bc1a0c11d94b7b0ed1e592ed"
         assert lib.package_id != NO_SETTINGS_PACKAGE_ID
 
 

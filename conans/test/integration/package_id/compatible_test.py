@@ -382,7 +382,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
         client.save({"conanfile.py": c2})
         client.run("create .")
-        package_id = "2f0f7e3cf6fcfb1b950301b4ffee8f05394fefb7"
+        package_id = "d640c198a16d51bc486c4e155ed8a1748c1aec8e"
         self.assertIn(f"Package '{package_id}' created", client.out)
 
         # Back to semver mode
@@ -430,9 +430,9 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn(f"pkg/0.1@user/stable:{package_id} - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        self.assertIn("consumer/0.1@user/stable:900b52aa593ce7dfb8e479cf16b3ce2d3f3f1f86 - Build",
+        self.assertIn("consumer/0.1@user/stable:7e0fc545cbb77e2c58fdb2dfd288e6f152d199b0 - Build",
                       client.out)
-        self.assertIn("consumer/0.1@user/stable: Package '900b52aa593ce7dfb8e479cf16b3ce2d3f3f1f86'"
+        self.assertIn("consumer/0.1@user/stable: Package '7e0fc545cbb77e2c58fdb2dfd288e6f152d199b0'"
                       " created", client.out)
 
         # Create package with gcc 4.9

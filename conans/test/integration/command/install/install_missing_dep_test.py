@@ -35,8 +35,8 @@ class InstallMissingDependency(unittest.TestCase):
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . lasote/testing", assert_error=True)
 
-        self.assertIn("Can't find a 'dep2/1.0@lasote/testing' package", client.out)
-        self.assertIn("- Dependencies: dep1/2.0@lasote/testing", client.out)
+        self.assertIn("ERROR: Missing prebuilt package for 'dep2/1.0@lasote/testing'", client.out)
+        self.assertIn("dep1/2.Y.Z", client.out)
 
     def test_missing_multiple_dep(self):
         client = TestClient()

@@ -209,8 +209,8 @@ class PackageIDTest(unittest.TestCase):
                          clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
-        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
-        self.assertIn("Package ID:", self.client.out)
+        self.assertIn("Can't find 'Hello2/2.3.8@lasote/stable:"
+                      "917abc8095555633a7ad21c5b156af87d07ef9c9'", self.client.out)
 
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_nameless_mode(self):
@@ -423,16 +423,19 @@ class PackageIDTest(unittest.TestCase):
         self._export("libd", "0.1.0", channel=channel, package_id_text=None,
                      requires=["libc/0.1.0@user/testing"])
         self.client.run("create . libd/0.1.0@user/testing", assert_error=True)
-        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:d4d0d064f89ab22de34fe7d99476736a87c1e254
+        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:50ba743402da48a791ff796f6045158e54402c57
 
-libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
-- Settings:%s
-- Options: an_option=off
-- Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
-- Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
-- Package ID: d4d0d064f89ab22de34fe7d99476736a87c1e254
+libc/0.1.0@user/testing: WARN: Can't find 'libc/0.1.0@user/testing:50ba743402da48a791ff796f6045158e54402c57' package for the specified settings, options and dependencies:
+[options]
+an_option=off
 
-ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""" % " ", self.client.out)
+[requires]
+liba/0.1.0
+libb/0.1.0
+libbar/0.1.0
+libfoo/0.1.0
+
+ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""", self.client.out)
 
 
 class PackageIDErrorTest(unittest.TestCase):
@@ -461,8 +464,6 @@ class PackageIDErrorTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
-        # This is mandatory, otherwise it doesn't work
-
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")

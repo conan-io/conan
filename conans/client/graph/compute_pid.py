@@ -1,11 +1,10 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR, BINARY_UNKNOWN
+from conans.client.graph.graph import BINARY_INVALID, BINARY_INVALID_BUILD, BINARY_UNKNOWN
 from conans.model.pkg_type import PackageType
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
-    ConanErrorConfiguration, ConanException
-from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PACKAGE_ID_INVALID, \
-    PACKAGE_ID_UNKNOWN
+    ConanException, ConanInvalidBuildConfiguration
+from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
 from conans.util.conan_v2_mode import conan_v2_property
 
 
@@ -53,7 +52,8 @@ def compute_package_id(node, new_config):
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
 
-    conanfile.info = ConanInfo.create(conanfile.settings.values,
+    conanfile.info = ConanInfo.create(conanfile,
+                                      conanfile.settings.values,
                                       conanfile.options.values,
                                       reqs_info,
                                       build_requires_info,
@@ -79,26 +79,26 @@ def compute_package_id(node, new_config):
             try:
                 conanfile.validate()
             except ConanInvalidConfiguration as e:
-                node.binary = BINARY_INVALID
-                node.binary_error = str(e)
-            except ConanErrorConfiguration as e:
-                node.binary = BINARY_ERROR
-                node.binary_error = str(e)
+                node.binary_error = BINARY_INVALID
+                node.binary_error_msg = str(e)
+            except ConanInvalidBuildConfiguration as e:
+                node.binary_error = BINARY_INVALID_BUILD
+                node.binary_error_msg = str(e)
 
     try:
-        # TODO: Maybe we want to validate the "info" values?
+        # TODO: Not defining inputs dissallow to build
         conanfile.settings.validate()  # All has to be ok!
         conanfile.options.validate()
     except ConanException as e:
-        node.binary = BINARY_INVALID
-        node.binary_error = str(e)
+        node.binary_error = BINARY_INVALID_BUILD
+        node.binary_error_msg = str(e)
 
     pid = conanfile.info.package_id()
     node.package_id = pid
     binary_error = conanfile.info.req_binary_error()
     if binary_error == BINARY_INVALID:
-        node.binary = BINARY_INVALID
-        node.binary_error = "The package has invalid transitive dependencies"
+        node.binary_error = BINARY_INVALID
+        node.binary_error_msg = "The package has invalid transitive dependencies"
     elif binary_error == BINARY_UNKNOWN:
-        node.binary = BINARY_UNKNOWN
-        node.binary_error = "The package_id cannot be computed until all dependencies are known"
+        node.binary_error = BINARY_UNKNOWN
+        node.binary_error_msg = "The package_id cannot be computed until all dependencies are known"

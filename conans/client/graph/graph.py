@@ -24,7 +24,7 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_UNKNOWN = "Unknown"
 BINARY_INVALID = "Invalid"
-BINARY_ERROR = "ConfigurationError"
+BINARY_INVALID_BUILD = "InvalidBuild"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -49,7 +49,9 @@ class Node(object):
             conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
 
-        self.binary = None
+        self.binary = None  # The binary status: Cache, Download, Missing
+        self.binary_error = None  # If the binary cannot be built or is unknown
+        self.binary_error_msg = None
         self.recipe = recipe
         self.remote = None
         self.binary_remote = None

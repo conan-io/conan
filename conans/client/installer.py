@@ -12,7 +12,7 @@ from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID, \
-    BINARY_ERROR
+    BINARY_INVALID_BUILD
 from conans.client.importer import remove_imports, run_imports
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
@@ -325,7 +325,7 @@ class BinaryInstaller(object):
             for node in level:
                 if node.binary == BINARY_MISSING:
                     missing.append(node)
-                elif node.binary in (BINARY_INVALID, BINARY_ERROR):
+                elif node.binary in (BINARY_INVALID, BINARY_INVALID_BUILD):
                     invalid.append(node)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     downloads.append(node)
@@ -343,26 +343,11 @@ class BinaryInstaller(object):
 
         # Report details just the first one
         node = missing[0]
-        package_id = node.package_id
         ref, conanfile = node.ref, node.conanfile
-        dependencies = [str(dep.dst) for dep in node.dependencies]
-
-        settings_text = ", ".join(conanfile.info.full_settings.dumps().splitlines())
-        options_text = ", ".join(conanfile.info.full_options.dumps().splitlines())
-        dependencies_text = ', '.join(dependencies)
-        requires_text = ", ".join(conanfile.info.requires.dumps().splitlines())
-
-        msg = textwrap.dedent('''\
-            Can't find a '%s' package for the specified settings, options and dependencies:
-            - Settings: %s
-            - Options: %s
-            - Dependencies: %s
-            - Requirements: %s
-            - Package ID: %s
-            ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
-        conanfile.output.warn(msg)
-        self._recorder.package_install_error(PackageReference(ref, package_id),
-                                             INSTALL_ERROR_MISSING, msg)
+        msg = ("Can't find '%s' package for the specified settings, options and dependencies:\n%s"
+               % (node.pref, conanfile.info.dumps()))
+        self._out.writeln(msg)
+        self._recorder.package_install_error(node.pref, INSTALL_ERROR_MISSING, msg)
         missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
         if len(missing_prefs) >= 5:
             build_str = "--build=missing"
@@ -415,7 +400,7 @@ class BinaryInstaller(object):
         if invalid:
             msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
             for node in invalid:
-                msg.append("{}: {}: {}".format(node.conanfile, node.binary, node.binary_error))
+                msg.append("{}: {}: {}".format(node.conanfile, node.binary, node.binary_error_msg))
             raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
         processed_package_refs = {}

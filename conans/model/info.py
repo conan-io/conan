@@ -1,7 +1,7 @@
 import os
 
 from conans.client.build.cppstd_flags import cppstd_default
-from conans.client.graph.graph import BINARY_ERROR, BINARY_INVALID, BINARY_UNKNOWN
+from conans.client.graph.graph import BINARY_INVALID_BUILD, BINARY_INVALID, BINARY_UNKNOWN
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
@@ -16,7 +16,6 @@ from conans.util.sha import sha1
 PREV_UNKNOWN = "PREV_UNKNOWN"
 RREV_UNKNOWN = "RREV_UNKNOWN"
 PACKAGE_ID_UNKNOWN = "UNKNOWN"
-PACKAGE_ID_INVALID = "INVALID"
 
 
 class RequirementInfo(object):
@@ -41,7 +40,7 @@ class RequirementInfo(object):
             func_package_id_mode()
 
     def req_binary_error(self):
-        if (self.package_id or self.package_revision) and self._binary in (BINARY_ERROR,
+        if (self.package_id or self.package_revision) and self._binary in (BINARY_INVALID_BUILD,
                                                                            BINARY_INVALID):
             return BINARY_INVALID
         if self.package_revision == PREV_UNKNOWN:
@@ -49,7 +48,7 @@ class RequirementInfo(object):
 
     def copy(self):
         # Useful for build_id()
-        result = RequirementInfo(self.package, "unrelated_mode")
+        result = RequirementInfo(self.package, "unrelated_mode", self._binary)
         for f in ("name", "version", "user", "channel", "recipe_revision", "package_id",
                   "package_revision"):
 
@@ -159,7 +158,10 @@ class RequirementInfo(object):
 class RequirementsInfo(UserRequirementsDict):
 
     def req_binary_error(self):
-        return any(d.req_binary_error() for d in self._data.values())
+        for d in self._data.values():
+            error = d.req_binary_error()
+            if error:
+                return error
 
     def copy(self):
         # For build_id() implementation
@@ -179,20 +181,6 @@ class RequirementsInfo(UserRequirementsDict):
     @property
     def pkg_names(self):
         return [r.ref.name for r in self._data.keys()]
-
-    @property
-    def sha(self):
-        result = []
-        for req_info in self._data.values():
-            s = req_info.sha
-            if s is None:
-                return None
-            if s == PACKAGE_ID_INVALID:
-                return PACKAGE_ID_INVALID
-            result.append(s)
-        result.sort()  # Show always in alphabetical order
-        result.insert(0, "[requires]")
-        return '\n'.join(result)
 
     def dumps(self):
         result = []
@@ -392,8 +380,9 @@ class PythonRequiresInfo(object):
 class _PackageReferenceList(list):
     @staticmethod
     def loads(text):
-        return _PackageReferenceList([PackageReference.loads(package_reference)
-                                     for package_reference in text.splitlines()])
+        return _PackageReferenceList([package_reference.strip()
+                                     for package_reference in text.splitlines()
+                                      if package_reference.strip()])
 
     def dumps(self):
         return "\n".join(self.serialize())
@@ -418,20 +407,21 @@ class ConanInfo(object):
         result.python_requires = self.python_requires.copy()
         return result
 
-    clone = copy
+    def clone(self):
+        return self.copy()
 
     @staticmethod
-    def create(settings, options, reqs_info, build_requires_info,
+    def create(conanfile, settings, options, reqs_info, build_requires_info,
                python_requires, default_python_requires_id_mode):
         result = ConanInfo()
-        result.full_settings = settings
+        result.conanfile = conanfile
         result.settings = settings.copy()
-        result.full_options = options
+
         result.options = options.copy()
         result.options.clear_indirect()
         result.requires = reqs_info
         result.build_requires = build_requires_info
-        result.full_requires = _PackageReferenceList()
+
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
@@ -550,10 +540,10 @@ class ConanInfo(object):
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
         using Visual Studio 14"""
-        if self.full_settings.compiler != "Visual Studio":
+        if self.conanfile.settings.compiler != "Visual Studio":
             return
 
-        toolset = str(self.full_settings.compiler.toolset)
+        toolset = str(self.conanfile.settings.compiler.toolset)
         version = MSVS_DEFAULT_TOOLSETS_INVERSE.get(toolset)
         if version is not None:
             self.settings.compiler.version = version
@@ -561,47 +551,47 @@ class ConanInfo(object):
 
     def vs_toolset_incompatible(self):
         """Will generate different packages for v140 and visual 15 than the visual 14"""
-        if self.full_settings.compiler != "Visual Studio":
+        if self.conanfile.settings.compiler != "Visual Studio":
             return
-        self.settings.compiler.version = self.full_settings.compiler.version
-        self.settings.compiler.toolset = self.full_settings.compiler.toolset
+        self.settings.compiler.version = self.conanfile.settings.compiler.version
+        self.settings.compiler.toolset = self.conanfile.settings.compiler.toolset
 
     def discard_build_settings(self):
         # When os is defined, os_build is irrelevant for the consumer.
         # only when os_build is alone (installers, etc) it has to be present in the package_id
-        if self.full_settings.os and self.full_settings.os_build:
+        if self.conanfile.settings.os and self.conanfile.settings.os_build:
             del self.settings.os_build
-        if self.full_settings.arch and self.full_settings.arch_build:
+        if self.conanfile.settings.arch and self.conanfile.settings.arch_build:
             del self.settings.arch_build
 
     def include_build_settings(self):
-        self.settings.os_build = self.full_settings.os_build
-        self.settings.arch_build = self.full_settings.arch_build
+        self.settings.os_build = self.conanfile.settings.os_build
+        self.settings.arch_build = self.conanfile.settings.arch_build
 
     def default_std_matching(self):
         """
         If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
         same as specifying None, packages are the same
         """
-        if self.full_settings.compiler == "msvc":
+        if self.conanfile.settings.compiler == "msvc":
             # This post-processing of package_id was a hack to introduce this in a non-breaking way
             # This whole function will be removed in Conan 2.0, and the responsibility will be
             # of the input profile
             return
-        if (self.full_settings.compiler and
-                self.full_settings.compiler.version):
-            default = cppstd_default(self.full_settings)
+        if (self.conanfile.settings.compiler and
+                self.conanfile.settings.compiler.version):
+            default = cppstd_default(self.conanfile.settings)
 
-            if str(self.full_settings.compiler.cppstd) == default:
+            if str(self.conanfile.settings.compiler.cppstd) == default:
                 self.settings.compiler.cppstd = None
 
     def default_std_non_matching(self):
-        if self.full_settings.compiler.cppstd:
-            self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
+        if self.conanfile.settings.compiler.cppstd:
+            self.settings.compiler.cppstd = self.conanfile.settings.compiler.cppstd
 
     def parent_compatible(self, *_, **kwargs):
         """If a built package for Intel has to be compatible for a Visual/GCC compiler
-        (consumer). Transform the visual/gcc full_settings into an intel one"""
+        (consumer). Transform the visual/gcc conanfile.settings into an intel one"""
 
         if "compiler" not in kwargs:
             raise ConanException("Specify 'compiler' as a keywork argument. e.g: "
@@ -614,19 +604,19 @@ class ConanInfo(object):
         for setting_name in kwargs:
             # Won't fail even if the setting is not valid, there is no validation at info
             setattr(self.settings.compiler, setting_name, kwargs[setting_name])
-        self.settings.compiler.base = self.full_settings.compiler
-        for field in self.full_settings.compiler.fields:
-            value = getattr(self.full_settings.compiler, field)
+        self.settings.compiler.base = self.conanfile.settings.compiler
+        for field in self.conanfile.settings.compiler.fields:
+            value = getattr(self.conanfile.settings.compiler, field)
             setattr(self.settings.compiler.base, field, value)
 
     def base_compatible(self):
         """If a built package for Visual/GCC has to be compatible for an Intel compiler
           (consumer). Transform the Intel profile into an visual/gcc one"""
-        if not self.full_settings.compiler.base:
+        if not self.conanfile.settings.compiler.base:
             raise ConanException("The compiler '{}' has "
-                                 "no 'base' sub-setting".format(self.full_settings.compiler))
+                                 "no 'base' sub-setting".format(self.conanfile.settings.compiler))
 
-        self.settings.compiler = self.full_settings.compiler.base
-        for field in self.full_settings.compiler.base.fields:
-            value = getattr(self.full_settings.compiler.base, field)
+        self.settings.compiler = self.conanfile.settings.compiler.base
+        for field in self.conanfile.settings.compiler.base.fields:
+            value = getattr(self.conanfile.settings.compiler.base, field)
             setattr(self.settings.compiler, field, value)
