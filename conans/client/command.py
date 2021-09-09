@@ -1333,8 +1333,7 @@ class Command(object):
         """
         Uploads a recipe and binary packages to a remote.
 
-        If no remote is specified, the first configured remote (by default conan-center, use
-        'conan remote list' to list the remotes) will be used.
+        If no remote is specified, it fails.
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload",
@@ -1345,7 +1344,8 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument('-q', '--query', default=None, action=OnceArgument,
                             help="Only upload packages matching a specific query. " + _QUERY_HELP)
-        parser.add_argument("-r", "--remote", action=OnceArgument,
+        # using required, we may want to pass this as a positional argument?
+        parser.add_argument("-r", "--remote", action=OnceArgument, required=True,
                             help='upload to this specific remote')
         parser.add_argument("--all", action='store_true', default=False,
                             help='Upload both package recipe and packages')
