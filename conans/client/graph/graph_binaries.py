@@ -33,8 +33,9 @@ class GraphBinariesAnalyzer(object):
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             conanfile.output.info('Forced build from source')
-            node.binary = BINARY_BUILD
-            node.prev = None
+            if node.binary is None:
+                node.binary = BINARY_BUILD
+                node.prev = None
             return True
 
     def _evaluate_clean_pkg_folder_dirty(self, node, package_layout, pref):
@@ -211,8 +212,7 @@ class GraphBinariesAnalyzer(object):
         #    node.binary = BINARY_INVALID
 
     def _process_node(self, node, pref, build_mode, update, remotes):
-        if node.binary in (BINARY_ERROR, BINARY_INVALID):
-            return
+        assert node.binary != BINARY_ERROR
 
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node, pref):

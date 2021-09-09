@@ -33,9 +33,13 @@ class TestValidate(unittest.TestCase):
                       client.out)
 
         error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
+        print(client.out)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         client.run("info pkg/0.1@ -s os=Windows")
+        print(client.out)
+        client.run("info pkg/0.1@ -s os=Windows --dry-build=missing")
+        print(client.out)
         self.assertIn("ID: INVALID", client.out)
         client.run("info pkg/0.1@ -s os=Windows --json=myjson")
         myjson = json.loads(client.load("myjson"))
