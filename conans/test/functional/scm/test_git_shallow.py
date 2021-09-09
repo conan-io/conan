@@ -1,5 +1,3 @@
-# coding=utf-8
-import os
 import textwrap
 import unittest
 
@@ -13,10 +11,8 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
-@pytest.mark.parametrize("scm_to_conandata", [True, False])
-def test_shallow_none_string(scm_to_conandata):
+def test_shallow_none_string():
     client = TestClient()
-    client.run("config set general.scm_to_conandata={}".format('1' if scm_to_conandata else '0'))
     client.save({'conanfile.py': textwrap.dedent("""
         from conans import ConanFile
 
@@ -75,7 +71,6 @@ class GitShallowTestCase(unittest.TestCase):
     def test_export_scm_to_conandata(self):
         # Check the shallow value is stored and propagated with the proper value
         client = TestClient()
-        client.run("config set general.scm_to_conandata=1")
         files = {'conanfile.py': self.conanfile.format(shallow_attrib=self._shallow_attrib_str(),
                                                        url='auto', rev='auto')}
         url, _ = create_local_git_repo(files=files)

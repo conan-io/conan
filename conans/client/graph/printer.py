@@ -15,6 +15,19 @@ def _get_python_requires(conanfile):
     return result
 
 
+def _print_deprecated(deps_graph, out):
+    deprecated = {}
+    for node in deps_graph.nodes:
+        if node.conanfile.deprecated:
+            deprecated[node.ref] = node.conanfile.deprecated
+
+    if deprecated:
+        out.writeln("Deprecated", Color.BRIGHT_YELLOW)
+        for d, reason in deprecated.items():
+            reason = " in favor of '{}'".format(reason) if isinstance(reason, str) else ""
+            out.writeln("    {}{}".format(d, reason), Color.BRIGHT_CYAN)
+
+
 def print_graph(deps_graph, out):
     requires = OrderedDict()
     build_requires = OrderedDict()
@@ -67,5 +80,7 @@ def print_graph(deps_graph, out):
         _recipes(build_requires)
         out.writeln("Build requirements packages", Color.BRIGHT_YELLOW)
         _packages(build_requires)
+
+    _print_deprecated(deps_graph, out)
 
     out.writeln("")

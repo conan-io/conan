@@ -200,6 +200,6 @@ def test_config_list():
     """
     client = TestClient()
     client.run('config list')
-    assert "Supported Conan *experimental* conan.conf properties:" in client.out
+    assert "Supported Conan *experimental* global.conf and [conf] properties:" in client.out
     for key, value in DEFAULT_CONFIGURATION.items():
         assert "{}: {}".format(key, value) in client.out

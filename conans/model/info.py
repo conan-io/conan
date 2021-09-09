@@ -559,7 +559,8 @@ class ConanInfo(object):
         version = str(version)[:4]
         _visuals = {'19.0': '14',
                     '19.1': '15',
-                    '19.2': '16'}
+                    '19.2': '16',
+                    '19.3': '17'}
         compatible.settings.compiler.version = _visuals[version]
         runtime = "MT" if runtime == "static" else "MD"
         if  runtime_type == "Debug":

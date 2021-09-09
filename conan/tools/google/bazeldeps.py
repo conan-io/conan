@@ -59,8 +59,8 @@ class BazelDeps(object):
                 {% for lib in libs %}
                 ":{{ lib }}_precompiled",
                 {% endfor %}
-                {% endif %}
                 ],
+                {% endif %}
             )
 
         """)

@@ -631,7 +631,7 @@ class Command(object):
         elif args.subcommand == 'init':
             return self._conan.config_init(force=args.force)
         elif args.subcommand == "list":
-            self._out.info("Supported Conan *experimental* conan.conf properties:")
+            self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
             for key, value in DEFAULT_CONFIGURATION.items():
                 self._out.writeln("{}: {}".format(key, value))
 

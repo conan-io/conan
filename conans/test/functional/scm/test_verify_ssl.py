@@ -1,5 +1,3 @@
-# coding=utf-8
-import os
 import textwrap
 import unittest
 
@@ -12,10 +10,8 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
-@pytest.mark.parametrize("scm_to_conandata", [True, False])
-def test_verify_ssl_none_string(scm_to_conandata):
+def test_verify_ssl_none_string():
     client = TestClient()
-    client.run("config set general.scm_to_conandata={}".format('1' if scm_to_conandata else '0'))
     client.save({'conanfile.py': textwrap.dedent("""
         from conans import ConanFile
 
@@ -70,7 +66,6 @@ class GitVerifySSLTestCase(unittest.TestCase):
 
     def test_export_scm_to_conandata(self):
         # Check the verify_ssl value is stored and propagated with the proper value
-        self.client.run("config set general.scm_to_conandata=1")
         self.client.run("export . {}".format(self.ref))
         content = load(self.client.get_latest_ref_layout(self.ref).conandata())
         if self.verify_ssl in [None, True]:

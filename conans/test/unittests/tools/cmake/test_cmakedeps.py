@@ -45,7 +45,7 @@ def test_cpp_info_name_cmakedeps(using_properties):
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
-        assert "TARGET MySuperPkg1::MySuperPkg1" in files["ComplexFileName1Target-release.cmake"]
+        assert "TARGET MySuperPkg1::MySuperPkg1" in files["ComplexFileName1-Target-release.cmake"]
         assert 'set(OriginalDepName_INCLUDE_DIRS_RELEASE ' \
                '"${OriginalDepName_PACKAGE_FOLDER_RELEASE}/include")' \
                in files["ComplexFileName1-release-x86-data.cmake"]
@@ -88,7 +88,7 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
-        assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1Target-debug.cmake"]
+        assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1-Target-debug.cmake"]
         assert 'set(OriginalDepName_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
@@ -167,7 +167,7 @@ def test_component_name_same_package():
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
-        target_cmake = files["mypkgTarget-release.cmake"]
+        target_cmake = files["mypkg-Target-release.cmake"]
         assert "$<$<CONFIG:Release>:${mypkg_mypkg_INCLUDE_DIRS_RELEASE}> APPEND)" in target_cmake
 
         data_cmake = files["mypkg-release-x86-data.cmake"]

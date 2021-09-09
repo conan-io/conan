@@ -84,7 +84,7 @@ def compute_package_id(node, new_config):
     try:
         conanfile.settings.validate()  # All has to be ok!
         conanfile.options.validate()
-    except ConanException:
+    except ConanException as e:
         conanfile.info.invalid = BINARY_INVALID, str(e)
 
     info = conanfile.info

@@ -1248,6 +1248,7 @@ class ConanAPIV1(object):
                     base=None, lockfile=None):
         # profile_host is mandatory
         profile_host = profile_host or ProfileData(None, None, None, None, None)
+        profile_build = profile_build or ProfileData(None, None, None, None, None)
         cwd = os.getcwd()
 
         if path and reference:
@@ -1282,7 +1283,7 @@ class ConanAPIV1(object):
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                        profile_build.options, profile_build.env, profile_build.conf,
-                                       cwd, self.app.cache)
+                                       cwd, self.app.cache, build_profile=True)
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         phost.process_settings(self.app.cache)
@@ -1341,10 +1342,9 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
     # Only work on the profile_build if something is provided
     pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                profile_build.options, profile_build.env, profile_build.conf,
-                               cwd, cache)
+                               cwd, cache, build_profile=True)
     pbuild.process_settings(cache)
 
-    # Preprocess settings and convert to real settings
     # Apply the new_config to the profiles the global one, so recipes get it too
     # TODO: This means lockfiles contain whole copy of the config here?
     # FIXME: Apply to locked graph-info as well
