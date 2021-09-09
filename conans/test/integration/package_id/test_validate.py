@@ -7,10 +7,8 @@ import pytest
 from conans.cli.exit_codes import ERROR_INVALID_CONFIGURATION
 from conans.client.graph.graph import BINARY_INVALID
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
-from conans.util.files import save
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-
+from conans.util.files import save
 
 
 class TestValidate(unittest.TestCase):
@@ -31,7 +29,7 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
 
         client.run("create . pkg/0.1@ -s os=Linux")
-        self.assertIn("pkg/0.1: Package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8' created",
+        self.assertIn("pkg/0.1: Package '9a4eb3c8701508aa9458b1a73d0633783ecc2270' created",
                       client.out)
 
         error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
@@ -128,11 +126,11 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
 
         client.run("create . pkg/0.1@ -s os=Linux -s build_type=Release")
-        self.assertIn("pkg/0.1: Package '139ed6a9c0b2338ce5c491c593f88a5c328ea9e4' created",
+        self.assertIn("pkg/0.1: Package 'c26ded3c7aa4408e7271e458d65421000e000711' created",
                       client.out)
         # compatible_packges fallback works
         client.run("install pkg/0.1@ -s os=Linux -s build_type=Debug")
-        self.assertIn("pkg/0.1:139ed6a9c0b2338ce5c491c593f88a5c328ea9e4 - Cache", client.out)
+        self.assertIn("pkg/0.1:c26ded3c7aa4408e7271e458d65421000e000711 - Cache", client.out)
 
         error = client.run("create . pkg/0.1@ -s os=Windows -s build_type=Release",
                            assert_error=True)
@@ -163,7 +161,7 @@ class TestValidate(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
 
-        package_id = "139ed6a9c0b2338ce5c491c593f88a5c328ea9e4"
+        package_id = "c26ded3c7aa4408e7271e458d65421000e000711"
         client.run("create . pkg/0.1@ -s os=Linux -s build_type=Release")
         self.assertIn(f"pkg/0.1: Package '{package_id}' created",
                       client.out)

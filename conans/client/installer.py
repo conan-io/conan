@@ -415,8 +415,7 @@ class BinaryInstaller(object):
         if invalid:
             msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
             for node in invalid:
-                binary, reason = node.conanfile.info.invalid
-                msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
+                msg.append("{}: {}: {}".format(node.conanfile, node.binary, node.binary_error))
             raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
         processed_package_refs = {}

@@ -31,7 +31,7 @@ class ConanReference:
             self._pkgid = args[5]
             self._prev = args[6]
         else:
-            raise ConanException("Invalid arguments for ConanReference")
+            raise ConanException("Invalid arguments for ConanReference", args)
 
     @property
     def name(self):

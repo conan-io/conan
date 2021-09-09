@@ -139,7 +139,7 @@ class GraphBinariesAnalyzer(object):
         self._evaluated[pref] = [node]
 
     def _evaluate_node(self, node, build_mode, update, remotes):
-        assert node.binary is None, "Node.binary should be None"
+        #assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
         assert node.package_id != PACKAGE_ID_UNKNOWN, "Node.package_id shouldn't be Unknown"
         assert node.prev is None, "Node.prev should be None"
@@ -169,7 +169,6 @@ class GraphBinariesAnalyzer(object):
                                          % (repr(locked.ref), node.package_id, locked.package_id))
         else:
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
-            assert node.binary is None, "Node.binary should be None if not locked"
             pref = PackageReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary in (BINARY_MISSING, BINARY_INVALID):
@@ -206,28 +205,21 @@ class GraphBinariesAnalyzer(object):
                 # package_id was not locked, this means a base lockfile that is being completed
                 locked.complete_base_node(node.package_id, node.prev)
 
-        if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
-                node.conanfile.info.invalid[0] == BINARY_INVALID):
-            node._package_id = PACKAGE_ID_INVALID  # Fixme: Hack
-            node.binary = BINARY_INVALID
+        #if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
+        #        node.conanfile.info.invalid[0] == BINARY_INVALID):
+        #    node._package_id = PACKAGE_ID_INVALID  # Fixme: Hack
+        #    node.binary = BINARY_INVALID
 
     def _process_node(self, node, pref, build_mode, update, remotes):
+        if node.binary in (BINARY_ERROR, BINARY_INVALID):
+            return
+
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node, pref):
             return
 
-        if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_ERROR:
-            node.binary = BINARY_ERROR
-            return
-
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE  # TODO: PREV?
-            return
-
-        if pref.id == PACKAGE_ID_INVALID:
-            # annotate pattern, so unused patterns in --build are not displayed as errors
-            build_mode.forced(node.conanfile, node.ref)
-            node.binary = BINARY_INVALID
             return
 
         if self._evaluate_build(node, build_mode):
@@ -270,11 +262,7 @@ class GraphBinariesAnalyzer(object):
             self._evaluate_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            if node.package_id == PACKAGE_ID_UNKNOWN:
-                assert node.binary is None, "Node.binary should be None"
-                node.binary = BINARY_UNKNOWN
-                # annotate pattern, so unused patterns in --build are not displayed as errors
-                build_mode.forced(node.conanfile, node.ref)
+            if node.binary in (BINARY_ERROR, BINARY_UNKNOWN):
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
 

@@ -1,10 +1,11 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
+from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR, BINARY_UNKNOWN
 from conans.model.pkg_type import PackageType
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
     ConanErrorConfiguration, ConanException
-from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
+from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PACKAGE_ID_INVALID, \
+    PACKAGE_ID_UNKNOWN
 from conans.util.conan_v2_mode import conan_v2_property
 
 
@@ -77,15 +78,25 @@ def compute_package_id(node, new_config):
             try:
                 conanfile.validate()
             except ConanInvalidConfiguration as e:
-                conanfile.info.invalid = BINARY_INVALID, str(e)
+                node.binary = BINARY_INVALID
+                node.binary_error = str(e)
             except ConanErrorConfiguration as e:
-                conanfile.info.invalid = BINARY_ERROR, str(e)
+                node.binary = BINARY_ERROR
+                node.binary_error = str(e)
 
     try:
+        # TODO: Maybe we want to validate the "info" values?
         conanfile.settings.validate()  # All has to be ok!
         conanfile.options.validate()
     except ConanException as e:
-        conanfile.info.invalid = BINARY_INVALID, str(e)
+        node.binary = BINARY_INVALID
+        node.binary_error = str(e)
 
-    info = conanfile.info
-    node.package_id = info.package_id()
+    pid = conanfile.info.package_id()
+    node.package_id = pid
+    if pid == PACKAGE_ID_INVALID:
+        node.binary = BINARY_INVALID
+        node.binary_error = "There are invalid transitive dependencies"
+    elif pid == PACKAGE_ID_UNKNOWN:
+        node.binary = BINARY_UNKNOWN
+        node.binary_error = "The package_id cannot be computed until all dependencies are built"

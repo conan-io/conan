@@ -285,10 +285,16 @@ class OptionsValues(object):
         return result
 
     def dumps(self):
-        result = []
-        for key, value in self.as_list():
-            result.append("%s=%s" % (key, value))
-        return "\n".join(result)
+        items = self.as_list()
+        if items:
+            result = ["[options]"]
+            for key, value in items:
+                if value is None or value == "None":
+                    continue
+                result.append("%s=%s" % (key, value))
+            result.append("")
+            return "\n".join(result)
+        return ""
 
     @staticmethod
     def loads(text):

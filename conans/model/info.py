@@ -1,7 +1,6 @@
 import os
 
 from conans.client.build.cppstd_flags import cppstd_default
-from conans.client.graph.graph import BINARY_INVALID
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
@@ -13,9 +12,9 @@ from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
 
-PREV_UNKNOWN = "PREV unknown"
-RREV_UNKNOWN = "RREV unknown"
-PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
+PREV_UNKNOWN = "PREV_UNKNOWN"
+RREV_UNKNOWN = "RREV_UNKNOWN"
+PACKAGE_ID_UNKNOWN = "UNKNOWN"
 PACKAGE_ID_INVALID = "INVALID"
 
 
@@ -63,23 +62,6 @@ class RequirementInfo(object):
         if self.package_revision:
             result.append("#%s" % self.package_revision)
         return "".join(result)
-
-    @property
-    def sha(self):
-        if self.package_id == PACKAGE_ID_UNKNOWN or self.package_revision == PREV_UNKNOWN:
-            return None
-        if self.package_id == PACKAGE_ID_INVALID:
-            return PACKAGE_ID_INVALID
-
-        ref = ConanFileReference(self.name, self.version, self.user, self.channel,
-                                 self.recipe_revision, validate=False)
-        pref = repr(ref)
-        if self.package_id:
-            pref += ":{}".format(self.package_id)
-            if self.package_revision:
-                pref += "#{}".format(self.package_revision)
-
-        return pref
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
@@ -206,7 +188,12 @@ class RequirementsInfo(UserRequirementsDict):
             dumped = req_info.dumps()
             if dumped:
                 result.append(dumped)
-        return "\n".join(sorted(result))
+
+        if result:
+            result = sorted(result)
+            result.insert(0, "[requires]")
+            result.append("")
+        return "\n".join(result)
 
     def unrelated_mode(self):
         self.clear()
@@ -273,8 +260,7 @@ class PythonRequireInfo(object):
         else:
             func_package_id_mode()
 
-    @property
-    def sha(self):
+    def dumps(self):
         ref = ConanFileReference(self._name, self._version, self._user, self._channel,
                                  self._revision, validate=False)
         return repr(ref)
@@ -348,11 +334,16 @@ class PythonRequiresInfo(object):
     def clear(self):
         self._refs = None
 
-    @property
-    def sha(self):
-        result = ['[python_requires]']
-        result.extend(r.sha for r in self._refs)
-        return '\n'.join(result)
+    def dumps(self):
+        result = []
+        for req_info in self._refs or []:
+            dumped = req_info.dumps()
+            if dumped:
+                result.append(dumped)
+        if result:
+            result.insert(0, "[python_requires]")
+            result.append("")
+        return "\n".join(sorted(result))
 
     def unrelated_mode(self):
         self._refs = None
@@ -400,12 +391,14 @@ class _PackageReferenceList(list):
 
 
 class ConanInfo(object):
+    def __init__(self):
+        # WIP: to make it defined
+        self.conf = None
 
     def copy(self):
         """ Useful for build_id implementation
         """
         result = ConanInfo()
-        result.invalid = self.invalid
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
@@ -413,11 +406,12 @@ class ConanInfo(object):
         result.python_requires = self.python_requires.copy()
         return result
 
+    clone = copy
+
     @staticmethod
     def create(settings, options, reqs_info, build_requires_info,
                python_requires, default_python_requires_id_mode):
         result = ConanInfo()
-        result.invalid = None
         result.full_settings = settings
         result.settings = settings.copy()
         result.full_options = options
@@ -435,52 +429,36 @@ class ConanInfo(object):
     @staticmethod
     def loads(text):
         # This is used for search functionality, search prints info from this file
-        parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
-                                     "requires", "full_requires", "env"],
+        parser = ConfigParser(text, ["settings", "options", "requires"],
                               raise_unexpected_field=False)
         result = ConanInfo()
-        result.invalid = None
         result.settings = Values.loads(parser.settings)
-        result.full_settings = Values.loads(parser.full_settings)
         result.options = OptionsValues.loads(parser.options)
-        result.full_options = OptionsValues.loads(parser.full_options)
-        result.full_requires = _PackageReferenceList.loads(parser.full_requires)
-        # Requires after load are not used for any purpose, CAN'T be used, they are not correct
-        # FIXME: remove this uglyness
-        result.requires = RequirementsInfo({})
-        result.build_requires = RequirementsInfo({})
-
+        result.requires = _PackageReferenceList.loads(parser.requires)
         return result
 
     def dumps(self):
-        def indent(text):
-            if not text:
-                return ""
-            return '\n'.join("    " + line for line in text.splitlines())
-        result = list()
-
-        result.append("[settings]")
-        result.append(indent(self.settings.dumps()))
-        result.append("\n[requires]")
-        result.append(indent(self.requires.dumps()))
-        result.append("\n[options]")
-        result.append(indent(self.options.dumps()))
-        result.append("\n[full_settings]")
-        result.append(indent(self.full_settings.dumps()))
-        result.append("\n[full_requires]")
-        result.append(indent(self.full_requires.dumps()))
-        result.append("\n[full_options]")
-        result.append(indent(self.full_options.dumps()))
-        result.append("\n[env]\n")
-
-        return '\n'.join(result) + "\n"
-
-    def clone(self):
-        q = self.copy()
-        q.full_settings = self.full_settings.copy()
-        q.full_options = self.full_options.copy()
-        q.full_requires = _PackageReferenceList.loads(self.full_requires.dumps())
-        return q
+        result = []
+        settings = self.settings.dumps()
+        if settings:
+            result.append(settings)
+        options = self.options.dumps()
+        if options:
+            result.append(options)
+        requires = self.requires.dumps()
+        if requires:
+            result.append(requires)
+        python_requires = self.python_requires.dumps()
+        if python_requires:
+            result.append(python_requires)
+        build_requires = self.build_requires.dumps()
+        if build_requires:
+            result.append(build_requires)
+        if self.conf is not None:
+            conf = self.conf.dumps()
+            if conf:
+                result.append(conf)
+        return '\n'.join(result)
 
     def __eq__(self, other):
         """ currently just for testing purposes
@@ -510,24 +488,15 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
-        result = [self.settings.sha,
-                  self.options.sha]
-        requires_sha = self.requires.sha
-        if requires_sha is None:
+        text = self.dumps()
+        # This can be probably optimized
+        if PACKAGE_ID_UNKNOWN in text:
             return PACKAGE_ID_UNKNOWN
-        if requires_sha == PACKAGE_ID_INVALID:
-            self.invalid = BINARY_INVALID, "Invalid transitive dependencies"
+        if PACKAGE_ID_INVALID in text:
             return PACKAGE_ID_INVALID
-        result.append(requires_sha)
-        if self.python_requires:
-            result.append(self.python_requires.sha)
-        if self.build_requires:
-            result.append(self.build_requires.sha.replace("[requires]", "[build_requires]"))
-        if hasattr(self, "conf"):
-            result.append(self.conf.sha)
-        result.append("")  # Append endline so file ends with LF
-        text = '\n'.join(result)
-        #print("HASING ", text)
+        print("HASHING--------")
+        print(text)
+        print("------------------------")
         package_id = sha1(text.encode())
         return package_id
 
@@ -537,7 +506,7 @@ class ConanInfo(object):
         """
         conan_info_json = {"settings": dict(self.settings.serialize()),
                            "options": dict(self.options.serialize()["options"]),
-                           "full_requires": self.full_requires.serialize()
+                           "requires": self.requires.serialize()
                            }
         return conan_info_json
 

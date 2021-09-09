@@ -21,7 +21,7 @@ class TestInvalidConfiguration:
                 if self.settings.os == "Windows":
                     raise ConanInvalidConfiguration("Package does not work in Windows!")
        """)
-    linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
+    linux_package_id = "9a4eb3c8701508aa9458b1a73d0633783ecc2270"
     invalid = "Invalid"
 
     @pytest.fixture(scope="class")
@@ -50,6 +50,7 @@ class TestInvalidConfiguration:
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s os=Linux")
+        print(client.out)
         assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
         assert "pkg/0.1: Already installed!" in client.out
 
@@ -110,7 +111,7 @@ class TestErrorConfigurationCompatible(TestInvalidConfiguration):
                    compatible_pkg.settings.os = "Linux"
                    self.compatible_packages.append(compatible_pkg)
         """)
-    linux_package_id = "02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8"
+    linux_package_id = "9a4eb3c8701508aa9458b1a73d0633783ecc2270"
     invalid = "ConfigurationError"
 
 
@@ -145,6 +146,7 @@ class TestInvalidBuildPackageID:
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s os=Windows")
+        print(client.out)
         assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
         assert "pkg/0.1: Already installed!" in client.out
 

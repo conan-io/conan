@@ -5,7 +5,6 @@ class Values(object):
     def __init__(self, value="values"):
         self._value = str(value)
         self._dict = {}  # {key: Values()}
-        self._modified = {}  # {"compiler.version.arch": (old_value, old_reference)}
 
     def __getattr__(self, attr):
         if attr not in self._dict:
@@ -92,24 +91,19 @@ class Values(object):
             setattr(attr, tokens[-1], Values(value))
         return result
 
-    def dumps(self):
-        """ produces a text string with lines containine a flattened version:
-        compiler.arch = XX
-        compiler.arch.speed = YY
-        """
-        return "\n".join(["%s=%s" % (field, value)
-                          for (field, value) in self.as_list()])
-
     def serialize(self):
         return self.as_list()
 
-    @property
-    def sha(self):
+    def dumps(self):
+        items = self.as_list(list_all=False)
+        if not items:
+            return ""
         result = ["[settings]"]
-        for (name, value) in self.as_list(list_all=False):
+        for (name, value) in items:
             # It is important to discard None values, so migrations in settings can be done
             # without breaking all existing packages SHAs, by adding a first "None" option
             # that doesn't change the final sha
             if value != "None":
                 result.append("%s=%s" % (name, value))
+        result.append("")
         return '\n'.join(result)
