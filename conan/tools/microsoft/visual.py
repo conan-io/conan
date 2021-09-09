@@ -2,8 +2,7 @@ import os
 import textwrap
 
 from conan.tools.env.environment import register_env_script
-from conan.tools.intel.intel import get_intel_setvars_command, is_using_intel_oneapi
-from conans.client.tools import intel_compilervars_command
+from conan.tools.intel import Intel
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
 from conans.util.files import save
@@ -28,15 +27,9 @@ def _write_conanvcvars(conanfile, group):
         return
 
     compiler = conanfile.settings.get_safe("compiler")
-    compiler_version = conanfile.settings.get_safe("compiler.version")
-    intel_vars_setup_command = None
+    vcvars = None
     if compiler == "intel":
-        if is_using_intel_oneapi(compiler_version):
-            # Using new Intel oneAPI toolkit
-            intel_vars_setup_command = get_intel_setvars_command(conanfile)
-        else:
-            # Using old Intel Parallel Studio XE
-            intel_vars_setup_command = intel_compilervars_command(conanfile)
+        vcvars = Intel(conanfile).command
     elif compiler == "Visual Studio" or compiler == "msvc":
         vs_version = vs_ide_version(conanfile)
         vcvarsarch = vcvars_arch(conanfile)
@@ -56,14 +49,14 @@ def _write_conanvcvars(conanfile, group):
             minor = version_components[1]
             # The equivalent of compiler 19.26 is toolset 14.26
             vcvars_ver = "14.{}".format(minor)
-        intel_vars_setup_command = vcvars_command(vs_version, architecture=vcvarsarch,
-                                                  platform_type=None, winsdk_version=None,
-                                                  vcvars_ver=vcvars_ver)
-    if intel_vars_setup_command:
+        vcvars = vcvars_command(vs_version, architecture=vcvarsarch,
+                                platform_type=None, winsdk_version=None,
+                                vcvars_ver=vcvars_ver)
+    if vcvars:
         content = textwrap.dedent("""\
             @echo off
             {}
-            """.format(intel_vars_setup_command))
+            """.format(vcvars))
         path = os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE)
         save(path, content)
 

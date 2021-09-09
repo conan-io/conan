@@ -42,7 +42,7 @@ class Intel:
             env.append(k, v)
         return env
 
-    def generate(self, env=None, auto_activate=True):
+    def generate(self, env=None, auto_activate=False):
         env = env or self.environment()
         env.save_script(self.filename, auto_activate=auto_activate)
 
@@ -63,17 +63,45 @@ class _InteloneAPI:
         if system == "Darwin":
             # Let's show WARNING for macOS
             self._out.warn("The macOS* operating system is not supported by the "
-                     "Intel oneAPI DPC++/C++ Compiler")
+                           "Intel oneAPI DPC++/C++ Compiler")
 
         installation_path = self._conanfile.conf["tools.intel:installation_path"]
         if not installation_path:
             # Let's try the default dirs
             if system == ["Linux", "Darwin"]:
+                # If it was installed as root
                 installation_path = os.path.join(os.sep, "opt", "intel", "oneapi")
+                if not os.path.exists(installation_path):
+                    # Try if it was installed as normal user
+                    installation_path = os.path.join(os.path.expanduser("~"), "intel", "oneapi")
+                if not os.path.exists(installation_path):
+                    raise ConanException("Don't know how to find Intel oneAPI folder on %s" % system)
             elif system == "Windows":
-                installation_path = "C:\\Program Files (x86)\\Intel\\oneAPI"
-            elif installation_path:
-                raise ConanException("Don't know how to find Intel compiler on %s" % system)
+
+                if self._arch == "x86":
+                    intel_arch = "IA32"
+                elif self._arch == "x86_64":
+                    intel_arch = "EM64T"
+                else:
+                    raise ConanException("don't know how to find Intel compiler on %s" % self._arch)
+                if is_win64():
+                    base = r"SOFTWARE\WOW6432Node"
+                else:
+                    base = r"SOFTWARE"
+                intel_version = self._version if "." in self._version else self._version + ".0"
+                base = r"{base}\Intel\Suites\{intel_version}".format(
+                    base=base, intel_version=intel_version
+                )
+                from six.moves import winreg  # @UnresolvedImport
+                path = base + r"\Defaults\C++\{arch}".format(arch=intel_arch)
+                subkey = _system_registry_key(winreg.HKEY_LOCAL_MACHINE, path, "SubKey")
+                if not subkey:
+                    raise ConanException("unable to find Intel C++ compiler installation")
+                path = base + r"\{subkey}\C++".format(subkey=subkey)
+                installation_path = _system_registry_key(winreg.HKEY_LOCAL_MACHINE, path,
+                                                         "LatestDir")
+                if not installation_path:
+                    raise ConanException("Don't know how to find Intel oneAPI folder on %s" % system)
 
         self._out.info("Got Intel oneAPI installation folder: %s" % installation_path)
         return installation_path
@@ -84,7 +112,7 @@ class _InteloneAPI:
 
         :return:
         """
-        if str(os.getenv("SETVARS_COMPLETED"), "") == "1":
+        if str(os.getenv("SETVARS_COMPLETED"), "") == "1" and not self._force:
             return "echo Conan:intel_setvars already set"
 
         system = platform.system()
@@ -108,6 +136,8 @@ class _InteloneAPI:
             base_version = self._settings.get_safe("compiler.base.version")
             if base_version:
                 command += " vs%s" % MSVS_YEAR.get(base_version)
+        if self._force:
+            command += " --force"
         return command
 
 
@@ -212,4 +242,6 @@ class _IntelLegacy:
             base_version = self._settings.get_safe("compiler.base.version")
             if base_version:
                 command += " vs%s" % MSVS_YEAR.get(base_version)
+        if self._force:
+            command += " --force"
         return command

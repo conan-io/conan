@@ -5,7 +5,6 @@ from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
 
-from conan.tools.intel.intel import is_using_intel_oneapi, get_intel_setvars_dict
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
@@ -242,12 +241,8 @@ class CMake(object):
         elif is_intel:
             if self.generator in ["Ninja", "Ninja Multi-Config",
                                   "NMake Makefiles", "NMake Makefiles JOM", "Unix Makefiles"]:
-                compiler_version = self._settings.get_safe("compiler.version")
-                if is_using_intel_oneapi(compiler_version):
-                    intel_vars_dict = get_intel_setvars_dict(self._conanfile, force=True)
-                else:
-                    intel_vars_dict = tools.intel_compilervars_dict(self._conanfile, force=True)
-                context = _environment_add(intel_vars_dict, post=self._append_vcvars)
+                intel_compilervars_dict = tools.intel_compilervars_dict(self._conanfile, force=True)
+                context = _environment_add(intel_compilervars_dict, post=self._append_vcvars)
         with context:
             self._conanfile.run(command)
 
