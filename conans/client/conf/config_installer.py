@@ -137,7 +137,7 @@ def _process_folder(config, folder, cache, output):
 def _process_download(config, cache, output, requester):
     with tmp_config_install_folder(cache) as tmp_folder:
         output.info("Trying to download  %s" % _hide_password(config.uri))
-        zippath = os.path.join(tmp_folder, "config.zip")
+        zippath = os.path.join(tmp_folder, os.path.basename(config.uri))
         try:
             tools.download(config.uri, zippath, out=output, verify=config.verify_ssl,
                            requester=requester)
