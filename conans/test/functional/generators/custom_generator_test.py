@@ -85,7 +85,7 @@ class CustomGeneratorTest(unittest.TestCase):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("upload %s" % str(gen_ref))
+        client.run("upload %s -r default" % str(gen_ref))
 
         # Test local, no retrieval
         files = {CONANFILE_TXT: consumer}
@@ -109,7 +109,7 @@ class CustomGeneratorTest(unittest.TestCase):
         files = {CONANFILE: generator_multi}
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("upload %s" % str(gen_ref))
+        client.run("upload %s -r default" % str(gen_ref))
 
         # Test local, no retrieval
         files = {CONANFILE_TXT: consumer_multi}

@@ -130,7 +130,7 @@ class JsonOutputTest(unittest.TestCase):
                          clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json ")
 
-        self.client.run('upload "*" -c --all')
+        self.client.run('upload "*" -c --all -r default')
 
         conanfile = str(GenConanfile("BB", "1.0")) + """
     def configure(self):
@@ -141,13 +141,13 @@ class JsonOutputTest(unittest.TestCase):
 """
         self.client.save({"conanfile.py": conanfile}, clean_first=True)
         self.client.run("create . private_user/channel --build missing")
-        self.client.run('upload "*" -c --all')
+        self.client.run('upload "*" -c --all -r default')
 
         self.client.save({"conanfile.py": GenConanfile("AA", "1.0").
                          with_require("BB/1.0@private_user/channel")},
                          clean_first=True)
         self.client.run("create . private_user/channel")
-        self.client.run('upload "*" -c --all')
+        self.client.run('upload "*" -c --all -r default')
 
         save(os.path.join(self.client.cache.profiles_path, "mybr"),
              """

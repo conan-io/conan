@@ -87,7 +87,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
                      "hello.cpp": hello_cpp,
                      "hello.h": hello_h})
         client.run("create . Pkg/0.1@lasote/testing")
-        client.run("upload Pkg* --all --confirm")
+        client.run("upload Pkg* --all --confirm -r default")
         client.run('remove "*" -f')
         client.run("search")
         self.assertIn("There are no packages", client.out)

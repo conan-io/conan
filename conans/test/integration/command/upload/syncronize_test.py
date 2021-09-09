@@ -27,7 +27,7 @@ class SynchronizeTest(unittest.TestCase):
         client.run("export . lasote/stable")
         ref_with_rev = client.cache.get_latest_rrev(ref)
         # Upload conan file
-        client.run("upload %s" % str(ref))
+        client.run("upload %s -r default" % str(ref))
 
         server_conan_path = remote_paths.export(ref_with_rev)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))

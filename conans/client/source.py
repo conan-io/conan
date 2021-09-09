@@ -23,7 +23,6 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
         return None
 
     if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
-        mkdir(export_sources_folder)
         return None
 
     if not remote:

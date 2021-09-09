@@ -275,7 +275,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
 
-        client.run("upload * --all --confirm")
+        client.run("upload * --all --confirm -r default")
         client.run("remove * -f")
         client.run("install Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
@@ -475,7 +475,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . base/1.1@user/testing")
-        client.run("upload * --confirm")
+        client.run("upload * --confirm -r default")
 
         client2 = TestClient(servers=client.servers, users={"default": [("user", "mypass")]})
         reuse = textwrap.dedent("""
@@ -495,7 +495,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile.replace("42", "143")})
         time.sleep(1)  # guarantee time offset
         client.run("export . base/1.1@user/testing")
-        client.run("upload * --confirm")
+        client.run("upload * --confirm -r default")
 
         db = client2.cache.dump()
         client2.run("install . --update")
@@ -513,7 +513,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . base/1.1@user/testing")
-        client.run("upload * --confirm")
+        client.run("upload * --confirm -r default")
 
         client2 = TestClient(servers=client.servers, users={"default": [("user", "password")]})
         reuse = textwrap.dedent("""
@@ -533,7 +533,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile.replace("42", "143")})
         # Make sure to bump the version!
         client.run("export . base/1.2@user/testing")
-        client.run("upload * --confirm")
+        client.run("upload * --confirm -r default")
 
         client2.run("install . --update")
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)

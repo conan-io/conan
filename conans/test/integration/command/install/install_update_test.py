@@ -74,18 +74,11 @@ def test_update_not_date():
     client.run("install . --build")
     client.run("upload Hello0/1.0@lasote/stable --all -r default")
 
-    client.run("remote list_ref")
-    assert "Hello0/1.0@lasote/stable" in client.out
-    client.run("remote list_pref Hello0/1.0@lasote/stable")
     prev = client.get_latest_prev("Hello0/1.0@lasote/stable")
     package_reference = f"Hello0/1.0@lasote/stable#{prev.ref.revision}:{prev.id}"
     assert package_reference in client.out
 
     ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
-    export_folder = client.get_latest_ref_layout(ref).export()
-    recipe_manifest = os.path.join(export_folder, CONAN_MANIFEST)
-    package_folder = client.cache.pkg_layout(prev).package()
-    package_manifest = os.path.join(package_folder, CONAN_MANIFEST)
 
     initial_recipe_timestamp = client.cache.get_timestamp(client.cache.get_latest_rrev(ref))
     initial_package_timestamp = client.cache.get_timestamp(prev)
@@ -96,12 +89,6 @@ def test_update_not_date():
     client.save({"conanfile.py": GenConanfile("Hello0", "1.0").with_test("pass")}, clean_first=True)
     client.run("export . lasote/stable")
     client.run("install Hello0/1.0@lasote/stable --build")
-
-    client.run("remote list_ref")
-    assert "Hello0/1.0@lasote/stable" in client.out
-
-    client.run("remote list_pref Hello0/1.0@lasote/stable")
-    assert f"Hello0/1.0@lasote/stable#{prev.ref.revision}:{prev.id}" in client.out
 
     rebuild_recipe_timestamp = client.cache.get_timestamp(client.cache.get_latest_rrev(ref))
     rebuild_package_timestamp = client.cache.get_timestamp(client.get_latest_prev(ref))
@@ -153,84 +140,12 @@ def test_reuse():
     assert header == "//EMPTY!"
 
 
-def test_upload_doesnt_follow_pref():
-    servers = OrderedDict()
-    servers['r1'] = TestServer()
-    servers['r2'] = TestServer()
-    client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
-                                                "r2": [("lasote", "mypass")]})
-    ref = "Pkg/0.1@lasote/testing"
-    client.save({"conanfile.py": GenConanfile()})
-    client.run("create . Pkg/0.1@lasote/testing")
-    client.run("upload Pkg/0.1@lasote/testing --all -r r2")
-    client.run("remote list_pref Pkg/0.1@lasote/testing")
-    rrev = client.cache.get_latest_rrev(ConanFileReference.loads(ref))
-    prev = client.cache.get_latest_prev(PackageReference(rrev, NO_SETTINGS_PACKAGE_ID))
-    assert "%s: r2" % prev.full_str() in client.out
-    client.run("remote remove_ref Pkg/0.1@lasote/testing")
-
-    # It should upload both to r1 (default), not taking into account the pref to r2
-    client.run("upload Pkg/0.1@lasote/testing --all -r default")
-    assert "Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID in client.out
-
-
-@pytest.mark.xfail(reason="cache2.0: revisit this test when we decide if we want to maintain"
-                          "the recipe-remote associations in the cache for 2.0")
-def test_install_update_following_pref():
-    conanfile = textwrap.dedent("""
-        import os, random
-        from conans import ConanFile, tools
-        class Pkg(ConanFile):
-            def package(self):
-                tools.save(os.path.join(self.package_folder, "file.txt"), str(random.random()))
-        """)
-    servers = OrderedDict()
-    servers["r1"] = TestServer()
-    servers["r2"] = TestServer()
-    client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
-                                                "r2": [("lasote", "mypass")]})
-
-    ref = "Pkg/0.1@lasote/testing"
-    client.save({"conanfile.py": conanfile})
-    client.run("create . %s" % ref)
-    the_time = time.time() - 100
-    with patch.object(RevisionList, '_now', return_value=the_time):
-        client.run("upload %s --all -r r2" % ref)
-        client.run("upload %s --all -r r1" % ref)
-    # Force recipe to follow r1
-    client.run("remote update_ref %s r1" % ref)
-
-    # Update package in r2 from a different client
-    client2 = TestClient(servers=servers, users=client.users)
-    ref = "Pkg/0.1@lasote/testing"
-    client2.save({"conanfile.py": conanfile})
-    client2.run("create . %s" % ref)
-    the_time = time.time() + 100
-    with patch.object(RevisionList, '_now', return_value=the_time):
-        client2.run("upload %s --all -r r2" % ref)
-
-    # Update from client, it will get the binary from r2
-    client.run("install %s --update" % ref)
-    assert "Pkg/0.1@lasote/testing from 'r1' - Cache" in client.out
-    assert "Retrieving package %s from remote 'r2'" % NO_SETTINGS_PACKAGE_ID in client.out
-
-
 def test_update_binaries_failed():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("install Pkg/0.1@lasote/testing --update")
     assert "Pkg/0.1@lasote/testing: WARN: Can't update, no remote defined" in client.out
-
-
-def test_update_binaries_no_package_error():
-    client = TestClient(default_server_user=True)
-    client.save({"conanfile.py": GenConanfile()})
-    client.run("create . Pkg/0.1@lasote/testing")
-    client.run("upload Pkg/0.1@lasote/testing -r default")
-    client.run("remote add_pref Pkg/0.1@lasote/testing:%s default" % NO_SETTINGS_PACKAGE_ID)
-    client.run("install Pkg/0.1@lasote/testing --update")
-    assert "Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote" in client.out
 
 
 def test_fail_usefully_when_failing_retrieving_package():

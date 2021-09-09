@@ -113,12 +113,6 @@ class Printer(object):
             _print("package_revision", name="Package revision", color=None)
             _print("binary", name="Binary", color=None)
 
-            if show("binary_remote") and is_ref:
-                if "binary_remote" in it:
-                    self._out.writeln("    Binary remote: %s" % it["binary_remote"])
-                else:
-                    self._out.writeln("    Binary remote: None")
-
             _print("creation_date", show_field="date", name="Creation date")
 
             _print("scm", show_field="scm", name="scm")
