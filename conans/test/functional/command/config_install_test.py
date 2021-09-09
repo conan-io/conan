@@ -16,9 +16,8 @@ from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.model.manifest import gather_files
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
+from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
 from conans.util.files import load, mkdir, save, save_files, make_file_read_only
 
@@ -146,18 +145,20 @@ class ConfigInstallTest(unittest.TestCase):
         zipdir(folder, zippath)
         return zippath
 
+    @staticmethod
+    def _get_files(folder):
+        relpaths = scan_folder(folder)
+        files = {}
+        for path in relpaths:
+            with open(os.path.join(folder, path), "r") as file_handle:
+                files[path] = file_handle.read()
+        return files
+
     def _create_tgz(self, tgz_path=None):
         folder = self._create_profile_folder()
         tgz_path = tgz_path or os.path.join(folder, "myconfig.tar.gz")
-        with open(tgz_path, "wb") as tgz_handle:
-            tgz = tarfile.open("name", "w:gz", fileobj=tgz_handle)
-            files, _ = gather_files(folder)
-            for filename, abs_path in files.items():
-                info = tgz.gettarinfo(name=abs_path, arcname=filename)
-                with open(abs_path, "rb") as file_handle:
-                    tgz.addfile(info, fileobj=file_handle)
-            tgz.close()
-        return tgz_path
+        files = self._get_files(folder)
+        return tgz_with_contents(files, tgz_path)
 
     def _check(self, params):
         typ, uri, verify, args = [p.strip() for p in params.split(",")]
