@@ -1,5 +1,4 @@
 import sqlite3
-import time
 
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.table import BaseDbTable
@@ -68,11 +67,10 @@ class ReferencesDbTable(BaseDbTable):
             raise ConanReferenceDoesNotExistInDB(f"No entry for reference '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
-    def save(self, path, ref: ConanReference, remote=None, reset_timestamp=False):
+    def save(self, path, ref: ConanReference, timestamp, remote=None):
         # we set the timestamp to 0 until they get a complete reference, here they
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
-        timestamp = time.time() if not reset_timestamp else 0
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = self._conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',
