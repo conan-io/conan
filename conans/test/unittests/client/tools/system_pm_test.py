@@ -194,9 +194,9 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.install("a_package", force=True)
             self.assertEqual(runner.command_called, "sudo -A yum install -y a_package")
 
-            settings = MockSettings({"arch": "x86", "arch_build": "x86_64", "os": "Linux",
-                                     "os_build": "Linux"})
+            settings = MockSettings({"arch": "x86", "os": "Linux"})
             conanfile = MockConanfile(settings)
+            conanfile.settings_build = MockSettings({"arch": "x86_64", "os": "Linux"})
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                     conanfile=conanfile)
             spt.install("a_package", force=False)
@@ -284,10 +284,9 @@ class SystemPackageToolTest(unittest.TestCase):
                                       "ppc64le": ":ppc64el", "armv7": ":arm", "armv7hf": ":armhf",
                                       "armv8": ":arm64", "s390x": ":s390x"}.items():
                 settings = MockSettings({"arch": arch,
-                                         "arch_build": "x86_64",
-                                         "os": "Linux",
-                                         "os_build": "Linux"})
+                                         "os": "Linux"})
                 conanfile = MockConanfile(settings)
+                conanfile.settings_build = MockSettings({"arch": "x86_64", "os": "Linux"})
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         conanfile=conanfile)
                 spt.install("a_package", force=True)
@@ -296,10 +295,9 @@ class SystemPackageToolTest(unittest.TestCase):
 
             for arch, distro_arch in {"x86_64": "", "x86": ":all"}.items():
                 settings = MockSettings({"arch": arch,
-                                         "arch_build": "x86_64",
-                                         "os": "Linux",
-                                         "os_build": "Linux"})
+                                         "os": "Linux"})
                 conanfile = MockConanfile(settings)
+                conanfile.settings_build = MockSettings({"arch": "x86_64", "os": "Linux"})
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         conanfile=conanfile)
                 spt.install("a_package", force=True, arch_names={"x86": "all"})

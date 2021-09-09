@@ -427,7 +427,6 @@ class ConanInfo(object):
         result.build_requires = build_requires_info
         result.full_requires = _PackageReferenceList()
         result.vs_toolset_compatible()
-        result.discard_build_settings()
         result.default_std_matching()
         result.python_requires = PythonRequiresInfo(python_requires, default_python_requires_id_mode)
         return result
@@ -586,18 +585,6 @@ class ConanInfo(object):
             return
         self.settings.compiler.version = self.full_settings.compiler.version
         self.settings.compiler.toolset = self.full_settings.compiler.toolset
-
-    def discard_build_settings(self):
-        # When os is defined, os_build is irrelevant for the consumer.
-        # only when os_build is alone (installers, etc) it has to be present in the package_id
-        if self.full_settings.os and self.full_settings.os_build:
-            del self.settings.os_build
-        if self.full_settings.arch and self.full_settings.arch_build:
-            del self.settings.arch_build
-
-    def include_build_settings(self):
-        self.settings.os_build = self.full_settings.os_build
-        self.settings.arch_build = self.full_settings.arch_build
 
     def default_std_matching(self):
         """

@@ -17,7 +17,6 @@ class DetectTest(unittest.TestCase):
                                           profile_path=DEFAULT_PROFILE_NAME)
         result = dict(result)
         self.assertTrue("arch" not in result)
-        self.assertTrue("arch_build" not in result)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
     def test_detect_custom_profile(self, _):
@@ -66,9 +65,7 @@ class DetectTest(unittest.TestCase):
                                               profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual("AIX", result['os'])
-            self.assertEqual("AIX", result['os_build'])
             self.assertEqual(expected_arch, result['arch'])
-            self.assertEqual(expected_arch, result['arch_build'])
 
     @parameterized.expand([
         ['arm64', 'armv8'],
@@ -85,7 +82,6 @@ class DetectTest(unittest.TestCase):
                                               profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual(expected_arch, result['arch'])
-            self.assertEqual(expected_arch, result['arch_build'])
 
     @mock.patch("conans.client.conf.detect._clang_compiler", return_value=("clang", "9"))
     def test_detect_clang_gcc_toolchain(self, _):
