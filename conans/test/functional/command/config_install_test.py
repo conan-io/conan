@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import tarfile
 import textwrap
 import time
 import unittest
@@ -16,7 +17,7 @@ from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
+from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
 from conans.util.files import load, mkdir, save, save_files, make_file_read_only
 
@@ -143,6 +144,21 @@ class ConfigInstallTest(unittest.TestCase):
         zippath = zippath or os.path.join(folder, "myconfig.zip")
         zipdir(folder, zippath)
         return zippath
+
+    @staticmethod
+    def _get_files(folder):
+        relpaths = scan_folder(folder)
+        files = {}
+        for path in relpaths:
+            with open(os.path.join(folder, path), "r") as file_handle:
+                files[path] = file_handle.read()
+        return files
+
+    def _create_tgz(self, tgz_path=None):
+        folder = self._create_profile_folder()
+        tgz_path = tgz_path or os.path.join(folder, "myconfig.tar.gz")
+        files = self._get_files(folder)
+        return tgz_with_contents(files, tgz_path)
 
     def _check(self, params):
         typ, uri, verify, args = [p.strip() for p in params.split(",")]
@@ -361,6 +377,17 @@ class Pkg(ConanFile):
             # repeat the process to check
             self.client.run("config install http://myfakeurl.com/myconf.zip --verify-ssl=False")
             self._check("url, http://myfakeurl.com/myconf.zip, False, None")
+
+    def test_install_url_tgz(self):
+        """ should install from a URL to tar.gz
+        """
+
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+            self._create_tgz(file_path)
+
+        with patch.object(FileDownloader, 'download', new=my_download):
+            self.client.run("config install http://myfakeurl.com/myconf.tar.gz")
+            self._check("url, http://myfakeurl.com/myconf.tar.gz, True, None")
 
     def test_failed_install_repo(self):
         """ should install from a git repo

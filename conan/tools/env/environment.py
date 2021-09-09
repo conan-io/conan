@@ -194,7 +194,7 @@ class Environment:
     def remove(self, name, value):
         self._values[name].remove(value)
 
-    def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def save_bat(self, filename, generate_deactivate=True, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
@@ -228,7 +228,7 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_ps1(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def save_ps1(self, filename, generate_deactivate=True, pathsep=os.pathsep):
         # FIXME: This is broken and doesnt work
         deactivate = ""
         capture = textwrap.dedent("""\
@@ -242,7 +242,7 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_sh(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def save_sh(self, filename, generate_deactivate=True, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
