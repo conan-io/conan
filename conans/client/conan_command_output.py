@@ -75,9 +75,6 @@ class CommandOutputer(object):
                 ret[ref] = manifest.time_str
         return ret
 
-    def nodes_to_build(self, nodes_to_build):
-        self._output.info(", ".join(str(n) for n in nodes_to_build))
-
     def _handle_json_output(self, data, json_output, cwd):
         json_str = json.dumps(data)
 
@@ -89,10 +86,6 @@ class CommandOutputer(object):
             save(json_output, json.dumps(data))
             self._output.writeln("")
             self._output.info("JSON file created at '%s'" % json_output)
-
-    def json_nodes_to_build(self, nodes_to_build, json_output, cwd):
-        data = [str(n) for n in nodes_to_build]
-        self._handle_json_output(data, json_output, cwd)
 
     def _grab_info_data(self, deps_graph, grab_paths):
         """ Convert 'deps_graph' into consumible information for json and cli """
