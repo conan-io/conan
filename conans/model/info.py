@@ -1,6 +1,7 @@
 import os
 
 from conans.client.build.cppstd_flags import cppstd_default
+from conans.client.graph.graph import BINARY_ERROR, BINARY_INVALID, BINARY_UNKNOWN
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
@@ -20,7 +21,7 @@ PACKAGE_ID_INVALID = "INVALID"
 
 class RequirementInfo(object):
 
-    def __init__(self, pref, default_package_id_mode, indirect=False):
+    def __init__(self, pref, default_package_id_mode, binary, indirect=False):
         self.package = pref
         self.full_name = pref.ref.name
         self.full_version = pref.ref.version
@@ -30,6 +31,7 @@ class RequirementInfo(object):
         self.full_package_id = pref.id
         self.full_package_revision = pref.revision
         self._indirect = indirect
+        self._binary = binary
 
         try:
             func_package_id_mode = getattr(self, default_package_id_mode)
@@ -37,6 +39,13 @@ class RequirementInfo(object):
             raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
         else:
             func_package_id_mode()
+
+    def req_binary_error(self):
+        if (self.package_id or self.package_revision) and self._binary in (BINARY_ERROR,
+                                                                           BINARY_INVALID):
+            return BINARY_INVALID
+        if self.package_revision == PREV_UNKNOWN:
+            return BINARY_UNKNOWN
 
     def copy(self):
         # Useful for build_id()
@@ -148,6 +157,9 @@ class RequirementInfo(object):
 
 
 class RequirementsInfo(UserRequirementsDict):
+
+    def req_binary_error(self):
+        return any(d.req_binary_error() for d in self._data.values())
 
     def copy(self):
         # For build_id() implementation
@@ -484,16 +496,14 @@ class ConanInfo(object):
         info_path = os.path.join(package_folder, CONANINFO)
         return ConanInfo.load_file(info_path)
 
+    def req_binary_error(self):
+        return self.requires.req_binary_error()
+
     def package_id(self):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
         text = self.dumps()
-        # This can be probably optimized
-        if PACKAGE_ID_UNKNOWN in text:
-            return PACKAGE_ID_UNKNOWN
-        if PACKAGE_ID_INVALID in text:
-            return PACKAGE_ID_INVALID
         print("HASHING--------")
         print(text)
         print("------------------------")

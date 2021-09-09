@@ -29,7 +29,7 @@ def compute_package_id(node, new_config):
         dep_conanfile = dep_node.conanfile
         if require.build:
             if dep_package_id:
-                req_info = RequirementInfo(dep_node.pref, dep_package_id)
+                req_info = RequirementInfo(dep_node.pref, dep_package_id, dep_node.binary)
                 build_data[require] = req_info
         else:
             if dep_package_id is None:  # Automatically deducing package_id
@@ -46,7 +46,8 @@ def compute_package_id(node, new_config):
                             dep_package_id = "minor_mode"
                     elif conanfile.package_type is PackageType.HEADER:
                         dep_package_id = "unrelated_mode"
-            req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
+            req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode,
+                                       dep_node.binary)
             data[require] = req_info
 
     reqs_info = RequirementsInfo(data)
@@ -94,9 +95,10 @@ def compute_package_id(node, new_config):
 
     pid = conanfile.info.package_id()
     node.package_id = pid
-    if pid == PACKAGE_ID_INVALID:
+    binary_error = conanfile.info.req_binary_error()
+    if binary_error == BINARY_INVALID:
         node.binary = BINARY_INVALID
-        node.binary_error = "There are invalid transitive dependencies"
-    elif pid == PACKAGE_ID_UNKNOWN:
+        node.binary_error = "The package has invalid transitive dependencies"
+    elif binary_error == BINARY_UNKNOWN:
         node.binary = BINARY_UNKNOWN
-        node.binary_error = "The package_id cannot be computed until all dependencies are built"
+        node.binary_error = "The package_id cannot be computed until all dependencies are known"

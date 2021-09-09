@@ -33,10 +33,22 @@ class TestValidate(unittest.TestCase):
                       client.out)
 
         error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
+        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
+        assert "pkg/0.1:ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715 - Invalid" in client.out
+        self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
+
+        error = client.run("install pkg/0.1@ -s os=Windows", assert_error=True)
         print(client.out)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
+        assert "pkg/0.1:ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715 - Invalid" in client.out
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
+
+
         client.run("info pkg/0.1@ -s os=Windows")
+        print(client.out)
+        assert "ID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715" in client.out
+        assert "Binary: Missing" in client.out
+
         print(client.out)
         client.run("info pkg/0.1@ -s os=Windows --dry-build=missing")
         print(client.out)
