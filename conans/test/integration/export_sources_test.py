@@ -172,7 +172,8 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports.append("license.lic")
 
         self.assertEqual(scan_folder(self.export_folder), sorted(expected_exports))
-        self.assertFalse(os.path.exists(self.export_sources_folder))
+        if mode == "exports":
+            self.assertFalse(os.path.exists(self.export_sources_folder))
 
     def _check_export_uploaded_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
