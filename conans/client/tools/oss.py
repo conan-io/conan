@@ -457,30 +457,11 @@ class OSInfo(object):
             return None
 
 
-def cross_building(conanfile=None, self_os=None, self_arch=None, skip_x64_x86=False, settings=None):
-    # Handle input arguments (backwards compatibility with 'settings' as first argument)
-    # TODO: This can be promoted to a decorator pattern for tools if we adopt 'conanfile' as the
-    #   first argument for all of them.
-    if conanfile and settings:
-        raise ConanException("Do not set both arguments, 'conanfile' and 'settings',"
-                             " to call cross_building function")
-
+def cross_building(conanfile, self_os=None, self_arch=None, skip_x64_x86=False):
     from conans.model.conan_file import ConanFile
-    if conanfile and not isinstance(conanfile, ConanFile):
-        return cross_building(settings=conanfile, self_os=self_os, self_arch=self_arch,
-                              skip_x64_x86=skip_x64_x86)
+    assert isinstance(conanfile, ConanFile)
 
-    if settings:
-        warnings.warn("Argument 'settings' has been deprecated, use 'conanfile' instead")
-
-    if conanfile:
-        ret = get_cross_building_settings(conanfile, self_os, self_arch)
-    else:
-        # TODO: If Conan is using 'profile_build' here we don't have any information about it,
-        #   we are falling back to the old behavior (which is probably wrong here)
-        conanfile = namedtuple('_ConanFile', ['settings'])(settings)
-        ret = get_cross_building_settings(conanfile, self_os, self_arch)
-
+    ret = get_cross_building_settings(conanfile, self_os, self_arch)
     build_os, build_arch, host_os, host_arch = ret
 
     if skip_x64_x86 and host_os is not None and (build_os == host_os) and \
@@ -499,11 +480,6 @@ def cross_building(conanfile=None, self_os=None, self_arch=None, skip_x64_x86=Fa
 
 def get_cross_building_settings(conanfile, self_os=None, self_arch=None):
     os_build, arch_build = get_build_os_arch(conanfile)
-    if not hasattr(conanfile, 'settings_build'):
-        # Let it override from outside only if no 'profile_build' is used
-        os_build = self_os or os_build or detected_os()
-        arch_build = self_arch or arch_build or detected_architecture()
-
     os_host = conanfile.settings.get_safe("os")
     arch_host = conanfile.settings.get_safe("arch")
 
@@ -610,18 +586,4 @@ def get_gnu_triplet(os_, arch, compiler=None):
 
 def get_build_os_arch(conanfile):
     """ Returns the value for the 'os' and 'arch' settings for the build context """
-    if hasattr(conanfile, 'settings_build'):
-        return conanfile.settings_build.get_safe('os'), conanfile.settings_build.get_safe('arch')
-    else:
-        return conanfile.settings.get_safe('os_build'), conanfile.settings.get_safe('arch_build')
-
-
-def get_target_os_arch(conanfile):
-    """ Returns the value for the 'os' and 'arch' settings for the target context """
-    if hasattr(conanfile, 'settings_target'):
-        settings_target = conanfile.settings_target
-        if settings_target is not None:
-            return settings_target.get_safe('os'), settings_target.get_safe('arch')
-        return None, None
-    else:
-        return conanfile.settings.get_safe('os_target'), conanfile.settings.get_safe('arch_target')
+    return conanfile.settings_build.get_safe('os'), conanfile.settings_build.get_safe('arch')

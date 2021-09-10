@@ -98,7 +98,7 @@ class Values(object):
         items = self.as_list(list_all=False)
         if not items:
             return ""
-        result = ["[settings]"]
+        result = []
         for (name, value) in items:
             # It is important to discard None values, so migrations in settings can be done
             # without breaking all existing packages SHAs, by adding a first "None" option

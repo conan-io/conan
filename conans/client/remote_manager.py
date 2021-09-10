@@ -29,7 +29,7 @@ def _headers_for_info(info):
         return None
 
     r = {}
-    settings = info.full_settings.as_list()
+    settings = info.settings.as_list()
     if settings:
         settings = ['{}={}'.format(*it) for it in settings]
         r.update({CONAN_REQUEST_HEADER_SETTINGS: ';'.join(settings)})

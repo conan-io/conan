@@ -121,13 +121,15 @@ class OptionsTest(unittest.TestCase):
             self.sut.propagate_upstream(options2, down_ref, own_ref)
 
         self.assertEqual(self.sut.values.dumps(),
-                         """optimized=4
+                         """\
+optimized=4
 path=NOTDEF
 static=False
 Boost:static=False
 Boost:thread=True
 Boost:thread.multi=off
-Poco:deps_bundled=True""")
+Poco:deps_bundled=True
+""")
 
     def test_pattern_positive(self):
         boost_values = PackageOptionValues()
@@ -322,7 +324,8 @@ class OptionsValuesTest(unittest.TestCase):
                                                       "Boost:static=False",
                                                       "Boost:thread=True",
                                                       "Boost:thread.multi=off",
-                                                      "Poco:deps_bundled=True"]))
+                                                      "Poco:deps_bundled=True",
+                                                      ""]))
 
     @pytest.mark.xfail(reason="Working in the PackageID broke this")
     def test_sha_constant(self):

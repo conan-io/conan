@@ -63,14 +63,6 @@ class SettingsCppStdTests(unittest.TestCase):
         r.process_settings(self.cache)
         self.assertNotIn("compiler.cppstd", r.settings)
 
-    def test_value_none(self):
-        self._save_profile(compiler_cppstd="None")
-
-        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        r.process_settings(self.cache)
-        self.assertEqual(r.settings["compiler.cppstd"], "None")
-        self.assertNotIn("cppstd", r.settings)
-
     def test_value_valid(self):
         self._save_profile(compiler_cppstd="11")
 

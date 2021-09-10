@@ -24,4 +24,4 @@ class ValuesTest(unittest.TestCase):
 
         v.compiler = None
         self.assertEqual(v.as_list(), [('compiler', 'None')])
-        self.assertEqual(v.dumps(), "compiler=None")
+        self.assertEqual(v.dumps(), "")

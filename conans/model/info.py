@@ -191,9 +191,9 @@ class RequirementsInfo(UserRequirementsDict):
 
         if result:
             result = sorted(result)
-            result.insert(0, "[requires]")
             result.append("")
-        return "\n".join(result)
+            return "\n".join(result)
+        return ""
 
     def unrelated_mode(self):
         self.clear()
@@ -423,8 +423,6 @@ class ConanInfo(object):
         result.build_requires = build_requires_info
 
         result.vs_toolset_compatible()
-        result.discard_build_settings()
-        result.default_std_matching()
         result.python_requires = PythonRequiresInfo(python_requires, default_python_requires_id_mode)
         return result
 
@@ -443,12 +441,15 @@ class ConanInfo(object):
         result = []
         settings = self.settings.dumps()
         if settings:
+            result.append("[settings]")
             result.append(settings)
         options = self.options.dumps()
         if options:
+            result.append("[options]")
             result.append(options)
         requires = self.requires.dumps()
         if requires:
+            result.append("[requires]")
             result.append(requires)
         python_requires = self.python_requires.dumps()
         if python_requires:
@@ -555,39 +556,6 @@ class ConanInfo(object):
             return
         self.settings.compiler.version = self.conanfile.settings.compiler.version
         self.settings.compiler.toolset = self.conanfile.settings.compiler.toolset
-
-    def discard_build_settings(self):
-        # When os is defined, os_build is irrelevant for the consumer.
-        # only when os_build is alone (installers, etc) it has to be present in the package_id
-        if self.conanfile.settings.os and self.conanfile.settings.os_build:
-            del self.settings.os_build
-        if self.conanfile.settings.arch and self.conanfile.settings.arch_build:
-            del self.settings.arch_build
-
-    def include_build_settings(self):
-        self.settings.os_build = self.conanfile.settings.os_build
-        self.settings.arch_build = self.conanfile.settings.arch_build
-
-    def default_std_matching(self):
-        """
-        If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
-        same as specifying None, packages are the same
-        """
-        if self.conanfile.settings.compiler == "msvc":
-            # This post-processing of package_id was a hack to introduce this in a non-breaking way
-            # This whole function will be removed in Conan 2.0, and the responsibility will be
-            # of the input profile
-            return
-        if (self.conanfile.settings.compiler and
-                self.conanfile.settings.compiler.version):
-            default = cppstd_default(self.conanfile.settings)
-
-            if str(self.conanfile.settings.compiler.cppstd) == default:
-                self.settings.compiler.cppstd = None
-
-    def default_std_non_matching(self):
-        if self.conanfile.settings.compiler.cppstd:
-            self.settings.compiler.cppstd = self.conanfile.settings.compiler.cppstd
 
     def parent_compatible(self, *_, **kwargs):
         """If a built package for Intel has to be compatible for a Visual/GCC compiler

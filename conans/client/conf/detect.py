@@ -275,7 +275,6 @@ def _detect_os_arch(result, output):
 
     the_os = detected_os()
     result.append(("os", the_os))
-    result.append(("os_build", the_os))
 
     arch = detected_architecture()
 
@@ -294,7 +293,6 @@ def _detect_os_arch(result, output):
                              "Please check your conan.conf and settings.yml files" % arch)
 
         result.append(("arch", arch))
-        result.append(("arch_build", arch))
 
 
 def detect_defaults_settings(output, profile_path):

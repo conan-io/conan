@@ -287,7 +287,7 @@ class OptionsValues(object):
     def dumps(self):
         items = self.as_list()
         if items:
-            result = ["[options]"]
+            result = []
             for key, value in items:
                 if value is None or value == "None":
                     continue

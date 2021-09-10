@@ -18,10 +18,10 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("", settings.values.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows\n", settings.values.dumps())
 
     def test_any(self):
         yml = "os: ANY"
@@ -31,10 +31,10 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("", settings.values.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows\n", settings.values.dumps())
 
     def test_none_any(self):
         yml = "os: [None, ANY]"
@@ -43,10 +43,10 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("", settings.values.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows\n", settings.values.dumps())
 
     def test_windows_linux_remove(self):
         yml = "os: [Windows, Linux]"
@@ -118,12 +118,12 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
         settings.validate()
         self.assertTrue(settings.os == "None")
-        self.assertEqual("os=None", settings.values.dumps())
+        self.assertEqual("", settings.values.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os.subsystem == None)
-        self.assertEqual("os=Windows", settings.values.dumps())
+        self.assertEqual("os=Windows\n", settings.values.dumps())
         settings.os.subsystem = "cygwin"
-        self.assertEqual("os=Windows\nos.subsystem=cygwin", settings.values.dumps())
+        self.assertEqual("os=Windows\nos.subsystem=cygwin\n", settings.values.dumps())
 
     def test_none__sub_subsetting(self):
         yml = """os:
@@ -200,7 +200,7 @@ class SettingsTest(unittest.TestCase):
         self.sut.remove("compiler")
         self.sut.os = "Windows"
         self.sut.validate()
-        self.assertEqual(self.sut.values.dumps(), "os=Windows")
+        self.assertEqual(self.sut.values.dumps(), "os=Windows\n")
 
     def test_remove_compiler(self):
         self.sut.compiler.remove("Visual Studio")
