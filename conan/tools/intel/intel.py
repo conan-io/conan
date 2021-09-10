@@ -1,4 +1,16 @@
 """
+    Intel generator module for Parallel Studio XE (legacy) and oneAPI integrations.
+
+    For simplicity and clarity, Intel informally refers to some of the terms in this document,
+    as listed below:
+
+        - ICX - Intel® oneAPI DPC++/C++ Compiler
+        - ICC Classic - Intel® C++ Compiler Classic
+        - DPCPP - Intel® oneAPI DPC++/C++ Compiler
+
+    DPCPP is built upon ICX as the underlying C++ Compiler, therefore most of this information
+    also applies to DPCPP.
+
     Intel® oneAPI Toolkit (DPC++/C++ Compiler)
         - Versioning: https://software.intel.com/content/www/us/en/develop/articles/oneapi-toolkit-version-to-compiler-version-mapping.html
         - Compiler: https://software.intel.com/content/www/us/en/develop/documentation/oneapi-dpcpp-cpp-compiler-dev-guide-and-reference/top.html
@@ -27,10 +39,18 @@ class Intel:
     def __init__(self, conanfile, arch=None, force=False):
         self._conanfile = conanfile
         compiler_version = conanfile.settings.get_safe("compiler.version")
+        mode = conanfile.settings.get_safe("compiler.mode")
         if is_using_intel_oneapi(compiler_version):
-            self._interface = _InteloneAPI(conanfile, arch=arch, force=force)
+            if mode == "classic":
+                self._interface = _InteloneAPIClassic(conanfile, arch=arch, force=force)
+            else:
+                self._interface = _InteloneAPIClang(conanfile, arch=arch, force=force)
         else:
             self._interface = _IntelLegacy(conanfile, arch=arch, force=force)
+
+    @property
+    def ms_toolset(self):
+        return self._interface.ms_toolset
 
     @property
     def command(self):
@@ -47,23 +67,21 @@ class Intel:
         env.save_script(self.filename, auto_activate=auto_activate)
 
 
-class _InteloneAPI:
+class _InteloneAPIBase:
+    """Intel® oneAPI base class"""
 
     def __init__(self, conanfile, arch=None, force=False):
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._arch = arch or conanfile.settings.get_safe("arch")
+        self._compiler_version = conanfile.settings.get_safe("compiler.version")
+        self._mode = conanfile.settings.get_safe("compiler.mode")
         self._force = force
         self._out = conanfile.output
 
     @property
     def installation_path(self):
         system = platform.system()
-
-        if system == "Darwin":
-            # Let's show WARNING for macOS
-            self._out.warn("The macOS* operating system is not supported by the "
-                           "Intel oneAPI DPC++/C++ Compiler")
 
         installation_path = self._conanfile.conf["tools.intel:installation_path"]
         if not installation_path:
@@ -88,7 +106,8 @@ class _InteloneAPI:
                     base = r"SOFTWARE\WOW6432Node"
                 else:
                     base = r"SOFTWARE"
-                intel_version = self._version if "." in self._version else self._version + ".0"
+                intel_version = self._compiler_version if "." in self._compiler_version \
+                    else self._compiler_version + ".0"
                 base = r"{base}\Intel\Suites\{intel_version}".format(
                     base=base, intel_version=intel_version
                 )
@@ -141,7 +160,30 @@ class _InteloneAPI:
         return command
 
 
+class _InteloneAPIClassic(_InteloneAPIBase):
+    """Intel® oneAPI C++ Compiler Classic """
+
+    @property
+    def ms_toolset(self):
+        # TODO: hardcoded value but will it depend on the version?
+        return "Intel C++ Compiler 19.2"
+
+
+class _InteloneAPIClang(_InteloneAPIBase):
+    """Intel® oneAPI DPC++/C++ Compiler"""
+
+    @property
+    def ms_toolset(self):
+        # By default, we'll assume you are using C/C++ mode else DPC++
+        if self._mode == "dp":  # DPC++
+            return "Intel(R) oneAPI DPC++ Compiler"
+        else:
+            return "Intel C++ Compiler %s" % (self._compiler_version.split('.')[0])
+
+
 class _IntelLegacy:
+    """Old-fashioned Intel® C++ Compiler also known as part of Intel Parallel Studio XE"""
+
     # https://software.intel.com/en-us/articles/intel-compiler-and-composer-update-version-numbers-to-compiler-version-number-mapping
     INTEL_YEAR = {"19.1": "2020",
                   "19": "2019",
@@ -157,6 +199,14 @@ class _IntelLegacy:
         self._arch = arch or conanfile.settings.get_safe("arch")
         self._force = force
         self._out = conanfile.output
+
+    @property
+    def ms_toolset(self):
+        compiler_version = self._settings.get_safe("compiler.version")
+        if compiler_version:
+            compiler_version = compiler_version if "." in compiler_version else \
+                "%s.0" % compiler_version
+            return "Intel C++ Compiler " + compiler_version
 
     @property
     def installation_path(self):

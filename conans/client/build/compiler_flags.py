@@ -100,7 +100,7 @@ def libcxx_flag(settings):
     libcxx = settings.get_safe("compiler.libcxx")
     if not compiler or not libcxx:
         return ""
-    if str(compiler) in ['clang', 'apple-clang']:
+    if str(compiler) in ['clang', 'apple-clang', "intel-cc"]:
         if str(libcxx) in ['libstdc++', 'libstdc++11']:
             return '-stdlib=libstdc++'
         elif str(libcxx) == 'libc++':

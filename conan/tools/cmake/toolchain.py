@@ -172,7 +172,7 @@ class GLibCXXBlock(Block):
         if compiler == "apple-clang":
             # In apple-clang 2 only values atm are "libc++" and "libstdc++"
             lib = "-stdlib={}".format(libcxx)
-        elif compiler == "clang":
+        elif compiler == "clang" or compiler == "intel-cc":
             if libcxx == "libc++":
                 lib = "-stdlib=libc++"
             elif libcxx == "libstdc++" or libcxx == "libstdc++11":
