@@ -53,19 +53,17 @@ class GraphBinariesAnalyzer(object):
                 try:
                     # if there's a later package revision in the remote we will take that one
                     pkg_id = PackageReference(pref.ref, pref.id)
-                    remote_prevs = self._remote_manager.get_package_revisions(pkg_id, remote)
-                    remote_latest_prev = PackageReference(pref.ref, pref.id,
-                                                          revision=remote_prevs[0].get("revision"))
-                    remote_latest_prev_time = remote_prevs[0].get("time")
+                    latest_prev, remote_time = self._remote_manager.get_latest_package_revision(pkg_id,
+                                                                                                remote)
                     cache_time = self._cache.get_timestamp(pref)
                 except NotFoundException:
                     output.warn("Can't update, no package in remote")
                 except NoRemoteAvailable:
                     output.warn("Can't update, no remote defined")
                 else:
-                    if cache_time < remote_latest_prev_time and remote_latest_prev != pref:
+                    if cache_time < remote_time and latest_prev != pref:
                         node.binary = BINARY_UPDATE
-                        node.prev = remote_latest_prev.revision
+                        node.prev = latest_prev.revision
                         output.info("Current package revision is older than the remote one")
                     else:
                         output.warn("Current package revision is newer than the remote one")
