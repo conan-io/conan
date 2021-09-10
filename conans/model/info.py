@@ -540,7 +540,7 @@ class ConanInfo(object):
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
         using Visual Studio 14"""
-        if self.conanfile.settings.compiler != "Visual Studio":
+        if self.conanfile.settings.get_safe("compiler") != "Visual Studio":
             return
 
         toolset = str(self.conanfile.settings.compiler.toolset)
@@ -551,7 +551,7 @@ class ConanInfo(object):
 
     def vs_toolset_incompatible(self):
         """Will generate different packages for v140 and visual 15 than the visual 14"""
-        if self.conanfile.settings.compiler != "Visual Studio":
+        if self.conanfile.settings.get_safe("compiler") != "Visual Studio":
             return
         self.settings.compiler.version = self.conanfile.settings.compiler.version
         self.settings.compiler.toolset = self.conanfile.settings.compiler.toolset

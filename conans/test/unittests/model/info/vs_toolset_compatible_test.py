@@ -8,6 +8,7 @@ from parameterized import parameterized
 from conans.client.conf import get_default_settings_yml
 from conans.model.info import ConanInfo
 from conans.model.settings import Settings
+from conans.test.utils.mocks import ConanFileMock
 
 
 class VSToolsetCompatibleTest(unittest.TestCase):
@@ -26,7 +27,8 @@ class VSToolsetCompatibleTest(unittest.TestCase):
         settings.compiler = "Visual Studio"
         settings.compiler.toolset = toolset
         settings.compiler.version = initial_version
-        info.full_settings = info.settings
+        info.conanfile = ConanFileMock()
+        info.conanfile.settings = settings
         info.vs_toolset_compatible()
         self.assertEqual(info.settings.compiler.version, expected_version)
         self.assertIsNone(info.settings.get_safe("compiler.toolset"))
@@ -45,7 +47,8 @@ class VSToolsetCompatibleTest(unittest.TestCase):
         settings.compiler = "Visual Studio"
         settings.compiler.toolset = toolset
         settings.compiler.version = initial_version
-        info.full_settings = info.settings
+        info.conanfile = ConanFileMock()
+        info.conanfile.settings = settings
         info.vs_toolset_compatible()
         self.assertEqual(info.settings.compiler.version, initial_version)
         self.assertEqual(info.settings.compiler.toolset, toolset)
