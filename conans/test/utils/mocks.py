@@ -125,6 +125,7 @@ class MockConanfile(ConanFile):
         self.folders = Folders()
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
+        self.settings_build = settings
         self.runner = runner
         self.options = options or MockOptions({})
         self.generators = []
@@ -150,6 +151,7 @@ class ConanFileMock(ConanFile):
         self.command = None
         self.path = None
         self.settings = None
+        self.settings_build = MockSettings({})
         self.options = Options(PackageOptions.loads(options))
         if options_values:
             for var, value in options_values.items():
