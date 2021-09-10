@@ -99,7 +99,7 @@ class UploadTest(unittest.TestCase):
     def test_not_existing_error(self):
         """ Trying to upload with pattern not matched must raise an Error
         """
-        client = TestClient()
+        client = TestClient(default_server_user=True)
         client.run("upload some_nonsense -r default", assert_error=True)
         self.assertIn("ERROR: No packages found matching pattern 'some_nonsense'",
                       client.out)
@@ -107,7 +107,7 @@ class UploadTest(unittest.TestCase):
     def test_invalid_reference_error(self):
         """ Trying to upload an invalid reference must raise an Error
         """
-        client = TestClient()
+        client = TestClient(default_server_user=True)
         client.run("upload some_nonsense -p hash1 -r default", assert_error=True)
         self.assertIn("ERROR: -p parameter only allowed with a valid recipe reference",
                       client.out)
@@ -130,7 +130,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
-        client.run("upload Hello0/1.2.1@user/testing -p {} -c".format(NO_SETTINGS_PACKAGE_ID))
+        client.run("upload Hello0/1.2.1@user/testing -p {} -c -r default".format(NO_SETTINGS_PACKAGE_ID))
         self.assertIn("WARN: Usage of `--package` argument is deprecated. "
                       "Use a full reference instead: `conan upload [...] "
                       "Hello0/1.2.1@user/testing:{}`".format(NO_SETTINGS_PACKAGE_ID), client.out)
