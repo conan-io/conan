@@ -130,14 +130,11 @@ def test_complete():
                 cmake.build()
                 self.run("mycmake")
                 self.output.info("RUNNING MYAPP")
-                filename = "conanrunenv-{}-{}".format(self.settings.build_type,
-                                                              self.settings.arch)
-                filename = filename.lower()
                 if self.settings.os == "Windows":
                     self.run(os.sep.join([".", str(self.settings.build_type), "myapp"]),
-                             env=filename)
+                             env="conanrun")
                 else:
-                    self.run(os.sep.join([".", "myapp"]), env=[filename])
+                    self.run(os.sep.join([".", "myapp"]), env=["conanrun"])
             """)
 
     cmakelists = textwrap.dedent("""
