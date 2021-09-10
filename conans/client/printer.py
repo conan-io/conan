@@ -81,14 +81,6 @@ class Printer(object):
                 _print("build_folder")
                 _print("package_folder")
 
-            if show("remote") and is_ref:
-                if "remote" in it:
-                    self._out.writeln("    Remote: %s=%s" % (it["remote"]["name"],
-                                                             it["remote"]["url"]),
-                                      Color.BRIGHT_GREEN)
-                else:
-                    self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
-
             _print("url", name="URL")
             _print("homepage", name="Homepage")
 
