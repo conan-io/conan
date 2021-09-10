@@ -409,7 +409,7 @@ def merge_directories(src, dst, excluded=None):
             linkto = os.path.join(os.path.dirname(pointer_src), linkto)
 
         # Check if it is outside the sources
-        out_of_source = os.path.relpath(linkto, os.path.realpath(src)).startswith(".")
+        out_of_source = os.path.relpath(linkto, src).startswith(".")
         if out_of_source:
             # May warn about out of sources symlink
             return
