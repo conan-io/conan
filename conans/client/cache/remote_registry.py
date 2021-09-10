@@ -69,9 +69,6 @@ class Remotes(object):
     def __nonzero__(self):
         return self.__bool__()
 
-    def clear(self):
-        self._remotes.clear()
-
     def items(self):
         return OrderedDict(
             (key, value) for (key, value) in self._remotes.items() if not value.disabled)
