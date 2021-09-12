@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
@@ -53,32 +55,7 @@ class Pkg(ConanFile):
         client.run("install ..")
         client.run("build ..")
 
-    def test_remove_runtime(self):
-        # https://github.com/conan-io/conan/issues/2327
-        client = TestClient()
-        conanfile = """from conans import ConanFile, CMake
-class Pkg(ConanFile):
-    settings = "os", "compiler", "arch"
-    def configure(self):
-        del self.settings.compiler.runtime
-    def build(self):
-        try:
-            self.settings.compiler.runtime
-        except Exception as e:
-            self.output.info(str(e))
-        cmake = CMake(self)
-        self.output.info(cmake.command_line)
-"""
-        client.save({"conanfile.py": conanfile})
-        build_folder = os.path.join(client.current_folder, "build")
-        mkdir(build_folder)
-        client.current_folder = build_folder
-        client.run('build .. -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
-                   '-s arch=x86')
-        self.assertIn("'settings.compiler.runtime' doesn't exist for 'Visual Studio'", client.out)
-        self.assertNotIn("CONAN_LINK_RUNTIME", client.out)
-        self.assertIn('-DCONAN_COMPILER="Visual Studio"', client.out)
-
+    @pytest.mark.xfail(reason="Move this to CMakeToolchain")
     def test_remove_subsetting(self):
         # https://github.com/conan-io/conan/issues/2049
         client = TestClient()
@@ -107,6 +84,7 @@ class ConanLib(ConanFile):
                    "-s compiler.version=4.9 -s compiler.libcxx=libstdc++11")
         self.assertNotIn("LIBCXX", client.out)
 
+    @pytest.mark.xfail(reason="Move this to CMakeToolchain")
     def test_remove_subsetting_build(self):
         # https://github.com/conan-io/conan/issues/2049
         client = TestClient()
