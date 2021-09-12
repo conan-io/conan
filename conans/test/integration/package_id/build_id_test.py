@@ -59,11 +59,9 @@ class BuildIdTest(unittest.TestCase):
 
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
-        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("Pkg/0.1@user/channel"))
-        pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
-                                            f"{package_id_windows_debug}")
-        prev_debug = client.cache.get_latest_prev(pref_debug)
-        layout = client.cache.pkg_layout(prev_debug)
+        pref_debug = client.get_latest_prev("Pkg/0.1@user/channel", package_id_windows_debug)
+        assert pref_debug
+        layout = client.cache.pkg_layout(pref_debug)
         conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
