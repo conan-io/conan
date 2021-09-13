@@ -10,6 +10,7 @@ from io import StringIO
 from conan.cache.db.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
+from conan.tools.sha import sha256
 from conans.errors import ConanException, ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB
 from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
 from conans.util.files import md5, rmdir
@@ -53,7 +54,9 @@ class DataCache:
 
     @staticmethod
     def _get_path(ref: ConanReference):
-        return md5(ref.full_reference)
+        value = ref.full_reference.encode("utf-8")
+        sha = sha256(value)
+        return sha[0:7]  # 7 is the default len of the shorted git commit
 
     def create_tmp_reference_layout(self, ref: ConanReference):
         assert not ref.rrev, "Recipe revision should be unknown"

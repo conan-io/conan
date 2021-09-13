@@ -482,19 +482,13 @@ class BinaryInstaller(object):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
+        assert pkg_layout, "The pkg_layout should be declared here"
         conanfile = node.conanfile
         output = conanfile.output
 
         bare_pref = PackageReference(pref.ref, pref.id)
         processed_prev = processed_package_references.get(bare_pref)
-        if processed_prev is None:  # This package-id has not been processed before
-            if not pkg_layout:
-                if pref.revision:
-                    raise ConanException("should this happen?")
-                    pkg_layout = self._cache.pkg_layout(pref)
-                else:
-                    pkg_layout = self._cache.create_temp_pkg_layout(pref)
-        else:
+        if processed_prev is not None:  # This package-id has not been processed before
             # We need to update the PREV of this node, as its processing has been skipped,
             # but it could be that another node with same PREF was built and obtained a new PREV
             node.prev = processed_prev
