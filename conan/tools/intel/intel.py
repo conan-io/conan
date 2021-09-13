@@ -4,14 +4,14 @@
     For simplicity and clarity, Intel informally refers to some of the terms in this document,
     as listed below:
 
-        - ICX - Intel® oneAPI DPC++/C++ Compiler
-        - ICC Classic - Intel® C++ Compiler Classic
-        - DPCPP - Intel® oneAPI DPC++/C++ Compiler
+        - ICX - Intel oneAPI DPC++/C++ Compiler
+        - ICC Classic - Intel C++ Compiler Classic
+        - DPCPP - Intel oneAPI DPC++/C++ Compiler
 
     DPCPP is built upon ICX as the underlying C++ Compiler, therefore most of this information
     also applies to DPCPP.
 
-    Intel® oneAPI Toolkit (DPC++/C++ Compiler)
+    Intel oneAPI Toolkit (DPC++/C++ Compiler)
         - Versioning: https://software.intel.com/content/www/us/en/develop/articles/oneapi-toolkit-version-to-compiler-version-mapping.html
         - Compiler: https://software.intel.com/content/www/us/en/develop/documentation/oneapi-dpcpp-cpp-compiler-dev-guide-and-reference/top.html
 """
@@ -68,7 +68,7 @@ class Intel:
 
 
 class _InteloneAPIBase:
-    """Intel® oneAPI base class"""
+    """Intel oneAPI base class"""
 
     def __init__(self, conanfile, arch=None, force=False):
         self._conanfile = conanfile
@@ -161,7 +161,7 @@ class _InteloneAPIBase:
 
 
 class _InteloneAPIClassic(_InteloneAPIBase):
-    """Intel® oneAPI C++ Compiler Classic """
+    """Intel oneAPI C++ Compiler Classic """
 
     @property
     def ms_toolset(self):
@@ -170,19 +170,19 @@ class _InteloneAPIClassic(_InteloneAPIBase):
 
 
 class _InteloneAPIClang(_InteloneAPIBase):
-    """Intel® oneAPI DPC++/C++ Compiler"""
+    """Intel oneAPI DPC++/C++ Compiler"""
 
     @property
     def ms_toolset(self):
         # By default, we'll assume you are using C/C++ mode else DPC++
-        if self._mode == "dp":  # DPC++
+        if self._mode == "dpcpp":  # DPC++
             return "Intel(R) oneAPI DPC++ Compiler"
         else:
             return "Intel C++ Compiler %s" % (self._compiler_version.split('.')[0])
 
 
 class _IntelLegacy:
-    """Old-fashioned Intel® C++ Compiler also known as part of Intel Parallel Studio XE"""
+    """Old-fashioned Intel C++ Compiler also known as part of Intel Parallel Studio XE"""
 
     # https://software.intel.com/en-us/articles/intel-compiler-and-composer-update-version-numbers-to-compiler-version-number-mapping
     INTEL_YEAR = {"19.1": "2020",

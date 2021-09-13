@@ -2417,7 +2417,7 @@ compiler:
     intel-cc:
         version: ["2021.1", "2021.2", "2021.3"]
             update: [None, ANY]
-        mode: [None, "classic", "dp"]
+        mode: [None, "classic", "dpcpp"]
         libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     qcc:
