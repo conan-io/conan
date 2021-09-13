@@ -141,6 +141,8 @@ class GeneratorManager(object):
     def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
         """ produces auxiliary files, required to build a project or a package.
         """
+        _receive_conf(conanfile)
+
         for generator_name in set(conanfile.generators):
             generator_class = self._new_generator(generator_name, output)
             if generator_class:
@@ -226,8 +228,6 @@ def write_toolchain(conanfile, path, output):
                "********************************************************************\n")
         raise ConanException(msg)
 
-    _receive_conf(conanfile)
-
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
         mkdir(path)
@@ -270,4 +270,3 @@ def _generate_aggregated_env(conanfile):
                         {}
                         """.format(lines))
         save(os.path.join(conanfile.generators_folder, "conanenv.bat"), bat_content)
-
