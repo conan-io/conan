@@ -6,8 +6,8 @@ from conans.test.utils.tools import TestClient
 
 def test_cmake_virtualenv():
     client = TestClient()
-    client.run("new hello/0.1 -s")
-    client.run("create .")
+    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("create . -tf=None")
 
     cmakewrapper = textwrap.dedent(r"""
         from conans import ConanFile
