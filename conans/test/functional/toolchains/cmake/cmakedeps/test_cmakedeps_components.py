@@ -182,12 +182,14 @@ def test_components_system_libs():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, tools, CMake
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
+
         class Consumer(ConanFile):
             name = "consumer"
             version = "0.1"
             requires = "requirement/system"
-            generators = "CMakeDeps"
+            generators = "CMakeDeps", "CMakeToolchain"
             exports_sources = "CMakeLists.txt"
             settings = "os", "arch", "compiler", "build_type"
 
