@@ -17,7 +17,6 @@ class ConanFileToolsTest(ConanFile):
     name = "Pkg"
     version = "0.1"
     exports_sources = "*"
-    generators = "cmake"
 
     def build(self):
         self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
@@ -115,7 +114,6 @@ import os
 class ConanFileToolsTest(ConanFile):
     name = "Pkg"
     version = "0.1"
-    generators = "cmake"
 
     def source(self):
         save("file.h", "file_h_contents!")
