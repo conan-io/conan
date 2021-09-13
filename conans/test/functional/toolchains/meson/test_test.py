@@ -44,7 +44,7 @@ class MesonTest(TestMesonBase):
         """)
 
     def test_reuse(self):
-        self.t.run("new hello/0.1 -s")
+        self.t.run("new hello/0.1 --template=cmake_lib")
 
         test_package_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
@@ -52,6 +52,6 @@ class MesonTest(TestMesonBase):
                      os.path.join("test_package", "meson.build"): self._test_package_meson_build,
                      os.path.join("test_package", "test_package.cpp"): test_package_cpp})
 
-        self.t.run("create . hello/0.1@ %s" % self._settings_str)
+        self.t.run("create . hello/0.1@ %s -tf=None" % self._settings_str)
 
         self._check_binary()

@@ -112,12 +112,8 @@ class GeneratorManager(object):
                 available = list(self._generators.keys()) + self._new_generators
                 raise ConanException("Invalid generator '%s'. Available types: %s" %
                                      (generator_name, ", ".join(available)))
-            try:
-                generator = generator_class(conanfile)
-            except TypeError:
-                # To allow old-style generator packages to work (e.g. premake)
-                output.warn("Generator %s failed with new __init__(), trying old one")
-                generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
+
+            generator = generator_class(conanfile)
 
             try:
                 generator.output_path = old_gen_folder
@@ -157,14 +153,6 @@ def _receive_conf(conanfile):
 
 
 def write_toolchain(conanfile, path, output):
-    if hasattr(conanfile, "toolchain"):
-        msg = ("\n*****************************************************************\n"
-               "******************************************************************\n"
-               "The 'toolchain' attribute or method has been deprecated and removed\n"
-               "Use 'generators = \"ClassName\"' or 'generate()' method instead.\n"
-               "********************************************************************\n"
-               "********************************************************************\n")
-        raise ConanException(msg)
 
     _receive_conf(conanfile)
 

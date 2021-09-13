@@ -109,6 +109,7 @@ class CustomSettingsTest(unittest.TestCase):
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
+            generators = "CMakeToolchain"
 
             def generate(self):
                 cmake = CMakeDeps(self)
@@ -122,7 +123,7 @@ class CustomSettingsTest(unittest.TestCase):
         set(CMAKE_CONFIGURATION_TYPES Debug Release MyRelease CACHE STRING
             "Available build-types: Debug, Release and MyRelease")
 
-        cmake_minimum_required(VERSION 2.8)
+        cmake_minimum_required(VERSION 3.15)
         project(App C CXX)
 
         set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
@@ -180,7 +181,8 @@ class CustomSettingsTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-myrelease.cmake")))
 
-            self.client.run_command('cmake .. -G "Visual Studio 15 Win64"')
+            self.client.run_command('cmake .. -G "Visual Studio 15 Win64" '
+                                    '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
             self.client.run_command('cmake --build . --config MyRelease')
             self.client.run_command(r"MyRelease\\app.exe")
             self.assertIn("hello/0.1: Hello World Release!", self.client.out)
@@ -235,4 +237,3 @@ def test_changing_build_type():
     client.run_command(cmd)
     assert "main: Debug!" in client.out
     assert "BUILD_TYPE=Release!!" in client.out
-
