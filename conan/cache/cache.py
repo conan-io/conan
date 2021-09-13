@@ -56,7 +56,7 @@ class DataCache:
     def _get_path(ref: ConanReference):
         value = ref.full_reference.encode("utf-8")
         sha = sha256(value)
-        return sha[0:7]  # 7 is the default len of the shorted git commit
+        return sha[0:8]  # 9 is the default len of the shorted git commit
 
     def create_tmp_reference_layout(self, ref: ConanReference):
         assert not ref.rrev, "Recipe revision should be unknown"
