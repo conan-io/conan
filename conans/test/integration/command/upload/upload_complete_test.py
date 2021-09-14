@@ -79,7 +79,7 @@ def test_upload_with_pattern():
 
 
 def test_upload_with_pattern_and_package_error():
-    client = TestClient()
+    client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile("Hello1", "1.2.1")})
     client.run("export . frodo/stable")
     client.run("upload Hello* --confirm -p 234234234 -r default", assert_error=True)
