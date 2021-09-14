@@ -150,14 +150,15 @@ class CustomSettingsTest(unittest.TestCase):
             set(CMAKE_CONFIGURATION_TYPES Debug MyRelease Release CACHE STRING "Types")
 
             cmake_minimum_required""")
-        cmake = cmake.replace("add_library", """
+        cmake = cmake.replace("add_library", textwrap.dedent("""
             set(CMAKE_CXX_FLAGS_MYRELEASE ${CMAKE_CXX_FLAGS_RELEASE})
             set(CMAKE_C_FLAGS_MYRELEASE ${CMAKE_C_FLAGS_RELEASE})
             set(CMAKE_EXE_LINKER_FLAGS_MYRELEASE ${CMAKE_EXE_LINKER_FLAGS_RELEASE})
-            add_library""")
+            add_library"""))
+        cmake = cmake.replace("PUBLIC_HEADER", "CONFIGURATIONS MyRelease\nPUBLIC_HEADER")
         self.client.save({"src/CMakeLists.txt": cmake})
         self.client.run("create . hello/0.1@ -s compiler.version=15 -s build_type=MyRelease "
-                        "-s:b build_type=MyRelease")
+                        "-s:b build_type=MyRelease -tf=None")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
@@ -181,7 +182,7 @@ class CustomSettingsTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-myrelease.cmake")))
 
-            self.client.run_command('cmake .. -G "Visual Studio 15 Win64" '
+            self.client.run_command('cmake .. -G "Visual Studio 15" '
                                     '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
             self.client.run_command('cmake --build . --config MyRelease')
             self.client.run_command(r"MyRelease\\app.exe")
