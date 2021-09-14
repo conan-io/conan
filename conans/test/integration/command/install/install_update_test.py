@@ -75,8 +75,6 @@ def test_update_not_date():
     client.run("upload Hello0/1.0@lasote/stable --all -r default")
 
     prev = client.get_latest_prev("Hello0/1.0@lasote/stable")
-    package_reference = f"Hello0/1.0@lasote/stable#{prev.ref.revision}:{prev.id}"
-    assert package_reference in client.out
 
     ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
 
