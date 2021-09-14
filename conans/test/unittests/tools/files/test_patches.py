@@ -1,3 +1,5 @@
+import os
+
 import patch_ng
 import pytest
 
@@ -41,6 +43,17 @@ def test_single_patch_file(mock_patch_ng):
     assert mock_patch_ng.filename == 'patch-file'
     assert mock_patch_ng.string is None
     assert mock_patch_ng.apply_args == ("my_source", 0, False)
+    assert len(str(conanfile.output)) == 0
+
+
+def test_base_path(mock_patch_ng):
+    conanfile = ConanFileMock()
+    conanfile.folders.set_base_source("my_source")
+    conanfile.display_name = 'mocked/ref'
+    patch(conanfile, patch_file='patch-file', base_path="subfolder")
+    assert mock_patch_ng.filename == 'patch-file'
+    assert mock_patch_ng.string is None
+    assert mock_patch_ng.apply_args == (os.path.join("my_source", "subfolder"), 0, False)
     assert len(str(conanfile.output)) == 0
 
 

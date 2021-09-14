@@ -18,7 +18,7 @@ def client_weird_lib_name():
         from conan.tools.layout import cmake_layout
 
         class Pkg(ConanFile):
-            exports_sources = "src/*"
+            exports_sources = "CMakeLists.txt", "src/*"
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps"
 
@@ -31,7 +31,7 @@ def client_weird_lib_name():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include")
+                self.copy("*.h", dst="include", src="src")
                 self.copy("*.lib", dst="lib", keep_path=False)
                 self.copy("*.a", dst="lib", keep_path=False)
                 ext = "a" if platform.system() != "Windows" else "lib"
@@ -46,11 +46,11 @@ def client_weird_lib_name():
 
     hdr = gen_function_h(name="hello")
     src = gen_function_cpp(name="hello")
-    cmake = gen_cmakelists(libname="hello_0.1", libsources=["hello.cpp"])
+    cmake = gen_cmakelists(libname="hello_0.1", libsources=["src/hello.cpp"])
 
     c.save({"src/hello.h": hdr,
             "src/hello.cpp": src,
-            "src/CMakeLists.txt": cmake,
+            "CMakeLists.txt": cmake,
             "conanfile.py": conanfile})
     c.run("create . hello/0.1@")
     return c
