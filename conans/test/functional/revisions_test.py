@@ -178,13 +178,15 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
         with environment_append({"MY_VAR": "1"}):
             pref = client.create(self.ref, conanfile=conanfile)
-        client.upload_all(self.ref)
 
-        time.sleep(1)  # Wait a second, to be considered an update
+        with patch.object(RevisionList, '_now', return_value=time.time()):
+            client.upload_all(self.ref)
+
         with environment_append({"MY_VAR": "2"}):
             pref2 = client2.create(self.ref, conanfile=conanfile)
 
-        client2.upload_all(self.ref)
+        with patch.object(RevisionList, '_now', return_value=time.time() + 20.0):
+            client2.upload_all(self.ref)
 
         prev1_time_remote = self.server.package_revision_time(pref)
         prev2_time_remote = self.server.package_revision_time(pref2)
