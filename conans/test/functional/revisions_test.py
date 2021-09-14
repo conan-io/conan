@@ -54,36 +54,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.id), self.c_v2.out)
 
-    def test_update_recipe_iterating_remotes(self):
-        """We have two servers (remote1 and remote2), both with a recipe but the second one with a
-        new RREV. If a client installs without specifying -r remote1, it WONT iterate
-        remote2, because it is associated in the registry and have it in the cache. Unless we
-        specify the -r remote2"""
-
-        conanfile = GenConanfile().with_package_file("file.txt", env_var="MY_VAR")
-        with environment_append({"MY_VAR": "1"}):
-            pref = self.c_v2.create(self.ref, conanfile=conanfile)
-        self.c_v2.upload_all(self.ref, remote="default")
-        time.sleep(1)
-
-        other_v2 = TurboTestClient(servers=self.servers)
-        # Same RREV, different new PREV
-        with environment_append({"MY_VAR": "2"}):
-            other_v2.create(self.ref, conanfile=conanfile)
-        other_v2.upload_all(self.ref, remote="remote2")
-
-        remote2_latest_prev = other_v2.get_latest_prev(self.ref)
-
-        self.c_v2.run("install {} --update".format(self.ref))
-        self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache (Updated date)", self.c_v2.out)
-        self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
-
-        # Now with the remote specified it will retrieve the binary fromm the remote2:
-        # https://github.com/conan-io/conan/pull/9355
-        self.c_v2.run("install {} --update -r remote2".format(self.ref))
-        self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache", self.c_v2.out)
-        self.assertIn("lib/1.0@conan/testing:{} - Update".format(pref.id), self.c_v2.out)
-
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,
         it gives an error"""
@@ -221,7 +191,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)  # Two package revisions
 
         client.run("install {} --update".format(self.ref))
-        self.assertIn("{} from 'default' - Cache".format(self.ref), client.out)
+        self.assertIn("{} from local cache - Cache".format(self.ref), client.out)
         self.assertIn("Retrieving package {}".format(pref.id), client.out)
 
         prev = client.package_revision(pref)
