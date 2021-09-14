@@ -88,13 +88,9 @@ class Pkg(ConanFile):
         client.run("upload Pkg* --all -r=server2 --confirm")
         client.run("remove * -p -f")
 
-        # It keeps associated to server1 even after a create FIXME: Conan 2.0
-        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("Pkg/0.1@lasote/testing"))
-        self.assertIn(f"{latest_rrev.full_str()}: server1", client.out)
-
-        # Trying to install from another remote fails
+        # recipe is cached, takes binary from server2
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2")
-        self.assertIn("Pkg/0.1@lasote/testing from 'server1' - Cache", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
         self.assertIn(f"Pkg/0.1@lasote/testing:{package_id2} - Download", client.out)
         self.assertIn(f"Pkg/0.1@lasote/testing: Retrieving package {package_id2} "
                       "from remote 'server2'", client.out)
