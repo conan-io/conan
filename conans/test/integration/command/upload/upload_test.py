@@ -550,7 +550,7 @@ class MyPkg(ConanFile):
         client2.users = {"server2": [("lasote", "mypass")]}
         client2.servers = {"server2": server2}
         client2.update_servers()
-        client2.run("upload * --all --confirm -r=server2 -r default")
+        client2.run("upload * --all --confirm -r=server2")
         self.assertIn("Uploading conanfile.py", client2.out)
         self.assertIn("Uploading conan_package.tgz", client2.out)
 
@@ -721,7 +721,7 @@ class MyPkg(ConanFile):
         self.assertIn("/lib/1.0/_/_/0/package", path.replace("\\", "/"))
 
         # Should be possible with explicit package
-        client.run(f'upload lib/1.0:{NO_SETTINGS_PACKAGE_ID}')
+        client.run(f'upload lib/1.0:{NO_SETTINGS_PACKAGE_ID} -r default')
         self.assertIn(f"Uploading package 1/1: {NO_SETTINGS_PACKAGE_ID} to 'default'",
                       client.out)
 
