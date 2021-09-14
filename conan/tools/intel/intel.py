@@ -90,16 +90,7 @@ class _InteloneAPIBase:
         installation_path = self._conanfile.conf["tools.intel:installation_path"]
         if not installation_path:
             # Let's try the default dirs
-            if system == ["Linux", "Darwin"]:
-                # If it was installed as root
-                installation_path = os.path.join(os.sep, "opt", "intel", "oneapi")
-                if not os.path.exists(installation_path):
-                    # Try if it was installed as normal user
-                    installation_path = os.path.join(os.path.expanduser("~"), "intel", "oneapi")
-                if not os.path.exists(installation_path):
-                    raise ConanException("Don't know how to find Intel oneAPI folder on %s" % system)
-            elif system == "Windows":
-
+            if system == "Windows":
                 if self._arch == "x86":
                     intel_arch = "IA32"
                 elif self._arch == "x86_64":
@@ -125,6 +116,14 @@ class _InteloneAPIBase:
                                                          "LatestDir")
                 if not installation_path:
                     raise ConanException("Don't know how to find Intel oneAPI folder on %s" % system)
+            else:
+                # If it was installed as root
+                installation_path = os.path.join(os.sep, "opt", "intel", "oneapi")
+                if not os.path.exists(installation_path):
+                    # Try if it was installed as normal user
+                    installation_path = os.path.join(os.path.expanduser("~"), "intel", "oneapi")
+                if not os.path.exists(installation_path):
+                    raise ConanException("Don't know how to find Intel oneAPI folder on %s" % system)
 
         self._out.info("Got Intel oneAPI installation folder: %s" % installation_path)
         return installation_path
@@ -135,7 +134,7 @@ class _InteloneAPIBase:
 
         :return:
         """
-        if str(os.getenv("SETVARS_COMPLETED"), "") == "1" and not self._force:
+        if str(os.getenv("SETVARS_COMPLETED", "")) == "1" and not self._force:
             return "echo Conan:intel_setvars already set"
 
         system = platform.system()
