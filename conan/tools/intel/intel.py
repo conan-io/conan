@@ -62,7 +62,7 @@ class Intel:
 
     def environment(self):
         env = Environment(conanfile=self._conanfile)
-        for k, v in env_diff(self.command, True):
+        for k, v in env_diff(self.command, True).items():
             env.append(k, v)
         return env
 
