@@ -2419,7 +2419,7 @@ compiler:
             update: [None, ANY]
         mode: [None, "classic", "dpcpp"]
         libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
-        cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+        cppstd: [None, 98, gnu98, 03, gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     qcc:
         version: ["4.4", "5.4", "8.3"]
         libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]

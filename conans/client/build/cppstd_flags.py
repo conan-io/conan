@@ -34,7 +34,6 @@ def cppstd_flag(compiler, compiler_version, cppstd, compiler_base=None):
             "Visual Studio": _cppstd_visualstudio,
             "msvc": _cppstd_msvc,
             "intel": cppstd_intel,
-            "intel-cc": _cppstd_intel_cc,
             "mcst-lcc": _cppstd_mcst_lcc}.get(str(compiler), None)
     flag = None
     if func:
@@ -55,16 +54,10 @@ def cppstd_default(settings):
         compiler = settings.get_safe("compiler")
         compiler_version = settings.get_safe("compiler.version")
         compiler_base = settings.get_safe("compiler.base")
-        # Only for intel-cc compiler
-        compiler_mode = settings.get_safe("compiler.mode")
-        os_ = settings.get_safe("os")
     else:
         compiler = str(settings.compiler)
         compiler_version = str(settings.compiler.version)
         compiler_base = str(settings.compiler.base)
-        # Only for intel-cc compiler
-        compiler_mode = settings.compiler.mode
-        os_ = str(settings.os)
     intel_cppstd_default = _intel_visual_cppstd_default if compiler_base == "Visual Studio" \
         else _intel_gcc_cppstd_default
     default = {"gcc": _gcc_cppstd_default(compiler_version),
@@ -72,7 +65,6 @@ def cppstd_default(settings):
                "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
                "Visual Studio": _visual_cppstd_default(compiler_version),
                "intel": intel_cppstd_default(compiler_version),
-               "intel-cc": _intel_cc_cppstd_default(os_, compiler_mode),
                "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
 
@@ -100,15 +92,6 @@ def _intel_visual_cppstd_default(_):
 
 def _intel_gcc_cppstd_default(_):
     return "gnu98"
-
-
-def _intel_cc_cppstd_default(os_, compiler_mode):
-    if compiler_mode == "dpcpp":
-        return "17" if os_ == "Windows" else "gnu17"
-    elif compiler_mode == "classic":
-        return "gnu98"
-    else:
-        return "14" if os_ == "Windows" else"gnu14"
 
 
 def _mcst_lcc_cppstd_default(compiler_version):
@@ -247,39 +230,6 @@ def _cppstd_clang(clang_version, cppstd):
         vgnu23 = "gnu++2b"
 
     flag = {"98": v98, "gnu98": vgnu98,
-            "11": v11, "gnu11": vgnu11,
-            "14": v14, "gnu14": vgnu14,
-            "17": v17, "gnu17": vgnu17,
-            "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
-    return "-std=%s" % flag if flag else None
-
-
-def _cppstd_intel_cc(_, cppstd):
-    """
-    Inspired in:
-    https://software.intel.com/content/www/us/en/develop/documentation/
-    oneapi-dpcpp-cpp-compiler-dev-guide-and-reference/top/compiler-reference/
-    compiler-options/compiler-option-details/language-options/std-qstd.html
-    """
-    # Note: for now, we don't care about compiler version
-    v98 = "c++98"
-    vgnu98 = "gnu++98"
-    v03 = "c++03"
-    vgnu03 = "gnu++03"
-    v11 = "c++11"
-    vgnu11 = "gnu++11"
-    v14 = "c++14"
-    vgnu14 = "gnu++14"
-    v17 = "c++17"
-    vgnu17 = "gnu++17"
-    v20 = "c++20"
-    vgnu20 = "gnu++20"
-    v23 = "c++2b"
-    vgnu23 = "gnu++2b"
-
-    flag = {"98": v98, "gnu98": vgnu98,
-            "03": v03, "gnu03": vgnu03,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,

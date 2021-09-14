@@ -27,9 +27,9 @@ from conans.errors import ConanException
 def is_using_intel_oneapi(compiler_version):
     """Check if the Intel compiler to be used belongs to Intel oneAPI
 
-    Note: Intel oneAPI Toolkit first version is 2021.1.1
+    Note: Intel oneAPI Toolkit first version is 2021.1
     """
-    return int(compiler_version.split(".")[0]) > 19
+    return int(compiler_version.split(".")[0]) >= 2021
 
 
 class Intel:
@@ -43,8 +43,12 @@ class Intel:
         if is_using_intel_oneapi(compiler_version):
             if mode == "classic":
                 self._interface = _InteloneAPIClassic(conanfile, arch=arch, force=force)
-            else:
+            elif conanfile.settings.get_safe("os") != "Darwin":
                 self._interface = _InteloneAPIClang(conanfile, arch=arch, force=force)
+            else:  # MacOS is not supported for the new oneAPI compilers
+                raise ConanException(
+                    'macOS* is not supported for the icx/icpx or dpcpp compilers. '
+                    'Use the "classic" mode instead (icc compiler).')
         else:
             self._interface = _IntelLegacy(conanfile, arch=arch, force=force)
 
