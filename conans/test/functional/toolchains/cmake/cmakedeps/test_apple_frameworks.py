@@ -4,7 +4,6 @@ import textwrap
 import pytest
 
 from conans.client.tools.apple import XCRun, to_apple_arch
-from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -28,7 +27,8 @@ def client():
 
 
 app_conanfile = textwrap.dedent("""
-    from conans import ConanFile, CMake
+    from conans import ConanFile
+    from conan.tools.cmake import CMake
 
     class App(ConanFile):
         requires = "foolib/1.0"
@@ -54,13 +54,11 @@ def test_apple_framework_xcode(client):
 
     client.save({'conanfile.py': app_conanfile,
                  'CMakeLists.txt': app_cmakelists})
-    with environment_append({"CONAN_CMAKE_GENERATOR": "Xcode"}):
-        client.run("install . -s build_type=Release")
-        client.run("install . -s build_type=Debug")
-        client.run("build .")
-        assert "/System/Library/Frameworks/Foundation.framework;" in client.out
-        assert "/System/Library/Frameworks/CoreServices.framework;" in client.out
-        assert "/System/Library/Frameworks/CoreFoundation.framework" in client.out
+
+    client.run("build . -c tools.cmake.cmaketoolchain:generator=Xcode")
+    assert "/System/Library/Frameworks/Foundation.framework;" in client.out
+    assert "/System/Library/Frameworks/CoreServices.framework;" in client.out
+    assert "/System/Library/Frameworks/CoreFoundation.framework" in client.out
 
 
 conanfile = textwrap.dedent("""
