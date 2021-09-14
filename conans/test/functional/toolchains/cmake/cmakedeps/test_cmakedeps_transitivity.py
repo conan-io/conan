@@ -92,7 +92,7 @@ def test_shared_requires_static():
 
     c.run("build .")
     command = environment_wrap_command(ConanFileMock(),
-                                       "conanrunenv", ".\\Release\\myapp.exe", cwd=c.current_folder)
+                                       "conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
 
@@ -134,7 +134,7 @@ def test_transitive_binary_skipped():
             "conanfile.py": conanfile}, clean_first=True)
 
     c.run("build . -g VirtualRunEnv")
-    command = environment_wrap_command(ConanFileMock(), "conanrunenv", ".\\Release\\myapp.exe",
+    command = environment_wrap_command(ConanFileMock(), "conanrun", ".\\Release\\myapp.exe",
                                        cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
