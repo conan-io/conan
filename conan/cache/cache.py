@@ -58,7 +58,8 @@ class DataCache:
         sha_bytes = md.digest()
         tmp = base64.b64encode(sha_bytes)  # Trick to reduce the len from 64 to 44
         # 9 is the default len of the shorted git commit, as this is base64 => 6
-        return tmp.decode("ascii")[0:6]
+        # FIXME: This "/" replace is a bit dirty
+        return tmp.decode("ascii")[0:6].replace("/", "_")  # '/' is a base64 valid char, replace it
 
     @staticmethod
     def _get_tmp_path():
