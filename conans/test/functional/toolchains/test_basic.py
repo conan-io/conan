@@ -109,29 +109,6 @@ class BasicTest(unittest.TestCase):
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path),  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
-    def test_old_toolchain(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                toolchain = "cmake"
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .", assert_error=True)
-        self.assertIn("The 'toolchain' attribute or method has been deprecated", client.out)
-
-    def test_old_toolchain_method(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                def toolchain(self):
-                    pass
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .", assert_error=True)
-        self.assertIn("The 'toolchain' attribute or method has been deprecated", client.out)
-
     @pytest.mark.tool_visual_studio
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
     def test_toolchain_windows(self):
