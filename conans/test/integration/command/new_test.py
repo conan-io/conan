@@ -384,7 +384,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn("CMakeToolchain", conanfile)
         conanfile = client.load("test_package/conanfile.py")
         self.assertIn("CMakeToolchain", conanfile)
-        cmake = client.load("test_package/src/CMakeLists.txt")
+        cmake = client.load("test_package/CMakeLists.txt")
         self.assertIn("find_package", cmake)
 
     def test_new_reference(self):

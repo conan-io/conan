@@ -20,7 +20,7 @@ class {package_name}Conan(ConanFile):
     default_options = {{"shared": False, "fPIC": True}}
 
     # Sources are located in the same place as this recipe, copy them to the recipe
-    exports_sources = "src/*"
+    exports_sources = "CMakeLists.txt", "src/*"
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -81,7 +81,7 @@ project(PackageTest CXX)
 
 find_package({name} CONFIG REQUIRED)
 
-add_executable(example example.cpp)
+add_executable(example src/example.cpp)
 target_link_libraries(example {name}::{name})
 """
 
@@ -89,9 +89,9 @@ target_link_libraries(example {name}::{name})
 cmake_v2 = """cmake_minimum_required(VERSION 3.15)
 project({name} CXX)
 
-add_library({name} {name}.cpp)
+add_library({name} src/{name}.cpp)
 
-set_target_properties({name} PROPERTIES PUBLIC_HEADER "{name}.h")
+set_target_properties({name} PROPERTIES PUBLIC_HEADER "src/{name}.h")
 install(TARGETS {name} DESTINATION "."
         PUBLIC_HEADER DESTINATION include
         RUNTIME DESTINATION bin
@@ -216,12 +216,12 @@ def get_cmake_lib_files(name, version, package_name="Pkg"):
                                                          package_name=package_name),
              "src/{}.cpp".format(name): source_cpp.format(name=name, version=version),
              "src/{}.h".format(name): source_h.format(name=name, version=version),
-             "src/CMakeLists.txt": cmake_v2.format(name=name, version=version),
+             "CMakeLists.txt": cmake_v2.format(name=name, version=version),
              "test_package/conanfile.py": test_conanfile_v2.format(name=name,
                                                                    version=version,
                                                                    package_name=package_name),
              "test_package/src/example.cpp": test_main.format(name=name),
-             "test_package/src/CMakeLists.txt": test_cmake_v2.format(name=name)}
+             "test_package/CMakeLists.txt": test_cmake_v2.format(name=name)}
     return files
 
 
@@ -245,7 +245,7 @@ class {package_name}Conan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     # Sources are located in the same place as this recipe, copy them to the recipe
-    exports_sources = "src/*"
+    exports_sources = "CMakeLists.txt", "src/*"
 
     def layout(self):
         cmake_layout(self)
@@ -267,7 +267,7 @@ class {package_name}Conan(ConanFile):
 cmake_exe_v2 = """cmake_minimum_required(VERSION 3.15)
 project({name} CXX)
 
-add_executable({name} {name}.cpp main.cpp)
+add_executable({name} src/{name}.cpp src/main.cpp)
 
 install(TARGETS {name} DESTINATION "."
         RUNTIME DESTINATION bin
@@ -299,7 +299,7 @@ def get_cmake_exe_files(name, version, package_name="Pkg"):
              "src/{}.cpp".format(name): source_cpp.format(name=name, version=version),
              "src/{}.h".format(name): source_h.format(name=name, version=version),
              "src/main.cpp": test_main.format(name=name),
-             "src/CMakeLists.txt": cmake_exe_v2.format(name=name, version=version),
+             "CMakeLists.txt": cmake_exe_v2.format(name=name, version=version),
              "test_package/conanfile.py": test_conanfile_exe_v2.format(name=name,
                                                                        version=version,
                                                                        package_name=package_name)
