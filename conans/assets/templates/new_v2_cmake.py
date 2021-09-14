@@ -72,7 +72,7 @@ class {package_name}TestConan(ConanFile):
     def test(self):
         if not tools.cross_building(self):
             cmd = os.path.join(self.cpp.build.bindirs[0], "example")
-            self.run(cmd, env="conanrunenv")
+            self.run(cmd, env="conanrun")
 """
 
 
@@ -289,7 +289,7 @@ class {package_name}TestConan(ConanFile):
 
     def test(self):
         if not tools.cross_building(self):
-            self.run("{name}", env="conanrunenv")
+            self.run("{name}", env="conanrun")
 """
 
 

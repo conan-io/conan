@@ -1,7 +1,7 @@
 import os
 import textwrap
 
-from conan.tools.env.environment import register_environment_script
+from conan.tools.env.environment import register_env_script
 from conans.client.tools import intel_compilervars_command
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
@@ -14,11 +14,11 @@ class VCVars:
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def generate(self, auto_activate=True):
-        _write_conanvcvars(self._conanfile, auto_activate=auto_activate)
+    def generate(self, group="build"):
+        _write_conanvcvars(self._conanfile, group=group)
 
 
-def _write_conanvcvars(conanfile, auto_activate=True):
+def _write_conanvcvars(conanfile, group):
     """
     write a conanvcvars.bat file with the good args from settings
     """
@@ -59,8 +59,8 @@ def _write_conanvcvars(conanfile, auto_activate=True):
         path = os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE)
         save(path, content)
 
-        if auto_activate:
-            register_environment_script(conanfile, path)
+        if group:
+            register_env_script(conanfile, path, group)
 
 
 def vs_ide_version(conanfile):
