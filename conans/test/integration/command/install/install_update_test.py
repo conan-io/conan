@@ -146,23 +146,3 @@ def test_update_binaries_failed():
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("install Pkg/0.1@lasote/testing --update")
     assert "Pkg/0.1@lasote/testing: WARN: Can't update, no remote defined" in client.out
-
-
-def test_fail_usefully_when_failing_retrieving_package():
-    ref = ConanFileReference.loads("lib/1.0@conan/stable")
-    ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
-    client = TurboTestClient(servers={"default": TestServer()})
-    pref1 = client.create(ref)
-    client.upload_all(ref)
-
-    client.create(ref2, conanfile=GenConanfile().with_requirement(ref))
-    client.upload_all(ref2)
-
-    # remove only the package from pref1
-    client.run("remove {} -p {} -f".format(pref1.ref, pref1.id))
-
-    # Now fake the remote url to force a network failure
-    client.run("remote update default http://this_not_exist8823.com")
-    # Try to install ref2, it will try to download the binary for ref1
-    client.run("install {}".format(ref2), assert_error=True)
-    assert "ERROR: Error downloading binary package: '{}'".format(pref1) in client.out
