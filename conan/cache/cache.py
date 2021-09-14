@@ -1,4 +1,4 @@
-import base64
+import hashlib
 import hashlib
 import os
 import shutil
@@ -6,15 +6,16 @@ import time
 import uuid
 from io import StringIO
 
+from conan.cache.conan_reference import ConanReference
+from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
 from conan.cache.db.cache_database import CacheDatabase
-from conan.cache.conan_reference import ConanReference
-from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conans.errors import ConanException, ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB
+from conans.errors import ConanException, ConanReferenceAlreadyExistsInDB, \
+    ConanReferenceDoesNotExistInDB
 from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
-from conans.util.files import md5, rmdir
+from conans.util.files import rmdir
 
 
 class DataCache:
@@ -55,11 +56,8 @@ class DataCache:
         hash = hash.encode("utf-8")
         md = hashlib.sha256()
         md.update(hash)
-        sha_bytes = md.digest()
-        tmp = base64.b64encode(sha_bytes)  # Trick to reduce the len from 64 to 44
-        # 9 is the default len of the shorted git commit, as this is base64 => 6
-        # FIXME: This "/" replace is a bit dirty
-        return tmp.decode("ascii")[0:6].replace("/", "_")  # '/' is a base64 valid char, replace it
+        sha_bytes = md.hexdigest()
+        return sha_bytes[0:9]
 
     @staticmethod
     def _get_tmp_path():
