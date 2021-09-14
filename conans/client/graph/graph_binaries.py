@@ -46,16 +46,33 @@ class GraphBinariesAnalyzer(object):
                 package_layout.package_remove()
                 return
 
+    def _get_latest_package_from_remotes(self, pref, remotes):
+        all_remotes_results = []
+        for r in remotes.values():
+            try:
+                latest_prev, latest_time = self._remote_manager.get_latest_package_revision(pref, r)
+                all_remotes_results.append({'prev': latest_prev, 'time': latest_time, 'remote': r})
+            except NotFoundException:
+                pass
+
+        if len(all_remotes_results) > 0:
+            remotes_results = sorted(all_remotes_results, key=lambda k: k['time'], reverse=True)
+            result = remotes_results[0]
+            return result.get('remote'), result.get('prev'), result.get('time')
+
+        return None, None, None
+
     def _evaluate_cache_pkg(self, node, pref, remote, remotes, update):
+        pkg_id = PackageReference(pref.ref, pref.id)
+        cache_time = self._cache.get_timestamp(pref)
+        node.prev = pref.revision
         if update:
             output = node.conanfile.output
             if remote:
                 try:
                     # if there's a later package revision in the remote we will take that one
-                    pkg_id = PackageReference(pref.ref, pref.id)
                     latest_prev, remote_time = self._remote_manager.get_latest_package_revision(pkg_id,
                                                                                                 remote)
-                    cache_time = self._cache.get_timestamp(pref)
                 except NotFoundException:
                     output.warn("Can't update, no package in remote")
                 except NoRemoteAvailable:
@@ -68,13 +85,26 @@ class GraphBinariesAnalyzer(object):
                     else:
                         output.warn("Current package revision is newer than the remote one")
             elif remotes:
-                pass  # Current behavior: no remote explicit or in metadata, do not update
+                # we did not specify a remote but we used --update, check all the remotes and
+                # pick the latest binary for that pref:pkgid
+                remote, remote_prev, remote_time = self._get_latest_package_from_remotes(pkg_id, remotes)
+                if remote_prev:
+                    if cache_time < remote_time and remote_prev != pref:
+                        node.binary = BINARY_UPDATE
+                        node.prev = remote_prev.revision
+                        output.info("Current package revision is older than the remote one")
+                    else:
+                        output.warn("Current package revision is newer than the remote one")
+                else:
+                    output.warn("Can't update, no package in remotes")
             else:
                 output.warn("Can't update, no remote defined")
 
         if not node.binary:
             node.binary = BINARY_CACHE
             assert node.prev, "PREV for %s is None" % str(pref)
+
+        return remote
 
     def _get_package_info(self, node, pref, remote):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
@@ -257,8 +287,7 @@ class GraphBinariesAnalyzer(object):
         remote_selected = remote is not None
 
         if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
-            node.prev = latest_prev_for_pkg_id.revision
-            self._evaluate_cache_pkg(node, latest_prev_for_pkg_id, remote, remotes, update)
+            remote = self._evaluate_cache_pkg(node, latest_prev_for_pkg_id, remote, remotes, update)
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
             remote = self._evaluate_remote_pkg(node, pref, remote, remotes, remote_selected, update)
