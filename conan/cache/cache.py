@@ -50,18 +50,25 @@ class DataCache:
         return self._base_folder
 
     @staticmethod
-    def _get_tmp_path():
-        return os.path.join("tmp", str(uuid.uuid4()))
-
-    @staticmethod
-    def _get_path(ref: ConanReference):
-        value = ref.full_reference.encode("utf-8")
+    def _short_hash_path(hash):
+        """:param hash: Unicode text to reduce"""
+        hash = hash.encode("utf-8")
         md = hashlib.sha256()
-        md.update(value)
+        md.update(hash)
         sha_bytes = md.digest()
         tmp = base64.b64encode(sha_bytes)  # Trick to reduce the len from 64 to 44
         # 9 is the default len of the shorted git commit, as this is base64 => 6
         return tmp.decode("ascii")[0:6]
+
+    @staticmethod
+    def _get_tmp_path():
+        hash = DataCache._short_hash_path(str(uuid.uuid4()))
+        return os.path.join("tmp", hash)
+
+    @staticmethod
+    def _get_path(ref: ConanReference):
+        value = ref.full_reference
+        return DataCache._short_hash_path(value)
 
     def create_tmp_reference_layout(self, ref: ConanReference):
         assert not ref.rrev, "Recipe revision should be unknown"
