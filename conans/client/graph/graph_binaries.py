@@ -62,10 +62,12 @@ class GraphBinariesAnalyzer(object):
 
         return None, None, None
 
-    def _evaluate_cache_pkg(self, node, pref, remote, remotes, update):
+    def _evaluate_cache_pkg(self, node, pref, remotes, update):
+        remote = remotes.selected
         pkg_id = PackageReference(pref.ref, pref.id)
         cache_time = self._cache.get_timestamp(pref)
         node.prev = pref.revision
+
         if update:
             output = node.conanfile.output
             if remote:
@@ -109,11 +111,12 @@ class GraphBinariesAnalyzer(object):
     def _get_package_info(self, node, pref, remote):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
 
-    def _evaluate_remote_pkg(self, node, pref, remote, remotes, remote_selected, update):
+    def _evaluate_remote_pkg(self, node, pref, remotes, update):
         remote_info = None
+
         # If the remote is pinned (remote_selected) we won't iterate the remotes.
-        # The "remote" can come from -r or from the registry (associated ref)
-        if remote_selected or remote:
+        remote = remotes.selected
+        if remote:
             try:
                 remote_info, pref = self._get_package_info(node, pref, remote)
             except NotFoundException:
@@ -122,13 +125,10 @@ class GraphBinariesAnalyzer(object):
                 node.conanfile.output.error("Error downloading binary package: '{}'".format(pref))
                 raise
 
-        # If we didn't pin a remote with -r and:
-        #   - The remote is None (not registry entry)
-        #        or
-        #   - We didn't find a package but having revisions enabled
+        # If we didn't pin a remote with -r
         # We iterate the other remotes to find a binary. If we added --update we will
         # return the latest package among all remotes, otherwise return the first match
-        if not remote_selected and (not remote or not remote_info):
+        if not remote or not remote_info:
             all_remotes_results = []
             for r in remotes.values():
                 if r == remote:
@@ -287,10 +287,10 @@ class GraphBinariesAnalyzer(object):
         remote_selected = remote is not None
 
         if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
-            remote = self._evaluate_cache_pkg(node, latest_prev_for_pkg_id, remote, remotes, update)
+            remote = self._evaluate_cache_pkg(node, latest_prev_for_pkg_id, remotes, update)
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
-            remote = self._evaluate_remote_pkg(node, pref, remote, remotes, remote_selected, update)
+            remote = self._evaluate_remote_pkg(node, pref, remotes, update)
 
         node.binary_remote = remote
 
