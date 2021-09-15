@@ -128,7 +128,7 @@ class GraphBinariesAnalyzer(object):
         # If we didn't pin a remote with -r
         # We iterate the other remotes to find a binary. If we added --update we will
         # return the latest package among all remotes, otherwise return the first match
-        if not remote or not remote_info:
+        if not remote and not remote_info:
             all_remotes_results = []
             for r in remotes.values():
                 if r == remote:
