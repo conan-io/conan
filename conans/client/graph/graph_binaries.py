@@ -62,6 +62,32 @@ class GraphBinariesAnalyzer(object):
 
         return None, None, None
 
+    # if we have a remote.selected then do not search in other remotes
+    # and error if it's not in the selected
+    # otherwise if we did not pin a remote:
+    # - if not --update: get the first package found
+    # - if --update: get the latest remote searching in all of them
+    def _get_package_from_remotes(self, pref, remotes, update):
+        remote = remotes.selected
+        remote_info = None
+
+
+
+        all_remotes_results = []
+        for r in remotes.values():
+            try:
+                latest_prev, latest_time = self._remote_manager.get_latest_package_revision(pref, r)
+                all_remotes_results.append({'prev': latest_prev, 'time': latest_time, 'remote': r})
+            except NotFoundException:
+                pass
+
+        if len(all_remotes_results) > 0:
+            remotes_results = sorted(all_remotes_results, key=lambda k: k['time'], reverse=True)
+            result = remotes_results[0]
+            return result.get('remote'), result.get('prev'), result.get('time')
+
+        return None, None, None
+
     def _evaluate_cache_pkg(self, node, pref, remotes, update):
         remote = remotes.selected
         pkg_id = PackageReference(pref.ref, pref.id)
@@ -282,9 +308,6 @@ class GraphBinariesAnalyzer(object):
         if latest_prev_for_pkg_id:
             package_layout = self._cache.pkg_layout(latest_prev_for_pkg_id)
             self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
-
-        remote = remotes.selected
-        remote_selected = remote is not None
 
         if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
             remote = self._evaluate_cache_pkg(node, latest_prev_for_pkg_id, remotes, update)
