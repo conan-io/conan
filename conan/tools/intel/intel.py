@@ -91,39 +91,27 @@ class _InteloneAPIBase:
         if not installation_path:
             # Let's try the default dirs
             if system == "Windows":
-                if self._arch == "x86":
-                    intel_arch = "IA32"
-                elif self._arch == "x86_64":
-                    intel_arch = "EM64T"
-                else:
-                    raise ConanException("don't know how to find Intel compiler on %s" % self._arch)
                 if is_win64():
                     base = r"SOFTWARE\WOW6432Node"
                 else:
                     base = r"SOFTWARE"
-                intel_version = self._compiler_version if "." in self._compiler_version \
-                    else self._compiler_version + ".0"
-                base = r"{base}\Intel\Suites\{intel_version}".format(
-                    base=base, intel_version=intel_version
-                )
+                path = r"{base}\Intel\Products\IntelOneAPI".format(base=base)
                 from six.moves import winreg  # @UnresolvedImport
-                path = base + r"\Defaults\C++\{arch}".format(arch=intel_arch)
-                subkey = _system_registry_key(winreg.HKEY_LOCAL_MACHINE, path, "SubKey")
-                if not subkey:
-                    raise ConanException("unable to find Intel C++ compiler installation")
-                path = base + r"\{subkey}\C++".format(subkey=subkey)
                 installation_path = _system_registry_key(winreg.HKEY_LOCAL_MACHINE, path,
-                                                         "LatestDir")
+                                                         "ProductDIr")
                 if not installation_path:
-                    raise ConanException("Don't know how to find Intel oneAPI folder on %s" % system)
-            else:
+                    raise ConanException("unable to find Intel oneAPI folder "
+                                         "installation from Windows registry: %s" % path)
+            elif system in ("Linux", "Darwin"):
                 # If it was installed as root
                 installation_path = os.path.join(os.sep, "opt", "intel", "oneapi")
                 if not os.path.exists(installation_path):
-                    # Try if it was installed as normal user
+                    # Try if it was installed as a normal user
                     installation_path = os.path.join(os.path.expanduser("~"), "intel", "oneapi")
                 if not os.path.exists(installation_path):
                     raise ConanException("Don't know how to find Intel oneAPI folder on %s" % system)
+            else:
+                raise ConanException("Your system is not supported by Intel oneAPI compilers.")
 
         self._out.info("Got Intel oneAPI installation folder: %s" % installation_path)
         return installation_path
