@@ -66,9 +66,9 @@ class Intel:
             env.append(k, v)
         return env
 
-    def generate(self, env=None, auto_activate=False):
+    def generate(self, env=None, group="build"):
         env = env or self.environment()
-        env.save_script(self.filename, auto_activate=auto_activate)
+        env.save_script(self.filename, group=group)
 
 
 class _InteloneAPIBase:
