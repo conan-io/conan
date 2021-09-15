@@ -67,11 +67,17 @@ class GraphBinariesAnalyzer(object):
     # otherwise if we did not pin a remote:
     # - if not --update: get the first package found
     # - if --update: get the latest remote searching in all of them
-    def _get_package_from_remotes(self, pref, remotes, update):
+    def _get_package_from_remotes(self, node, pref, remotes, update):
         remote = remotes.selected
         remote_info = None
-
-
+        if remote:
+            try:
+                remote_info, pref = self._get_package_info(node, pref, remote)
+            except NotFoundException:
+                pass
+            except Exception:
+                node.conanfile.output.error("Error downloading binary package: '{}'".format(pref))
+                raise
 
         all_remotes_results = []
         for r in remotes.values():
@@ -157,8 +163,6 @@ class GraphBinariesAnalyzer(object):
         if not remote and not remote_info:
             all_remotes_results = []
             for r in remotes.values():
-                if r == remote:
-                    continue
                 try:
                     remote_info, pref = self._get_package_info(node, pref, r)
                 except NotFoundException:
