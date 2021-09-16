@@ -234,18 +234,3 @@ class RedirectedTestOutput(StringIO):
 
     def __contains__(self, value):
         return value in self.__repr__()
-
-
-class SysStdStream():
-
-    def __init__(self):
-        self.contents = ""
-
-    def write(self, message):
-        self.contents += message
-
-    def isatty(self):
-        return False
-
-    def flush(self):
-        return

@@ -5,7 +5,8 @@ import pytest
 from conans.client.graph.build_mode import BuildMode
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.test.utils.mocks import MockConanfile, SysStdStream
+from conans.test.utils.mocks import MockConanfile, RedirectedTestOutput
+from conans.test.utils.tools import redirect_output
 
 
 @pytest.fixture
@@ -38,83 +39,83 @@ def test_invalid_configuration():
 
 
 def test_common_build_force(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         reference = ConanFileReference.loads("Hello/0.1@user/testing")
         build_mode = BuildMode(["Hello"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode.report_matches()
-        assert output.contents == ""
+        assert output.getvalue() == ""
 
 
 def test_no_user_channel(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         reference = ConanFileReference.loads("Hello/0.1@")
         build_mode = BuildMode(["Hello/0.1@"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode.report_matches()
-        assert output.contents == ""
+        assert output.getvalue() == ""
 
 
 def test_revision_included(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         reference = ConanFileReference.loads("Hello/0.1@user/channel#rrev1")
         build_mode = BuildMode(["Hello/0.1@user/channel#rrev1"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode.report_matches()
-        assert output.contents == ""
+        assert output.getvalue() == ""
 
 
 def test_no_user_channel_revision_included(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         reference = ConanFileReference.loads("Hello/0.1@#rrev1")
         build_mode = BuildMode(["Hello/0.1@#rrev1"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode.report_matches()
-        assert output.contents == ""
+        assert output.getvalue() == ""
 
 
 def test_non_matching_build_force(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         reference = ConanFileReference.loads("Bar/0.1@user/testing")
         build_mode = BuildMode(["Hello"])
         assert build_mode.forced(conanfile, reference) is False
         build_mode.report_matches()
-        assert "ERROR: No package matching 'Hello' pattern" in output.contents
+        assert "ERROR: No package matching 'Hello' pattern" in output.getvalue()
 
 
 def test_full_reference_build_force(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         reference = ConanFileReference.loads("Bar/0.1@user/testing")
         build_mode = BuildMode(["Bar/0.1@user/testing"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode.report_matches()
-        assert output.contents == ""
+        assert output.getvalue() == ""
 
 
 def test_non_matching_full_reference_build_force(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         reference = ConanFileReference.loads("Bar/0.1@user/stable")
         build_mode = BuildMode(["Bar/0.1@user/testing"])
         assert build_mode.forced(conanfile, reference) is False
         build_mode.report_matches()
-        assert "No package matching 'Bar/0.1@user/testing' pattern" in output.contents
+        assert "No package matching 'Bar/0.1@user/testing' pattern" in output.getvalue()
 
 
 def test_multiple_builds(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         reference = ConanFileReference.loads("Bar/0.1@user/stable")
         build_mode = BuildMode(["Bar", "Foo"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode.report_matches()
-        assert "ERROR: No package matching" in output.contents
+        assert "ERROR: No package matching" in output.getvalue()
 
 
 def test_allowed(conanfile):
@@ -126,8 +127,8 @@ def test_allowed(conanfile):
 
 
 def test_casing(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         reference = ConanFileReference.loads("Boost/1.69.0@user/stable")
 
         build_mode = BuildMode(["Boost"])
@@ -135,19 +136,19 @@ def test_casing(conanfile):
         build_mode = BuildMode(["Bo*"])
         assert build_mode.forced(conanfile, reference) is True
         build_mode.report_matches()
-        assert "" == output.contents
+        assert "" == output.getvalue()
 
         build_mode = BuildMode(["boost"])
         assert build_mode.forced(conanfile, reference) is False
         build_mode = BuildMode(["bo*"])
         assert build_mode.forced(conanfile, reference) is False
         build_mode.report_matches()
-        assert "ERROR: No package matching" in output.contents
+        assert "ERROR: No package matching" in output.getvalue()
 
 
 def test_pattern_matching(conanfile):
-    output = SysStdStream()
-    with mock.patch("sys.stderr", output):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
         build_mode = BuildMode(["Boost*"])
         reference = ConanFileReference.loads("Boost/1.69.0@user/stable")
         assert (build_mode.forced(conanfile, reference)) is True
@@ -197,4 +198,4 @@ def test_pattern_matching(conanfile):
         assert build_mode.forced(conanfile, reference) is False
 
         build_mode.report_matches()
-        assert output.contents == ""
+        assert output.getvalue() == ""

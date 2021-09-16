@@ -1,7 +1,5 @@
 # coding=utf-8
-import sys
 import unittest
-from types import MethodType
 from unittest import mock
 
 from parameterized import parameterized
