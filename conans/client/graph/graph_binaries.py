@@ -150,7 +150,7 @@ class GraphBinariesAnalyzer(object):
         remote = remotes.selected
         if remote:
             try:
-                remote_info, pref = self._get_package_info(node, pref, remote)
+                prev, prev_time = self._remote_manager.get_latest_package_revision_with_time(pref, remote, info=node.conanfile.info)
             except NotFoundException:
                 pass
             except Exception:

@@ -304,9 +304,9 @@ class RestV2Methods(RestCommonMethods):
             raise RecipeNotFoundException(ref)
         return tmp
 
-    def get_package_revisions(self, pref):
+    def get_package_revisions(self, pref, headers=None):
         url = self.router.package_revisions(pref)
-        tmp = self.get_json(url)["revisions"]
+        tmp = self.get_json(url, headers=headers)["revisions"]
         # FIXME: the server API is returning an iso date, we have to convert to timestamp
         tmp = [{"revision": item.get("revision"),
                 "time": from_iso8601_to_timestamp(item.get("time"))} for item in tmp]

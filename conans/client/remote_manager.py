@@ -8,6 +8,7 @@ from requests.exceptions import ConnectionError
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException, ConanReferenceDoesNotExistInDB
+from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.search.search import filter_packages
 from conans.util import progress_bar
@@ -89,6 +90,15 @@ class RemoteManager(object):
         pref = self._resolve_latest_pref(pref, remote, headers=headers)
         # FIXME Conan 2.0: With revisions, it is not needed to pass headers to this second function
         return self._call_remote(remote, "get_package_info", pref, headers=headers), pref
+
+    # FIXME: this method returns the latest package revision with the time or if a prev is specified
+    #  it returns that prev if it exists in the server with the time
+    def get_latest_package_revision_with_time(self, pref, remote, info=None):
+        headers = _headers_for_info(info)
+        revisions = self._call_remote(remote, "get_package_revisions", pref, headers=headers)
+        ref = PackageReference(pref.ref, pref.id, revisions[0].get("revision"))
+        ref_time = revisions[0].get("time")
+        return (ref, ref_time) if revisions else (None, None)
 
     def get_recipe(self, ref, remote):
         """
@@ -244,8 +254,8 @@ class RemoteManager(object):
     def get_recipe_revisions(self, ref, remote):
         return self._call_remote(remote, "get_recipe_revisions", ref)
 
-    def get_package_revisions(self, pref, remote):
-        revisions = self._call_remote(remote, "get_package_revisions", pref)
+    def get_package_revisions(self, pref, remote, headers=None):
+        revisions = self._call_remote(remote, "get_package_revisions", pref, headers=headers)
         return revisions
 
     def get_latest_recipe_revision(self, ref, remote):
