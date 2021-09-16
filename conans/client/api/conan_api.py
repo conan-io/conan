@@ -1,5 +1,6 @@
 import functools
 import os
+import sys
 import time
 
 from tqdm import tqdm
@@ -98,6 +99,14 @@ def api_method(f):
             old_curdir = os.getcwd()
         except EnvironmentError:
             old_curdir = None
+
+        if api.quiet:
+            old_stdout = sys.stdout
+            old_stderr = sys.stderr
+            devnull = open(os.devnull, 'w')
+            sys.stdout = devnull
+            sys.stderr = devnull
+
         try:
             api.create_app()
             with environment_append(api.app.cache.config.env_vars):
@@ -105,14 +114,19 @@ def api_method(f):
         finally:
             if old_curdir:
                 os.chdir(old_curdir)
+            if api.quiet:
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
     return wrapper
 
 
 class ConanAPIV2(object):
     def __init__(self, cache_folder=None, quiet=True, user_io=None, http_requester=None,
                  runner=None):
-        self.out = ConanOutput(quiet=quiet)
-        self.user_io = user_io or UserIO(out=self.out)
+
+        self.quiet = quiet
+        self.out = ConanOutput()
+        self.user_io = user_io or UserIO()
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
         self.http_requester = http_requester
         self.runner = runner

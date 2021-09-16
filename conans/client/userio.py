@@ -9,16 +9,8 @@ from conans.errors import ConanException
 class UserIO(object):
     """Class to interact with the user, used to show messages and ask for information"""
 
-    def __init__(self, ins=sys.stdin, out=None):
-        """
-        Params:
-            ins: input stream
-            out: ConanOutput, should have "write" method
-        """
-        self._ins = ins
-        if not out:
-            out = ConanOutput(sys.stdout, sys.stderr)
-        self.out = out
+    def __init__(self):
+        self.out = ConanOutput()
         self._interactive = True
 
     def disable_input(self):
@@ -73,7 +65,7 @@ class UserIO(object):
             self.out.input_text('%s (%s): ' % (msg, default_value))
         else:
             self.out.input_text('%s: ' % msg)
-        s = self._ins.readline().replace("\n", "")
+        s = sys.stdin.readline().replace("\n", "")
         if default_value is not None and s == '':
             return default_value
         return s

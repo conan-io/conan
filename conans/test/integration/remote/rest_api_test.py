@@ -79,7 +79,7 @@ class RestApiTest(unittest.TestCase):
                                                       config=config)
                 localdb = LocalDBMock()
 
-                mocked_user_io = UserIO(out=TestBufferConanOutput())
+                mocked_user_io = UserIO()
                 mocked_user_io.get_username = Mock(return_value="private_user")
                 mocked_user_io.get_password = Mock(return_value="private_pass")
 

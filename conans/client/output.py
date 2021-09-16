@@ -76,14 +76,12 @@ class ConanOutput(object):
     and auxiliary info, success, warn methods for convenience.
     """
 
-    def __init__(self, stream, stream_err=None, color=False):
-        self._stream = stream
-        self._stream_err = stream_err or stream
+    def __init__(self, color=False):
         self._color = color
 
     @property
     def is_terminal(self):
-        return hasattr(self._stream, "isatty") and self._stream.isatty()
+        return hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
 
     def writeln(self, data, front=None, back=None, error=False):
         self.write(data, front, back, newline=True, error=error)
@@ -91,12 +89,12 @@ class ConanOutput(object):
     def _write(self, data, newline=False):
         if newline:
             data = "%s\n" % data
-        self._stream.write(data)
+        sys.stdout.write(data)
 
     def _write_err(self, data, newline=False):
         if newline:
             data = "%s\n" % data
-        self._stream_err.write(data)
+        sys.stderr.write(data)
 
     def write(self, data, front=None, back=None, newline=False, error=False):
         if self._color and (front or back):
@@ -117,7 +115,7 @@ class ConanOutput(object):
             except UnicodeError:
                 data = data.encode("utf8").decode("ascii", "ignore")
 
-        self._stream.flush()
+        sys.stdout.flush()
 
     def info(self, data):
         self.writeln(data, Color.BRIGHT_CYAN)
@@ -145,18 +143,16 @@ class ConanOutput(object):
         if len(line) > TOTAL_SIZE:
             line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
         self.write("\r%s%s" % (line, " " * (TOTAL_SIZE - len(line))))
-        self._stream.flush()
+        sys.stdout.flush()
         self._color = tmp_color
 
     def flush(self):
-        self._stream.flush()
+        sys.stdout.flush()
 
 
 class ScopedOutput(ConanOutput):
     def __init__(self, scope, output):
         self.scope = scope
-        self._stream = output._stream
-        self._stream_err = output._stream_err
         self._color = output._color
 
     def write(self, data, front=None, back=None, newline=False, error=False):

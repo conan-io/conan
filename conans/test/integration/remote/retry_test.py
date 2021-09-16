@@ -4,12 +4,13 @@ import os
 import unittest
 from collections import namedtuple, Counter
 
+import mock
 from requests.exceptions import HTTPError
 
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import AuthenticationException, ForbiddenException
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput, SysStdStream
 from conans.util.files import save
 
 
@@ -55,31 +56,33 @@ class RetryDownloadTests(unittest.TestCase):
         save(self.filename, "anything")
 
     def test_error_401(self):
-        output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(401, "content"), output=output,
-                                verify=False, config=_ConfigMock())
-        with self.assertRaisesRegex(AuthenticationException, "content"):
-            uploader.upload(url="fake", abs_path=self.filename, retry=2)
-        output_lines = str(output).splitlines()
-        counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: content"], 0)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
+        output = SysStdStream()
+        with mock.patch("sys.stderr", output):
+            uploader = FileUploader(requester=_RequesterMock(401, "content"),
+                                    verify=False, config=_ConfigMock())
+            with self.assertRaisesRegex(AuthenticationException, "content"):
+                uploader.upload(url="fake", abs_path=self.filename, retry=2)
+            output_lines = output.contents.splitlines()
+            counter = Counter(output_lines)
+            self.assertEqual(counter["ERROR: content"], 0)
+            self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
 
     def test_error_403_forbidden(self):
-        output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(403, "content"), output=output,
-                                verify=False, config=_ConfigMock())
-        with self.assertRaisesRegex(ForbiddenException, "content"):
-            auth = namedtuple("auth", "token")
-            uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
-        output_lines = str(output).splitlines()
-        counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: content"], 0)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
+        output = SysStdStream()
+        with mock.patch("sys.stderr", output):
+            uploader = FileUploader(requester=_RequesterMock(403, "content"),
+                                    verify=False, config=_ConfigMock())
+            with self.assertRaisesRegex(ForbiddenException, "content"):
+                auth = namedtuple("auth", "token")
+                uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
+            output_lines = output.contents.splitlines()
+            counter = Counter(output_lines)
+            self.assertEqual(counter["ERROR: content"], 0)
+            self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
 
     def test_error_403_authentication(self):
         output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(403, "content"), output=output,
+        uploader = FileUploader(requester=_RequesterMock(403, "content"),
                                 verify=False, config=_ConfigMock())
         with self.assertRaisesRegex(AuthenticationException, "content"):
             auth = namedtuple("auth", "token")
@@ -95,23 +98,24 @@ class RetryDownloadTests(unittest.TestCase):
             def put(self, *args, **kwargs):
                 raise Exception("any exception")
 
-        output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(), output=output,
-                                verify=False, config=_ConfigMock())
-        with self.assertRaisesRegex(Exception, "any exception"):
-            uploader.upload(url="fake", abs_path=self.filename, retry=2)
-        output_lines = str(output).splitlines()
-        counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: any exception"], 2)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
+        output = SysStdStream()
+        with mock.patch("sys.stderr", output):
+            uploader = FileUploader(requester=_RequesterMock(), verify=False, config=_ConfigMock())
+            with self.assertRaisesRegex(Exception, "any exception"):
+                uploader.upload(url="fake", abs_path=self.filename, retry=2)
+            output_lines = output.contents.splitlines()
+            counter = Counter(output_lines)
+            self.assertEqual(counter["ERROR: any exception"], 2)
+            self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
 
     def test_error_500(self):
-        output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(500, "content"), output=output,
-                                verify=False, config=_ConfigMock())
-        with self.assertRaisesRegex(Exception, "500 Server Error: content"):
-            uploader.upload(url="fake", abs_path=self.filename, retry=2)
-        output_lines = str(output).splitlines()
-        counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: 500 Server Error: content"], 2)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
+        output = SysStdStream()
+        with mock.patch("sys.stderr", output):
+            uploader = FileUploader(requester=_RequesterMock(500, "content"), verify=False,
+                                    config=_ConfigMock())
+            with self.assertRaisesRegex(Exception, "500 Server Error: content"):
+                uploader.upload(url="fake", abs_path=self.filename, retry=2)
+            output_lines = output.contents.splitlines()
+            counter = Counter(output_lines)
+            self.assertEqual(counter["ERROR: 500 Server Error: content"], 2)
+            self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)

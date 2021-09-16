@@ -75,7 +75,7 @@ def api_method(f):
         except EnvironmentError:
             old_curdir = None
         old_output = api.user_io.out
-        quiet_output = ConanOutput(StringIO(), color=api.color) if quiet else None
+        quiet_output = ConanOutput(color=api.color) if quiet else None
         try:
             api.create_app(quiet_output=quiet_output)
             log_command(f.__name__, kwargs)
@@ -211,8 +211,8 @@ class ConanAPIV1(object):
     def __init__(self, cache_folder=None, output=None, user_io=None, http_requester=None,
                  runner=None):
         self.color = colorama_initialize()
-        self.out = output or ConanOutput(sys.stdout, sys.stderr, self.color)
-        self.user_io = user_io or UserIO(out=self.out)
+        self.out = output or ConanOutput(self.color)
+        self.user_io = user_io or UserIO()
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
         self.http_requester = http_requester
         self.runner = runner

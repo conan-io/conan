@@ -55,7 +55,7 @@ def get_global_instances():
 
 
 # Assign a default, will be overwritten in the factory of the ConanAPI
-set_global_instances(the_output=ConanOutput(sys.stdout, sys.stderr, True), the_requester=requests,
+set_global_instances(the_output=ConanOutput(color=True), the_requester=requests,
                      config=None)
 
 

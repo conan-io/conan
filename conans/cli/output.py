@@ -68,21 +68,16 @@ class TqdmHandler(logging.StreamHandler):
 
 
 class ConanOutput(object):
-    def __init__(self, quiet=False):
+    def __init__(self):
         self._logger = logging.getLogger("conan_out_logger")
-        self._stream_handler = None
-        self._quiet = quiet
+        self._stream = sys.stderr
         self._color = self._init_colors()
 
-        if self._quiet:
-            self._logger.addHandler(NullHandler())
-        else:
-            self._stream = sys.stderr
-            self._stream_handler = TqdmHandler(self._stream)
-            self._stream_handler.setFormatter(logging.Formatter("%(message)s"))
-            self._logger.addHandler(self._stream_handler)
-            self._logger.setLevel(logging.INFO)
-            self._logger.propagate = False
+        self._stream_handler = TqdmHandler(self._stream)
+        self._stream_handler.setFormatter(logging.Formatter("%(message)s"))
+        self._logger.addHandler(self._stream_handler)
+        self._logger.setLevel(logging.INFO)
+        self._logger.propagate = False
 
         self._scope = ""
 
@@ -136,12 +131,11 @@ class ConanOutput(object):
         if self._stream_handler:
             self._stream_handler.flush()
 
-    @staticmethod
-    def _init_colors():
+    def _init_colors(self):
         clicolor = get_env("CLICOLOR")
         clicolor_force = get_env("CLICOLOR_FORCE")
         no_color = get_env("NO_COLOR")
-        if no_color or (clicolor and clicolor == "0"):
+        if no_color or (clicolor and clicolor == "0") or not self.is_terminal:
             import colorama
             colorama.init(strip=True)
             return False

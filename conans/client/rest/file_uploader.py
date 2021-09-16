@@ -3,6 +3,7 @@ import time
 
 from copy import copy
 
+from conans.cli.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException
@@ -12,8 +13,8 @@ from conans.util.files import sha1sum
 
 class FileUploader(object):
 
-    def __init__(self, requester, output, verify, config):
-        self._output = output
+    def __init__(self, requester, verify, config):
+        self._output = ConanOutput()
         self._requester = requester
         self._config = config
         self._verify_ssl = verify

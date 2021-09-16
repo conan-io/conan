@@ -179,7 +179,7 @@ class RestV2Methods(RestCommonMethods):
     def _upload_files(self, files, urls, retry, retry_wait, display_name=None):
         t1 = time.time()
         failed = []
-        uploader = FileUploader(self.requester, self._output, self.verify_ssl, self._config)
+        uploader = FileUploader(self.requester, self.verify_ssl, self._config)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):

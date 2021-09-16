@@ -38,7 +38,7 @@ class MockedUserIO(UserIO):
     an exception except we have a value to return.
     """
 
-    def __init__(self, logins, ins=sys.stdin, out=None):
+    def __init__(self, logins):
         """
         logins is a dict of {remote: list(user, password)}
         will return sequentially
@@ -46,7 +46,7 @@ class MockedUserIO(UserIO):
         assert isinstance(logins, dict)
         self.logins = logins
         self.login_index = Counter()
-        UserIO.__init__(self, ins, out)
+        UserIO.__init__(self)
 
     def get_username(self, remote_name):
         username_env = self._get_env_username(remote_name)
@@ -129,7 +129,6 @@ class MockConanfile(ConanFile):
         self.runner = runner
         self.options = options or MockOptions({})
         self.generators = []
-        self.output = TestBufferConanOutput()
 
         self.should_configure = True
         self.should_build = True
@@ -197,11 +196,11 @@ class TestBufferConanOutput(ConanOutput):
     """
 
     def __init__(self):
-        ConanOutput.__init__(self, StringIO(), color=False)
+        ConanOutput.__init__(self, color=False)
 
     def __repr__(self):
         # FIXME: I'm sure there is a better approach. Look at six docs.
-        return self._stream.getvalue()
+        return sys.stdout.read()
 
     def __str__(self, *args, **kwargs):
         return self.__repr__()
@@ -235,3 +234,18 @@ class RedirectedTestOutput(StringIO):
 
     def __contains__(self, value):
         return value in self.__repr__()
+
+
+class SysStdStream():
+
+    def __init__(self):
+        self.contents = ""
+
+    def write(self, message):
+        self.contents += message
+
+    def isatty(self):
+        return False
+
+    def flush(self):
+        return

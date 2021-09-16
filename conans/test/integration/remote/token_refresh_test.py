@@ -76,7 +76,7 @@ class RequesterWithTokenMock(object):
 class TestTokenRefresh(unittest.TestCase):
 
     def setUp(self):
-        mocked_user_io = UserIO(out=TestBufferConanOutput())
+        mocked_user_io = UserIO()
         mocked_user_io.get_username = Mock(return_value="myuser")
         mocked_user_io.get_password = Mock(return_value="mypassword")
 
