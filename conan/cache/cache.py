@@ -57,7 +57,8 @@ class DataCache:
         md = hashlib.sha256()
         md.update(hash)
         sha_bytes = md.hexdigest()
-        return sha_bytes[0:9]
+        # len based on: https://github.com/conan-io/conan/pull/9595#issuecomment-918976451
+        return sha_bytes[0:16]
 
     @staticmethod
     def _get_tmp_path():
