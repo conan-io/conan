@@ -288,7 +288,7 @@ class DepsGraphBuilder(object):
                 # Maybe it was an ALIAS, so we can check conflict again
                 conflict = self._conflicting_references(previous, require.ref, node.ref)
                 if conflict:
-                    raise ConanException("Unresolvable conflict between {} and {}".format(previous, require.ref))
+                    raise ConanException(conflict)
 
             # Add current ancestors to the previous node and upstream deps
             for n in previous.public_closure:
@@ -328,7 +328,8 @@ class DepsGraphBuilder(object):
                         "in your root package."
                         % (consumer_ref, consumer_ref, new_ref, next(iter(previous.dependants)).src,
                            previous.ref, new_ref.name))
-            return True
+            return "Unresolvable conflict between {} and {}".format(previous.ref, new_ref)
+
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
