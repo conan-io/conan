@@ -32,7 +32,6 @@ class TestMigrations(unittest.TestCase):
         self.assertTrue(hasattr(migrations_settings, var_name),
                         "Migrations var '{}' not found".format(var_name))
         migrations_settings_content = getattr(migrations_settings, var_name)
-        # this is the same comparison made in client/migrations.py
         assert current_settings == migrations_settings_content
 
     def test_is_there_var_for_settings_previous_version(self):
