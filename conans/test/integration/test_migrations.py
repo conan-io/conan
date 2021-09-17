@@ -33,7 +33,7 @@ class TestMigrations(unittest.TestCase):
                         "Migrations var '{}' not found".format(var_name))
         migrations_settings_content = getattr(migrations_settings, var_name)
         # this is the same comparison made in client/migrations.py
-        self.assertListEqual(current_settings.splitlines(), migrations_settings_content.splitlines())
+        assert current_settings == migrations_settings_content
 
     def test_is_there_var_for_settings_previous_version(self):
         from conans import __version__ as current_version
