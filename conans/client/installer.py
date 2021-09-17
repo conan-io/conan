@@ -13,6 +13,7 @@ from conans.client.generators import write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID, \
     BINARY_ERROR
+from conans.client.graph.install_graph import InstallGraph
 from conans.client.importer import remove_imports, run_imports
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
@@ -310,19 +311,21 @@ class BinaryInstaller(object):
                 graph_lock):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
         # order by levels and separate the root node (ref=None) from the rest
-        nodes_by_level = deps_graph.by_levels()
-        root_level = nodes_by_level.pop()
-        root_node = root_level[0]
+        install_graph = InstallGraph(deps_graph)
+        install_order = install_graph.install_order()
+        print(install_order)
+
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
-        self._build(nodes_by_level, root_node, profile_host, profile_build,
+        self._build(install_order, profile_host, profile_build,
                     graph_lock, remotes, build_mode, update)
 
     @staticmethod
-    def _classify(nodes_by_level):
+    def _classify(install_order, install_graph):
         missing, invalid, downloads = [], [], []
-        for level in nodes_by_level:
-            for node in level:
+        for level in install_order:
+            for pref in level:
+                node = install_graph[pref]
                 if node.binary == BINARY_MISSING:
                     missing.append(node)
                 elif node.binary in (BINARY_INVALID, BINARY_ERROR):
@@ -409,9 +412,9 @@ class BinaryInstaller(object):
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
                                          node.conanfile.output, self._recorder)
 
-    def _build(self, nodes_by_level, root_node, profile_host, profile_build, graph_lock,
+    def _build(self, install_order, profile_host, profile_build, graph_lock,
                remotes, build_mode, update):
-        missing, invalid, downloads = self._classify(nodes_by_level)
+        missing, invalid, downloads = self._classify(install_order)
         if invalid:
             msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
             for node in invalid:
@@ -422,7 +425,7 @@ class BinaryInstaller(object):
         processed_package_refs = {}
         self._download(downloads, processed_package_refs)
 
-        for level in nodes_by_level:
+        for level in install_order:
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
