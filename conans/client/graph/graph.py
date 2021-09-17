@@ -226,14 +226,6 @@ class DepsGraph(object):
             for node in level:
                 yield node
 
-    def nodes_to_build(self):
-        ret = []
-        for node in self.ordered_iterate():
-            if node.binary == BINARY_BUILD:
-                if node.ref.copy_clear_rev() not in ret:
-                    ret.append(node.ref.copy_clear_rev())
-        return ret
-
     def by_levels(self, nodes_subset=None):
         return self._order_levels(True, nodes_subset)
 
