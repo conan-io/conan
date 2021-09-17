@@ -401,12 +401,10 @@ class HelloConan(ConanFile):
         # Not found error
         with self.assertRaisesRegex(ConanException,
                                    "Not found: http://google.es/FILE_NOT_FOUND"):
-            captured_output = RedirectedTestOutput()
-            with redirect_output(captured_output):
-                tools.download("http://google.es/FILE_NOT_FOUND",
-                               os.path.join(temp_folder(), "README.txt"), out=ConanOutput(),
-                               requester=requests,
-                               retry=2, retry_wait=0)
+            tools.download("http://google.es/FILE_NOT_FOUND",
+                           os.path.join(temp_folder(), "README.txt"), out=ConanOutput(),
+                           requester=requests,
+                           retry=2, retry_wait=0)
 
     @pytest.mark.slow
     def test_download_retries(self):
@@ -461,12 +459,13 @@ class HelloConan(ConanFile):
         # Not authorized
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                           overwrite=True, requester=requests, out=out, retry=0, retry_wait=0)
+                           overwrite=True, requester=requests, out=ConanOutput(),
+                           retry=0, retry_wait=0)
 
         # Authorized
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       auth=("user", "passwd"), overwrite=True, requester=requests, out=out,
-                       retry=0, retry_wait=0)
+                       auth=("user", "passwd"), overwrite=True, requester=requests,
+                       out=ConanOutput(), retry=0, retry_wait=0)
 
         # Authorized using headers
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
@@ -682,20 +681,19 @@ class HelloConan(ConanFile):
 
         thread.run_server()
 
-        out = TestBufferConanOutput()
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, retry=0, retry_wait=0)
+                      output=ConanOutput(), retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test.txt"))
             self.assertEqual(load("test.txt"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="myfile.doc", retry=0, retry_wait=0)
+                      output=ConanOutput(), destination="myfile.doc", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("myfile.doc"))
             self.assertEqual(load("myfile.doc"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="mytemp/myfile.txt", retry=0, retry_wait=0)
+                      output=ConanOutput(), destination="mytemp/myfile.txt", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("mytemp/myfile.txt"))
             self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
 
