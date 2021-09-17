@@ -42,7 +42,7 @@ from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.artifactory import ARTIFACTORY_DEFAULT_USER, ARTIFACTORY_DEFAULT_PASSWORD, \
     ArtifactoryServer
-from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput, RedirectedTestOutput
+from conans.test.utils.mocks import MockedUserIO, RedirectedTestOutput
 from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
     create_remote_svn_repo
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
@@ -561,11 +561,12 @@ class TestClient(object):
         return error
 
     def run_command(self, command, cwd=None, assert_error=False):
-        output = TestBufferConanOutput()
-        self.out = output
-        runner = ConanRunner(output=output)
-        ret = runner(command, cwd=cwd or self.current_folder)
-        self._handle_cli_result(command, assert_error=assert_error, error=ret)
+        runner = ConanRunner()
+        from conans.test.utils.mocks import RedirectedTestOutput
+        self.out = RedirectedTestOutput()  # Initialize each command
+        with redirect_output(self.out):
+            ret = runner(command, cwd=cwd or self.current_folder)
+            self._handle_cli_result(command, assert_error=assert_error, error=ret)
         return ret
 
     def _handle_cli_result(self, command, assert_error, error):

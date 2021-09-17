@@ -6,8 +6,8 @@ import platform
 
 import pytest
 
+from conans.client.output import ConanOutput
 from conans.migrations import Migrator
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanMigrationError
 
@@ -23,11 +23,10 @@ class MigratorPermissionTest(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Can't apply chmod on Windows")
     def test_invalid_permission(self):
-        out = TestBufferConanOutput()
         conf_path = temp_folder(False)
         os.chmod(conf_path, 0o444)
         conf_path = os.path.join(conf_path, "foo")
-        migrator = FakeMigrator(conf_path, "latest", out)
+        migrator = FakeMigrator(conf_path, "latest", ConanOutput())
         with self.assertRaises(ConanMigrationError) as error:
             migrator.migrate()
         self.assertEqual("Can't write version file in '{0}/version.txt': The folder {0} does not "

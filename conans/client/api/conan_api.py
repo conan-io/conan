@@ -43,7 +43,7 @@ class ConanApp(object):
         self.out = self.user_io.out
 
         self.cache_folder = cache_folder
-        self.cache = ClientCache(self.cache_folder, self.out)
+        self.cache = ClientCache(self.cache_folder)
         self.config = self.cache.config
         if self.config.non_interactive:
             self.user_io.disable_input()
@@ -53,17 +53,17 @@ class ConanApp(object):
                                                   self.config.logging_file)
         conans.util.log.logger.debug("INIT: Using config '%s'" % self.cache.conan_conf_path)
 
-        self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks, self.out)
+        self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks)
         # Wraps an http_requester to inject proxies, certs, etc
         self.requester = ConanRequester(self.config, http_requester)
         # To handle remote connections
         artifacts_properties = self.cache.read_artifacts_properties()
-        rest_client_factory = RestApiClientFactory(self.out, self.requester, self.config,
+        rest_client_factory = RestApiClientFactory(self.requester, self.config,
                                                    artifacts_properties=artifacts_properties)
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(rest_client_factory, self.user_io, self.cache.localdb)
         # Handle remote connections
-        self.remote_manager = RemoteManager(self.cache, auth_manager, self.out, self.hook_manager)
+        self.remote_manager = RemoteManager(self.cache, auth_manager, self.hook_manager)
 
         # Adjust global tool variables
         set_global_instances(self.out, self.requester, self.config)

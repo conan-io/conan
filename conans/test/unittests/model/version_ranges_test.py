@@ -1,26 +1,25 @@
 import unittest
 
 from conans.client.graph.range_resolver import satisfying
+from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class BasicMaxVersionTest(unittest.TestCase):
     def test_prereleases_versions(self):
-        output = TestBufferConanOutput()
-        result = satisfying(["1.1.1", "1.1.11", "1.1.21", "1.1.111"], "", output)
+        result = satisfying(["1.1.1", "1.1.11", "1.1.21", "1.1.111"], "", ConanOutput())
         self.assertEqual(result, "1.1.111")
         # prereleases are ordered
         result = satisfying(["1.1.1-a.1", "1.1.1-a.11", "1.1.1-a.111", "1.1.1-a.21"], "~1.1.1-a",
-                            output)
+                            ConanOutput())
         self.assertEqual(result, "1.1.1-a.111")
-        result = satisfying(["1.1.1", "1.1.1-11", "1.1.1-111", "1.1.1-21"], "", output)
+        result = satisfying(["1.1.1", "1.1.1-11", "1.1.1-111", "1.1.1-21"], "", ConanOutput())
         self.assertEqual(result, "1.1.1")
-        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.3-", output)
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.3-", ConanOutput())
         self.assertEqual(result, "4.2.3-pre")
-        result = satisfying(["4.2.2", "4.2.3-pre", "4.2.4"], "~4.2.3-", output)
+        result = satisfying(["4.2.2", "4.2.3-pre", "4.2.4"], "~4.2.3-", ConanOutput())
         self.assertEqual(result, "4.2.4")
-        result = satisfying(["4.2.2", "4.2.3-pre", "4.2.3"], "~4.2.3-", output)
+        result = satisfying(["4.2.2", "4.2.3-pre", "4.2.3"], "~4.2.3-", ConanOutput())
         self.assertEqual(result, "4.2.3")
 
     def test_loose_versions(self):
@@ -37,22 +36,22 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "1.3")
 
     def test_include_prerelease_versions(self):
-        output = TestBufferConanOutput()
-        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,include_prerelease = True", output)
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,include_prerelease = True",
+                            ConanOutput())
         self.assertEqual(result, "4.2.3-pre")
-        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1", output)
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1", ConanOutput())
         self.assertEqual(result, "4.2.2")
         # https://github.com/conan-io/conan/issues/7343
-        result = satisfying(["1.0.0-pre"], "~1.0, include_prerelease=True", output)
+        result = satisfying(["1.0.0-pre"], "~1.0, include_prerelease=True", ConanOutput())
         self.assertIsNone(result)
-        result = satisfying(["1.2.0-pre"], "~1.0, include_prerelease=True", output)
+        result = satisfying(["1.2.0-pre"], "~1.0, include_prerelease=True", ConanOutput())
         self.assertIsNone(result)
         # this matches, because it is equivalent to 1.0.X
-        result = satisfying(["1.1.0-pre"], "~1.0, include_prerelease=True", output)
+        result = satisfying(["1.1.0-pre"], "~1.0, include_prerelease=True", ConanOutput())
         self.assertEqual(result, "1.1.0-pre")
-        result = satisfying(["1.0.0-pre"], "<1.0, include_prerelease=True", output)
+        result = satisfying(["1.0.0-pre"], "<1.0, include_prerelease=True", ConanOutput())
         self.assertEqual(result, "1.0.0-pre")
-        result = satisfying(["1.0.1-pre"], "~1.0, include_prerelease=True", output)
+        result = satisfying(["1.0.1-pre"], "~1.0, include_prerelease=True", ConanOutput())
         self.assertEqual(result, "1.0.1-pre")
 
     def test_basic(self):

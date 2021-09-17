@@ -8,13 +8,13 @@ from mock import Mock, MagicMock
 from conans import __version__
 from conans.client.cache.cache import ClientCache
 from conans.client.conf import get_default_client_conf, ConanClientConfigParser
+from conans.client.output import ConanOutput
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.tools import environment_append
 from conans.client.tools.files import replace_in_file, save
 from conans.errors import ConanException
 from conans.paths import CACERT_FILE
 from conans.test.utils.tools import temp_folder
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import normalize
 
 
@@ -29,7 +29,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
 
     @staticmethod
     def _create_requesters(cache_folder=None):
-        cache = ClientCache(cache_folder or temp_folder(), TestBufferConanOutput())
+        cache = ClientCache(cache_folder or temp_folder())
         mock_requester = MockRequesterGet()
         requester = ConanRequester(cache.config, mock_requester)
         return requester, mock_requester, cache
@@ -59,7 +59,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
         save(conan_conf, normalize(get_default_client_conf()))
         replace_in_file(conan_conf, "# cacert_path",
                         "cacert_path={}".format(file_path),
-                        output=TestBufferConanOutput())
+                        output=ConanOutput())
         config = ConanClientConfigParser(conan_conf)
         mocked_requester = MockRequesterGet()
         requester = ConanRequester(config, mocked_requester)
@@ -88,7 +88,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
 class ConanRequesterHeadersTests(unittest.TestCase):
     def test_user_agent(self):
         cache_folder = temp_folder()
-        cache = ClientCache(cache_folder, TestBufferConanOutput())
+        cache = ClientCache(cache_folder)
         mock_http_requester = MagicMock()
         requester = ConanRequester(cache.config, mock_http_requester)
         requester.get(url="aaa")

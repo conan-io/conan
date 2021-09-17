@@ -6,12 +6,14 @@ import unittest
 
 from mock import Mock
 
+from conans.client.output import ConanOutput
 from conans.client.tools import untargz, unzip
 from conans.client.tools.files import chdir, save
-from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
 from conans.model.manifest import gather_files
+from conans.test.utils.tools import redirect_output
 from conans.util.files import gzopen_without_timestamps
 
 
@@ -49,8 +51,9 @@ class ZipExtractPlainTest(unittest.TestCase):
 
         # ZIP unzipped regularly
         extract_folder = temp_folder()
-        output = TestBufferConanOutput()
-        unzip(zip_file, destination=extract_folder, strip_root=False, output=output)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            unzip(zip_file, destination=extract_folder, strip_root=False, output=ConanOutput())
         self.assertNotIn("ERROR: Error extract", output)
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file1")))
@@ -60,8 +63,9 @@ class ZipExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        output = TestBufferConanOutput()
-        unzip(zip_file, destination=extract_folder, strip_root=True, output=output)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            unzip(zip_file, destination=extract_folder, strip_root=True, output=ConanOutput())
         self.assertNotIn("ERROR: Error extract", output)
         self.assertFalse(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "file1")))

@@ -19,7 +19,6 @@ class ExportPkgTest(unittest.TestCase):
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": None},
-                            requester_class=None,
                             users={"default": [("lasote", "mypass")]})
 
         client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
@@ -29,7 +28,6 @@ class ExportPkgTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Build-requires are expanded now, so this is expected to fail atm")
     def test_dont_touch_server_build_require(self):
         client = TestClient(servers={"default": None},
-                            requester_class=None,
                             users={"default": [("lasote", "mypass")]})
         profile = dedent("""
             [build_requires]

@@ -9,12 +9,12 @@ import pytest
 from parameterized import parameterized
 
 from conans.client import tools
+from conans.client.output import ConanOutput
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load, save
 
 conanfile_scope_env = """
@@ -216,7 +216,7 @@ class ProfileTest(unittest.TestCase):
         self.client.cache.default_profile  # Creates default
         tools.replace_in_file(self.client.cache.default_profile_path,
                               "compiler.libcxx", "#compiler.libcxx", strict=False,
-                              output=TestBufferConanOutput())
+                              output=ConanOutput())
 
         self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . lasote/stable")
@@ -383,7 +383,7 @@ class ProfileTest(unittest.TestCase):
         tools.replace_in_file(self.client.cache.conan_conf_path,
                               "default_profile = default",
                               "default_profile = p1",
-                              output=TestBufferConanOutput())
+                              output=ConanOutput())
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("create . user/testing")
         self._assert_env_variable_printed("A_VAR", "1")

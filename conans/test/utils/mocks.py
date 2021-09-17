@@ -155,7 +155,7 @@ class ConanFileMock(ConanFile):
                 self.options._data[var] = value
         self.deps_cpp_info = MockDepsCppInfo()  # ("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.deps_cpp_info.sysroot = "/path/to/sysroot"
-        self.output = TestBufferConanOutput()
+        self.output = ConanOutput()
         self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
@@ -186,31 +186,6 @@ class ConanFileMock(ConanFile):
 
 
 MockOptions = MockSettings
-
-
-class TestBufferConanOutput(ConanOutput):
-    """ wraps the normal output of the application, captures it into an stream
-    and gives it operators similar to string, so it can be compared in tests
-    """
-
-    def __init__(self):
-        ConanOutput.__init__(self, color=False)
-
-    def __repr__(self):
-        # FIXME: I'm sure there is a better approach. Look at six docs.
-        return sys.stdout.read()
-
-    def __str__(self, *args, **kwargs):
-        return self.__repr__()
-
-    def __eq__(self, value):
-        return self.__repr__() == value
-
-    def __ne__(self, value):
-        return not self.__eq__(value)
-
-    def __contains__(self, value):
-        return value in self.__repr__()
 
 
 class RedirectedTestOutput(StringIO):

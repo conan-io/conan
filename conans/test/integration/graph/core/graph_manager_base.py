@@ -17,13 +17,13 @@ from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
+from conans.client.output import ConanOutput
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -40,9 +40,8 @@ class MockRemoteManager(object):
 class GraphManagerTest(unittest.TestCase):
 
     def setUp(self):
-        self.output = TestBufferConanOutput()
         cache_folder = temp_folder()
-        cache = ClientCache(cache_folder, self.output)
+        cache = ClientCache(cache_folder)
         save(cache.default_profile_path, "")
         save(cache.settings_path, "os: [Windows, Linux]")
         self.cache = cache
@@ -51,20 +50,20 @@ class GraphManagerTest(unittest.TestCase):
         self.remote_manager = MockRemoteManager()
         cache = self.cache
         self.resolver = RangeResolver(self.cache, self.remote_manager)
-        proxy = ConanProxy(cache, self.output, self.remote_manager)
+        proxy = ConanProxy(cache, ConanOutput(), self.remote_manager)
 
         pyreq_loader = PyRequireLoader(proxy, self.resolver)
         pyreq_loader.enable_remotes(remotes=Remotes())
-        self.loader = ConanFileLoader(None, self.output, pyreq_loader=pyreq_loader)
+        self.loader = ConanFileLoader(None, ConanOutput(), pyreq_loader=pyreq_loader)
 
         binaries = GraphBinariesAnalyzer(cache, self.remote_manager)
-        self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
+        self.manager = GraphManager(ConanOutput(), cache, self.remote_manager, self.loader, proxy,
                                     self.resolver, binaries)
         generator_manager = GeneratorManager()
         hook_manager = Mock()
         app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager"
                               " binaries_analyzer generator_manager")
-        app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager,
+        app = app_type(self.cache, ConanOutput(), self.remote_manager, hook_manager, self.manager,
                        binaries, generator_manager)
         return app
 

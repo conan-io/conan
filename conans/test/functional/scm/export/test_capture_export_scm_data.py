@@ -8,11 +8,13 @@ import pytest
 from parameterized import parameterized
 
 from conans.client.cmd.export import _capture_scm_auto_fields
+from conans.client.output import ConanOutput
 from conans.client.tools.scm import Git
 from conans.model.ref import ConanFileReference
-from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import redirect_output
 from conans.util.files import save
 
 
@@ -35,7 +37,6 @@ class CaptureExportSCMDataTest(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, )])
     def test_url_auto_revision_auto(self, _, local_origin):
-        output = TestBufferConanOutput()
 
         # Mock the conanfile (return scm_data)
         conanfile = mock.MagicMock()
@@ -45,12 +46,14 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         url = self.git.folder if local_origin else "https://remote.url"
         self.git.run("remote add origin \"{}\"".format(url))
 
-        scm_data, _ = _capture_scm_auto_fields(
-            conanfile=conanfile,
-            conanfile_dir=self.conanfile_dir,
-            recipe_layout=None,
-            output=output,
-            ignore_dirty=True)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            scm_data, _ = _capture_scm_auto_fields(
+                conanfile=conanfile,
+                conanfile_dir=self.conanfile_dir,
+                recipe_layout=None,
+                output=ConanOutput(),
+                ignore_dirty=True)
 
         self.assertEqual(scm_data.url, url)
         self.assertEqual(scm_data.revision, self.rev)
@@ -61,7 +64,6 @@ class CaptureExportSCMDataTest(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, ), ])
     def test_revision_auto(self, _, is_pristine):
-        output = TestBufferConanOutput()
 
         # Mock the conanfile (return scm_data)
         url = "https://remote.url"
@@ -71,12 +73,14 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         if not is_pristine:
             save(os.path.join(self.git.folder, "other"), "ccc")
 
-        scm_data, _ = _capture_scm_auto_fields(
-            conanfile=conanfile,
-            conanfile_dir=self.conanfile_dir,
-            recipe_layout=None,
-            output=output,
-            ignore_dirty=False)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            scm_data, _ = _capture_scm_auto_fields(
+                conanfile=conanfile,
+                conanfile_dir=self.conanfile_dir,
+                recipe_layout=None,
+                output=ConanOutput(),
+                ignore_dirty=False)
 
         self.assertEqual(scm_data.url, url)
         if is_pristine:
@@ -90,7 +94,6 @@ class CaptureExportSCMDataTest(unittest.TestCase):
                           output)
 
     def test_url_auto(self, _):
-        output = TestBufferConanOutput()
 
         # Mock the conanfile (return scm_data)
         conanfile = mock.MagicMock()
@@ -100,12 +103,14 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         url = "https://remote.url"
         self.git.run("remote add origin \"{}\"".format(url))
 
-        scm_data, _ = _capture_scm_auto_fields(
-                    conanfile=conanfile,
-                    conanfile_dir=self.conanfile_dir,
-                    recipe_layout=None,
-                    output=output,
-                    ignore_dirty=True)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            scm_data, _ = _capture_scm_auto_fields(
+                        conanfile=conanfile,
+                        conanfile_dir=self.conanfile_dir,
+                        recipe_layout=None,
+                        output=ConanOutput(),
+                        ignore_dirty=True)
 
         self.assertEqual(scm_data.url, url)
         self.assertEqual(scm_data.revision, self.rev)

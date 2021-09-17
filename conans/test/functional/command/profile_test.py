@@ -7,13 +7,13 @@ import json
 import pytest
 
 from conans.client import tools
+from conans.client.output import ConanOutput
 from conans.test.utils.profiles import create_profile
 from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 from conans.util.runners import check_output_runner
 from conans.paths import DEFAULT_PROFILE_NAME
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class ProfileTest(unittest.TestCase):
@@ -268,8 +268,8 @@ class DetectCompilersTest(unittest.TestCase):
             "Darwin": "apple-clang",
             "Windows": "Visual Studio"
         }
-        output = TestBufferConanOutput()
-        result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
+
+        result = detect_defaults_settings(ConanOutput(), profile_path=DEFAULT_PROFILE_NAME)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         platform_compiler = platform_default_compilers.get(platform.system(), None)
@@ -290,7 +290,6 @@ class DetectCompilersTest(unittest.TestCase):
             # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
             raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore!")
 
-        output = TestBufferConanOutput()
         with tools.environment_append({"CC": "gcc"}):
             result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
         # result is a list of tuples (name, value) so converting it to dict

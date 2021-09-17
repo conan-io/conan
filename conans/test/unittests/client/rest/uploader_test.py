@@ -4,7 +4,6 @@ from collections import namedtuple
 
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -29,7 +28,6 @@ class UploaderUnitTest(unittest.TestCase):
     def setUp(self):
         self.f = tempfile.mktemp()
         save(self.f, "some contents")
-        self.out = TestBufferConanOutput()
 
     def test_401_raises_unauthoirzed_exception(self):
         uploader = FileUploader(MockRequester(401), verify=False, config=_ConfigMock())
@@ -54,7 +52,6 @@ class UploaderUnitTest(unittest.TestCase):
             uploader.upload("fake_url", self.f, auth=auth)
 
     def test_500_raises_internal_error(self):
-        out = TestBufferConanOutput()
         uploader = FileUploader(MockRequester(500), verify=False, config=_ConfigMock())
         f = tempfile.mktemp()
         save(f, "some contents")
