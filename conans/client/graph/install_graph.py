@@ -1,5 +1,7 @@
 from collections import OrderedDict
 
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
+
 
 class _InstallGraphNode:
     def __init__(self, pref):
@@ -20,6 +22,8 @@ class InstallGraph:
         self._nodes = OrderedDict()  # {pref: _InstallGraphNode}
 
         for node in deps_graph.nodes:
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+                continue
             n = self._nodes.setdefault(node.pref, _InstallGraphNode(node.pref))
             n.nodes.append(node)
             if n.binary is None:

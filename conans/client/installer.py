@@ -321,11 +321,10 @@ class BinaryInstaller(object):
                     graph_lock, remotes, build_mode, update)
 
     @staticmethod
-    def _classify(install_order, install_graph):
+    def _classify(install_order):
         missing, invalid, downloads = [], [], []
         for level in install_order:
-            for pref in level:
-                node = install_graph[pref]
+            for node in level:
                 if node.binary == BINARY_MISSING:
                     missing.append(node)
                 elif node.binary in (BINARY_INVALID, BINARY_ERROR):
@@ -379,7 +378,7 @@ class BinaryInstaller(object):
             Or read 'http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
             ''' % (missing_pkgs, build_str)))
 
-    def _download(self, downloads, processed_package_refs):
+    def _download(self, downloads):
         """ executes the download of packages (both download and update), only once for a given
         PREF, even if node duplicated
         :param downloads: all nodes to be downloaded or updated, included repetitions
@@ -389,12 +388,7 @@ class BinaryInstaller(object):
 
         download_nodes = []
         for node in downloads:
-            pref = node.pref
-            bare_pref = PackageReference(pref.ref, pref.id)
-            if bare_pref in processed_package_refs:
-                continue
-            processed_package_refs[bare_pref] = pref.revision
-            assert node.prev, "PREV for %s is None" % str(node.pref)
+            assert node.pref.revision, "PREV for %s is None" % str(node.pref)
             download_nodes.append(node)
 
         parallel = self._cache.config.parallel_download
@@ -426,19 +420,13 @@ class BinaryInstaller(object):
         self._download(downloads, processed_package_refs)
 
         for level in install_order:
-            for node in level:
-                ref, conan_file = node.ref, node.conanfile
-                output = conan_file.output
-
-                if node.binary == BINARY_EDITABLE:
-                    self._handle_node_editable(node, profile_host, profile_build, graph_lock)
-                    # Need a temporary package revision for package_revision_mode
-                    # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
-                    node.prev = "editable"
+            for install_node in level:
+                if install_node.binary == BINARY_EDITABLE:
+                    self._handle_node_editable(install_node, profile_host, profile_build, graph_lock)
                 else:
-                    if node.binary == BINARY_SKIP:  # Privates not necessary
+                    if install_node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
-                    assert ref.revision is not None, "Installer should receive RREV always"
+                    assert install_node.pref.ref.revision is not None, "Installer should receive RREV always"
                     if node.binary == BINARY_UNKNOWN:
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                         if node.binary == BINARY_MISSING:
@@ -452,22 +440,30 @@ class BinaryInstaller(object):
                     _handle_system_requirements(conan_file, package_layout, output)
                     self._handle_node_cache(node, processed_package_refs, remotes, package_layout)
 
-    def _handle_node_editable(self, node, profile_host, profile_build, graph_lock):
-        # Get source of information
+    def _handle_node_editable(self, install_node, profile_host, profile_build, graph_lock):
+        for node in install_node.nodes:
+            # Get source of information
+            conanfile = node.conanfile
+            ref = node.ref
+            conanfile_path = self._cache.editable_path(ref)
+            # TODO: Check, this assumes the folder is always the conanfile one
+            base_path = os.path.dirname(conanfile_path)
+            self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
+
+            # New editables mechanism based on Folders
+            conanfile.folders.set_base_package(base_path)
+            conanfile.folders.set_base_source(base_path)
+            conanfile.folders.set_base_build(base_path)
+            conanfile.folders.set_base_install(base_path)
+            conanfile.folders.set_base_imports(base_path)
+
+            # Need a temporary package revision for package_revision_mode
+            # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
+            node.prev = "editable"
+
+        # It will only run generation and imports once
+        node = install_node.nodes[0]
         conanfile = node.conanfile
-        ref = node.ref
-        conanfile_path = self._cache.editable_path(ref)
-        # TODO: Check, this assumes the folder is always the conanfile one
-        base_path = os.path.dirname(conanfile_path)
-        self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
-
-        # New editables mechanism based on Folders
-        conanfile.folders.set_base_package(base_path)
-        conanfile.folders.set_base_source(base_path)
-        conanfile.folders.set_base_build(base_path)
-        conanfile.folders.set_base_install(base_path)
-        conanfile.folders.set_base_imports(base_path)
-
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
