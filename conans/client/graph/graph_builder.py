@@ -288,7 +288,7 @@ class DepsGraphBuilder(object):
                 # Maybe it was an ALIAS, so we can check conflict again
                 conflict = self._conflicting_references(previous, require.ref, node.ref)
                 if conflict:
-                    raise ConanException(conflict)
+                    raise ConanException("Unresolvable conflict between {} and {}".format(previous, require.ref))
 
             # Add current ancestors to the previous node and upstream deps
             for n in previous.public_closure:
