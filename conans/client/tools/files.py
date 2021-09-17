@@ -214,7 +214,7 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     class PatchLogHandler(logging.Handler):
         def __init__(self):
             logging.Handler.__init__(self, logging.DEBUG)
-            self.output = output or ConanOutput(sys.stdout, sys.stderr, color=True)
+            self.output = output or ConanOutput(color=True)
             self.patchname = patch_file if patch_file else "patch_ng"
 
         def emit(self, record):

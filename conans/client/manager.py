@@ -65,7 +65,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
 
     installer = BinaryInstaller(app, recorder=recorder)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
-    build_modes = BuildMode(build_modes, out)
+    build_modes = BuildMode(build_modes)
     installer.install(deps_graph, remotes, build_modes, update, profile_host, profile_build,
                       graph_lock)
 

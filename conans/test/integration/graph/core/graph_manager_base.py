@@ -57,7 +57,7 @@ class GraphManagerTest(unittest.TestCase):
         pyreq_loader.enable_remotes(remotes=Remotes())
         self.loader = ConanFileLoader(None, self.output, pyreq_loader=pyreq_loader)
 
-        binaries = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
+        binaries = GraphBinariesAnalyzer(cache, self.remote_manager)
         self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver, binaries)
         generator_manager = GeneratorManager()
@@ -164,7 +164,7 @@ class GraphManagerTest(unittest.TestCase):
         if install:
             deps_graph.report_graph_error()
             binary_installer = BinaryInstaller(app, recorder)
-            build_mode = BuildMode(build_mode, app.out)
+            build_mode = BuildMode(build_mode)
             binary_installer.install(deps_graph, None, build_mode, update, profile_host=profile_host,
                                      profile_build=profile_build, graph_lock=None)
         return deps_graph

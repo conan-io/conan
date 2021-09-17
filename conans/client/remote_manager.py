@@ -5,6 +5,7 @@ import traceback
 
 from requests.exceptions import ConnectionError
 
+from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException, ConanReferenceDoesNotExistInDB
@@ -45,9 +46,9 @@ def _headers_for_info(info):
 class RemoteManager(object):
     """ Will handle the remotes to get recipes, packages etc """
 
-    def __init__(self, cache, auth_manager, output, hook_manager):
+    def __init__(self, cache, auth_manager, hook_manager):
         self._cache = cache
-        self._output = output
+        self._output = ConanOutput()
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 

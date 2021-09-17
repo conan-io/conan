@@ -13,6 +13,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 
 import bottle
+import mock
 import requests
 from mock import Mock
 from requests.exceptions import HTTPError
@@ -233,7 +234,7 @@ class TestRequester(object):
             mock_request = Mock()
             mock_request.headers = {}
             kwargs["auth"](mock_request)
-            if "headers" not in kwargs:
+            if kwargs.get("headers") is None:
                 kwargs["headers"] = {}
             kwargs["headers"].update(mock_request.headers)
 
@@ -336,7 +337,7 @@ def _copy_cache_folder(target_folder):
     master_folder = _copy_cache_folder.master.setdefault(cache_key, temp_folder(create_dir=False))
     if not os.path.exists(master_folder):
         # Create and populate the cache folder with the defaults
-        cache = ClientCache(master_folder, TestBufferConanOutput())
+        cache = ClientCache(master_folder)
         cache.initialize_config()
         cache.registry.initialize_remotes()
         cache.initialize_default_profile()
@@ -432,7 +433,7 @@ class TestClient(object):
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
-        return ClientCache(self.cache_folder, TestBufferConanOutput())
+        return ClientCache(self.cache_folder)
 
     @property
     def base_folder(self):
@@ -503,23 +504,11 @@ class TestClient(object):
         finally:
             self.current_folder = old_dir
 
-    def get_conan_api_v2(self):
-        user_io = MockedUserIO(self.users, out=sys.stderr)
-        conan = ConanAPIV2(cache_folder=self.cache_folder, quiet=False, user_io=user_io,
-                           http_requester=self._http_requester, runner=self.runner)
-        return conan
-
-    def get_conan_api_v1(self):
-        user_io = MockedUserIO(self.users)
-        conan = Conan(cache_folder=self.cache_folder, user_io=user_io,
-                      http_requester=self._http_requester, runner=self.runner)
-        return conan
-
     def get_conan_api(self, args=None):
         if self.is_conan_cli_v2_command(args):
-            return self.get_conan_api_v2()
+            return ConanAPIV2(cache_folder=self.cache_folder)
         else:
-            return self.get_conan_api_v1()
+            return Conan(cache_folder=self.cache_folder)
 
     def get_conan_command(self, args=None):
         if self.is_conan_cli_v2_command(args):
@@ -539,25 +528,26 @@ class TestClient(object):
         old_modules = list(sys.modules.keys())
 
         args = shlex.split(command_line)
+        with mock.patch("conans.client.conan_api.ConanApp.user_io", MockedUserIO(self.users)):
+            with mock.patch("conans.client.conan_api.ConanApp.requester", self._http_requester):
+                self.api = self.get_conan_api(args)
+                command = self.get_conan_command(args)
 
-        self.api = self.get_conan_api(args)
-        command = self.get_conan_command(args)
-
-        try:
-            error = command.run(args)
-        finally:
-            try:
-                self.api.app.cache.closedb()
-            except AttributeError:
-                pass
-            sys.path = old_path
-            os.chdir(current_dir)
-            # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
-            added_modules = set(sys.modules).difference(old_modules)
-            for added in added_modules:
-                sys.modules.pop(added, None)
-        self._handle_cli_result(command_line, assert_error=assert_error, error=error)
-        return error
+                try:
+                    error = command.run(args)
+                finally:
+                    try:
+                        self.api.app.cache.closedb()
+                    except AttributeError:
+                        pass
+                    sys.path = old_path
+                    os.chdir(current_dir)
+                    # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
+                    added_modules = set(sys.modules).difference(old_modules)
+                    for added in added_modules:
+                        sys.modules.pop(added, None)
+                self._handle_cli_result(command_line, assert_error=assert_error, error=error)
+                return error
 
     def run(self, command_line, assert_error=False):
         """ run a single command as in the command line.

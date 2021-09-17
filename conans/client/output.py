@@ -151,6 +151,7 @@ class ConanOutput(object):
 
 
 class ScopedOutput(ConanOutput):
+
     def __init__(self, scope, output):
         self.scope = scope
         self._color = output._color

@@ -300,7 +300,7 @@ def is_config_install_scheduled(api):
     :param api: Conan API instance
     :return: True, if it should occur now. Otherwise, False.
     """
-    cache = ClientCache(api.cache_folder, api.out)
+    cache = ClientCache(api.cache_folder)
     interval = cache.config.config_install_interval
     config_install_file = cache.config_install_file
     if interval is not None:

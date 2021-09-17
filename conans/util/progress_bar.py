@@ -1,4 +1,5 @@
 import os
+import sys
 from contextlib import contextmanager
 import time
 
@@ -22,15 +23,15 @@ def left_justify_description(msg):
 
 class ProgressOutput(ConanOutput):
     def __init__(self, output):
-        super(ProgressOutput, self).__init__(output._stream, output._stream_err, output._color)
+        super(ProgressOutput, self).__init__(output._color)
 
     def _write(self, data, newline=False):
         end = "\n" if newline else ""
-        tqdm.write(str(data), file=self._stream, end=end)
+        tqdm.write(str(data), file=sys.stdout, end=end)
 
     def _write_err(self, data, newline=False):
         end = "\n" if newline else ""
-        tqdm.write(str(data), file=self._stream_err, end=end)
+        tqdm.write(str(data), file=sys.stderr, end=end)
 
 
 class Progress(object):

@@ -55,7 +55,7 @@ class Pkg(ConanFile):
         finally:
             os.chdir(old_path)
         output_dir = os.path.join(tmp_dir, "output_dir")
-        tools.unzip(tar_path, output_dir, output=ConanOutput(stream=sys.stdout))
+        tools.unzip(tar_path, output_dir, output=ConanOutput())
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
 

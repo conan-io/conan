@@ -11,9 +11,8 @@ from conans.model.ref import PackageReference
 
 class GraphBinariesAnalyzer(object):
 
-    def __init__(self, cache, output, remote_manager):
+    def __init__(self, cache, remote_manager):
         self._cache = cache
-        self._output = output
         self._remote_manager = remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
@@ -174,7 +173,7 @@ class GraphBinariesAnalyzer(object):
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary in (BINARY_MISSING, BINARY_INVALID):
                 if node.conanfile.compatible_packages:
-                    compatible_build_mode = BuildMode(None, self._output)
+                    compatible_build_mode = BuildMode(None)
                     for compatible_package in node.conanfile.compatible_packages:
                         package_id = compatible_package.package_id()
                         if package_id == node.package_id:
@@ -261,7 +260,7 @@ class GraphBinariesAnalyzer(object):
         compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
-        build_mode = BuildMode(build_mode, self._output)
+        build_mode = BuildMode(build_mode)
         assert isinstance(build_mode, BuildMode)
 
         default_package_id_mode = self._cache.config.default_package_id_mode

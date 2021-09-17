@@ -3,7 +3,7 @@ import time
 
 from copy import copy
 
-from conans.cli.output import ConanOutput
+from conans.client.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException

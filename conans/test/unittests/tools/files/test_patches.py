@@ -5,7 +5,8 @@ import pytest
 
 from conan.tools.files import patch, apply_conandata_patches
 from conans.errors import ConanException
-from conans.test.utils.mocks import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
+from conans.test.utils.tools import redirect_output
 
 
 class MockPatchset:
@@ -81,23 +82,29 @@ def test_single_patch_arguments(mock_patch_ng):
 def test_single_patch_type(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.display_name = 'mocked/ref'
-    patch(conanfile, patch_file='patch-file', patch_type='patch_type')
-    assert 'Apply patch (patch_type)\n' == str(conanfile.output)
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        patch(conanfile, patch_file='patch-file', patch_type='patch_type')
+    assert 'Apply patch (patch_type)\n' == output.getvalue()
 
 
 def test_single_patch_description(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.display_name = 'mocked/ref'
-    patch(conanfile, patch_file='patch-file', patch_description='patch_description')
-    assert 'Apply patch: patch_description\n' == str(conanfile.output)
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        patch(conanfile, patch_file='patch-file', patch_description='patch_description')
+    assert 'Apply patch: patch_description\n' == output.getvalue()
 
 
 def test_single_patch_extra_fields(mock_patch_ng):
     conanfile = ConanFileMock()
     conanfile.display_name = 'mocked/ref'
-    patch(conanfile, patch_file='patch-file', patch_type='patch_type',
-          patch_description='patch_description')
-    assert 'Apply patch (patch_type): patch_description\n' == str(conanfile.output)
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        patch(conanfile, patch_file='patch-file', patch_type='patch_type',
+              patch_description='patch_description')
+    assert 'Apply patch (patch_type): patch_description\n' == output.getvalue()
 
 
 def test_single_no_patchset(monkeypatch):
@@ -136,9 +143,11 @@ def test_multiple_no_version(mock_patch_ng):
          'patch_source': 'https://github.com/google/flatbuffers/pull/5650',
          'patch_description': 'Needed to build with modern clang compilers.'}
     ]}
-    apply_conandata_patches(conanfile)
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        apply_conandata_patches(conanfile)
     assert 'Apply patch (backport): Needed to build with modern clang compilers.\n' \
-           == str(conanfile.output)
+           == output.getvalue()
 
 
 def test_multiple_with_version(mock_patch_ng):
@@ -164,10 +173,14 @@ def test_multiple_with_version(mock_patch_ng):
     assert 'Can only be applied if conanfile.version is already defined' == str(excinfo.value)
 
     conanfile.version = "1.2.11"
-    apply_conandata_patches(conanfile)
-    assert len(str(conanfile.output)) == 0
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        apply_conandata_patches(conanfile)
+    assert len(str(output.getvalue())) == 0
 
     conanfile.version = "1.11.0"
-    apply_conandata_patches(conanfile)
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        apply_conandata_patches(conanfile)
     assert 'Apply patch (backport): Needed to build with modern clang compilers.\n' \
-           == str(conanfile.output)
+           == output.getvalue()

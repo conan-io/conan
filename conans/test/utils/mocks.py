@@ -53,7 +53,6 @@ class MockedUserIO(UserIO):
         if username_env:
             return username_env
 
-        self._raise_if_non_interactive()
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         if len(sub_dict) - 1 < index:
@@ -67,7 +66,6 @@ class MockedUserIO(UserIO):
         if password_env:
             return password_env
 
-        self._raise_if_non_interactive()
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         tmp = sub_dict[index][1]

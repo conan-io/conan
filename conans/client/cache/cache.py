@@ -9,6 +9,7 @@ from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conans.assets.templates import dict_loader
+from conans.client.output import ConanOutput
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
@@ -41,9 +42,9 @@ class ClientCache(object):
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
     """
 
-    def __init__(self, cache_folder, output):
+    def __init__(self, cache_folder):
         self.cache_folder = cache_folder
-        self._output = output
+        self._output = ConanOutput()
 
         # Caching
         self._no_lock = None

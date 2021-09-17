@@ -6,8 +6,10 @@ from parameterized import parameterized
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
+from conans.client.output import ConanOutput
 from conans.paths import DEFAULT_PROFILE_NAME
-from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.mocks import RedirectedTestOutput
+from conans.test.utils.tools import redirect_output
 
 
 class DetectTest(unittest.TestCase):
@@ -20,35 +22,39 @@ class DetectTest(unittest.TestCase):
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
     def test_detect_custom_profile(self, _):
-        output = TestBufferConanOutput()
-        with tools.environment_append({"CC": "gcc"}):
-            detect_defaults_settings(output, profile_path="~/.conan/profiles/mycustomprofile")
-            self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 "
-                          "mycustomprofile", output)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            with tools.environment_append({"CC": "gcc"}):
+                detect_defaults_settings(ConanOutput(), profile_path="~/.conan/profiles/mycustomprofile")
+                self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 "
+                              "mycustomprofile", output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
     def test_detect_default_profile(self, _):
-        output = TestBufferConanOutput()
-        with tools.environment_append({"CC": "gcc"}):
-            detect_defaults_settings(output, profile_path="~/.conan/profiles/default")
-            self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 default",
-                          output)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            with tools.environment_append({"CC": "gcc"}):
+                detect_defaults_settings(ConanOutput(), profile_path="~/.conan/profiles/default")
+                self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 default",
+                              output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
     def test_detect_file_profile(self, _):
-        output = TestBufferConanOutput()
-        with tools.environment_append({"CC": "gcc"}):
-            detect_defaults_settings(output, profile_path="./MyProfile")
-            self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 MyProfile",
-                          output)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            with tools.environment_append({"CC": "gcc"}):
+                detect_defaults_settings(ConanOutput(), profile_path="./MyProfile")
+                self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 MyProfile",
+                              output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
     def test_detect_abs_file_profile(self, _):
-        output = TestBufferConanOutput()
-        with tools.environment_append({"CC": "gcc"}):
-            detect_defaults_settings(output, profile_path="/foo/bar/quz/custom-profile")
-            self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 "
-                          "custom-profile", output)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            with tools.environment_append({"CC": "gcc"}):
+                detect_defaults_settings(ConanOutput(), profile_path="/foo/bar/quz/custom-profile")
+                self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 "
+                              "custom-profile", output)
 
     @parameterized.expand([
         ['powerpc', '64', '7.1.0.0', 'ppc64'],
@@ -85,10 +91,11 @@ class DetectTest(unittest.TestCase):
 
     @mock.patch("conans.client.conf.detect._clang_compiler", return_value=("clang", "9"))
     def test_detect_clang_gcc_toolchain(self, _):
-        output = TestBufferConanOutput()
-        with tools.environment_append({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
-            detect_defaults_settings(output, profile_path="./MyProfile")
-            self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            with tools.environment_append({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
+                detect_defaults_settings(ConanOutput(), profile_path="./MyProfile")
+                self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
 
     def test_vs2022(self):
         with mock.patch("conans.client.conf.detect._get_default_compiler",

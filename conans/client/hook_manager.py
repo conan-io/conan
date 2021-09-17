@@ -5,7 +5,7 @@ import uuid
 from collections import defaultdict
 from threading import Lock
 
-from conans.client.output import ScopedOutput
+from conans.client.output import ScopedOutput, ConanOutput
 from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException
 from conans.util.files import save
@@ -25,11 +25,11 @@ valid_hook_methods = ["pre_export", "post_export",
 
 class HookManager(object):
 
-    def __init__(self, hooks_folder, hook_names, output):
+    def __init__(self, hooks_folder, hook_names):
         self._hooks_folder = hooks_folder
         self._hook_names = hook_names
         self.hooks = defaultdict(list)
-        self.output = output
+        self._output = ConanOutput()
         self._mutex = Lock()
 
     def execute(self, method_name, **kwargs):
@@ -46,7 +46,7 @@ class HookManager(object):
             "Method '{}' not in valid hooks methods".format(method_name)
         for name, method in self.hooks[method_name]:
             try:
-                output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self.output)
+                output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self._output)
                 method(output=output, **kwargs)
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
@@ -66,7 +66,7 @@ class HookManager(object):
                 if hook_method:
                     self.hooks[method].append((hook_name, hook_method))
         except NotFoundException:
-            self.output.warn("Hook '%s' not found in %s folder. Please remove hook from conan.conf "
+            self._output.warn("Hook '%s' not found in %s folder. Please remove hook from conan.conf "
                              "or include it inside the hooks folder." % (hook_name,
                                                                          self._hooks_folder))
         except Exception as e:

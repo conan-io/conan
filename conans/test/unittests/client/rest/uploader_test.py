@@ -32,30 +32,30 @@ class UploaderUnitTest(unittest.TestCase):
         self.out = TestBufferConanOutput()
 
     def test_401_raises_unauthoirzed_exception(self):
-        uploader = FileUploader(MockRequester(401), self.out, verify=False, config=_ConfigMock())
+        uploader = FileUploader(MockRequester(401), verify=False, config=_ConfigMock())
         with self.assertRaisesRegex(AuthenticationException, "tururu"):
             uploader.upload("fake_url", self.f)
 
     def test_403_raises_unauthoirzed_exception_if_no_token(self):
         auth = namedtuple("auth", "token")(None)
-        uploader = FileUploader(MockRequester(403), self.out, verify=False, config=_ConfigMock())
+        uploader = FileUploader(MockRequester(403), verify=False, config=_ConfigMock())
         with self.assertRaisesRegex(AuthenticationException, "tururu"):
             uploader.upload("fake_url", self.f, auth=auth)
 
     def test_403_raises_unauthorized_exception_if_no_auth(self):
-        uploader = FileUploader(MockRequester(403), self.out, verify=False, config=_ConfigMock())
+        uploader = FileUploader(MockRequester(403), verify=False, config=_ConfigMock())
         with self.assertRaisesRegex(AuthenticationException, "tururu"):
             uploader.upload("fake_url", self.f)
 
     def test_403_raises_forbidden_exception_if_token(self):
         auth = namedtuple("auth", "token")("SOMETOKEN")
-        uploader = FileUploader(MockRequester(403), self.out, verify=False, config=_ConfigMock())
+        uploader = FileUploader(MockRequester(403), verify=False, config=_ConfigMock())
         with self.assertRaisesRegex(ForbiddenException, "tururu"):
             uploader.upload("fake_url", self.f, auth=auth)
 
     def test_500_raises_internal_error(self):
         out = TestBufferConanOutput()
-        uploader = FileUploader(MockRequester(500), out, verify=False, config=_ConfigMock())
+        uploader = FileUploader(MockRequester(500), verify=False, config=_ConfigMock())
         f = tempfile.mktemp()
         save(f, "some contents")
         with self.assertRaisesRegex(InternalErrorException, "tururu"):
