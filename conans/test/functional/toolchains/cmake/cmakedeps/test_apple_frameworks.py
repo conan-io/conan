@@ -33,7 +33,7 @@ app_conanfile = textwrap.dedent("""
     class App(ConanFile):
         requires = "foolib/1.0"
         generators = "CMakeDeps", "CMakeToolchain"
-        settings = "build_type",  # cmake_multi doesn't work without build_type
+        settings = "build_type", "os", "arch"
 
         def build(self):
             cmake = CMake(self)
