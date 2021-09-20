@@ -47,7 +47,7 @@ class ClientMigrator(Migrator):
         self.out.warn("Migration: Updating settings.yml")
         if hasattr(migrations_settings, var_name):
             version_default_contents = getattr(migrations_settings, var_name)
-            if version_default_contents != get_default_settings_yml():
+            if version_default_contents.splitlines() != get_default_settings_yml().splitlines():
                 current_settings = load(cache.settings_path)
                 if current_settings != version_default_contents:
                     save_new()
