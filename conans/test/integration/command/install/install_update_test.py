@@ -136,6 +136,7 @@ def test_reuse():
 
     client2 = TestClient(servers=client.servers, users=client.users)
     client2.run("install Hello0/1.0@lasote/stable")
+    print(client2.out)
 
     assert str(client2.out).count("Downloading conaninfo.txt") == 1
 

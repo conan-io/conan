@@ -258,6 +258,18 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         if self.revision:
             ConanName.validate_revision(self.revision)
 
+    def __eq__(self, other):
+        from conans.model.info import PACKAGE_ID_UNKNOWN
+        # Two references with PACKAGE_ID_UNKNOWN cannot be the same reference
+        return (self.ref == other.ref and self.id == other.id and self.revision == other.revision
+                and self.id != PACKAGE_ID_UNKNOWN)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash((self.ref, self.id, self.revision))
+
     @staticmethod
     def loads(text, validate=True):
         text = text.strip()
