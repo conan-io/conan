@@ -76,12 +76,12 @@ class GraphBinariesAnalyzer(object):
         if not remotes and update:
             node.conanfile.output.warn("Can't update, no remote defined")
 
-        if len(results) == 0:
-            raise NotFoundException("No packages found for: {}".format(pref))
-        else:
+        if len(results) > 0:
             remotes_results = sorted(results, key=lambda k: k['time'], reverse=True)
             result = remotes_results[0]
             return result.get('remote'), result.get('prev'), result.get('time')
+
+        return None, None, None
 
     def _evaluate_is_cached(self, node, pref):
         previous_nodes = self._evaluated.get(pref)
