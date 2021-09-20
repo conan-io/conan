@@ -60,8 +60,6 @@ class GraphBinariesAnalyzer(object):
                                                                                              remote,
                                                                                              info=node.conanfile.info)
                 return remote, prev, prev_time
-            except NotFoundException:
-                pass
             except Exception:
                 node.conanfile.output.error("Error downloading binary package: '{}'".format(pref))
                 raise
