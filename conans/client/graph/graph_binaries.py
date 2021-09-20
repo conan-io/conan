@@ -73,7 +73,7 @@ class GraphBinariesAnalyzer(object):
             except NotFoundException:
                 pass
 
-        if not remotes:
+        if not remotes and update:
             node.conanfile.output.warn("Can't update, no remote defined")
 
         if len(results) == 0:
@@ -231,7 +231,7 @@ class GraphBinariesAnalyzer(object):
                         node.binary = BINARY_CACHE
                         node.binary_remote = None
                         node.prev = cache_latest_prev.revision
-                        output.warn("Current package revision is newer than the remote one")
+                        output.info("Current package revision is newer than the remote one")
 
         if not node.binary:
             node.binary = BINARY_CACHE
