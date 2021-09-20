@@ -48,6 +48,9 @@ class PkgConfigDeps(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
+    def _get_composed_require_name(self, pkg_name, comp_name):
+        return "%s-%s" % (pkg_name, comp_name)
+
     def _get_require_comp_name(self, dep, req):
         # FIXME: this str() is only needed for python2.7 (unicode values). Remove it for Conan 2.0
         pkg_name = str(dep.ref.name)
@@ -55,7 +58,7 @@ class PkgConfigDeps(object):
         # FIXME: it could allow defining requires to not direct dependencies
         req = self._conanfile.dependencies.host[pkg]
         cmp_name = get_component_alias(req, comp_name)
-        return cmp_name
+        return self._get_composed_require_name(pkg, cmp_name)
 
     def _get_components(self, dep):
         ret = []
@@ -75,10 +78,10 @@ class PkgConfigDeps(object):
                 pkg, cmp_name = require.split("::")
                 req = dep.dependencies.direct_host[pkg]
                 public_comp_deps.append(
-                    (get_target_namespace(req), get_component_alias(req, cmp_name)))
+                    self._get_composed_require_name(pkg, get_component_alias(req, cmp_name))
+                )
             else:  # Points to a component of same package
-                public_comp_deps.append((get_target_namespace(dep),
-                                         get_component_alias(dep, require)))
+                public_comp_deps.append(get_component_alias(dep, require))
         return public_comp_deps
 
     @property
@@ -90,22 +93,24 @@ class PkgConfigDeps(object):
 
             if dep.new_cpp_info.has_components:
                 components = self._get_components(dep)
+                # Adding one *.pc file per component, e.g., pkg-comp1.pc
                 for comp_genname, comp_cpp_info, comp_requires_gennames in components:
-                    pkg_comp_genname = "%s-%s" % (pkg_genname, comp_genname)
+                    pkg_comp_genname = self._get_composed_require_name(pkg_genname, comp_genname)
                     ret["%s.pc" % pkg_comp_genname] = self._pc_file_content(
                         pkg_comp_genname, comp_cpp_info,
-                        comp_requires_gennames, dep.package_folder,
-                        dep.ref.version)
+                        comp_requires_gennames,
+                        dep.package_folder, dep.ref.version)
+                # Adding the pkg *.pc file (including its components as requires if any)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
                 if pkg_genname not in comp_gennames:
+                    pkg_requires = (self._get_composed_require_name(pkg_genname, i)
+                                    for i in comp_gennames)
                     ret["%s.pc" % pkg_genname] = self._global_pc_file_contents(pkg_genname,
                                                                                dep,
-                                                                               comp_gennames)
+                                                                               pkg_requires)
             else:
-                require_public_deps = [_d for _, _d in
-                                       self._get_public_require_deps(dep)]
                 ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep.new_cpp_info,
-                                                                   require_public_deps,
+                                                                   self._get_public_require_deps(dep),
                                                                    dep.package_folder,
                                                                    dep.ref.version)
         return ret
