@@ -314,7 +314,6 @@ class BinaryInstaller(object):
         # order by levels and separate the root node (ref=None) from the rest
         install_graph = InstallGraph(deps_graph)
         install_order = install_graph.install_order()
-        print(install_order)
 
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
@@ -429,8 +428,7 @@ class BinaryInstaller(object):
                 if install_node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(install_node, profile_host, profile_build, graph_lock)
                 else:
-                    if install_node.binary == BINARY_SKIP:  # Privates not necessary
-                        continue
+                    assert install_node.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN)
                     assert install_node.pref.ref.revision is not None, "Installer should receive RREV always"
                     if install_node.binary == BINARY_UNKNOWN:
                         assert len(install_node.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
@@ -441,9 +439,10 @@ class BinaryInstaller(object):
                         elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                             self._download_pkg(install_node)
                         install_node.pref = node.pref  # Just in case it was recomputed
+                        install_node.binary = node.binary
 
-                    if not install_node.pref.revision:
-                        print("THERE IS NO REVISION FOR ", install_node.pref, install_node.binary)
+                    if install_node.pref.revision is None:
+                        assert install_node.binary == BINARY_BUILD
                         package_layout = self._cache.create_temp_pkg_layout(install_node.pref)
                     else:
                         package_layout = self._cache.get_or_create_pkg_layout(install_node.pref)
