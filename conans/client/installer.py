@@ -11,8 +11,7 @@ from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, BINARY_INVALID, \
-    BINARY_ERROR
+    BINARY_MISSING, BINARY_UPDATE, BINARY_UNKNOWN, BINARY_INVALID, BINARY_ERROR
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.importer import remove_imports, run_imports
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
@@ -311,12 +310,12 @@ class BinaryInstaller(object):
     def install(self, deps_graph, remotes, build_mode, update, profile_host, profile_build,
                 graph_lock):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
+
+        self._out.info("\nInstalling (downloading, building) binaries...")
+
         # order by levels and separate the root node (ref=None) from the rest
         install_graph = InstallGraph(deps_graph)
         install_order = install_graph.install_order()
-
-        # Get the nodes in order and if we have to build them
-        self._out.info("Installing (downloading, building) binaries...")
 
         missing, invalid, downloads = self._classify(install_order)
         if invalid:
@@ -327,8 +326,9 @@ class BinaryInstaller(object):
                 msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
             raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
-        self._download_bulk(downloads)
 
+        if downloads:
+            self._download_bulk(downloads)
         self._build(install_order, profile_host, profile_build,
                     graph_lock, remotes, build_mode, update)
 
@@ -394,29 +394,22 @@ class BinaryInstaller(object):
     def _download_bulk(self, downloads):
         """ executes the download of packages (both download and update), only once for a given
         PREF, even if node duplicated
-        :param downloads: all nodes to be downloaded or updated, included repetitions
+        :param downloads: all nodes to be downloaded or updated,
         """
-        if not downloads:
-            return
-
-        download_nodes = []
-        for node in downloads:
-            assert node.pref.revision, "PREV for %s is None" % str(node.pref)
-            download_nodes.append(node)
-
         parallel = self._cache.config.parallel_download
         if parallel is not None:
             self._out.info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
-            thread_pool.map(self._download_pkg, [n for n in download_nodes])
+            thread_pool.map(self._download_pkg, downloads)
             thread_pool.close()
             thread_pool.join()
         else:
-            for node in download_nodes:
+            for node in downloads:
                 self._download_pkg(node)
 
     def _download_pkg(self, install_node):
         node = install_node.nodes[0]
+        assert node.pref.revision is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
                                          node.conanfile.output, self._recorder)
 

@@ -22,7 +22,7 @@ class InstallGraph:
 
     def __init__(self, deps_graph):
         self._nodes = []  # _InstallGraphNode
-        prefs = {}  # {pref: _InstallGraphNode}
+        prefs = {}  # {pref known: _InstallGraphNode}
         deps = {}  # {node: _installGraphNode}
 
         for node in deps_graph.ordered_iterate():
@@ -34,23 +34,22 @@ class InstallGraph:
                 if install_node is not None:
                     install_node.nodes.append(node)
                     assert install_node.binary == node.binary
-                    deps[node] = install_node
                 else:
                     install_node = _InstallGraphNode(node)
                     self._nodes.append(install_node)
                     prefs[node.pref] = install_node
-                    deps[node] = install_node
             else:
                 install_node = _InstallGraphNode(node)
                 self._nodes.append(install_node)
-                deps[node] = install_node
+
+            deps[node] = install_node
 
             for dep in node.dependencies:
                 if dep.dst.binary != BINARY_SKIP:
                     install_node.requires.append(deps[dep.dst])
 
     def install_order(self):
-        # First do a topological order by levels, the prefs of the nodes are stored
+        # a topological order by levels, returns a list of list, in order of processing
         levels = []
         opened = self._nodes
         while opened:
@@ -58,7 +57,7 @@ class InstallGraph:
             closed = []
             for o in opened:
                 requires = o.requires
-                if not any(n in opened for n in requires):  # Doesn't have an open requires
+                if not any(n in opened for n in requires):
                     current_level.append(o)
                     closed.append(o)
 
