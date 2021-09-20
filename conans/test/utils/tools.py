@@ -11,6 +11,7 @@ import uuid
 import zipfile
 from collections import OrderedDict
 from contextlib import contextmanager
+from unittest.mock import PropertyMock
 
 import bottle
 import mock
@@ -370,7 +371,7 @@ class TestClient(object):
     """
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
-                 requester_class=None, runner=None, path_with_spaces=True,
+                 requester_class=None, path_with_spaces=True,
                  cpu_count=1, default_server_user=None,
                  cache_autopopulate=True):
         """
@@ -406,7 +407,6 @@ class TestClient(object):
             self.cache_folder = cache_folder or temp_folder(path_with_spaces)
 
         self.requester_class = requester_class
-        self.runner = runner
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception(textwrap.dedent("""
@@ -506,9 +506,9 @@ class TestClient(object):
 
     def get_conan_api(self, args=None):
         if self.is_conan_cli_v2_command(args):
-            return ConanAPIV2(cache_folder=self.cache_folder)
+            return ConanAPIV2(cache_folder=self.cache_folder, http_requester=self._http_requester)
         else:
-            return Conan(cache_folder=self.cache_folder)
+            return Conan(cache_folder=self.cache_folder, http_requester=self._http_requester)
 
     def get_conan_command(self, args=None):
         if self.is_conan_cli_v2_command(args):
@@ -528,26 +528,26 @@ class TestClient(object):
         old_modules = list(sys.modules.keys())
 
         args = shlex.split(command_line)
-        with mock.patch("conans.client.conan_api.ConanApp.user_io", MockedUserIO(self.users)):
-            with mock.patch("conans.client.conan_api.ConanApp.requester", self._http_requester):
-                self.api = self.get_conan_api(args)
-                command = self.get_conan_command(args)
+        with mock.patch("conans.client.conan_api.UserIO", MockedUserIO) as mocked_user_io:
+            mocked_user_io.logins = PropertyMock(return_value=self.users)
+            self.api = self.get_conan_api(args)
+            command = self.get_conan_command(args)
 
+            try:
+                error = command.run(args)
+            finally:
                 try:
-                    error = command.run(args)
-                finally:
-                    try:
-                        self.api.app.cache.closedb()
-                    except AttributeError:
-                        pass
-                    sys.path = old_path
-                    os.chdir(current_dir)
-                    # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
-                    added_modules = set(sys.modules).difference(old_modules)
-                    for added in added_modules:
-                        sys.modules.pop(added, None)
-                self._handle_cli_result(command_line, assert_error=assert_error, error=error)
-                return error
+                    self.api.app.cache.closedb()
+                except AttributeError:
+                    pass
+                sys.path = old_path
+                os.chdir(current_dir)
+                # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
+                added_modules = set(sys.modules).difference(old_modules)
+                for added in added_modules:
+                    sys.modules.pop(added, None)
+            self._handle_cli_result(command_line, assert_error=assert_error, error=error)
+            return error
 
     def run(self, command_line, assert_error=False):
         """ run a single command as in the command line.
@@ -566,7 +566,7 @@ class TestClient(object):
         self.out = RedirectedTestOutput()  # Initialize each command
         with redirect_output(self.out):
             ret = runner(command, cwd=cwd or self.current_folder)
-            self._handle_cli_result(command, assert_error=assert_error, error=ret)
+        self._handle_cli_result(command, assert_error=assert_error, error=ret)
         return ret
 
     def _handle_cli_result(self, command, assert_error, error):

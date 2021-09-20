@@ -1,7 +1,5 @@
 import os
-import sys
 from collections import Counter, defaultdict, namedtuple
-
 from io import StringIO
 
 from conans import ConanFile, Options
@@ -38,13 +36,12 @@ class MockedUserIO(UserIO):
     an exception except we have a value to return.
     """
 
-    def __init__(self, logins):
+    def __init__(self):
         """
         logins is a dict of {remote: list(user, password)}
         will return sequentially
         """
-        assert isinstance(logins, dict)
-        self.logins = logins
+        self.logins = None
         self.login_index = Counter()
         UserIO.__init__(self)
 
@@ -60,12 +57,8 @@ class MockedUserIO(UserIO):
                             "provide more tuples or input the right ones")
         return sub_dict[index][0]
 
-    def get_password(self, remote_name):
+    def get_pass(self, remote_name):
         """Overridable for testing purpose"""
-        password_env = self._get_env_password(remote_name)
-        if password_env:
-            return password_env
-
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         tmp = sub_dict[index][1]

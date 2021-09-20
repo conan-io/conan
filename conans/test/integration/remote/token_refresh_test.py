@@ -81,8 +81,7 @@ class TestTokenRefresh(unittest.TestCase):
 
         requester = RequesterWithTokenMock()
         config = namedtuple("ConfigMock", "download_cache")(None)
-        self.rest_client_factory = RestApiClientFactory(mocked_user_io.out,
-                                                        requester, config=config,
+        self.rest_client_factory = RestApiClientFactory(requester, config=config,
                                                         artifacts_properties=None)
         self.localdb = LocalDBMock()
         self.auth_manager = ConanApiAuthManager(self.rest_client_factory, mocked_user_io,

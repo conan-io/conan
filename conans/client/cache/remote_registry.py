@@ -5,6 +5,7 @@ import stat
 from collections import OrderedDict, namedtuple
 from urllib.parse import urlparse
 
+from conans.client.output import ConanOutput
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.config_parser import get_bool_from_text_value
 from conans.util.files import load, save
@@ -234,9 +235,9 @@ class Remotes(object):
 
 class RemoteRegistry(object):
 
-    def __init__(self, cache, output):
+    def __init__(self, cache):
         self._cache = cache
-        self._output = output
+        self._output = ConanOutput()
         self._filename = cache.remotes_path
 
     def _validate_url(self, url):

@@ -3,9 +3,7 @@ import os
 import textwrap
 import unittest
 
-
 from conans.client import tools
-from conans.client.output import ConanOutput
 from conans.client.runner import ConanRunner
 from conans.model.ref import ConanFileReference
 from conans.paths import RUN_LOG_NAME
@@ -39,12 +37,12 @@ class ConanTraceTest(unittest.TestCase):
             """ % RUN_LOG_NAME)
 
         def _install_a_package(print_commands_to_output, generate_run_log_file):
-            runner = ConanRunner(print_commands_to_output, generate_run_log_file,
-                                 log_run_to_output=True, output=ConanOutput())
-
             client = TestClient(servers=self.servers,
-                                users={"default": [("lasote", "mypass")]},
-                                runner=runner)
+                                users={"default": [("lasote", "mypass")]})
+            client.run("config set log.print_run_commands={}".format(print_commands_to_output))
+            client.run("config set log.run_to_file={}".format(generate_run_log_file))
+            client.run("config set log.run_to_output=True")
+
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": base})
             client.run("create . lasote/stable")

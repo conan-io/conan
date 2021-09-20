@@ -184,7 +184,7 @@ class ClientCache(object):
 
     @property
     def registry(self):
-        return RemoteRegistry(self, self._output)
+        return RemoteRegistry(self)
 
     def _no_locks(self):
         if self._no_lock is None:

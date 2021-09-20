@@ -179,9 +179,10 @@ def _get_conanfile_path(path, cwd, py):
 
 
 class ConanApp(object):
-    def __init__(self, cache_folder):
+    def __init__(self, cache_folder, http_requester=None):
 
-        self.out = ConanOutput()
+        self.user_io = UserIO()
+        self.out = self.user_io.out
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder)
         self.config = self.cache.config
@@ -194,6 +195,8 @@ class ConanApp(object):
         conans.util.log.logger.debug("INIT: Using config '%s'" % self.cache.conan_conf_path)
 
         self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks)
+        # Wraps an http_requester to inject proxies, certs, etc
+        self.requester = ConanRequester(self.config, http_requester)
         # To handle remote connections
         artifacts_properties = self.cache.read_artifacts_properties()
         rest_client_factory = RestApiClientFactory(self.requester, self.config,
@@ -208,8 +211,7 @@ class ConanApp(object):
 
         self.runner = ConanRunner(self.config.print_commands_to_output,
                                   self.config.generate_run_log_file,
-                                  self.config.log_run_to_output,
-                                  self.out)
+                                  self.config.log_run_to_output)
 
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
@@ -220,16 +222,6 @@ class ConanApp(object):
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
                                           self.proxy, self.range_resolver, self.binaries_analyzer)
-
-    @property
-    def user_io(self):
-        # User IO, interaction and logging
-        return UserIO()
-
-    @property
-    def requester(self):
-        # Wraps an http_requester to inject proxies, certs, etc
-        return ConanRequester(self.config)
 
     def load_remotes(self, remote_name=None, update=False, check_updates=False):
         remotes = self.cache.registry.load_remotes()
@@ -244,11 +236,12 @@ class ConanAPIV1(object):
     def factory(cls):
         return cls(), None, None
 
-    def __init__(self, cache_folder=None):
+    def __init__(self, cache_folder=None, http_requester=None):
         self.color = colorama_initialize()
         self.out = ConanOutput(self.color)
         self.user_io = UserIO()
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
+        self.http_requester = http_requester
         self.app = None  # Api calls will create a new one every call
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
@@ -259,7 +252,7 @@ class ConanAPIV1(object):
         sys.path.append(python_folder)
 
     def create_app(self):
-        self.app = ConanApp(self.cache_folder)
+        self.app = ConanApp(self.cache_folder, self.http_requester)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,

@@ -9,17 +9,29 @@ from conans.errors import ConanException
 class UserIO(object):
     """Class to interact with the user, used to show messages and ask for information"""
 
-    def __init__(self):
+    def __init__(self, ins=sys.stdin):
+        """
+        Params:
+            ins: input stream
+            out: ConanOutput, should have "write" method
+        """
+        self._ins = ins
         self.out = ConanOutput()
-        self._input_disabled = False
-
-    def raw_input(self):
-        return input()
+        self._interactive = True
 
     def disable_input(self):
-        self._input_disabled = True
+        self._interactive = False
 
-    def get_pass(self):
+    def _raise_if_non_interactive(self):
+        if not self._interactive:
+            raise ConanException("Conan interactive mode disabled")
+
+    def raw_input(self):
+        self._raise_if_non_interactive()
+        return input()
+
+    def get_pass(self, remote_name):
+        self._raise_if_non_interactive()
         return getpass.getpass("")
 
     def request_login(self, remote_name, username=None):
@@ -27,12 +39,20 @@ class UserIO(object):
         :param username If username is specified it only request password"""
 
         if not username:
-            self.out.write("Remote '%s' username: " % remote_name)
-            username = self.get_username(remote_name)
+            if self._interactive:
+                self.out.write("Remote '%s' username: " % remote_name)
+            username = self._get_env_username(remote_name)
+            if not username:
+                self._raise_if_non_interactive()
+                username = self.get_username(remote_name)
 
-        self.out.write('Please enter a password for "%s" account: ' % username)
+        if self._interactive:
+            self.out.write('Please enter a password for "%s" account: ' % username)
         try:
-            pwd = self.get_password(remote_name)
+            pwd = self._get_env_password(remote_name)
+            if not pwd:
+                self._raise_if_non_interactive()
+                pwd = self.get_password(remote_name)
         except ConanException:
             raise
         except Exception as e:
@@ -41,25 +61,23 @@ class UserIO(object):
 
     def get_username(self, remote_name):
         """Overridable for testing purpose"""
-        return self._get_env_username(remote_name) or self.raw_input()
+        return self.raw_input()
 
     def get_password(self, remote_name):
         """Overridable for testing purpose"""
-        return self._get_env_password(remote_name) or self.get_pass()
+        return self.get_pass(remote_name)
 
     def request_string(self, msg, default_value=None):
         """Request user to input a msg
         :param msg Name of the msg
         """
-        if self._input_disabled:
-            raise ConanException("Conan interactive mode disabled")
-
+        self._raise_if_non_interactive()
 
         if default_value:
             self.out.input_text('%s (%s): ' % (msg, default_value))
         else:
             self.out.input_text('%s: ' % msg)
-        s = sys.stdin.readline().replace("\n", "")
+        s = self._ins.readline().replace("\n", "")
         if default_value is not None and s == '':
             return default_value
         return s
