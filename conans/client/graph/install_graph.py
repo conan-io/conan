@@ -1,17 +1,19 @@
-from collections import OrderedDict
-
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP
+from conans.model.info import PACKAGE_ID_UNKNOWN
 
 
 class _InstallGraphNode:
-    def __init__(self, pref):
-        self.pref = pref
-        self.nodes = []  # GraphNode
-        self.requires = []  # prefs
-        self.binary = None
+    def __init__(self, node):
+        self.pref = node.pref
+        self.nodes = [node]  # GraphNode
+        self.requires = []  # _InstallGraphNode
+        self.binary = node.binary
 
     def __str__(self):
         return "{}:{}".format(str(self.pref), self.binary)
+
+    def __repr__(self):
+        return str(self)
 
 
 class InstallGraph:
@@ -19,33 +21,45 @@ class InstallGraph:
     """
 
     def __init__(self, deps_graph):
-        self._nodes = OrderedDict()  # {pref: _InstallGraphNode}
+        self._nodes = []  # _InstallGraphNode
+        prefs = {}  # {pref: _InstallGraphNode}
+        deps = {}  # {node: _installGraphNode}
 
-        for node in deps_graph.nodes:
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+        for node in deps_graph.ordered_iterate():
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary == BINARY_SKIP:
                 continue
-            n = self._nodes.setdefault(node.pref, _InstallGraphNode(node.pref))
-            n.nodes.append(node)
-            if n.binary is None:
-                n.binary = node.binary
-            else:  # all nodes with the same pref should have the same binary action
-                assert n.binary == node.binary
+
+            if node.pref.id != PACKAGE_ID_UNKNOWN:
+                install_node = prefs.get(node.pref)
+                if install_node is not None:
+                    install_node.nodes.append(node)
+                    assert install_node.binary == node.binary
+                    deps[node] = install_node
+                else:
+                    install_node = _InstallGraphNode(node)
+                    self._nodes.append(install_node)
+                    prefs[node.pref] = install_node
+                    deps[node] = install_node
+            else:
+                install_node = _InstallGraphNode(node)
+                self._nodes.append(install_node)
+                deps[node] = install_node
 
             for dep in node.dependencies:
-                n.requires.append(dep.dst.pref)
+                if dep.dst.binary != BINARY_SKIP:
+                    install_node.requires.append(deps[dep.dst])
 
     def install_order(self):
         # First do a topological order by levels, the prefs of the nodes are stored
         levels = []
-        opened = list(self._nodes.keys())
+        opened = self._nodes
         while opened:
             current_level = []
             closed = []
             for o in opened:
-                node = self._nodes[o]
-                requires = node.requires
+                requires = o.requires
                 if not any(n in opened for n in requires):  # Doesn't have an open requires
-                    current_level.append(node)
+                    current_level.append(o)
                     closed.append(o)
 
             if current_level:

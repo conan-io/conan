@@ -434,14 +434,16 @@ class BinaryInstaller(object):
                     assert install_node.pref.ref.revision is not None, "Installer should receive RREV always"
                     if install_node.binary == BINARY_UNKNOWN:
                         assert len(install_node.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
-                        node = install_node.nodes
+                        node = install_node.nodes[0]
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
                         elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                             self._download_pkg(install_node)
+                        install_node.pref = node.pref  # Just in case it was recomputed
 
                     if not install_node.pref.revision:
+                        print("THERE IS NO REVISION FOR ", install_node.pref, install_node.binary)
                         package_layout = self._cache.create_temp_pkg_layout(install_node.pref)
                     else:
                         package_layout = self._cache.get_or_create_pkg_layout(install_node.pref)
