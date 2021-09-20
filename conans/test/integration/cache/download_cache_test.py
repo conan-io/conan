@@ -55,8 +55,8 @@ class DownloadCacheTest(unittest.TestCase):
         client.run('config set log.trace_file="%s"' % log_trace_file)
         client.run("install mypkg/0.1@user/testing")
         content = load(log_trace_file)
-        # Not cached uses 7, because it downloads twice conaninfo.txt
-        self.assertEqual(7, content.count('"_action": "DOWNLOAD"'))
+
+        self.assertEqual(6, content.count('"_action": "DOWNLOAD"'))
 
         # restoring config cache works again
         os.remove(log_trace_file)
