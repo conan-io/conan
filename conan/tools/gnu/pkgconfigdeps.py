@@ -48,7 +48,8 @@ class PkgConfigDeps(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def _get_composed_require_name(self, pkg_name, comp_name):
+    @staticmethod
+    def _get_composed_require_name(pkg_name, comp_name):
         return "%s-%s" % (pkg_name, comp_name)
 
     def _get_require_comp_name(self, dep, req):
