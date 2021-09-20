@@ -435,12 +435,12 @@ class BinaryInstaller(object):
                         assert len(install_node.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
                         node = install_node.nodes[0]
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
+                        install_node.pref = node.pref  # Just in case it was recomputed
+                        install_node.binary = node.binary
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
                         elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                             self._download_pkg(install_node)
-                        install_node.pref = node.pref  # Just in case it was recomputed
-                        install_node.binary = node.binary
 
                     if install_node.pref.revision is None:
                         assert install_node.binary == BINARY_BUILD
@@ -449,8 +449,13 @@ class BinaryInstaller(object):
                         package_layout = self._cache.get_or_create_pkg_layout(install_node.pref)
 
                     _handle_system_requirements(install_node, package_layout)
-                    self._handle_node_cache(install_node, remotes, package_layout)
 
+                    if install_node.binary in (BINARY_BUILD, BINARY_CACHE):
+                        self._handle_node_cache(install_node, remotes, package_layout)
+                        # Just in case it was recomputed
+                        install_node.pref = install_node.nodes[0].pref
+
+                    # Make sure that all nodes with same pref compute package_info()
                     package_folder = package_layout.package()
                     pref = install_node.pref
                     assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
@@ -520,9 +525,6 @@ class BinaryInstaller(object):
                 # at this point the package reference should be complete
                 if pkg_layout.reference != pref:
                     self._cache.assign_prev(pkg_layout, ConanReference(pref))
-            elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                # this can happen after a re-evaluation of packageID with Package_ID_unknown
-                pass
             elif node.binary == BINARY_CACHE:
                 assert node.prev, "PREV for %s is None" % str(pref)
                 output.success('Already installed!')
