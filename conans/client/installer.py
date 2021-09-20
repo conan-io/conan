@@ -428,7 +428,8 @@ class BinaryInstaller(object):
                 if install_node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(install_node, profile_host, profile_build, graph_lock)
                 else:
-                    assert install_node.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN)
+                    assert install_node.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN,
+                                                   BINARY_DOWNLOAD, BINARY_UPDATE)
                     assert install_node.pref.ref.revision is not None, "Installer should receive RREV always"
                     if install_node.binary == BINARY_UNKNOWN:
                         assert len(install_node.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
@@ -449,6 +450,18 @@ class BinaryInstaller(object):
 
                     _handle_system_requirements(install_node, package_layout)
                     self._handle_node_cache(install_node, remotes, package_layout)
+
+                    package_folder = package_layout.package()
+                    pref = install_node.pref
+                    assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
+                                                           % (str(pref), package_folder))
+                    for n in install_node.nodes:
+                        n.prev = pref.revision  # Make sure the prev is assigned
+                        conanfile = n.conanfile
+                        # Call the info method
+                        self._call_package_info(conanfile, package_folder, ref=pref.ref,
+                                                is_editable=False)
+                        self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
     def _handle_node_editable(self, install_node, profile_host, profile_build, graph_lock):
         for node in install_node.nodes:
@@ -518,29 +531,7 @@ class BinaryInstaller(object):
             else:
                 raise Exception("Unexpected node.binary {}".format(node.binary))
 
-            package_folder = pkg_layout.package()
-            assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
-                                                   % (str(pref), package_folder))
-
-        for n in install_node.nodes:
-            n.prev = node.prev  # Make sure the prev is assigned
-            conanfile = n.conanfile
-            # Call the info method
-            self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
-            self._recorder.package_cpp_info(pref, conanfile.cpp_info)
-
     def _build_package(self, node, output, remotes, pkg_layout):
-        conanfile = node.conanfile
-        # It is necessary to complete the sources of python requires, which might be used
-        # Only the legacy python_requires allow this
-        python_requires = getattr(conanfile, "python_requires", None)
-        if python_requires and isinstance(python_requires, dict):  # Old legacy python_requires
-            for python_require in python_requires.values():
-                assert python_require.ref.revision is not None, \
-                    "Installer should receive python_require.ref always"
-                retrieve_exports_sources(self._remote_manager, self._cache, pkg_layout,
-                                         python_require.conanfile, python_require.ref, remotes)
-
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
                                   self._generator_manager)
         pref = builder.build_package(node, self._recorder, remotes, pkg_layout)
