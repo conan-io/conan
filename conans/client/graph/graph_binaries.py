@@ -4,7 +4,8 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
                                        BINARY_INVALID, BINARY_ERROR)
-from conans.errors import NoRemoteAvailable, NotFoundException, ConanException
+from conans.errors import NoRemoteAvailable, NotFoundException, ConanException, \
+    PackageNotFoundException
 from conans.model.info import PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.ref import PackageReference
 
@@ -59,6 +60,8 @@ class GraphBinariesAnalyzer(object):
                                                                                              remote,
                                                                                              info=node.conanfile.info)
                 return remote, prev, prev_time
+            except NotFoundException:
+                pass
             except Exception:
                 node.conanfile.output.error("Error downloading binary package: '{}'".format(pref))
                 raise
@@ -80,8 +83,8 @@ class GraphBinariesAnalyzer(object):
             remotes_results = sorted(results, key=lambda k: k['time'], reverse=True)
             result = remotes_results[0]
             return result.get('remote'), result.get('prev'), result.get('time')
-
-        return None, None, None
+        else:
+            raise PackageNotFoundException(pref)
 
     def _evaluate_is_cached(self, node, pref):
         previous_nodes = self._evaluated.get(pref)
@@ -199,15 +202,16 @@ class GraphBinariesAnalyzer(object):
         output = node.conanfile.output
 
         if not cache_latest_prev:
-            remote, remote_prev, prev_time = self._get_package_from_remotes(node, pref, remotes, update)
-            if remote_prev:
-                node.binary = BINARY_DOWNLOAD
-                node.prev = remote_prev.revision
-                node.binary_remote = remote
-            else:
+            try:
+                remote, remote_prev, prev_time = self._get_package_from_remotes(node, pref, remotes, update)
+            except NotFoundException:
                 node.binary = BINARY_MISSING
                 node.prev = None
                 node.binary_remote = None
+            else:
+                node.binary = BINARY_DOWNLOAD
+                node.prev = remote_prev.revision
+                node.binary_remote = remote
         else:
             package_layout = self._cache.pkg_layout(cache_latest_prev)
             self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)

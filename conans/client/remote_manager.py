@@ -98,7 +98,10 @@ class RemoteManager(object):
         revisions = self._call_remote(remote, "get_package_revisions", pref, headers=headers)
         ref = PackageReference(pref.ref, pref.id, revisions[0].get("revision"))
         ref_time = revisions[0].get("time")
-        return (ref, ref_time) if revisions else (None, None)
+        if revisions:
+            return ref, ref_time
+        else:
+            raise PackageNotFoundException(pref)
 
     def get_recipe(self, ref, remote):
         """
