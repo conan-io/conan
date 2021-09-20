@@ -374,6 +374,13 @@ class GraphManager(object):
                 graph_lock.check_locked_build_requires(node, package_build_requires,
                                                        new_profile_build_requires)
 
+    def _load_middleware(self):
+        # Load custom middleware from the cache.
+        # Middleware loaded here from the cache will have precedence
+        # and overwrite possible middleware loaded from packages (requires)
+        for middleware_path in self._cache.middleware:
+            self._loader.load_middleware(middleware_path)
+
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     recorder, profile_host, profile_build, apply_build_requires,
                     graph_lock):
@@ -383,6 +390,20 @@ class GraphManager(object):
                                    recorder)
         graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
                                    profile_build, graph_lock)
+
+        # Finish setting up middleware
+        self._load_middleware()
+        if profile_host:
+            self._loader.enable_middleware(profile_host.middleware)
+            builder.load_middleware(profile_host.middleware, check_updates, update, remotes, profile_host)
+        if profile_build:
+            self._loader.enable_middleware(profile_build.middleware)
+            builder.load_middleware(profile_build.middleware, check_updates, update, remotes, profile_build)
+
+        # Apply middleware to nodes, before package_id is called
+        if self._loader.get_middleware():
+            for node in graph.nodes:
+                node.conanfile = self._loader.apply_middleware(node.conanfile, profile_host, profile_build)
 
         self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
                                      remotes, profile_host_build_requires, recorder, profile_host,

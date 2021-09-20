@@ -1,5 +1,6 @@
 import os
 import platform
+from abc import ABC
 from contextlib import contextmanager
 
 import six
@@ -94,7 +95,7 @@ def get_env_context_manager(conanfile, without_python=False):
     return _env_and_python(conanfile)
 
 
-class ConanFile(object):
+class ConanFile(ABC):
     """ The base class for all package recipes
     """
 

@@ -14,6 +14,7 @@ from conans.errors import ConanException, NotFoundException, ConanInvalidConfigu
     conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
+from conans.model.conan_middleware import Middleware
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
@@ -24,9 +25,10 @@ from conans.util.files import load
 class ConanFileLoader(object):
 
     def __init__(self, runner, output, python_requires, generator_manager=None, pyreq_loader=None,
-                 requester=None):
+                 requester=None, middleware_manager=None):
         self._runner = runner
         self._generator_manager = generator_manager
+        self._middleware_manager = middleware_manager
         self._output = output
         self._pyreq_loader = pyreq_loader
         self._python_requires = python_requires
@@ -59,7 +61,7 @@ class ConanFileLoader(object):
         try:
             self._python_requires.valid = True
             module, conanfile = parse_conanfile(conanfile_path, self._python_requires,
-                                                self._generator_manager)
+                                                self._generator_manager, self._middleware_manager)
             self._python_requires.valid = False
 
             self._python_requires.locked_versions = None
@@ -109,6 +111,22 @@ class ConanFileLoader(object):
                 continue
             if issubclass(attr, Generator) and attr != Generator:
                 self._generator_manager.add(attr.__name__, attr, custom=True)
+
+    def load_middleware(self, conanfile_path):
+        """ Load middleware classes from a module. Any non-middleware classes
+        will be ignored. python_requires is not processed.
+        """
+        """ Parses a python in-memory module and adds any middleware found
+            to the provided middleware list
+            @param conanfile_module: the module to be processed
+            """
+        conanfile_module, module_id = _parse_conanfile(conanfile_path)
+        for name, attr in conanfile_module.__dict__.items():
+            if (name.startswith("_") or not inspect.isclass(attr) or
+                    attr.__dict__.get("__module__") != module_id):
+                continue
+            if issubclass(attr, Middleware) and attr != Middleware:
+                self._middleware_manager.add(attr.__name__, attr, custom=True)
 
     @staticmethod
     def _load_data(conanfile_path):
@@ -347,8 +365,17 @@ class ConanFileLoader(object):
         conanfile.generators = []  # remove the default txt generator
         return conanfile
 
+    def enable_middleware(self, names):
+        self._middleware_manager.enable_middleware(names, self)
 
-def _parse_module(conanfile_module, module_id, generator_manager):
+    def get_middleware(self):
+        return self._middleware_manager.get_middleware()
+
+    def apply_middleware(self, *args, **kw):
+        return self._middleware_manager.apply_middleware(*args, **kw)
+
+
+def _parse_module(conanfile_module, module_id, generator_manager, middleware_manager):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
     @param conanfile_module: the module to be processed
@@ -360,7 +387,9 @@ def _parse_module(conanfile_module, module_id, generator_manager):
                 attr.__dict__.get("__module__") != module_id):
             continue
 
-        if issubclass(attr, ConanFile) and attr != ConanFile:
+        if issubclass(attr, Middleware) and attr != Middleware:
+            middleware_manager.add(attr.__name__, attr, custom=True, enable=True)
+        elif issubclass(attr, ConanFile) and attr != ConanFile:
             if result is None:
                 result = attr
             else:
@@ -374,11 +403,11 @@ def _parse_module(conanfile_module, module_id, generator_manager):
     return result
 
 
-def parse_conanfile(conanfile_path, python_requires, generator_manager):
+def parse_conanfile(conanfile_path, python_requires, generator_manager, middleware_manager):
     with python_requires.capture_requires() as py_requires:
         module, filename = _parse_conanfile(conanfile_path)
         try:
-            conanfile = _parse_module(module, filename, generator_manager)
+            conanfile = _parse_module(module, filename, generator_manager, middleware_manager)
 
             # Check for duplicates
             # TODO: move it into PythonRequires

@@ -33,6 +33,7 @@ PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
 TEMPLATES_FOLDER = "templates"
 GENERATORS_FOLDER = "generators"
+MIDDLEWARE_FOLDER = "middleware"
 
 
 def _is_case_insensitive_os():
@@ -195,6 +196,10 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, GENERATORS_FOLDER)
 
     @property
+    def middleware_path(self):
+        return os.path.join(self.cache_folder, MIDDLEWARE_FOLDER)
+
+    @property
     def default_profile_path(self):
         if os.path.isabs(self.config.default_profile):
             return self.config.default_profile
@@ -245,6 +250,17 @@ class ClientCache(object):
                 if os.path.isfile(generator) and generator.endswith(".py"):
                     generators.append(generator)
         return generators
+
+    @property
+    def middleware(self):
+        """Returns a list of generator paths inside the middleware folder"""
+        middleware = []
+        if os.path.exists(self.middleware_path):
+            for path in os.listdir(self.middleware_path):
+                generator = os.path.join(self.middleware_path, path)
+                if os.path.isfile(generator) and generator.endswith(".py"):
+                    middleware.append(generator)
+        return middleware
 
     def delete_empty_dirs(self, deleted_refs):
         """ Method called by ConanRemover.remove() to clean up from the cache empty folders

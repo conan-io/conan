@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from conans.client.loader import parse_conanfile
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.errors import ConanException, NotFoundException
+from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 from conans.util.conan_v2_mode import conan_v2_error
@@ -100,7 +101,8 @@ class PyRequireLoader(object):
             for p in py_requires_extend:
                 pkg_name, base_class_name = p.rsplit(".", 1)
                 base_class = getattr(py_requires[pkg_name].module, base_class_name)
-                conanfile.__bases__ = (base_class,) + conanfile.__bases__
+                bases = tuple([base for base in conanfile.__bases__ if base not in ConanFile.__bases__])
+                conanfile.__bases__ = ConanFile.__bases__ + (base_class,) + bases
         conanfile.python_requires = py_requires
 
     def _resolve_py_requires(self, py_requires_refs, lock_python_requires, loader):

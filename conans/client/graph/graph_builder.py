@@ -68,6 +68,17 @@ class DepsGraphBuilder(object):
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         return dep_graph
 
+    def load_middleware(self, references, check_updates, update, remotes, profile):
+        for reference in references:
+            if "/" not in reference:
+                continue
+            ref = ConanFileReference.loads(reference)
+            result = self._proxy.get_recipe(ref, check_updates, update,
+                                            remotes, self._recorder)
+            conanfile_path, _, _, new_ref = result
+
+            conanfile = self._loader.load_conanfile(conanfile_path, profile, ref=ref)
+
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
                               remotes, profile_host, profile_build, graph_lock):
         # The options that will be defined in the node will be the real options values that have
