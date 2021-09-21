@@ -5,7 +5,7 @@ from conans.errors import NotFoundException, RecipeNotFoundException, PackageNot
 from multiprocessing.pool import ThreadPool
 
 
-def download(app, ref, package_ids, remote, remotes, recipe, recorder):
+def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     out, remote_manager, cache, loader = app.out, app.remote_manager, app.cache, app.loader
     hook_manager = app.hook_manager
     assert(isinstance(ref, ConanFileReference))
