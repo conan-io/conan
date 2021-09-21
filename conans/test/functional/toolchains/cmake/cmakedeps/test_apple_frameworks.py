@@ -345,7 +345,7 @@ def test_apple_own_framework_cmake_find_package_multi():
         from conan.tools.cmake import CMake
         class TestPkg(ConanFile):
             generators = "CMakeDeps", "CMakeToolchain"
-            settings = "build_type",
+            settings = "build_type", "os", "arch"
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
