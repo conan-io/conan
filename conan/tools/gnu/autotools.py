@@ -2,7 +2,10 @@ import os
 from conan.tools.files import load_toolchain_args
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.microsoft import unix_path
-from conans.client.build import join_arguments
+
+
+def join_arguments(args):
+    return " ".join(filter(None, args))
 
 
 class Autotools(object):

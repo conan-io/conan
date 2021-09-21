@@ -5,8 +5,7 @@ import unittest
 import pytest
 
 from conans.model.ref import ConanFileReference
-from conans.paths import BUILD_INFO_CMAKE, CONANFILE
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 

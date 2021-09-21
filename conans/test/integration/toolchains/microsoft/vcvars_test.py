@@ -8,8 +8,8 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
-@pytest.mark.parametrize("auto_activate", [False, True, None])
-def test_vcvars_generator(auto_activate):
+@pytest.mark.parametrize("group", ["build", "run", None])
+def test_vcvars_generator(group):
     client = TestClient(path_with_spaces=False)
 
     conanfile = textwrap.dedent("""
@@ -21,7 +21,7 @@ def test_vcvars_generator(auto_activate):
 
             def generate(self):
                 VCVars(self).generate({})
-    """.format("True" if auto_activate else "False" if auto_activate is False else ""))
+    """.format('group="{}"'.format(group) if group else ""))
 
     client.save({"conanfile.py": conanfile})
     client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=19.1 '
@@ -29,11 +29,11 @@ def test_vcvars_generator(auto_activate):
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
-    if auto_activate is True or auto_activate is None:
-        bat_contents = client.load("conanenv.bat")
+    if group in ("build", None):
+        bat_contents = client.load("conanbuild.bat")
         assert "conanvcvars.bat" in bat_contents
     else:
-        assert not os.path.exists(os.path.join(client.current_folder, "conanenv.bat"))
+        assert not os.path.exists(os.path.join(client.current_folder, "conanbuild.bat"))
 
 
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")

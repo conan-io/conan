@@ -13,18 +13,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import load
 
 _t_default_settings_yml = Template(textwrap.dedent("""
-    # Only for cross building, 'os_build/arch_build' is the system that runs Conan
-    os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
-    arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
-
-    # Only for building cross compilation tools, 'os_target/arch_target' is the system for
-    # which the tools generate code
-    os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
-    arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
-
-    # Rest of the settings are "host" settings:
-    # - For native building/cross building: Where the library/program will run.
-    # - For building cross compilation tools: Where the cross compiler will run.
     os:
         Windows:
             subsystem: [None, cygwin, msys, msys2, wsl]

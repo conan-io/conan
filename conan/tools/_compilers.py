@@ -106,13 +106,7 @@ def build_type_flags(settings):
 
 
 def use_win_mingw(conanfile):
-    if hasattr(conanfile, 'settings_build'):
-        os_build = conanfile.settings_build.get_safe('os')
-    else:
-        os_build = conanfile.settings.get_safe('os_build')
-    if os_build is None:  # Assume is the same specified in host settings, not cross-building
-        os_build = conanfile.settings.get_safe("os")
-
+    os_build = conanfile.settings_build.get_safe('os')
     if os_build == "Windows":
         compiler = conanfile.settings.get_safe("compiler")
         sub = conanfile.settings.get_safe("os.subsystem")

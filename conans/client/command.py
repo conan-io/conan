@@ -676,12 +676,8 @@ class Command(object):
         parser.add_argument("--package-filter", nargs='?',
                             help='Print information only for packages that match the filter pattern'
                                  ' e.g., MyPackage/1.2@user/channel or MyPackage*')
-        dry_build_help = ("Apply the --build argument to output the information, "
-                          "as it would be done by the install command")
-        parser.add_argument("-db", "--dry-build", action=Extender, nargs="?", help=dry_build_help)
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
-
         update_help = "Will check if updates of the dependencies exist in the remotes " \
                       "(a new version that satisfies a version range, a new revision or a newer " \
                       "recipe if not using revisions)."
@@ -694,70 +690,52 @@ class Command(object):
                                     conf=args.conf_build)
         # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
-        # INSTALL SIMULATION, NODES TO INSTALL
-        if args.build is not None:
-            nodes, _ = self._conan.info_nodes_to_build(args.path_or_reference,
-                                                       build_modes=args.build,
-                                                       settings=args.settings_host,
-                                                       options=args.options_host,
-                                                       env=args.env_host,
-                                                       profile_names=args.profile_host,
-                                                       conf=args.conf_host,
-                                                       profile_build=profile_build,
-                                                       remote_name=args.remote,
-                                                       check_updates=args.update)
-            if args.json:
-                json_arg = True if args.json == "1" else args.json
-                self._outputer.json_nodes_to_build(nodes, json_arg, os.getcwd())
-            else:
-                self._outputer.nodes_to_build(nodes)
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
-        else:
-            data = self._conan.info(args.path_or_reference,
-                                    remote_name=args.remote,
-                                    settings=args.settings_host,
-                                    options=args.options_host,
-                                    env=args.env_host,
-                                    profile_names=args.profile_host,
-                                    conf=args.conf_host,
-                                    profile_build=profile_build,
-                                    update=args.update,
-                                    build=args.dry_build,
-                                    lockfile=args.lockfile,
-                                    name=args.name,
-                                    version=args.version,
-                                    user=args.user,
-                                    channel=args.channel)
-            deps_graph, _ = data
-            only = args.only
-            if args.only == ["None"]:
-                only = []
-            if only and args.paths and (set(only) - set(path_only_options)):
-                raise ConanException("Invalid --only value '%s' with --path specified, allowed "
-                                     "values: [%s]." % (only, str_path_only_options))
-            elif only and not args.paths and (set(only) - set(info_only_options)):
-                raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
-                                     "Use --only=None to show only the references."
-                                     % (only, str_only_options))
+        data = self._conan.info(args.path_or_reference,
+                                remote_name=args.remote,
+                                settings=args.settings_host,
+                                options=args.options_host,
+                                env=args.env_host,
+                                profile_names=args.profile_host,
+                                conf=args.conf_host,
+                                profile_build=profile_build,
+                                update=args.update,
+                                build=args.build,
+                                lockfile=args.lockfile,
+                                name=args.name,
+                                version=args.version,
+                                user=args.user,
+                                channel=args.channel)
+        deps_graph, _ = data
+        only = args.only
+        if args.only == ["None"]:
+            only = []
+        if only and args.paths and (set(only) - set(path_only_options)):
+            raise ConanException("Invalid --only value '%s' with --path specified, allowed "
+                                 "values: [%s]." % (only, str_path_only_options))
+        elif only and not args.paths and (set(only) - set(info_only_options)):
+            raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
+                                 "Use --only=None to show only the references."
+                                 % (only, str_only_options))
 
-            if args.graph:
-                if args.graph.endswith(".html"):
-                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML,
-                                                                  user_overrides=True)
-                else:
-                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT,
-                                                                  user_overrides=True)
-                self._outputer.info_graph(args.graph, deps_graph, os.getcwd(), template=template)
-            if args.json:
-                json_arg = True if args.json == "1" else args.json
-                self._outputer.json_info(deps_graph, json_arg, os.getcwd(), show_paths=args.paths)
+        if args.graph:
+            if args.graph.endswith(".html"):
+                template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML,
+                                                              user_overrides=True)
+            else:
+                template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT,
+                                                              user_overrides=True)
+            self._outputer.info_graph(args.graph, deps_graph, os.getcwd(), template=template)
+        if args.json:
+            json_arg = True if args.json == "1" else args.json
+            self._outputer.json_info(deps_graph, json_arg, os.getcwd(), show_paths=args.paths)
 
-            if not args.graph and not args.json:
-                self._outputer.info(deps_graph, only, args.package_filter, args.paths)
+        if not args.graph and not args.json:
+            self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 
-            # TODO: Check this UX or flow
-            if deps_graph.error:
-                raise deps_graph.error
+        # TODO: Check this UX or flow
+        if deps_graph.error:
+            raise deps_graph.error
 
     def source(self, *args):
         """
@@ -888,7 +866,7 @@ class Command(object):
                                      update=args.update, generators=args.generator,
                                      no_imports=args.no_imports,
                                      lockfile=args.lockfile,
-                                     lockfile_out=args.lockfile_out)
+                                     lockfile_out=args.lockfile_out, conf=args.conf_host)
         except ConanException as exc:
             info = exc.info
             raise

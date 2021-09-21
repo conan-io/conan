@@ -21,6 +21,7 @@ def conanfile():
     c.settings.arch = "x86"
     c.settings.compiler = "gcc"
     c.settings.compiler.libcxx = "libstdc++"
+    c.settings_build = c.settings
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()
@@ -155,6 +156,7 @@ def conanfile_apple():
     c.settings.compiler.libcxx = "libc++"
     c.settings.os = "Macos"
     c.settings.os.version = "10.15"
+    c.settings_build = c.settings
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()

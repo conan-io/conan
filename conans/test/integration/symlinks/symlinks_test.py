@@ -287,7 +287,7 @@ class ConanSymlink(ConanFile):
 @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
 class SymlinkExportSources(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conans import ConanFile
 
         class SymlinksConan(ConanFile):
             name = "symlinks"

@@ -7,46 +7,10 @@ import unittest
 import pytest
 
 from conans.client import tools
-from conans.paths import CONANFILE
 from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.runners import check_output_runner
-
-
-@pytest.mark.xfail(reason="RunEnvironment test will be removed next PR")
-@pytest.mark.tool_cmake
-class RunEnvironmentTest(unittest.TestCase):
-
-    def test_run_environment(self):
-        client = TestClient()
-        files = cpp_hello_conan_files("Hello0", "0.1")
-        files[CONANFILE] = files[CONANFILE].replace(
-            'self.copy(pattern="*.so", dst="lib", keep_path=False)',
-            '''self.copy(pattern="*.so", dst="lib", keep_path=False)
-        self.copy(pattern="*say_hello*", dst="bin", keep_path=False)''')
-        client.save(files)
-        client.run("export . lasote/stable")
-
-        reuse = textwrap.dedent("""
-            from conans import ConanFile, RunEnvironment, tools
-
-            class HelloConan(ConanFile):
-                name = "Reuse"
-                version = "0.1"
-                build_policy = "missing"
-                requires = "Hello0/0.1@lasote/stable"
-
-                def build(self):
-                    run_env = RunEnvironment(self)
-                    with tools.environment_append(run_env.vars):
-                        self.run("say_hello")
-        """)
-
-        client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("build . --build missing")
-        self.assertIn("Hello Hello0", client.out)
 
 
 @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")

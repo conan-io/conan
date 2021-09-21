@@ -6,7 +6,6 @@ import unittest
 import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -19,14 +18,13 @@ class TestCMakeDepsGenerator:
         client = TestClient()
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, CMake
+            from conans import ConanFile
 
             class Conan(ConanFile):
                 name = "hello"
                 version = "1.0"
                 settings = "os", "arch", "compiler", "build_type"
                 exports_sources = ["target-alias.cmake"]
-                generators = "cmake"
 
                 def package(self):
                     self.copy("target-alias.cmake", dst="share/cmake")
@@ -92,7 +90,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
     def test_build_modules(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, CMake
+            from conans import ConanFile
 
             class Conan(ConanFile):
                 name = "test"
@@ -131,14 +129,15 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         self.assertEqual(set(os.listdir(modules_path)),
                          {"FindFindModule.cmake", "my-module.cmake"})
         consumer = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
 
             class Conan(ConanFile):
                 name = "consumer"
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
                 exports_sources = ["CMakeLists.txt"]
-                generators = "CMakeDeps"
+                generators = "CMakeDeps", "CMakeToolchain"
                 requires = "test/1.0"
 
                 def build(self):
@@ -166,7 +165,8 @@ class TestNoNamespaceTarget:
 
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake
+        from conans import ConanFile
+        from conant.tools.cmake import CMake
 
         class Recipe(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
@@ -270,4 +270,3 @@ class TestNoNamespaceTarget:
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
             assert '>> nonamespace libs: library::library' in t.out
             t.run_command('cmake --build . --config Release')  # Compiles and links.
-

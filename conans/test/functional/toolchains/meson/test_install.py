@@ -86,7 +86,7 @@ class MesonInstall(TestMesonBase):
 
         find_package(hello REQUIRED)
 
-        add_executable(${PROJECT_NAME} test_package.cpp)
+        add_executable(${PROJECT_NAME} src/test_package.cpp)
         target_link_libraries(${PROJECT_NAME} hello::hello)
         """)
 
@@ -101,7 +101,7 @@ class MesonInstall(TestMesonBase):
                      "hello.cpp": hello_cpp,
                      "hello.h": hello_h,
                      os.path.join("test_package", "conanfile.py"): self._test_package_conanfile_py,
-                     os.path.join("test_package", "src", "CMakeLists.txt"): self._test_package_cmake_lists,
+                     os.path.join("test_package", "CMakeLists.txt"): self._test_package_cmake_lists,
                      os.path.join("test_package", "src", "test_package.cpp"): test_package_cpp})
 
         self.t.run("create . hello/0.1@ %s" % self._settings_str)

@@ -640,26 +640,6 @@ class ConanAPIV1(object):
         return ref, profile_host, profile_build, graph_lock, root_ref
 
     @api_method
-    def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
-                            profile_names=None, remote_name=None, check_updates=None,
-                            profile_build=None, name=None, version=None, user=None, channel=None,
-                            conf=None):
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
-        reference, profile_host, profile_build, graph_lock, root_ref = \
-            self._info_args(reference, profile_host, profile_build, name=name,
-                            version=version, user=user, channel=channel)
-
-        recorder = ActionRecorder()
-        remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
-        deps_graph = self.app.graph_manager.load_graph(reference, None, profile_host,
-                                                       profile_build, graph_lock,
-                                                       root_ref, build_modes, check_updates,
-                                                       False, remotes, recorder)
-        nodes_to_build = deps_graph.nodes_to_build()
-        return nodes_to_build, deps_graph.root.conanfile
-
-    @api_method
     def info(self, reference_or_path, remote_name=None, settings=None, options=None, env=None,
              profile_names=None, update=False, build=None, lockfile=None,
              profile_build=None, name=None, version=None, user=None, channel=None, conf=None):

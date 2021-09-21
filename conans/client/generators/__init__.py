@@ -6,7 +6,6 @@ from os.path import join
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
-from .cmake import CMakeGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
 from .markdown import MarkdownGenerator
@@ -16,8 +15,7 @@ from ..tools import chdir
 
 class GeneratorManager(object):
     def __init__(self):
-        self._generators = {"cmake": CMakeGenerator,
-                            "ycm": YouCompleteMeGenerator,
+        self._generators = {"ycm": YouCompleteMeGenerator,
                             "json": JsonGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
@@ -94,6 +92,8 @@ class GeneratorManager(object):
     def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
         """ produces auxiliary files, required to build a project or a package.
         """
+        _receive_conf(conanfile)
+
         for generator_name in set(conanfile.generators):
             generator_class = self._new_generator(generator_name, output)
             if generator_class:
@@ -114,12 +114,8 @@ class GeneratorManager(object):
                 available = list(self._generators.keys()) + self._new_generators
                 raise ConanException("Invalid generator '%s'. Available types: %s" %
                                      (generator_name, ", ".join(available)))
-            try:
-                generator = generator_class(conanfile)
-            except TypeError:
-                # To allow old-style generator packages to work (e.g. premake)
-                output.warn("Generator %s failed with new __init__(), trying old one")
-                generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
+
+            generator = generator_class(conanfile)
 
             try:
                 generator.output_path = old_gen_folder
@@ -159,16 +155,6 @@ def _receive_conf(conanfile):
 
 
 def write_toolchain(conanfile, path, output):
-    if hasattr(conanfile, "toolchain"):
-        msg = ("\n*****************************************************************\n"
-               "******************************************************************\n"
-               "The 'toolchain' attribute or method has been deprecated and removed\n"
-               "Use 'generators = \"ClassName\"' or 'generate()' method instead.\n"
-               "********************************************************************\n"
-               "********************************************************************\n")
-        raise ConanException(msg)
-
-    _receive_conf(conanfile)
 
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
@@ -177,16 +163,17 @@ def write_toolchain(conanfile, path, output):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
 
-    if conanfile.virtualenv:
+    if conanfile.virtualbuildenv or conanfile.virtualrunenv:
         mkdir(path)
         with chdir(path):
-            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-            from conan.tools.env.virtualrunenv import VirtualRunEnv
-            env = VirtualBuildEnv(conanfile)
-            env.generate()
-
-            env = VirtualRunEnv(conanfile)
-            env.generate()
+            if conanfile.virtualbuildenv:
+                from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+                env = VirtualBuildEnv(conanfile)
+                env.generate()
+            if conanfile.virtualrunenv:
+                from conan.tools.env import VirtualRunEnv
+                env = VirtualRunEnv(conanfile)
+                env.generate()
 
     output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)
@@ -194,22 +181,23 @@ def write_toolchain(conanfile, path, output):
 
 def _generate_aggregated_env(conanfile):
     from conan.tools.microsoft import unix_path
-    bats = []
-    shs = []
 
-    for s in conanfile.environment_scripts:
-        path = os.path.join(conanfile.generators_folder, s)
-        if path.lower().endswith(".bat"):
-            bats.append(path)
-        elif path.lower().endswith(".sh"):
-            shs.append(unix_path(conanfile, path))
-    if shs:
-        sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
-        save(os.path.join(conanfile.generators_folder, "conanenv.sh"), sh_content)
-    if bats:
-        lines = "\r\n".join('call "{}"'.format(b) for b in bats)
-        bat_content = textwrap.dedent("""\
-                        @echo off
-                        {}
-                        """.format(lines))
-        save(os.path.join(conanfile.generators_folder, "conanenv.bat"), bat_content)
+    for group, env_scripts in conanfile.env_scripts.items():
+        bats = []
+        shs = []
+        for env_script in env_scripts:
+            path = os.path.join(conanfile.generators_folder, env_script)
+            if env_script.endswith(".bat"):
+                bats.append(path)
+            elif env_script.endswith(".sh"):
+                shs.append(unix_path(conanfile, path))
+        if shs:
+            sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
+            save(os.path.join(conanfile.generators_folder, "conan{}.sh".format(group)), sh_content)
+        if bats:
+            lines = "\r\n".join('call "{}"'.format(b) for b in bats)
+            bat_content = textwrap.dedent("""\
+                            @echo off
+                            {}
+                            """.format(lines))
+            save(os.path.join(conanfile.generators_folder, "conan{}.bat".format(group)), bat_content)
