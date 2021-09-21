@@ -25,7 +25,6 @@ unknown
     def test_base(self):
         base = '''
 [generators]
-cmake
 ycm
     '''
         files = {"conanfile.txt": base}
@@ -33,7 +32,7 @@ ycm
         client.save(files)
         client.run("install . --build")
 
-        self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
+        self.assertEqual(sorted(['conanfile.txt',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
                                  LOCKFILE]),
                          sorted(os.listdir(client.current_folder)))

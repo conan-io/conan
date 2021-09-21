@@ -16,7 +16,7 @@ def test_local_static_generators_folder():
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type"))
     conan_file += """
-    generators = "cmake", "CMakeToolchain"
+    generators = "CMakeToolchain"
     def layout(self):
         self.folders.build = "build-{}".format(self.settings.build_type)
         self.folders.generators = "{}/generators".format(self.folders.build)
@@ -25,16 +25,12 @@ def test_local_static_generators_folder():
     client.run("install . -if=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    cmake_generator_path = os.path.join(old_install_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
-    assert os.path.exists(cmake_generator_path)
     assert not os.path.exists(cmake_toolchain_generator_path)
 
     build_folder = os.path.join(client.current_folder, "build-Release")
     generators_folder = os.path.join(build_folder, "generators")
-    cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(generators_folder, "conan_toolchain.cmake")
-    assert not os.path.exists(cmake_generator_path)
     assert os.path.exists(cmake_toolchain_generator_path)
 
 
@@ -55,19 +51,15 @@ def test_local_dynamic_generators_folder():
         self.folders.generators = "{}/generators".format(self.folders.build)
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install -g cmake")
+    client.run("install . -if=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    cmake_generator_path = os.path.join(old_install_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
-    assert os.path.exists(cmake_generator_path)
     assert not os.path.exists(cmake_toolchain_generator_path)
 
     build_folder = os.path.join(client.current_folder, "build-Release")
     generators_folder = os.path.join(build_folder, "generators")
-    cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(generators_folder, "conan_toolchain.cmake")
-    assert not os.path.exists(cmake_generator_path)
     assert os.path.exists(cmake_toolchain_generator_path)
 
 
@@ -84,13 +76,11 @@ def test_no_layout_generators_folder():
         tc.generate()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install -g cmake")
+    client.run("install . -if=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    cmake_generator_path = os.path.join(old_install_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
 
-    assert os.path.exists(cmake_generator_path)
     # In the install_folder
     assert os.path.exists(cmake_toolchain_generator_path)
 

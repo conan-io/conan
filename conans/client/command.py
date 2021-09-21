@@ -875,7 +875,7 @@ class Command(object):
                                      update=args.update, generators=args.generator,
                                      no_imports=args.no_imports,
                                      lockfile=args.lockfile,
-                                     lockfile_out=args.lockfile_out)
+                                     lockfile_out=args.lockfile_out, conf=args.conf_host)
         except ConanException as exc:
             info = exc.info
             raise

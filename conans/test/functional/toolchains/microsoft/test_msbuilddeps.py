@@ -720,11 +720,13 @@ def check_build_vs_project_with_a(vs_version):
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . updep.pkg.team/0.1@")
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
             exports = '*'
             requires = "updep.pkg.team/0.1@"
+            generators = "CMakeToolchain"
 
             def build(self):
                 cmake = CMake(self)
