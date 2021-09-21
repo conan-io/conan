@@ -160,40 +160,8 @@ class Command(object):
                             'Useful in combination with "export-pkg" command')
         parser.add_argument("-m", "--template",
                             help='Use the given template to generate a conan project')
-        parser.add_argument("-cis", "--ci-shared", action='store_true',
-                            default=False,
-                            help='Package will have a "shared" option to be used in CI')
-        parser.add_argument("-cilg", "--ci-travis-gcc", action='store_true',
-                            default=False,
-                            help='Generate travis-ci files for linux gcc')
-        parser.add_argument("-cilc", "--ci-travis-clang", action='store_true',
-                            default=False,
-                            help='Generate travis-ci files for linux clang')
-        parser.add_argument("-cio", "--ci-travis-osx", action='store_true',
-                            default=False,
-                            help='Generate travis-ci files for OSX apple-clang')
-        parser.add_argument("-ciw", "--ci-appveyor-win", action='store_true',
-                            default=False, help='Generate appveyor files for Appveyor '
-                                                'Visual Studio')
-        parser.add_argument("-ciglg", "--ci-gitlab-gcc", action='store_true',
-                            default=False,
-                            help='Generate GitLab files for linux gcc')
-        parser.add_argument("-ciglc", "--ci-gitlab-clang", action='store_true',
-                            default=False,
-                            help='Generate GitLab files for linux clang')
-        parser.add_argument("-ciccg", "--ci-circleci-gcc", action='store_true',
-                            default=False,
-                            help='Generate CircleCI files for linux gcc')
-        parser.add_argument("-ciccc", "--ci-circleci-clang", action='store_true',
-                            default=False,
-                            help='Generate CircleCI files for linux clang')
-        parser.add_argument("-cicco", "--ci-circleci-osx", action='store_true',
-                            default=False,
-                            help='Generate CircleCI files for OSX apple-clang')
         parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
                             help='Generate a .gitignore with the known patterns to excluded')
-        parser.add_argument("-ciu", "--ci-upload-url",
-                            help='Define URL of the repository to upload')
         parser.add_argument('-d', '--define', action='append')
 
         args = parser.parse_args(*args)
@@ -204,18 +172,7 @@ class Command(object):
         self._warn_python_version()
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
-                        visual_versions=args.ci_appveyor_win,
-                        linux_gcc_versions=args.ci_travis_gcc,
-                        linux_clang_versions=args.ci_travis_clang,
-                        gitignore=args.gitignore,
-                        osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
-                        upload_url=args.ci_upload_url,
-                        gitlab_gcc_versions=args.ci_gitlab_gcc,
-                        gitlab_clang_versions=args.ci_gitlab_clang,
-                        circleci_gcc_versions=args.ci_circleci_gcc,
-                        circleci_clang_versions=args.ci_circleci_clang,
-                        circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.template,
+                        gitignore=args.gitignore, template=args.template,
                         defines=defines)
 
     def inspect(self, *args):

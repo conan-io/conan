@@ -143,10 +143,3 @@ def test_upper_option_txt(client):
     hello1_info = os.path.join(hello1, CONANINFO)
     hello1_conan_info = ConanInfo.load_file(hello1_info)
     assert 0 == hello1_conan_info.options.language
-
-
-def test_cross_platform_msg(client):
-    # Explicit with os_build and os_arch settings
-    client.run("install Hello0/0.1@lasote/stable -s:b os=Macos -s:h os=Windows", assert_error=True)
-    assert "Cross-build from 'Macos:None' to 'Windows:None'" in client.out
-    assert "ERROR: Missing binary: Hello0" in client.out
