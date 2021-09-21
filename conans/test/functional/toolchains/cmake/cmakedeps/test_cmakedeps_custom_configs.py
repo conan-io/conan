@@ -144,7 +144,7 @@ class CustomSettingsTest(unittest.TestCase):
         settings = settings.replace("Release", "MyRelease")
         save(self.client.cache.settings_path, settings)
         self.client.run("new hello/0.1 --template=cmake_lib")
-        cmake = self.client.load("src/CMakeLists.txt")
+        cmake = self.client.load("CMakeLists.txt")
 
         cmake = cmake.replace("cmake_minimum_required", """
             set(CMAKE_CONFIGURATION_TYPES Debug MyRelease Release CACHE STRING "Types")
@@ -156,7 +156,7 @@ class CustomSettingsTest(unittest.TestCase):
             set(CMAKE_EXE_LINKER_FLAGS_MYRELEASE ${CMAKE_EXE_LINKER_FLAGS_RELEASE})
             add_library"""))
         cmake = cmake.replace("PUBLIC_HEADER", "CONFIGURATIONS MyRelease\nPUBLIC_HEADER")
-        self.client.save({"src/CMakeLists.txt": cmake})
+        self.client.save({"CMakeLists.txt": cmake})
         self.client.run("create . hello/0.1@ -s compiler.version=15 -s build_type=MyRelease "
                         "-s:b build_type=MyRelease -tf=None")
 
