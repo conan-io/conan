@@ -59,11 +59,11 @@ class CustomConfigurationTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
-        self.client.run("new hello/0.1 -s")
+        self.client.run("new hello/0.1 --template=cmake_lib")
         self.client.run("create . hello/0.1@ -s compiler.version=15 "
-                        "-s build_type=Release -o hello:shared=True")
+                        "-s build_type=Release -o hello:shared=True -tf=None")
         self.client.run("create . hello/0.1@ -s compiler.version=15 "
-                        "-s build_type=Release")
+                        "-s build_type=Release -tf=None")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
@@ -109,6 +109,7 @@ class CustomSettingsTest(unittest.TestCase):
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
+            generators = "CMakeToolchain"
 
             def generate(self):
                 cmake = CMakeDeps(self)
@@ -122,7 +123,7 @@ class CustomSettingsTest(unittest.TestCase):
         set(CMAKE_CONFIGURATION_TYPES Debug Release MyRelease CACHE STRING
             "Available build-types: Debug, Release and MyRelease")
 
-        cmake_minimum_required(VERSION 2.8)
+        cmake_minimum_required(VERSION 3.15)
         project(App C CXX)
 
         set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
@@ -142,22 +143,22 @@ class CustomSettingsTest(unittest.TestCase):
         settings = load(self.client.cache.settings_path)
         settings = settings.replace("Release", "MyRelease")
         save(self.client.cache.settings_path, settings)
-        self.client.run("new hello/0.1 -s")
-        cmake = self.client.load("src/CMakeLists.txt")
+        self.client.run("new hello/0.1 --template=cmake_lib")
+        cmake = self.client.load("CMakeLists.txt")
 
         cmake = cmake.replace("cmake_minimum_required", """
             set(CMAKE_CONFIGURATION_TYPES Debug MyRelease Release CACHE STRING "Types")
 
             cmake_minimum_required""")
-        cmake = cmake.replace("conan_basic_setup()", """
-            conan_basic_setup()
+        cmake = cmake.replace("add_library", textwrap.dedent("""
             set(CMAKE_CXX_FLAGS_MYRELEASE ${CMAKE_CXX_FLAGS_RELEASE})
             set(CMAKE_C_FLAGS_MYRELEASE ${CMAKE_C_FLAGS_RELEASE})
             set(CMAKE_EXE_LINKER_FLAGS_MYRELEASE ${CMAKE_EXE_LINKER_FLAGS_RELEASE})
-            """)
-        self.client.save({"src/CMakeLists.txt": cmake})
+            add_library"""))
+        cmake = cmake.replace("PUBLIC_HEADER", "CONFIGURATIONS MyRelease\nPUBLIC_HEADER")
+        self.client.save({"CMakeLists.txt": cmake})
         self.client.run("create . hello/0.1@ -s compiler.version=15 -s build_type=MyRelease "
-                        "-s:b build_type=MyRelease")
+                        "-s:b build_type=MyRelease -tf=None")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
@@ -181,7 +182,8 @@ class CustomSettingsTest(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "hello-Target-myrelease.cmake")))
 
-            self.client.run_command('cmake .. -G "Visual Studio 15 Win64"')
+            self.client.run_command('cmake .. -G "Visual Studio 15" '
+                                    '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
             self.client.run_command('cmake --build . --config MyRelease')
             self.client.run_command(r"MyRelease\\app.exe")
             self.assertIn("hello/0.1: Hello World Release!", self.client.out)
@@ -236,4 +238,3 @@ def test_changing_build_type():
     client.run_command(cmd)
     assert "main: Debug!" in client.out
     assert "BUILD_TYPE=Release!!" in client.out
-

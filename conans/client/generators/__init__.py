@@ -6,7 +6,6 @@ from os.path import join
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
-from .cmake import CMakeGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
 from .markdown import MarkdownGenerator
@@ -16,8 +15,7 @@ from ..tools import chdir
 
 class GeneratorManager(object):
     def __init__(self):
-        self._generators = {"cmake": CMakeGenerator,
-                            "ycm": YouCompleteMeGenerator,
+        self._generators = {"ycm": YouCompleteMeGenerator,
                             "json": JsonGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
@@ -116,12 +114,8 @@ class GeneratorManager(object):
                 available = list(self._generators.keys()) + self._new_generators
                 raise ConanException("Invalid generator '%s'. Available types: %s" %
                                      (generator_name, ", ".join(available)))
-            try:
-                generator = generator_class(conanfile)
-            except TypeError:
-                # To allow old-style generator packages to work (e.g. premake)
-                output.warn("Generator %s failed with new __init__(), trying old one")
-                generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
+
+            generator = generator_class(conanfile)
 
             try:
                 generator.output_path = old_gen_folder
@@ -161,14 +155,6 @@ def _receive_conf(conanfile):
 
 
 def write_toolchain(conanfile, path, output):
-    if hasattr(conanfile, "toolchain"):
-        msg = ("\n*****************************************************************\n"
-               "******************************************************************\n"
-               "The 'toolchain' attribute or method has been deprecated and removed\n"
-               "Use 'generators = \"ClassName\"' or 'generate()' method instead.\n"
-               "********************************************************************\n"
-               "********************************************************************\n")
-        raise ConanException(msg)
 
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")

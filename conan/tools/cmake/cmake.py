@@ -12,13 +12,6 @@ from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 
 
-def _validate_recipe(conanfile):
-    forbidden_generators = ["cmake", "cmake_multi"]
-    if any(it in conanfile.generators for it in forbidden_generators):
-        raise ConanException("Usage of toolchain is only supported with 'cmake_find_package'"
-                             " or 'cmake_find_package_multi' generators")
-
-
 def _cmake_cmd_line_args(conanfile, generator, parallel):
     args = []
     if not generator:
@@ -58,8 +51,6 @@ class CMake(object):
     """
 
     def __init__(self, conanfile, parallel=True):
-        _validate_recipe(conanfile)
-
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel

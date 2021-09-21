@@ -7,6 +7,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Move this test to CMakeToolchain")
 class LibcxxSettingTest(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Not in Windows")

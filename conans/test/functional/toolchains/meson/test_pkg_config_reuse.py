@@ -38,8 +38,8 @@ class MesonPkgConfigTest(TestMesonBase):
     """)
 
     def test_reuse(self):
-        self.t.run("new hello/0.1 -s")
-        self.t.run("create . hello/0.1@ %s" % self._settings_str)
+        self.t.run("new hello/0.1 --template=cmake_lib")
+        self.t.run("create . hello/0.1@ %s -tf=None" % self._settings_str)
 
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
