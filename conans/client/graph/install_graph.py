@@ -4,6 +4,7 @@ from conans.model.info import PACKAGE_ID_UNKNOWN
 
 class _InstallGraphNode:
     def __init__(self, node):
+        self.id = None
         self.pref = node.pref
         self.nodes = [node]  # GraphNode
         self.requires = []  # _InstallGraphNode
@@ -15,13 +16,27 @@ class _InstallGraphNode:
     def __repr__(self):
         return str(self)
 
+    def serialize(self):
+        node = self.nodes[0]
+        options = node.conanfile.options.values.as_list()
+        return {"id": self.id,
+                "ref": repr(self.pref.ref),
+                "package_id": self.pref.id,
+                "options": options,
+                "depends": [n.id for n in self.requires]}
+
 
 class InstallGraph:
     """ A graph containing the package references in order to be built/downloaded
     """
 
-    def __init__(self, deps_graph):
+    def __init__(self, deps_graph=None):
         self._nodes = []  # _InstallGraphNode
+
+        if deps_graph is not None:
+            self._initialize_deps_graph(deps_graph)
+
+    def _initialize_deps_graph(self, deps_graph):
         prefs = {}  # {pref known: _InstallGraphNode}
         deps = {}  # {node: _installGraphNode}
 
@@ -38,15 +53,29 @@ class InstallGraph:
                     install_node = _InstallGraphNode(node)
                     self._nodes.append(install_node)
                     prefs[node.pref] = install_node
+                    install_node.id = len(self._nodes)
             else:
                 install_node = _InstallGraphNode(node)
                 self._nodes.append(install_node)
+                install_node.id = len(self._nodes)
 
             deps[node] = install_node
 
             for dep in node.dependencies:
                 if dep.dst.binary != BINARY_SKIP:
                     install_node.requires.append(deps[dep.dst])
+
+    def serialize(self):
+        result = []
+        for n in self._nodes:
+            result.append(n.serialize())
+        return result
+
+    @staticmethod
+    def deserialize():
+        result = InstallGraph()
+
+        return result
 
     def install_order(self):
         # a topological order by levels, returns a list of list, in order of processing
@@ -67,3 +96,13 @@ class InstallGraph:
             opened = set(opened).difference(closed)
 
         return levels
+
+    def install_order_serialize(self):
+        install_order = self.install_order()
+        result = []
+        for level in install_order:
+            simple_level = []
+            for node in level:
+                simple_level.append(node.serialize())
+            result.append(simple_level)
+        return result

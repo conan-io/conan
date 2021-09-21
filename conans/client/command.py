@@ -14,6 +14,7 @@ from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
 from conans.client.conan_api import Conan, _make_abs_path, ProfileData
 from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.conan_command_output import CommandOutputer
+from conans.client.graph.install_graph import InstallGraph
 from conans.client.output import Color
 from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
@@ -664,6 +665,8 @@ class Command(object):
         parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
+        parser.add_argument("--build-order", action=OnceArgument,
+                            help='Return the build-order, in json')
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
@@ -707,6 +710,12 @@ class Command(object):
                                 user=args.user,
                                 channel=args.channel)
         deps_graph, _ = data
+
+        if args.build_order:
+            install_graph = InstallGraph(deps_graph)
+            install_order_serialized = install_graph.install_order_serialize()
+            save(_make_abs_path(args.build_order), json.dumps(install_order_serialized, indent=4))
+            return
         only = args.only
         if args.only == ["None"]:
             only = []
