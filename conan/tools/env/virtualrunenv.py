@@ -25,6 +25,23 @@ class VirtualRunEnv:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        self._conanfile.virtualrunenv = False
+        self.basename = "conanrunenv"
+        self.configuration = conanfile.settings.get_safe("build_type")
+        if self.configuration:
+            self.configuration = self.configuration.lower()
+        self.arch = conanfile.settings.get_safe("arch")
+        if self.arch:
+            self.arch = self.arch.lower()
+
+    @property
+    def _filename(self):
+        f = self.basename
+        if self.configuration:
+            f += "-" + self.configuration
+        if self.arch:
+            f += "-" + self.arch
+        return f
 
     def environment(self):
         """ collects the runtime information from dependencies. For normal libraries should be
@@ -43,7 +60,7 @@ class VirtualRunEnv:
 
         return runenv
 
-    def generate(self, auto_activate=False):
+    def generate(self, group="run"):
         run_env = self.environment()
         if run_env:
-            run_env.save_script("conanrunenv", auto_activate=auto_activate)
+            run_env.save_script(self._filename, group)

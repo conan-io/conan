@@ -92,6 +92,8 @@ class GeneratorManager(object):
     def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
         """ produces auxiliary files, required to build a project or a package.
         """
+        _receive_conf(conanfile)
+
         for generator_name in set(conanfile.generators):
             generator_class = self._new_generator(generator_name, output)
             if generator_class:
@@ -154,8 +156,6 @@ def _receive_conf(conanfile):
 
 def write_toolchain(conanfile, path, output):
 
-    _receive_conf(conanfile)
-
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
         mkdir(path)
@@ -163,16 +163,17 @@ def write_toolchain(conanfile, path, output):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
 
-    if conanfile.virtualenv:
+    if conanfile.virtualbuildenv or conanfile.virtualrunenv:
         mkdir(path)
         with chdir(path):
-            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-            from conan.tools.env.virtualrunenv import VirtualRunEnv
-            env = VirtualBuildEnv(conanfile)
-            env.generate()
-
-            env = VirtualRunEnv(conanfile)
-            env.generate()
+            if conanfile.virtualbuildenv:
+                from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+                env = VirtualBuildEnv(conanfile)
+                env.generate()
+            if conanfile.virtualrunenv:
+                from conan.tools.env import VirtualRunEnv
+                env = VirtualRunEnv(conanfile)
+                env.generate()
 
     output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)
@@ -180,22 +181,23 @@ def write_toolchain(conanfile, path, output):
 
 def _generate_aggregated_env(conanfile):
     from conan.tools.microsoft import unix_path
-    bats = []
-    shs = []
 
-    for s in conanfile.environment_scripts:
-        path = os.path.join(conanfile.generators_folder, s)
-        if path.lower().endswith(".bat"):
-            bats.append(path)
-        elif path.lower().endswith(".sh"):
-            shs.append(unix_path(conanfile, path))
-    if shs:
-        sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
-        save(os.path.join(conanfile.generators_folder, "conanenv.sh"), sh_content)
-    if bats:
-        lines = "\r\n".join('call "{}"'.format(b) for b in bats)
-        bat_content = textwrap.dedent("""\
-                        @echo off
-                        {}
-                        """.format(lines))
-        save(os.path.join(conanfile.generators_folder, "conanenv.bat"), bat_content)
+    for group, env_scripts in conanfile.env_scripts.items():
+        bats = []
+        shs = []
+        for env_script in env_scripts:
+            path = os.path.join(conanfile.generators_folder, env_script)
+            if env_script.endswith(".bat"):
+                bats.append(path)
+            elif env_script.endswith(".sh"):
+                shs.append(unix_path(conanfile, path))
+        if shs:
+            sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
+            save(os.path.join(conanfile.generators_folder, "conan{}.sh".format(group)), sh_content)
+        if bats:
+            lines = "\r\n".join('call "{}"'.format(b) for b in bats)
+            bat_content = textwrap.dedent("""\
+                            @echo off
+                            {}
+                            """.format(lines))
+            save(os.path.join(conanfile.generators_folder, "conan{}.bat".format(group)), bat_content)

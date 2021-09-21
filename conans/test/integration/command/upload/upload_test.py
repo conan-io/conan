@@ -502,7 +502,7 @@ class MyPkg(ConanFile):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_skip_upload(self):
-        """ Check that the option --dry does not upload anything
+        """ Check that the option --skip does not upload anything
         """
         client = TestClient(default_server_user=True)
 

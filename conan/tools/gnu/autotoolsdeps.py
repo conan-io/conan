@@ -59,5 +59,5 @@ class AutotoolsDeps:
             self._environment = env
         return self._environment
 
-    def generate(self,  auto_activate=True):
-        self.environment.save_script("conanautotoolsdeps", auto_activate=auto_activate)
+    def generate(self,  group="build"):
+        self.environment.save_script("conanautotoolsdeps", group=group)

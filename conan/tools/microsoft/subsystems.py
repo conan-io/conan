@@ -21,8 +21,8 @@ def run_in_windows_bash(conanfile, command, cwd=None, env=None):
         env_win = [env] if not isinstance(env, list) else env
         env_shell = []
     else:
-        env_shell = ["conanenv.sh"]
-        env_win = ["conanenv.bat"]
+        env_shell = ["conanbuild.sh"]
+        env_win = ["conanbuild.bat"]
 
     subsystem = conanfile.conf["tools.microsoft.bash:subsystem"]
     shell_path = conanfile.conf["tools.microsoft.bash:path"]
