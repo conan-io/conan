@@ -98,10 +98,7 @@ class RemoteManager(object):
         revisions = self._call_remote(remote, "get_package_revisions", pref, headers=headers)
         ref = PackageReference(pref.ref, pref.id, revisions[0].get("revision"))
         ref_time = revisions[0].get("time")
-        if revisions:
-            return ref, ref_time
-        else:
-            raise PackageNotFoundException(pref)
+        return ref, ref_time
 
     def get_recipe(self, ref, remote):
         """
@@ -273,8 +270,7 @@ class RemoteManager(object):
     #  it returns that rrev if it exists in the server with the time
     def get_latest_recipe_revision_with_time(self, ref, remote):
         revisions = self._call_remote(remote, "get_recipe_revisions", ref)
-        return {'reference': ref.copy_with_rev(revisions[0].get("revision")),
-                'time': revisions[0].get("time")} if revisions else {}
+        return ref.copy_with_rev(revisions[0].get("revision")), revisions[0].get("time")
 
     def _resolve_latest_ref(self, ref, remote):
         if ref.revision is None:
