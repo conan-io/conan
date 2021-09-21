@@ -1,4 +1,4 @@
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_BUILD
 from conans.model.info import PACKAGE_ID_UNKNOWN
 
 
@@ -9,6 +9,7 @@ class _InstallGraphNode:
         self.nodes = [node]  # GraphNode
         self.requires = []  # _InstallGraphNode
         self.binary = node.binary
+        self.context = node.context
 
     def __str__(self):
         return "{}:{}".format(str(self.pref), self.binary)
@@ -18,10 +19,12 @@ class _InstallGraphNode:
 
     def serialize(self):
         node = self.nodes[0]
+        # FIXME: The aggregation of the upstream is not correct here
         options = node.conanfile.options.values.as_list()
         return {"id": self.id,
                 "ref": repr(self.pref.ref),
                 "package_id": self.pref.id,
+                "context": self.context,
                 "options": options,
                 "depends": [n.id for n in self.requires]}
 
@@ -97,12 +100,14 @@ class InstallGraph:
 
         return levels
 
-    def install_order_serialize(self):
+    def install_build_order(self):
         install_order = self.install_order()
         result = []
         for level in install_order:
             simple_level = []
             for node in level:
-                simple_level.append(node.serialize())
-            result.append(simple_level)
+                if node.binary == BINARY_BUILD:
+                    simple_level.append(node.serialize())
+            if simple_level:
+                result.append(simple_level)
         return result

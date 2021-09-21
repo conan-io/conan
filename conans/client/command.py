@@ -713,7 +713,7 @@ class Command(object):
 
         if args.build_order:
             install_graph = InstallGraph(deps_graph)
-            install_order_serialized = install_graph.install_order_serialize()
+            install_order_serialized = install_graph.install_build_order()
             save(_make_abs_path(args.build_order), json.dumps(install_order_serialized, indent=4))
             return
         only = args.only
