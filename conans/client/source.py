@@ -5,7 +5,7 @@ from conans.client import tools
 from conans.client.cmd.export import export_recipe, export_source
 from conans.client.tools import no_op
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
-    conanfile_exception_formatter
+    conanfile_exception_formatter, NotFoundException
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.conan_v2_mode import conan_v2_property
@@ -13,7 +13,23 @@ from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager
                                merge_directories, clean_dirty)
 
 
-def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remote):
+def _try_get_sources(ref, remote_manager, recipe_layout, remote):
+    try:
+        remote_manager.get_recipe_revisions(ref, remote)
+    except NotFoundException:
+        return
+    else:
+        try:
+            remote_manager.get_recipe_sources(ref, recipe_layout, remote)
+        except Exception as e:
+            msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
+                   "Probably it was installed from a remote that is no longer available.\n"
+                   % str(ref))
+            raise ConanException("\n".join([str(e), msg]))
+    return remote
+
+
+def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remote, remotes):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
@@ -25,19 +41,23 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
     if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
         return None
 
-    if not remote:
+    try:
+        sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, remote)
+        # the revision is not in remote any more, check other remotes
+        if not sources_remote:
+            for r in remotes.values():
+                if r != remote:
+                    sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, r)
+                    if sources_remote:
+                        return
+    except Exception:
+        raise
+
+    if not sources_remote:
         msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
                "Probably it was installed from a remote that is no longer available.\n"
                % str(ref))
         raise ConanException(msg)
-
-    try:
-        remote_manager.get_recipe_sources(ref, recipe_layout, remote)
-    except Exception as e:
-        msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
-               "Probably it was installed from a remote that is no longer available.\n"
-               % str(ref))
-        raise ConanException("\n".join([str(e), msg]))
 
 
 def config_source_local(conanfile, conanfile_path, hook_manager):
