@@ -36,6 +36,7 @@ def is_using_intel_oneapi(compiler_version):
 
 def get_inteloneapi_installation_path():
     system = platform.system()
+    installation_path = None
     # Let's try the default dirs
     if system == "Windows":
         if is_win64():
@@ -59,6 +60,8 @@ def get_inteloneapi_installation_path():
             raise ConanException("Don't know how to find Intel oneAPI folder on %s" % system)
     else:
         raise ConanException("Your system is not supported by Intel oneAPI compilers.")
+
+    return installation_path
 
 
 class IntelOneAPI:

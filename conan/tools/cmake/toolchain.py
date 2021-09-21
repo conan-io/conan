@@ -769,12 +769,12 @@ class CMakeToolchain(object):
         toolchain_file = self._conanfile.conf["tools.cmake.cmaketoolchain:toolchain_file"]
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(self.filename, self.content)
-        # Generators like Ninja or NMake requires an active vcvars
-        if self.generator is not None and "Visual" not in self.generator:
-            VCVars(self._conanfile).generate()
         # If we're using Intel oneAPI, we need to generate the environment file and run it
-        elif self._conanfile.settings.get_safe("compiler") == "intel-cc":
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelOneAPI(self._conanfile).generate()
+        # Generators like Ninja or NMake requires an active vcvars
+        elif self.generator is not None and "Visual" not in self.generator:
+            VCVars(self._conanfile).generate()
         self._writebuild(toolchain_file)
 
     def _writebuild(self, toolchain_file):
