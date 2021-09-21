@@ -2,7 +2,8 @@ import os
 import textwrap
 
 from conan.tools.env.environment import register_env_script
-from conan.tools.intel import Intel
+from conan.tools.intel import IntelOneAPI
+from conans.client.tools import intel_compilervars_command
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
 from conans.util.files import save
@@ -29,7 +30,9 @@ def _write_conanvcvars(conanfile, group):
     compiler = conanfile.settings.get_safe("compiler")
     vcvars = None
     if compiler == "intel":
-        vcvars = Intel(conanfile).command
+        vcvars = intel_compilervars_command(conanfile)
+    elif compiler == "intel-cc":
+        vcvars = IntelOneAPI(conanfile).command
     elif compiler == "Visual Studio" or compiler == "msvc":
         vs_version = vs_ide_version(conanfile)
         vcvarsarch = vcvars_arch(conanfile)
