@@ -12,7 +12,7 @@ class UserInputTest(unittest.TestCase):
     @mock.patch("conans.client.userio.UserInput.get_username", return_value="username")
     @mock.patch("conans.client.userio.UserInput.get_password", return_value="passwd")
     def test_request_login(self, m1, m2):
-        user_input = UserInput(non_interactive=True)
+        user_input = UserInput(non_interactive=False)
 
         # Use mocked ones
         u, p = user_input.request_login(remote_name="lol")
