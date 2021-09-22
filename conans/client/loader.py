@@ -22,9 +22,8 @@ from conans.util.files import load
 
 class ConanFileLoader(object):
 
-    def __init__(self, runner, output, generator_manager=None, pyreq_loader=None, requester=None):
+    def __init__(self, runner, output,  pyreq_loader=None, requester=None):
         self._runner = runner
-        self._generator_manager = generator_manager
         self._output = output
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
@@ -48,7 +47,7 @@ class ConanFileLoader(object):
             return conanfile, cached[2]
 
         try:
-            module, conanfile = parse_conanfile(conanfile_path, self._generator_manager)
+            module, conanfile = parse_conanfile(conanfile_path)
 
             # This is the new py_requires feature, to supersede the old python_requires
             if self._pyreq_loader:
@@ -341,7 +340,7 @@ class ConanFileLoader(object):
         return conanfile
 
 
-def _parse_module(conanfile_module, module_id, generator_manager):
+def _parse_module(conanfile_module, module_id):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
     @param conanfile_module: the module to be processed
@@ -365,10 +364,10 @@ def _parse_module(conanfile_module, module_id, generator_manager):
     return result
 
 
-def parse_conanfile(conanfile_path, generator_manager):
+def parse_conanfile(conanfile_path):
     module, filename = _parse_conanfile(conanfile_path)
     try:
-        conanfile = _parse_module(module, filename, generator_manager)
+        conanfile = _parse_module(module, filename)
         return module, conanfile
     except Exception as e:  # re-raise with file name
         raise ConanException("%s: %s" % (conanfile_path, str(e)))
