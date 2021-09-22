@@ -15,8 +15,7 @@ from conans.test.utils.tools import redirect_output
 class DetectTest(unittest.TestCase):
     @mock.patch("platform.machine", return_value="")
     def test_detect_empty_arch(self, _):
-        result = detect_defaults_settings(output=Mock(),
-                                          profile_path=DEFAULT_PROFILE_NAME)
+        result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
         result = dict(result)
         self.assertTrue("arch" not in result)
 
@@ -25,7 +24,7 @@ class DetectTest(unittest.TestCase):
         output = RedirectedTestOutput()
         with redirect_output(output):
             with tools.environment_append({"CC": "gcc"}):
-                detect_defaults_settings(ConanOutput(), profile_path="~/.conan/profiles/mycustomprofile")
+                detect_defaults_settings(profile_path="~/.conan/profiles/mycustomprofile")
                 self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 "
                               "mycustomprofile", output)
 
@@ -34,7 +33,7 @@ class DetectTest(unittest.TestCase):
         output = RedirectedTestOutput()
         with redirect_output(output):
             with tools.environment_append({"CC": "gcc"}):
-                detect_defaults_settings(ConanOutput(), profile_path="~/.conan/profiles/default")
+                detect_defaults_settings(profile_path="~/.conan/profiles/default")
                 self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 default",
                               output)
 
@@ -43,7 +42,7 @@ class DetectTest(unittest.TestCase):
         output = RedirectedTestOutput()
         with redirect_output(output):
             with tools.environment_append({"CC": "gcc"}):
-                detect_defaults_settings(ConanOutput(), profile_path="./MyProfile")
+                detect_defaults_settings(profile_path="./MyProfile")
                 self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 MyProfile",
                               output)
 
@@ -92,7 +91,7 @@ class DetectTest(unittest.TestCase):
         output = RedirectedTestOutput()
         with redirect_output(output):
             with tools.environment_append({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
-                detect_defaults_settings(ConanOutput(), profile_path="./MyProfile")
+                detect_defaults_settings(profile_path="./MyProfile")
                 self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
 
     def test_vs2022(self):

@@ -6,7 +6,6 @@ from subprocess import CalledProcessError
 
 from urllib.parse import quote_plus, unquote, urlparse
 
-from conans.cli.output import ConanOutput
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
@@ -41,7 +40,8 @@ class SCMBase(object):
             raise ConanException("Error retrieving {} version: '{}'".format(cls.cmd_command, e))
 
     def __init__(self, conanfile, folder=None, verify_ssl=True, username=None, password=None,
-                 force_english=True):
+                 force_english=True, runner=None):
+
         self.conanfile = conanfile
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
@@ -50,13 +50,17 @@ class SCMBase(object):
         self._force_eng = force_english
         self._username = username
         self._password = password
+        self._runner = runner
 
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 with pyinstaller_bundle_env_cleaned():
-                    return self.conanfile.run(command)
+                    if not self._runner:
+                        return check_output_runner(command).strip()
+                    else:
+                        return self._runner(command)
 
     def _handle_scp_pattern(self, user, domain, url):
         if self._password:
@@ -323,11 +327,11 @@ class SVN(SCMBase):
     file_protocol = 'file:///' if platform.system() == "Windows" else 'file://'
     API_CHANGE_VERSION = Version("1.9")  # CLI changes in 1.9
 
-    def __init__(self, folder=None, runner=None, *args, **kwargs):
+    def __init__(self, conanfile, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
             return check_output_runner(command)
         runner = runner or runner_no_strip
-        super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
+        super(SVN, self).__init__(conanfile, folder=folder, runner=runner, *args, **kwargs)
 
     @property
     def version(self):
