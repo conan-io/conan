@@ -33,7 +33,6 @@ class JsonTest(unittest.TestCase):
         cpp_info.exelinkflags = ["-exelinkflag"]
         cpp_info.sharedlinkflags = ["-sharedlinkflag"]
         cpp_info.cxxflags = ["-cxxflag"]
-        cpp_info.public_deps = ["MyPkg"]
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         # Add user_info

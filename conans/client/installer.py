@@ -546,11 +546,6 @@ class BinaryInstaller(object):
 
         conanfile.user_info = UserInfo()
 
-        # Get deps_cpp_info from upstream nodes
-        # TODO public_deps = [req.ref.name for req in conanfile.requires if not req.private and not req.override]
-        public_deps = [req.ref.name for req in conanfile.requires.values()]
-        # FIXME: THIs public_deps doesn't make sense here, it is ConanFileDependencies
-        conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
 
@@ -594,19 +589,5 @@ class BinaryInstaller(object):
                     # variable is not declared at build/source, the package will keep the value
                     fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
 
-                if conanfile._conan_dep_cpp_info is None:
-                    try:
-                        if not is_editable and not hasattr(conanfile, "layout"):
-                            # FIXME: Remove when new cppinfo model. If using the layout method
-                            #        the cppinfo object is filled from self.cpp.package new
-                            #        model and we cannot check if the defaults have been modified
-                            #        because it doesn't exist in the new model where the defaults
-                            #        for the components are always empty
-                            pass
-                            #conanfile.cpp_info._raise_incorrect_components_definition(
-                            #    conanfile.name, conanfile.requires)
-                    except ConanException as e:
-                        raise ConanException("%s package_info(): %s" % (str(conanfile), e))
-                    conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
                 self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                            reference=ref)
