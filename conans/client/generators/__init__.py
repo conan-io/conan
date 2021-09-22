@@ -1,42 +1,23 @@
 import os
 import textwrap
-import traceback
-from os.path import join
 
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.util.env_reader import get_env
-from conans.util.files import normalize, save, mkdir
-from .deploy import DeployGenerator
+from conans.util.files import save, mkdir
 from ..tools import chdir
 
 
 class GeneratorManager(object):
     def __init__(self):
-        self._generators = {"deploy": DeployGenerator}
-        self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
-                                "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
-                                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
-                                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-                                "VCVars"]
+        self._generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
+                            "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
+                            "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
+                            "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
+                            "VCVars", "deploy"]
 
-    def add(self, name, generator_class, custom=False):
-        if name not in self._generators or custom:
-            self._generators[name] = generator_class
-
-    def __contains__(self, name):
-        return name in self._generators
-
-    def __getitem__(self, key):
-        return self._generators[key]
-
-    def _new_generator(self, generator_name, output):
-        if generator_name not in self._new_generators:
-            return
-        if generator_name in self._generators:  # Avoid colisions with user custom generators
-            msg = ("******* Your custom generator name '{}' is colliding with a new experimental "
-                   "built-in one. It is recommended to rename it. *******".format(generator_name))
-            output.warn(msg)
-            return
+    def _generator(self, generator_name):
+        if generator_name not in self._generators:
+            raise ConanException("Invalid generator '%s'. Available types: %s" %
+                                 (generator_name, ", ".join(self._generators)))
         if generator_name == "CMakeToolchain":
             from conan.tools.cmake import CMakeToolchain
             return CMakeToolchain
@@ -79,9 +60,12 @@ class GeneratorManager(object):
         elif generator_name == "BazelToolchain":
             from conan.tools.google import BazelToolchain
             return BazelToolchain
+        elif generator_name == "deploy":
+            from conans.client.generators.deploy import DeployGenerator as deploy
+            return deploy
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
-                                 "not commplete".format(generator_name))
+                                 "not complete".format(generator_name))
 
     def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
         """ produces auxiliary files, required to build a project or a package.
@@ -89,7 +73,7 @@ class GeneratorManager(object):
         _receive_conf(conanfile)
 
         for generator_name in set(conanfile.generators):
-            generator_class = self._new_generator(generator_name, output)
+            generator_class = self._generator(generator_name)
             if generator_class:
                 try:
                     generator = generator_class(conanfile)
@@ -101,38 +85,6 @@ class GeneratorManager(object):
                 except Exception as e:
                     raise ConanException("Error in generator '{}': {}".format(generator_name,
                                                                               str(e)))
-
-            try:
-                generator_class = self._generators[generator_name]
-            except KeyError:
-                available = list(self._generators.keys()) + self._new_generators
-                raise ConanException("Invalid generator '%s'. Available types: %s" %
-                                     (generator_name, ", ".join(available)))
-
-            generator = generator_class(conanfile)
-
-            try:
-                generator.output_path = old_gen_folder
-                content = generator.content
-                if isinstance(content, dict):
-                    if generator.filename:
-                        output.warn("Generator %s is multifile. Property 'filename' not used"
-                                    % (generator_name,))
-                    for k, v in content.items():
-                        if generator.normalize:  # To not break existing behavior, to be removed 2.0
-                            v = normalize(v)
-                        output.info("Generator %s created %s" % (generator_name, k))
-                        save(join(old_gen_folder, k), v, only_if_modified=True)
-                else:
-                    content = normalize(content)
-                    output.info("Generator %s created %s" % (generator_name, generator.filename))
-                    save(join(old_gen_folder, generator.filename), content, only_if_modified=True)
-            except Exception as e:
-                if get_env("CONAN_VERBOSE_TRACEBACK", False):
-                    output.error(traceback.format_exc())
-                output.error("Generator %s(file:%s) failed\n%s"
-                             % (generator_name, generator.filename, str(e)))
-                raise ConanException(e)
 
 
 def _receive_conf(conanfile):
