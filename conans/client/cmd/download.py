@@ -5,7 +5,7 @@ from conans.errors import NotFoundException, RecipeNotFoundException, PackageNot
 from multiprocessing.pool import ThreadPool
 
 
-def download(app, ref, package_ids, remote, recipe, recorder, remotes):
+def download(app, ref, package_ids, remote, recipe, remotes):
     out, remote_manager, cache, loader = app.out, app.remote_manager, app.cache, app.loader
     hook_manager = app.hook_manager
     assert(isinstance(ref, ConanFileReference))
@@ -39,13 +39,12 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
 
         parallel = cache.config.parallel_download
         _download_binaries(conanfile, ref, package_ids, cache, remote_manager,
-                           remote, output, recorder, parallel)
+                           remote, output, parallel)
     hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,
                          remote=remote)
 
 
-def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote, output,
-                       recorder, parallel):
+def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote, output, parallel):
 
     def _download(package_id):
         pref = PackageReference(ref, package_id)
@@ -63,7 +62,7 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
             output.info(message)
 
         if not skip_download:
-            remote_manager.get_package(conanfile, pref, remote, output, recorder)
+            remote_manager.get_package(conanfile, pref, remote, output)
 
     if parallel is not None:
         output.info("Downloading binary packages in %s parallel threads" % parallel)

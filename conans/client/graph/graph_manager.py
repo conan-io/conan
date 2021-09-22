@@ -43,7 +43,7 @@ class GraphManager(object):
 
     def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
                    root_ref, build_mode, check_updates, update,
-                   remotes, recorder, apply_build_requires=True, lockfile_node_id=None,
+                   remotes, apply_build_requires=True, lockfile_node_id=None,
                    is_build_require=False, require_overrides=None):
         """ main entry point to compute a full dependency graph
         """
