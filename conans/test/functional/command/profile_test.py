@@ -34,7 +34,8 @@ class ProfileTest(unittest.TestCase):
         client.run("install . -pr=mylocalprofile")
 
     def test_empty(self):
-        client = TestClient(cache_autopopulate=False)
+        client = TestClient()
+        os.remove(client.cache.default_profile_path)
         client.run("profile list")
         self.assertIn("No profiles defined", client.out)
 
