@@ -55,11 +55,6 @@ class ConanFile(object):
     generators = []
     revision_mode = "hash"
 
-    # Vars to control the build steps (build(), package())
-    should_configure = True
-    should_build = True
-    should_install = True
-    should_test = True
     in_local_cache = True
     develop = False
 
