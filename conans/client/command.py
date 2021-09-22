@@ -160,40 +160,8 @@ class Command(object):
                             'Useful in combination with "export-pkg" command')
         parser.add_argument("-m", "--template",
                             help='Use the given template to generate a conan project')
-        parser.add_argument("-cis", "--ci-shared", action='store_true',
-                            default=False,
-                            help='Package will have a "shared" option to be used in CI')
-        parser.add_argument("-cilg", "--ci-travis-gcc", action='store_true',
-                            default=False,
-                            help='Generate travis-ci files for linux gcc')
-        parser.add_argument("-cilc", "--ci-travis-clang", action='store_true',
-                            default=False,
-                            help='Generate travis-ci files for linux clang')
-        parser.add_argument("-cio", "--ci-travis-osx", action='store_true',
-                            default=False,
-                            help='Generate travis-ci files for OSX apple-clang')
-        parser.add_argument("-ciw", "--ci-appveyor-win", action='store_true',
-                            default=False, help='Generate appveyor files for Appveyor '
-                                                'Visual Studio')
-        parser.add_argument("-ciglg", "--ci-gitlab-gcc", action='store_true',
-                            default=False,
-                            help='Generate GitLab files for linux gcc')
-        parser.add_argument("-ciglc", "--ci-gitlab-clang", action='store_true',
-                            default=False,
-                            help='Generate GitLab files for linux clang')
-        parser.add_argument("-ciccg", "--ci-circleci-gcc", action='store_true',
-                            default=False,
-                            help='Generate CircleCI files for linux gcc')
-        parser.add_argument("-ciccc", "--ci-circleci-clang", action='store_true',
-                            default=False,
-                            help='Generate CircleCI files for linux clang')
-        parser.add_argument("-cicco", "--ci-circleci-osx", action='store_true',
-                            default=False,
-                            help='Generate CircleCI files for OSX apple-clang')
         parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
                             help='Generate a .gitignore with the known patterns to excluded')
-        parser.add_argument("-ciu", "--ci-upload-url",
-                            help='Define URL of the repository to upload')
         parser.add_argument('-d', '--define', action='append')
 
         args = parser.parse_args(*args)
@@ -204,18 +172,7 @@ class Command(object):
         self._warn_python_version()
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
-                        visual_versions=args.ci_appveyor_win,
-                        linux_gcc_versions=args.ci_travis_gcc,
-                        linux_clang_versions=args.ci_travis_clang,
-                        gitignore=args.gitignore,
-                        osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
-                        upload_url=args.ci_upload_url,
-                        gitlab_gcc_versions=args.ci_gitlab_gcc,
-                        gitlab_clang_versions=args.ci_gitlab_clang,
-                        circleci_gcc_versions=args.ci_circleci_gcc,
-                        circleci_clang_versions=args.ci_circleci_clang,
-                        circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.template,
+                        gitignore=args.gitignore, template=args.template,
                         defines=defines)
 
     def inspect(self, *args):
@@ -676,12 +633,8 @@ class Command(object):
         parser.add_argument("--package-filter", nargs='?',
                             help='Print information only for packages that match the filter pattern'
                                  ' e.g., MyPackage/1.2@user/channel or MyPackage*')
-        dry_build_help = ("Apply the --build argument to output the information, "
-                          "as it would be done by the install command")
-        parser.add_argument("-db", "--dry-build", action=Extender, nargs="?", help=dry_build_help)
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
-
         update_help = "Will check if updates of the dependencies exist in the remotes " \
                       "(a new version that satisfies a version range, a new revision or a newer " \
                       "recipe if not using revisions)."
@@ -694,70 +647,52 @@ class Command(object):
                                     conf=args.conf_build)
         # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
-        # INSTALL SIMULATION, NODES TO INSTALL
-        if args.build is not None:
-            nodes, _ = self._conan.info_nodes_to_build(args.path_or_reference,
-                                                       build_modes=args.build,
-                                                       settings=args.settings_host,
-                                                       options=args.options_host,
-                                                       env=args.env_host,
-                                                       profile_names=args.profile_host,
-                                                       conf=args.conf_host,
-                                                       profile_build=profile_build,
-                                                       remote_name=args.remote,
-                                                       check_updates=args.update)
-            if args.json:
-                json_arg = True if args.json == "1" else args.json
-                self._outputer.json_nodes_to_build(nodes, json_arg, os.getcwd())
-            else:
-                self._outputer.nodes_to_build(nodes)
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
-        else:
-            data = self._conan.info(args.path_or_reference,
-                                    remote_name=args.remote,
-                                    settings=args.settings_host,
-                                    options=args.options_host,
-                                    env=args.env_host,
-                                    profile_names=args.profile_host,
-                                    conf=args.conf_host,
-                                    profile_build=profile_build,
-                                    update=args.update,
-                                    build=args.dry_build,
-                                    lockfile=args.lockfile,
-                                    name=args.name,
-                                    version=args.version,
-                                    user=args.user,
-                                    channel=args.channel)
-            deps_graph, _ = data
-            only = args.only
-            if args.only == ["None"]:
-                only = []
-            if only and args.paths and (set(only) - set(path_only_options)):
-                raise ConanException("Invalid --only value '%s' with --path specified, allowed "
-                                     "values: [%s]." % (only, str_path_only_options))
-            elif only and not args.paths and (set(only) - set(info_only_options)):
-                raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
-                                     "Use --only=None to show only the references."
-                                     % (only, str_only_options))
+        data = self._conan.info(args.path_or_reference,
+                                remote_name=args.remote,
+                                settings=args.settings_host,
+                                options=args.options_host,
+                                env=args.env_host,
+                                profile_names=args.profile_host,
+                                conf=args.conf_host,
+                                profile_build=profile_build,
+                                update=args.update,
+                                build=args.build,
+                                lockfile=args.lockfile,
+                                name=args.name,
+                                version=args.version,
+                                user=args.user,
+                                channel=args.channel)
+        deps_graph, _ = data
+        only = args.only
+        if args.only == ["None"]:
+            only = []
+        if only and args.paths and (set(only) - set(path_only_options)):
+            raise ConanException("Invalid --only value '%s' with --path specified, allowed "
+                                 "values: [%s]." % (only, str_path_only_options))
+        elif only and not args.paths and (set(only) - set(info_only_options)):
+            raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
+                                 "Use --only=None to show only the references."
+                                 % (only, str_only_options))
 
-            if args.graph:
-                if args.graph.endswith(".html"):
-                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML,
-                                                                  user_overrides=True)
-                else:
-                    template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT,
-                                                                  user_overrides=True)
-                self._outputer.info_graph(args.graph, deps_graph, os.getcwd(), template=template)
-            if args.json:
-                json_arg = True if args.json == "1" else args.json
-                self._outputer.json_info(deps_graph, json_arg, os.getcwd(), show_paths=args.paths)
+        if args.graph:
+            if args.graph.endswith(".html"):
+                template = self._conan.app.cache.get_template(templates.INFO_GRAPH_HTML,
+                                                              user_overrides=True)
+            else:
+                template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT,
+                                                              user_overrides=True)
+            self._outputer.info_graph(args.graph, deps_graph, os.getcwd(), template=template)
+        if args.json:
+            json_arg = True if args.json == "1" else args.json
+            self._outputer.json_info(deps_graph, json_arg, os.getcwd(), show_paths=args.paths)
 
-            if not args.graph and not args.json:
-                self._outputer.info(deps_graph, only, args.package_filter, args.paths)
+        if not args.graph and not args.json:
+            self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 
-            # TODO: Check this UX or flow
-            if deps_graph.error:
-                raise deps_graph.error
+        # TODO: Check this UX or flow
+        if deps_graph.error:
+            raise deps_graph.error
 
     def source(self, *args):
         """
@@ -888,7 +823,7 @@ class Command(object):
                                      update=args.update, generators=args.generator,
                                      no_imports=args.no_imports,
                                      lockfile=args.lockfile,
-                                     lockfile_out=args.lockfile_out)
+                                     lockfile_out=args.lockfile_out, conf=args.conf_host)
         except ConanException as exc:
             info = exc.info
             raise

@@ -6,21 +6,13 @@ from os.path import join
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
-from .cmake import CMakeGenerator
 from .deploy import DeployGenerator
-from .json_generator import JsonGenerator
-from .markdown import MarkdownGenerator
-from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
 
 
 class GeneratorManager(object):
     def __init__(self):
-        self._generators = {"cmake": CMakeGenerator,
-                            "ycm": YouCompleteMeGenerator,
-                            "json": JsonGenerator,
-                            "deploy": DeployGenerator,
-                            "markdown": MarkdownGenerator}
+        self._generators = {"deploy": DeployGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
@@ -117,12 +109,7 @@ class GeneratorManager(object):
                 available = list(self._generators.keys()) + self._new_generators
                 raise ConanException("Invalid generator '%s'. Available types: %s" %
                                      (generator_name, ", ".join(available)))
-            try:
-                generator = generator_class(conanfile)
-            except TypeError:
-                # To allow old-style generator packages to work (e.g. premake)
-                conanfile.output.warning("Generator %s failed with new __init__(), trying old one")
-                generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
+            generator = generator_class(conanfile)
 
             try:
                 generator.output_path = old_gen_folder
@@ -163,14 +150,6 @@ def _receive_conf(conanfile):
 
 
 def write_toolchain(conanfile):
-    if hasattr(conanfile, "toolchain"):
-        msg = ("\n*****************************************************************\n"
-               "******************************************************************\n"
-               "The 'toolchain' attribute or method has been deprecated and removed\n"
-               "Use 'generators = \"ClassName\"' or 'generate()' method instead.\n"
-               "********************************************************************\n"
-               "********************************************************************\n")
-        raise ConanException(msg)
 
     if hasattr(conanfile, "generate"):
         conanfile.output.highlight("Calling generate()")

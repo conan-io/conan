@@ -111,5 +111,4 @@ class BuildInfoTest(unittest.TestCase):
         self.assertEqual({}, info.configs)
         self.assertEqual([], info.cxxflags)
         self.assertEqual([], info.exelinkflags)
-        self.assertEqual([], info.public_deps)
         self.assertEqual([], info.sharedlinkflags)

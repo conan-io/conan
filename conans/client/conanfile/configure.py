@@ -2,7 +2,6 @@ from conans.client.tools import no_op
 from conans.errors import conanfile_exception_formatter
 from conans.model.pkg_type import PackageType
 from conans.model.requires import BuildRequirements, TestRequirements
-from conans.util.conan_v2_mode import conan_v2_error
 
 
 def run_configure_method(conanfile, down_options, down_ref, ref):
@@ -10,19 +9,10 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
 
     # Avoid extra time manipulating the sys.path for python
     with no_op():  # TODO: Remove this in a later refactor
-        if hasattr(conanfile, "config"):
-            conan_v2_error("config() has been deprecated. Use config_options() and configure()")
-            with conanfile_exception_formatter(str(conanfile), "config"):
-                conanfile.config()
-
         with conanfile_exception_formatter(str(conanfile), "config_options"):
             conanfile.config_options()
 
         conanfile.options.propagate_upstream(down_options, down_ref, ref)
-
-        if hasattr(conanfile, "config"):
-            with conanfile_exception_formatter(str(conanfile), "config"):
-                conanfile.config()
 
         with conanfile_exception_formatter(str(conanfile), "configure"):
             conanfile.configure()

@@ -342,13 +342,13 @@ class InfoTest2(unittest.TestCase):
         client.run("export . Pkg2/0.1@user/channel")
         client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel",
                      "myprofile": "[build_requires]\ntool/0.1@user/channel"}, clean_first=True)
-        client.run("info . -pr=myprofile --dry-build=missing")
+        client.run("info . -pr=myprofile --build=missing")
         print(client.out)
         # Check that there is only 1 output for tool, not repeated many times
         pkgs = [line for line in str(client.out).splitlines() if line.startswith("tool")]
         self.assertEqual(len(pkgs), 1)
 
-        client.run("info . -pr=myprofile --dry-build=missing --graph=file.html")
+        client.run("info . -pr=myprofile --build=missing --graph=file.html")
         html = client.load("file.html")
         self.assertIn("html", html)
         # To check that this node is not duplicated
@@ -537,7 +537,7 @@ class TestInfoContext:
         client.run("create cmake cmake/1.0@")
         client.run("export pkg pkg/1.0@")
 
-        client.run("info pkg/1.0@ -pr:b=default -pr:h=default --dry-build")
+        client.run("info pkg/1.0@ -pr:b=default -pr:h=default --build")
         assert "cmake/1.0\n"\
                "    ID: {}\n"\
                "    BuildID: None\n"\
@@ -548,7 +548,7 @@ class TestInfoContext:
                "    BuildID: None\n" \
                "    Context: host".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
-        client.run("info pkg/1.0@ -pr:b=default -pr:h=default --dry-build --json=file.json")
+        client.run("info pkg/1.0@ -pr:b=default -pr:h=default --build --json=file.json")
         info = json.loads(client.load("file.json"))
         assert info[0]["reference"] == "cmake/1.0"
         assert info[0]["context"] == "build"

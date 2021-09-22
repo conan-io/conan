@@ -1,10 +1,10 @@
 import fnmatch
 from collections import OrderedDict
 
+
 from conans.cli.output import Color
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
-from conans.util.conan_v2_mode import conan_v2_error
 
 
 class Printer(object):
@@ -23,23 +23,11 @@ class Printer(object):
 
     def print_inspect(self, inspect, raw=False):
         for k, v in inspect.items():
-            if k == "default_options":
-                conan_v2_error("Declare 'default_options' as a dictionary", not isinstance(v, dict))
-
-                if isinstance(v, str):
-                    v = OptionsValues.loads(v)
-                elif isinstance(v, tuple):
-                    v = OptionsValues(v)
-                elif isinstance(v, list):
-                    v = OptionsValues(tuple(v))
-                elif isinstance(v, dict):
-                    v = OptionsValues(v)
-
             if raw:
                 self._out.info(str(v))
             else:
-                if isinstance(v, (dict, OptionsValues)):
-                    self._out.info("%s:" % k)
+                if isinstance(v, dict):
+                    self._out.writeln("%s:" % k)
                     for ok, ov in sorted(v.items()):
                         self._out.info("    %s: %s" % (ok, ov))
                 else:

@@ -330,8 +330,6 @@ class CppInfo(_CppInfo):
             self.frameworkdirs.append(self._default_values.frameworkdir)
         self.components = DefaultOrderedDict(lambda: Component(self.rootpath,
                                                                self.version, self._default_values))
-        # public_deps is needed to accumulate list of deps for cmake targets
-        self.public_deps = []
         self._configs = {}
 
     def __str__(self):

@@ -1,17 +1,17 @@
 import os
 
+from conans.cli.output import Color, ConanOutput
+from conans.client.generators import write_toolchain
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
-from conans.cli.output import Color, ConanOutput
-from conans.client.generators import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
-from conans.model.ref import ConanFileReference
 from conans.model.graph_lock import GraphLockFile, GraphLock
+from conans.model.ref import ConanFileReference
 
 
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
@@ -56,14 +56,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         conanfile.output.highlight("Installing package")
     print_graph(deps_graph)
 
-    try:
-        if cross_building(conanfile):
-            settings = get_cross_building_settings(conanfile)
-            message = "Cross-build from '%s:%s' to '%s:%s'" % settings
-            out.info(message, Color.BRIGHT_MAGENTA)
-    except ConanException:  # Setting os doesn't exist
-        pass
-
     installer = BinaryInstaller(app, recorder=recorder)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
     build_modes = BuildMode(build_modes)
@@ -75,8 +67,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     conanfile.folders.set_base_install(install_folder)
     conanfile.folders.set_base_imports(install_folder)
     conanfile.folders.set_base_generators(base_folder)
-
-    output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
 
     if install_folder:
         # Write generators

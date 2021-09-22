@@ -7,6 +7,7 @@ from mock import mock
 
 from conans.errors import ConanException
 from conans.model.scm import SCM
+from conans.test.utils.mocks import ConanFileMock
 
 
 class SCMDetectRepoTest(unittest.TestCase):
@@ -16,7 +17,7 @@ class SCMDetectRepoTest(unittest.TestCase):
         # Be sure there is no repo in the folder to test
         for name, candidate in SCM.availables.items():
             try:
-                candidate(folder=self.folder).check_repo()
+                candidate(ConanFileMock(), folder=self.folder).check_repo()
             except ConanException:
                 pass
             else:
