@@ -29,7 +29,7 @@ def _try_get_sources(ref, remote_manager, recipe_layout, remote):
     return remote
 
 
-def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remote, remotes):
+def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remotes):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
@@ -41,6 +41,7 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
     if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
         return None
 
+    remote = remotes.selected
     try:
         sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, remote)
         # the revision is not in remote any more, check other remotes
@@ -49,7 +50,7 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
                 if r != remote:
                     sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, r)
                     if sources_remote:
-                        return
+                        break
     except Exception:
         raise
 
@@ -58,6 +59,9 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
                "Probably it was installed from a remote that is no longer available.\n"
                % str(ref))
         raise ConanException(msg)
+
+    # FIXME: this output is scoped but without reference, check if we want this
+    conanfile.output.info("Sources downloaded from '{}'".format(sources_remote.name))
 
 
 def config_source_local(conanfile, conanfile_path, hook_manager):

@@ -167,7 +167,7 @@ class _PackagePreparator(object):
         """
         recipe_layout = self._cache.ref_layout(ref)
 
-        retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, ref, remote, remotes)
+        retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, ref, remotes)
 
         conanfile_path = recipe_layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
