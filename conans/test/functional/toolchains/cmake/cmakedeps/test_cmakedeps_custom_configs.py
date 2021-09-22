@@ -5,6 +5,7 @@ import unittest
 
 import pytest
 
+from conans.client.conf import get_default_settings_yml
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -140,7 +141,7 @@ class CustomSettingsTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
-        settings = load(self.client.cache.settings_path)
+        settings = get_default_settings_yml()
         settings = settings.replace("Release", "MyRelease")
         save(self.client.cache.settings_path, settings)
         self.client.run("new hello/0.1 --template=cmake_lib")

@@ -33,8 +33,6 @@ from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, colorama_initialize
 from conans.client.profile_loader import profile_from_args, read_profile
-from conans.client.recorder.action_recorder import ActionRecorder
-from conans.client.recorder.upload_recoder import UploadRecorder
 from conans.client.remote_manager import RemoteManager
 from conans.client.remover import ConanRemover
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -231,25 +229,11 @@ class ConanAPIV1(object):
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-            cwd=None, visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
-            osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
-            gitlab_gcc_versions=None, gitlab_clang_versions=None,
-            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
-            template=None, defines=None):
+            cwd=None, template=None, defines=None, gitignore=None):
         from conans.client.cmd.new import cmd_new
         cwd = os.path.abspath(cwd or os.getcwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
-                        exports_sources=exports_sources, bare=bare,
-                        visual_versions=visual_versions,
-                        linux_gcc_versions=linux_gcc_versions,
-                        linux_clang_versions=linux_clang_versions,
-                        osx_clang_versions=osx_clang_versions, shared=shared,
-                        upload_url=upload_url, gitignore=gitignore,
-                        gitlab_gcc_versions=gitlab_gcc_versions,
-                        gitlab_clang_versions=gitlab_clang_versions,
-                        circleci_gcc_versions=circleci_gcc_versions,
-                        circleci_clang_versions=circleci_clang_versions,
-                        circleci_osx_versions=circleci_osx_versions,
+                        exports_sources=exports_sources, bare=bare, gitignore=gitignore,
                         template=template, cache=self.app.cache, defines=defines)
 
         save_files(cwd, files)
@@ -318,11 +302,9 @@ class ConanAPIV1(object):
                                                                            self.app.out,
                                                                            lockfile=lockfile)
         ref = ConanFileReference.loads(reference)
-        recorder = ActionRecorder()
         install_build_and_test(self.app, conanfile_path, ref, profile_host,
                                profile_build, graph_lock, root_ref, remotes, update,
-                               build_modes=build_modes, test_build_folder=test_build_folder,
-                               recorder=recorder)
+                               build_modes=build_modes, test_build_folder=test_build_folder)
 
     @api_method
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
@@ -342,7 +324,7 @@ class ConanAPIV1(object):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         cwd = cwd or os.getcwd()
-        recorder = ActionRecorder()
+
         try:
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
@@ -360,28 +342,21 @@ class ConanAPIV1(object):
 
             self.app.range_resolver.clear_output()  # invalidate version range output
 
-            recorder.recipe_exported(new_ref)
-
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [new_ref.name]
 
             # FIXME: Dirty hack: remove the root for the test_package/conanfile.py consumer
             root_ref = ConanFileReference(None, None, None, None, validate=False)
-            recorder.add_recipe_being_developed(new_ref)
             create(self.app, new_ref, profile_host, profile_build,
                    graph_lock, root_ref, remotes, update, build_modes,
-                   test_build_folder, test_folder, conanfile_path, recorder=recorder,
+                   test_build_folder, test_folder, conanfile_path,
                    is_build_require=is_build_require, require_overrides=require_overrides)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
                 graph_lock_file.save(lockfile_out)
-            return recorder.get_info()
-
         except ConanException as exc:
-            recorder.error = True
-            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -395,7 +370,7 @@ class ConanAPIV1(object):
         remotes = self.app.load_remotes()
         cwd = cwd or os.getcwd()
 
-        recorder = ActionRecorder()
+
         try:
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
@@ -428,9 +403,7 @@ class ConanAPIV1(object):
                                  graph_lock=graph_lock, ignore_dirty=ignore_dirty)
             ref = new_ref.copy_clear_rev()
             # new_ref has revision
-            recorder.recipe_exported(new_ref)
-            recorder.add_recipe_being_developed(ref)
-            export_pkg(self.app, recorder, new_ref, source_folder=source_folder,
+            export_pkg(self.app, new_ref, source_folder=source_folder,
                        build_folder=build_folder, package_folder=package_folder,
                        profile_host=profile_host, profile_build=profile_build,
                        graph_lock=graph_lock, root_ref=root_ref, force=force,
@@ -439,10 +412,7 @@ class ConanAPIV1(object):
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
                 graph_lock_file.save(lockfile_out)
-            return recorder.get_info()
         except ConanException as exc:
-            recorder.error = True
-            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -459,8 +429,8 @@ class ConanAPIV1(object):
                                              "specify a package revision")
             remotes = self.app.load_remotes(remote_name=remote_name)
             remote = remotes.get_remote(remote_name)
-            recorder = ActionRecorder()
-            download(self.app, ref, packages, remote, recipe, recorder, remotes=remotes)
+
+            download(self.app, ref, packages, remote, recipe, remotes=remotes)
         else:
             raise ConanException("Provide a valid full reference without wildcards.")
 
@@ -473,7 +443,7 @@ class ConanAPIV1(object):
                           require_overrides=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
-        recorder = ActionRecorder()
+
         cwd = cwd or os.getcwd()
         try:
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
@@ -490,7 +460,7 @@ class ConanAPIV1(object):
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder, base_folder=cwd,
                          remotes=remotes, profile_host=profile_host, profile_build=profile_build,
                          graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
-                         update=update, generators=generators, recorder=recorder,
+                         update=update, generators=generators,
                          lockfile_node_id=lockfile_node_id,
                          is_build_require=is_build_require,
                          require_overrides=require_overrides)
@@ -499,10 +469,7 @@ class ConanAPIV1(object):
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
                 graph_lock_file.save(lockfile_out)
-            return recorder.get_info()
         except ConanException as exc:
-            recorder.error = True
-            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -515,7 +482,7 @@ class ConanAPIV1(object):
 
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
-        recorder = ActionRecorder()
+
         cwd = cwd or os.getcwd()
         try:
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
@@ -546,17 +513,13 @@ class ConanAPIV1(object):
                          update=update,
                          generators=generators,
                          no_imports=no_imports,
-                         recorder=recorder,
                          require_overrides=require_overrides)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
                 graph_lock_file.save(lockfile_out)
-            return recorder.get_info()
         except ConanException as exc:
-            recorder.error = True
-            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -607,14 +570,15 @@ class ConanAPIV1(object):
 
     @api_method
     def config_init(self, force=False):
-        self.app.cache.reset_default_profile()
         if force:
             self.app.cache.reset_config()
             self.app.cache.registry.reset_remotes()
+            self.app.cache.reset_default_profile()
             self.app.cache.reset_settings()
         else:
             self.app.cache.initialize_config()
             self.app.cache.registry.initialize_remotes()
+            self.app.cache.initialize_default_profile()
             self.app.cache.initialize_settings()
 
     def _info_args(self, reference_or_path, profile_host, profile_build,
@@ -648,13 +612,13 @@ class ConanAPIV1(object):
             self._info_args(reference_or_path, profile_host,
                             profile_build, name=name, version=version,
                             user=user, channel=channel, lockfile=lockfile)
-        recorder = ActionRecorder()
+
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
         deps_graph = self.app.graph_manager.load_graph(reference, None, profile_host,
                                                        profile_build, graph_lock,
                                                        root_ref, build,
-                                                       update, False, remotes, recorder)
+                                                       update, False, remotes)
         return deps_graph, deps_graph.root.conanfile
 
     @api_method
@@ -668,7 +632,7 @@ class ConanAPIV1(object):
 
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
-        recorder = ActionRecorder()
+
         cwd = cwd or os.getcwd()
 
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
@@ -700,8 +664,7 @@ class ConanAPIV1(object):
                                      build_modes=build,
                                      update=update,
                                      generators=generators,
-                                     no_imports=no_imports,
-                                     recorder=recorder)
+                                     no_imports=no_imports)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -715,10 +678,7 @@ class ConanAPIV1(object):
                       should_configure=should_configure, should_build=should_build,
                       should_install=should_install, should_test=should_test)
 
-            return recorder.get_info()
         except ConanException as exc:
-            recorder.error = True
-            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -756,7 +716,7 @@ class ConanAPIV1(object):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=None)
-        recorder = ActionRecorder()
+
         try:
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
             profile_host, profile_build, graph_lock, root_ref = \
@@ -772,14 +732,11 @@ class ConanAPIV1(object):
                                      profile_build=profile_build,
                                      graph_lock=graph_lock,
                                      root_ref=root_ref,
-                                     recorder=recorder,
                                      remotes=remotes)
             conanfile = deps_info.root.conanfile
             conanfile.folders.set_base_imports(dest)
             return run_imports(conanfile)
         except ConanException as exc:
-            recorder.error = True
-            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -888,19 +845,12 @@ class ConanAPIV1(object):
                parallel_upload=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        upload_recorder = UploadRecorder()
         uploader = CmdUpload(self.app.cache, self.app.user_io, self.app.remote_manager,
                              self.app.loader, self.app.hook_manager)
         remotes = self.app.load_remotes(remote_name=remote_name)
-        try:
-            uploader.upload(pattern, remotes, upload_recorder, package, all_packages, confirm,
-                            retry, retry_wait, integrity_check, policy, query=query,
-                            parallel_upload=parallel_upload)
-            return upload_recorder.get_info()
-        except ConanException as exc:
-            upload_recorder.error = True
-            exc.info = upload_recorder.get_info()
-            raise
+        uploader.upload(pattern, remotes, package, all_packages, confirm,
+                        retry, retry_wait, integrity_check, policy, query=query,
+                        parallel_upload=parallel_upload)
 
     @api_method
     def remote_list(self):
@@ -1257,7 +1207,7 @@ class ConanAPIV1(object):
 
         mkdir(install_folder)
         remotes = self.app.load_remotes(remote_name=remote_name)
-        recorder = ActionRecorder()
+
         root_id = graph_lock.root_node_id()
         reference = graph_lock.nodes[root_id].ref
         if recipes:
@@ -1267,7 +1217,7 @@ class ConanAPIV1(object):
                                                       root_ref=root_ref,
                                                       build_mode=None,
                                                       check_updates=False, update=None,
-                                                      remotes=remotes, recorder=recorder,
+                                                      remotes=remotes,
                                                       lockfile_node_id=root_id)
             print_graph(graph, self.app.out)
         else:
@@ -1275,7 +1225,7 @@ class ConanAPIV1(object):
                          base_folder=cwd,
                          profile_host=phost, profile_build=pbuild, graph_lock=graph_lock,
                          root_ref=root_ref, remotes=remotes, build_modes=build,
-                         generators=generators, recorder=recorder, lockfile_node_id=root_id)
+                         generators=generators, lockfile_node_id=root_id)
 
         if lockfile_out:
             lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -1359,12 +1309,12 @@ class ConanAPIV1(object):
         if pbuild:
             pbuild.process_settings(self.app.cache)
 
-        recorder = ActionRecorder()
+
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
         deps_graph = self.app.graph_manager.load_graph(ref_or_path, None, phost,
                                                        pbuild, graph_lock, root_ref, build, update,
-                                                       update, remotes, recorder)
+                                                       update, remotes)
         print_graph(deps_graph, self.app.out)
 
         # The computed graph-lock by the graph expansion
