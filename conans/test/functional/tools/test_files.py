@@ -14,7 +14,7 @@ from conans.util.files import save
 class MockPatchset:
     apply_args = None
 
-    def apply(self, root, strip, fuzz):
+    def apply(self, strip=0, root=None, fuzz=False):
         self.apply_args = (root, strip, fuzz)
         return True
 
@@ -142,7 +142,6 @@ def test_apply_conandata_patches(mock_patch_ng):
     client.save({'conanfile.py': conanfile,
                  'conandata.yml': conandata_yml})
     client.run('create .')
-
 
     assert mock_patch_ng.apply_args[0].endswith('source_subfolder')
     assert mock_patch_ng.apply_args[1:] == (0, False)
