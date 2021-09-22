@@ -202,3 +202,4 @@ class ConanLib(ConanFile):
         client.run("remove * -f")
         client.run("install hello/0.1@ -r server0")
         client.run("upload hello/0.1@ --all -r server1")
+        self.assertIn("Downloading conan_sources.tgz", client.out)
