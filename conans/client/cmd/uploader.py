@@ -86,13 +86,11 @@ class _UploadCollecter(object):
         for ref in refs:
             # TODO: cache2.0. For 2.0 we should always specify the revision of the reference
             #  that we want to upload, check if  we should move this to other place
-            # get the latest revision for the reference
             remote = remotes.selected
-            ref_remote = remote if remote else None
 
             upload = True
             if not confirm:
-                msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), ref_remote.name)
+                msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), remote.name)
                 upload = self._user_io.request_boolean(msg)
             if upload:
                 try:
@@ -145,7 +143,7 @@ class _UploadCollecter(object):
                     package_id, package_revision = package.id, package.revision
                     assert package_revision is not None, "PREV cannot be None to upload"
                     prefs.append(PackageReference(ref, package_id, package_revision))
-                refs_by_remote[ref_remote].append((ref, conanfile, prefs))
+                refs_by_remote[remote].append((ref, conanfile, prefs))
 
         return refs_by_remote
 
