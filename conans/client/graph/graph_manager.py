@@ -23,7 +23,7 @@ class GraphManager(object):
         """
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
         # FIXME: Make "conan source" build the whole graph. Do it in another PR
-        profile_host = profile_from_args(None, None, None, None, None, os.getcwd(), None)
+        profile_host = profile_from_args(None, None, None, None, None, os.getcwd(), self._cache)
         profile_host.process_settings(self._cache)
 
         name, version, user, channel = None, None, None, None
