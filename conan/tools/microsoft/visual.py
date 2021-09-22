@@ -1,12 +1,10 @@
 import os
-import textwrap
 
-from conan.tools.env.environment import register_env_script
+from conan.tools.env.environment import create_env_script
 from conan.tools.intel import IntelOneAPI
 from conans.client.tools import intel_compilervars_command
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
-from conans.util.files import save
 
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
@@ -56,15 +54,7 @@ def _write_conanvcvars(conanfile, group):
                                 platform_type=None, winsdk_version=None,
                                 vcvars_ver=vcvars_ver)
     if vcvars:
-        content = textwrap.dedent("""\
-            @echo off
-            {}
-            """.format(vcvars))
-        path = os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE)
-        save(path, content)
-
-        if group:
-            register_env_script(conanfile, path, group)
+        create_env_script(conanfile, vcvars, CONAN_VCVARS_FILE, group)
 
 
 def vs_ide_version(conanfile):

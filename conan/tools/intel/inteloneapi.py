@@ -20,8 +20,7 @@ import platform
 
 import six
 
-from conan.tools.env import Environment
-from conans.client.tools.env import env_diff
+from conan.tools.env.environment import create_env_script
 from conans.client.tools.win import is_win64, _system_registry_key
 from conans.errors import ConanException
 
@@ -101,15 +100,12 @@ class IntelOneAPI:
         else:  # DPC++ compiler
             return "Intel(R) oneAPI DPC++ Compiler"
 
-    def environment(self):
-        env = Environment(conanfile=self._conanfile)
-        for k, v in env_diff(self.command, True).items():
-            env.append(k, v)
-        return env
-
-    def generate(self, env=None, group="build"):
-        env = env or self.environment()
-        env.save_script(self.filename, group=group)
+    def generate(self, group="build"):
+        if platform.system() == "Windows" and not self._conanfile.win_bash:
+            filename = self.filename + '.bat'
+        else:
+            filename = self.filename + '.sh'
+        create_env_script(self._conanfile, self.command, filename, group)
 
     @property
     def installation_path(self):

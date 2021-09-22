@@ -427,6 +427,21 @@ class ProfileEnvironment:
         return result
 
 
+def create_env_script(conanfile, command, filename, group):
+    """
+    Create a simple script executing a command and register it.
+    """
+    content = textwrap.dedent("""\
+        @echo off
+        {}
+        """.format(command))
+    path = os.path.join(conanfile.generators_folder, filename)
+    save(path, content)
+
+    if group:
+        register_env_script(conanfile, path, group)
+
+
 def register_env_script(conanfile, env_script_path, group):
     """
     Add the "env_script_path" to the current list of registered scripts for defined "group"
