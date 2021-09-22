@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import uuid
 
 import pytest
@@ -105,6 +106,37 @@ tools_locations = {
     }
 }
 
+
+# TODO: Make this match the default tools (compilers) above automatically
+default_profiles = {
+    "Windows": textwrap.dedent("""\
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=Visual Studio
+        compiler.version=15
+        build_type=Release
+        """),
+    "Linux": textwrap.dedent("""\
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=8
+        compiler.libcxx=libstdc++11
+        build_type=Release
+        """),
+    "Darwin": textwrap.dedent("""\
+        [settings]
+        os=Macos
+        arch=x86_64
+        compiler=apple-clang
+        compiler.version=12
+        compiler.libcxx=libc++
+        build_type=Release
+        """)
+}
+
 try:
     from conans.test.conftest_user import tools_locations as user_tool_locations
 
@@ -119,6 +151,13 @@ try:
     update(tools_locations, user_tool_locations)
 except ImportError as e:
     user_tool_locations = None
+
+try:
+    from conans.test.conftest_user import default_profiles as user_default_profiles
+    default_profiles.update(user_default_profiles)
+except ImportError as e:
+    user_default_profiles = None
+
 
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},

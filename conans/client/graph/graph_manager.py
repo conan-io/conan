@@ -2,6 +2,7 @@ from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import Node, CONTEXT_HOST
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
+from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 
 
@@ -18,7 +19,7 @@ class GraphManager(object):
         """loads a conanfile for local flow: source
         """
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
-        profile_host = self._cache.default_profile
+        profile_host = Profile()
         profile_host.process_settings(self._cache)
 
         name, version, user, channel = None, None, None, None

@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import shlex
 import shutil
 import socket
@@ -39,6 +40,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.conftest import default_profiles
 from conans.test.utils.artifactory import ARTIFACTORY_DEFAULT_USER, ARTIFACTORY_DEFAULT_PASSWORD, \
     ArtifactoryServer
 from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput, RedirectedTestOutput
@@ -50,7 +52,7 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
 from conans.test.utils.test_files import temp_folder
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
-from conans.util.files import mkdir, save_files
+from conans.util.files import mkdir, save_files, save
 
 NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
 
@@ -329,24 +331,6 @@ if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
     TestServer = ArtifactoryServer
 
 
-def _copy_cache_folder(target_folder):
-    # Some variables affect to cache population (take a different default folder)
-    vars_ = [CONAN_V2_MODE_ENVVAR, 'CC', 'CXX', 'PATH']
-    cache_key = hash('|'.join(map(str, [os.environ.get(it, None) for it in vars_])))
-    master_folder = _copy_cache_folder.master.setdefault(cache_key, temp_folder(create_dir=False))
-    if not os.path.exists(master_folder):
-        # Create and populate the cache folder with the defaults
-        cache = ClientCache(master_folder, TestBufferConanOutput())
-        cache.initialize_config()
-        cache.registry.initialize_remotes()
-        cache.initialize_default_profile()
-        cache.initialize_settings()
-    shutil.copytree(master_folder, target_folder)
-
-
-_copy_cache_folder.master = dict()  # temp_folder(create_dir=False)
-
-
 @contextmanager
 def redirect_output(target):
     original_stdout = sys.stdout
@@ -370,8 +354,7 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 cpu_count=1, default_server_user=None,
-                 cache_autopopulate=True):
+                 cpu_count=1, default_server_user=None):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -397,12 +380,7 @@ class TestClient(object):
         if self.users is None:
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
-        if cache_autopopulate and (not cache_folder or not os.path.exists(cache_folder)):
-            # Copy a cache folder already populated
-            self.cache_folder = cache_folder or temp_folder(path_with_spaces, create_dir=False)
-            _copy_cache_folder(self.cache_folder)
-        else:
-            self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+        self.cache_folder = cache_folder or temp_folder(path_with_spaces)
 
         self.requester_class = requester_class
         self.runner = runner
@@ -425,6 +403,10 @@ class TestClient(object):
         self.tune_conan_conf(cache_folder, cpu_count)
 
         self.out = RedirectedTestOutput()
+
+        # create default profile
+        text = default_profiles[platform.system()]
+        save(self.cache.default_profile_path, text)
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
