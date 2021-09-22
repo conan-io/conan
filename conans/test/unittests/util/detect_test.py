@@ -6,7 +6,7 @@ from parameterized import parameterized
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
@@ -52,7 +52,7 @@ class DetectTest(unittest.TestCase):
         output = RedirectedTestOutput()
         with redirect_output(output):
             with tools.environment_append({"CC": "gcc"}):
-                detect_defaults_settings(ConanOutput(), profile_path="/foo/bar/quz/custom-profile")
+                detect_defaults_settings(profile_path="/foo/bar/quz/custom-profile")
                 self.assertIn("conan profile update settings.compiler.libcxx=libstdc++11 "
                               "custom-profile", output)
 
@@ -67,8 +67,7 @@ class DetectTest(unittest.TestCase):
                 mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
                 mock.patch("conans.client.tools.oss.OSInfo.get_aix_conf", mock.MagicMock(return_value=bitness)), \
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value=version)):
-            result = detect_defaults_settings(output=Mock(),
-                                              profile_path=DEFAULT_PROFILE_NAME)
+            result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual("AIX", result['os'])
             self.assertEqual(expected_arch, result['arch'])
@@ -84,8 +83,7 @@ class DetectTest(unittest.TestCase):
     ])
     def test_detect_arch(self, machine, expected_arch):
         with mock.patch("platform.machine", mock.MagicMock(return_value=machine)):
-            result = detect_defaults_settings(output=Mock(),
-                                              profile_path=DEFAULT_PROFILE_NAME)
+            result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual(expected_arch, result['arch'])
 
@@ -100,8 +98,7 @@ class DetectTest(unittest.TestCase):
     def test_vs2022(self):
         with mock.patch("conans.client.conf.detect._get_default_compiler",
                         mock.MagicMock(return_value=("Visual Studio", "17"))):
-            result = detect_defaults_settings(output=Mock(),
-                                              profile_path=DEFAULT_PROFILE_NAME)
+            result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual('msvc', result['compiler'])
             self.assertEqual('19.3', result['compiler.version'])

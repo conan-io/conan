@@ -5,7 +5,7 @@ from io import StringIO
 import mock
 
 from conans import tools
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 from conans.client.tools.files import which
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool, AptTool
@@ -81,7 +81,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ConanException, "add_repository not implemented"):
             new_out = StringIO()
-            spt = SystemPackageTool(os_info=os_info, output=ConanOutput(new_out))
+            spt = SystemPackageTool()
             spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
                                repo_key=None)
 
@@ -118,8 +118,7 @@ class SystemPackageToolTest(unittest.TestCase):
                 os_info.linux_distro = "debian"
                 patched_with_apt.return_value = True
 
-                new_out = StringIO()
-                spt = SystemPackageTool(runner=runner, os_info=os_info, output=ConanOutput(new_out))
+                spt = SystemPackageTool()
 
                 spt.add_repository(repository=repository, repo_key=gpg_key, update=update)
                 self.assertEqual(len(runner.commands), 0)

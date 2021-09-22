@@ -1,22 +1,22 @@
 # coding=utf-8
 
-import unittest
 import os
 import platform
+import unittest
 
 import pytest
 
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
+from conans.errors import ConanMigrationError
 from conans.migrations import Migrator
 from conans.test.utils.test_files import temp_folder
-from conans.errors import ConanMigrationError
 
 
 class FakeMigrator(Migrator):
 
-    def __init__(self, cache_folder, current_version, out):
+    def __init__(self, cache_folder, current_version):
         self.cache_folder = cache_folder
-        super(FakeMigrator, self).__init__(cache_folder, current_version, out)
+        super(FakeMigrator, self).__init__(cache_folder, current_version)
 
 
 class MigratorPermissionTest(unittest.TestCase):
@@ -26,7 +26,7 @@ class MigratorPermissionTest(unittest.TestCase):
         conf_path = temp_folder(False)
         os.chmod(conf_path, 0o444)
         conf_path = os.path.join(conf_path, "foo")
-        migrator = FakeMigrator(conf_path, "latest", ConanOutput())
+        migrator = FakeMigrator(conf_path, "latest")
         with self.assertRaises(ConanMigrationError) as error:
             migrator.migrate()
         self.assertEqual("Can't write version file in '{0}/version.txt': The folder {0} does not "

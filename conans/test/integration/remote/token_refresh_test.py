@@ -6,7 +6,7 @@ from mock import Mock
 from conans.client.cache.remote_registry import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClientFactory
-from conans.client.userio import UserIO
+from conans.client.userio import UserInput
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import LocalDBMock
 
@@ -75,16 +75,16 @@ class RequesterWithTokenMock(object):
 class TestTokenRefresh(unittest.TestCase):
 
     def setUp(self):
-        mocked_user_io = UserIO()
-        mocked_user_io.get_username = Mock(return_value="myuser")
-        mocked_user_io.get_password = Mock(return_value="mypassword")
+        mocked_user_input = UserInput(non_interactive=False)
+        mocked_user_input.get_username = Mock(return_value="myuser")
+        mocked_user_input.get_password = Mock(return_value="mypassword")
 
         requester = RequesterWithTokenMock()
         config = namedtuple("ConfigMock", "download_cache")(None)
         self.rest_client_factory = RestApiClientFactory(requester, config=config,
                                                         artifacts_properties=None)
         self.localdb = LocalDBMock()
-        self.auth_manager = ConanApiAuthManager(self.rest_client_factory, mocked_user_io,
+        self.auth_manager = ConanApiAuthManager(self.rest_client_factory, mocked_user_input,
                                                 self.localdb)
         self.remote = Remote("myremote", "myurl", True, True)
         self.ref = ConanFileReference.loads("lib/1.0@conan/stable#myreciperev")

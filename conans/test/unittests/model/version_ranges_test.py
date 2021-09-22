@@ -1,7 +1,7 @@
 import unittest
 
 from conans.client.graph.range_resolver import satisfying
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 
 

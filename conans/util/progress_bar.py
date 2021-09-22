@@ -5,7 +5,7 @@ import time
 
 from tqdm import tqdm
 
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
@@ -22,23 +22,22 @@ def left_justify_description(msg):
 
 
 class ProgressOutput(ConanOutput):
-    def __init__(self, output):
-        super(ProgressOutput, self).__init__(output._color)
+    def __init__(self, output: ConanOutput):
+        super(ProgressOutput, self).__init__()
+        self._color = output._color
 
-    def _write(self, data, newline=False):
-        end = "\n" if newline else ""
-        tqdm.write(str(data), file=sys.stdout, end=end)
+    def _write(self, msg, level, fg=None, bg=None):
+        tqdm.write(str(msg), file=sys.stdout)
 
-    def _write_err(self, data, newline=False):
-        end = "\n" if newline else ""
-        tqdm.write(str(data), file=sys.stderr, end=end)
+    def _write_err(self, msg, level, fg=None, bg=None):
+        tqdm.write(str(msg), file=sys.stderr)
 
 
 class Progress(object):
-    def __init__(self, length, output, description, post_description=None):
+    def __init__(self, length, description, post_description=None):
         self._tqdm_bar = None
         self._total_length = length
-        self._output = output
+        self._output = ConanOutput()
         self._processed_size = 0
         self._description = description
         self._post_description = "{} completed".format(
@@ -81,10 +80,10 @@ class Progress(object):
 
 
 class FileWrapper(Progress):
-    def __init__(self, fileobj, output, description, post_description=None):
+    def __init__(self, fileobj, description, post_description=None):
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
-        super(FileWrapper, self).__init__(self.tell(), output, description, post_description)
+        super(FileWrapper, self).__init__(self.tell(), description, post_description)
         self.seek(0)
 
     def seekable(self):
@@ -104,13 +103,13 @@ class FileWrapper(Progress):
 
 
 class ListWrapper(object):
-    def __init__(self, files_list, output, description, post_description=None):
+    def __init__(self, files_list, description, post_description=None):
         self._files_list = files_list
         self._total_length = len(self._files_list)
         self._iterator = iter(self._files_list)
         self._last_progress = None
         self._i_file = 0
-        self._output = output
+        self._output = ConanOutput()
         self._description = description
         self._post_description = "{} completed".format(
             self._description) if not post_description else post_description
@@ -148,15 +147,15 @@ class ListWrapper(object):
 
 
 @contextmanager
-def open_binary(path, output, description):
+def open_binary(path, description):
     with open(path, mode='rb') as file_handler:
-        file_wrapped = FileWrapper(file_handler, output, description)
+        file_wrapped = FileWrapper(file_handler, description)
         yield file_wrapped
         file_wrapped.pb_close()
 
 
 @contextmanager
-def iterate_list_with_progress(files_list, output, description):
-    list_wrapped = ListWrapper(files_list, output, description)
+def iterate_list_with_progress(files_list, description):
+    list_wrapped = ListWrapper(files_list, description)
     yield list_wrapped
     list_wrapped.pb_close()

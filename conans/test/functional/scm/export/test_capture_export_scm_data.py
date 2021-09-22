@@ -7,8 +7,8 @@ import mock
 import pytest
 from parameterized import parameterized
 
+from conans.cli.output import ConanOutput
 from conans.client.cmd.export import _capture_scm_auto_fields
-from conans.client.output import ConanOutput
 from conans.client.tools.scm import Git
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import RedirectedTestOutput

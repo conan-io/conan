@@ -2,6 +2,7 @@ import json
 import os
 from collections import OrderedDict
 
+from conans.cli.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.grapher import Grapher
@@ -17,8 +18,8 @@ from conans.util.misc import make_tuple
 
 class CommandOutputer(object):
 
-    def __init__(self, output, cache):
-        self._output = output
+    def __init__(self, cache):
+        self._output = ConanOutput()
         self._cache = cache
 
     def print_profile(self, profile, profile_text):
@@ -82,12 +83,12 @@ class CommandOutputer(object):
         json_str = json.dumps(data)
 
         if json_output is True:
-            self._output.write(json_str)
+            self._output.info(json_str)
         else:
             if not os.path.isabs(json_output):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json.dumps(data))
-            self._output.writeln("")
+            self._output.info("")
             self._output.info("JSON file created at '%s'" % json_output)
 
     def json_nodes_to_build(self, nodes_to_build, json_output, cwd):
@@ -249,18 +250,18 @@ class CommandOutputer(object):
         lines = ["%s (%s)" % (r["revision"],
                               iso8601_to_str(r["time"]) if r["time"] else "No time")
                  for r in revisions]
-        self._output.writeln("\n".join(lines))
+        self._output.info("\n".join(lines))
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:
             self._output.info("Listing directory '%s':" % path)
-            self._output.writeln("\n".join([" %s" % i for i in list_files]))
+            self._output.info("\n".join([" %s" % i for i in list_files]))
         else:
-            self._output.writeln("\n".join(list_files))
+            self._output.info("\n".join(list_files))
 
     def print_file_contents(self, contents, file_name, raw):
         if raw or not self._output.is_terminal:
-            self._output.writeln(contents)
+            self._output.info(contents)
             return
 
         from pygments import highlight
@@ -274,7 +275,7 @@ class CommandOutputer(object):
         else:
             lexer = TextLexer()
 
-        self._output.write(highlight(contents, lexer, TerminalFormatter()))
+        self._output.info(highlight(contents, lexer, TerminalFormatter()))
 
     def print_user_list(self, info):
         for remote in info["remotes"]:

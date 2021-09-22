@@ -1,8 +1,8 @@
 import os
 import shutil
 
+from conans.cli.output import ScopedOutput
 from conans.client.file_copier import FileCopier
-from conans.client.output import ScopedOutput
 from conans.client.packager import report_files_from_manifest
 from conans.client.tools import no_op
 from conans.errors import ConanException, conanfile_exception_formatter
@@ -26,22 +26,22 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref,
                              "--build-folder and package folder can't be the same")
 
     mkdir(conanfile.package_folder)
-    output = conanfile.output
+    scoped_output = conanfile.output
     # Make the copy of all the patterns
-    output.info("Generating the package")
-    output.info("Package folder %s" % conanfile.package_folder)
+    scoped_output.info("Generating the package")
+    scoped_output.info("Package folder %s" % conanfile.package_folder)
 
     with no_op():  # TODO: Remove this in a later refactor
         return _call_package(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info)
 
 
 def _call_package(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info):
-    output = conanfile.output
+    scoped_output = conanfile.output
 
     hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
 
-    output.highlight("Calling package()")
+    scoped_output.highlight("Calling package()")
     folders = [conanfile.source_folder, conanfile.build_folder] \
         if conanfile.source_folder != conanfile.build_folder else [conanfile.build_folder]
     conanfile.copy = FileCopier(folders, conanfile.package_folder)
@@ -55,14 +55,14 @@ def _call_package(conanfile, package_id, hook_manager, conanfile_path, ref, copy
                          reference=ref, package_id=package_id)
 
     manifest = _create_aux_files(conanfile, copy_info)
-    package_output = ScopedOutput("%s package()" % output.scope, output)
+    package_output = ScopedOutput("%s package()" % scoped_output.scope, scoped_output)
     report_files_from_manifest(package_output, manifest)
     package_id = package_id or os.path.basename(conanfile.package_folder)
 
-    output.success("Package '%s' created" % package_id)
+    scoped_output.success("Package '%s' created" % package_id)
 
     prev = manifest.summary_hash
-    output.info("Created package revision %s" % prev)
+    scoped_output.info("Created package revision %s" % prev)
     return prev
 
 

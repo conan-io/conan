@@ -8,8 +8,8 @@ from textwrap import dedent
 import pytest
 from parameterized import parameterized
 
+from conans.cli.output import ConanOutput
 from conans.client import tools
-from conans.client.output import ConanOutput
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.profiles import create_profile as _create_profile
@@ -215,8 +215,7 @@ class ProfileTest(unittest.TestCase):
 
         self.client.cache.default_profile  # Creates default
         tools.replace_in_file(self.client.cache.default_profile_path,
-                              "compiler.libcxx", "#compiler.libcxx", strict=False,
-                              output=ConanOutput())
+                              "compiler.libcxx", "#compiler.libcxx", strict=False)
 
         self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . lasote/stable")
@@ -382,8 +381,7 @@ class ProfileTest(unittest.TestCase):
         # Change default profile to p1 => p2 => default
         tools.replace_in_file(self.client.cache.conan_conf_path,
                               "default_profile = default",
-                              "default_profile = p1",
-                              output=ConanOutput())
+                              "default_profile = p1")
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("create . user/testing")
         self._assert_env_variable_printed("A_VAR", "1")
@@ -538,9 +536,9 @@ class ProfileAggregationTest(unittest.TestCase):
         settings = "os", "compiler", "arch", "build_type"
 
         def build(self):
-            self.output.warn("ENV1:%s" % os.getenv("ENV1"))
-            self.output.warn("ENV2:%s" % os.getenv("ENV2"))
-            self.output.warn("ENV3:%s" % os.getenv("ENV3"))
+            self.output.warning("ENV1:%s" % os.getenv("ENV1"))
+            self.output.warning("ENV2:%s" % os.getenv("ENV2"))
+            self.output.warning("ENV3:%s" % os.getenv("ENV3"))
     """)
 
     consumer = dedent("""
@@ -694,9 +692,9 @@ def test_consumer_specific_settings():
               .with_default_option("shared", False))
     configure = """
     def configure(self):
-        self.output.warn("I'm {} and my build type is {}".format(self.name,
+        self.output.warning("I'm {} and my build type is {}".format(self.name,
                                                                  self.settings.build_type))
-        self.output.warn("I'm {} and my shared is {}".format(self.name, self.options.shared))
+        self.output.warning("I'm {} and my shared is {}".format(self.name, self.options.shared))
     """
     dep += configure
     client.save({"conanfile.py": dep})
@@ -760,7 +758,7 @@ def test_create_and_priority_of_consumer_specific_setting():
     conanfile = str(GenConanfile().with_settings("build_type").with_name("foo").with_version("1.0"))
     configure = """
     def configure(self):
-        self.output.warn("I'm {} and my build type is {}".format(self.name,
+        self.output.warning("I'm {} and my build type is {}".format(self.name,
                                                                  self.settings.build_type))
     """
     conanfile += configure
@@ -790,7 +788,7 @@ def test_consumer_specific_settings_from_profile():
     conanfile = str(GenConanfile().with_settings("build_type").with_name("hello"))
     configure = """
     def configure(self):
-        self.output.warn("I'm {} and my build type is {}".format(self.name,
+        self.output.warning("I'm {} and my build type is {}".format(self.name,
                                                                  self.settings.build_type))
     """
     conanfile += configure

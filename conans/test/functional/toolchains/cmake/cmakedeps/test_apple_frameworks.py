@@ -227,7 +227,7 @@ def test_apple_own_framework_cross_build(settings):
                 cmake.generate()
 
             def build(self):
-                self.output.warn("Building test package at: {}".format(self.build_folder))
+                self.output.warning("Building test package at: {}".format(self.build_folder))
                 cmake = CMake(self)
                 cmake.configure()
                 cmake.build()

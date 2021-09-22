@@ -3,10 +3,8 @@ import platform
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
+from conans.cli.output import ConanOutput, ScopedOutput
 from conans.client import tools
-from conans.client.output import ScopedOutput
-
-from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
@@ -79,9 +77,9 @@ class ConanFile(object):
     # Run in windows bash
     win_bash = None
 
-    def __init__(self, output, runner, display_name=""):
+    def __init__(self, runner, display_name=""):
         # an output stream (writeln, info, warn error)
-        self.output = ScopedOutput(display_name, output)
+        self.output = ScopedOutput(display_name, ConanOutput())
         self.display_name = display_name
         # something that can run commands, as os.sytem
         self._conan_runner = runner
@@ -271,13 +269,13 @@ class ConanFile(object):
         """ build your project calling the desired build tools as done in the command line.
         E.g. self.run("cmake --build .") Or use the provided build helpers. E.g. cmake.build()
         """
-        self.output.warn("This conanfile has no build step")
+        self.output.warning("This conanfile has no build step")
 
     def package(self):
         """ package the needed files from source and build folders.
         E.g. self.copy("*.h", src="src/includes", dst="includes")
         """
-        self.output.warn("This conanfile has no package step")
+        self.output.warning("This conanfile has no package step")
 
     def package_info(self):
         """ define cpp_build_info, flags, etc

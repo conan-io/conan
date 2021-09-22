@@ -14,7 +14,7 @@ from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
 from conans.client.conan_api import Conan, _make_abs_path, ProfileData
 from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.conan_command_output import CommandOutputer
-from conans.client.output import Color
+from conans.cli.output import Color, ConanOutput
 from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
     ConanMigrationError
@@ -106,12 +106,12 @@ class Command(object):
     def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._out = conan_api.out
+        self._out = ConanOutput()
 
     @property
     def _outputer(self):
         # FIXME, this access to the cache for output is ugly, should be removed
-        return CommandOutputer(self._out, self._conan.app.cache)
+        return CommandOutputer(self._conan.app.cache)
 
     def help(self, *args):
         """
@@ -417,9 +417,9 @@ class Command(object):
             packages_list = args.package
 
             if packages_list:
-                self._out.warn("Usage of `--package` argument is deprecated."
-                               " Use a full reference instead: "
-                               "`conan download [...] {}:{}`".format(reference, packages_list[0]))
+                self._out.warning("Usage of `--package` argument is deprecated."
+                                  " Use a full reference instead: "
+                                  "`conan download [...] {}:{}`".format(reference, packages_list[0]))
         else:
             reference = repr(pref.ref)
             if pref.ref.user is None:
@@ -619,7 +619,7 @@ class Command(object):
             if args.list:
                 configs = self._conan.config_install_list()
                 for index, config in enumerate(configs):
-                    self._out.writeln("%s: %s" % (index, config))
+                    self._out.info("%s: %s" % (index, config))
                 return
             elif args.remove is not None:
                 self._conan.config_install_remove(index=args.remove)
@@ -633,7 +633,7 @@ class Command(object):
         elif args.subcommand == "list":
             self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
             for key, value in DEFAULT_CONFIGURATION.items():
-                self._out.writeln("{}: {}".format(key, value))
+                self._out.info("{}: {}".format(key, value))
 
     def info(self, *args):
         """
@@ -1383,7 +1383,7 @@ class Command(object):
             package_id = args.package
 
             if package_id:
-                self._out.warn("Usage of `--package` argument is deprecated."
+                self._out.warning("Usage of `--package` argument is deprecated."
                                " Use a full reference instead: "
                                "`conan upload [...] {}:{}`".format(reference, package_id))
 
@@ -1634,7 +1634,7 @@ class Command(object):
             self._conan.update_profile(profile, key, value)
         elif args.subcommand == "get":
             key = args.item
-            self._out.writeln(self._conan.get_profile_key(profile, key))
+            self._out.info(self._conan.get_profile_key(profile, key))
         elif args.subcommand == "remove":
             self._conan.delete_profile_key(profile, args.item)
 
@@ -1667,7 +1667,7 @@ class Command(object):
             package_id = args.package
 
             if package_id:
-                self._out.warn("Usage of `--package` argument is deprecated."
+                self._out.warning("Usage of `--package` argument is deprecated."
                                " Use a full reference instead: "
                                "`conan get [...] {}:{}`".format(reference, package_id))
         else:
@@ -1738,12 +1738,12 @@ class Command(object):
             if ret:
                 self._out.success("Removed editable mode for reference '{}'".format(args.reference))
             else:
-                self._out.warn("Reference '{}' was not installed "
+                self._out.warning("Reference '{}' was not installed "
                                "as editable".format(args.reference))
         elif args.subcommand == "list":
             for k, v in self._conan.editable_list().items():
                 self._out.info("%s" % k)
-                self._out.writeln("    Path: %s" % v["path"])
+                self._out.info("    Path: %s" % v["path"])
 
     def frogarian(self, *args):
         """
@@ -1850,13 +1850,13 @@ class Command(object):
                 self._conan.lock_bundle_clean_modified(args.bundle)
             elif args.bundlecommand == "build-order":
                 build_order = self._conan.lock_bundle_build_order(args.bundle)
-                self._out.writeln(build_order)
+                self._out.info(build_order)
                 if args.json:
                     json_file = _make_abs_path(args.json)
                     save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "build-order":
             build_order = self._conan.lock_build_order(args.lockfile)
-            self._out.writeln(build_order)
+            self._out.info(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
@@ -1909,10 +1909,10 @@ class Command(object):
         fmt = '  %-{}s'.format(max_len)
 
         for group_name, comm_names in grps:
-            self._out.writeln(group_name, Color.BRIGHT_MAGENTA)
+            self._out.info(group_name, Color.BRIGHT_MAGENTA)
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
-                self._out.write(fmt % name, Color.GREEN)
+                self._out.info(fmt % name, Color.GREEN)
 
                 # Help will be all the lines up to the first empty one
                 docstring_lines = commands[name].__doc__.split('\n')
@@ -1929,7 +1929,7 @@ class Command(object):
 
                 import textwrap
                 txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" "*(max_len+2))
-                self._out.writeln(txt)
+                self._out.info(txt)
 
         self._out.writeln("")
         self._out.writeln('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
@@ -1958,14 +1958,14 @@ class Command(object):
             return
 
         if len(matches) > 1:
-            self._out.writeln("The most similar commands are")
+            self._out.info("The most similar commands are")
         else:
-            self._out.writeln("The most similar command is")
+            self._out.info("The most similar command is")
 
         for match in matches:
-            self._out.writeln("    %s" % match)
+            self._out.info("    %s" % match)
 
-        self._out.writeln("")
+        self._out.info("")
 
     @staticmethod
     def _check_lockfile_args(args):
@@ -1986,38 +1986,39 @@ class Command(object):
         width = 70
         version = sys.version_info
         if version.major == 2:
-            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+            self._out.info("*"*width, front=Color.BRIGHT_RED)
             msg = textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
                                 " stopped supporting it officially. We strongly recommend"
                                 " you to use Python >= 3.5. Conan will completely stop"
                                 " working with Python 2 in the following releases", width)
-            self._out.writeln(msg, front=Color.BRIGHT_RED)
-            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+            self._out.info(msg, front=Color.BRIGHT_RED)
+            self._out.info("*"*width, front=Color.BRIGHT_RED)
             if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
                 # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently
                 # deprecated and some libraries we use as dependencies have stopped supporting it.
                 # Conan might fail to run and we are no longer fixing errors related to Python 2.
-                self._out.writeln(textwrap.fill("Python 2 deprecation notice has been bypassed"
+                self._out.info(textwrap.fill("Python 2 deprecation notice has been bypassed"
                                                 " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'",
                                                 width))
             else:
                 msg = textwrap.fill("If you really need to run Conan with Python 2 in your"
                                     " CI without this interactive input, please contact us"
                                     " at info@conan.io", width)
-                self._out.writeln(msg, front=Color.BRIGHT_RED)
-                self._out.writeln("*" * width, front=Color.BRIGHT_RED)
-                self._out.write(textwrap.fill("Understood the risk, keep going [y/N]: ", width,
-                                              drop_whitespace=False), front=Color.BRIGHT_RED)
+                self._out.info(msg, front=Color.BRIGHT_RED)
+                self._out.info("*" * width, front=Color.BRIGHT_RED)
+                _msg = textwrap.fill("Understood the risk, keep going [y/N]: ", width,
+                                     drop_whitespace=False)
+                self._out.write(_msg, fg=Color.BRIGHT_RED)
                 ret = input().lower()
                 if ret not in ["yes", "ye", "y"]:
-                    self._out.writeln(textwrap.fill("Wise choice. Stopping here!", width))
+                    self._out.info(textwrap.fill("Wise choice. Stopping here!", width))
                     sys.exit(0)
         elif version.minor == 4:
-            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
-            self._out.writeln(textwrap.fill("Python 3.4 support has been dropped. It is strongly "
+            self._out.info("*"*width, front=Color.BRIGHT_RED)
+            self._out.info(textwrap.fill("Python 3.4 support has been dropped. It is strongly "
                                             "recommended to use Python >= 3.5 with Conan", width),
                               front=Color.BRIGHT_RED)
-            self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+            self._out.info("*"*width, front=Color.BRIGHT_RED)
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class

@@ -3,6 +3,7 @@ import re
 import time
 import traceback
 
+from conans.cli.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.client.tools.files import check_md5, check_sha1, check_sha256
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
@@ -24,8 +25,8 @@ def check_checksum(file_path, md5, sha1, sha256):
 
 class FileDownloader(object):
 
-    def __init__(self, requester, output, verify, config):
-        self._output = output
+    def __init__(self, requester, verify, config):
+        self._output = ConanOutput()
         self._requester = requester
         self._verify_ssl = verify
         self._config = config
@@ -43,7 +44,7 @@ class FileDownloader(object):
         if file_path and os.path.exists(file_path):
             if overwrite:
                 if self._output:
-                    self._output.warn("file '%s' already exists, overwriting" % file_path)
+                    self._output.warning("file '%s' already exists, overwriting" % file_path)
             else:
                 # Should not happen, better to raise, probably we had to remove
                 # the dest folder before

@@ -14,7 +14,7 @@ from conans.model.user_info import UserInfo, DepsUserInfo
 class JsonTest(unittest.TestCase):
 
     def test_variables_setup(self):
-        conanfile = ConanFile(Mock(), None)
+        conanfile = ConanFile(None)
         conanfile.initialize(Settings({}))
 
         # Add some cpp_info for dependencies

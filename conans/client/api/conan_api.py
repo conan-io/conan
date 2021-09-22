@@ -1,26 +1,101 @@
 import functools
+import logging
 import os
 import sys
 import time
 
 from tqdm import tqdm
 
+import conans
 from conans import __version__ as client_version
-from conans.cli.output import ConanOutput
+from conans.cli.output import ConanOutput, TqdmHandler
 from conans.client.api.helpers.search import Search
-from conans.client.conan_api import ConanApp
+from conans.client.cache.cache import ClientCache
 from conans.client.conf.required_version import check_required_conan_version
+from conans.client.generators import GeneratorManager
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+from conans.client.graph.graph_manager import GraphManager
+from conans.client.graph.proxy import ConanProxy
+from conans.client.graph.python_requires import PyRequireLoader
+from conans.client.graph.range_resolver import RangeResolver
+from conans.client.hook_manager import HookManager
+from conans.client.loader import ConanFileLoader
 from conans.client.migrations import ClientMigrator
+from conans.client.remote_manager import RemoteManager
+from conans.client.rest.auth_manager import ConanApiAuthManager
+from conans.client.rest.conan_requester import ConanRequester
+from conans.client.rest.rest_client import RestApiClientFactory
+from conans.client.runner import ConanRunner
 from conans.client.tools.env import environment_append
-from conans.client.userio import UserIO
+from conans.client.userio import color_enabled, init_colorama
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_packages
+from conans.tools import set_global_instances
+from conans.util.log import configure_logger
+
+
+class ConanApp(object):
+    def __init__(self, cache_folder, http_requester=None):
+
+        self.cache_folder = cache_folder
+        self.cache = ClientCache(self.cache_folder)
+        self.config = self.cache.config
+
+        # FIXME: Missing manage of non-interactive, it has state in user_input
+
+        # Adjust CONAN_LOGGING_LEVEL with the env readed
+        conans.util.log.logger = configure_logger(self.config.logging_level,
+                                                  self.config.logging_file)
+        conans.util.log.logger.debug("INIT: Using config '%s'" % self.cache.conan_conf_path)
+
+        self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks)
+        # Wraps an http_requester to inject proxies, certs, etc
+        self.requester = ConanRequester(self.config, http_requester)
+        # To handle remote connections
+        artifacts_properties = self.cache.read_artifacts_properties()
+        rest_client_factory = RestApiClientFactory(self.requester, self.config,
+                                                   artifacts_properties=artifacts_properties)
+        # Wraps RestApiClient to add authentication support (same interface)
+        auth_manager = ConanApiAuthManager(rest_client_factory, self.cache)
+        # Handle remote connections
+        self.remote_manager = RemoteManager(self.cache, auth_manager, self.hook_manager)
+
+        # Adjust global tool variables
+        set_global_instances(self.requester, self.config)
+
+        self.runner = ConanRunner(self.config.print_commands_to_output,
+                                  self.config.generate_run_log_file,
+                                  self.config.log_run_to_output)
+
+        self.proxy = ConanProxy(self.cache, self.remote_manager)
+        self.range_resolver = RangeResolver(self.cache, self.remote_manager)
+        self.generator_manager = GeneratorManager()
+        self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
+        self.loader = ConanFileLoader(self.runner, self.generator_manager, self.pyreq_loader,
+                                      self.requester)
+        self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.remote_manager)
+        self.graph_manager = GraphManager(self.cache, self.loader,
+                                          self.proxy, self.range_resolver, self.binaries_analyzer)
+
+    def load_remotes(self, remote_name=None, update=False, check_updates=False):
+        remotes = self.cache.registry.load_remotes()
+        if remote_name:
+            remotes.select(remote_name)
+        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
+        return remotes
 
 
 def api_method(f):
     """Useful decorator to manage Conan API methods"""
+
+
+    def _init_stream(stream):
+        init_colorama(stream)
+        stream_handler = TqdmHandler(stream)
+        stream_handler.setFormatter(logging.Formatter("%(message)s"))
+
     @functools.wraps(f)
     def wrapper(api, *args, **kwargs):
         try:  # getcwd can fail if Conan runs on an non-existing folder
@@ -34,6 +109,8 @@ def api_method(f):
             devnull = open(os.devnull, 'w')
             sys.stdout = devnull
             sys.stderr = devnull
+
+        _init_stream(sys.stderr)
 
         try:
             api.create_app()
@@ -53,15 +130,14 @@ class ConanAPIV2(object):
 
         self.quiet = quiet
         self.out = ConanOutput()
-        self.user_io = UserIO()
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
         self.http_requester = http_requester
         self.app = None  # Api calls will create a new one every call
 
         # Migration system
-        migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
+        migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
-        check_required_conan_version(self.cache_folder, self.out)
+        check_required_conan_version(self.cache_folder)
 
     def create_app(self):
         self.app = ConanApp(self.cache_folder, self.http_requester)

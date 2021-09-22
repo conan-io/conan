@@ -2,29 +2,61 @@ import getpass
 import os
 import sys
 
-from conans.client.output import ConanOutput
 from conans.errors import ConanException
 
 
-class UserIO(object):
+def is_terminal(stream):
+    return hasattr(stream, "isatty") and stream.isatty()
+
+
+def color_enabled(stream):
+    """
+    NO_COLOR: No colors and no colorama
+    CLICOLOR: When 1, colors if is_terminal
+    CLICOLOR_FORCE: When 1, always colors (except if NO_COLOR)
+    """
+    if os.getenv("NO_COLOR") == "1":
+        return False
+    elif os.getenv("CLICOLOR_FORCE") == "1" or (os.getenv("CLICOLOR", "1") != "0"
+                                                and is_terminal(stream)):
+        return True
+    else:
+        return False
+
+
+def init_colorama(stream):
+    import colorama
+
+    if not color_enabled(stream):
+        if os.getenv("NO_COLOR") != "1":
+            colorama.init(strip=True)
+        return False
+    else:
+        colorama.init(convert=False, strip=False)
+        return True
+
+
+class UserInput(object):
     """Class to interact with the user, used to show messages and ask for information"""
 
-    def __init__(self, ins=sys.stdin):
+    def __init__(self, non_interactive):
         """
         Params:
             ins: input stream
             out: ConanOutput, should have "write" method
         """
-        self._ins = ins
-        self.out = ConanOutput()
-        self._interactive = True
+        self._ins = sys.stdin
+        # FIXME: circular include, move "color_enabled" function to better location
+        from conans.cli.output import ConanOutput
+        self._out = ConanOutput()
+        self._interactive = not non_interactive
 
     def disable_input(self):
         self._interactive = False
 
     def _raise_if_non_interactive(self):
         if not self._interactive:
-            raise ConanException("Conan interactive mode disabled")
+            raise ConanException("Conan interactive mode disabled1")
 
     def raw_input(self):
         self._raise_if_non_interactive()
@@ -40,14 +72,14 @@ class UserIO(object):
 
         if not username:
             if self._interactive:
-                self.out.write("Remote '%s' username: " % remote_name)
+                self._out.write("Remote '%s' username: " % remote_name)
             username = self._get_env_username(remote_name)
             if not username:
                 self._raise_if_non_interactive()
                 username = self.get_username(remote_name)
 
         if self._interactive:
-            self.out.write('Please enter a password for "%s" account: ' % username)
+            self._out.write('Please enter a password for "%s" account: ' % username)
         try:
             pwd = self._get_env_password(remote_name)
             if not pwd:
@@ -74,9 +106,9 @@ class UserIO(object):
         self._raise_if_non_interactive()
 
         if default_value:
-            self.out.input_text('%s (%s): ' % (msg, default_value))
+            self._out.input_text('%s (%s): ' % (msg, default_value))
         else:
-            self.out.input_text('%s: ' % msg)
+            self._out.input_text('%s: ' % msg)
         s = self._ins.readline().replace("\n", "")
         if default_value is not None and s == '':
             return default_value
@@ -99,7 +131,7 @@ class UserIO(object):
             elif s.lower() in ['no', 'n']:
                 ret = False
             else:
-                self.out.error("%s is not a valid answer" % s)
+                self._out.error("%s is not a valid answer" % s)
         return ret
 
     def _get_env_password(self, remote_name):
@@ -110,7 +142,7 @@ class UserIO(object):
         var_name = "CONAN_PASSWORD_%s" % remote_name
         ret = os.getenv(var_name, None) or os.getenv("CONAN_PASSWORD", None)
         if ret:
-            self.out.info("Got password '******' from environment")
+            self._out.info("Got password '******' from environment")
         return ret
 
     def _get_env_username(self, remote_name):
@@ -122,5 +154,5 @@ class UserIO(object):
         ret = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
 
         if ret:
-            self.out.info("Got username '%s' from environment" % ret)
+            self._out.info("Got username '%s' from environment" % ret)
         return ret

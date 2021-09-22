@@ -7,6 +7,7 @@ import uuid
 
 import yaml
 
+from conans.cli.output import ConanOutput
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
@@ -23,10 +24,9 @@ from conans.util.files import load
 
 class ConanFileLoader(object):
 
-    def __init__(self, runner, output, generator_manager=None, pyreq_loader=None, requester=None):
+    def __init__(self, runner, generator_manager=None, pyreq_loader=None, requester=None):
         self._runner = runner
         self._generator_manager = generator_manager
-        self._output = output
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
         self._requester = requester
@@ -41,7 +41,7 @@ class ConanFileLoader(object):
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
-            conanfile = cached[0](self._output, self._runner, display)
+            conanfile = cached[0](self._runner, display)
             conanfile._conan_requester = self._requester
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(str(conanfile), "init"):
@@ -72,7 +72,7 @@ class ConanFileLoader(object):
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
                                                               module)
-            result = conanfile(self._output, self._runner, display)
+            result = conanfile(self._runner, display)
             result._conan_requester = self._requester
             if hasattr(result, "init") and callable(result.init):
                 with conanfile_exception_formatter(str(result), "init"):
@@ -271,7 +271,7 @@ class ConanFileLoader(object):
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
-        conanfile = ConanFile(self._output, self._runner, display_name)
+        conanfile = ConanFile(self._runner, display_name)
         tmp_settings = profile.processed_settings.copy()
         package_settings_values = profile.package_settings_values
         if "&" in package_settings_values:
@@ -313,7 +313,7 @@ class ConanFileLoader(object):
                      build_requires_options=None, is_build_require=False, require_overrides=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(self._output, self._runner, display_name="virtual")
+        conanfile = ConanFile(self._runner, display_name="virtual")
         conanfile.initialize(profile_host.processed_settings.copy(), profile_host.buildenv)
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
         conanfile.settings = profile_host.processed_settings.copy_values()

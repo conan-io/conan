@@ -5,6 +5,7 @@ from collections import namedtuple, Counter
 
 from mock import Mock
 
+from conans.cli.output import ConanOutput
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.generators import GeneratorManager
@@ -12,12 +13,10 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
-
 from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
-from conans.client.output import ConanOutput
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
@@ -50,15 +49,14 @@ class GraphManagerTest(unittest.TestCase):
         self.remote_manager = MockRemoteManager()
         cache = self.cache
         self.resolver = RangeResolver(self.cache, self.remote_manager)
-        proxy = ConanProxy(cache, ConanOutput(), self.remote_manager)
+        proxy = ConanProxy(cache, self.remote_manager)
 
         pyreq_loader = PyRequireLoader(proxy, self.resolver)
         pyreq_loader.enable_remotes(remotes=Remotes())
-        self.loader = ConanFileLoader(None, ConanOutput(), pyreq_loader=pyreq_loader)
+        self.loader = ConanFileLoader(None, pyreq_loader=pyreq_loader)
 
         binaries = GraphBinariesAnalyzer(cache, self.remote_manager)
-        self.manager = GraphManager(ConanOutput(), cache, self.remote_manager, self.loader, proxy,
-                                    self.resolver, binaries)
+        self.manager = GraphManager(cache, self.loader, proxy, self.resolver, binaries)
         generator_manager = GeneratorManager()
         hook_manager = Mock()
         app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager"

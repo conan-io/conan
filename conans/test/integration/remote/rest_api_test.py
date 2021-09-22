@@ -14,7 +14,7 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.rest.rest_client_v1 import complete_url
 from conans.client.tools import environment_append
-from conans.client.userio import UserIO
+from conans.client.userio import UserInput
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
@@ -78,11 +78,11 @@ class RestApiTest(unittest.TestCase):
                                                       config=config)
                 localdb = LocalDBMock()
 
-                mocked_user_io = UserIO()
-                mocked_user_io.get_username = Mock(return_value="private_user")
-                mocked_user_io.get_password = Mock(return_value="private_pass")
+                mocked_user_input = UserInput(non_interactive=False)
+                mocked_user_input.get_username = Mock(return_value="private_user")
+                mocked_user_input.get_password = Mock(return_value="private_pass")
 
-                cls.auth_manager = ConanApiAuthManager(client_factory, mocked_user_io, localdb)
+                cls.auth_manager = ConanApiAuthManager(client_factory, mocked_user_input, localdb)
                 cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
                                     True)
                 cls.auth_manager._authenticate(cls.remote, user="private_user",

@@ -370,7 +370,7 @@ class CompatibleIDsTest(unittest.TestCase):
     def package_id(self):
         p = self.info.clone()
         p.requires.recipe_revision_mode()
-        self.output.warn("Alternative package ID: {}".format(p.package_id()))
+        self.output.warning("Alternative package ID: {}".format(p.package_id()))
         self.compatible_packages.append(p)
 """
         c1 = str(c1) + tmp

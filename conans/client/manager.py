@@ -5,7 +5,7 @@ from conans.client.graph.graph import RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
-from conans.client.output import Color
+from conans.cli.output import Color, ConanOutput
 from conans.client.generators import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
@@ -31,12 +31,13 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     assert profile_host is not None
     assert profile_build is not None
 
-    out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
+    graph_manager, cache = app.graph_manager, app.cache
 
+    out = ConanOutput()
     out.info("Configuration (profile_host):")
-    out.writeln(profile_host.dumps())
+    out.info(profile_host.dumps())
     out.info("Configuration (profile_build):")
-    out.writeln(profile_build.dumps())
+    out.info(profile_build.dumps())
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host, profile_build,
                                           graph_lock, root_ref, build_modes, False, update, remotes,
@@ -53,13 +54,13 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         out.highlight("Installing package: %s" % str(ref_or_path))
     else:
         conanfile.output.highlight("Installing package")
-    print_graph(deps_graph, out)
+    print_graph(deps_graph)
 
     try:
         if cross_building(conanfile):
             settings = get_cross_building_settings(conanfile)
             message = "Cross-build from '%s:%s' to '%s:%s'" % settings
-            out.writeln(message, Color.BRIGHT_MAGENTA)
+            out.info(message, Color.BRIGHT_MAGENTA)
     except ConanException:  # Setting os doesn't exist
         pass
 
@@ -84,9 +85,8 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         tmp.extend([g for g in generators if g not in tmp])
         conanfile.generators = tmp
         app.generator_manager.write_generators(conanfile, install_folder,
-                                               conanfile.generators_folder,
-                                               output)
-        write_toolchain(conanfile, conanfile.generators_folder, output)
+                                               conanfile.generators_folder)
+        write_toolchain(conanfile)
 
         if not isinstance(ref_or_path, ConanFileReference):
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
@@ -94,7 +94,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         if not no_imports:
             run_imports(conanfile)
         if type(conanfile).system_requirements != ConanFile.system_requirements:
-            call_system_requirements(conanfile, conanfile.output)
+            call_system_requirements(conanfile)
 
         if not create_reference and isinstance(ref_or_path, ConanFileReference):
             # The conanfile loaded is a virtual one. The one w deploy is the first level one

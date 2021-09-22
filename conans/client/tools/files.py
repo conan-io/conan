@@ -10,9 +10,8 @@ from fnmatch import fnmatch
 
 from patch_ng import fromfile, fromstring
 
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException
-from conans.util.fallbacks import default_output
 from conans.util.files import (_generic_algorithm_sum, load, save)
 
 UNIT_SIZE = 1000.0
@@ -53,8 +52,7 @@ def human_size(size_bytes):
     return "%s%s" % (formatted_size, suffix)
 
 
-def unzip(filename, destination=".", keep_permissions=False, pattern=None, output=None,
-          strip_root=False):
+def unzip(filename, destination=".", keep_permissions=False, pattern=None, strip_root=False):
     """
     Unzip a zipped file
     :param filename: Path to the zip file
@@ -65,11 +63,10 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     that the zip was created correctly.
     :param pattern: Extract only paths matching the pattern. This should be a
     Unix shell-style wildcard, see fnmatch documentation for more details.
-    :param output: output
     :param flat: If all the contents are in a single dir, flat that directory.
     :return:
     """
-    output = default_output(output, 'conans.client.tools.files.unzip')
+    output = ConanOutput()
 
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
@@ -214,13 +211,13 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     class PatchLogHandler(logging.Handler):
         def __init__(self):
             logging.Handler.__init__(self, logging.DEBUG)
-            self.output = output or ConanOutput(color=True)
+            self.output = output or ConanOutput()
             self.patchname = patch_file if patch_file else "patch_ng"
 
         def emit(self, record):
             logstr = self.format(record)
             if record.levelno == logging.WARN:
-                self.output.warn("%s: %s" % (self.patchname, logstr))
+                self.output.warning("%s: %s" % (self.patchname, logstr))
             else:
                 self.output.info("%s: %s" % (self.patchname, logstr))
 
@@ -248,7 +245,7 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
     if strict:
         raise ConanException(message)
     else:
-        output.warn(message)
+        output.warning(message)
         return False
 
 
@@ -267,8 +264,8 @@ def _add_write_permissions(file_path):
         os.chmod(file_path, saved_permissions)
 
 
-def replace_in_file(file_path, search, replace, strict=True, output=None, encoding=None):
-    output = default_output(output, 'conans.client.tools.files.replace_in_file')
+def replace_in_file(file_path, search, replace, strict=True, encoding=None):
+    output = ConanOutput()
 
     encoding_in = encoding or "auto"
     encoding_out = encoding or "utf-8"
@@ -281,13 +278,11 @@ def replace_in_file(file_path, search, replace, strict=True, output=None, encodi
         save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
 
-def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None,
-                         encoding=None):
-    output = default_output(output, 'conans.client.tools.files.replace_path_in_file')
+def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, encoding=None):
+    output = ConanOutput()
 
     if windows_paths is False or (windows_paths is None and platform.system() != "Windows"):
-        return replace_in_file(file_path, search, replace, strict=strict, output=output,
-                               encoding=encoding)
+        return replace_in_file(file_path, search, replace, strict=strict, encoding=encoding)
 
     def normalized_text(text):
         return text.replace("\\", "/").lower()
@@ -346,7 +341,7 @@ def collect_libs(conanfile, folder=None):
     result = []
     for lib_folder in lib_folders:
         if not os.path.exists(lib_folder):
-            conanfile.output.warn("Lib folder doesn't exist, can't collect libraries: "
+            conanfile.output.warning("Lib folder doesn't exist, can't collect libraries: "
                                   "{0}".format(lib_folder))
             continue
         files = os.listdir(lib_folder)
@@ -356,9 +351,9 @@ def collect_libs(conanfile, folder=None):
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:
-                    conanfile.output.warn("Library '%s' was either already found in a previous "
-                                          "'conanfile.cpp_info.libdirs' folder or appears several "
-                                          "times with a different file extension" % name)
+                    conanfile.output.warning("Library '%s' was either already found in a previous "
+                                             "'conanfile.cpp_info.libdirs' folder or appears several "
+                                             "times with a different file extension" % name)
                 else:
                     result.append(name)
     result.sort()

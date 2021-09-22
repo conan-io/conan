@@ -46,13 +46,13 @@ def get_cpp_info(name):
 
 
 def test_foo():
-    dep1 = ConanFile(Mock(), None)
+    dep1 = ConanFile(None)
     dep1.cpp_info = get_cpp_info("dep1")
     dep1._conan_node = Mock()
     dep1._conan_node.ref = ConanFileReference.loads("dep1/1.0")
     dep1.package_folder = "/path/to/folder_dep1"
 
-    dep2 = ConanFile(Mock(), None)
+    dep2 = ConanFile(None)
     dep2.cpp_info = get_cpp_info("dep2")
     dep2._conan_node = Mock()
     dep2._conan_node.ref = ConanFileReference.loads("dep2/1.0")
@@ -65,7 +65,7 @@ def test_foo():
         deps[req1] = ConanFileInterface(dep1)
         deps[req2] = ConanFileInterface(dep2)
         mock_deps.return_value = ConanFileDependencies(deps)
-        consumer = ConanFile(Mock(), None)
+        consumer = ConanFile(None)
         consumer.settings = MockSettings(
             {"build_type": "Release",
              "arch": "x86",

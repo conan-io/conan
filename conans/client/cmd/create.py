@@ -1,5 +1,6 @@
 import os
 
+from conans.cli.output import ConanOutput
 from conans.client.cmd.test import install_build_and_test
 from conans.client.manager import deps_install
 from conans.errors import ConanException
@@ -40,7 +41,7 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
             # If we have a lockfile, then we are first going to make sure the lockfile is used
             # correctly to build the package in the cache, and only later will try to run
             # test_package
-            out = app.out
+            out = ConanOutput()
             out.info("Installing and building %s" % repr(ref))
             deps_install(app=app,
                          ref_or_path=ref,

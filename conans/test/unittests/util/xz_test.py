@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from io import StringIO
 
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 from conans.client.tools.files import save, unzip
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -84,6 +84,6 @@ class Pkg(ConanFile):
             tar.add(file_path, "a_file.txt")
 
         dest_folder = temp_folder()
-        unzip(txz, dest_folder, output=ConanOutput(StringIO()))
+        unzip(txz, dest_folder)
         content = load(os.path.join(dest_folder, "a_file.txt"))
         self.assertEqual(content, "my content!")

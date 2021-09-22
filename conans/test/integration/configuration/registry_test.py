@@ -3,7 +3,6 @@ import unittest
 
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import RemoteRegistry, Remote, Remotes
-from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder

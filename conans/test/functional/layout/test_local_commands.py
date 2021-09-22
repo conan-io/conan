@@ -109,7 +109,7 @@ def test_local_build():
         self.folders.generators = "my_generators"
         self.folders.build = "my_build"
     def build(self):
-        self.output.warn("Generators folder: {}".format(self.folders.generators_folder))
+        self.output.warning("Generators folder: {}".format(self.folders.generators_folder))
         tools.save("build_file.dll", "bar")
 """
     client.save({"conanfile.py": conan_file})
@@ -194,9 +194,9 @@ def test_export_pkg():
         tools.save("library.lib", "bar")
         tools.save("generated.h", "bar")
     def package(self):
-        self.output.warn("Source folder: {}".format(self.source_folder))
-        self.output.warn("Build folder: {}".format(self.build_folder))
-        self.output.warn("Package folder: {}".format(self.package_folder))
+        self.output.warning("Source folder: {}".format(self.source_folder))
+        self.output.warning("Build folder: {}".format(self.build_folder))
+        self.output.warning("Package folder: {}".format(self.package_folder))
         self.copy("*.h")
         self.copy("*.lib")
     """
@@ -239,9 +239,9 @@ def test_export_pkg_local():
         tools.save("library.lib", "bar")
         tools.save("generated.h", "bar")
     def package(self):
-        self.output.warn("Source folder: {}".format(self.source_folder))
-        self.output.warn("Build folder: {}".format(self.build_folder))
-        self.output.warn("Package folder: {}".format(self.package_folder))
+        self.output.warning("Source folder: {}".format(self.source_folder))
+        self.output.warning("Build folder: {}".format(self.build_folder))
+        self.output.warning("Package folder: {}".format(self.package_folder))
         self.copy("*.h")
         self.copy("*.lib")
     """
@@ -304,7 +304,7 @@ def test_imports():
     def layout(self):
         self.folders.imports = "my_imports"
     def imports(self):
-        self.output.warn("Imports folder: {}".format(self.imports_folder))
+        self.output.warning("Imports folder: {}".format(self.imports_folder))
         self.copy("*.dll")
     """
 

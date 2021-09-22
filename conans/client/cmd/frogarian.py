@@ -89,4 +89,4 @@ frogarian = """\
 
 
 def cmd_frogarian(output):
-    output.writeln(frogarian)
+    output.info(frogarian)

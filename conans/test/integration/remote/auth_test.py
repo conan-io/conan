@@ -50,6 +50,7 @@ class AuthorizeTest(unittest.TestCase):
         ref = self.ref.copy_with_rev(rev)
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
 
+        # FIXME: Mock user_input too to test this
         # Check that login failed two times before ok
         self.assertEqual(self.conan.api.app.user_io.login_index["default"], 3)
 

@@ -43,7 +43,7 @@ from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.artifactory import ARTIFACTORY_DEFAULT_USER, ARTIFACTORY_DEFAULT_PASSWORD, \
     ArtifactoryServer
-from conans.test.utils.mocks import MockedUserIO, RedirectedTestOutput
+from conans.test.utils.mocks import MockedUserInput, RedirectedTestOutput
 from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
     create_remote_svn_repo
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
@@ -475,7 +475,7 @@ class TestClient(object):
         if cpu_count:
             replace_in_file(cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
-                            output=Mock(), strict=not bool(cache_folder))
+                            strict=not bool(cache_folder))
 
     def update_servers(self):
         cache = self.cache
@@ -528,26 +528,25 @@ class TestClient(object):
         old_modules = list(sys.modules.keys())
 
         args = shlex.split(command_line)
-        with mock.patch("conans.client.conan_api.UserIO", MockedUserIO) as mocked_user_io:
-            mocked_user_io.logins = PropertyMock(return_value=self.users)
-            self.api = self.get_conan_api(args)
-            command = self.get_conan_command(args)
 
+        self.api = self.get_conan_api(args)
+        command = self.get_conan_command(args)
+
+        try:
+            error = command.run(args)
+        finally:
             try:
-                error = command.run(args)
-            finally:
-                try:
-                    self.api.app.cache.closedb()
-                except AttributeError:
-                    pass
-                sys.path = old_path
-                os.chdir(current_dir)
-                # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
-                added_modules = set(sys.modules).difference(old_modules)
-                for added in added_modules:
-                    sys.modules.pop(added, None)
-            self._handle_cli_result(command_line, assert_error=assert_error, error=error)
-            return error
+                self.api.app.cache.closedb()
+            except AttributeError:
+                pass
+            sys.path = old_path
+            os.chdir(current_dir)
+            # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
+            added_modules = set(sys.modules).difference(old_modules)
+            for added in added_modules:
+                sys.modules.pop(added, None)
+        self._handle_cli_result(command_line, assert_error=assert_error, error=error)
+        return error
 
     def run(self, command_line, assert_error=False):
         """ run a single command as in the command line.
@@ -556,8 +555,11 @@ class TestClient(object):
         """
         from conans.test.utils.mocks import RedirectedTestOutput
         self.out = RedirectedTestOutput()  # Initialize each command
-        with redirect_output(self.out):
-            error = self.run_cli(command_line, assert_error=assert_error)
+        with mock.patch("conans.client.rest.auth_manager.UserInput", MockedUserInput) as mock_input:
+            mock_input.logins = PropertyMock(return_value=self.users)
+            with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
+                with redirect_output(self.out):
+                    error = self.run_cli(command_line, assert_error=assert_error)
         return error
 
     def run_command(self, command, cwd=None, assert_error=False):

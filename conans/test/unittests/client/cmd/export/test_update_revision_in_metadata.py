@@ -7,11 +7,9 @@ from collections import namedtuple
 import pytest
 from mock import mock
 
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-
-
 # TODO: 2.0: add some unittests for the new cache on getting the fields that replace the metadata
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output

@@ -2,8 +2,8 @@ import os
 import time
 import traceback
 
+from conans.cli.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
-from conans.client.output import ConanOutput
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.file_uploader import FileUploader
@@ -41,7 +41,7 @@ class RestV2Methods(RestCommonMethods):
 
     def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
-        contents = run_downloader(self.requester, None, self.verify_ssl, self._config,
+        contents = run_downloader(self.requester, self.verify_ssl, self._config,
                                   use_cache=use_cache, url=url,
                                   auth=self.auth, headers=headers)
         return contents
@@ -188,7 +188,7 @@ class RestV2Methods(RestCommonMethods):
             if output and not output.is_terminal:
                 msg = "Uploading: %s" % filename if not display_name else (
                     "Uploading %s -> %s" % (filename, display_name))
-                output.writeln(msg)
+                output.info(msg)
             resource_url = urls[filename]
             try:
                 headers = self._artifacts_properties if not self._matrix_params else {}
@@ -213,10 +213,10 @@ class RestV2Methods(RestCommonMethods):
         output = ConanOutput()
         for filename in sorted(files, reverse=True):
             if output and not output.is_terminal:
-                output.writeln("Downloading %s" % filename)
+                output.info("Downloading %s" % filename)
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
-            run_downloader(self.requester, output, self.verify_ssl, self._config,
+            run_downloader(self.requester, self.verify_ssl, self._config,
                            use_cache=use_cache,
                            url=resource_url, file_path=abs_path, auth=self.auth)
 

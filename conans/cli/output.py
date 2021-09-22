@@ -4,6 +4,7 @@ import sys
 import tqdm
 from colorama import Fore, Style
 
+from conans.client.userio import color_enabled
 from conans.util.env_reader import get_env
 
 
@@ -69,21 +70,9 @@ class TqdmHandler(logging.StreamHandler):
 
 class ConanOutput(object):
     def __init__(self):
-        self._logger = logging.getLogger("conan_out_logger")
-        self._stream = sys.stderr
-        self._color = self._init_colors()
-
-        self._stream_handler = TqdmHandler(self._stream)
-        self._stream_handler.setFormatter(logging.Formatter("%(message)s"))
-        self._logger.addHandler(self._stream_handler)
-        self._logger.setLevel(logging.INFO)
-        self._logger.propagate = False
-
+        self.stream = sys.stderr
         self._scope = ""
-
-    @property
-    def stream(self):
-        return self._stream
+        self._color = color_enabled(self.stream)
 
     @property
     def color(self):
@@ -99,54 +88,88 @@ class ConanOutput(object):
 
     @property
     def is_terminal(self):
-        return hasattr(self._stream, "isatty") and self._stream.isatty()
+        return hasattr(self.stream, "isatty") and self.stream.isatty()
 
-    def _write(self, msg, level, fg=None, bg=None):
+    def writeln(self, data, fg=None, bg=None):
+        self.write(data, fg, bg, newline=True)
+
+    def write(self, data, fg=None, bg=None, newline=False):
+        if self._color and (fg or bg):
+            data = "%s%s%s%s" % (fg or '', bg or '', data, Style.RESET_ALL)
+
+        # https://github.com/conan-io/conan/issues/4277
+        # Windows output locks produce IOErrors
+        for _ in range(3):
+            try:
+                if newline:
+                    data = "%s\n" % data
+                self.stream.write(data)
+                break
+            except IOError:
+                import time
+                time.sleep(0.02)
+            except UnicodeError:
+                data = data.encode("utf8").decode("ascii", "ignore")
+
+        self.stream.flush()
+
+    def rewrite_line(self, line):
+        tmp_color = self._color
+        self._color = False
+        TOTAL_SIZE = 70
+        LIMIT_SIZE = 32  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
+        if len(line) > TOTAL_SIZE:
+            line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
+        self.write("\r%s%s" % (line, " " * (TOTAL_SIZE - len(line))))
+        self.stream.flush()
+        self._color = tmp_color
+
+    def _write_message(self, msg, fg=None, bg=None):
         if self._scope:
-            msg = "{}: {}".format(self.scope, msg)
+            if self._color:
+                msg = "%s%s%s: %s" % (fg or '', bg or '', self.scope, Style.RESET_ALL)
+                msg = "{}: {}".format(self.scope, msg)
+            else:
+                msg = "{}: {}".format(self.scope, msg)
         if self._color:
-            msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
-        self._logger.log(level, msg)
+            if self._scope:
+                msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+            else:
+                msg = "{}{}{}{}".format(Color.BRIGHT_WHITE, bg or '', msg, Style.RESET_ALL)
+
+        self.stream.write("{}\n".format(msg))
 
     def debug(self, msg):
-        self._write(msg, logging.DEBUG)
+        self._write_message(msg, logging.DEBUG)
 
     def info(self, msg, fg=None, bg=None):
-        self._write(msg, logging.INFO, fg, bg)
+        self._write_message(msg, fg=fg, bg=bg)
 
-    # TODO: remove, just to support the migration system warn message
-    def warn(self, msg):
-        self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
+    def highlight(self, data):
+        self.info(data, Color.BRIGHT_MAGENTA)
+
+    def success(self, data):
+        self.info(data, Color.BRIGHT_GREEN)
 
     def warning(self, msg):
-        self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
+        self._write_message("WARN: {}".format(msg), Color.YELLOW)
 
     def error(self, msg):
-        self._write("ERROR: {}".format(msg), logging.ERROR, Color.RED)
+        self._write_message("ERROR: {}".format(msg), Color.RED)
 
     def critical(self, msg):
-        self._write("ERROR: {}".format(msg), logging.CRITICAL, Color.BRIGHT_RED)
+        self._write_message("ERROR: {}".format(msg), Color.BRIGHT_RED)
 
     def flush(self):
-        if self._stream_handler:
-            self._stream_handler.flush()
+        self.stream.flush()
 
-    def _init_colors(self):
-        clicolor = get_env("CLICOLOR")
-        clicolor_force = get_env("CLICOLOR_FORCE")
-        no_color = get_env("NO_COLOR")
-        if no_color or (clicolor and clicolor == "0") or not self.is_terminal:
-            import colorama
-            colorama.init(strip=True)
-            return False
-        else:
-            import colorama
-            if clicolor_force or (clicolor and clicolor != "0"):
-                colorama.init(convert=False, strip=False)
-            else:
-                # TODO: check if colorama checks for stripping colors are enough
-                colorama.init()
-            return True
+
+class ScopedOutput(ConanOutput):
+
+    def __init__(self, scope, output):
+        ConanOutput.__init__(self)
+        self._scope = scope
+        self._color = output._color
 
 
 def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):

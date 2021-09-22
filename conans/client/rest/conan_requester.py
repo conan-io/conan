@@ -44,7 +44,7 @@ class ConanRequester(object):
         # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
         no_proxy = self.proxies.pop("no_proxy", None)
         if no_proxy:
-            warnings.warn("proxies.no_proxy has been deprecated."
+            warnings.warning("proxies.no_proxy has been deprecated."
                           " Use proxies.no_proxy_match instead")
             os.environ["NO_PROXY"] = no_proxy
 

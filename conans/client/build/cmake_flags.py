@@ -128,10 +128,10 @@ def runtime_definition(runtime):
     return {runtime_definition_var_name: "/%s" % runtime} if runtime else {}
 
 
-def build_type_definition(new_build_type, old_build_type, generator, output):
+def build_type_definition(new_build_type, old_build_type, generator, scoped_output):
     if new_build_type and new_build_type != old_build_type:
-        output.warn("Forced CMake build type ('%s') different from the settings build type ('%s')"
-                    % (new_build_type, old_build_type))
+        scoped_output.warning("Forced CMake build type ('%s') different from the settings "
+                              "build type ('%s')" % (new_build_type, old_build_type))
 
     build_type = new_build_type or old_build_type
     if build_type and not is_multi_configuration(generator):
@@ -143,7 +143,7 @@ class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
                  parallel=True, generator=None, set_cmake_flags=False,
-                 forced_build_type=None, output=None):
+                 forced_build_type=None):
         self._conanfile = conanfile
         self._forced_cmake_system_name = cmake_system_name
         self._make_program = make_program
@@ -151,7 +151,7 @@ class CMakeDefinitionsBuilder(object):
         self._generator = generator
         self._set_cmake_flags = set_cmake_flags
         self._forced_build_type = forced_build_type
-        self._output = output
+        self._scoped_output = self._conanfile.output
 
     def _ss(self, setname):
         """safe setting"""
@@ -278,10 +278,10 @@ class CMakeDefinitionsBuilder(object):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or self._make_program
         if make_program:
             if not tools.which(make_program):
-                self._output.warn("The specified make program '%s' cannot be found and will be "
+                self._scoped_output.warning("The specified make program '%s' cannot be found and will be "
                                   "ignored" % make_program)
             else:
-                self._output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
+                self._scoped_output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
                 return {"CMAKE_MAKE_PROGRAM": make_program}
 
         return {}
@@ -300,7 +300,7 @@ class CMakeDefinitionsBuilder(object):
         definitions = OrderedDict()
         definitions.update(runtime_definition(runtime))
         definitions.update(build_type_definition(self._forced_build_type, build_type,
-                                                 self._generator, self._output))
+                                                 self._generator, self._scoped_output))
 
         # don't attempt to override variables set within toolchain
         if (tools.is_apple_os(os_) and "CONAN_CMAKE_TOOLCHAIN_FILE" not in os.environ
@@ -329,7 +329,7 @@ class CMakeDefinitionsBuilder(object):
         # C, CXX, LINK FLAGS
         if compiler == "Visual Studio" or compiler_base == "Visual Studio":
             if self._parallel:
-                flag = parallel_compiler_cl_flag(output=self._output)
+                flag = parallel_compiler_cl_flag(output=self._scoped_output)
                 definitions['CONAN_CXX_FLAGS'] = flag
                 definitions['CONAN_C_FLAGS'] = flag
         else:  # arch_flag is only set for non Visual Studio

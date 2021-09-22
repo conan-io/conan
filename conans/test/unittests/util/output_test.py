@@ -6,7 +6,7 @@ import zipfile
 from io import StringIO
 
 from conans.client import tools
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, redirect_output
@@ -14,15 +14,6 @@ from conans.util.files import load, save
 
 
 class OutputTest(unittest.TestCase):
-
-    def test_simple_output(self):
-        captured_output = RedirectedTestOutput()
-        with redirect_output(captured_output):
-            output = ConanOutput()
-            output.rewrite_line("This is a very long line that has to be truncated somewhere, "
-                                "because it is so long it doesn't fit in the output terminal")
-        self.assertIn("This is a very long line that ha ... esn't fit in the output terminal",
-                      captured_output.getvalue())
 
     def test_error(self):
         client = TestClient()
@@ -57,7 +48,7 @@ class PkgConan(ConanFile):
         output_dir = os.path.join(tmp_dir, "output_dir")
         captured_output = RedirectedTestOutput()
         with redirect_output(captured_output):
-            tools.unzip(zip_path, output_dir, output=ConanOutput())
+            tools.unzip(zip_path, output_dir)
 
         output = captured_output.getvalue()
         self.assertRegex(output, "Unzipping [\d]+B")

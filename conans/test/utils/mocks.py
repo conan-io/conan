@@ -3,8 +3,8 @@ from collections import Counter, defaultdict, namedtuple
 from io import StringIO
 
 from conans import ConanFile, Options
-from conans.client.output import ConanOutput
-from conans.client.userio import UserIO
+from conans.cli.output import ConanOutput
+from conans.client.userio import UserInput
 from conans.model.conf import ConfDefinition
 from conans.model.layout import Folders
 from conans.model.options import PackageOptions
@@ -30,20 +30,20 @@ class LocalDBMock(object):
         self.refresh_token = refresh_token
 
 
-class MockedUserIO(UserIO):
+class MockedUserInput(UserInput):
     """
     Mock for testing. If get_username or get_password is requested will raise
     an exception except we have a value to return.
     """
 
-    def __init__(self):
+    def __init__(self, non_interactive):
         """
         logins is a dict of {remote: list(user, password)}
         will return sequentially
         """
         self.logins = None
         self.login_index = Counter()
-        UserIO.__init__(self)
+        UserInput.__init__(self, non_interactive=non_interactive)
 
     def get_username(self, remote_name):
         username_env = self._get_env_username(remote_name)

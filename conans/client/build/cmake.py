@@ -1,10 +1,10 @@
 import os
 import platform
 import re
+from io import StringIO
 from itertools import chain
 
-from io import StringIO
-
+from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
@@ -12,7 +12,6 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
     is_generator_platform_supported, is_toolset_supported
-from conans.client.output import ConanOutput
 from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -56,7 +55,7 @@ class CMake(object):
         self.generator = generator or get_generator(conanfile)
 
         if not self.generator:
-            self._conanfile.output.warn("CMake generator could not be deduced from settings")
+            self._conanfile.output.warning("CMake generator could not be deduced from settings")
         self.parallel = parallel
         # Initialize definitions (won't be updated if conanfile or any of these variables change)
         builder = CMakeDefinitionsBuilder(self._conanfile,
@@ -64,8 +63,7 @@ class CMake(object):
                                           make_program=make_program, parallel=parallel,
                                           generator=self.generator,
                                           set_cmake_flags=set_cmake_flags,
-                                          forced_build_type=build_type,
-                                          output=self._conanfile.output)
+                                          forced_build_type=build_type)
         # FIXME CONAN 2.0: CMake() interface should be always the constructor and self.definitions.
         # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear
 
@@ -424,7 +422,8 @@ class CMake(object):
         # We don't want warnings printed because there is no replacement of the abs path.
         # there could be MANY cmake files in the package and the normal thing is to not find
         # the abs paths
-        _null_out = ConanOutput(StringIO())
+        _null_out = ConanOutput()
+        # FIXME: Fix the null out, now is not null
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake") and not f.startswith("conan"):

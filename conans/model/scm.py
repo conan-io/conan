@@ -89,9 +89,9 @@ class SCMData(object):
 class SCM(object):
     availables = {'git': Git, 'svn': SVN}
 
-    def __init__(self, data, repo_folder, output):
+    def __init__(self, conanfile, data, repo_folder):
+        self._conanfile = conanfile
         self._data = data
-        self._output = output
         self.repo_folder = repo_folder
         # Finally instance a repo
         self.repo = self._get_repo()
@@ -111,9 +111,9 @@ class SCM(object):
         if not repo_class:
             raise ConanException("SCM not supported: %s" % self._data.type)
 
-        return repo_class(folder=self.repo_folder, verify_ssl=self._data.verify_ssl,
-                          username=self._data.username, password=self._data.password,
-                          output=self._output)
+        return repo_class(self._conanfile,
+                          folder=self.repo_folder, verify_ssl=self._data.verify_ssl,
+                          username=self._data.username, password=self._data.password)
 
     @property
     def excluded_files(self):
@@ -190,7 +190,7 @@ class SCM(object):
         if self._data.type == "git":
             return src_root
 
-        url_root = SCM(self._data, src_root, self._output).get_remote_url(remove_credentials=True)
+        url_root = SCM(self._conanfile, self._data, src_root).get_remote_url(remove_credentials=True)
         if url_root:
             url = self.clean_url(url)
             src_path = os.path.join(src_root, os.path.relpath(url, url_root))

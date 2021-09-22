@@ -21,7 +21,7 @@ class LibcxxSettingTest(unittest.TestCase):
 
                 def build(self):
                     cmake = CMake(self)
-                    self.output.warn(cmake.command_line)
+                    self.output.warning(cmake.command_line)
                     self.run('cmake . %s' % cmake.command_line)
                     self.run("cmake --build . %s" %  cmake.build_config)
                 ''')

@@ -3,19 +3,20 @@ import shutil
 from collections import OrderedDict
 from io import StringIO
 from typing import List
+
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conans.assets.templates import dict_loader
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
     get_default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.output import Color
+from conans.cli.output import Color
 from conans.client.profile_loader import read_profile
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
@@ -334,18 +335,17 @@ class ClientCache(object):
 
     def initialize_default_profile(self):
         if not os.path.exists(self.default_profile_path):
-            self._output.writeln("Auto detecting your dev setup to initialize the "
+            self._output.info("Auto detecting your dev setup to initialize the "
                                  "default profile (%s)" % self.default_profile_path,
                                  Color.BRIGHT_YELLOW)
 
-            default_settings = detect_defaults_settings(self._output,
-                                                        profile_path=self.default_profile_path)
-            self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
-            self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
+            default_settings = detect_defaults_settings(profile_path=self.default_profile_path)
+            self._output.info("Default settings", Color.BRIGHT_YELLOW)
+            self._output.info("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
                                  Color.BRIGHT_YELLOW)
-            self._output.writeln("*** You can change them in %s ***" % self.default_profile_path,
+            self._output.info("*** You can change them in %s ***" % self.default_profile_path,
                                  Color.BRIGHT_MAGENTA)
-            self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n",
+            self._output.info("*** Or override with -s compiler='other' -s ...s***\n\n",
                                  Color.BRIGHT_MAGENTA)
 
             default_profile = Profile()

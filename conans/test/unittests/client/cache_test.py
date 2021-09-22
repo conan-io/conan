@@ -1,19 +1,14 @@
 # coding=utf-8
 
-import os
 import unittest
-
-from io import StringIO
 
 import pytest
 
 from conans.client.cache.cache import ClientCache
-from conans.client.output import ConanOutput
 from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
-from conans.util.files import save
 
 
 class CacheTest(unittest.TestCase):

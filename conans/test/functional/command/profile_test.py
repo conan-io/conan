@@ -6,9 +6,9 @@ import unittest
 
 import pytest
 
+from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.output import ConanOutput
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.profiles import create_profile
@@ -270,8 +270,7 @@ class DetectCompilersTest(unittest.TestCase):
             "Windows": "Visual Studio"
         }
 
-        conan_output = ConanOutput()
-        result = detect_defaults_settings(conan_output, profile_path=DEFAULT_PROFILE_NAME)
+        result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         platform_compiler = platform_default_compilers.get(platform.system(), None)
@@ -293,13 +292,11 @@ class DetectCompilersTest(unittest.TestCase):
             raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore!")
 
         output = RedirectedTestOutput()  # Initialize each command
-        conan_output = ConanOutput()
         with redirect_output(output):
             with tools.environment_append({"CC": "gcc"}):
-                result = detect_defaults_settings(conan_output, profile_path=DEFAULT_PROFILE_NAME)
+                result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         # No compiler should be detected
         self.assertIsNone(result.get("compiler", None))
         self.assertIn("gcc detected as a frontend using apple-clang", output)
-        self.assertIsNotNone(conan_output.error)

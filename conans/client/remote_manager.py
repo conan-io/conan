@@ -118,7 +118,7 @@ class RemoteManager(object):
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
         check_compressed_files(EXPORT_TGZ_NAME, zipped_files)
         if tgz_file:
-            uncompress_file(tgz_file, export_folder, output=self._output)
+            uncompress_file(tgz_file, export_folder)
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
@@ -151,17 +151,17 @@ class RemoteManager(object):
 
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         check_compressed_files(EXPORT_SOURCES_TGZ_NAME, zipped_files)
-        uncompress_file(tgz_file, export_sources_folder, output=self._output)
+        uncompress_file(tgz_file, export_sources_folder)
         touch_folder(export_sources_folder)
 
-    def get_package(self, conanfile, pref, remote, output, recorder):
+    def get_package(self, conanfile, pref, remote, recorder):
         ref_layout = self._cache.ref_layout(pref.ref)
         conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
 
-        output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
+        ConanOutput().info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         latest_prev = self.get_latest_package_revision(pref, remote)
 
         pkg_layout = self._cache.get_or_create_pkg_layout(latest_prev)
@@ -169,13 +169,14 @@ class RemoteManager(object):
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)
-            self._get_package(pkg_layout, pref, remote, output, recorder, info=info)
+            self._get_package(pkg_layout, pref, remote, recorder, info=info)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
 
-    def _get_package(self, layout, pref, remote, output, recorder, info):
+    def _get_package(self, layout, pref, remote, recorder, info):
+        output = ConanOutput()
         t1 = time.time()
         try:
             headers = _headers_for_info(info)
@@ -198,7 +199,7 @@ class RemoteManager(object):
             package_folder = layout.package()
             if tgz_file:  # This must happen always, but just in case
                 # TODO: The output could be changed to the package one, but
-                uncompress_file(tgz_file, package_folder, output=self._output)
+                uncompress_file(tgz_file, package_folder)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
@@ -319,10 +320,10 @@ def check_compressed_files(tgz_name, files):
                                  "Please upgrade conan client." % f)
 
 
-def uncompress_file(src_path, dest_folder, output):
+def uncompress_file(src_path, dest_folder):
     t1 = time.time()
     try:
-        with progress_bar.open_binary(src_path, output, "Decompressing %s" % os.path.basename(
+        with progress_bar.open_binary(src_path, "Decompressing %s" % os.path.basename(
             src_path)) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
