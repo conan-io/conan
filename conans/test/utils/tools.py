@@ -723,9 +723,7 @@ class TurboTestClient(TestClient):
             return None
 
         package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
-
         package_ref = PackageReference(ref, package_id)
-
         prevs = self.cache.get_package_revisions(package_ref, only_latest_prev=True)
         prev = prevs[0]
 
@@ -772,10 +770,10 @@ class TurboTestClient(TestClient):
 
     def search(self, pattern, remote=None, assert_error=False, args=None):
         remote = " -r={}".format(remote) if remote else ""
-        self.run("search {} --json {} {} {}".format(pattern, self.tmp_json_name, remote,
+        self.run("search {} --json {} {} {}".format(pattern, ".tmp.json", remote,
                                                     args or ""),
                  assert_error=assert_error)
-        data = json.loads(self.load(self.tmp_json_name))
+        data = json.loads(self.load(".tmp.json"))
         return data
 
     def massive_uploader(self, ref, revisions, num_prev, remote=None):
