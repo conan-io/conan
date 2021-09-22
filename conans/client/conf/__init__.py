@@ -363,25 +363,6 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("Invalid configuration, missing %s" % varname)
 
     @property
-    def default_profile(self):
-        ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
-        if ret:
-            if not os.path.isabs(ret):
-                from conans.client.cache.cache import PROFILES_FOLDER
-                profiles_folder = os.path.join(os.path.dirname(self.filename), PROFILES_FOLDER)
-                ret = os.path.abspath(os.path.join(profiles_folder, ret))
-
-            if not os.path.exists(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' "
-                                     "must point to an existing profile file.")
-            return ret
-        else:
-            try:
-                return unquote(self.get_item("general.default_profile"))
-            except ConanException:
-                return DEFAULT_PROFILE_NAME
-
-    @property
     def cache_no_locks(self):
         try:
             return get_env("CONAN_CACHE_NO_LOCKS", False)

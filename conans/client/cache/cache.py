@@ -18,7 +18,7 @@ from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
-from conans.paths import ARTIFACTS_PROPERTIES_FILE
+from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
 
@@ -256,10 +256,8 @@ class ClientCache(object):
 
     @property
     def default_profile_path(self):
-        if os.path.isabs(self.config.default_profile):
-            return self.config.default_profile
-        else:
-            return os.path.join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
+        # Used only in testing
+        return os.path.join(self.cache_folder, PROFILES_FOLDER, DEFAULT_PROFILE_NAME)
 
     @property
     def hooks_path(self):

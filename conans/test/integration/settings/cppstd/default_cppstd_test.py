@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import json
 import os
 import textwrap
@@ -7,9 +5,8 @@ import unittest
 
 from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.conf import get_default_settings_yml
-from conans.client.tools import environment_append, save, load
+from conans.client.tools import save, load
 from conans.model.settings import Settings
-from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 
@@ -21,48 +18,37 @@ class DefaultCppTestCase(unittest.TestCase):
         [settings]
         os=Linux
         arch=x86
-        compiler={}
-        compiler.version={}
+        compiler=gcc
+        compiler.version=7
         compiler.libcxx=libstdc++11
-        """.format(compiler, compiler_version))
+        """)
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
 
         class Library(ConanFile):
-            settings = "{settings}"
+            settings = "os", "compiler"
 
             def configure(self):
                 compiler_cppstd = self.settings.get_safe("compiler.cppstd")
-                self.output.info(">>>> settings: {{}}".format(self.settings.fields))
-                self.output.info(">>>> compiler.cppstd: {{}}".format(compiler_cppstd))
+                self.output.info("compiler.cppstd: {}!!".format(compiler_cppstd))
         """)
 
     id_default = "827ab7c8bacdca7433f4463313dfe30219f13843"
 
-    def run(self, *args, **kwargs):
-        default_profile_path = os.path.join(temp_folder(), "default.profile")
-        save(default_profile_path, self.default_profile)
-        with environment_append({"CONAN_DEFAULT_PROFILE_PATH": default_profile_path}):
-            super(DefaultCppTestCase, self).run(*args, **kwargs)
-
     def setUp(self):
         self.t = TestClient()
+        save(self.t.cache.default_profile_path, self.default_profile)
         # Compute ID without the setting 'cppstd'
-        target_id, output = self._get_id()
+        target_id, output = self._get_id({})
         self.assertEqual(target_id, self.id_default)
-        self.assertIn(">>>> settings: ['compiler', 'os']", output)
-        self.assertIn(">>>> compiler.cppstd: None", output)
+        self.assertIn("compiler.cppstd: None!!", output)
 
-    def _get_id(self, settings_values=None):
+    def _get_id(self, settings_values):
         # Create the conanfile with corresponding settings
-        settings = ["os", "compiler", ]
-
-        conanfile = self.conanfile.format(settings='", "'.join(settings))
-        self.t.save({"conanfile.py": conanfile}, clean_first=True)
+        self.t.save({"conanfile.py": self.conanfile}, clean_first=True)
 
         # Create the string with the command line settings
-        settings_values = settings_values or dict()
         settings_values_str = ["-s {k}={v}".format(k=k, v=v) for k, v in settings_values.items()]
         settings_values_str = " ".join(settings_values_str)
 
@@ -76,42 +62,24 @@ class DefaultCppTestCase(unittest.TestCase):
         # Return ID, output
         return data[0]["id"], info_output
 
-
-def _make_cppstd_default(compiler, compiler_version):
-    settings = Settings.loads(get_default_settings_yml())
-    settings.compiler = compiler
-    settings.compiler.version = compiler_version
-    return cppstd_default(settings)
-
-
-class SettingsCompilerCppStdTests(DefaultCppTestCase):
-    """
-    Validate package ID computed taking into account different scenarios for 'compiler.cppstd'. The
-    ID has to be the same if the setting is not informed and if it has the default value, also
-    these values should be the same as the ones using the 'cppstd' approach.
-    """
-
-    def _get_id(self, settings_values=None):
-        return super(SettingsCompilerCppStdTests, self)._get_id(settings_values=settings_values)
-
     def test_value_none(self):
         # Explicit value 'None' passed to setting 'cppstd'
         id_with, output = self._get_id(settings_values={"compiler.cppstd": "None"})
-        self.assertIn(">>>> settings: ['compiler', 'os']", output)
-        self.assertIn(">>>> compiler.cppstd: None", output)
+        self.assertIn("compiler.cppstd: None!!", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'compiler.cppstd'
-        cppstd = _make_cppstd_default(self.compiler, self.compiler_version)
+        settings = Settings.loads(get_default_settings_yml())
+        settings.compiler = self.compiler
+        settings.compiler.version = self.compiler_version
+        cppstd = cppstd_default(settings)
         id_with, output = self._get_id(settings_values={"compiler.cppstd": cppstd})
-        self.assertIn(">>>> settings: ['compiler', 'os']", output)
-        self.assertIn(">>>> compiler.cppstd: gnu14", output)
+        self.assertIn("compiler.cppstd: gnu14!!", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_other(self):
         # Explicit value (not the default) passed to setting 'cppstd'
         id_with, output = self._get_id(settings_values={"compiler.cppstd": "14"})
-        self.assertIn(">>>> settings: ['compiler', 'os']", output)
-        self.assertIn(">>>> compiler.cppstd: 14", output)
+        self.assertIn("compiler.cppstd: 14!!", output)
         self.assertNotEqual(self.id_default, id_with)

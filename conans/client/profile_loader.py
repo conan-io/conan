@@ -11,6 +11,7 @@ from conans.model.env_info import unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
+from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
 from conans.util.log import logger
@@ -258,8 +259,13 @@ def profile_from_args(profiles, settings, options, env, conf, cwd, cache, build_
     """
 
     if profiles is None:
-        default_name = "core:default_build_profile" if build_profile else "core:default_profile"
-        default_profile = cache.new_config[default_name] or "default"
+        if build_profile:
+            default_profile = cache.new_config["core:default_build_profile"] or DEFAULT_PROFILE_NAME
+        else:
+            default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
+            if default_profile is None:
+                default_profile = cache.new_config["core:default_profile"] or DEFAULT_PROFILE_NAME
+
         default_profile = os.path.join(cache.profiles_path, default_profile)
         if not os.path.exists(default_profile):
             msg = ("The default profile file doesn't exist:\n"
