@@ -274,7 +274,6 @@ class Environment:
         save(filename, content)
 
     def save_script(self, name, group="build"):
-        # FIXME: using platform is not ideal but settings might be incomplete
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
             self.save_bat(path)
@@ -427,14 +426,10 @@ class ProfileEnvironment:
         return result
 
 
-def create_env_script(conanfile, command, filename, group):
+def create_env_script(conanfile, content, filename, group):
     """
     Create a simple script executing a command and register it.
     """
-    content = textwrap.dedent("""\
-        @echo off
-        {}
-        """.format(command))
     path = os.path.join(conanfile.generators_folder, filename)
     save(path, content)
 

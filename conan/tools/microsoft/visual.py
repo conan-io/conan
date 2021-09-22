@@ -1,4 +1,5 @@
 import os
+import textwrap
 
 from conan.tools.env.environment import create_env_script
 from conan.tools.intel import IntelOneAPI
@@ -54,7 +55,11 @@ def _write_conanvcvars(conanfile, group):
                                 platform_type=None, winsdk_version=None,
                                 vcvars_ver=vcvars_ver)
     if vcvars:
-        create_env_script(conanfile, vcvars, CONAN_VCVARS_FILE, group)
+        content = textwrap.dedent("""\
+            @echo off
+            {}
+            """.format(vcvars))
+        create_env_script(conanfile, content, CONAN_VCVARS_FILE, group)
 
 
 def vs_ide_version(conanfile):

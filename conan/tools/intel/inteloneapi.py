@@ -17,6 +17,7 @@
 """
 import os
 import platform
+import textwrap
 
 import six
 
@@ -102,10 +103,15 @@ class IntelOneAPI:
 
     def generate(self, group="build"):
         if platform.system() == "Windows" and not self._conanfile.win_bash:
+            content = textwrap.dedent("""\
+                @echo off
+                {}
+                """.format(self.command))
             filename = self.filename + '.bat'
         else:
             filename = self.filename + '.sh'
-        create_env_script(self._conanfile, self.command, filename, group)
+            content = self.command
+        create_env_script(self._conanfile, content, filename, group)
 
     @property
     def installation_path(self):
