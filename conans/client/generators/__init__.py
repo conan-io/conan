@@ -7,18 +7,12 @@ from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
 from .deploy import DeployGenerator
-from .json_generator import JsonGenerator
-from .markdown import MarkdownGenerator
-from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
 
 
 class GeneratorManager(object):
     def __init__(self):
-        self._generators = {"ycm": YouCompleteMeGenerator,
-                            "json": JsonGenerator,
-                            "deploy": DeployGenerator,
-                            "markdown": MarkdownGenerator}
+        self._generators = {"deploy": DeployGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
