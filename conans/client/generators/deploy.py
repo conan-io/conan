@@ -14,19 +14,21 @@ FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt"]
 class DeployGenerator:
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        # TODO: check if we want to output to another folder
+        self._output_folder = self._conanfile.generators_folder
 
     def manifest_content(self, copied_files):
         date = timestamp_now()
         file_dict = {}
         for f in copied_files:
-            abs_path = os.path.join(self._conanfile.generators_folder, f)
+            abs_path = os.path.join(self._output_folder, f)
             file_dict[f] = md5sum(abs_path)
         manifest = FileTreeManifest(date, file_dict)
         return repr(manifest)
 
     @property
     def manifest_path(self):
-        return os.path.join(self._conanfile.generators_folder, BUILD_INFO_DEPLOY)
+        return os.path.join(self._output_folder, BUILD_INFO_DEPLOY)
 
     def generate(self):
         copied_files = []
@@ -40,7 +42,7 @@ class DeployGenerator:
                     if f in FILTERED_FILES:
                         continue
                     src = os.path.normpath(os.path.join(root, f))
-                    dst = os.path.join(self._conanfile.generators_folder, transitive.ref.name,
+                    dst = os.path.join(self._output_folder, transitive.ref.name,
                                        os.path.relpath(root, rootpath), f)
                     dst = os.path.normpath(dst)
                     mkdir(os.path.dirname(dst))
