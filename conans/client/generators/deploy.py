@@ -11,7 +11,7 @@ from conans.util.files import mkdir, md5sum
 FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt"]
 
 
-class Deploy:
+class DeployGenerator:
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
