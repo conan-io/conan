@@ -46,30 +46,6 @@ class RequireOverrideTest(unittest.TestCase):
             self.client.run("info .")
             self.assertIn("libA/2.0@user/channel overridden", self.client.out)
 
-    def test_public_deps(self):
-        client = TestClient()
-        pkg2 = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                requires = ("pkg/0.1@user/stable", "override"),
-                def package_info(self):
-                    self.output.info("PUBLIC PKG2:%s" % self.cpp_info.public_deps)
-            """)
-        client.save({"conanfile.py": pkg2})
-        client.run("create . pkg2/0.1@user/stable")
-        self.assertIn("pkg2/0.1@user/stable: PUBLIC PKG2:[]", client.out)
-        pkg3 = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                requires = "pkg2/0.1@user/stable", ("pkg/0.1@user/stable", "override")
-                generators = "cmake"
-            """)
-        client.save({"conanfile.py": pkg3})
-        client.run("install .")
-        self.assertIn("pkg2/0.1@user/stable: PUBLIC PKG2:[]", client.out)
-        conanbuildinfo = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_DEPENDENCIES pkg2)", conanbuildinfo)
-
     def test_can_override_even_versions_with_build_metadata(self):
         # https://github.com/conan-io/conan/issues/5900
 
