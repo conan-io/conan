@@ -495,7 +495,6 @@ class Command(object):
                                                      require_overrides=args.require_override)
 
         except ConanException as exc:
-            info = exc.info
             raise
         finally:
             if args.json and info:
