@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shlex
 import shutil
 import socket
@@ -701,7 +702,6 @@ class TestClient(object):
 
 
 class TurboTestClient(TestClient):
-    tmp_json_name = ".tmp_json"
 
     def __init__(self, *args, **kwargs):
         if "users" not in kwargs and "default_server_user" not in kwargs:
@@ -714,16 +714,16 @@ class TurboTestClient(TestClient):
         if conanfile:
             self.save({"conanfile.py": conanfile})
         full_str = "{}@".format(ref.full_str()) if not ref.user else ref.full_str()
-        self.run("create . {} {} --json {}".format(full_str,
-                                                   args or "", self.tmp_json_name),
+        self.run("create . {} {}".format(full_str, args or ""),
                  assert_error=assert_error)
 
         ref = self.cache.get_latest_rrev(ref)
 
-        data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
-        package_id = data["installed"][0]["packages"][0]["id"]
+
+        package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
+
         package_ref = PackageReference(ref, package_id)
 
         prevs = self.cache.get_package_revisions(package_ref, only_latest_prev=True)
@@ -743,14 +743,13 @@ class TurboTestClient(TestClient):
     def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
-                                                       args or "", self.tmp_json_name),
+        self.run("export-pkg . {} {}".format(ref.full_str(),  args or ""),
                  assert_error=assert_error)
         rrev = self.cache.get_latest_rrev(ref)
-        data = json.loads(self.load(self.tmp_json_name))
+
         if assert_error:
             return None
-        package_id = data["installed"][0]["packages"][0]["id"]
+        package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
         package_ref = PackageReference(ref, package_id)
         prev = self.cache.get_latest_prev(package_ref)
         return package_ref.copy_with_revs(rrev, prev)
