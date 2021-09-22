@@ -1,19 +1,12 @@
-from datetime import datetime
-import time
-
 from requests.exceptions import RequestException
 
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
-                                       RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
+                                       RECIPE_NOT_IN_REMOTE,
                                        RECIPE_UPDATED, RECIPE_EDITABLE,
                                        RECIPE_INCACHE_DATE_UPDATED)
 from conans.client.output import ScopedOutput
-from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
-from conans.client.remover import DiskRemover
-from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
-from conans.model.ref import ConanFileReference
+from conans.errors import ConanException, NotFoundException
 from conans.util.tracer import log_recipe_got_from_local_cache
-
 
 
 class ConanProxy(object):

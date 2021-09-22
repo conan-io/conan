@@ -7,7 +7,7 @@ from conans.errors import ConanException
 from conans.model.ref import PackageReference
 
 
-def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
+def export_pkg(app, ref, source_folder, build_folder, package_folder,
                profile_host, profile_build, graph_lock, root_ref, force, remotes):
     cache, output, hook_manager = app.cache, app.out, app.hook_manager
     graph_manager = app.graph_manager
@@ -21,7 +21,7 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
     # because the "package()" method is in develop=True already
     deps_graph = graph_manager.load_graph(ref, ref, profile_host, profile_build, graph_lock,
                                           root_ref, build_mode=[ref.name], check_updates=False,
-                                          update=False, remotes=remotes, recorder=recorder,
+                                          update=False, remotes=remotes,
                                           apply_build_requires=False)
     deps_graph.report_graph_error()
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
@@ -62,4 +62,3 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
         # after the package has been created we need to update the node PREV
         pkg_node.prev = pref.revision
         pkg_node.graph_lock_node.prev = pref.revision
-    recorder.package_exported(pref)
