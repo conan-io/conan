@@ -41,18 +41,12 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
     if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
         return None
 
-    remote = remotes.selected
     try:
         sources_remote = None
-        if remote:
-            sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, remote)
-        # the revision is not in remote any more, check other remotes
-        if not sources_remote:
-            for r in remotes.values():
-                if r != remote:
-                    sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, r)
-                    if sources_remote:
-                        break
+        for r in remotes.values():
+            sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, r)
+            if sources_remote:
+                break
     except Exception:
         raise
 
