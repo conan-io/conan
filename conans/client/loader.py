@@ -13,7 +13,6 @@ from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration, \
     conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
-from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
@@ -94,8 +93,6 @@ class ConanFileLoader(object):
             if (name.startswith("_") or not inspect.isclass(attr) or
                     attr.__dict__.get("__module__") != module_id):
                 continue
-            if issubclass(attr, Generator) and attr != Generator:
-                self._generator_manager.add(attr.__name__, attr, custom=True)
 
     @staticmethod
     def _load_data(conanfile_path):
@@ -361,8 +358,6 @@ def _parse_module(conanfile_module, module_id, generator_manager):
                 result = attr
             else:
                 raise ConanException("More than 1 conanfile in the file")
-        elif issubclass(attr, Generator) and attr != Generator:
-            generator_manager.add(attr.__name__, attr, custom=True)
 
     if result is None:
         raise ConanException("No subclass of ConanFile")

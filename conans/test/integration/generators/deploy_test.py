@@ -13,7 +13,6 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile, TurboTestClient, NO_SETTINGS_PACKAGE_ID
 
 
-@pytest.mark.xfail(reason="Deploy generator to be revisited")
 class DeployGeneratorTest(unittest.TestCase):
     """
     Deploy generator set of tests with only one package
@@ -29,7 +28,7 @@ class DeployGeneratorTest(unittest.TestCase):
         ref = ConanFileReference("name", "version", "user", "channel")
         self.client.create(ref, conanfile)
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % ref.full_str())
+        self.client.run("install %s -g Deploy" % ref.full_str())
 
     def test_deploy_folder_path(self):
         base_path = os.path.join(self.client.current_folder, "name")
@@ -66,7 +65,6 @@ class DeployGeneratorTest(unittest.TestCase):
             self.assertNotIn(name, content)
 
 
-@pytest.mark.xfail(reason="Deploy generator to be revisited")
 class DeployGeneratorGraphTest(unittest.TestCase):
     """
     Deploy generator set of tests with more than one package in the graph
@@ -90,7 +88,7 @@ class DeployGeneratorGraphTest(unittest.TestCase):
         self.client.create(ref1, conanfile1)
         self.client.create(ref2, conanfile2)
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % ref2.full_str())
+        self.client.run("install %s -g Deploy" % ref2.full_str())
 
     def get_expected_paths(self):
         base1_path = os.path.join(self.client.current_folder, "name1")
@@ -139,7 +137,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.assertFalse(stat_info.st_mode & stat.S_IXUSR)
         os.chmod(self.header_path, stat_info.st_mode | stat.S_IXUSR)
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % self.ref1.full_str())
+        self.client.run("install %s -g Deploy" % self.ref1.full_str())
         base1_path = os.path.join(self.client.current_folder, "name1")
         header1_path = os.path.join(base1_path, "include", "header1.h")
         stat_info = os.stat(header1_path)
@@ -163,7 +161,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
 
     def test_symbolic_links(self):
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install %s -g Deploy" % self.ref.full_str())
         base_path = os.path.join(self.client.current_folder, "name")
         header_path = os.path.join(base_path, "include", "header.h")
         link_path = os.path.join(base_path, "include", "header.h.lnk")
@@ -178,7 +176,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         header_path = os.path.join(base_path, "include", "header.h")
         link_path = os.path.join(base_path, "include", "header.h.lnk")
         save(link_path, "")
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install %s -g Deploy" % self.ref.full_str())
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
@@ -191,7 +189,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         link_path = os.path.join(base_path, "include", "header.h.lnk")
         save(header_path, "")
         os.symlink(header_path, link_path)
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install %s -g Deploy" % self.ref.full_str())
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
@@ -205,7 +203,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         save(header_path, "")
         os.symlink(header_path, link_path)
         os.remove(header_path)  # This will make it a broken symlink
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install %s -g Deploy" % self.ref.full_str())
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
@@ -217,7 +215,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         header_path = os.path.join(base_path, "include", "header.h")
         link_path = os.path.join(base_path, "include", "header.h.lnk")
         save(header_path, "")
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install %s -g Deploy" % self.ref.full_str())
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
@@ -247,7 +245,7 @@ class DeployGeneratorSymbolicLinkFolderTest(unittest.TestCase):
 
     def test_symbolic_links(self):
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install %s -g Deploy" % self.ref.full_str())
         base_path = os.path.join(self.client.current_folder, "name")
         folder_path = os.path.join(base_path, "one_folder")
         link_folder_path = os.path.join(base_path, "other_folder")
