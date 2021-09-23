@@ -55,8 +55,7 @@ class GraphManagerTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, pyreq_loader=pyreq_loader)
 
         binaries = GraphBinariesAnalyzer(cache, self.remote_manager)
-        self.manager = GraphManager(cache, self.remote_manager, self.loader,
-                                    self.resolver, binaries)
+        self.manager = GraphManager(cache, self.loader, self.resolver, binaries)
         hook_manager = Mock()
         app_type = namedtuple("ConanApp", "cache remote_manager hook_manager graph_manager"
                               " binaries_analyzer")

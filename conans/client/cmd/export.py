@@ -280,7 +280,7 @@ def _export_scm(scoped_output, scm_data, origin_folder, scm_sources_folder):
     """ Copy the local folder to the scm_sources folder in the cache, this enables to work
         with local sources without committing and pushing changes to the scm remote.
         https://github.com/conan-io/conan/issues/5195"""
-    excluded = SCM(scm_data, origin_folder).excluded_files
+    excluded = SCM(scm_data, origin_folder, scoped_output).excluded_files
     excluded.append("conanfile.py")
     scoped_output.info("SCM: Getting sources from folder: %s" % origin_folder)
     merge_directories(origin_folder, scm_sources_folder, excluded=excluded)
