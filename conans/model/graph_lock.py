@@ -522,7 +522,7 @@ class GraphLock(object):
                 t = "Build-require" if build_requires else "Require"
                 msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
                 if self._relaxed:
-                    node.conanfile.output.warn(msg)
+                    node.conanfile.output.warning(msg)
                 else:
                     raise ConanException(msg)
             else:

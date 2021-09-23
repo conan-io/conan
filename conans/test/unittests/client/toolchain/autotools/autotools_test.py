@@ -19,7 +19,7 @@ def test_configure_arguments():
         "make_args": "my_make_args"}
     )
     runner = RunnerMock()
-    conanfile = ConanFile(Mock(), runner=runner)
+    conanfile = ConanFile(runner=runner)
     conanfile.settings = MockSettings({})
     conanfile.folders.set_base_install(tmp)
     conanfile.folders.set_base_source(tmp)

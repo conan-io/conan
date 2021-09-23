@@ -7,6 +7,7 @@ import warnings
 from collections import namedtuple
 from contextlib import contextmanager
 
+from conans.cli.output import ConanOutput
 from conans.client.tools import which
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, detected_architecture, get_build_os_arch
@@ -14,12 +15,11 @@ from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.env_reader import get_env
-from conans.util.fallbacks import default_output
 from conans.util.files import mkdir_tmp, save
 from conans.util.runners import check_output_runner
 
 
-def _visual_compiler_cygwin(output, version):
+def _visual_compiler_cygwin(version):
     if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/"
                       "CurrentVersion/ProgramFilesDir (x86)"):
         is_64bits = True
@@ -36,7 +36,7 @@ def _visual_compiler_cygwin(output, version):
 
     installed_version = Version(version).major(fill=False)
     compiler = "Visual Studio"
-    output.success("CYGWIN: Found %s %s" % (compiler, installed_version))
+    ConanOutput().success("CYGWIN: Found %s %s" % (compiler, installed_version))
     return compiler, installed_version
 
 
@@ -63,17 +63,17 @@ def is_win64():
                                 "ProgramFilesDir (x86)") is not None
 
 
-def _visual_compiler(output, version):
+def _visual_compiler(version):
     """"version have to be 8.0, or 9.0 or... anything .0"""
     if platform.system().startswith("CYGWIN"):
-        return _visual_compiler_cygwin(output, version)
+        return _visual_compiler_cygwin(version)
 
     if Version(version) >= "15":
         vs_path = os.getenv('vs%s0comntools' % version)
         path = vs_path or vs_installation_path(version)
         if path:
             compiler = "Visual Studio"
-            output.success("Found %s %s" % (compiler, version))
+            ConanOutput().success("Found %s %s" % (compiler, version))
             return compiler, version
         return None
 
@@ -94,8 +94,8 @@ def _visual_compiler(output, version):
     return None
 
 
-def latest_vs_version_installed(output):
-    return latest_visual_studio_version_installed(output=output)
+def latest_vs_version_installed():
+    return latest_visual_studio_version_installed()
 
 
 MSVS_YEAR = {"17": "2022",
@@ -151,10 +151,10 @@ def msvs_toolset(conanfile):
     return toolset
 
 
-def latest_visual_studio_version_installed(output):
+def latest_visual_studio_version_installed():
     msvc_sersions = reversed(sorted(list(MSVS_DEFAULT_TOOLSETS.keys()), key=int))
     for version in msvc_sersions:
-        vs = _visual_compiler(output, version)
+        vs = _visual_compiler(version)
         if vs:
             return vs[1]
     return None
@@ -325,7 +325,7 @@ def find_windows_10_sdk():
 
 
 def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False, vcvars_ver=None,
-                   winsdk_version=None, output=None, settings=None):
+                   winsdk_version=None, settings=None):
     # Handle input arguments (backwards compatibility with 'settings' as first argument)
     # TODO: This can be promoted to a decorator pattern for any function
     if conanfile and settings:
@@ -335,11 +335,10 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
     from conans.model.conan_file import ConanFile
     if conanfile and not isinstance(conanfile, ConanFile):
         return vcvars_command(settings=conanfile, arch=arch, compiler_version=compiler_version,
-                              force=force, vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
-                              output=output)
+                              force=force, vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
 
     if settings:
-        warnings.warn("argument 'settings' has been deprecated, use 'conanfile' instead")
+        warnings.warning("argument 'settings' has been deprecated, use 'conanfile' instead")
 
     if not conanfile:
         # TODO: If Conan is using 'profile_build' here we don't have any information about it,
@@ -348,7 +347,7 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
     del settings
 
     # Here starts the actual implementation for this function
-    output = default_output(output, 'conans.client.tools.win.vcvars_command')
+    output = ConanOutput()
 
     arch_setting = arch or conanfile.settings.get_safe("arch")
 
@@ -363,7 +362,7 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
         # as they might be using Microsoft STL and other tools
         # (e.g. resource compiler, manifest tool, etc)
         # in this case, use the latest Visual Studio available on the machine
-        last_version = latest_vs_version_installed(output=output)
+        last_version = latest_vs_version_installed()
 
         compiler_version = compiler_version or last_version
     os_setting = conanfile.settings.get_safe("os")
@@ -414,7 +413,7 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
             if not force:
                 raise ConanException("Error, %s" % message)
             else:
-                output.warn(message)
+                output.warning(message)
     else:
         vs_path = vs_installation_path(str(compiler_version))
 
@@ -453,11 +452,11 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
 
 def vcvars_dict(conanfile=None, arch=None, compiler_version=None, force=False,
                 filter_known_paths=False, vcvars_ver=None, winsdk_version=None, only_diff=True,
-                output=None, settings=None):
+                settings=None):
     known_path_lists = ("include", "lib", "libpath", "path")
     cmd = vcvars_command(conanfile, settings=settings, arch=arch,
                          compiler_version=compiler_version, force=force,
-                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
+                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
     cmd += " && set"
     ret = check_output_runner(cmd)
     new_env = {}
@@ -674,4 +673,4 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
 
         # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
         with environment_append(normalized_env):
-            return conanfile._conan_runner(wincmd, output=conanfile.output, subprocess=True)
+            return conanfile._conan_runner(wincmd, subprocess=True)

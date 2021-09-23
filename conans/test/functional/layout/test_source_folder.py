@@ -60,7 +60,7 @@ def test_exports():
         self.folders.source = "my_src"
     def build(self):
         # This FOO comes from the my_tools.py
-        self.output.warn("FOO: {}".format(FOO))
+        self.output.warning("FOO: {}".format(FOO))
     """
 
     client = TestClient()

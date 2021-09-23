@@ -87,7 +87,7 @@ class EqualerrorConan(ConanFile):
     default_options = {"opt": "b=c"}
 
     def build(self):
-        self.output.warn("OPTION %s" % self.options.opt)
+        self.output.warning("OPTION %s" % self.options.opt)
 '''
         client.save({"conanfile.py": conanfile})
         client.run("export . user/testing")

@@ -6,6 +6,8 @@ import traceback
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
 
+from conans.cli.output import ConanOutput
+from conans.client.userio import UserInput
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
@@ -42,10 +44,9 @@ class _UploadCollecter(object):
     the full REVISIONS for every that has to be uploaded.
     No remote API calls are done in this step, everything is local
     """
-    def __init__(self, cache, user_io, output, loader):
+    def __init__(self, cache, loader):
         self._cache = cache
-        self._user_io = user_io
-        self._output = output
+        self._user_input = UserInput(cache.config.non_interactive)
         self._loader = loader
 
     def collect(self, package_id, reference_or_pattern, confirm, remotes, all_packages, query):
@@ -99,7 +100,7 @@ class _UploadCollecter(object):
             upload = True
             if not confirm:
                 msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), ref_remote.name)
-                upload = self._user_io.request_boolean(msg)
+                upload = self._user_input.request_boolean(msg)
             if upload:
                 try:
                     conanfile_path = self._cache.ref_layout(ref).conanfile()
@@ -157,10 +158,10 @@ class _UploadCollecter(object):
 
 
 class _PackagePreparator(object):
-    def __init__(self, cache, remote_manager, hook_manager, output):
+    def __init__(self, cache, remote_manager, hook_manager):
         self._cache = cache
         self._remote_manager = remote_manager
-        self._output = output
+        self._output = ConanOutput()
         self._hook_manager = hook_manager
 
     def prepare_recipe(self, ref, conanfile, remote, remotes, policy):
@@ -260,8 +261,8 @@ class _PackagePreparator(object):
                     remote_manifest, _ = self._remote_manager.get_recipe_manifest(ref, remote)
                 except NotFoundException:
                     # This is weird, the manifest still not there, better upload everything
-                    self._output.warn("The remote recipe doesn't have the 'conanmanifest.txt' "
-                                      "file and will be uploaded: '{}'".format(ref))
+                    self._output.warning("The remote recipe doesn't have the 'conanmanifest.txt' "
+                                         "file and will be uploaded: '{}'".format(ref))
                     return files, deleted
 
             if remote_manifest == local_manifest:
@@ -279,7 +280,7 @@ class _PackagePreparator(object):
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
             tgz_path = os.path.join(download_export_folder, f)
             if is_dirty(tgz_path):
-                self._output.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
+                self._output.warning("%s: Removing %s, marked as dirty" % (str(ref), f))
                 os.remove(tgz_path)
                 clean_dirty(tgz_path)
 
@@ -299,9 +300,8 @@ class _PackagePreparator(object):
                 result[tgz_name] = tgz
             elif tgz_files:
                 if self._output and not self._output.is_terminal:
-                    self._output.writeln(msg)
-                tgz = compress_files(tgz_files, tgz_symlinks, tgz_name, download_export_folder,
-                                     self._output)
+                    self._output.info(msg)
+                tgz = compress_files(tgz_files, tgz_symlinks, tgz_name, download_export_folder)
                 result[tgz_name] = tgz
 
         add_tgz(EXPORT_TGZ_NAME, files, symlinks, "Compressing recipe...")
@@ -329,7 +329,7 @@ class _PackagePreparator(object):
         download_pkg_folder = layout.download_package()
         package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
         if is_dirty(package_tgz):
-            self._output.warn("%s: Removing %s, marked as dirty" % (str(pref), PACKAGE_TGZ_NAME))
+            self._output.warning("%s: Removing %s, marked as dirty" % (str(pref), PACKAGE_TGZ_NAME))
             os.remove(package_tgz)
             clean_dirty(package_tgz)
 
@@ -350,11 +350,10 @@ class _PackagePreparator(object):
 
         if not os.path.isfile(package_tgz):
             if self._output and not self._output.is_terminal:
-                self._output.writeln("Compressing package...")
+                self._output.info("Compressing package...")
             tgz_files = {f: path for f, path in files.items() if
                          f not in [CONANINFO, CONAN_MANIFEST]}
-            tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, download_pkg_folder,
-                                      self._output)
+            tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, download_pkg_folder)
             assert tgz_path == package_tgz
             assert os.path.exists(package_tgz)
 
@@ -374,8 +373,8 @@ class _PackagePreparator(object):
             self._output.writeln("")
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
-                self._output.warn("Mismatched checksum '%s' (manifest: %s, file: %s)"
-                                  % (fname, h1, h2))
+                self._output.warning("Mismatched checksum '%s' (manifest: %s, file: %s)"
+                                     % (fname, h1, h2))
 
             if PACKAGE_TGZ_NAME in files:
                 tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
@@ -441,33 +440,33 @@ class CmdUpload(object):
     - get_recipe_manifest() to check the date and raise if policy requires
     - get_package_manifest() to raise if policy!=force and manifests change
     """
-    def __init__(self, cache, user_io, remote_manager, loader, hook_manager):
+    def __init__(self, cache, remote_manager, loader, hook_manager):
         self._cache = cache
-        self._user_io = user_io
-        self._output = progress_bar.ProgressOutput(self._user_io.out)
+        self._progress_output = progress_bar.ProgressOutput(ConanOutput())
         self._remote_manager = remote_manager
         self._loader = loader
         self._hook_manager = hook_manager
         self._upload_thread_pool = None
         self._exceptions_list = []
-        self._preparator = _PackagePreparator(cache, remote_manager, hook_manager, self._output)
+        self._preparator = _PackagePreparator(cache, remote_manager, hook_manager)
+        self._user_input = UserInput(self._cache.config.non_interactive)
 
     def upload(self, reference_or_pattern, remotes, package_id=None,
                all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
                policy=None, query=None, parallel_upload=False):
         t1 = time.time()
 
-        collecter = _UploadCollecter(self._cache, self._user_io, self._output, self._loader)
+        collecter = _UploadCollecter(self._cache, self._loader)
         refs_by_remote = collecter.collect(package_id, reference_or_pattern, confirm, remotes,
                                            all_packages, query)
 
         if parallel_upload:
-            self._user_io.disable_input()
+            self._cache.config.non_interactive = True
         self._upload_thread_pool = ThreadPool(
             cpu_count() if parallel_upload else 1)
 
         for remote, refs in refs_by_remote.items():
-            self._output.info("Uploading to remote '{}':".format(remote.name))
+            self._progress_output.info("Uploading to remote '{}':".format(remote.name))
 
             def upload_ref(ref_conanfile_prefs):
                 _ref, _conanfile, _prefs = ref_conanfile_prefs
@@ -491,7 +490,7 @@ class CmdUpload(object):
                 msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
                 if get_env("CONAN_VERBOSE_TRACEBACK", False):
                     msg += trace
-                self._output.error(msg)
+                self._progress_output.error(msg)
             raise ConanException("Errors uploading some packages")
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
@@ -507,7 +506,7 @@ class CmdUpload(object):
         self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
                                    reference=ref, remote=recipe_remote)
         msg = "\rUploading %s to remote '%s'" % (str(ref), recipe_remote.name)
-        self._output.info(left_justify_message(msg))
+        self._progress_output.info(left_justify_message(msg))
         self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
 
         # Now the binaries
@@ -521,7 +520,7 @@ class CmdUpload(object):
                     up_msg = "\rUploading package %d/%d: %s to '%s'" % (index + 1, total,
                                                                         str(pref.id),
                                                                         p_remote.name)
-                    self._output.info(left_justify_message(up_msg))
+                    self._progress_output.info(left_justify_message(up_msg))
                     self._upload_package(pref, retry, retry_wait, integrity_check, policy, p_remote)
                 except BaseException as pkg_exc:
                     trace = traceback.format_exc()
@@ -559,9 +558,9 @@ class CmdUpload(object):
             self._remote_manager.upload_recipe(ref, files_to_upload, deleted, remote, retry,
                                                retry_wait)
             msg = "\rUploaded conan recipe '%s' to '%s': %s" % (str(ref), remote.name, remote.url)
-            self._output.info(left_justify_message(msg))
+            self._progress_output.info(left_justify_message(msg))
         else:
-            self._output.info("Recipe is up to date, upload skipped")
+            self._progress_output.info("Recipe is up to date, upload skipped")
         duration = time.time() - t1
         log_recipe_upload(ref, duration, cache_files, remote.name)
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
@@ -597,7 +596,7 @@ class CmdUpload(object):
                                                 retry_wait)
             logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
         else:
-            self._output.info("Package is up to date, upload skipped")
+            self._progress_output.info("Package is up to date, upload skipped")
 
         duration = time.time() - t1
         log_package_upload(pref, duration, cache_files, p_remote)
@@ -612,7 +611,7 @@ class CmdUpload(object):
         return pref
 
 
-def compress_files(files, symlinks, name, dest_dir, output=None):
+def compress_files(files, symlinks, name, dest_dir):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
@@ -627,7 +626,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
             tgz.addfile(tarinfo=info)
 
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
-        with progress_bar.iterate_list_with_progress(sorted(files.items()), output,
+        with progress_bar.iterate_list_with_progress(sorted(files.items()),
                                                      "Compressing %s" % name) as pg_file_list:
             for filename, abs_path in pg_file_list:
                 info = tarfile.TarInfo(name=filename)

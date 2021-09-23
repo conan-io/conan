@@ -11,7 +11,6 @@ from conans.client.conf import get_default_settings_yml
 from conans.client.profile_loader import profile_from_args
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -19,7 +18,7 @@ class SettingsCppStdTests(unittest.TestCase):
 
     def setUp(self):
         self.tmp_folder = temp_folder()
-        self.cache = ClientCache(self.tmp_folder, TestBufferConanOutput())
+        self.cache = ClientCache(self.tmp_folder)
 
     def _save_profile(self, compiler_cppstd=None, filename="default"):
         fullpath = os.path.join(self.cache.profiles_path, filename)

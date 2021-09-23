@@ -21,7 +21,7 @@ class HelloConan(ConanFile):
     settings = "os", "compiler", "build_type"
 
     def configure(self):
-        self.output.warn("Runtime: %s" % self.settings.get_safe("compiler.runtime"))
+        self.output.warning("Runtime: %s" % self.settings.get_safe("compiler.runtime"))
 
         '''
 

@@ -66,7 +66,7 @@ def _get_generator_class(generator_name):
                              "not complete".format(generator_name))
 
 
-def write_generators(conanfile, output):
+def write_generators(conanfile):
     new_gen_folder = conanfile.generators_folder
     _receive_conf(conanfile)
 
@@ -75,7 +75,7 @@ def write_generators(conanfile, output):
         if generator_class:
             try:
                 generator = generator_class(conanfile)
-                output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
+                conanfile.output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
                 mkdir(new_gen_folder)
                 with chdir(new_gen_folder):
                     generator.generate()
@@ -84,7 +84,7 @@ def write_generators(conanfile, output):
                 raise ConanException("Error in generator '{}': {}".format(generator_name, str(e)))
 
     if hasattr(conanfile, "generate"):
-        output.highlight("Calling generate()")
+        conanfile.output.highlight("Calling generate()")
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
             with conanfile_exception_formatter(str(conanfile), "generate"):
@@ -93,6 +93,7 @@ def write_generators(conanfile, output):
     if conanfile.virtualbuildenv or conanfile.virtualrunenv:
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
+
             if conanfile.virtualbuildenv:
                 from conan.tools.env.virtualbuildenv import VirtualBuildEnv
                 env = VirtualBuildEnv(conanfile)
@@ -102,7 +103,7 @@ def write_generators(conanfile, output):
                 env = VirtualRunEnv(conanfile)
                 env.generate()
 
-    output.highlight("Aggregating env generators")
+    conanfile.output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)
 
 

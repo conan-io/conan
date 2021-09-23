@@ -1,9 +1,10 @@
 import os
 
+from conans.cli.output import ConanOutput
 from conans.client.downloaders.download import run_downloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
 from conans.errors import ConanException
-from conans.util.fallbacks import default_output, default_requester
+from conans.util.fallbacks import default_requester
 
 
 def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
@@ -19,11 +20,11 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
                                  "parameter.".format(url_base))
         filename = os.path.basename(url_base)
 
-    download(url, filename, out=output, requester=requester, verify=verify, retry=retry,
+    download(url, filename, requester=requester, verify=verify, retry=retry,
              retry_wait=retry_wait, overwrite=overwrite, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
     unzip(filename, destination=destination, keep_permissions=keep_permissions, pattern=pattern,
-          output=output, strip_root=strip_root)
+          strip_root=strip_root)
     os.unlink(filename)
 
 
@@ -50,7 +51,7 @@ def ftp_download(ip, filename, login='', password=''):
             pass
 
 
-def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, overwrite=False,
+def download(url, filename, verify=True, retry=None, retry_wait=None, overwrite=False,
              auth=None, headers=None, requester=None, md5='', sha1='', sha256=''):
     """Retrieves a file from a given URL into a file with a given filename.
        It uses certificates from a list of known verifiers for https downloads,
@@ -60,8 +61,6 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
                 the follow URLs will be used as mirror in case of download error.
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
-    :param out: An object with a write() method can be passed to get the output. stdout will use if
-                not specified
     :param retry: Number of retries in case of failure. Default is overriden by general.retry in the
                   conan.conf file or an env variable CONAN_RETRY
     :param retry_wait: Seconds to wait between download attempts. Default is overriden by
@@ -76,7 +75,7 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     :param sha256: SHA-256 hash code to check the downloaded file
     :return: None
     """
-    out = default_output(out, 'conans.client.tools.net.download')
+    out = ConanOutput()
     requester = default_requester(requester, 'conans.client.tools.net.download')
     from conans.tools import _global_config as config
 
@@ -90,7 +89,7 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        run_downloader(requester=requester, output=out, verify=verify, config=config,
+        run_downloader(requester=requester, verify=verify, config=config,
                        user_download=True, use_cache=bool(config and checksum), url=file_url,
                        file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
                        auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
@@ -105,6 +104,6 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
                 break
             except Exception as error:
                 message = "Could not download from the URL {}: {}.".format(url_it, str(error))
-                out.warn(message + " Trying another mirror.")
+                out.warning(message + " Trying another mirror.")
         else:
             raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))

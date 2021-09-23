@@ -5,6 +5,7 @@ import time
 from multiprocessing.pool import ThreadPool
 
 from conan.cache.conan_reference import ConanReference
+from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
@@ -45,9 +46,10 @@ def build_id(conan_file):
 
 
 class _PackageBuilder(object):
-    def __init__(self, cache, output, hook_manager, remote_manager):
+
+    def __init__(self, cache, scoped_output, hook_manager, remote_manager):
         self._cache = cache
-        self._output = output
+        self._scoped_output = scoped_output
         self._hook_manager = hook_manager
         self._remote_manager = remote_manager
 
@@ -84,12 +86,13 @@ class _PackageBuilder(object):
                 self._cache.update_reference(build_prev, new_build_id=recipe_build_id)
 
         if is_dirty(build_folder):
-            self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
+            self._scoped_output.warning("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
             clean_dirty(build_folder)
 
         if skip_build and os.path.exists(build_folder):
-            self._output.info("Won't be built, using previous build folder as defined in build_id()")
+            self._scoped_output.info("Won't be built, using previous build folder as defined "
+                                     "in build_id()")
 
         return build_folder, skip_build
 
@@ -108,7 +111,7 @@ class _PackageBuilder(object):
         conanfile.folders.set_base_package(None)
 
         config_source(export_folder, export_source_folder, scm_sources_folder,
-                      conanfile, self._output, conanfile_path, pref.ref,
+                      conanfile, conanfile_path, pref.ref,
                       self._hook_manager, self._cache)
 
     @staticmethod
@@ -129,7 +132,8 @@ class _PackageBuilder(object):
 
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
-        write_generators(conanfile, self._output)
+
+        write_generators(conanfile)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -141,24 +145,24 @@ class _PackageBuilder(object):
             with tools.chdir(conanfile.build_folder):
                 run_build_method(conanfile, self._hook_manager, reference=pref.ref,
                                  package_id=pref.id)
-            self._output.success("Package '%s' built" % pref.id)
-            self._output.info("Build folder %s" % conanfile.build_folder)
+            conanfile.output.success("Package '%s' built" % pref.id)
+            conanfile.output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
-            self._output.writeln("")
-            self._output.error("Package '%s' build failed" % pref.id)
-            self._output.warn("Build folder %s" % conanfile.build_folder)
+            conanfile.output.writeln("")
+            conanfile.output.error("Package '%s' build failed" % pref.id)
+            conanfile.output.warning("Build folder %s" % conanfile.build_folder)
             if isinstance(exc, ConanExceptionInUserConanfileMethod):
                 raise exc
             raise ConanException(exc)
         finally:
             # Now remove all files that were imported with imports()
-            remove_imports(conanfile, copied_files, self._output)
+            remove_imports(conanfile, copied_files)
 
     def _package(self, conanfile, pref, conanfile_path):
         # FIXME: Is weak to assign here the recipe_hash
         # Creating ***info.txt files
         save(os.path.join(conanfile.folders.base_build, CONANINFO), conanfile.info.dumps())
-        self._output.info("Generated %s" % CONANINFO)
+        conanfile.output.info("Generated %s" % CONANINFO)
 
         package_id = pref.id
         # Do the actual copy, call the conanfile.package() method
@@ -201,7 +205,7 @@ class _PackageBuilder(object):
         # TODO: cache2.0 check locks
         # with package_layout.conanfile_read_lock(self._output):
         with tools.chdir(base_build):
-            self._output.info('Building your package in %s' % base_build)
+            conanfile.output.info('Building your package in %s' % base_build)
             try:
                 if getattr(conanfile, 'no_copy_source', False):
                     conanfile.folders.set_base_source(base_source)
@@ -240,7 +244,7 @@ def _remove_folder_raising(folder):
                              "Close any app using it, and retry" % str(e))
 
 
-def _handle_system_requirements(conan_file, package_layout, out):
+def _handle_system_requirements(conanfile, package_layout):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
     check package/sha1/
 
@@ -248,30 +252,30 @@ def _handle_system_requirements(conan_file, package_layout, out):
     """
     # TODO: Check if this idiom should be generalize to all methods defined in base ConanFile
     # Instead of calling empty methods
-    if type(conan_file).system_requirements == ConanFile.system_requirements:
+    if type(conanfile).system_requirements == ConanFile.system_requirements:
         return
 
     system_reqs_path = package_layout.system_reqs()
     system_reqs_package_path = package_layout.system_reqs_package()
 
-    ret = call_system_requirements(conan_file, out)
+    ret = call_system_requirements(conanfile)
 
     try:
         ret = str(ret or "")
     except Exception:
-        out.warn("System requirements didn't return a string")
+        conanfile.out.warning("System requirements didn't return a string")
         ret = ""
-    if getattr(conan_file, "global_system_requirements", None):
+    if getattr(conanfile, "global_system_requirements", None):
         save(system_reqs_path, ret)
     else:
         save(system_reqs_package_path, ret)
 
 
-def call_system_requirements(conanfile, output):
+def call_system_requirements(conanfile):
     try:
         return conanfile.system_requirements()
     except Exception as e:
-        output.error("while executing system_requirements(): %s" % str(e))
+        conanfile.output.error("while executing system_requirements(): %s" % str(e))
         raise ConanException("Error in system requirements")
 
 
@@ -282,7 +286,7 @@ class BinaryInstaller(object):
 
     def __init__(self, app):
         self._cache = app.cache
-        self._out = app.out
+        self._out = ConanOutput()
         self._remote_manager = app.remote_manager
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
@@ -346,7 +350,9 @@ class BinaryInstaller(object):
             - Requirements: %s
             - Package ID: %s
             ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
-        conanfile.output.warn(msg)
+
+        conanfile.output.warning(msg)
+
         missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
         if len(missing_prefs) >= 5:
             build_str = "--build=missing"
@@ -408,8 +414,8 @@ class BinaryInstaller(object):
 
         for level in nodes_by_level:
             for node in level:
-                ref, conan_file = node.ref, node.conanfile
-                output = conan_file.output
+                ref, conanfile = node.ref, node.conanfile
+                output = conanfile.output
 
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, profile_host, profile_build, graph_lock)
@@ -430,7 +436,7 @@ class BinaryInstaller(object):
                     else:
                         package_layout = self._cache.get_or_create_pkg_layout(node.pref)
 
-                    _handle_system_requirements(conan_file, package_layout, output)
+                    _handle_system_requirements(conanfile, package_layout)
                     self._handle_node_cache(node, processed_package_refs, remotes, package_layout)
 
     def _handle_node_editable(self, node, profile_host, profile_build, graph_lock):
@@ -452,7 +458,9 @@ class BinaryInstaller(object):
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        write_generators(conanfile, output)
+
+        write_generators(conanfile)
+
         graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
         graph_lock_file.save(os.path.join(conanfile.install_folder, "conan.lock"))
         output.info("Generated conan.lock")
@@ -482,7 +490,7 @@ class BinaryInstaller(object):
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                     pkg_layout.package_remove()
                     with pkg_layout.set_dirty_context_manager():
-                        pref = self._build_package(node, output, remotes, pkg_layout)
+                        pref = self._build_package(node, remotes, pkg_layout)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
@@ -507,8 +515,9 @@ class BinaryInstaller(object):
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
 
-    def _build_package(self, node, output, remotes, pkg_layout):
-        builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
+    def _build_package(self, node, remotes, pkg_layout):
+        builder = _PackageBuilder(self._cache, node.conanfile.output,
+                                  self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, remotes, pkg_layout)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision
