@@ -86,7 +86,6 @@ class ConanTraceTest(unittest.TestCase):
 
         traces = load(trace_file)
         self.assertNotIn("mypass", traces)
-        self.assertIn('"password": "**********"', traces)
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()

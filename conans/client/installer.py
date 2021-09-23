@@ -10,7 +10,7 @@ from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
-from conans.client.generators import write_toolchain
+from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, BINARY_INVALID, \
     BINARY_ERROR
@@ -47,12 +47,12 @@ def build_id(conan_file):
 
 
 class _PackageBuilder(object):
-    def __init__(self, cache, scoped_output, hook_manager, remote_manager, generators):
+
+    def __init__(self, cache, scoped_output, hook_manager, remote_manager):
         self._cache = cache
         self._scoped_output = scoped_output
         self._hook_manager = hook_manager
         self._remote_manager = remote_manager
-        self._generator_manager = generators
 
     def _get_build_folder(self, conanfile, package_layout):
         # Build folder can use a different package_ID if build_id() is defined.
@@ -133,12 +133,8 @@ class _PackageBuilder(object):
 
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
-        logger.info("GENERATORS: Writing generators")
-        self._generator_manager.write_generators(conanfile, conanfile.build_folder,
-                                                 conanfile.generators_folder)
 
-        logger.info("TOOLCHAIN: Writing toolchain")
-        write_toolchain(conanfile)
+        write_generators(conanfile)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -299,7 +295,6 @@ class BinaryInstaller(object):
         self._recorder = recorder
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
-        self._generator_manager = app.generator_manager
         # Load custom generators from the cache, generators are part of the binary
         # build and install. Generators loaded here from the cache will have precedence
         # and overwrite possible generators loaded from packages (requires)
@@ -468,10 +463,9 @@ class BinaryInstaller(object):
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        self._generator_manager.write_generators(conanfile, conanfile.install_folder,
-                                                 conanfile.generators_folder)
-        write_toolchain(conanfile)
-        output.info("Generated toolchain")
+
+        write_generators(conanfile)
+
         graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
         graph_lock_file.save(os.path.join(conanfile.install_folder, "conan.lock"))
         output.info("Generated conan.lock")
@@ -482,19 +476,13 @@ class BinaryInstaller(object):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
+        assert pkg_layout, "The pkg_layout should be declared here"
         conanfile = node.conanfile
         output = conanfile.output
 
         bare_pref = PackageReference(pref.ref, pref.id)
         processed_prev = processed_package_references.get(bare_pref)
-        if processed_prev is None:  # This package-id has not been processed before
-            if not pkg_layout:
-                if pref.revision:
-                    raise ConanException("should this happen?")
-                    pkg_layout = self._cache.pkg_layout(pref)
-                else:
-                    pkg_layout = self._cache.create_temp_pkg_layout(pref)
-        else:
+        if processed_prev is not None:  # This package-id has not been processed before
             # We need to update the PREV of this node, as its processing has been skipped,
             # but it could be that another node with same PREF was built and obtained a new PREV
             node.prev = processed_prev
@@ -536,8 +524,7 @@ class BinaryInstaller(object):
 
     def _build_package(self, node, remotes, pkg_layout):
         builder = _PackageBuilder(self._cache, node.conanfile.output,
-                                  self._hook_manager, self._remote_manager,
-                                  self._generator_manager)
+                                  self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, self._recorder, remotes, pkg_layout)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision

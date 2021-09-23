@@ -1,14 +1,12 @@
 import os
 
-from conans.cli.output import Color, ConanOutput
-from conans.client.generators import write_toolchain
+from conans.cli.output import ConanOutput
+from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
-from conans.client.tools import cross_building, get_cross_building_settings
-from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.graph_lock import GraphLockFile, GraphLock
 from conans.model.ref import ConanFileReference
@@ -74,9 +72,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         generators = set(generators) if generators else set()
         tmp.extend([g for g in generators if g not in tmp])
         conanfile.generators = tmp
-        app.generator_manager.write_generators(conanfile, install_folder,
-                                               conanfile.generators_folder)
-        write_toolchain(conanfile)
+        write_generators(conanfile)
 
         if not isinstance(ref_or_path, ConanFileReference):
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)

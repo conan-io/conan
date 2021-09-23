@@ -12,7 +12,6 @@ from conans.cli.output import ConanOutput, TqdmHandler
 from conans.client.api.helpers.search import Search
 from conans.client.cache.cache import ClientCache
 from conans.client.conf.required_version import check_required_conan_version
-from conans.client.generators import GeneratorManager
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
@@ -71,13 +70,12 @@ class ConanApp(object):
 
         self.proxy = ConanProxy(self.cache, self.remote_manager)
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
-        self.generator_manager = GeneratorManager()
+
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.generator_manager, self.pyreq_loader,
-                                      self.requester)
+        self.loader = ConanFileLoader(self.runner, self.pyreq_loader, self.requester)
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.remote_manager)
-        self.graph_manager = GraphManager(self.cache, self.loader,
-                                          self.proxy, self.range_resolver, self.binaries_analyzer)
+        self.graph_manager = GraphManager(self.cache, self.loader, self.proxy, self.range_resolver,
+                                          self.binaries_analyzer)
 
     def load_remotes(self, remote_name=None, update=False, check_updates=False):
         remotes = self.cache.registry.load_remotes()
