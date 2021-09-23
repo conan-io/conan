@@ -52,6 +52,7 @@ class _InstallGraphNode:
                 existing.add(node)
             else:
                 self.packages.append(pkg)
+                self._package_ids[node.pref.id] = pkg
 
         for dep in node.dependencies:
             if dep.dst.binary != BINARY_SKIP:

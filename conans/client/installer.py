@@ -358,7 +358,7 @@ class BinaryInstaller(object):
                             package.pref = node.pref  # Just in case it was recomputed
                             package.binary = node.binary
                             if node.binary == BINARY_MISSING:
-                                raise_missing([node], self._out)
+                                raise_missing([package], self._out)
                             elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                                 self._download_pkg(package)
 
