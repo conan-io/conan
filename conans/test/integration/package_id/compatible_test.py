@@ -382,7 +382,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
         client.save({"conanfile.py": c2})
         client.run("create .")
-        package_id = "2f0f7e3cf6fcfb1b950301b4ffee8f05394fefb7"
+        package_id = "c4597d37d3321fbd01d761b83d9cef4baed840db"
         self.assertIn(f"Package '{package_id}' created", client.out)
 
         # Back to semver mode

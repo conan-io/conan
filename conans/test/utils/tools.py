@@ -555,7 +555,11 @@ class TestClient(object):
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        if self.users != {}:
+
+        if self.users is False:
+            # only used by test_auth_with_env
+            return self._run(command_line, assert_error)
+        else:
             self.mocked_input = MockedUserInput(non_interactive=False)
             self.mocked_input.logins = self.users
             with mock.patch("conans.client.rest.auth_manager.UserInput") as mock_rest:
@@ -563,8 +567,6 @@ class TestClient(object):
                     mock_rest.return_value = self.mocked_input
                     mock_api.return_value = self.mocked_input
                     return self._run(command_line, assert_error)
-        else:   # I think only the "test_auth_with_env" test expect this...
-            return self._run(command_line, assert_error)
 
     def _run(self, command_line, assert_error):
         from conans.test.utils.mocks import RedirectedTestOutput
