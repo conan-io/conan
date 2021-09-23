@@ -10,7 +10,6 @@ from conans.client.userio import UserIO
 from conans.model.conf import ConfDefinition
 from conans.model.layout import Folders
 from conans.model.options import PackageOptions
-from conans.model.user_info import DepsUserInfo
 
 
 class LocalDBMock(object):
@@ -143,7 +142,6 @@ class ConanFileMock(ConanFile):
         self.should_test = True
         self.generators = []
         self.captured_env = {}
-        self.deps_user_info = DepsUserInfo()
         self.folders = Folders()
         self.folders.set_base_source(".")
         self.folders.set_base_build(".")
