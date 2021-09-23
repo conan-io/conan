@@ -12,10 +12,10 @@ class AConan(ConanFile):
     version = "0.1"
 
     def build(self):
-        self.output.warn("build() IN LOCAL CACHE=> %s" % str(self.in_local_cache))
+        self.output.warning("build() IN LOCAL CACHE=> %s" % str(self.in_local_cache))
 
     def package(self):
-        self.output.warn("package() IN LOCAL CACHE=> %s" % str(self.in_local_cache))
+        self.output.warning("package() IN LOCAL CACHE=> %s" % str(self.in_local_cache))
 
 """
 

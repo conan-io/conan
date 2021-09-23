@@ -24,16 +24,16 @@ def conanfile():
         self.folders.build = "my_build"
 
     def source(self):
-        self.output.warn("Source folder: {}".format(self.source_folder))
+        self.output.warning("Source folder: {}".format(self.source_folder))
         # The layout describes where the sources are, not force them to be there
         tools.save("my_sources/source.h", "foo")
 
     def build(self):
-        self.output.warn("Build folder: {}".format(self.build_folder))
+        self.output.warning("Build folder: {}".format(self.build_folder))
         tools.save("build.lib", "bar")
 
     def package(self):
-        self.output.warn("Package folder: {}".format(self.package_folder))
+        self.output.warning("Package folder: {}".format(self.package_folder))
         tools.save(os.path.join(self.package_folder, "LICENSE"), "bar")
         self.copy("*.h", dst="include")
         self.copy("*.lib", dst="lib")
@@ -60,11 +60,11 @@ def test_create_test_package_no_layout(conanfile):
             generators = "CMakeDeps", "CMakeToolchain"
             def build(self):
                 assert os.path.exists("conan_toolchain.cmake")
-                self.output.warn("hey! building")
-                self.output.warn(os.getcwd())
+                self.output.warning("hey! building")
+                self.output.warning(os.getcwd())
 
             def test(self):
-                self.output.warn("hey! testing")
+                self.output.warning("hey! testing")
     """)
     client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": conanfile_test})
     client.run("create . lib/1.0@")
@@ -96,11 +96,11 @@ def test_create_test_package_with_layout(conanfile):
 
             def build(self):
                 assert os.path.exists("my_generators/conan_toolchain.cmake")
-                self.output.warn("hey! building")
-                self.output.warn(os.getcwd())
+                self.output.warning("hey! building")
+                self.output.warning(os.getcwd())
 
             def test(self):
-                self.output.warn("hey! testing")
+                self.output.warning("hey! testing")
     """)
     client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": conanfile_test})
     client.run("create . lib/1.0@")
@@ -199,7 +199,7 @@ def test_imports():
         self.folders.imports = os.path.join(self.folders.build, "my_imports")
 
     def imports(self):
-        self.output.warn("Imports folder: {}".format(self.imports_folder))
+        self.output.warning("Imports folder: {}".format(self.imports_folder))
         self.copy("*.dll")
 
     def build(self):
@@ -207,7 +207,7 @@ def test_imports():
         assert "cmake-build-release" in self.build_folder
         assert os.path.exists(os.path.join(self.imports_folder, "library.dll"))
         assert os.path.exists(os.path.join(self.build_folder, "my_imports", "library.dll"))
-        self.output.warn("Built and imported!")
+        self.output.warning("Built and imported!")
     """
 
     client.save({"conanfile.py": conan_file})
@@ -244,9 +244,9 @@ def test_cpp_package():
             generators = "CMakeDeps"
             def generate(self):
                 info = self.dependencies["hello"].cpp_info
-                self.output.warn("**includedirs:{}**".format(info.includedirs))
-                self.output.warn("**libdirs:{}**".format(info.libdirs))
-                self.output.warn("**libs:{}**".format(info.libs))
+                self.output.warning("**includedirs:{}**".format(info.includedirs))
+                self.output.warning("**libdirs:{}**".format(info.libdirs))
+                self.output.warning("**libs:{}**".format(info.libs))
         """)
 
     client.save({"conanfile.py": conan_consumer})

@@ -8,13 +8,13 @@ from textwrap import dedent
 import pytest
 from parameterized import parameterized
 
+from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load, save
 
 conanfile_scope_env = """
@@ -73,7 +73,6 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install .. -pr=sub/profile")
         self.assertIn("conanfile.txt: Installing package", self.client.out)
 
-    @pytest.mark.tool_compiler
     def test_base_profile_generated(self):
         """we are testing that the default profile is created (when not existing, fresh install)
          even when you run a create with a profile"""
@@ -82,7 +81,6 @@ class ProfileTest(unittest.TestCase):
         self.client.run("create . conan/testing --profile myprofile")
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("export . lasote/stable")
@@ -169,7 +167,6 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("scopes_env", self.client.out)
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_install_profile_env(self):
         create_profile(self.client.cache.profiles_path, "envs", settings={},
                        env=[("A_VAR", "A_VALUE"),
@@ -214,8 +211,7 @@ class ProfileTest(unittest.TestCase):
                        settings=profile_settings, package_settings={})
 
         tools.replace_in_file(self.client.cache.default_profile_path,
-                              "compiler.libcxx", "#compiler.libcxx", strict=False,
-                              output=TestBufferConanOutput())
+                              "compiler.libcxx", "#compiler.libcxx", strict=False)
 
         self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . lasote/stable")
@@ -339,7 +335,6 @@ class ProfileTest(unittest.TestCase):
         client.run("create . mypkg/0.1@ -pr=profile")
         assert "mypkg/0.1: SETTINGS! os=Linux!!" in client.out
 
-    @pytest.mark.tool_compiler
     def test_install_profile_options(self):
         create_profile(self.client.cache.profiles_path, "vs_12_86",
                        options=[("Hello0:language", 1),
@@ -353,7 +348,6 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("static=False", info)
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_scopes_env(self):
         # Create a profile and use it
         create_profile(self.client.cache.profiles_path, "scopes_env", settings={},
@@ -370,7 +364,6 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_default_including_another_profile(self):
         p1 = "include(p2)\n[env]\nA_VAR=1"
         p2 = "include(default)\n[env]\nA_VAR=2"
@@ -380,14 +373,12 @@ class ProfileTest(unittest.TestCase):
         # Change default profile to p1 => p2 => default
         tools.replace_in_file(self.client.cache.conan_conf_path,
                               "default_profile = default",
-                              "default_profile = p1",
-                              output=TestBufferConanOutput())
+                              "default_profile = p1")
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("create . user/testing")
         self._assert_env_variable_printed("A_VAR", "1")
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_test_package(self):
         test_conanfile = '''from conans.model.conan_file import ConanFile
 from conans import CMake
@@ -447,7 +438,6 @@ class DefaultNameConan(ConanFile):
     def _assert_env_variable_printed(self, name, value):
         self.assertIn("%s=%s" % (name, value), self.client.out)
 
-    @pytest.mark.tool_compiler
     def test_info_with_profiles(self):
 
         self.client.run("remove '*' -f")
@@ -536,9 +526,9 @@ class ProfileAggregationTest(unittest.TestCase):
         settings = "os", "compiler", "arch", "build_type"
 
         def build(self):
-            self.output.warn("ENV1:%s" % os.getenv("ENV1"))
-            self.output.warn("ENV2:%s" % os.getenv("ENV2"))
-            self.output.warn("ENV3:%s" % os.getenv("ENV3"))
+            self.output.warning("ENV1:%s" % os.getenv("ENV1"))
+            self.output.warning("ENV2:%s" % os.getenv("ENV2"))
+            self.output.warning("ENV3:%s" % os.getenv("ENV3"))
     """)
 
     consumer = dedent("""
@@ -692,9 +682,9 @@ def test_consumer_specific_settings():
               .with_default_option("shared", False))
     configure = """
     def configure(self):
-        self.output.warn("I'm {} and my build type is {}".format(self.name,
+        self.output.warning("I'm {} and my build type is {}".format(self.name,
                                                                  self.settings.build_type))
-        self.output.warn("I'm {} and my shared is {}".format(self.name, self.options.shared))
+        self.output.warning("I'm {} and my shared is {}".format(self.name, self.options.shared))
     """
     dep += configure
     client.save({"conanfile.py": dep})
@@ -758,7 +748,7 @@ def test_create_and_priority_of_consumer_specific_setting():
     conanfile = str(GenConanfile().with_settings("build_type").with_name("foo").with_version("1.0"))
     configure = """
     def configure(self):
-        self.output.warn("I'm {} and my build type is {}".format(self.name,
+        self.output.warning("I'm {} and my build type is {}".format(self.name,
                                                                  self.settings.build_type))
     """
     conanfile += configure
@@ -788,7 +778,7 @@ def test_consumer_specific_settings_from_profile():
     conanfile = str(GenConanfile().with_settings("build_type").with_name("hello"))
     configure = """
     def configure(self):
-        self.output.warn("I'm {} and my build type is {}".format(self.name,
+        self.output.warning("I'm {} and my build type is {}".format(self.name,
                                                                  self.settings.build_type))
     """
     conanfile += configure

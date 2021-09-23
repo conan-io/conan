@@ -7,13 +7,12 @@ import unittest
 import pytest
 
 from conans import load
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile, TurboTestClient, NO_SETTINGS_PACKAGE_ID
 
 
-@pytest.mark.xfail(reason="Deploy generator to be revisited")
 class DeployGeneratorTest(unittest.TestCase):
     """
     Deploy generator set of tests with only one package
@@ -66,7 +65,6 @@ class DeployGeneratorTest(unittest.TestCase):
             self.assertNotIn(name, content)
 
 
-@pytest.mark.xfail(reason="Deploy generator to be revisited")
 class DeployGeneratorGraphTest(unittest.TestCase):
     """
     Deploy generator set of tests with more than one package in the graph

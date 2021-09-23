@@ -1,28 +1,21 @@
 # coding=utf-8
 
-import os
 import unittest
-
-from io import StringIO
 
 import pytest
 
 from conans.client.cache.cache import ClientCache
-from conans.client.output import ConanOutput
 from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
-from conans.util.files import save
 
 
 class CacheTest(unittest.TestCase):
 
     def setUp(self):
         tmp_dir = temp_folder()
-        stream = StringIO()
-        output = ConanOutput(stream)
-        self.cache = ClientCache(tmp_dir, output)
+        self.cache = ClientCache(tmp_dir)
         self.ref = ConanFileReference.loads("lib/1.0@conan/stable")
 
     @pytest.mark.xfail(reason="cache2.0")

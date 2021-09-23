@@ -4,8 +4,9 @@ import unittest
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import RemoteRegistry, Remote, Remotes
 from conans.errors import ConanException
+from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.tools import redirect_output
 from conans.util.files import save
 
 
@@ -14,7 +15,7 @@ class RegistryTest(unittest.TestCase):
     def test_add_remove_update(self):
         f = os.path.join(temp_folder(), "aux_file")
         Remotes().save(f)
-        cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
+        cache = ClientCache(os.path.dirname(f))
         registry = cache.registry
 
         # Add
@@ -67,9 +68,8 @@ class RegistryTest(unittest.TestCase):
  ]
 }
 """)
-        output = TestBufferConanOutput()
-        cache = ClientCache(tmp_folder, output)
-        registry = RemoteRegistry(cache, output)
+        cache = ClientCache(tmp_folder)
+        registry = RemoteRegistry(cache)
         registry.add("repo1", "url1", True, insert=0)
         self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True, False),
                          Remote("conan.io", "https://server.conan.io", True, False)])
@@ -86,27 +86,28 @@ class RegistryTest(unittest.TestCase):
     def test_remote_none(self):
         """ RemoteRegistry should be able to deal when the URL is None
         """
-        f = os.path.join(temp_folder(), "add_none_test")
-        Remotes().save(f)
-        cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
-        registry = cache.registry
-
-        registry.add("foobar", None)
-        self.assertEqual(list(registry.load_remotes().values()),
-                         [("conancenter", "https://center.conan.io", True, False),
-                          ("foobar", None, True, False)])
-        self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)
-        registry.remove("foobar")
-
-        registry.update("conancenter", None)
-        self.assertEqual(list(registry.load_remotes().values()),
-                         [("conancenter", None, True, False)])
-        self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            f = os.path.join(temp_folder(), "add_none_test")
+            Remotes().save(f)
+            cache = ClientCache(os.path.dirname(f))
+            registry = cache.registry
+            registry.add("foobar", None)
+            self.assertEqual(list(registry.load_remotes().values()),
+                             [("conancenter", "https://center.conan.io", True, False),
+                              ("foobar", None, True, False)])
+            self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", output)
+            registry.remove("foobar")
+            output.clear()
+            registry.update("conancenter", None)
+            self.assertEqual(list(registry.load_remotes().values()),
+                             [("conancenter", None, True, False)])
+            self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", output)
 
     def test_enable_disable_remotes(self):
         f = os.path.join(temp_folder(), "aux_file")
         Remotes().save(f)
-        cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
+        cache = ClientCache(os.path.dirname(f))
         registry = cache.registry
 
         registry.add("local", "http://localhost:9300")

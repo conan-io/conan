@@ -1,18 +1,19 @@
+
 import os
 
+from conans.cli.output import ConanOutput
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import Node, CONTEXT_HOST
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.profile_loader import profile_from_args
-from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 
 
 class GraphManager(object):
-    def __init__(self, output, cache, remote_manager, loader, proxy, resolver, binary_analyzer):
+    def __init__(self, cache, loader, proxy, resolver, binary_analyzer):
         self._proxy = proxy
-        self._output = output
+        self._output = ConanOutput()
         self._resolver = resolver
         self._cache = cache
         self._loader = loader

@@ -3,19 +3,15 @@ import platform
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
+from conans.cli.output import ConanOutput, ScopedOutput
 from conans.client import tools
-from conans.client.output import ScopedOutput
-
-from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
-from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Patterns, Infos
 from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options
 from conans.model.requires import Requirements
-from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 
 
@@ -79,9 +75,7 @@ class ConanFile(object):
     # Run in windows bash
     win_bash = None
 
-    def __init__(self, output, runner, display_name=""):
-        # an output stream (writeln, info, warn error)
-        self.output = ScopedOutput(display_name, output)
+    def __init__(self, runner, display_name=""):
         self.display_name = display_name
         # something that can run commands, as os.sytem
         self._conan_runner = runner
@@ -126,6 +120,14 @@ class ConanFile(object):
         self.cpp.package.frameworkdirs = ["Frameworks"]
 
     @property
+    def output(self):
+        # an output stream (writeln, info, warn error)
+        scope = self.display_name
+        if not scope:
+            scope = self.ref if self._conan_node else ""
+        return ScopedOutput(scope, ConanOutput())
+
+    @property
     def context(self):
         return self._conan_node.context
 
@@ -164,12 +166,9 @@ class ConanFile(object):
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
-        self.deps_cpp_info = DepsCppInfo()
 
         # user declared variables
         self.user_info = None
-        # Keys are the package names (only 'host' if different contexts)
-        self.deps_user_info = DepsUserInfo()
 
         if self.description is not None and not isinstance(self.description, str):
             raise ConanException("Recipe 'description' must be a string.")
@@ -270,13 +269,13 @@ class ConanFile(object):
         """ build your project calling the desired build tools as done in the command line.
         E.g. self.run("cmake --build .") Or use the provided build helpers. E.g. cmake.build()
         """
-        self.output.warn("This conanfile has no build step")
+        self.output.warning("This conanfile has no build step")
 
     def package(self):
         """ package the needed files from source and build folders.
         E.g. self.copy("*.h", src="src/includes", dst="includes")
         """
-        self.output.warn("This conanfile has no package step")
+        self.output.warning("This conanfile has no package step")
 
     def package_info(self):
         """ define cpp_build_info, flags, etc

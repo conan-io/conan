@@ -8,7 +8,6 @@ from conans.util.files import load, save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-@pytest.mark.tool_compiler
 class ConanSettingsPreprocessorTest(unittest.TestCase):
 
     def setUp(self):
@@ -22,7 +21,7 @@ class HelloConan(ConanFile):
     settings = "os", "compiler", "build_type"
 
     def configure(self):
-        self.output.warn("Runtime: %s" % self.settings.get_safe("compiler.runtime"))
+        self.output.warning("Runtime: %s" % self.settings.get_safe("compiler.runtime"))
         '''
         self.client.save({"conanfile.py": self.conanfile})
 

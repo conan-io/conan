@@ -64,7 +64,7 @@ def client():
 @pytest.mark.parametrize("build_profile", ["", "-pr:b=default"])
 def test_build_require_test_package(existing_br, build_profile, client):
     test_cmake = textwrap.dedent(r"""
-        import os, platform
+        import os, platform, sys
         from conans import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
