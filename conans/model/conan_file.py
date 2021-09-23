@@ -6,9 +6,7 @@ from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
 from conans.client.output import ScopedOutput
 
-from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
-from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Patterns, Infos
@@ -164,7 +162,6 @@ class ConanFile(object):
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
-        self.deps_cpp_info = DepsCppInfo()
 
         # user declared variables
         self.user_info = None
