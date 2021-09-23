@@ -21,6 +21,7 @@ import textwrap
 
 import six
 
+from conan.tools.env import Environment
 from conan.tools.env.environment import create_env_script
 from conans.client.tools.win import is_win64, _system_registry_key
 from conans.errors import ConanException
@@ -69,7 +70,8 @@ class IntelOneAPI:
 
     filename = "conanintelsetvars"
 
-    def __init__(self, conanfile, command_args=None, arch=None, force=False):
+    def __init__(self, conanfile):
+        # Let's check the compatibility
         compiler_version = conanfile.settings.get_safe("compiler.version")
         mode = conanfile.settings.get_safe("compiler.mode")
         if is_using_intel_oneapi(compiler_version):
@@ -81,15 +83,14 @@ class IntelOneAPI:
             # Do not support legacy versions
             raise ConanException("You have to use 'intel' compiler which is meant for legacy "
                                  "versions like Intel Parallel Studio XE.")
-
+        # Private properties
         self._conanfile = conanfile
         self._settings = conanfile.settings
-        self._arch = arch or conanfile.settings.get_safe("arch")
         self._compiler_version = compiler_version
         self._mode = mode
-        self._force = force
         self._out = conanfile.output
-        self._command_args = command_args
+        # Public properties
+        self.arch = conanfile.settings.get_safe("arch")
 
     @property
     def ms_toolset(self):
@@ -122,33 +123,59 @@ class IntelOneAPI:
 
     @property
     def command(self):
-        """Get the setvars.bat|sh load command
-
-        :return: `str`
         """
-        if str(os.getenv("SETVARS_COMPLETED", "")) == "1" and not self._force:
-            return "echo Conan:intel_setvars already set"
+        The Intel oneAPI DPC++/C++ Compiler includes environment configuration scripts to
+        configure your build and development environment variables:
+            On Linux*, the file is a shell script called setvars.sh.
+            On Windows*, the file is a batch file called setvars.bat.
+
+        * Linux:
+            >> . /<install-dir>/setvars.sh <arg1> <arg2> … <argn><arg1> <arg2> … <argn>
+
+            The compiler environment script file accepts an optional target architecture
+            argument <arg>:
+                intel64: Generate code and use libraries for Intel 64 architecture-based targets.
+                ia32: Generate code and use libraries for IA-32 architecture-based targets.
+        * Windows:
+            >> call <install-dir>\\setvars.bat [<arg1>] [<arg2>]
+
+            Where <arg1> is optional and can be one of the following:
+                intel64: Generate code and use libraries for Intel 64 architecture
+                         (host and target).
+                ia32: Generate code and use libraries for IA-32 architecture (host and target).
+            With the dpcpp compiler, <arg1> is intel64 by default.
+
+            The <arg2> is optional. If specified, it is one of the following:
+                vs2019: Microsoft Visual Studio* 2019
+                vs2017: Microsoft Visual Studio 2017
+
+        :return: `str` setvars.sh|bat command to be run
+        """
+        # Let's check if user wants to use some custom arguments to run the setvars script
+        command_args = self._conanfile.conf["tools.intel:setvars_args"] or ""
+
+        if str(Environment(self._conanfile).get("SETVARS_COMPLETED", "")) == "1" \
+                and "force" not in command_args:
+            return "echo Conan:intel_setvars already set! Pass '--force' if you want to reload it."
 
         system = platform.system()
         svars = "setvars.bat" if system == "Windows" else "setvars.sh"
-        command = os.path.join(self.installation_path, svars)
-        command = '"%s"' % command
+        command = '"%s"' % os.path.join(self.installation_path, svars)
         if system == "Windows":
             command = "call " + command
         else:
             command = ". " + command  # dot is more portable than source
         # If user has passed custom arguments
-        if self._command_args:
-            command += self._command_args if isinstance(self._command_args, six.string_types) \
-                else ' '.join(self._command_args)
+        if command_args:
+            command += command_args if isinstance(command_args, six.string_types) \
+                else ' '.join(command_args)
             return command
         # Add architecture argument
-        if self._arch == "x86_64":
+        if self.arch == "x86_64":
             command += " intel64"
-        elif self._arch == "x86":
+        elif self.arch == "x86":
             command += " ia32"
         else:
-            raise ConanException("don't know how to call %s for %s" % (svars, self._arch))
-        if self._force:
-            command += " --force"
+            raise ConanException("don't know how to call %s for %s" % (svars, self.arch))
+
         return command
