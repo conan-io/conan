@@ -451,7 +451,7 @@ class CmdUpload(object):
         self._preparator = _PackagePreparator(cache, remote_manager, hook_manager)
         self._user_input = UserInput(self._cache.config.non_interactive)
 
-    def upload(self, reference_or_pattern, remotes, upload_recorder, package_id=None,
+    def upload(self, reference_or_pattern, remotes, package_id=None,
                all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
                policy=None, query=None, parallel_upload=False):
         t1 = time.time()
@@ -472,7 +472,7 @@ class CmdUpload(object):
                 _ref, _conanfile, _prefs = ref_conanfile_prefs
                 try:
                     self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait,
-                                     integrity_check, policy, remote, upload_recorder, remotes)
+                                     integrity_check, policy, remote, remotes)
                 except BaseException as base_exception:
                     base_trace = traceback.format_exc()
                     self._exceptions_list.append((base_exception, _ref, base_trace, remote))
@@ -496,7 +496,7 @@ class CmdUpload(object):
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
     def _upload_ref(self, conanfile, ref, prefs, retry, retry_wait, integrity_check, policy,
-                    recipe_remote, upload_recorder, remotes):
+                    recipe_remote, remotes):
         """ Uploads the recipes and binaries identified by ref
         """
         assert (ref.revision is not None), "Cannot upload a recipe without RREV"
@@ -508,7 +508,6 @@ class CmdUpload(object):
         msg = "\rUploading %s to remote '%s'" % (str(ref), recipe_remote.name)
         self._progress_output.info(left_justify_message(msg))
         self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
-        upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
 
         # Now the binaries
         if prefs:
@@ -523,7 +522,6 @@ class CmdUpload(object):
                                                                         p_remote.name)
                     self._progress_output.info(left_justify_message(up_msg))
                     self._upload_package(pref, retry, retry_wait, integrity_check, policy, p_remote)
-                    upload_recorder.add_package(pref, p_remote.name, p_remote.url)
                 except BaseException as pkg_exc:
                     trace = traceback.format_exc()
                     return pkg_exc, pref, trace, p_remote

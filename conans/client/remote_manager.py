@@ -8,7 +8,7 @@ from requests.exceptions import ConnectionError
 from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
-    PackageNotFoundException, ConanReferenceDoesNotExistInDB
+    PackageNotFoundException
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.search.search import filter_packages
 from conans.util import progress_bar
@@ -154,7 +154,7 @@ class RemoteManager(object):
         uncompress_file(tgz_file, export_sources_folder)
         touch_folder(export_sources_folder)
 
-    def get_package(self, conanfile, pref, remote, recorder):
+    def get_package(self, conanfile, pref, remote):
         ref_layout = self._cache.ref_layout(pref.ref)
         conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
@@ -169,13 +169,13 @@ class RemoteManager(object):
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)
-            self._get_package(pkg_layout, pref, remote, conanfile.output, recorder, info=info)
+            self._get_package(pkg_layout, pref, remote, conanfile.output, info=info)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
 
-    def _get_package(self, layout, pref, remote, scoped_output, recorder, info):
+    def _get_package(self, layout, pref, remote, scoped_output, info):
         t1 = time.time()
         try:
             headers = _headers_for_info(info)
@@ -206,7 +206,7 @@ class RemoteManager(object):
             touch_folder(package_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(package_folder)
-            recorder.package_downloaded(pref, remote.url)
+
             scoped_output.success('Package installed %s' % pref.id)
             scoped_output.info("Downloaded package revision %s" % pref.revision)
         except NotFoundException:

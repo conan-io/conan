@@ -16,7 +16,6 @@ from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
-from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
@@ -146,7 +145,6 @@ class GraphManagerTest(unittest.TestCase):
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
         update = check_updates = False
-        recorder = ActionRecorder()
         remotes = Remotes()
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
@@ -154,10 +152,10 @@ class GraphManagerTest(unittest.TestCase):
 
         deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
                                                   None, ref, build_mode, check_updates, update,
-                                                  remotes, recorder)
+                                                  remotes)
         if install:
             deps_graph.report_graph_error()
-            binary_installer = BinaryInstaller(app, recorder)
+            binary_installer = BinaryInstaller(app)
             build_mode = BuildMode(build_mode)
             binary_installer.install(deps_graph, None, build_mode, update, profile_host=profile_host,
                                      profile_build=profile_build, graph_lock=None)

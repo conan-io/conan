@@ -15,11 +15,10 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOA
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, BINARY_INVALID, \
     BINARY_ERROR
 from conans.client.importer import remove_imports, run_imports
-from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
-from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
+from conans.model.build_info import CppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
@@ -178,7 +177,7 @@ class _PackageBuilder(object):
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
 
-    def build_package(self, node, recorder, remotes, package_layout):
+    def build_package(self, node, remotes, package_layout):
         t1 = time.time()
 
         conanfile = node.conanfile
@@ -231,10 +230,7 @@ class _PackageBuilder(object):
                 log_file = os.path.join(base_build, RUN_LOG_NAME)
                 log_file = log_file if os.path.exists(log_file) else None
                 log_package_built(pref, time.time() - t1, log_file)
-                recorder.package_built(pref)
             except ConanException as exc:
-                recorder.package_install_error(pref, INSTALL_ERROR_BUILDING, str(exc),
-                                               remote_name=None)
                 raise exc
 
         return node.pref
@@ -288,11 +284,10 @@ class BinaryInstaller(object):
     locally in case they are not found in remotes
     """
 
-    def __init__(self, app, recorder):
+    def __init__(self, app):
         self._cache = app.cache
         self._out = ConanOutput()
         self._remote_manager = app.remote_manager
-        self._recorder = recorder
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
         # Load custom generators from the cache, generators are part of the binary
@@ -355,9 +350,9 @@ class BinaryInstaller(object):
             - Requirements: %s
             - Package ID: %s
             ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
+
         conanfile.output.warning(msg)
-        self._recorder.package_install_error(PackageReference(ref, package_id),
-                                             INSTALL_ERROR_MISSING, msg)
+
         missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
         if len(missing_prefs) >= 5:
             build_str = "--build=missing"
@@ -401,8 +396,7 @@ class BinaryInstaller(object):
                 self._download_pkg(node)
 
     def _download_pkg(self, node):
-        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
-                                         self._recorder)
+        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
     def _build(self, nodes_by_level, root_node, profile_host, profile_build, graph_lock,
                remotes, build_mode, update):
@@ -508,7 +502,6 @@ class BinaryInstaller(object):
                     assert node.prev, "PREV for %s is None" % str(pref)
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
-                    self._recorder.package_fetched_from_cache(pref)
                 processed_package_references[bare_pref] = node.prev
 
             # at this point the package reference should be complete
@@ -520,12 +513,11 @@ class BinaryInstaller(object):
                                                    % (str(pref), package_folder))
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
-            self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
     def _build_package(self, node, remotes, pkg_layout):
         builder = _PackageBuilder(self._cache, node.conanfile.output,
                                   self._hook_manager, self._remote_manager)
-        pref = builder.build_package(node, self._recorder, remotes, pkg_layout)
+        pref = builder.build_package(node, remotes, pkg_layout)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision
         return pref
