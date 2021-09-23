@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 import conans
 from conans import __version__ as client_version
-from conans.cli.output import ConanOutput, TqdmHandler
+from conans.cli.output import ConanOutput
 from conans.client.api.helpers.search import Search
 from conans.client.cache.cache import ClientCache
 from conans.client.conf.required_version import check_required_conan_version
@@ -89,8 +89,6 @@ def api_method(f):
 
     def _init_stream(stream):
         init_colorama(stream)
-        stream_handler = TqdmHandler(stream)
-        stream_handler.setFormatter(logging.Formatter("%(message)s"))
 
     @functools.wraps(f)
     def wrapper(api, *args, **kwargs):

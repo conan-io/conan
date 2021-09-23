@@ -202,7 +202,6 @@ class RemoteManager(object):
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
-
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(package_folder)
             if get_env("CONAN_READ_ONLY_CACHE", False):
@@ -322,8 +321,8 @@ def check_compressed_files(tgz_name, files):
 def uncompress_file(src_path, dest_folder):
     t1 = time.time()
     try:
-        with progress_bar.open_binary(src_path, "Decompressing %s" % os.path.basename(
-            src_path)) as file_handler:
+        with progress_bar.open_binary(src_path, "Decompressing "
+                                                "%s" % os.path.basename(src_path)) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))

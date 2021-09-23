@@ -52,22 +52,6 @@ except ImportError:  # TODO: Remove if Python > 3.1
             self.lock = None
 
 
-class TqdmHandler(logging.StreamHandler):
-    def __init__(self, stream=None):
-        self._stream = stream
-        super(TqdmHandler, self).__init__(stream)
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            tqdm.tqdm.write(msg, file=self._stream)
-            self.flush()
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            self.handleError(record)
-
-
 class ConanOutput(object):
     def __init__(self):
         self.stream = sys.stderr
@@ -126,16 +110,9 @@ class ConanOutput(object):
 
     def _write_message(self, msg, fg=None, bg=None):
         if self._scope:
-            if self._color:
-                msg = "%s%s%s: %s" % (fg or '', bg or '', self.scope, Style.RESET_ALL)
-                msg = "{}: {}".format(self.scope, msg)
-            else:
-                msg = "{}: {}".format(self.scope, msg)
+            msg = "{}: {}".format(self.scope, msg)
         if self._color:
-            if self._scope:
-                msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
-            else:
-                msg = "{}{}{}{}".format(Color.BRIGHT_WHITE, bg or '', msg, Style.RESET_ALL)
+            msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
 
         self.stream.write("{}\n".format(msg))
 

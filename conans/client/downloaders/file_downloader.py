@@ -128,7 +128,7 @@ class FileDownloader(object):
             total_length = get_total_length()
             action = "Downloading" if range_start == 0 else "Continuing download of"
             description = "{} {}".format(action, os.path.basename(file_path)) if file_path else None
-            progress = progress_bar.Progress(total_length, self._output, description)
+            progress = progress_bar.Progress(total_length, description)
             progress.initial_value(range_start)
 
             chunk_size = 1024 if not file_path else 1024 * 100
