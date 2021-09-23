@@ -189,7 +189,7 @@ def _detect_gcc_libcxx(executable, version, profile_name, profile_path):
 
             Or edit '{profile_path}' and set compiler.libcxx=libstdc++11
             """.format(profile=profile_name, profile_path=profile_path))
-        output.info("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
+        output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
                        "***********************\n %s\n************************************"
                        "************************************************\n\n\n" % msg,
                        Color.BRIGHT_RED)

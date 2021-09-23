@@ -564,6 +564,8 @@ class ConanClientConfigParser(ConfigParser, object):
     @non_interactive.setter
     def non_interactive(self, value):
         # Made this because uploads in parallel need a way to disable the interactive
+        # FIXME: Can't we fail in the command line directly if no interactive?
+        #        see uploader.py  if parallel_upload:
         self._non_interactive = value
 
     @property

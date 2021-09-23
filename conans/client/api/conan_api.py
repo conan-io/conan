@@ -43,8 +43,6 @@ class ConanApp(object):
         self.cache = ClientCache(self.cache_folder)
         self.config = self.cache.config
 
-        # FIXME: Missing manage of non-interactive, it has state in user_input
-
         # Adjust CONAN_LOGGING_LEVEL with the env readed
         conans.util.log.logger = configure_logger(self.config.logging_level,
                                                   self.config.logging_file)
