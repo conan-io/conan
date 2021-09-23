@@ -235,11 +235,11 @@ class GraphBinariesAnalyzer(object):
                         node.prev = cache_latest_prev.revision
                         output.info("Current package revision is newer than the remote one")
 
-        if not node.binary:
-            node.binary = BINARY_CACHE
-            node.binary_remote = None
-            node.prev = cache_latest_prev.revision
-            assert node.prev, "PREV for %s is None" % str(pref)
+            if not node.binary:
+                node.binary = BINARY_CACHE
+                node.binary_remote = None
+                node.prev = cache_latest_prev.revision
+                assert node.prev, "PREV for %s is None" % str(pref)
 
     def _evaluate_package_id(self, node):
         compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()
