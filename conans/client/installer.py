@@ -396,8 +396,7 @@ class BinaryInstaller(object):
                 self._download_pkg(node)
 
     def _download_pkg(self, node):
-        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
-                                         node.conanfile.output)
+        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
     def _build(self, nodes_by_level, root_node, profile_host, profile_build, graph_lock,
                remotes, build_mode, update):
