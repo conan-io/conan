@@ -1,20 +1,22 @@
+import os
+
 from conan.tools.env import Environment
 
 
-def runenv_from_cpp_info(conanfile, cpp_info):
+def runenv_from_cpp_info(conanfile, cpp_info, package_folder):
     """ return an Environment deducing the runtime information from a cpp_info
     """
     dyn_runenv = Environment(conanfile)
     if cpp_info is None:  # This happens when the dependency is a private one = BINARY_SKIP
         return dyn_runenv
-    if cpp_info.bin_paths:  # cpp_info.exes is not defined yet
-        dyn_runenv.prepend_path("PATH", cpp_info.bin_paths)
+    if cpp_info.bindirs:  # cpp_info.exes is not defined yet
+        dyn_runenv.prepend_path("PATH", [os.path.join(package_folder, p) for p in cpp_info.bindirs])
     # If it is a build_require this will be the build-os, otherwise it will be the host-os
-    if cpp_info.lib_paths:
-        dyn_runenv.prepend_path("LD_LIBRARY_PATH", cpp_info.lib_paths)
-        dyn_runenv.prepend_path("DYLD_LIBRARY_PATH", cpp_info.lib_paths)
-    if cpp_info.framework_paths:
-        dyn_runenv.prepend_path("DYLD_FRAMEWORK_PATH", cpp_info.framework_paths)
+    if cpp_info.libdirs:
+        dyn_runenv.prepend_path("LD_LIBRARY_PATH", [os.path.join(package_folder, p) for p in cpp_info.libdirs])
+        dyn_runenv.prepend_path("DYLD_LIBRARY_PATH", [os.path.join(package_folder, p) for p in cpp_info.libdirs])
+    if cpp_info.frameworkdirs:
+        dyn_runenv.prepend_path("DYLD_FRAMEWORK_PATH", [os.path.join(package_folder, p) for p in cpp_info.frameworkdirs])
     return dyn_runenv
 
 
@@ -56,7 +58,7 @@ class VirtualRunEnv:
         for _, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
                 runenv.compose_env(dep.runenv_info)
-            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep.cpp_info))
+            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep.new_cpp_info, dep.package_folder))
 
         return runenv
 

@@ -49,7 +49,8 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 build_env.compose_env(build_require.runenv_info)
             # Then the implicit
-            build_env.compose_env(runenv_from_cpp_info(self._conanfile, build_require.cpp_info))
+            build_env.compose_env(runenv_from_cpp_info(self._conanfile, build_require.new_cpp_info,
+                                                       build_require.package_folder))
 
         # Requires in host context can also bring some direct buildenv_info
         host_requires = self._conanfile.dependencies.host.topological_sort
