@@ -15,20 +15,7 @@ from conans.model.requires import Requirements
 from conans.paths import RUN_LOG_NAME
 
 
-def create_settings(conanfile, settings):
-    try:
-        defined_settings = getattr(conanfile, "settings", None)
-        if isinstance(defined_settings, str):
-            defined_settings = [defined_settings]
-        current = defined_settings or {}
-        settings.constraint(current)
-        return settings
-    except Exception as e:
-        raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
-                                        conanfile.display_name, str(e)))
-
-
-class ConanFile(object):
+class ConanFile:
     """ The base class for all package recipes
     """
     name = None
@@ -44,6 +31,7 @@ class ConanFile(object):
     description = None
     topics = None
     homepage = None
+    
     build_policy = None
     short_paths = False
     exports = None
@@ -67,10 +55,6 @@ class ConanFile(object):
     provides = None
     deprecated = None
 
-    # Folders
-    folders = None
-    patterns = None
-
     package_type = None
     # Run in windows bash
     win_bash = None
@@ -90,12 +74,25 @@ class ConanFile(object):
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
 
+        if isinstance(self.generators, str):
+            self.generators = [self.generators]
+        if isinstance(self.settings, str):
+            self.settings = [self.settings]
+        self.options = Options.create_options(self.options, self.default_options)
         self.requires = Requirements(getattr(self, "requires", None),
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None))
 
+        self.cpp_info = None  # Will be initialized at processing time
+        # user declared variables
+        self.user_info = None
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
+
+        if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
+            self.virtualbuildenv = True
+        if not hasattr(self, "virtualrunenv"):  # Allow the user to override it with True or False
+            self.virtualrunenv = True
 
         self.env_scripts = {}  # Accumulate the env scripts generated in order
 
@@ -157,26 +154,12 @@ class ConanFile(object):
 
     def initialize(self, settings, buildenv=None):
         self._conan_buildenv = buildenv
-        if isinstance(self.generators, str):
-            self.generators = [self.generators]
-        # User defined options
-
-        self.options = Options.create_options(self.options, self.default_options)
-        self.settings = create_settings(self, settings)
-
-        # needed variables to pack the project
-        self.cpp_info = None  # Will be initialized at processing time
-
-        # user declared variables
-        self.user_info = None
-
-        if self.description is not None and not isinstance(self.description, str):
-            raise ConanException("Recipe 'description' must be a string.")
-
-        if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
-            self.virtualbuildenv = True
-        if not hasattr(self, "virtualrunenv"):  # Allow the user to override it with True or False
-            self.virtualrunenv = True
+        try:
+            settings.constraint(self.settings)
+        except Exception as e:
+            raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
+                self.display_name, str(e)))
+        self.settings = settings
 
     @property
     def new_cpp_info(self):
