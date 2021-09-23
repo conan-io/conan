@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient
 class SymlinkPackageTest(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() not in ("Linux", "Darwin"), reason="Requires Symlinks")
-    @pytest.mark.tool_compiler
     def test_symlink_created(self):
         conanfile = """from conans import ConanFile
 import os

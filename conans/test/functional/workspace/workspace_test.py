@@ -156,7 +156,6 @@ class WorkspaceTest(unittest.TestCase):
                                    "does not define path"):
             Workspace(path, None)
 
-    @pytest.mark.tool_compiler
     def test_simple(self):
         client = TestClient()
 
@@ -246,7 +245,6 @@ class WorkspaceTest(unittest.TestCase):
         b_cmake = client.load(os.path.join("B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloD ${CONAN_LIBS})", b_cmake)
 
-    @pytest.mark.tool_compiler
     def test_transitivity(self):
         # https://github.com/conan-io/conan/issues/4720
         client = TestClient()
@@ -810,7 +808,6 @@ class Pkg(ConanFile):
         conanbuildinfo = client.load(os.path.join("A", "build", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
 
-    @pytest.mark.tool_compiler
     def test_per_package_layout(self):
         client = TestClient()
 
@@ -855,7 +852,6 @@ class Pkg(ConanFile):
         self.assertIn("myincludeC", conanbuildcmake)
         self.assertIn("myincludeB", conanbuildcmake)
 
-    @pytest.mark.tool_compiler
     def test_generators(self):
         client = TestClient()
 

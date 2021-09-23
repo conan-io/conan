@@ -65,7 +65,6 @@ class PropagateSpecificComponents(unittest.TestCase):
         self.assertNotIn("top::cmp2", content)
         self.assertIn("top::cmp1", content)
 
-    @pytest.mark.tool_compiler
     def test_cmake_find_package_app(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.save({'conanfile.py': self.app})

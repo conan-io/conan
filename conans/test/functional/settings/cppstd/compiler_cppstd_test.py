@@ -110,7 +110,6 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                       " 'compiler.cppstd' together with 'cppstd'", t.out)
 
 
-@pytest.mark.tool_compiler
 class UseCompilerCppStdSettingTests(unittest.TestCase):
 
     conanfile = textwrap.dedent("""

@@ -23,7 +23,6 @@ conanfile = textwrap.dedent('''
 @pytest.mark.skipif(platform.system() == 'Linux', reason="Only for case insensitive OS")
 class CaseSensitiveTest(unittest.TestCase):
 
-    @pytest.mark.tool_compiler
     def test_install(self):
         test_server = TestServer()
         servers = {"default": test_server}
