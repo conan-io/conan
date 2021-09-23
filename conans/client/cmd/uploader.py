@@ -461,9 +461,7 @@ class CmdUpload(object):
                                            all_packages, query)
 
         if parallel_upload:
-            # FIXME: This probably doesn't have effect as the user_input is instanced when needed and
-            #        it is not supposed to have state
-            self._user_input.disable_input()
+            self._cache.config.non_interactive = True
         self._upload_thread_pool = ThreadPool(
             cpu_count() if parallel_upload else 1)
 

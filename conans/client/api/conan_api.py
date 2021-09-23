@@ -96,12 +96,13 @@ def api_method(f):
 
     @functools.wraps(f)
     def wrapper(api, *args, **kwargs):
+        quiet = kwargs.pop("quiet", False)
         try:  # getcwd can fail if Conan runs on an non-existing folder
             old_curdir = os.getcwd()
         except EnvironmentError:
             old_curdir = None
 
-        if api.quiet:
+        if quiet:
             old_stdout = sys.stdout
             old_stderr = sys.stderr
             devnull = open(os.devnull, 'w')
@@ -118,16 +119,15 @@ def api_method(f):
         finally:
             if old_curdir:
                 os.chdir(old_curdir)
-            if api.quiet:
+            if quiet:
                 sys.stdout = old_stdout
                 sys.stderr = old_stderr
     return wrapper
 
 
 class ConanAPIV2(object):
-    def __init__(self, cache_folder=None, quiet=True, http_requester=None):
+    def __init__(self, cache_folder=None, http_requester=None):
 
-        self.quiet = quiet
         self.out = ConanOutput()
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
         self.http_requester = http_requester

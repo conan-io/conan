@@ -176,7 +176,7 @@ def main(args):
     # Temporary hack to call the legacy command system if the command is not yet implemented in V2
     command_argument = args[0] if args else None
     if command_argument in CLI_V1_COMMANDS:
-        from conans.client.command import main as v1_main
+        from conans.client.command import v1_main
         return v1_main(args)
 
     try:

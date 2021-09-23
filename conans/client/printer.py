@@ -1,9 +1,7 @@
 import fnmatch
 from collections import OrderedDict
 
-
 from conans.cli.output import Color
-from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 
 
@@ -24,14 +22,14 @@ class Printer(object):
     def print_inspect(self, inspect, raw=False):
         for k, v in inspect.items():
             if raw:
-                self._out.info(str(v))
+                self._out.write(str(v))
             else:
                 if isinstance(v, dict):
                     self._out.writeln("%s:" % k)
                     for ok, ov in sorted(v.items()):
-                        self._out.info("    %s: %s" % (ok, ov))
+                        self._out.writeln("    %s: %s" % (ok, ov))
                 else:
-                    self._out.info("%s: %s" % (k, str(v)))
+                    self._out.writeln("%s: %s" % (k, str(v)))
 
     def print_info(self, data, _info, package_filter=None, show_paths=False):
         """ Print in console the dependency information for a conan file
@@ -50,7 +48,7 @@ class Printer(object):
             show_field = show_field or it_field
             name = name or it_field
             if show(show_field) and it_field in it:
-                self._out.info("    %s: %s" % (name, it[it_field]), color)
+                self._out.writeln("    %s: %s" % (name, it[it_field]), color)
 
         # Iteration and printing
         for it in data:
@@ -59,7 +57,7 @@ class Printer(object):
 
             is_ref = it["is_ref"]
 
-            self._out.info(it["display_name"], Color.BRIGHT_CYAN)
+            self._out.writeln(it["display_name"], Color.BRIGHT_CYAN)
             _print("id", name="ID")
             _print("build_id", name="BuildID")
             _print("context", name="Context")
@@ -71,11 +69,11 @@ class Printer(object):
 
             if show("remote") and is_ref:
                 if "remote" in it:
-                    self._out.info("    Remote: %s=%s" % (it["remote"]["name"],
+                    self._out.writeln("    Remote: %s=%s" % (it["remote"]["name"],
                                                              it["remote"]["url"]),
                                       Color.BRIGHT_GREEN)
                 else:
-                    self._out.info("    Remote: None", Color.BRIGHT_GREEN)
+                    self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
 
             _print("url", name="URL")
             _print("homepage", name="Homepage")
@@ -83,16 +81,16 @@ class Printer(object):
             if show("license") and "license" in it:
                 licenses_str = ", ".join(it["license"])
                 lead_str = "Licenses" if len(it["license"]) > 1 else "License"
-                self._out.info("    %s: %s" % (lead_str, licenses_str), Color.BRIGHT_GREEN)
+                self._out.writeln("    %s: %s" % (lead_str, licenses_str), Color.BRIGHT_GREEN)
 
             _print("author", name="Author")
             _print("description", name="Description")
 
             if show("topics") and "topics" in it:
-                self._out.info("    Topics: %s" % ", ".join(it["topics"]), Color.BRIGHT_GREEN)
+                self._out.writeln("    Topics: %s" % ", ".join(it["topics"]), Color.BRIGHT_GREEN)
 
             if show("provides") and "provides" in it:
-                self._out.info("    Provides: %s" % ", ".join(it["provides"]), Color.BRIGHT_GREEN)
+                self._out.writeln("    Provides: %s" % ", ".join(it["provides"]), Color.BRIGHT_GREEN)
 
             _print("deprecated", name="Deprecated")
 
@@ -103,34 +101,34 @@ class Printer(object):
 
             if show("binary_remote") and is_ref:
                 if "binary_remote" in it:
-                    self._out.info("    Binary remote: %s" % it["binary_remote"])
+                    self._out.writeln("    Binary remote: %s" % it["binary_remote"])
                 else:
-                    self._out.info("    Binary remote: None")
+                    self._out.writeln("    Binary remote: None")
 
             _print("creation_date", show_field="date", name="Creation date")
 
             _print("scm", show_field="scm", name="scm")
 
             if show("python_requires") and "python_requires" in it:
-                self._out.info("    Python-requires:", Color.BRIGHT_GREEN)
+                self._out.writeln("    Python-requires:", Color.BRIGHT_GREEN)
                 for d in it["python_requires"]:
-                    self._out.info("        %s" % d, Color.BRIGHT_YELLOW)
+                    self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
 
             if show("required") and "required_by" in it:
-                self._out.info("    Required by:", Color.BRIGHT_GREEN)
+                self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in it["required_by"]:
-                    self._out.info("        %s" % d, Color.BRIGHT_YELLOW)
+                    self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
 
             if show("requires"):
                 if "requires" in it:
-                    self._out.info("    Requires:", Color.BRIGHT_GREEN)
+                    self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
                     for d in it["requires"]:
-                        self._out.info("        %s" % d, Color.BRIGHT_YELLOW)
+                        self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
 
                 if "build_requires" in it:
-                    self._out.info("    Build Requires:", Color.BRIGHT_GREEN)
+                    self._out.writeln("    Build Requires:", Color.BRIGHT_GREEN)
                     for d in it["build_requires"]:
-                        self._out.info("        %s" % d, Color.BRIGHT_YELLOW)
+                        self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
 
     def print_search_recipes(self, search_info, pattern, raw, all_remotes_search):
         """ Print all the exported conans information
@@ -154,11 +152,11 @@ class Printer(object):
         else:
             for remote_info in search_info:
                 if all_remotes_search:
-                    self._out.info("Remote '%s':" % str(remote_info["remote"]))
+                    self._out.writeln("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
                     reference = conan_item["recipe"]["id"]
                     ref = ConanFileReference.loads(reference)
-                    self._out.info(ref.full_str())
+                    self._out.writeln(ref.full_str())
 
     def print_search_packages(self, search_info, ref, packages_query, raw):
         assert(isinstance(ref, ConanFileReference))

@@ -206,7 +206,7 @@ class Command(object):
         attributes = [args.raw, ] if args.raw else args.attribute
         quiet = bool(args.raw)
 
-        result = self._conan.inspect(args.path_or_reference, attributes, args.remote)
+        result = self._conan.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
         Printer(self._out).print_inspect(result, raw=args.raw)
         if args.json:
 
@@ -2112,7 +2112,7 @@ _help_build_policies = '''Optional, specify which packages to build from source.
 '''
 
 
-def main(args):
+def v1_main(args):
     """ main entry point of the conan application, using a Command to
     parse parameters
 

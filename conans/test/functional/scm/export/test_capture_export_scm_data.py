@@ -5,6 +5,7 @@ import unittest
 
 import mock
 import pytest
+from mock.mock import Mock
 from parameterized import parameterized
 
 from conans.cli.output import ConanOutput
@@ -37,79 +38,79 @@ class CaptureExportSCMDataTest(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, )])
     def test_url_auto_revision_auto(self, _, local_origin):
-
-        # Mock the conanfile (return scm_data)
-        conanfile = mock.MagicMock()
-        conanfile.scm = {'type': 'git', 'url': 'auto', 'revision': 'auto'}
-
-        # Set the remote for the repo
-        url = self.git.folder if local_origin else "https://remote.url"
-        self.git.run("remote add origin \"{}\"".format(url))
-
         output = RedirectedTestOutput()
         with redirect_output(output):
+            # Mock the conanfile (return scm_data)
+            conanfile = mock.MagicMock()
+            conanfile.output = ConanOutput()
+            conanfile.scm = {'type': 'git', 'url': 'auto', 'revision': 'auto'}
+
+            # Set the remote for the repo
+            url = self.git.folder if local_origin else "https://remote.url"
+            self.git.run("remote add origin \"{}\"".format(url))
+
             scm_data, _ = _capture_scm_auto_fields(
                 conanfile=conanfile,
                 conanfile_dir=self.conanfile_dir,
                 recipe_layout=None,
                 ignore_dirty=True)
 
-        self.assertEqual(scm_data.url, url)
-        self.assertEqual(scm_data.revision, self.rev)
-        self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)
-        self.assertIn("Revision deduced by 'auto': {}".format(self.rev), output)
-        if local_origin:
-            self.assertIn("WARN: Repo origin looks like a local path: {}".format(url), output)
+            self.assertEqual(scm_data.url, url)
+            self.assertEqual(scm_data.revision, self.rev)
+            self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)
+            self.assertIn("Revision deduced by 'auto': {}".format(self.rev), output)
+            if local_origin:
+                self.assertIn("WARN: Repo origin looks like a local path: {}".format(url), output)
 
     @parameterized.expand([(True, ), (False, ), ])
     def test_revision_auto(self, _, is_pristine):
-
-        # Mock the conanfile (return scm_data)
-        url = "https://remote.url"
-        conanfile = mock.MagicMock()
-        conanfile.scm = {'type': 'git', 'url': url, 'revision': 'auto'}
-
-        if not is_pristine:
-            save(os.path.join(self.git.folder, "other"), "ccc")
-
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm_data, _ = _capture_scm_auto_fields(
-                conanfile=conanfile,
-                conanfile_dir=self.conanfile_dir,
-                recipe_layout=None,
-                ignore_dirty=False)
+            # Mock the conanfile (return scm_data)
+            url = "https://remote.url"
+            conanfile = mock.MagicMock()
+            conanfile.output = ConanOutput()
+            conanfile.scm = {'type': 'git', 'url': url, 'revision': 'auto'}
 
-        self.assertEqual(scm_data.url, url)
-        if is_pristine:
-            self.assertEqual(scm_data.revision, self.rev)
-            self.assertIn("Revision deduced by 'auto': {}".format(self.rev), output)
-            self.assertNotIn("Repo origin deduced", output)
-        else:
-            self.assertEqual(scm_data.revision, "auto")
-            self.assertIn("There are uncommitted changes, skipping the replacement of 'scm.url' "
-                          "and 'scm.revision' auto fields. Use --ignore-dirty to force it.",
-                          output)
+            if not is_pristine:
+                save(os.path.join(self.git.folder, "other"), "ccc")
+                scm_data, _ = _capture_scm_auto_fields(
+                    conanfile=conanfile,
+                    conanfile_dir=self.conanfile_dir,
+                    recipe_layout=None,
+                    ignore_dirty=False)
+
+                self.assertEqual(scm_data.url, url)
+                if is_pristine:
+                    self.assertEqual(scm_data.revision, self.rev)
+                    self.assertIn("Revision deduced by 'auto': {}".format(self.rev), output)
+                    self.assertNotIn("Repo origin deduced", output)
+                else:
+                    self.assertEqual(scm_data.revision, "auto")
+                    self.assertIn("There are uncommitted changes, skipping the replacement of "
+                                  "'scm.url' and 'scm.revision' auto fields. Use --ignore-dirty to "
+                                  "force it.", output)
 
     def test_url_auto(self, _):
-
-        # Mock the conanfile (return scm_data)
-        conanfile = mock.MagicMock()
-        conanfile.scm = {'type': 'git', 'url': "auto", 'revision': self.rev}
-
-        # Set the remote for the repo
-        url = "https://remote.url"
-        self.git.run("remote add origin \"{}\"".format(url))
-
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm_data, _ = _capture_scm_auto_fields(
-                        conanfile=conanfile,
-                        conanfile_dir=self.conanfile_dir,
-                        recipe_layout=None,
-                        ignore_dirty=True)
+            # Mock the conanfile (return scm_data)
+            conanfile = mock.MagicMock()
+            conanfile.output = ConanOutput()
+            conanfile.scm = {'type': 'git', 'url': "auto", 'revision': self.rev}
 
-        self.assertEqual(scm_data.url, url)
-        self.assertEqual(scm_data.revision, self.rev)
-        self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)
-        self.assertNotIn("Revision deduced", output)
+            # Set the remote for the repo
+            url = "https://remote.url"
+            self.git.run("remote add origin \"{}\"".format(url))
+
+
+            scm_data, _ = _capture_scm_auto_fields(
+                            conanfile=conanfile,
+                            conanfile_dir=self.conanfile_dir,
+                            recipe_layout=None,
+                            ignore_dirty=True)
+
+            self.assertEqual(scm_data.url, url)
+            self.assertEqual(scm_data.revision, self.rev)
+            self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)
+            self.assertNotIn("Revision deduced", output)

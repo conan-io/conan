@@ -373,7 +373,7 @@ class TestClient(object):
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, path_with_spaces=True,
                  cpu_count=1, default_server_user=None,
-                 cache_autopopulate=True):
+                 cache_autopopulate=True, mock_input=True):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -426,6 +426,8 @@ class TestClient(object):
         self.tune_conan_conf(cache_folder, cpu_count)
 
         self.out = RedirectedTestOutput()
+        self.mocked_input = None
+
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
@@ -553,17 +555,23 @@ class TestClient(object):
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
+        if self.users != {}:
+            self.mocked_input = MockedUserInput(non_interactive=False)
+            self.mocked_input.logins = self.users
+            with mock.patch("conans.client.rest.auth_manager.UserInput") as mock_rest:
+                with mock.patch("conans.client.conan_api.UserInput") as mock_api:
+                    mock_rest.return_value = self.mocked_input
+                    mock_api.return_value = self.mocked_input
+                    return self._run(command_line, assert_error)
+        else:   # I think only the "test_auth_with_env" test expect this...
+            return self._run(command_line, assert_error)
+
+    def _run(self, command_line, assert_error):
         from conans.test.utils.mocks import RedirectedTestOutput
-        self.out = RedirectedTestOutput()  # Initialize each command
-        rest_namespace = "conans.client.rest.auth_manager.UserInput"
-        api_namespace = "conans.client.conan_api.UserInput"
-        with mock.patch(rest_namespace, MockedUserInput) as mock_rest:
-            with mock.patch(api_namespace, MockedUserInput) as mock_api:
-                mock_rest.logins = mock_api.logins = PropertyMock(return_value=self.users)
-                with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
-                    with redirect_output(self.out):
-                        error = self.run_cli(command_line, assert_error=assert_error)
-        return error
+        with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
+            self.out = RedirectedTestOutput()  # Initialize each command
+            with redirect_output(self.out):
+                return self.run_cli(command_line, assert_error=assert_error)
 
     def run_command(self, command, cwd=None, assert_error=False):
         runner = ConanRunner()

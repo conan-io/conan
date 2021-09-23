@@ -26,7 +26,7 @@ LOGIN_RETRIES = 3
 class ConanApiAuthManager(object):
 
     def __init__(self, rest_client_factory, cache):
-        self._user_input = UserInput(cache.config.non_interactive)
+        self._cache = cache
         self._rest_client_factory = rest_client_factory
         self._localdb = cache.localdb
 
@@ -71,7 +71,8 @@ class ConanApiAuthManager(object):
         we can get a valid token from api_client. If a token is returned,
         credentials are stored in localdb and rest method is called"""
         for _ in range(LOGIN_RETRIES):
-            input_user, input_password = self._user_input.request_login(remote.name, user)
+            ui = UserInput(self._cache.config.non_interactive)
+            input_user, input_password = ui.request_login(remote.name, user)
             try:
                 self._authenticate(remote, input_user, input_password)
             except AuthenticationException:

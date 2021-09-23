@@ -168,7 +168,7 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, recipe_layout, ignore_dir
         return None, None
 
     # Resolve SCMData in the user workspace (someone may want to access CVS or import some py)
-    scm = SCM(scm_data, conanfile_dir)
+    scm = SCM(scm_data, conanfile_dir, conanfile.output)
     captured = scm_data.capture_origin or scm_data.capture_revision
 
     if not captured:
