@@ -3,8 +3,7 @@ from requests.exceptions import RequestException
 from conans.cli.output import ConanOutput
 from conans.cli.output import ScopedOutput
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
-                                       RECIPE_NOT_IN_REMOTE,
-                                       RECIPE_UPDATED, RECIPE_EDITABLE,
+                                       RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
                                        RECIPE_INCACHE_DATE_UPDATED)
 from conans.errors import ConanException, NotFoundException
 from conans.util.tracer import log_recipe_got_from_local_cache

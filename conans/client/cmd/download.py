@@ -7,7 +7,6 @@ from multiprocessing.pool import ThreadPool
 
 def download(app, ref, package_ids, remote, recipe, remotes):
     remote_manager, cache, loader = app.remote_manager, app.cache, app.loader
-
     hook_manager = app.hook_manager
     assert(isinstance(ref, ConanFileReference))
     scoped_output = ScopedOutput(str(ref), ConanOutput())
