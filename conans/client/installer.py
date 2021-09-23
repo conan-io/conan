@@ -1,6 +1,5 @@
 import os
 import shutil
-import textwrap
 import time
 from multiprocessing.pool import ThreadPool
 
@@ -9,21 +8,20 @@ from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
-from conans.client.generators import write_toolchain
+from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_UPDATE, BINARY_UNKNOWN, BINARY_INVALID, BINARY_ERROR
-from conans.client.graph.install_graph import InstallGraph
+    BINARY_MISSING, BINARY_UPDATE, BINARY_UNKNOWN
+from conans.client.graph.install_graph import InstallGraph, raise_missing
 from conans.client.importer import remove_imports, run_imports
-from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
+from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter, ConanInvalidConfiguration)
-from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
+                           conanfile_exception_formatter)
+from conans.model.build_info import CppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
-from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.new_build_info import NewCppInfo, fill_old_cppinfo
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
@@ -46,12 +44,11 @@ def build_id(conan_file):
 
 
 class _PackageBuilder(object):
-    def __init__(self, cache, output, hook_manager, remote_manager, generators):
+    def __init__(self, cache, output, hook_manager, remote_manager):
         self._cache = cache
         self._output = output
         self._hook_manager = hook_manager
         self._remote_manager = remote_manager
-        self._generator_manager = generators
 
     def _get_build_folder(self, conanfile, package_layout):
         # Build folder can use a different package_ID if build_id() is defined.
@@ -131,12 +128,7 @@ class _PackageBuilder(object):
 
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
-        logger.info("GENERATORS: Writing generators")
-        self._generator_manager.write_generators(conanfile, conanfile.build_folder,
-                                                 conanfile.generators_folder, self._output)
-
-        logger.info("TOOLCHAIN: Writing toolchain")
-        write_toolchain(conanfile, conanfile.generators_folder, self._output)
+        write_generators(conanfile, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -300,102 +292,37 @@ class BinaryInstaller(object):
         self._recorder = recorder
         self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
-        self._generator_manager = app.generator_manager
         # Load custom generators from the cache, generators are part of the binary
         # build and install. Generators loaded here from the cache will have precedence
         # and overwrite possible generators loaded from packages (requires)
         for generator_path in app.cache.generators:
             app.loader.load_generators(generator_path)
 
-    def install(self, deps_graph, remotes, build_mode, update, profile_host, profile_build,
-                graph_lock):
+    def install(self, deps_graph, remotes, build_mode, update):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
         self._out.info("\nInstalling (downloading, building) binaries...")
 
         # order by levels and separate the root node (ref=None) from the rest
         install_graph = InstallGraph(deps_graph)
+        install_graph.raise_errors(self._out)
         install_order = install_graph.install_order()
 
-        missing, invalid, downloads = self._classify(install_order)
-        if invalid:
-            msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
-            for install_node in invalid:
-                node = install_node.nodes[0]
-                binary, reason = node.conanfile.info.invalid
-                msg.append("{}: {}: {}".format(node.conanfile, binary, reason))
-            raise ConanInvalidConfiguration("\n".join(msg))
-        self._raise_missing(missing)
+        self._download_bulk(install_order)
+        self._build(install_order, remotes, build_mode, update)
 
-        if downloads:
-            self._download_bulk(downloads)
-        self._build(install_order, profile_host, profile_build,
-                    graph_lock, remotes, build_mode, update)
-
-    @staticmethod
-    def _classify(install_order):
-        missing, invalid, downloads = [], [], []
+    def _download_bulk(self, install_order):
+        """ executes the download of packages (both download and update), only once for a given
+        PREF
+        """
+        downloads = []
         for level in install_order:
             for node in level:
-                if node.binary == BINARY_MISSING:
-                    missing.append(node)
-                elif node.binary in (BINARY_INVALID, BINARY_ERROR):
-                    invalid.append(node)
-                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                    downloads.append(node)
-        return missing, invalid, downloads
-
-    def _raise_missing(self, missing):
-        if not missing:
+                for package in node.packages:
+                    if package.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                        downloads.append(package)
+        if not downloads:
             return
-
-        missing_prefs = set(n.pref for n in missing)  # avoid duplicated
-        missing_prefs = list(sorted(missing_prefs))
-        for pref in missing_prefs:
-            self._out.error("Missing binary: %s" % str(pref))
-        self._out.writeln("")
-
-        # Report details just the first one
-        install_node = missing[0]
-        node = install_node.nodes[0]
-        package_id = node.package_id
-        ref, conanfile = node.ref, node.conanfile
-        dependencies = [str(dep.dst) for dep in node.dependencies]
-
-        settings_text = ", ".join(conanfile.info.full_settings.dumps().splitlines())
-        options_text = ", ".join(conanfile.info.full_options.dumps().splitlines())
-        dependencies_text = ', '.join(dependencies)
-        requires_text = ", ".join(conanfile.info.requires.dumps().splitlines())
-
-        msg = textwrap.dedent('''\
-            Can't find a '%s' package for the specified settings, options and dependencies:
-            - Settings: %s
-            - Options: %s
-            - Dependencies: %s
-            - Requirements: %s
-            - Package ID: %s
-            ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
-        conanfile.output.warn(msg)
-        self._recorder.package_install_error(PackageReference(ref, package_id),
-                                             INSTALL_ERROR_MISSING, msg)
-        missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
-        if len(missing_prefs) >= 5:
-            build_str = "--build=missing"
-        else:
-            build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
-
-        raise ConanException(textwrap.dedent('''\
-            Missing prebuilt package for '%s'
-            Try to build from sources with '%s'
-            Use 'conan search <reference> --table table.html'
-            Or read 'http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-            ''' % (missing_pkgs, build_str)))
-
-    def _download_bulk(self, downloads):
-        """ executes the download of packages (both download and update), only once for a given
-        PREF, even if node duplicated
-        :param downloads: all nodes to be downloaded or updated,
-        """
         parallel = self._cache.config.parallel_download
         if parallel is not None:
             self._out.info("Downloading binary packages in %s parallel threads" % parallel)
@@ -407,61 +334,61 @@ class BinaryInstaller(object):
             for node in downloads:
                 self._download_pkg(node)
 
-    def _download_pkg(self, install_node):
-        node = install_node.nodes[0]
+    def _download_pkg(self, package):
+        node = package.nodes[0]
         assert node.pref.revision is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
                                          node.conanfile.output, self._recorder)
 
-    def _build(self, install_order, profile_host, profile_build, graph_lock,
-               remotes, build_mode, update):
+    def _build(self, install_order, remotes, build_mode, update):
 
         for level in install_order:
-            for install_node in level:
-                if install_node.binary == BINARY_EDITABLE:
-                    self._handle_node_editable(install_node, profile_host, profile_build, graph_lock)
-                else:
-                    assert install_node.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN,
-                                                   BINARY_DOWNLOAD, BINARY_UPDATE)
-                    assert install_node.pref.ref.revision is not None, "Installer should receive RREV always"
-                    if install_node.binary == BINARY_UNKNOWN:
-                        assert len(install_node.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
-                        node = install_node.nodes[0]
-                        self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
-                        install_node.pref = node.pref  # Just in case it was recomputed
-                        install_node.binary = node.binary
-                        if node.binary == BINARY_MISSING:
-                            self._raise_missing([node])
-                        elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                            self._download_pkg(install_node)
-
-                    if install_node.pref.revision is None:
-                        assert install_node.binary == BINARY_BUILD
-                        package_layout = self._cache.create_temp_pkg_layout(install_node.pref)
+            for level_node in level:
+                for package in level_node.packages:
+                    if package.binary == BINARY_EDITABLE:
+                        self._handle_node_editable(package)
                     else:
-                        package_layout = self._cache.get_or_create_pkg_layout(install_node.pref)
+                        assert package.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN,
+                                                  BINARY_DOWNLOAD, BINARY_UPDATE)
+                        assert level_node.ref.revision is not None, "Installer should receive RREV always"
+                        if package.binary == BINARY_UNKNOWN:
+                            assert len(package.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
+                            node = package.nodes[0]
+                            self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
+                            package.pref = node.pref  # Just in case it was recomputed
+                            package.binary = node.binary
+                            if node.binary == BINARY_MISSING:
+                                raise_missing([node], self._out)
+                            elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                                self._download_pkg(package)
 
-                    _handle_system_requirements(install_node, package_layout)
+                        if package.pref.revision is None:
+                            assert package.binary == BINARY_BUILD
+                            package_layout = self._cache.create_temp_pkg_layout(package.pref)
+                        else:
+                            package_layout = self._cache.get_or_create_pkg_layout(package.pref)
 
-                    if install_node.binary in (BINARY_BUILD, BINARY_CACHE):
-                        self._handle_node_cache(install_node, remotes, package_layout)
-                        # Just in case it was recomputed
-                        install_node.pref = install_node.nodes[0].pref
+                        _handle_system_requirements(package, package_layout)
 
-                    # Make sure that all nodes with same pref compute package_info()
-                    package_folder = package_layout.package()
-                    pref = install_node.pref
-                    assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
-                                                           % (str(pref), package_folder))
-                    for n in install_node.nodes:
-                        n.prev = pref.revision  # Make sure the prev is assigned
-                        conanfile = n.conanfile
-                        # Call the info method
-                        self._call_package_info(conanfile, package_folder, ref=pref.ref,
-                                                is_editable=False)
-                        self._recorder.package_cpp_info(pref, conanfile.cpp_info)
+                        if package.binary in (BINARY_BUILD, BINARY_CACHE):
+                            self._handle_node_cache(package, remotes, package_layout)
+                            # Just in case it was recomputed
+                            package.pref = package.nodes[0].pref
 
-    def _handle_node_editable(self, install_node, profile_host, profile_build, graph_lock):
+                        # Make sure that all nodes with same pref compute package_info()
+                        package_folder = package_layout.package()
+                        pref = package.pref
+                        assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
+                                                               % (str(pref), package_folder))
+                        for n in package.nodes:
+                            n.prev = pref.revision  # Make sure the prev is assigned
+                            conanfile = n.conanfile
+                            # Call the info method
+                            self._call_package_info(conanfile, package_folder, ref=pref.ref,
+                                                    is_editable=False)
+                            self._recorder.package_cpp_info(pref, conanfile.cpp_info)
+
+    def _handle_node_editable(self, install_node):
         for node in install_node.nodes:
             # Get source of information
             conanfile = node.conanfile
@@ -488,13 +415,7 @@ class BinaryInstaller(object):
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        self._generator_manager.write_generators(conanfile, conanfile.install_folder,
-                                                 conanfile.generators_folder, output)
-        write_toolchain(conanfile, conanfile.generators_folder, output)
-        output.info("Generated toolchain")
-        graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-        graph_lock_file.save(os.path.join(conanfile.install_folder, "conan.lock"))
-        output.info("Generated conan.lock")
+        write_generators(conanfile, output)
         copied_files = run_imports(conanfile)
         report_copied_files(copied_files, output)
 
@@ -503,6 +424,7 @@ class BinaryInstaller(object):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
+        assert pkg_layout, "The pkg_layout should be declared here"
         conanfile = node.conanfile
         output = conanfile.output
 
@@ -527,8 +449,7 @@ class BinaryInstaller(object):
                 raise Exception("Unexpected node.binary {}".format(node.binary))
 
     def _build_package(self, node, output, remotes, pkg_layout):
-        builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
-                                  self._generator_manager)
+        builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, self._recorder, remotes, pkg_layout)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision

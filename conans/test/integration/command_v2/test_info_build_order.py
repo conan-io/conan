@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -15,22 +17,38 @@ def test_info_build_order():
     bo_json = json.loads(c.load("bo.json"))
 
     result = [
-        [{
-            "id": 1,
-            "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
-            "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
-            "context": "host",
-            "options": [],
-            "depends": []
-        }],
-        [{
-            "id": 2,
-            "ref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
-            "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
-            "context": "host",
-            "options": [],
-            "depends": [1]
-        }]
+        [
+            {
+                "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "depends": [],
+                "packages": [
+                    {
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "context": "host",
+                        "binary": "Build",
+                        "prev": None,
+                        "options": []
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "ref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
+                "depends": [
+                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                ],
+                "packages": [
+                    {
+                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "context": "host",
+                        "binary": "Build",
+                        "prev": None,
+                        "options": []
+                    }
+                ]
+            }
+        ]
     ]
 
     assert bo_json == result
@@ -46,22 +64,38 @@ def test_info_build_order_build_require():
     c.run("info  consumer --build-order=bo.json --build=missing")
     bo_json = json.loads(c.load("bo.json"))
     result = [
-        [{
-            "id": 1,
-            "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
-            "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
-            "context": "build",
-            "options": [],
-            "depends": []
-        }],
-        [{
-            "id": 2,
-            "ref": "pkg/0.1#1364f701b47130c7e38f04c5e5fab985",
-            "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
-            "context": "host",
-            "options": [],
-            "depends": [1]
-        }]
+        [
+            {
+                "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "depends": [],
+                "packages": [
+                    {
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "context": "build",
+                        "binary": "Build",
+                        "prev": None,
+                        "options": []
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "ref": "pkg/0.1#1364f701b47130c7e38f04c5e5fab985",
+                "depends": [
+                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                ],
+                "packages": [
+                    {
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "context": "host",
+                        "binary": "Build",
+                        "prev": None,
+                        "options": []
+                    }
+                ]
+            }
+        ]
     ]
 
     assert bo_json == result
@@ -81,41 +115,81 @@ def test_info_build_order_options():
 
     c.run("info  consumer --build-order=bo.json --build=missing")
     bo_json = json.loads(c.load("bo.json"))
+    print(c.load("bo.json"))
+
     result = [
         [
             {
-                "id": 1,
                 "ref": "tool/0.1#b6299fc637530d547c7eaa047d1da91d",
-                "package_id": "656515670a0b81a38777e89d7984090eadc9919d",
-                'context': 'build',
-                "options": [["myopt", "2"]],
-                "depends": []
-            },
-            {
-                "id": 2,
-                "ref": "tool/0.1#b6299fc637530d547c7eaa047d1da91d",
-                "package_id": "3da64a6c9584c99ed46ddf3a929787da9075a475",
-                'context': 'build',
-                "options": [["myopt", "1"]],
-                "depends": []
+                "depends": [],
+                "packages": [
+                    {
+                        "package_id": "3da64a6c9584c99ed46ddf3a929787da9075a475",
+                        "context": "build",
+                        "binary": "Build",
+                        "prev": None,
+                        "options": [
+                            [
+                                "myopt",
+                                "1"
+                            ]
+                        ]
+                    },
+                    {
+                        "package_id": "656515670a0b81a38777e89d7984090eadc9919d",
+                        "context": "build",
+                        "binary": "Build",
+                        "prev": None,
+                        "options": [
+                            [
+                                "myopt",
+                                "2"
+                            ]
+                        ]
+                    }
+                ]
             }
         ],
         [
             {
-                "id": 4,
-                "ref": "dep2/0.1#d7154a7eee8e107438768c1542ca1b70",
-                "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
-                'context': 'host',
-                "options": [["tool:myopt", "2"]],
-                "depends": [1]
+                "ref": "dep1/0.1#36716458443ac8c76bf2e905323b331c",
+                "depends": [
+                    "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
+                ],
+                "packages": [
+                    {
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "context": "host",
+                        "binary": "Build",
+                        "prev": None,
+                        "options": [
+                            [
+                                "tool:myopt",
+                                "1"
+                            ]
+                        ]
+                    }
+                ]
             },
             {
-                "id": 3,
-                "ref": "dep1/0.1#36716458443ac8c76bf2e905323b331c",
-                "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
-                'context': 'host',
-                "options": [["tool:myopt", "1"]],
-                "depends": [2]
+                "ref": "dep2/0.1#d7154a7eee8e107438768c1542ca1b70",
+                "depends": [
+                    "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
+                ],
+                "packages": [
+                    {
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "context": "host",
+                        "binary": "Build",
+                        "prev": None,
+                        "options": [
+                            [
+                                "tool:myopt",
+                                "2"
+                            ]
+                        ]
+                    }
+                ]
             }
         ]
     ]
@@ -123,6 +197,7 @@ def test_info_build_order_options():
     assert bo_json == result
 
 
+@pytest.mark.xfail(reason="Ongoing work of merging build-orders")
 def test_info_build_order_multi_product():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),

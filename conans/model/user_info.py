@@ -27,8 +27,3 @@ class UserInfo(object):
     @property
     def vars(self):
         return self._values_
-
-
-class DepsUserInfo(defaultdict):
-    def __init__(self):
-        super(DepsUserInfo, self).__init__(UserInfo)

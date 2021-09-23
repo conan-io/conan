@@ -1,17 +1,14 @@
 import os
 
+from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
-from conans.client.output import Color
-from conans.client.generators import write_toolchain
-from conans.client.tools import cross_building, get_cross_building_settings
-from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
-from conans.model.ref import ConanFileReference
 from conans.model.graph_lock import GraphLockFile, GraphLock
+from conans.model.ref import ConanFileReference
 
 
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
@@ -55,19 +52,10 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         conanfile.output.highlight("Installing package")
     print_graph(deps_graph, out)
 
-    try:
-        if cross_building(conanfile):
-            settings = get_cross_building_settings(conanfile)
-            message = "Cross-build from '%s:%s' to '%s:%s'" % settings
-            out.writeln(message, Color.BRIGHT_MAGENTA)
-    except ConanException:  # Setting os doesn't exist
-        pass
-
     installer = BinaryInstaller(app, recorder=recorder)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
     build_modes = BuildMode(build_modes, out)
-    installer.install(deps_graph, remotes, build_modes, update, profile_host, profile_build,
-                      graph_lock)
+    installer.install(deps_graph, remotes, build_modes, update)
 
     graph_lock.complete_matching_prevs()
 
@@ -83,10 +71,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         generators = set(generators) if generators else set()
         tmp.extend([g for g in generators if g not in tmp])
         conanfile.generators = tmp
-        app.generator_manager.write_generators(conanfile, install_folder,
-                                               conanfile.generators_folder,
-                                               output)
-        write_toolchain(conanfile, conanfile.generators_folder, output)
+        write_generators(conanfile, output)
 
         if not isinstance(ref_or_path, ConanFileReference):
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
