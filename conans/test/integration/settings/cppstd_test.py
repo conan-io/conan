@@ -19,7 +19,7 @@ class TestConan(ConanFile):
     settings = "compiler", %s
 
     def build(self):
-        self.output.warn("BUILDING!")
+        self.output.warning("BUILDING!")
 """
         # Without the setting
         client.save({CONANFILE: conanfile % ""})

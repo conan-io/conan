@@ -17,17 +17,16 @@ from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import get_default_client_conf
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 from conans.client.tools import chdir
 from conans.client.tools.files import replace_in_file
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import vswhere
 from conans.errors import ConanException, AuthenticationException
 from conans.model.build_info import CppInfo
-from conans.test.utils.mocks import ConanFileMock, TestBufferConanOutput
+from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, TestClient, zipdir
-from conans.tools import get_global_instances
+from conans.test.utils.tools import StoppableThreadBottle, TestClient, zipdir, redirect_output
 from conans.util.files import load, md5, mkdir, save
 from conans.util.runners import check_output_runner
 
@@ -68,9 +67,8 @@ class ReplaceInFileTest(unittest.TestCase):
             handler.write(text)
 
     def test_replace_in_file(self):
-        output = ConanOutput(sys.stdout)
-        replace_in_file(self.win_file, "nis", "nus", output=output)
-        replace_in_file(self.bytes_file, "nis", "nus", output=output)
+        replace_in_file(self.win_file, "nis", "nus")
+        replace_in_file(self.bytes_file, "nis", "nus")
 
         content = tools.load(self.win_file)
         self.assertNotIn("nis", content)
@@ -82,7 +80,6 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
-    output = TestBufferConanOutput()
 
     def test_replace_paths(self):
         folder = temp_folder()
@@ -90,22 +87,21 @@ class ToolsTest(unittest.TestCase):
         replace_with = "MYPATH"
         expected = 'Some other contentsMYPATH"finally all text'
 
-        out = TestBufferConanOutput()
         save(path, 'Some other contentsc:\\Path\\TO\\file.txt"finally all text')
         ret = tools.replace_path_in_file(path, "C:/Path/to/file.txt", replace_with,
-                                         windows_paths=True, output=out)
+                                         windows_paths=True)
         self.assertEqual(load(path), expected)
         self.assertTrue(ret)
 
         save(path, 'Some other contentsC:/Path\\TO\\file.txt"finally all text')
         ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with,
-                                         windows_paths=True, output=out)
+                                         windows_paths=True)
         self.assertEqual(load(path), expected)
         self.assertTrue(ret)
 
         save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
         ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False,
-                                         windows_paths=True, output=out)
+                                         windows_paths=True)
         self.assertEqual(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
         self.assertFalse(ret)
 
@@ -113,14 +109,13 @@ class ToolsTest(unittest.TestCase):
         s = 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext'
         save(path, s)
         ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
-                                         windows_paths=True, output=out)
+                                         windows_paths=True)
         self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
         self.assertTrue(ret)
 
         # Automatic windows_paths
         save(path, s)
-        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
-                                         output=out)
+        ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False)
         if platform.system() == "Windows":
             self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
             self.assertTrue(ret)
@@ -139,7 +134,7 @@ class ToolsTest(unittest.TestCase):
         self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
 
     def test_cpu_count(self):
-        output = ConanOutput(sys.stdout)
+        output = ConanOutput()
         cpus = tools.cpu_count(output=output)
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
@@ -155,7 +150,7 @@ class ToolsTest(unittest.TestCase):
         get_cpu_quota_mock.return_value = 12000
         get_cpu_period_mock.return_value = 1000
 
-        output = ConanOutput(sys.stdout)
+        output = ConanOutput()
         cpus = tools.cpu_count(output=output)
         self.assertEqual(12, cpus)
 
@@ -216,6 +211,7 @@ class ToolsTest(unittest.TestCase):
             ["1", "2", "3"]
         )
 
+
     def test_get_env_in_conanfile(self):
         """
         Test get_env is available and working in conanfile
@@ -251,7 +247,6 @@ class HelloConan(ConanFile):
 
     def build(self):
         assert(tools._global_requester != None)
-        assert(tools._global_output != None)
         """
         client.save({"conanfile.py": conanfile})
 
@@ -266,9 +261,8 @@ class HelloConan(ConanFile):
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
             conan_api, _, _ = ConanAPIV1.factory()
         conan_api.remote_list()
-        global_output, global_requester = get_global_instances()
-        self.assertEqual(global_requester.proxies, {"http": "http://myproxy.com"})
-        self.assertIsNotNone(global_output.warn)
+        from conans.tools import _global_requester
+        self.assertEqual(_global_requester.proxies, {"http": "http://myproxy.com"})
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):
@@ -389,21 +383,22 @@ class HelloConan(ConanFile):
                           '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
     def test_download_retries_errors(self):
-        out = TestBufferConanOutput()
 
         # Retry arguments override defaults
-        with self.assertRaisesRegex(ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=requests,
-                           retry=2, retry_wait=1)
-        self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
+        captured_output = RedirectedTestOutput()
+        with redirect_output(captured_output):
+            with self.assertRaisesRegex(ConanException, "Error downloading"):
+                tools.download("http://fakeurl3.es/nonexists",
+                               os.path.join(temp_folder(), "file.txt"),
+                               requester=requests,
+                               retry=2, retry_wait=1)
+        self.assertEqual(captured_output.getvalue().count("Waiting 1 seconds to retry..."), 2)
 
         # Not found error
         with self.assertRaisesRegex(ConanException,
                                    "Not found: http://google.es/FILE_NOT_FOUND"):
             tools.download("http://google.es/FILE_NOT_FOUND",
-                           os.path.join(temp_folder(), "README.txt"), out=out,
+                           os.path.join(temp_folder(), "README.txt"),
                            requester=requests,
                            retry=2, retry_wait=0)
 
@@ -435,22 +430,24 @@ class HelloConan(ConanFile):
 
         http_server.run_server()
 
-        out = TestBufferConanOutput()
 
         dest = os.path.join(temp_folder(), "manual.html")
-        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
-                       retry_wait=0, requester=requests)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            tools.download("http://localhost:%s/manual.html" % http_server.port, dest,
+                           retry=3, retry_wait=0, requester=requests)
         self.assertTrue(os.path.exists(dest))
         content = load(dest)
 
         # overwrite = False
         with self.assertRaises(ConanException):
-            tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out,
-                           retry=2, retry_wait=0, overwrite=False, requester=requests)
+            tools.download("http://localhost:%s/manual.html" % http_server.port, dest,
+                           retry=2, retry_wait=0, overwrite=False,
+                           requester=requests)
 
         # overwrite = True
-        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=2,
-                       retry_wait=0, overwrite=True, requester=requests)
+        tools.download("http://localhost:%s/manual.html" % http_server.port, dest,
+                       retry=2, retry_wait=0, overwrite=True, requester=requests)
         self.assertTrue(os.path.exists(dest))
         content_new = load(dest)
         self.assertEqual(content, content_new)
@@ -458,17 +455,17 @@ class HelloConan(ConanFile):
         # Not authorized
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                           overwrite=True, requester=requests, out=out, retry=0, retry_wait=0)
+                           overwrite=True, requester=requests, retry=0, retry_wait=0)
 
         # Authorized
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       auth=("user", "passwd"), overwrite=True, requester=requests, out=out,
+                       auth=("user", "passwd"), overwrite=True, requester=requests,
                        retry=0, retry_wait=0)
 
         # Authorized using headers
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True,
-                       requester=requests, out=out, retry=0, retry_wait=0)
+                       requester=requests, retry=0, retry_wait=0)
         http_server.stop()
 
     @pytest.mark.slow
@@ -483,12 +480,11 @@ class HelloConan(ConanFile):
 
         http_server.run_server()
 
-        out = TestBufferConanOutput()
         dest = os.path.join(temp_folder(), "manual.html")
         # Not authorized
         with self.assertRaisesRegex(AuthenticationException, "403"):
             tools.download("http://localhost:%s/forbidden" % http_server.port, dest,
-                           requester=requests, out=out)
+                           requester=requests)
 
         http_server.stop()
 
@@ -600,17 +596,16 @@ class HelloConan(ConanFile):
 
         thread.run_server()
 
-        out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
         with self.assertRaises(ConanException) as error:
-            tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
+            tools.get("http://localhost:%s/?file=1" % thread.port, output=ConanOutput())
         self.assertIn("Cannot deduce file name from the url: 'http://localhost:{}/?file=1'."
                       " Use 'filename' parameter.".format(thread.port), str(error.exception))
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz",
-                      requester=requests, output=out, retry=0, retry_wait=0)
+                      requester=requests, output=ConanOutput(), retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test_folder"))
 
         # Test: Use a different endpoint but still not the filename one
@@ -618,20 +613,22 @@ class HelloConan(ConanFile):
             from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
                 tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                          requester=requests, output=out, retry=0, retry_wait=0)
+                          requester=requests, output=ConanOutput(), retry=0, retry_wait=0)
             tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                      filename="sample.tar.gz", requester=requests, output=out,
+                      filename="sample.tar.gz", requester=requests, output=ConanOutput(),
                       retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
         with self.assertRaisesRegex(ConanException, "Error"):
-            tools.get("http://localhost:%s/error_url" % thread.port,
-                      filename="fake_sample.tar.gz", requester=requests, output=out, verify=False,
-                      retry=2, retry_wait=0)
+            captured_output = RedirectedTestOutput()
+            with redirect_output(captured_output):
+                tools.get("http://localhost:%s/error_url" % thread.port,
+                          filename="fake_sample.tar.gz", requester=requests, output=ConanOutput(), verify=False,
+                          retry=2, retry_wait=0)
 
         # Not found error
-        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
+        self.assertEqual(captured_output.getvalue().count("Waiting 0 seconds to retry..."), 2)
 
     def test_get_unzip_strip_root(self):
         """Test that the strip_root mechanism from the underlying unzip
@@ -679,20 +676,19 @@ class HelloConan(ConanFile):
 
         thread.run_server()
 
-        out = TestBufferConanOutput()
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, retry=0, retry_wait=0)
+                      output=ConanOutput(), retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test.txt"))
             self.assertEqual(load("test.txt"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="myfile.doc", retry=0, retry_wait=0)
+                      output=ConanOutput(), destination="myfile.doc", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("myfile.doc"))
             self.assertEqual(load("myfile.doc"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="mytemp/myfile.txt", retry=0, retry_wait=0)
+                      output=ConanOutput(), destination="mytemp/myfile.txt", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("mytemp/myfile.txt"))
             self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
 
@@ -720,31 +716,32 @@ class HelloConan(ConanFile):
                 return resp
 
         file = "test.txt.gz"
-        out = TestBufferConanOutput()
         urls = ["http://localhost:{}/{}".format(8000 + i, file) for i in range(3)]
 
         # Only the first file must be downloaded
         with tools.chdir(tools.mkdir_tmp()):
             requester = MockRequester()
-            tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
+            tools.get(urls, requester=requester, output=ConanOutput(), retry=0, retry_wait=0)
             self.assertEqual(1, requester.count)
 
         # Fail the first, download only the second
         with tools.chdir(tools.mkdir_tmp()):
             requester = MockRequester()
             requester.fail_first = True
-            tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
+            captured_output = RedirectedTestOutput()
+            with redirect_output(captured_output):
+                tools.get(urls, requester=requester, output=ConanOutput(), retry=0, retry_wait=0)
             self.assertEqual(2, requester.count)
             self.assertIn("WARN: Could not download from the URL {}: Error 408 downloading file {}."
                           " Trying another mirror."
-                          .format(urls[0], urls[0]), out)
+                          .format(urls[0], urls[0]), captured_output.getvalue())
 
         # Fail all downloads
         with tools.chdir(tools.mkdir_tmp()):
             requester = MockRequester()
             requester.fail_all = True
             with self.assertRaises(ConanException) as error:
-                tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
+                tools.get(urls, requester=requester, output=ConanOutput(), retry=0, retry_wait=0)
             self.assertEqual(3, requester.count)
             self.assertIn("All downloads from (3) URLs have failed.", str(error.exception))
 
@@ -782,129 +779,140 @@ class HelloConan(ConanFile):
 class CollectLibTestCase(unittest.TestCase):
 
     def test_collect_libs(self):
-        conanfile = ConanFileMock()
-        # Without package_folder
-        conanfile.package_folder = None
-        result = tools.collect_libs(conanfile)
-        self.assertEqual([], result)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            conanfile = ConanFileMock()
+            # Without package_folder
+            conanfile.package_folder = None
+            result = tools.collect_libs(conanfile)
+            self.assertEqual([], result)
 
-        # Default behavior
-        conanfile.package_folder = temp_folder()
-        mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(mylib_path, "")
-        conanfile.cpp_info = CppInfo("", "")
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib"], result)
+            # Default behavior
+            conanfile.package_folder = temp_folder()
+            mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+            save(mylib_path, "")
+            conanfile.cpp_info = CppInfo("", "")
+            result = tools.collect_libs(conanfile)
+            self.assertEqual(["mylib"], result)
 
-        # Custom folder
-        customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
-        save(customlib_path, "")
-        result = tools.collect_libs(conanfile, folder="custom_folder")
-        self.assertEqual(["customlib"], result)
+            # Custom folder
+            customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
+            save(customlib_path, "")
+            result = tools.collect_libs(conanfile, folder="custom_folder")
+            self.assertEqual(["customlib"], result)
 
-        # Custom folder doesn't exist
-        result = tools.collect_libs(conanfile, folder="fake_folder")
-        self.assertEqual([], result)
-        self.assertIn("Lib folder doesn't exist, can't collect libraries:", conanfile.output)
+            # Custom folder doesn't exist
+            result = tools.collect_libs(conanfile, folder="fake_folder")
+            self.assertEqual([], result)
+            self.assertIn("Lib folder doesn't exist, can't collect libraries:", output.getvalue())
+            output.clear()
 
-        # Use cpp_info.libdirs
-        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["customlib", "mylib"], result)
+            # Use cpp_info.libdirs
+            conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+            result = tools.collect_libs(conanfile)
+            self.assertEqual(["customlib", "mylib"], result)
 
-        # Custom folder with multiple libdirs should only collect from custom folder
-        self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
-        result = tools.collect_libs(conanfile, folder="custom_folder")
-        self.assertEqual(["customlib"], result)
+            # Custom folder with multiple libdirs should only collect from custom folder
+            self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
+            result = tools.collect_libs(conanfile, folder="custom_folder")
+            self.assertEqual(["customlib"], result)
 
-        # Warn same lib different folders
-        conanfile = ConanFileMock()
-        conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo(conanfile.name, "")
-        custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
-        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(custom_mylib_path, "")
-        save(lib_mylib_path, "")
-        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib"], result)
-        self.assertIn("Library 'mylib' was either already found in a previous "
-                      "'conanfile.cpp_info.libdirs' folder or appears several times with a "
-                      "different file extension", conanfile.output)
+            # Warn same lib different folders
+            conanfile = ConanFileMock()
+            conanfile.package_folder = temp_folder()
+            conanfile.cpp_info = CppInfo(conanfile.name, "")
+            custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
+            lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+            save(custom_mylib_path, "")
+            save(lib_mylib_path, "")
+            conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
 
-        # Warn lib folder does not exist with correct result
-        conanfile = ConanFileMock()
-        conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo(conanfile.name, "")
-        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(lib_mylib_path, "")
-        no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
-        conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib"], result)
-        self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
-                      % no_folder_path, conanfile.output)
+            output.clear()
+            result = tools.collect_libs(conanfile)
+            self.assertEqual(["mylib"], result)
+            self.assertIn("Library 'mylib' was either already found in a previous "
+                          "'conanfile.cpp_info.libdirs' folder or appears several times with a "
+                          "different file extension", output.getvalue())
+
+            # Warn lib folder does not exist with correct result
+            conanfile = ConanFileMock()
+            conanfile.package_folder = temp_folder()
+            conanfile.cpp_info = CppInfo(conanfile.name, "")
+            lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+            save(lib_mylib_path, "")
+            no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
+            conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
+            output.clear()
+            result = tools.collect_libs(conanfile)
+            self.assertEqual(["mylib"], result)
+            self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
+                          % no_folder_path, output.getvalue())
 
     def test_self_collect_libs(self):
-        conanfile = ConanFileMock()
-        # Without package_folder
-        conanfile.package_folder = None
-        result = tools.collect_libs(conanfile)
-        self.assertEqual([], result)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            conanfile = ConanFileMock()
+            # Without package_folder
+            conanfile.package_folder = None
+            result = tools.collect_libs(conanfile)
+            self.assertEqual([], result)
 
-        # Default behavior
-        conanfile.package_folder = temp_folder()
-        mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(mylib_path, "")
-        conanfile.cpp_info = CppInfo("", "")
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib"], result)
+            # Default behavior
+            conanfile.package_folder = temp_folder()
+            mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+            save(mylib_path, "")
+            conanfile.cpp_info = CppInfo("", "")
+            result = tools.collect_libs(conanfile)
+            self.assertEqual(["mylib"], result)
 
-        # Custom folder
-        customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
-        save(customlib_path, "")
-        result = tools.collect_libs(conanfile, folder="custom_folder")
-        self.assertEqual(["customlib"], result)
+            # Custom folder
+            customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
+            save(customlib_path, "")
+            result = tools.collect_libs(conanfile, folder="custom_folder")
+            self.assertEqual(["customlib"], result)
 
-        # Custom folder doesn't exist
-        result = tools.collect_libs(conanfile, folder="fake_folder")
-        self.assertEqual([], result)
-        self.assertIn("Lib folder doesn't exist, can't collect libraries:", conanfile.output)
+            # Custom folder doesn't exist
+            output.clear()
+            result = tools.collect_libs(conanfile, folder="fake_folder")
+            self.assertEqual([], result)
+            self.assertIn("Lib folder doesn't exist, can't collect libraries:", output.getvalue())
 
-        # Use cpp_info.libdirs
-        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["customlib", "mylib"], result)
+            # Use cpp_info.libdirs
+            conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+            result = tools.collect_libs(conanfile)
+            self.assertEqual(["customlib", "mylib"], result)
 
-        # Custom folder with multiple libdirs should only collect from custom folder
-        self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
-        result = tools.collect_libs(conanfile, folder="custom_folder")
-        self.assertEqual(["customlib"], result)
+            # Custom folder with multiple libdirs should only collect from custom folder
+            self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
+            result = tools.collect_libs(conanfile, folder="custom_folder")
+            self.assertEqual(["customlib"], result)
 
-        # Warn same lib different folders
-        conanfile = ConanFileMock()
-        conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("", "")
-        custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
-        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(custom_mylib_path, "")
-        save(lib_mylib_path, "")
-        conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib"], result)
-        self.assertIn("Library 'mylib' was either already found in a previous "
-                      "'conanfile.cpp_info.libdirs' folder or appears several times with a "
-                      "different file extension", conanfile.output)
+            # Warn same lib different folders
+            conanfile = ConanFileMock()
+            conanfile.package_folder = temp_folder()
+            conanfile.cpp_info = CppInfo("", "")
+            custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
+            lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+            save(custom_mylib_path, "")
+            save(lib_mylib_path, "")
+            conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
+            output.clear()
+            result = tools.collect_libs(conanfile)
+            self.assertEqual(["mylib"], result)
+            self.assertIn("Library 'mylib' was either already found in a previous "
+                          "'conanfile.cpp_info.libdirs' folder or appears several times with a "
+                          "different file extension", output.getvalue())
 
-        # Warn lib folder does not exist with correct result
-        conanfile = ConanFileMock()
-        conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("", "")
-        lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
-        save(lib_mylib_path, "")
-        no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
-        conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
-        result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib"], result)
-        self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
-                      % no_folder_path, conanfile.output)
+            # Warn lib folder does not exist with correct result
+            conanfile = ConanFileMock()
+            conanfile.package_folder = temp_folder()
+            conanfile.cpp_info = CppInfo("", "")
+            lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
+            save(lib_mylib_path, "")
+            no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
+            conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
+            output.clear()
+            result = tools.collect_libs(conanfile)
+            self.assertEqual(["mylib"], result)
+            self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
+                          % no_folder_path, output.getvalue())

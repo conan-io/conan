@@ -11,7 +11,6 @@ from conans.paths import RUN_LOG_NAME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load
 
 
@@ -39,20 +38,19 @@ class ConanTraceTest(unittest.TestCase):
             """ % RUN_LOG_NAME)
 
         def _install_a_package(print_commands_to_output, generate_run_log_file):
-            out = TestBufferConanOutput()
-            runner = ConanRunner(print_commands_to_output, generate_run_log_file,
-                                 log_run_to_output=True, output=out)
-
             client = TestClient(servers=self.servers,
-                                users={"default": [("lasote", "mypass")]},
-                                runner=runner)
+                                users={"default": [("lasote", "mypass")]})
+            client.run("config set log.print_run_commands={}".format(print_commands_to_output))
+            client.run("config set log.run_to_file={}".format(generate_run_log_file))
+            client.run("config set log.run_to_output=True")
+
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": base})
             client.run("create . lasote/stable")
             pref = client.get_latest_prev(ref)
             package_dir = client.get_latest_pkg_layout(pref).package()
             log_file_packaged_ = os.path.join(package_dir, RUN_LOG_NAME)
-            out = "\n".join([str(out), str(client.out)])
+            out = "\n".join([str(client.out), str(client.out)])
             return log_file_packaged_, out
 
         log_file_packaged, output = _install_a_package(False, True)

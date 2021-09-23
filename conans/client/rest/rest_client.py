@@ -8,8 +8,7 @@ from conans.util.log import logger
 
 class RestApiClientFactory(object):
 
-    def __init__(self, output, requester, config, artifacts_properties=None):
-        self._output = output
+    def __init__(self, requester, config, artifacts_properties=None):
         self._requester = requester
         self._config = config
         self._artifacts_properties = artifacts_properties
@@ -17,7 +16,7 @@ class RestApiClientFactory(object):
 
     def new(self, remote, token, refresh_token, custom_headers):
         tmp = RestApiClient(remote, token, refresh_token, custom_headers,
-                            self._output, self._requester, self._config,
+                            self._requester, self._config,
                             self._cached_capabilities,
                             self._artifacts_properties)
         return tmp
@@ -28,7 +27,7 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, remote, token, refresh_token, custom_headers, output, requester,
+    def __init__(self, remote, token, refresh_token, custom_headers, requester,
                  config, cached_capabilities, artifacts_properties=None):
 
         # Set to instance
@@ -36,7 +35,6 @@ class RestApiClient(object):
         self._refresh_token = refresh_token
         self._remote_url = remote.url
         self._custom_headers = custom_headers
-        self._output = output
         self._requester = requester
 
         self._verify_ssl = remote.verify_ssl
@@ -49,7 +47,7 @@ class RestApiClient(object):
     def _capable(self, capability, user=None, password=None):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
-            tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
+            tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers,
                                 self._requester, self._config, self._verify_ssl,
                                 self._artifacts_properties)
             capabilities = tmp.server_capabilities(user, password)
@@ -66,7 +64,7 @@ class RestApiClient(object):
                                  "remotes that don't accept revisions.")
         matrix_params = self._capable(MATRIX_PARAMS)
         checksum_deploy = self._capable(CHECKSUM_DEPLOY)
-        return RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
+        return RestV2Methods(self._remote_url, self._token, self._custom_headers,
                              self._requester, self._config, self._verify_ssl,
                              self._artifacts_properties, checksum_deploy, matrix_params)
 
@@ -107,7 +105,7 @@ class RestApiClient(object):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     def authenticate(self, user, password):
-        api_v2 = RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
+        api_v2 = RestV2Methods(self._remote_url, self._token, self._custom_headers,
                                self._requester, self._verify_ssl, self._artifacts_properties)
 
         if self._refresh_token and self._token:

@@ -323,7 +323,7 @@ class MyPkg(ConanFile):
                 version = "0.1"
 
                 def package_info(self):
-                    self.output.warn("Hello, I'm HelloBar")
+                    self.output.warning("Hello, I'm HelloBar")
             ''')
 
         client.save({"conanfile.py": conanfile})

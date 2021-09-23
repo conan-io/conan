@@ -558,7 +558,7 @@ class MyPkg(ConanFile):
         """ Without user info, uploads should fail when login prompt has been disabled.
         """
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
-        client = TestClient(default_server_user=True)
+        client = TestClient(default_server_user=True, mock_input=False)
         client.save(files)
         client.run("config set general.non_interactive=True")
         client.run("create . user/testing")
@@ -574,7 +574,7 @@ class MyPkg(ConanFile):
     def test_upload_login_prompt_disabled_user_not_authenticated(self):
         # When a user is not authenticated, uploads should fail when login prompt has been disabled.
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
-        client = TestClient(default_server_user=True)
+        client = TestClient(default_server_user=True, mock_input=False)
         client.save(files)
         client.run("config set general.non_interactive=True")
         client.run("create . user/testing")

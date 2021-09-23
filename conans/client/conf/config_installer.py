@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from urllib.parse import urlparse
 
 from conans import load
+from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.tools import Git
@@ -48,25 +49,26 @@ def tmp_config_install_folder(cache):
         rmdir(tmp_folder)
 
 
-def _process_git_repo(config, cache, output):
+def _process_git_repo(config, cache):
+    output = ConanOutput()
     output.info("Trying to clone repo: %s" % config.uri)
     with tmp_config_install_folder(cache) as tmp_folder:
         with tools.chdir(tmp_folder):
             try:
                 args = config.args or ""
-                git = Git(verify_ssl=config.verify_ssl, output=output)
+                git = Git(verify_ssl=config.verify_ssl)
                 git.clone(config.uri, args=args)
                 output.info("Repo cloned!")
             except Exception as e:
                 raise ConanException("Can't clone repo: %s" % str(e))
-        _process_folder(config, tmp_folder, cache, output)
+        _process_folder(config, tmp_folder, cache)
 
 
-def _process_zip_file(config, zippath, cache, output, tmp_folder, first_remove=False):
-    unzip(zippath, tmp_folder, output=output)
+def _process_zip_file(config, zippath, cache, tmp_folder, first_remove=False):
+    unzip(zippath, tmp_folder)
     if first_remove:
         os.unlink(zippath)
-    _process_folder(config, tmp_folder, cache, output)
+    _process_folder(config, tmp_folder, cache)
 
 
 def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
@@ -86,7 +88,8 @@ def _filecopy(src, filename, dst):
     shutil.copyfile(src, dst)
 
 
-def _process_file(directory, filename, config, cache, output, folder):
+def _process_file(directory, filename, config, cache, folder):
+    output = ConanOutput()
     if filename == "settings.yml":
         output.info("Installing settings.yml")
         _filecopy(directory, filename, cache.cache_folder)
@@ -115,7 +118,7 @@ def _process_file(directory, filename, config, cache, output, folder):
             _filecopy(directory, filename, target_folder)
 
 
-def _process_folder(config, folder, cache, output):
+def _process_folder(config, folder, cache):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
@@ -123,17 +126,17 @@ def _process_folder(config, folder, cache, output):
     for root, dirs, files in walk(folder):
         dirs[:] = [d for d in dirs if d != ".git"]
         for f in files:
-            _process_file(root, f, config, cache, output, folder)
+            _process_file(root, f, config, cache, folder)
 
 
-def _process_download(config, cache, output, requester):
+def _process_download(config, cache, requester):
+    output = ConanOutput()
     with tmp_config_install_folder(cache) as tmp_folder:
         output.info("Trying to download  %s" % _hide_password(config.uri))
         zippath = os.path.join(tmp_folder, os.path.basename(config.uri))
         try:
-            tools.download(config.uri, zippath, out=output, verify=config.verify_ssl,
-                           requester=requester)
-            _process_zip_file(config, zippath, cache, output, tmp_folder, first_remove=True)
+            tools.download(config.uri, zippath, verify=config.verify_ssl, requester=requester)
+            _process_zip_file(config, zippath, cache, tmp_folder, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))
 
@@ -202,21 +205,21 @@ def _is_compressed_file(filename):
     return False
 
 
-def _process_config(config, cache, output, requester):
+def _process_config(config, cache, requester):
     try:
         if config.type == "git":
-            _process_git_repo(config, cache, output)
+            _process_git_repo(config, cache)
         elif config.type == "dir":
-            _process_folder(config, config.uri, cache, output)
+            _process_folder(config, config.uri, cache)
         elif config.type == "file":
             if _is_compressed_file(config.uri):
                 with tmp_config_install_folder(cache) as tmp_folder:
-                    _process_zip_file(config, config.uri, cache, output, tmp_folder)
+                    _process_zip_file(config, config.uri, cache, tmp_folder)
             else:
                 dirname, filename = os.path.split(config.uri)
-                _process_file(dirname, filename, config, cache, output, dirname)
+                _process_file(dirname, filename, config, cache, dirname)
         elif config.type == "url":
-            _process_download(config, cache, output, requester=requester)
+            _process_download(config, cache, requester=requester)
         else:
             raise ConanException("Unable to process config install: %s" % config.uri)
     except Exception as e:
@@ -239,7 +242,7 @@ def _load_configs(configs_file):
 
 def configuration_install(app, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None):
-    cache, output, requester = app.cache, app.out, app.requester
+    cache, requester = app.cache, app.requester
     configs = []
     configs_file = cache.config_install_file
     if os.path.isfile(configs_file):
@@ -253,21 +256,21 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
             config.config_type = config_type or config.type
             config.args = args or config.args
             config.verify_ssl = verify_ssl or config.verify_ssl
-            _process_config(config, cache, output, requester)
+            _process_config(config, cache, requester)
             _save_configs(configs_file, configs)
         else:
             if not configs:
                 raise ConanException("Called config install without arguments")
             # Execute the previously stored ones
             for config in configs:
-                output.info("Config install:  %s" % _hide_password(config.uri))
-                _process_config(config, cache, output, requester)
+                ConanOutput().info("Config install:  %s" % _hide_password(config.uri))
+                _process_config(config, cache, requester)
             touch(cache.config_install_file)
     else:
         # Execute and store the new one
         config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
                                          source_folder, target_folder)
-        _process_config(config, cache, output, requester)
+        _process_config(config, cache, requester)
         if config not in configs:
             configs.append(config)
         else:
@@ -300,7 +303,7 @@ def is_config_install_scheduled(api):
     :param api: Conan API instance
     :return: True, if it should occur now. Otherwise, False.
     """
-    cache = ClientCache(api.cache_folder, api.out)
+    cache = ClientCache(api.cache_folder)
     interval = cache.config.config_install_interval
     config_install_file = cache.config_install_file
     if interval is not None:
@@ -308,8 +311,8 @@ def is_config_install_scheduled(api):
             raise ConanException("config_install_interval defined, but no config_install file")
         scheduled = _is_scheduled_intervals(config_install_file, interval)
         if scheduled and not _load_configs(config_install_file):
-            api.out.warn("Skipping scheduled config install, "
-                         "no config listed in config_install file")
+            ConanOutput().warning("Skipping scheduled config install, "
+                                  "no config listed in config_install file")
             os.utime(config_install_file, None)
         else:
             return scheduled

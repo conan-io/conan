@@ -6,21 +6,14 @@ import zipfile
 from io import StringIO
 
 from conans.client import tools
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
+from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, redirect_output
 from conans.util.files import load, save
 
 
 class OutputTest(unittest.TestCase):
-
-    def test_simple_output(self):
-        stream = StringIO()
-        output = ConanOutput(stream)
-        output.rewrite_line("This is a very long line that has to be truncated somewhere, "
-                            "because it is so long it doesn't fit in the output terminal")
-        self.assertIn("This is a very long line that ha ... esn't fit in the output terminal",
-                      stream.getvalue())
 
     def test_error(self):
         client = TestClient()
@@ -53,10 +46,11 @@ class PkgConan(ConanFile):
         zipf.close()
 
         output_dir = os.path.join(tmp_dir, "output_dir")
-        new_out = StringIO()
-        tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
+        captured_output = RedirectedTestOutput()
+        with redirect_output(captured_output):
+            tools.unzip(zip_path, output_dir)
 
-        output = new_out.getvalue()
+        output = captured_output.getvalue()
         self.assertRegex(output, "Unzipping [\d]+B")
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
@@ -76,8 +70,9 @@ class PkgConan(ConanFile):
         zipf.close()
 
         output_dir = os.path.join(tmp_dir, "dst/"*40, "output_dir")
-        new_out = StringIO()
-        tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
+        captured_output = RedirectedTestOutput()
+        with redirect_output(captured_output):
+            tools.unzip(zip_path, output_dir, output=ConanOutput())
 
-        output = new_out.getvalue()
+        output = captured_output.getvalue()
         self.assertIn("ERROR: Error extract src/src", output)
