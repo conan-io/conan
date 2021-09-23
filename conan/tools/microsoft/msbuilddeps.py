@@ -7,7 +7,6 @@ from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conans.errors import ConanException
-from conans.model.build_info import DepCppInfo
 from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
@@ -142,7 +141,7 @@ class MSBuildDeps(object):
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
         return condition
 
-    def _vars_props_file(self, name, cpp_info, deps):
+    def _vars_props_file(self, name, cpp_info, deps, package_folder):
         """
         content for conan_vars_poco_x86_release.props, containing the variables
         """
@@ -153,11 +152,11 @@ class MSBuildDeps(object):
 
         fields = {
             'name': name,
-            'root_folder': cpp_info.rootpath,
-            'bin_dirs': "".join("%s;" % p for p in cpp_info.bin_paths),
-            'res_dirs': "".join("%s;" % p for p in cpp_info.res_paths),
-            'include_dirs': "".join("%s;" % p for p in cpp_info.include_paths),
-            'lib_dirs': "".join("%s;" % p for p in cpp_info.lib_paths),
+            'root_folder': package_folder,
+            'bin_dirs': "".join("%s;" % p for p in cpp_info.bindirs),
+            'res_dirs': "".join("%s;" % p for p in cpp_info.resdirs),
+            'include_dirs': "".join("%s;" % p for p in cpp_info.includedirs),
+            'lib_dirs': "".join("%s;" % p for p in cpp_info.libdirs),
             'libs': "".join([add_valid_ext(lib) for lib in cpp_info.libs]),
             'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
@@ -270,12 +269,13 @@ class MSBuildDeps(object):
         for dep in host_req + test_req:
             dep_name = dep.ref.name
             dep_name = dep_name.replace(".", "_")
-            cpp_info = DepCppInfo(dep.cpp_info)  # To account for automatic component aggregation
+            cpp_info = dep.new_cpp_info  # To account for automatic component aggregation
+            package_folder = dep.package_folder
             public_deps = [d.ref.name.replace(".", "_")
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
             # One file per configuration, with just the variables
             vars_props_name = "conan_%s_vars%s.props" % (dep_name, conf_name)
-            result[vars_props_name] = self._vars_props_file(dep_name, cpp_info, public_deps)
+            result[vars_props_name] = self._vars_props_file(dep_name, cpp_info, public_deps, package_folder)
             props_name = "conan_%s%s.props" % (dep_name, conf_name)
             result[props_name] = self._conf_props_file(dep_name, vars_props_name, public_deps)
 
