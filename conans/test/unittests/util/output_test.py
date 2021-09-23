@@ -1,12 +1,11 @@
-# -*- coding: utf-8 -*-
 import os
 import platform
 import unittest
 import zipfile
-from io import StringIO
+
+import pytest
 
 from conans.client import tools
-from conans.cli.output import ConanOutput
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, redirect_output
@@ -51,13 +50,12 @@ class PkgConan(ConanFile):
             tools.unzip(zip_path, output_dir)
 
         output = captured_output.getvalue()
-        self.assertRegex(output, "Unzipping [\d]+B")
+        self.assertRegex(output, r"Unzipping [\d]+B")
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires windows")
     def test_short_paths_unzip_output(self):
-        if platform.system() != "Windows":
-            return
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "src/"*40, "example.txt")
         save(file_path, "Hello world!")
@@ -72,7 +70,7 @@ class PkgConan(ConanFile):
         output_dir = os.path.join(tmp_dir, "dst/"*40, "output_dir")
         captured_output = RedirectedTestOutput()
         with redirect_output(captured_output):
-            tools.unzip(zip_path, output_dir, output=ConanOutput())
+            tools.unzip(zip_path, output_dir)
 
         output = captured_output.getvalue()
         self.assertIn("ERROR: Error extract src/src", output)

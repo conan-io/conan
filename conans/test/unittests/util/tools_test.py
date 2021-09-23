@@ -2,9 +2,7 @@
 import os
 import platform
 import subprocess
-import sys
 import unittest
-from collections import namedtuple
 
 import pytest
 import requests
@@ -342,45 +340,6 @@ class HelloConan(ConanFile):
         with patch('conans.client.tools.win.subprocess', myrunner):
             json = vswhere()
             self.assertNotIn("descripton", json)
-
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-    def test_run_in_bash(self):
-
-        class MockConanfile(object):
-            def __init__(self):
-
-                self.output = namedtuple("output", "info")(lambda x: None)  # @UnusedVariable
-                self.env = {"PATH": "/path/to/somewhere"}
-
-                class MyRun(object):
-                    def __call__(self, command, output, log_filepath=None,
-                                 cwd=None, subprocess=False):  # @UnusedVariable
-                        self.command = command
-                self._conan_runner = MyRun()
-
-        conanfile = MockConanfile()
-        with patch.object(OSInfo, "bash_path", return_value='bash'):
-            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn("bash", conanfile._conan_runner.command)
-            self.assertIn("--login -c", conanfile._conan_runner.command)
-            self.assertIn("^&^& a_command.bat ^", conanfile._conan_runner.command)
-
-        with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
-            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('path\\to\\mybash.exe --login -c', conanfile._conan_runner.command)
-
-        with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
-            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
-                                      with_login=False)
-            self.assertIn('"path with spaces\\to\\mybash.exe"  -c', conanfile._conan_runner.command)
-
-        # try to append more env vars
-        conanfile = MockConanfile()
-        with patch.object(OSInfo, "bash_path", return_value='bash'):
-            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
-                                      env={"PATH": "/other/path", "MYVAR": "34"})
-            self.assertIn('^&^& PATH=\\^"/other/path:/path/to/somewhere:$PATH\\^" '
-                          '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
     def test_download_retries_errors(self):
 
