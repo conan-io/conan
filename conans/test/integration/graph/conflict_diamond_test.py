@@ -4,6 +4,7 @@ import unittest
 
 from conans.client.tools import environment_append
 from conans.paths import CONANFILE
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, load
 import json
 
@@ -97,3 +98,18 @@ class ConflictDiamondTest(unittest.TestCase):
             self.assertEqual(hello0["reference"], "Hello0/0.1@lasote/stable")
             self.assertListEqual(sorted(hello0["required_by"]),
                                  sorted(["Hello2/0.1@lasote/stable", "Hello1/0.1@lasote/stable"]))
+
+
+def test_conflict_msg():
+    c = TestClient()
+    c.save({"lib/conanfile.py": GenConanfile(),
+            "conanfile.txt":  textwrap.dedent("""
+                                [requires]
+                                libdeflate/1.7
+                                [build_requires]
+                                libdeflate/1.8
+                                """)})
+    c.run("export lib libdeflate/1.7@")
+    c.run("export lib libdeflate/1.8@")
+    c.run("install .", assert_error=True)
+    assert "ERROR: Unresolvable conflict between libdeflate/1.7 and libdeflate/1.8" in c.out
