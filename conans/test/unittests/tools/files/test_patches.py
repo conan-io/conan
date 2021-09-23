@@ -93,7 +93,7 @@ def test_single_patch_type(mock_patch_ng):
         conanfile = ConanFileMock()
         conanfile.display_name = 'mocked/ref'
         patch(conanfile, patch_file='patch-file', patch_type='patch_type')
-    assert 'Apply patch (patch_type)\n' == output.getvalue()
+    assert 'mocked/ref: Apply patch (patch_type)\n' == output.getvalue()
 
 
 def test_single_patch_description(mock_patch_ng):
@@ -102,7 +102,7 @@ def test_single_patch_description(mock_patch_ng):
         conanfile = ConanFileMock()
         conanfile.display_name = 'mocked/ref'
         patch(conanfile, patch_file='patch-file', patch_description='patch_description')
-    assert 'Apply patch: patch_description\n' == output.getvalue()
+    assert 'mocked/ref: Apply patch: patch_description\n' == output.getvalue()
 
 
 def test_single_patch_extra_fields(mock_patch_ng):
@@ -112,7 +112,7 @@ def test_single_patch_extra_fields(mock_patch_ng):
         conanfile.display_name = 'mocked/ref'
         patch(conanfile, patch_file='patch-file', patch_type='patch_type',
               patch_description='patch_description')
-    assert 'Apply patch (patch_type): patch_description\n' == output.getvalue()
+    assert 'mocked/ref: Apply patch (patch_type): patch_description\n' == output.getvalue()
 
 
 def test_single_no_patchset(monkeypatch):
@@ -154,7 +154,7 @@ def test_multiple_no_version(mock_patch_ng):
              'patch_description': 'Needed to build with modern clang compilers.'}
         ]}
         apply_conandata_patches(conanfile)
-    assert 'Apply patch (backport): Needed to build with modern clang compilers.\n' \
+    assert 'mocked/ref: Apply patch (backport): Needed to build with modern clang compilers.\n' \
            == output.getvalue()
 
 
@@ -185,9 +185,9 @@ def test_multiple_with_version(mock_patch_ng):
         conanfile.version = "1.2.11"
 
         apply_conandata_patches(conanfile)
-    assert len(str(output.getvalue())) == 0
+        assert len(str(output.getvalue())) == 0
 
-    conanfile.version = "1.11.0"
-    apply_conandata_patches(conanfile)
-    assert 'Apply patch (backport): Needed to build with modern clang compilers.\n' \
-           == output.getvalue()
+        conanfile.version = "1.11.0"
+        apply_conandata_patches(conanfile)
+        assert 'mocked/ref: Apply patch (backport): Needed to build with modern clang compilers.\n' \
+               == output.getvalue()

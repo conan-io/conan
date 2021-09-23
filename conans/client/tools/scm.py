@@ -51,7 +51,7 @@ class SCMBase(object):
         self._username = username
         self._password = password
         self._runner = runner
-        self._scoped_output = scoped_output
+        self._scoped_output = scoped_output or ConanOutput()
 
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)

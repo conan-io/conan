@@ -57,7 +57,7 @@ class AuthorizeTest(unittest.TestCase):
     def test_auth_with_env(self):
 
         def _upload_with_credentials(credentials):
-            cli = TestClient(servers=self.servers, users=False)
+            cli = TestClient(servers=self.servers, mock_input=False)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
             cli.run("export . lasote/testing")
             with tools.environment_append(credentials):

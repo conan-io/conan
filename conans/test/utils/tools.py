@@ -426,8 +426,7 @@ class TestClient(object):
         self.tune_conan_conf(cache_folder, cpu_count)
 
         self.out = RedirectedTestOutput()
-        self.mocked_input = None
-
+        self.mock_input = mock_input
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
@@ -556,8 +555,8 @@ class TestClient(object):
             tuple if required
         """
 
-        if self.users is False:
-            # only used by test_auth_with_env
+        if not self.mock_input:
+            # Used by test_auth_with_env and some other tests that need the non mocked input
             return self._run(command_line, assert_error)
         else:
             self.mocked_input = MockedUserInput(non_interactive=False)
