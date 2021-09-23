@@ -15,17 +15,14 @@ from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager
 
 def _try_get_sources(ref, remote_manager, recipe_layout, remote):
     try:
-        remote_manager.get_recipe_revisions(ref, remote)
+        remote_manager.get_recipe_sources(ref, recipe_layout, remote)
     except NotFoundException:
         return
-    else:
-        try:
-            remote_manager.get_recipe_sources(ref, recipe_layout, remote)
-        except Exception as e:
-            msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
-                   "Probably it was installed from a remote that is no longer available.\n"
-                   % str(ref))
-            raise ConanException("\n".join([str(e), msg]))
+    except Exception as e:
+        msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
+               "Probably it was installed from a remote that is no longer available.\n"
+               % str(ref))
+        raise ConanException("\n".join([str(e), msg]))
     return remote
 
 
