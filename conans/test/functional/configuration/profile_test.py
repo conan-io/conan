@@ -73,7 +73,6 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install .. -pr=sub/profile")
         self.assertIn("conanfile.txt: Installing package", self.client.out)
 
-    @pytest.mark.tool_compiler
     def test_base_profile_generated(self):
         """we are testing that the default profile is created (when not existing, fresh install)
          even when you run a create with a profile"""
@@ -82,7 +81,6 @@ class ProfileTest(unittest.TestCase):
         self.client.run("create . conan/testing --profile myprofile")
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("export . lasote/stable")
@@ -169,7 +167,6 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("scopes_env", self.client.out)
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_install_profile_env(self):
         create_profile(self.client.cache.profiles_path, "envs", settings={},
                        env=[("A_VAR", "A_VALUE"),
@@ -339,7 +336,6 @@ class ProfileTest(unittest.TestCase):
         client.run("create . mypkg/0.1@ -pr=profile")
         assert "mypkg/0.1: SETTINGS! os=Linux!!" in client.out
 
-    @pytest.mark.tool_compiler
     def test_install_profile_options(self):
         create_profile(self.client.cache.profiles_path, "vs_12_86",
                        options=[("Hello0:language", 1),
@@ -353,7 +349,6 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("static=False", info)
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_scopes_env(self):
         # Create a profile and use it
         create_profile(self.client.cache.profiles_path, "scopes_env", settings={},
@@ -370,7 +365,6 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_default_including_another_profile(self):
         p1 = "include(p2)\n[env]\nA_VAR=1"
         p2 = "include(default)\n[env]\nA_VAR=2"
@@ -387,7 +381,6 @@ class ProfileTest(unittest.TestCase):
         self._assert_env_variable_printed("A_VAR", "1")
 
     @pytest.mark.xfail(reason="New environment changed")
-    @pytest.mark.tool_compiler
     def test_test_package(self):
         test_conanfile = '''from conans.model.conan_file import ConanFile
 from conans import CMake
@@ -447,7 +440,6 @@ class DefaultNameConan(ConanFile):
     def _assert_env_variable_printed(self, name, value):
         self.assertIn("%s=%s" % (name, value), self.client.out)
 
-    @pytest.mark.tool_compiler
     def test_info_with_profiles(self):
 
         self.client.run("remove '*' -f")
