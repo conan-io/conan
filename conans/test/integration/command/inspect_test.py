@@ -35,14 +35,14 @@ class ConanInspectTest(unittest.TestCase):
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: ('os', 'arch')", client.out)
         client.run("inspect pkg/0.1@user/channel -r=default -a settings")
-        self.assertIn("settings: os", client.out)
+        self.assertIn("settings: ['os']", client.out)
         client.run("inspect pkg/0.1@user/channel -a settings")
         # we got in cache the revision from the remote but still the latest
         # revision in cache is the last we created
         self.assertIn("settings: ('os', 'arch')", client.out)
         client.run("remove * -f")
         client.run("inspect pkg/0.1@user/channel -a settings")
-        self.assertIn("settings: os", client.out)
+        self.assertIn("settings: ['os']", client.out)
 
     def test_inspect_not_in_remote(self):
         client = TestClient(default_server_user=True)
@@ -50,13 +50,13 @@ class ConanInspectTest(unittest.TestCase):
         client.run("export . user/channel")
 
         client.run("inspect pkg/0.1@user/channel -a settings")
-        self.assertIn("settings: os", client.out)
+        self.assertIn("settings: ['os']", client.out)
 
         client.run("inspect pkg/0.1@user/channel -a settings -r default", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'pkg/0.1@user/channel'", client.out)
 
         client.run("inspect pkg/0.1@user/channel -a settings")
-        self.assertIn("settings: os", client.out)
+        self.assertIn("settings: ['os']", client.out)
 
     def test_name_version(self):
         server = TestServer()
@@ -198,7 +198,7 @@ license: MIT
 author: John Doe
 description: Yet Another Test
 topics: ('foo', 'bar', 'qux')
-generators: cmake
+generators: ['cmake']
 exports: None
 exports_sources: None
 short_paths: False

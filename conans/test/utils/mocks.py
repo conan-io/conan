@@ -1,12 +1,12 @@
 import os
-from collections import Counter, defaultdict, namedtuple
+from collections import Counter, namedtuple
 from io import StringIO
 
-from conans import ConanFile, Options
+from conans import ConanFile
 from conans.client.userio import UserInput
 from conans.model.conf import ConfDefinition
 from conans.model.layout import Folders
-from conans.model.options import PackageOptions
+from conans.model.options import PackageOptions, Options
 
 
 class LocalDBMock(object):

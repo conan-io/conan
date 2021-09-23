@@ -78,7 +78,6 @@ class ConanFile:
             self.generators = [self.generators]
         if isinstance(self.settings, str):
             self.settings = [self.settings]
-        self.options = Options.create_options(self.options, self.default_options)
         self.requires = Requirements(getattr(self, "requires", None),
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None))
@@ -153,6 +152,9 @@ class ConanFile:
         return self._conan_buildenv
 
     def initialize(self, settings, buildenv=None):
+        # If we move this to constructor, the python_require inheritance in init fails
+        # and "conan inspect" also breaks
+        self.options = Options.create_options(self.options, self.default_options)
         self._conan_buildenv = buildenv
         try:
             settings.constraint(self.settings or [])
