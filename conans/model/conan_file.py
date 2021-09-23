@@ -31,7 +31,7 @@ class ConanFile:
     description = None
     topics = None
     homepage = None
-    
+
     build_policy = None
     short_paths = False
     exports = None
@@ -155,7 +155,7 @@ class ConanFile:
     def initialize(self, settings, buildenv=None):
         self._conan_buildenv = buildenv
         try:
-            settings.constraint(self.settings)
+            settings.constraint(self.settings or [])
         except Exception as e:
             raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
                 self.display_name, str(e)))
