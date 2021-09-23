@@ -17,9 +17,8 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter, ConanInvalidConfiguration,
-                           ConanReferenceDoesNotExistInDB)
-from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
+                           conanfile_exception_formatter, ConanInvalidConfiguration)
+from conans.model.build_info import CppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
