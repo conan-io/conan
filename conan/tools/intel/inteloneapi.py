@@ -19,9 +19,6 @@ import os
 import platform
 import textwrap
 
-import six
-
-from conan.tools.env import Environment
 from conan.tools.env.environment import create_env_script
 from conans.client.tools.win import is_win64, _system_registry_key
 from conans.errors import ConanException
@@ -37,7 +34,6 @@ def is_using_intel_oneapi(compiler_version):
 
 def get_inteloneapi_installation_path():
     system = platform.system()
-    installation_path = None
     # Let's try the default dirs
     if system == "Windows":
         if is_win64():
@@ -153,10 +149,10 @@ class IntelOneAPI:
         """
         # Let's check if user wants to use some custom arguments to run the setvars script
         command_args = self._conanfile.conf["tools.intel:setvars_args"] or ""
-
-        if str(Environment(self._conanfile).get("SETVARS_COMPLETED", "")) == "1" \
-                and "force" not in command_args:
-            return "echo Conan:intel_setvars already set! Pass '--force' if you want to reload it."
+        # The setvars script is going to be loaded/cleared up every conanfile.run() execution
+        # but we will check this env variable just in case
+        if str(os.getenv("SETVARS_COMPLETED", "")) == "1" and "force" not in command_args:
+            return "echo Conan:intel_setvars already set! Pass --force if you want to reload it"
 
         system = platform.system()
         svars = "setvars.bat" if system == "Windows" else "setvars.sh"
@@ -167,8 +163,7 @@ class IntelOneAPI:
             command = ". " + command  # dot is more portable than source
         # If user has passed custom arguments
         if command_args:
-            command += command_args if isinstance(command_args, six.string_types) \
-                else ' '.join(command_args)
+            command += " %s" % command_args
             return command
         # Add architecture argument
         if self.arch == "x86_64":
