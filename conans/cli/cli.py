@@ -180,7 +180,7 @@ def main(args):
         return v1_main(args)
 
     try:
-        conan_api = Conan(quiet=False)
+        conan_api = Conan()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
