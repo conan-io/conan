@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 
-from conans.model.build_info import CppInfo, DepCppInfo
+from conans.model.build_info import CppInfo
 
 
 @pytest.mark.xfail(reason="DepsCppInfo removed")
