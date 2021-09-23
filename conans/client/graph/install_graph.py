@@ -18,7 +18,8 @@ class _InstallGraphPackage:
     def add(self, node):
         assert self.package_id == node.pref.id
         assert self.binary == node.binary
-        assert self.context == node.context
+        # The context might vary, but if same package_id, all fine
+        # assert self.context == node.context
         assert self.prev == node.prev
         self.nodes.append(node)
 
