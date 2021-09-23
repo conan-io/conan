@@ -4,7 +4,6 @@ import re
 from jinja2 import Template
 
 from conans import __version__ as client_version
-from conans.client.cmd.new_ci import ci_get_files
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, get_reference_fields
 from conans.util.files import load
@@ -317,11 +316,7 @@ def _get_files_from_template_dir(template_dir, name, version, package_name, defi
 
 
 def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-            visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
-            osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
-            gitlab_gcc_versions=None, gitlab_clang_versions=None,
-            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
-            template=None, cache=None, defines=None):
+            gitignore=None, template=None, cache=None, defines=None):
     try:
         name, version, user, channel, revision = get_reference_fields(ref, user_channel_input=False)
         # convert "package_name" -> "PackageName"
@@ -423,10 +418,4 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
     if gitignore:
         files[".gitignore"] = gitignore_template
 
-    files.update(ci_get_files(name, version, user, channel, visual_versions,
-                              linux_gcc_versions, linux_clang_versions,
-                              osx_clang_versions, shared, upload_url,
-                              gitlab_gcc_versions, gitlab_clang_versions,
-                              circleci_gcc_versions, circleci_clang_versions,
-                              circleci_osx_versions))
     return files

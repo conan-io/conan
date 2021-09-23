@@ -10,7 +10,6 @@ from conans.client.userio import UserIO
 from conans.model.conf import ConfDefinition
 from conans.model.layout import Folders
 from conans.model.options import PackageOptions
-from conans.model.user_info import DepsUserInfo
 
 
 class LocalDBMock(object):
@@ -97,33 +96,10 @@ class MockCppInfo(object):
         self.framework_paths = []
 
 
-class MockDepsCppInfo(defaultdict):
-
-    def __init__(self):
-        super(MockDepsCppInfo, self).__init__(MockCppInfo)
-        self.include_paths = []
-        self.lib_paths = []
-        self.libs = []
-        self.defines = []
-        self.cflags = []
-        self.cxxflags = []
-        self.sharedlinkflags = []
-        self.exelinkflags = []
-        self.sysroot = ""
-        self.frameworks = []
-        self.framework_paths = []
-        self.system_libs = []
-
-    @property
-    def deps(self):
-        return self.keys()
-
-
 class MockConanfile(ConanFile):
 
     def __init__(self, settings, options=None, runner=None):
         self.folders = Folders()
-        self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
         self.settings_build = settings
         self.runner = runner
@@ -156,8 +132,6 @@ class ConanFileMock(ConanFile):
         if options_values:
             for var, value in options_values.items():
                 self.options._data[var] = value
-        self.deps_cpp_info = MockDepsCppInfo()  # ("deps_cpp_info", "sysroot")("/path/to/sysroot")
-        self.deps_cpp_info.sysroot = "/path/to/sysroot"
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
         if shared is not None:
@@ -168,7 +142,6 @@ class ConanFileMock(ConanFile):
         self.should_test = True
         self.generators = []
         self.captured_env = {}
-        self.deps_user_info = DepsUserInfo()
         self.folders = Folders()
         self.folders.set_base_source(".")
         self.folders.set_base_build(".")

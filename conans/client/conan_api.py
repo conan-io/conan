@@ -19,7 +19,6 @@ from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
 from conans.client.conf.required_version import check_required_conan_version
-from conans.client.generators import GeneratorManager
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
@@ -187,10 +186,8 @@ class ConanApp(object):
 
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
-        self.generator_manager = GeneratorManager()
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.out,
-                                      self.generator_manager, self.pyreq_loader, self.requester)
+        self.loader = ConanFileLoader(self.runner, self.out, self.pyreq_loader, self.requester)
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
                                           self.proxy, self.range_resolver, self.binaries_analyzer)
@@ -231,25 +228,11 @@ class ConanAPIV1(object):
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-            cwd=None, visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
-            osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
-            gitlab_gcc_versions=None, gitlab_clang_versions=None,
-            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
-            template=None, defines=None):
+            cwd=None, template=None, defines=None, gitignore=None):
         from conans.client.cmd.new import cmd_new
         cwd = os.path.abspath(cwd or os.getcwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
-                        exports_sources=exports_sources, bare=bare,
-                        visual_versions=visual_versions,
-                        linux_gcc_versions=linux_gcc_versions,
-                        linux_clang_versions=linux_clang_versions,
-                        osx_clang_versions=osx_clang_versions, shared=shared,
-                        upload_url=upload_url, gitignore=gitignore,
-                        gitlab_gcc_versions=gitlab_gcc_versions,
-                        gitlab_clang_versions=gitlab_clang_versions,
-                        circleci_gcc_versions=circleci_gcc_versions,
-                        circleci_clang_versions=circleci_clang_versions,
-                        circleci_osx_versions=circleci_osx_versions,
+                        exports_sources=exports_sources, bare=bare, gitignore=gitignore,
                         template=template, cache=self.app.cache, defines=defines)
 
         save_files(cwd, files)

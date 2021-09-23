@@ -1,18 +1,21 @@
+import hashlib
+import hashlib
 import os
 import shutil
 import time
 import uuid
 from io import StringIO
 
+from conan.cache.conan_reference import ConanReference
+from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
 from conan.cache.db.cache_database import CacheDatabase
-from conan.cache.conan_reference import ConanReference
-from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conans.errors import ConanException, ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB
+from conans.errors import ConanException, ConanReferenceAlreadyExistsInDB, \
+    ConanReferenceDoesNotExistInDB
 from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
-from conans.util.files import md5, rmdir
+from conans.util.files import rmdir
 
 
 class DataCache:
@@ -48,12 +51,24 @@ class DataCache:
         return self._base_folder
 
     @staticmethod
+    def _short_hash_path(hash):
+        """:param hash: Unicode text to reduce"""
+        hash = hash.encode("utf-8")
+        md = hashlib.sha256()
+        md.update(hash)
+        sha_bytes = md.hexdigest()
+        # len based on: https://github.com/conan-io/conan/pull/9595#issuecomment-918976451
+        return sha_bytes[0:16]
+
+    @staticmethod
     def _get_tmp_path():
-        return os.path.join("tmp", str(uuid.uuid4()))
+        hash = DataCache._short_hash_path(str(uuid.uuid4()))
+        return os.path.join("tmp", hash)
 
     @staticmethod
     def _get_path(ref: ConanReference):
-        return md5(ref.full_reference)
+        value = ref.full_reference
+        return DataCache._short_hash_path(value)
 
     def create_tmp_reference_layout(self, ref: ConanReference):
         assert not ref.rrev, "Recipe revision should be unknown"

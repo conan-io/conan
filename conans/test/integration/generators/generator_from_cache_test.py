@@ -5,11 +5,14 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="Rethink cache generators for conan 2.0")
 class GeneratorFromCacheTest(unittest.TestCase):
     """
     Tests user defined generators loaded from the generators folder in

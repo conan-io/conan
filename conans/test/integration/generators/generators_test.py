@@ -22,21 +22,6 @@ unknown
         client.run("install . --build", assert_error=True)
         self.assertIn("ERROR: Invalid generator 'unknown'. Available types:", client.out)
 
-    def test_base(self):
-        base = '''
-[generators]
-ycm
-    '''
-        files = {"conanfile.txt": base}
-        client = TestClient()
-        client.save(files)
-        client.run("install . --build")
-
-        self.assertEqual(sorted(['conanfile.txt',
-                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
-                                 LOCKFILE]),
-                         sorted(os.listdir(client.current_folder)))
-
     @pytest.mark.xfail(reason="Generator qmake generator to be revisited")
     def test_srcdirs(self):
         client = TestClient()
