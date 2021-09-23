@@ -6,16 +6,13 @@ from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
 from conans.client.output import ScopedOutput
 
-from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
-from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Patterns, Infos
 from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options
 from conans.model.requires import Requirements
-from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 
 
@@ -164,12 +161,9 @@ class ConanFile(object):
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
-        self.deps_cpp_info = DepsCppInfo()
 
         # user declared variables
         self.user_info = None
-        # Keys are the package names (only 'host' if different contexts)
-        self.deps_user_info = DepsUserInfo()
 
         if self.description is not None and not isinstance(self.description, str):
             raise ConanException("Recipe 'description' must be a string.")

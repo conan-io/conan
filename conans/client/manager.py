@@ -1,6 +1,6 @@
 import os
 
-from conans.client.generators import write_toolchain
+from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
@@ -72,10 +72,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         generators = set(generators) if generators else set()
         tmp.extend([g for g in generators if g not in tmp])
         conanfile.generators = tmp
-        app.generator_manager.write_generators(conanfile, install_folder,
-                                               conanfile.generators_folder,
-                                               output)
-        write_toolchain(conanfile, conanfile.generators_folder, output)
+        write_generators(conanfile, output)
 
         if not isinstance(ref_or_path, ConanFileReference):
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)

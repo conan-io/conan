@@ -13,7 +13,6 @@ from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration, \
     conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
-from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
@@ -23,9 +22,8 @@ from conans.util.files import load
 
 class ConanFileLoader(object):
 
-    def __init__(self, runner, output, generator_manager=None, pyreq_loader=None, requester=None):
+    def __init__(self, runner, output,  pyreq_loader=None, requester=None):
         self._runner = runner
-        self._generator_manager = generator_manager
         self._output = output
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
@@ -49,7 +47,7 @@ class ConanFileLoader(object):
             return conanfile, cached[2]
 
         try:
-            module, conanfile = parse_conanfile(conanfile_path, self._generator_manager)
+            module, conanfile = parse_conanfile(conanfile_path)
 
             # This is the new py_requires feature, to supersede the old python_requires
             if self._pyreq_loader:
@@ -94,8 +92,6 @@ class ConanFileLoader(object):
             if (name.startswith("_") or not inspect.isclass(attr) or
                     attr.__dict__.get("__module__") != module_id):
                 continue
-            if issubclass(attr, Generator) and attr != Generator:
-                self._generator_manager.add(attr.__name__, attr, custom=True)
 
     @staticmethod
     def _load_data(conanfile_path):
@@ -344,7 +340,7 @@ class ConanFileLoader(object):
         return conanfile
 
 
-def _parse_module(conanfile_module, module_id, generator_manager):
+def _parse_module(conanfile_module, module_id):
     """ Parses a python in-memory module, to extract the classes, mainly the main
     class defining the Recipe, but also process possible existing generators
     @param conanfile_module: the module to be processed
@@ -361,8 +357,6 @@ def _parse_module(conanfile_module, module_id, generator_manager):
                 result = attr
             else:
                 raise ConanException("More than 1 conanfile in the file")
-        elif issubclass(attr, Generator) and attr != Generator:
-            generator_manager.add(attr.__name__, attr, custom=True)
 
     if result is None:
         raise ConanException("No subclass of ConanFile")
@@ -370,10 +364,10 @@ def _parse_module(conanfile_module, module_id, generator_manager):
     return result
 
 
-def parse_conanfile(conanfile_path, generator_manager):
+def parse_conanfile(conanfile_path):
     module, filename = _parse_conanfile(conanfile_path)
     try:
-        conanfile = _parse_module(module, filename, generator_manager)
+        conanfile = _parse_module(module, filename)
         return module, conanfile
     except Exception as e:  # re-raise with file name
         raise ConanException("%s: %s" % (conanfile_path, str(e)))
