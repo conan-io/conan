@@ -3,6 +3,7 @@ import os
 import textwrap
 import unittest
 
+
 from conans.client import tools
 from conans.client.runner import ConanRunner
 from conans.model.ref import ConanFileReference
@@ -86,6 +87,7 @@ class ConanTraceTest(unittest.TestCase):
 
         traces = load(trace_file)
         self.assertNotIn("mypass", traces)
+        self.assertIn('"password": "**********"', traces)
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()

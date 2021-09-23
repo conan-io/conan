@@ -33,6 +33,7 @@ from conans.paths import get_conan_user_home
 from conans.search.search import search_packages
 from conans.tools import set_global_instances
 from conans.util.log import configure_logger
+from conans.util.tracer import log_command
 
 
 class ConanApp(object):
@@ -110,6 +111,7 @@ def api_method(f):
         _init_stream(sys.stderr)
 
         try:
+            log_command(f.__name__, kwargs)
             api.create_app()
             with environment_append(api.app.cache.config.env_vars):
                 return f(api, *args, **kwargs)
