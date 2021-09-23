@@ -23,7 +23,7 @@ from conans.model.ref import ConanFileReference, PackageReference, get_reference
     check_valid_ref
 from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import exception_message_safe
+from conans.util.files import exception_message_safe, load
 from conans.util.files import save
 from conans.util.log import logger
 from conans.assets import templates
@@ -592,6 +592,30 @@ class Command(object):
             self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
             for key, value in DEFAULT_CONFIGURATION.items():
                 self._out.writeln("{}: {}".format(key, value))
+
+    def build_order(self, *args):
+        """
+        Merge build orders
+        """
+        parser = argparse.ArgumentParser(description=self.build_order.__doc__,
+                                         prog="conan build-order",
+                                         formatter_class=SmartFormatter)
+        parser.add_argument("--file", nargs="?", action=Extender,
+                            help="Files to be merged")
+        parser.add_argument("--build-order", action=OnceArgument,
+                            help='Return the build-order, in json')
+
+        args = parser.parse_args(*args)
+
+        result = InstallGraph()
+        for f in args.file:
+            f = _make_abs_path(f)
+            install_graph = InstallGraph.deserialize(json.loads(load(f)))
+            result.merge(install_graph)
+
+        install_order_serialized = result.install_build_order()
+        save(_make_abs_path(args.build_order), json.dumps(install_order_serialized, indent=4))
+        return
 
     def info(self, *args):
         """

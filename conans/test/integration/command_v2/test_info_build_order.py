@@ -23,10 +23,9 @@ def test_info_build_order():
                 "depends": [],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "pref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         "context": "host",
                         "binary": "Build",
-                        "prev": None,
                         "options": []
                     }
                 ]
@@ -40,10 +39,9 @@ def test_info_build_order():
                 ],
                 "packages": [
                     {
-                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "pref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd:486166899301ccd88a8b71715c97eeea5cc3ff2b",
                         "context": "host",
                         "binary": "Build",
-                        "prev": None,
                         "options": []
                     }
                 ]
@@ -70,10 +68,9 @@ def test_info_build_order_build_require():
                 "depends": [],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "pref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         "context": "build",
                         "binary": "Build",
-                        "prev": None,
                         "options": []
                     }
                 ]
@@ -87,10 +84,9 @@ def test_info_build_order_build_require():
                 ],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "pref": "pkg/0.1#1364f701b47130c7e38f04c5e5fab985:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         "context": "host",
                         "binary": "Build",
-                        "prev": None,
                         "options": []
                     }
                 ]
@@ -115,7 +111,6 @@ def test_info_build_order_options():
 
     c.run("info  consumer --build-order=bo.json --build=missing")
     bo_json = json.loads(c.load("bo.json"))
-    print(c.load("bo.json"))
 
     result = [
         [
@@ -124,10 +119,9 @@ def test_info_build_order_options():
                 "depends": [],
                 "packages": [
                     {
-                        "package_id": "3da64a6c9584c99ed46ddf3a929787da9075a475",
+                        "pref": "tool/0.1#b6299fc637530d547c7eaa047d1da91d:3da64a6c9584c99ed46ddf3a929787da9075a475",
                         "context": "build",
                         "binary": "Build",
-                        "prev": None,
                         "options": [
                             [
                                 "myopt",
@@ -136,10 +130,9 @@ def test_info_build_order_options():
                         ]
                     },
                     {
-                        "package_id": "656515670a0b81a38777e89d7984090eadc9919d",
+                        "pref": "tool/0.1#b6299fc637530d547c7eaa047d1da91d:656515670a0b81a38777e89d7984090eadc9919d",
                         "context": "build",
                         "binary": "Build",
-                        "prev": None,
                         "options": [
                             [
                                 "myopt",
@@ -158,10 +151,9 @@ def test_info_build_order_options():
                 ],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "pref": "dep1/0.1#36716458443ac8c76bf2e905323b331c:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         "context": "host",
                         "binary": "Build",
-                        "prev": None,
                         "options": [
                             [
                                 "tool:myopt",
@@ -178,10 +170,9 @@ def test_info_build_order_options():
                 ],
                 "packages": [
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "pref": "dep2/0.1#d7154a7eee8e107438768c1542ca1b70:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         "context": "host",
                         "binary": "Build",
-                        "prev": None,
                         "options": [
                             [
                                 "tool:myopt",
@@ -197,7 +188,6 @@ def test_info_build_order_options():
     assert bo_json == result
 
 
-@pytest.mark.xfail(reason="Ongoing work of merging build-orders")
 def test_info_build_order_multi_product():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
@@ -208,38 +198,58 @@ def test_info_build_order_multi_product():
     c.run("export pkg pkg/0.1@")
     c.run("export pkg pkg/0.2@")
     c.run("info consumer1 --build-order=bo1.json --build=missing")
+    print(c.load("bo1.json"))
     c.run("info consumer2 --build-order=bo2.json --build=missing")
+    c.run("build_order --file=bo1.json --file=bo2.json --build-order=bo3.json")
 
-    bo_json = json.loads(c.load("bo2.json"))
+    print(c.load("bo3.json"))
+
+    bo_json = json.loads(c.load("bo3.json"))
 
     result = [
-        [{
-            "id": 1,
-            "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
-            "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
-            "context": "host",
-            "files": ["bo1.json", "bo2.json"],
-            "options": [],
-            "depends": []
-        }],
-        [{
-            "id": 2,
-            "ref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
-            "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
-            "context": "host",
-            "files": ["bo1.json"],
-            "options": [],
-            "depends": [1]
-        },
-        {
-            "id": 3,
-            "ref": "pkg/0.2#447b56f0334b7e2a28aa86e218c8b3bd",
-            "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
-            "context": "host",
-            "files": ["bo2.json"],
-            "options": [],
-            "depends": [1]
-        }
+        [
+            {
+                "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "depends": [],
+                "packages": [
+                    {
+                        "pref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "context": "host",
+                        "binary": "Build",
+                        "options": []
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "ref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
+                "depends": [
+                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                ],
+                "packages": [
+                    {
+                        "pref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd:486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "context": "host",
+                        "binary": "Build",
+                        "options": []
+                    }
+                ]
+            },
+            {
+                "ref": "pkg/0.2#447b56f0334b7e2a28aa86e218c8b3bd",
+                "depends": [
+                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                ],
+                "packages": [
+                    {
+                        "pref": "pkg/0.2#447b56f0334b7e2a28aa86e218c8b3bd:486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "context": "host",
+                        "binary": "Build",
+                        "options": []
+                    }
+                ]
+            }
         ]
     ]
 

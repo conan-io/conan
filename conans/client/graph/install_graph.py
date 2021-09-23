@@ -4,54 +4,78 @@ from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SK
     BINARY_MISSING, BINARY_INVALID, BINARY_ERROR
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
+from conans.model.ref import PackageReference, ConanFileReference
 
 
 class _InstallGraphPackage:
-    def __init__(self, node):
-        self.pref = node.pref
-        self.package_id = node.pref.id
-        self.prev = node.pref.revision
-        self.nodes = [node]  # GraphNode
-        self.binary = node.binary
-        self.context = node.context
+    def __init__(self):
+        self.pref = None
+        self.nodes = []  # GraphNode
+        self.binary = None
+        self.context = None
+        self.options = []
+
+    @staticmethod
+    def create(node):
+        result = _InstallGraphPackage()
+        result.pref = node.pref
+        result.binary = node.binary
+        result.context = node.context
+        # FIXME: The aggregation of the upstream options is not correct here
+        result.options = node.conanfile.options.values.as_list()
+        result.nodes.append(node)
+        return result
 
     def add(self, node):
-        assert self.package_id == node.pref.id
+        assert self.pref == node.pref
         assert self.binary == node.binary
         # The context might vary, but if same package_id, all fine
         # assert self.context == node.context
-        assert self.prev == node.prev
         self.nodes.append(node)
 
     def serialize(self):
-        node = self.nodes[0]
-        # FIXME: The aggregation of the upstream is not correct here
-        options = node.conanfile.options.values.as_list()
-        return {"package_id": self.package_id,
+        return {"pref": repr(self.pref),
                 "context": self.context,
                 "binary": self.binary,
-                "prev": self.prev,
-                "options": options,
-                }
+                "options": self.options}
+
+    @staticmethod
+    def deserialize(data):
+        result = _InstallGraphPackage()
+        result.pref = PackageReference.loads(data["pref"])
+        result.binary = data["binary"]
+        result.context = data["context"]
+        result.options = data["options"]
+        return result
 
 
 class _InstallGraphNode:
-    def __init__(self, node):
-        self.ref = node.ref
+    def __init__(self):
+        self.ref = None
         self.packages = []
         self._package_ids = {}
         self.depends = []  # Other refs
-        self.add(node)
+
+    @staticmethod
+    def create(node):
+        result = _InstallGraphNode()
+        result.ref = node.ref
+        result.add(node)
+        return result
+
+    def merge(self, other):
+        assert self.ref == other.ref
+        
 
     def add(self, node):
-        pkg = _InstallGraphPackage(node)
         if node.pref.id == PACKAGE_ID_UNKNOWN:
-            self.packages.append(pkg)
+            self.packages.append(_InstallGraphPackage.create(node))
         else:
             existing = self._package_ids.get(node.pref.id)
             if existing is not None:
                 existing.add(node)
             else:
+                pkg = _InstallGraphPackage.create(node)
                 self.packages.append(pkg)
                 self._package_ids[node.pref.id] = pkg
 
@@ -65,6 +89,16 @@ class _InstallGraphNode:
                 "packages": [p.serialize() for p in self.packages],
                 }
 
+    @staticmethod
+    def deserialize(data):
+        result = _InstallGraphNode()
+        result.ref = ConanFileReference.loads(data["ref"])
+        for d in data["depends"]:
+            result.depends.append(ConanFileReference.loads(d))
+        for p in data["packages"]:
+            result.packages.append(_InstallGraphPackage.deserialize(p))
+        return result
+
 
 class InstallGraph:
     """ A graph containing the package references in order to be built/downloaded
@@ -76,6 +110,23 @@ class InstallGraph:
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
 
+    def merge(self, other):
+        for ref, install_node in other._nodes.items():
+            existing = self._nodes.get(ref)
+            if existing is None:
+                self._nodes[ref] = install_node
+            else:
+                existing.merge(install_node)
+
+    @staticmethod
+    def deserialize(data):
+        result = InstallGraph()
+        for level in data:
+            for item in level:
+                elem = _InstallGraphNode.deserialize(item)
+                result._nodes[elem.ref] = elem
+        return result
+
     def _initialize_deps_graph(self, deps_graph):
         for node in deps_graph.ordered_iterate():
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary == BINARY_SKIP:
@@ -83,7 +134,7 @@ class InstallGraph:
 
             existing = self._nodes.get(node.ref)
             if existing is None:
-                self._nodes[node.ref] = _InstallGraphNode(node)
+                self._nodes[node.ref] = _InstallGraphNode.create(node)
             else:
                 existing.add(node)
 
