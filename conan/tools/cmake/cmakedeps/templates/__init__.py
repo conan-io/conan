@@ -98,8 +98,6 @@ class CMakeDepsFileTemplate(object):
                 return ret
 
         ret = req.new_cpp_info.get_property("cmake_target_name", "CMakeDeps")
-        if not ret:
-            ret = req.cpp_info.get_name("cmake_find_package_multi", default_name=False)
         return ret or req.ref.name
 
     def get_component_alias(self, req, comp_name):
@@ -115,7 +113,4 @@ class CMakeDepsFileTemplate(object):
             if ret:
                 return ret
         ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
-        if not ret:
-            ret = req.cpp_info.components[comp_name].get_name("cmake_find_package_multi",
-                                                              default_name=False)
         return ret or comp_name
