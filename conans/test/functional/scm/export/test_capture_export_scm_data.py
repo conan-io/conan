@@ -52,7 +52,6 @@ class CaptureExportSCMDataTest(unittest.TestCase):
                 conanfile=conanfile,
                 conanfile_dir=self.conanfile_dir,
                 recipe_layout=None,
-                output=ConanOutput(),
                 ignore_dirty=True)
 
         self.assertEqual(scm_data.url, url)
@@ -79,7 +78,6 @@ class CaptureExportSCMDataTest(unittest.TestCase):
                 conanfile=conanfile,
                 conanfile_dir=self.conanfile_dir,
                 recipe_layout=None,
-                output=ConanOutput(),
                 ignore_dirty=False)
 
         self.assertEqual(scm_data.url, url)
@@ -109,7 +107,6 @@ class CaptureExportSCMDataTest(unittest.TestCase):
                         conanfile=conanfile,
                         conanfile_dir=self.conanfile_dir,
                         recipe_layout=None,
-                        output=ConanOutput(),
                         ignore_dirty=True)
 
         self.assertEqual(scm_data.url, url)

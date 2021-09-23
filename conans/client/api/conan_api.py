@@ -90,7 +90,6 @@ class ConanApp(object):
 def api_method(f):
     """Useful decorator to manage Conan API methods"""
 
-
     def _init_stream(stream):
         init_colorama(stream)
         stream_handler = TqdmHandler(stream)

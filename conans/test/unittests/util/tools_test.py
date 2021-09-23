@@ -805,6 +805,7 @@ class CollectLibTestCase(unittest.TestCase):
             result = tools.collect_libs(conanfile, folder="fake_folder")
             self.assertEqual([], result)
             self.assertIn("Lib folder doesn't exist, can't collect libraries:", output.getvalue())
+            output.clear()
 
             # Use cpp_info.libdirs
             conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
@@ -825,9 +826,9 @@ class CollectLibTestCase(unittest.TestCase):
             save(custom_mylib_path, "")
             save(lib_mylib_path, "")
             conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-            output = RedirectedTestOutput()
-            with redirect_output(output):
-                result = tools.collect_libs(conanfile)
+
+            output.clear()
+            result = tools.collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
             self.assertIn("Library 'mylib' was either already found in a previous "
                           "'conanfile.cpp_info.libdirs' folder or appears several times with a "
@@ -841,9 +842,8 @@ class CollectLibTestCase(unittest.TestCase):
             save(lib_mylib_path, "")
             no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
             conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
-            output = RedirectedTestOutput()
-            with redirect_output(output):
-                result = tools.collect_libs(conanfile)
+            output.clear()
+            result = tools.collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
             self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
                           % no_folder_path, output.getvalue())
@@ -872,6 +872,7 @@ class CollectLibTestCase(unittest.TestCase):
             self.assertEqual(["customlib"], result)
 
             # Custom folder doesn't exist
+            output.clear()
             result = tools.collect_libs(conanfile, folder="fake_folder")
             self.assertEqual([], result)
             self.assertIn("Lib folder doesn't exist, can't collect libraries:", output.getvalue())
@@ -895,9 +896,8 @@ class CollectLibTestCase(unittest.TestCase):
             save(custom_mylib_path, "")
             save(lib_mylib_path, "")
             conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-            output = RedirectedTestOutput()
-            with redirect_output(output):
-                result = tools.collect_libs(conanfile)
+            output.clear()
+            result = tools.collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
             self.assertIn("Library 'mylib' was either already found in a previous "
                           "'conanfile.cpp_info.libdirs' folder or appears several times with a "
@@ -911,9 +911,8 @@ class CollectLibTestCase(unittest.TestCase):
             save(lib_mylib_path, "")
             no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
             conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
-            output = RedirectedTestOutput()
-            with redirect_output(output):
-                result = tools.collect_libs(conanfile)
+            output.clear()
+            result = tools.collect_libs(conanfile)
             self.assertEqual(["mylib"], result)
             self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
                           % no_folder_path, output.getvalue())

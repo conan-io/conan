@@ -55,7 +55,7 @@ def config_source_local(conanfile, conanfile_path, hook_manager):
     def get_sources_from_exports():
         src_folder = conanfile.source_folder
         if conanfile_folder != src_folder:
-            _run_local_scm(conanfile, conanfile_folder, src_folder, output=conanfile.output)
+            _run_local_scm(conanfile, conanfile_folder, src_folder)
             conanfile.output.info("Executing exports to: %s" % src_folder)
             export_recipe(conanfile, conanfile_folder, src_folder)
             export_source(conanfile, conanfile_folder, src_folder)
@@ -139,9 +139,11 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                 with conanfile_exception_formatter(conanfile.display_name, "source"):
 
                     with conan_v2_property(conanfile, 'settings',
-                                           "'self.settings' access in source() method is deprecated"):
+                                           "'self.settings' access in source() method is "
+                                           "deprecated"):
                         with conan_v2_property(conanfile, 'options',
-                                               "'self.options' access in source() method is deprecated"):
+                                               "'self.options' access in source() method is "
+                                               "deprecated"):
                             conanfile.source()
 
                 hook_manager.execute("post_source", conanfile=conanfile,
@@ -197,7 +199,7 @@ def _run_cache_scm(conanfile, scm_sources_folder):
         _clean_source_folder(dest_dir)
 
 
-def _run_local_scm(conanfile, conanfile_folder, src_folder, output):
+def _run_local_scm(conanfile, conanfile_folder, src_folder):
     """
     Only called when 'conan source' in user space
     :param conanfile: recipe
@@ -213,17 +215,17 @@ def _run_local_scm(conanfile, conanfile_folder, src_folder, output):
     dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
     # In user space, if revision="auto", then copy
     if scm_data.capture_origin or scm_data.capture_revision:  # FIXME: or clause?
-        scm = SCM(scm_data, conanfile_folder, output)
+        scm = SCM(scm_data, conanfile_folder, conanfile.output)
         scm_url = scm_data.url if scm_data.url != "auto" else \
             scm.get_qualified_remote_url(remove_credentials=True)
 
         src_path = scm.get_local_path_to_url(url=scm_url)
         if src_path and src_path != dest_dir:
-            excluded = SCM(scm_data, src_path, output).excluded_files
-            output.info("SCM: Getting sources from folder: %s" % src_path)
+            excluded = SCM(scm_data, src_path, conanfile.output).excluded_files
+            conanfile.output.info("SCM: Getting sources from folder: %s" % src_path)
             merge_directories(src_path, dest_dir, excluded=excluded)
             return
 
-    output.info("SCM: Getting sources from url: '%s'" % scm_data.url)
-    scm = SCM(scm_data, dest_dir, output)
+    conanfile.output.info("SCM: Getting sources from url: '%s'" % scm_data.url)
+    scm = SCM(scm_data, dest_dir, conanfile.output)
     scm.checkout()

@@ -86,21 +86,19 @@ class RegistryTest(unittest.TestCase):
     def test_remote_none(self):
         """ RemoteRegistry should be able to deal when the URL is None
         """
-        f = os.path.join(temp_folder(), "add_none_test")
-        Remotes().save(f)
-        cache = ClientCache(os.path.dirname(f))
-        registry = cache.registry
         output = RedirectedTestOutput()
         with redirect_output(output):
+            f = os.path.join(temp_folder(), "add_none_test")
+            Remotes().save(f)
+            cache = ClientCache(os.path.dirname(f))
+            registry = cache.registry
             registry.add("foobar", None)
             self.assertEqual(list(registry.load_remotes().values()),
                              [("conancenter", "https://center.conan.io", True, False),
                               ("foobar", None, True, False)])
             self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", output)
             registry.remove("foobar")
-
-        output = RedirectedTestOutput()
-        with redirect_output(output):
+            output.clear()
             registry.update("conancenter", None)
             self.assertEqual(list(registry.load_remotes().values()),
                              [("conancenter", None, True, False)])

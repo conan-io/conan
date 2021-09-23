@@ -46,8 +46,7 @@ class RunSCMTest(unittest.TestCase):
                 output = RedirectedTestOutput()
                 with redirect_output(output):
                     _run_cache_scm(conanfile,
-                                   scm_sources_folder=local_sources_path,
-                                   output=ConanOutput())
+                                   scm_sources_folder=local_sources_path)
 
         self.assertIn("Copying previously cached scm sources", output)
 
@@ -74,8 +73,7 @@ class RunSCMTest(unittest.TestCase):
                 output = RedirectedTestOutput()
                 with redirect_output(output):
                     _run_cache_scm(conanfile,
-                                   scm_sources_folder="/not/existing/path",
-                                   output=ConanOutput())
+                                   scm_sources_folder="/not/existing/path")
 
         self.assertIn("SCM: Getting sources from url: '{}'".format(url), output)
 
@@ -104,8 +102,7 @@ class RunSCMTest(unittest.TestCase):
             with redirect_output(output):
                 _run_local_scm(conanfile,
                                conanfile_folder=local_sources_path,
-                               src_folder=self.src_folder,
-                               output=ConanOutput())
+                               src_folder=self.src_folder)
 
         self.assertIn("getting sources from folder: {}".format(local_sources_path).lower(),
                       str(output).lower())

@@ -1,4 +1,4 @@
-from conans.cli.output import ScopedOutput
+from conans.cli.output import ScopedOutput, ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
@@ -9,7 +9,7 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     remote_manager, cache, loader = app.remote_manager, app.cache, app.loader
     hook_manager = app.hook_manager
     assert(isinstance(ref, ConanFileReference))
-    scoped_output = ScopedOutput(str(ref))
+    scoped_output = ScopedOutput(str(ref), ConanOutput())
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
@@ -24,7 +24,7 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
 
     layout = cache.ref_layout(ref)
     conan_file_path = layout.conanfile()
-    conanfile = loader.load_basic(conan_file_path)
+    conanfile = loader.load_basic(conan_file_path, display=ref)
 
     # Download the sources too, don't be lazy
     retrieve_exports_sources(remote_manager, cache, layout, conanfile, ref, remotes)
@@ -63,7 +63,7 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
             scoped_output.info(message)
 
         if not skip_download:
-            remote_manager.get_package(conanfile, pref, remote, scoped_output, recorder)
+            remote_manager.get_package(conanfile, pref, remote, recorder)
 
     if parallel is not None:
         scoped_output.info("Downloading binary packages in %s parallel threads" % parallel)

@@ -78,8 +78,6 @@ class ConanFile(object):
     win_bash = None
 
     def __init__(self, runner, display_name=""):
-        # an output stream (writeln, info, warn error)
-        self.output = ScopedOutput(display_name, ConanOutput())
         self.display_name = display_name
         # something that can run commands, as os.sytem
         self._conan_runner = runner
@@ -122,6 +120,14 @@ class ConanFile(object):
         self.cpp.package.resdirs = ["res"]
         self.cpp.package.builddirs = [""]
         self.cpp.package.frameworkdirs = ["Frameworks"]
+
+    @property
+    def output(self):
+        # an output stream (writeln, info, warn error)
+        scope = self.display_name
+        if not scope:
+            scope = self.ref if self._conan_node else ""
+        return ScopedOutput(scope, ConanOutput())
 
     @property
     def context(self):

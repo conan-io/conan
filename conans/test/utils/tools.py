@@ -555,11 +555,14 @@ class TestClient(object):
         """
         from conans.test.utils.mocks import RedirectedTestOutput
         self.out = RedirectedTestOutput()  # Initialize each command
-        with mock.patch("conans.client.rest.auth_manager.UserInput", MockedUserInput) as mock_input:
-            mock_input.logins = PropertyMock(return_value=self.users)
-            with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
-                with redirect_output(self.out):
-                    error = self.run_cli(command_line, assert_error=assert_error)
+        rest_namespace = "conans.client.rest.auth_manager.UserInput"
+        api_namespace = "conans.client.conan_api.UserInput"
+        with mock.patch(rest_namespace, MockedUserInput) as mock_rest:
+            with mock.patch(api_namespace, MockedUserInput) as mock_api:
+                mock_rest.logins = mock_api.logins = PropertyMock(return_value=self.users)
+                with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
+                    with redirect_output(self.out):
+                        error = self.run_cli(command_line, assert_error=assert_error)
         return error
 
     def run_command(self, command, cwd=None, assert_error=False):

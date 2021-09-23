@@ -3,7 +3,7 @@
 import unittest
 
 from conans.client.tools.scm import SCMBase
-from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
+from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
 
 
@@ -73,45 +73,45 @@ class OutputMock(object):
 class GetUrlWithCredentialsTest(unittest.TestCase):
 
     def test_url(self):
-        scm = SCMBase(ConanFileMock())
+        scm = SCMBase()
         self.assertEqual('http://github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("http://github.com/conan-io/conan.git"))
 
     def test_url_username(self):
-        scm = SCMBase(ConanFileMock())
+        scm = SCMBase()
         self.assertEqual('http://user@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("http://user@github.com/conan-io/conan.git"))
 
     def test_url_password(self):
-        scm = SCMBase(ConanFileMock())
+        scm = SCMBase()
         self.assertEqual('http://user:pass@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials(
                              "http://user:pass@github.com/conan-io/conan.git"))
 
     def test_url_with_user_param(self):
-        scm = SCMBase(ConanFileMock(), username="user")
+        scm = SCMBase(username="user")
         self.assertEqual('https://user@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("https://github.com/conan-io/conan.git"))
 
     def test_url_with_password_param(self):
-        scm = SCMBase(ConanFileMock(), password="pass")
+        scm = SCMBase(password="pass")
         self.assertEqual('https://github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("https://github.com/conan-io/conan.git"))
 
     def test_url_with_user_password_param(self):
-        scm = SCMBase(ConanFileMock(), username="user", password="pass")
+        scm = SCMBase(username="user", password="pass")
         self.assertEqual('https://user:pass@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("https://github.com/conan-io/conan.git"))
 
     def test_url_with_user_password_characters_param(self):
-        scm = SCMBase(ConanFileMock(), username="el niño", password="la contra%seña")
+        scm = SCMBase(username="el niño", password="la contra%seña")
         self.assertEqual('https://el+ni%C3%B1o:la+contra%25se%C3%B1a@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("https://github.com/conan-io/conan.git"))
 
     def test_url_user_with_user_param(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="user")
+            scm = SCMBase(username="user")
             self.assertEqual('https://dani@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("https://dani@github.com/conan-io/conan.git"))
             self.assertEqual(1, len(output.getvalue().splitlines()))
@@ -120,7 +120,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_url_user_with_password_param(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass")
+            scm = SCMBase(password="pass")
             self.assertEqual('https://dani:pass@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("https://dani@github.com/conan-io/"
                                                           "conan.git"))
@@ -128,7 +128,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_url_user_with_user_password_param(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="user", password="pass")
+            scm = SCMBase(username="user", password="pass")
             self.assertEqual('https://dani:pass@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("https://dani@github.com/conan-io"
                                                           "/conan.git"))
@@ -138,7 +138,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_url_user_pass_with_user_param(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="user")
+            scm = SCMBase(username="user")
             self.assertEqual('http://dani:pass@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials(
                                  "http://dani:pass@github.com/conan-io/conan.git"))
@@ -148,7 +148,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_url_user_pass_with_password_param(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass")
+            scm = SCMBase(password="pass")
             self.assertEqual('http://dani:secret@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials(
                                  "http://dani:secret@github.com/conan-io/conan.git"))
@@ -158,7 +158,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_url_user_pass_with_user_password_param(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="user", password="pass")
+            scm = SCMBase(username="user", password="pass")
             self.assertEqual('http://dani:secret@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials(
                                  "http://dani:secret@github.com/conan-io/conan.git"))
@@ -167,28 +167,28 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
             self.assertIn("WARN: SCM password got from URL, ignoring 'password' parameter", output)
 
     def test_ssh(self):
-        scm = SCMBase(ConanFileMock())
+        scm = SCMBase()
         self.assertEqual('ssh://github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
 
     def test_ssh_username_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="dani", password="pass")
+            scm = SCMBase(username="dani", password="pass")
             self.assertEqual('ssh://dani@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
             self.assertEqual(1, len(output.getvalue().splitlines()))
             self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output)
 
     def test_ssh_username(self):
-        scm = SCMBase(ConanFileMock(), username="dani")
+        scm = SCMBase(username="dani")
         self.assertEqual('ssh://dani@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
 
     def test_ssh_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass")
+            scm = SCMBase(password="pass")
             self.assertEqual('ssh://github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("ssh://github.com/conan-io/conan.git"))
             self.assertEqual(1, len(output.getvalue().splitlines()))
@@ -196,7 +196,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
 
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass")
+            scm = SCMBase(password="pass")
             self.assertEqual('ssh://dani@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("ssh://dani@github.com/conan-io/conan.git"))
             self.assertEqual(1, len(output.getvalue().splitlines()))
@@ -205,7 +205,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_ssh_url_with_username_only_username(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="dani")
+            scm = SCMBase(username="dani")
             self.assertEqual('ssh://git@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git"))
             self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output)
@@ -213,7 +213,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_ssh_url_with_username_and_username_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass", username="dani")
+            scm = SCMBase(password="pass", username="dani")
             self.assertEqual('ssh://git@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("ssh://git@github.com/conan-io/conan.git"))
             self.assertEqual(2, len(output.getvalue().splitlines()))
@@ -223,7 +223,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_ssh_url_with_username_password_and_only_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="password")
+            scm = SCMBase(password="password")
             self.assertEqual('ssh://git@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
             self.assertEqual(2, len(output.getvalue().splitlines()))
@@ -235,7 +235,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_ssh_url_with_username_password_and_only_username(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="dani")
+            scm = SCMBase(username="dani")
             self.assertEqual('ssh://git@github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
             self.assertEqual(2, len(output.getvalue().splitlines()))
@@ -247,7 +247,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_ssh_url_with_username_password_and_username_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="password", username="dani")
+            scm = SCMBase(password="password", username="dani")
             self.assertEqual("ssh://git@github.com/conan-io/conan.git",
                              scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
             self.assertEqual(3, len(output.getvalue().splitlines()))
@@ -257,14 +257,14 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
                           output)
 
     def test_scp(self):
-        scm = SCMBase(ConanFileMock())
+        scm = SCMBase()
         self.assertEqual('git@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("git@github.com/conan-io/conan.git"))
 
     def test_scp_only_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass")
+            scm = SCMBase(password="pass")
             self.assertEqual("git@github.com:conan-io/conan.git",
                              scm.get_url_with_credentials("git@github.com:conan-io/conan.git"))
             self.assertIn("WARN: SCM password cannot be set for scp url, ignoring parameter",
@@ -273,7 +273,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_scp_only_username(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="dani")
+            scm = SCMBase(username="dani")
             self.assertEqual('git@github.com:conan-io/conan.git',
                              scm.get_url_with_credentials("git@github.com:conan-io/conan.git"))
             self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter",
@@ -282,7 +282,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_scp_username_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass", username="dani")
+            scm = SCMBase(password="pass", username="dani")
             self.assertEqual("git@github.com:conan-io/conan.git",
                              scm.get_url_with_credentials("git@github.com:conan-io/conan.git"))
             self.assertEqual(2, len(output.getvalue().splitlines()))
@@ -294,20 +294,20 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_scp_url_username_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="password")
+            scm = SCMBase(password="password")
             self.assertEqual('git:pass@github.com:conan-io/conan.git',
                              scm.get_url_with_credentials("git:pass@github.com:conan-io/conan.git"))
             self.assertIn("WARN: URL type not supported, ignoring 'username' and 'password' "
                           "parameters", output)
 
     def test_file_url(self):
-        scm = SCMBase(ConanFileMock())
+        scm = SCMBase()
         self.assertEqual("file://path/to/.git", scm.get_url_with_credentials("file://path/to/.git"))
 
     def test_file_url_with_username_password_params(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="user", password="pass")
+            scm = SCMBase(username="user", password="pass")
             self.assertEqual('file://path/to/.git', scm.get_url_with_credentials("file://path/to/.git"))
             self.assertEqual(2, len(output.getvalue().splitlines()))
             self.assertIn("WARN: SCM username cannot be set for file url, ignoring parameter",
@@ -318,14 +318,14 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_git(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock())
+            scm = SCMBase()
             self.assertEqual('git://github.com/conan-io/conan.git',
                              scm.get_url_with_credentials("git://github.com/conan-io/conan.git"))
 
     def test_git_only_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass")
+            scm = SCMBase(password="pass")
             self.assertEqual("git://github.com/conan-io/conan.git",
                              scm.get_url_with_credentials("git://github.com/conan-io/conan.git"))
             self.assertIn("WARN: SCM password cannot be set for git url, ignoring parameter",
@@ -334,7 +334,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_git_only_username(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), username="dani")
+            scm = SCMBase(username="dani")
             self.assertEqual("git://github.com/conan-io/conan.git",
                              scm.get_url_with_credentials("git://github.com/conan-io/conan.git"))
             self.assertIn("WARN: SCM username cannot be set for git url, ignoring parameter",
@@ -343,7 +343,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_git_username_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass", username="dani")
+            scm = SCMBase(password="pass", username="dani")
             self.assertEqual("git://github.com/conan-io/conan.git",
                              scm.get_url_with_credentials("git://github.com/conan-io/conan.git"))
             self.assertEqual(2, len(output.getvalue().splitlines()))
@@ -353,7 +353,7 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_git_url_username_password(self):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            scm = SCMBase(ConanFileMock(), password="pass")
+            scm = SCMBase(password="pass")
             self.assertEqual("git://github.com/conan-io/conan.git",
                              scm.get_url_with_credentials(
                                  "git://user:pass@github.com/conan-io/conan.git"))

@@ -52,7 +52,7 @@ class AuthorizeTest(unittest.TestCase):
 
         # FIXME: Mock user_input too to test this
         # Check that login failed two times before ok
-        self.assertEqual(self.conan.api.app.user_io.login_index["default"], 3)
+        self.assertEqual(self.conan.api.app.user_input.login_index["default"], 3)
 
     def test_auth_with_env(self):
 
@@ -103,7 +103,7 @@ class AuthorizeTest(unittest.TestCase):
         self.assertIsNone(rev)
 
         # Check that login failed all times
-        self.assertEqual(self.conan.api.app.user_io.login_index["default"], 3)
+        self.assertEqual(self.conan.api.app.user_input.login_index["default"], 3)
 
     def test_no_client_username_checks(self):
         """Checks whether client username checks are disabled."""
@@ -123,7 +123,7 @@ class AuthorizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
 
         # Check that login failed once before ok
-        self.assertEqual(self.conan.api.app.user_io.login_index["default"], 2)
+        self.assertEqual(self.conan.api.app.user_input.login_index["default"], 2)
 
 
 class AuthenticationTest(unittest.TestCase):

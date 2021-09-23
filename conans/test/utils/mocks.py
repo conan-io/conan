@@ -3,7 +3,6 @@ from collections import Counter, defaultdict, namedtuple
 from io import StringIO
 
 from conans import ConanFile, Options
-from conans.cli.output import ConanOutput
 from conans.client.userio import UserInput
 from conans.model.conf import ConfDefinition
 from conans.model.layout import Folders
@@ -113,6 +112,8 @@ class MockDepsCppInfo(defaultdict):
 class MockConanfile(ConanFile):
 
     def __init__(self, settings, options=None, runner=None):
+        self.display_name = ""
+        self._conan_node = None
         self.folders = Folders()
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
@@ -138,6 +139,8 @@ class ConanFileMock(ConanFile):
 
     def __init__(self, shared=None, options=None, options_values=None):
         options = options or ""
+        self.display_name = ""
+        self._conan_node = None
         self.command = None
         self.path = None
         self.settings = None
@@ -148,7 +151,6 @@ class ConanFileMock(ConanFile):
                 self.options._data[var] = value
         self.deps_cpp_info = MockDepsCppInfo()  # ("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.deps_cpp_info.sysroot = "/path/to/sysroot"
-        self.output = ConanOutput()
         self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
@@ -185,6 +187,10 @@ class RedirectedTestOutput(StringIO):
     def __init__(self):
         # Chage to super() for Py3
         StringIO.__init__(self)
+
+    def clear(self):
+        self.seek(0)
+        self.truncate(0)
 
     def __repr__(self):
         return self.getvalue()

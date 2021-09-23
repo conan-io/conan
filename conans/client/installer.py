@@ -469,7 +469,7 @@ class BinaryInstaller(object):
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
         self._generator_manager.write_generators(conanfile, conanfile.install_folder,
-                                                 conanfile.generators_folder, output)
+                                                 conanfile.generators_folder)
         write_toolchain(conanfile)
         output.info("Generated toolchain")
         graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)

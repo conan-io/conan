@@ -77,12 +77,16 @@ class RestApiTest(unittest.TestCase):
                 client_factory = RestApiClientFactory(requester=requester,
                                                       config=config)
                 localdb = LocalDBMock()
+                cache = Mock()
+                cache.localdb = localdb
+                cache.config.non_interactive = False
 
                 mocked_user_input = UserInput(non_interactive=False)
                 mocked_user_input.get_username = Mock(return_value="private_user")
                 mocked_user_input.get_password = Mock(return_value="private_pass")
 
-                cls.auth_manager = ConanApiAuthManager(client_factory, mocked_user_input, localdb)
+                # FIXME: Missing mock
+                cls.auth_manager = ConanApiAuthManager(client_factory, cache)
                 cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
                                     True)
                 cls.auth_manager._authenticate(cls.remote, user="private_user",

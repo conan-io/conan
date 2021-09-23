@@ -138,6 +138,7 @@ def test_casing(conanfile):
         build_mode.report_matches()
         assert "" == output.getvalue()
 
+        output.clear()
         build_mode = BuildMode(["boost"])
         assert build_mode.forced(conanfile, reference) is False
         build_mode = BuildMode(["bo*"])

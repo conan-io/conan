@@ -342,7 +342,7 @@ def collect_libs(conanfile, folder=None):
     for lib_folder in lib_folders:
         if not os.path.exists(lib_folder):
             conanfile.output.warning("Lib folder doesn't exist, can't collect libraries: "
-                                  "{0}".format(lib_folder))
+                                     "{0}".format(lib_folder))
             continue
         files = os.listdir(lib_folder)
         for f in files:

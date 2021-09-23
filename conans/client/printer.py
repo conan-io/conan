@@ -232,6 +232,6 @@ class Printer(object):
         if value is not None:
             value_color = Color.BRIGHT_WHITE
             self._out.write('%s%s%s' % (indent_text, text, separator), fg=text_color)
-            self._out.write(value, fg=value_color, endline=True)
+            self._out.writeln(value, fg=value_color)
         else:
             self._out.writeln('%s%s' % (indent_text, text), text_color)

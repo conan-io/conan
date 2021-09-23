@@ -206,7 +206,7 @@ class Command(object):
         attributes = [args.raw, ] if args.raw else args.attribute
         quiet = bool(args.raw)
 
-        result = self._conan.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
+        result = self._conan.inspect(args.path_or_reference, attributes, args.remote)
         Printer(self._out).print_inspect(result, raw=args.raw)
         if args.json:
 

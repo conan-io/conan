@@ -106,9 +106,9 @@ class UserInput(object):
         self._raise_if_non_interactive()
 
         if default_value:
-            self._out.input_text('%s (%s): ' % (msg, default_value))
+            self._out.write('%s (%s): ' % (msg, default_value))
         else:
-            self._out.input_text('%s: ' % msg)
+            self._out.write('%s: ' % msg)
         s = self._ins.readline().replace("\n", "")
         if default_value is not None and s == '':
             return default_value

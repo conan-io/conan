@@ -161,7 +161,7 @@ class RemoteManager(object):
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
 
-        ConanOutput().info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
+        conanfile.output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         latest_prev = self.get_latest_package_revision(pref, remote)
 
         pkg_layout = self._cache.get_or_create_pkg_layout(latest_prev)
@@ -169,14 +169,13 @@ class RemoteManager(object):
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)
-            self._get_package(pkg_layout, pref, remote, recorder, info=info)
+            self._get_package(pkg_layout, pref, remote, conanfile.output, recorder, info=info)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
 
-    def _get_package(self, layout, pref, remote, recorder, info):
-        output = ConanOutput()
+    def _get_package(self, layout, pref, remote, scoped_output, recorder, info):
         t1 = time.time()
         try:
             headers = _headers_for_info(info)
@@ -209,13 +208,13 @@ class RemoteManager(object):
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(package_folder)
             recorder.package_downloaded(pref, remote.url)
-            output.success('Package installed %s' % pref.id)
-            output.info("Downloaded package revision %s" % pref.revision)
+            scoped_output.success('Package installed %s' % pref.id)
+            scoped_output.info("Downloaded package revision %s" % pref.revision)
         except NotFoundException:
             raise PackageNotFoundException(pref)
         except BaseException as e:
-            output.error("Exception while getting package: %s" % str(pref.id))
-            output.error("Exception: %s %s" % (type(e), str(e)))
+            scoped_output.error("Exception while getting package: %s" % str(pref.id))
+            scoped_output.error("Exception: %s %s" % (type(e), str(e)))
             raise
 
     def search_recipes(self, remote, pattern, ignorecase=True):
