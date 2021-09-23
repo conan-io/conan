@@ -27,7 +27,6 @@ class TestConan(ConanFile):
         self.assertIn("UseEnv=True", bat)
         self.assertIn('CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_environment_deactivate(self):
         if platform.system() == "Windows":
             """ This test fails. The deactivation script takes the value of some envvars set by

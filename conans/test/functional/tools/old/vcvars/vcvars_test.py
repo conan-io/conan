@@ -172,7 +172,6 @@ compiler:
                 # Not raising
                 tools.vcvars_command(settings, force=True, output=output)
 
-    @pytest.mark.tool_compiler
     def test_vcvars_context_manager(self):
         conanfile = """
 from conans import ConanFile, tools

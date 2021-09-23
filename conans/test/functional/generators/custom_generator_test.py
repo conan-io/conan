@@ -73,7 +73,6 @@ class CustomGeneratorTest(unittest.TestCase):
         test_server = TestServer()
         self.servers = {"default": test_server}
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_reuse(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
