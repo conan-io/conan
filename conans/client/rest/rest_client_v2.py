@@ -320,6 +320,7 @@ class RestV2Methods(RestCommonMethods):
     def get_latest_recipe_revision(self, ref):
         url = self.router.recipe_latest(ref)
         data = self.get_json(url)
+        # FIXME: the server API is returning an iso date, we have to convert to timestamp
         return ref.copy_with_rev(data.get("revision")), from_iso8601_to_timestamp(data.get("time"))
 
     def get_latest_package_revision(self, pref, headers):
