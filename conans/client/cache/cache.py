@@ -108,12 +108,6 @@ class ClientCache(object):
     def get_timestamp(self, ref):
         return self._data_cache.get_timestamp(ConanReference(ref))
 
-    def get_remote(self, ref):
-        return None
-
-    def set_remote(self, ref, remote):
-        pass
-
     def set_timestamp(self, ref, timestamp):
         return self._data_cache.update_reference(ConanReference(ref), new_timestamp=timestamp)
 
