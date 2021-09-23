@@ -51,9 +51,6 @@ class UserInput(object):
         self._out = ConanOutput()
         self._interactive = not non_interactive
 
-    def disable_input(self):
-        self._interactive = False
-
     def _raise_if_non_interactive(self):
         if not self._interactive:
             raise ConanException("Conan interactive mode disabled")

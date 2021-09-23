@@ -51,7 +51,7 @@ def test_upload_parallel_success():
 def test_upload_parallel_fail_on_interaction():
     """Upload 2 packages in parallel and fail because non_interactive forced"""
 
-    client = TestClient(default_server_user=True)
+    client = TestClient(default_server_user=True, mock_input=False)
     client.save({"conanfile.py": GenConanfile()})
     num_references = 2
     for index in range(num_references):
