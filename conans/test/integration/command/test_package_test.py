@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANFILE
@@ -122,6 +124,7 @@ class TestPackageTest(unittest.TestCase):
                                                     "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
 
+    @pytest.mark.xfail(reason="Update for NewCppInfo")
     def test_check_version(self):
         client = TestClient()
         dep = textwrap.dedent("""

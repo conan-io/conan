@@ -1,6 +1,8 @@
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -65,6 +67,7 @@ def test_test_package():
     assert "gtest" not in cmake_data
 
 
+@pytest.mark.xfail(reason="Update for NewCppInfo")
 def test_components_error():
     # https://github.com/conan-io/conan/issues/9331
     client = TestClient()

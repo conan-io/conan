@@ -1,5 +1,7 @@
 import textwrap
 
+import pytest
+
 from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
 
 
@@ -19,6 +21,7 @@ class CppinfoTestCase(ConanV2ModeTestCase):
         self.assertIn("Conan v2 incompatible: Use 'self.cpp_info.build_modules["
                       "\"<generator>\"].extend(['aa', 'bb'])' instead", t.out)
 
+    @pytest.mark.xfail(reason="Update for NewCppInfo")
     def test_deprecate_build_modules_as_list_append(self):
         t = self.get_client()
         conanfile = textwrap.dedent("""
