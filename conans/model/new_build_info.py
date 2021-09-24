@@ -2,12 +2,29 @@ import copy
 import os
 from collections import OrderedDict
 
-from conans.model.build_info import DefaultOrderedDict
-
 _DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
                    "frameworkdirs"]
 _FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "cxxflags",
                     "sharedlinkflags", "exelinkflags"]
+
+
+class DefaultOrderedDict(OrderedDict):
+
+    def __init__(self, factory):
+        self.factory = factory
+        super(DefaultOrderedDict, self).__init__()
+
+    def __getitem__(self, key):
+        if key not in self.keys():
+            super(DefaultOrderedDict, self).__setitem__(key, self.factory())
+            super(DefaultOrderedDict, self).__getitem__(key).name = key
+        return super(DefaultOrderedDict, self).__getitem__(key)
+
+    def __copy__(self):
+        the_copy = DefaultOrderedDict(self.factory)
+        for key, value in super(DefaultOrderedDict, self).items():
+            the_copy[key] = value
+        return the_copy
 
 
 class _NewComponent(object):

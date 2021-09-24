@@ -6,7 +6,6 @@ import pytest
 
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
-from conans.model.build_info import BuildModulesDict, CppInfo, dict_to_abs_paths
 
 
 @pytest.mark.xfail(reason="DepsCppInfo removed")
