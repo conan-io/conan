@@ -2,11 +2,11 @@ import mock
 import os
 import unittest
 
-from conans import Settings
 from conans.client.conf import get_default_settings_yml
 from conans.client.tools.env import environment_append
 from conans.client.tools.intel import intel_compilervars_command
 from conans.errors import ConanException
+from conans.model.settings import Settings
 from conans.test.utils.mocks import MockConanfile
 
 

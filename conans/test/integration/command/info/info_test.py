@@ -343,7 +343,6 @@ class InfoTest2(unittest.TestCase):
         client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel",
                      "myprofile": "[build_requires]\ntool/0.1@user/channel"}, clean_first=True)
         client.run("info . -pr=myprofile --build=missing")
-        print(client.out)
         # Check that there is only 1 output for tool, not repeated many times
         pkgs = [line for line in str(client.out).splitlines() if line.startswith("tool")]
         self.assertEqual(len(pkgs), 1)

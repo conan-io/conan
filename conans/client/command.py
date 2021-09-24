@@ -742,22 +742,6 @@ class Command(object):
         parser.add_argument("--user", action=OnceArgument, help='Provide a user')
         parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("--should_build", default=None, action="store_true",
-                            help="Execute the build step (variable should_build=True). When "
-                                 "specified, configure/install/test won't run unless "
-                                 "--configure/--install/--test specified")
-        parser.add_argument("--should_configure", default=None, action="store_true",
-                            help="Execute the configuration step (variable should_configure=True). "
-                                 "When specified, build/install/test won't run unless "
-                                 "--build/--install/--test specified")
-        parser.add_argument("--should_install", default=None, action="store_true",
-                            help="Execute the install step (variable should_install=True). When "
-                                 "specified, configure/build/test won't run unless "
-                                 "--configure/--build/--test specified")
-        parser.add_argument("--should_test", default=None, action="store_true",
-                            help="Execute the test step (variable should_test=True). When "
-                                 "specified, configure/build/install won't run unless "
-                                 "--configure/--build/--install specified")
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="Directory to install the package (when the build system or "
                                  "build() method does it). Defaulted to the '{build_folder}/package' "
@@ -791,13 +775,6 @@ class Command(object):
 
         self._warn_python_version()
 
-        if args.should_build or args.should_configure or args.should_install or args.should_test:
-            should_build, should_config, should_install, should_test = \
-                (bool(args.should_build), bool(args.should_configure), bool(args.should_install),
-                 bool(args.should_test))
-        else:
-            should_build = should_config = should_install = should_test = True
-
         info = None
         try:
             info = self._conan.build(conanfile_path=args.path,
@@ -809,10 +786,6 @@ class Command(object):
                                      package_folder=args.package_folder,
                                      build_folder=args.build_folder,
                                      install_folder=args.install_folder,
-                                     should_configure=should_config,
-                                     should_build=should_build,
-                                     should_install=should_install,
-                                     should_test=should_test,
                                      settings=args.settings_host, options=args.options_host,
                                      env=args.env_host, profile_names=args.profile_host,
                                      profile_build=profile_build,
@@ -1857,13 +1830,13 @@ class Command(object):
         width = 70
         version = sys.version_info
         if version.major == 2:
-            self._out.info("*"*width, front=Color.BRIGHT_RED)
+            self._out.info("*"*width, fg=Color.BRIGHT_RED)
             msg = textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
                                 " stopped supporting it officially. We strongly recommend"
                                 " you to use Python >= 3.5. Conan will completely stop"
                                 " working with Python 2 in the following releases", width)
-            self._out.info(msg, front=Color.BRIGHT_RED)
-            self._out.info("*"*width, front=Color.BRIGHT_RED)
+            self._out.info(msg, fg=Color.BRIGHT_RED)
+            self._out.info("*"*width, fg=Color.BRIGHT_RED)
             if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
                 # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently
                 # deprecated and some libraries we use as dependencies have stopped supporting it.
@@ -1875,8 +1848,8 @@ class Command(object):
                 msg = textwrap.fill("If you really need to run Conan with Python 2 in your"
                                     " CI without this interactive input, please contact us"
                                     " at info@conan.io", width)
-                self._out.info(msg, front=Color.BRIGHT_RED)
-                self._out.info("*" * width, front=Color.BRIGHT_RED)
+                self._out.info(msg, fg=Color.BRIGHT_RED)
+                self._out.info("*" * width, fg=Color.BRIGHT_RED)
                 _msg = textwrap.fill("Understood the risk, keep going [y/N]: ", width,
                                      drop_whitespace=False)
                 self._out.write(_msg, fg=Color.BRIGHT_RED)
@@ -1885,11 +1858,11 @@ class Command(object):
                     self._out.info(textwrap.fill("Wise choice. Stopping here!", width))
                     sys.exit(0)
         elif version.minor == 4:
-            self._out.info("*"*width, front=Color.BRIGHT_RED)
+            self._out.info("*"*width, fg=Color.BRIGHT_RED)
             self._out.info(textwrap.fill("Python 3.4 support has been dropped. It is strongly "
                                             "recommended to use Python >= 3.5 with Conan", width),
-                              front=Color.BRIGHT_RED)
-            self._out.info("*"*width, front=Color.BRIGHT_RED)
+                              fg=Color.BRIGHT_RED)
+            self._out.info("*"*width, fg=Color.BRIGHT_RED)
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
@@ -1902,25 +1875,9 @@ class Command(object):
             except IndexError:  # No parameters
                 self._show_help()
                 return False
-            try:
-                commands = self._commands()
-                method = commands[command]
-            except KeyError as exc:
-                if command in ["-v", "--version"]:
-                    self._out.success("Conan version %s" % client_version)
-                    return False
 
-                self._warn_python_version()
-
-                if command in ["-h", "--help"]:
-                    self._show_help()
-                    return False
-
-                self._out.writeln(
-                    "'%s' is not a Conan command. See 'conan --help'." % command)
-                self._out.writeln("")
-                self._print_similar(command)
-                raise ConanException("Unknown command %s" % str(exc))
+            commands = self._commands()
+            method = commands[command]
 
             if (command != "config" or
                (command == "config" and len(args[0]) > 1 and args[0][1] != "install")) and \
