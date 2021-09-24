@@ -143,4 +143,4 @@ def test_update_binaries_failed():
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("install Pkg/0.1@lasote/testing --update")
-    assert "Pkg/0.1@lasote/testing: WARN: Can't update, no remote defined" in client.out
+    assert "Pkg/0.1@lasote/testing: WARN: Can't update, there are no remotes configured or enabled" in client.out
