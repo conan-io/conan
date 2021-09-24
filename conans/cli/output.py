@@ -130,10 +130,10 @@ class ConanOutput(object):
         self._write_message(msg, fg=fg, bg=bg)
 
     def highlight(self, data):
-        self.info(data, Color.BRIGHT_MAGENTA)
+        self.info(data, fg=Color.BRIGHT_MAGENTA)
 
     def success(self, data):
-        self.info(data, Color.BRIGHT_GREEN)
+        self.info(data, fg=Color.BRIGHT_GREEN)
 
     def warning(self, msg):
         self._write_message("WARN: {}".format(msg), Color.YELLOW)

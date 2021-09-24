@@ -1919,13 +1919,13 @@ class Command(object):
         width = 70
         version = sys.version_info
         if version.major == 2:
-            self._out.info("*"*width, front=Color.BRIGHT_RED)
+            self._out.info("*"*width, fg=Color.BRIGHT_RED)
             msg = textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
                                 " stopped supporting it officially. We strongly recommend"
                                 " you to use Python >= 3.5. Conan will completely stop"
                                 " working with Python 2 in the following releases", width)
-            self._out.info(msg, front=Color.BRIGHT_RED)
-            self._out.info("*"*width, front=Color.BRIGHT_RED)
+            self._out.info(msg, fg=Color.BRIGHT_RED)
+            self._out.info("*"*width, fg=Color.BRIGHT_RED)
             if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
                 # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently
                 # deprecated and some libraries we use as dependencies have stopped supporting it.
@@ -1937,8 +1937,8 @@ class Command(object):
                 msg = textwrap.fill("If you really need to run Conan with Python 2 in your"
                                     " CI without this interactive input, please contact us"
                                     " at info@conan.io", width)
-                self._out.info(msg, front=Color.BRIGHT_RED)
-                self._out.info("*" * width, front=Color.BRIGHT_RED)
+                self._out.info(msg, fg=Color.BRIGHT_RED)
+                self._out.info("*" * width, fg=Color.BRIGHT_RED)
                 _msg = textwrap.fill("Understood the risk, keep going [y/N]: ", width,
                                      drop_whitespace=False)
                 self._out.write(_msg, fg=Color.BRIGHT_RED)
@@ -1947,11 +1947,11 @@ class Command(object):
                     self._out.info(textwrap.fill("Wise choice. Stopping here!", width))
                     sys.exit(0)
         elif version.minor == 4:
-            self._out.info("*"*width, front=Color.BRIGHT_RED)
+            self._out.info("*"*width, fg=Color.BRIGHT_RED)
             self._out.info(textwrap.fill("Python 3.4 support has been dropped. It is strongly "
                                             "recommended to use Python >= 3.5 with Conan", width),
-                              front=Color.BRIGHT_RED)
-            self._out.info("*"*width, front=Color.BRIGHT_RED)
+                              fg=Color.BRIGHT_RED)
+            self._out.info("*"*width, fg=Color.BRIGHT_RED)
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
@@ -1964,25 +1964,9 @@ class Command(object):
             except IndexError:  # No parameters
                 self._show_help()
                 return False
-            try:
-                commands = self._commands()
-                method = commands[command]
-            except KeyError as exc:
-                if command in ["-v", "--version"]:
-                    self._out.success("Conan version %s" % client_version)
-                    return False
 
-                self._warn_python_version()
-
-                if command in ["-h", "--help"]:
-                    self._show_help()
-                    return False
-
-                self._out.writeln(
-                    "'%s' is not a Conan command. See 'conan --help'." % command)
-                self._out.writeln("")
-                self._print_similar(command)
-                raise ConanException("Unknown command %s" % str(exc))
+            commands = self._commands()
+            method = commands[command]
 
             if (command != "config" or
                (command == "config" and len(args[0]) > 1 and args[0][1] != "install")) and \
