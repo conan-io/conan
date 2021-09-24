@@ -116,7 +116,10 @@ class ConanOutput(object):
             else:
                 tmp = "{}: ".format(self._scope)
 
-        tmp += "{}".format(msg)
+        if self._color and not self._scope:
+            tmp += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+        else:
+            tmp += "{}".format(msg)
 
         self.stream.write("{}\n".format(tmp))
 
