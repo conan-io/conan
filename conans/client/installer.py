@@ -18,7 +18,6 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
-from conans.model.build_info import CppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
@@ -539,8 +538,7 @@ class BinaryInstaller(object):
                                            reference=ref)
                 if hasattr(conanfile, "layout"):
                     # Old cpp info without defaults (the defaults are in the new one)
-                    conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
-                                                 default_values=CppInfoDefaultValues())
+                    conanfile.cpp_info = NewCppInfo()
                     if not is_editable:
                         package_cppinfo = conanfile.cpp.package.copy()
                         package_cppinfo.set_relative_base_folder(conanfile.folders.package)
