@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from conans.model import Generator
 from conans.client.generators import XCodeGenerator
 from conans import tools
