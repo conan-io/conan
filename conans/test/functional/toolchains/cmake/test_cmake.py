@@ -98,9 +98,12 @@ class Base(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conans.tools import save
+            from conan.tools.layout import cmake_layout
             import os
             class Pkg(ConanFile):
-                settings = "build_type"
+                settings = "build_type", "compiler"
+                def layout(self):
+                    cmake_layout(self)
                 def package(self):
                     save(os.path.join(self.package_folder, "include/hello.h"),
                          '''#include <iostream>
@@ -127,7 +130,7 @@ class Base(unittest.TestCase):
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
-            self.client.run("build .. %s %s" % (settings, options))
+            self.client.run("build .. %s %s --build=missing" % (settings, options))
             install_out = self.client.out
         return install_out
 
