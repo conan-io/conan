@@ -9,7 +9,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Patterns, Infos
-from conans.model.new_build_info import from_old_cppinfo
+from conans.model.new_build_info import NewCppInfo
 from conans.model.options import Options
 from conans.model.requires import Requirements
 from conans.paths import RUN_LOG_NAME
@@ -165,7 +165,7 @@ class ConanFile(object):
         self.settings = create_settings(self, settings)
 
         # needed variables to pack the project
-        self.cpp_info = None  # Will be initialized at processing time
+        self._cpp_info = None  # Will be initialized at processing time
 
         # user declared variables
         self.user_info = None
@@ -179,10 +179,14 @@ class ConanFile(object):
             self.virtualrunenv = True
 
     @property
-    def new_cpp_info(self):
-        if not self._conan_new_cpp_info:
-            self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
-        return self._conan_new_cpp_info
+    def cpp_info(self):
+        if not self._cpp_info:
+            self._cpp_info = NewCppInfo()
+        return self._cpp_info
+
+    @cpp_info.setter
+    def cpp_info(self, info):
+        self._cpp_info = info
 
     @property
     def source_folder(self):

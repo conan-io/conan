@@ -269,7 +269,7 @@ class MSBuildDeps(object):
         for dep in host_req + test_req:
             dep_name = dep.ref.name
             dep_name = dep_name.replace(".", "_")
-            cpp_info = dep.new_cpp_info  # To account for automatic component aggregation
+            cpp_info = dep.cpp_info  # To account for automatic component aggregation
             package_folder = dep.package_folder
             public_deps = [d.ref.name.replace(".", "_")
                            for r, d in dep.dependencies.direct_host.items() if r.visible]

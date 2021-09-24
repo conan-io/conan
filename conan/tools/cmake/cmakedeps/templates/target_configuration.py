@@ -146,7 +146,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
     def get_required_components_names(self):
         """Returns a list of component_name"""
         ret = []
-        sorted_comps = self.conanfile.new_cpp_info.get_sorted_components()
+        sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         for comp_name, comp in sorted_comps.items():
             ret.append(self.get_component_alias(self.conanfile, comp_name))
         ret.reverse()
@@ -162,8 +162,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         # Declared cppinfo.requires or .components[].requires
         visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True})
         visible_host_direct = visible_host.filter({"direct": True})
-        if self.conanfile.new_cpp_info.required_components:
-            for dep_name, component_name in self.conanfile.new_cpp_info.required_components:
+        if self.conanfile.cpp_info.required_components:
+            for dep_name, component_name in self.conanfile.cpp_info.required_components:
                 if not dep_name:
                     # Internal dep (no another component)
                     req = self.conanfile
