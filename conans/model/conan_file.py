@@ -94,7 +94,6 @@ class ConanFile(object):
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None))
 
-        self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
 
         self.env_scripts = {}  # Accumulate the env scripts generated in order
