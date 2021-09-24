@@ -252,7 +252,7 @@ class MSBuildDeps(object):
         return content_multi
 
     def _content(self):
-        # We cannot use self._conanfile.warn(), because that fails for virtual conanfile
+        # We cannot use self._conanfile.warning(), because that fails for virtual conanfile
         print("*** The 'msbuild' generator is EXPERIMENTAL ***")
         if not self._conanfile.settings.get_safe("build_type"):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")

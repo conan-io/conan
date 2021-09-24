@@ -12,7 +12,6 @@ from conans.util.files import load
 
 @pytest.mark.xfail(reason="cmake old generator will be removed")
 @pytest.mark.slow
-@pytest.mark.tool_compiler
 class DiamondTest(unittest.TestCase):
 
     def setUp(self):

@@ -191,7 +191,7 @@ from conans import ConanFile
 
 class HelloTestConan(ConanFile):
     def test(self):
-        self.output.warn("Tested ok!")
+        self.output.warning("Tested ok!")
 ''', "Hello/0.1@conan/stable")
         self.assertIn("Tested ok!", client.out)
 

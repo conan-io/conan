@@ -188,14 +188,6 @@ def _get_tool(name, version):
     return cached
 
 
-def _tool_name_mapping(tool_name):
-    if tool_name == "compiler":
-        tool_name = {"Windows": "visual_studio",
-                     "Linux": "gcc",
-                     "Darwin": "clang"}.get(platform.system())
-    return tool_name
-
-
 @pytest.fixture(autouse=True)
 def add_tool(request):
     tools_paths = []
@@ -203,7 +195,6 @@ def add_tool(request):
     for mark in request.node.iter_markers():
         if mark.name.startswith("tool_"):
             tool_name = mark.name[5:]
-            tool_name = _tool_name_mapping(tool_name)
             tool_version = mark.kwargs.get('version')
             result = _get_tool(tool_name, tool_version)
             if result is True:

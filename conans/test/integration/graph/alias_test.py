@@ -274,8 +274,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         '"myoption=True"',
-                        '"myoption=True", "LibD:myoption=False"',
-                        output=client.out)
+                        '"myoption=True", "LibD:myoption=False"')
         client.run("export . LibB/0.1@user/testing")
         client.run("alias LibB/latest@user/testing LibB/0.1@user/testing")
 

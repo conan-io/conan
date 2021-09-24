@@ -9,11 +9,10 @@
     elsewhere (mainly in conans.util or conans.client.tools) and ready to be used without
     the currification.
 """
-import sys
 
 import requests
 
-from conans.client.output import ConanOutput
+from conans.cli.output import ConanOutput
 # Tools from conans.client.tools
 from conans.client.tools import files as tools_files, net as tools_net, oss as tools_oss, \
     system_pm as tools_system_pm, win as tools_win
@@ -34,29 +33,21 @@ from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # p
 
 
 # This global variables are intended to store the configuration of the running Conan application
-_global_output = None
 _global_requester = None
 _global_config = None
 
 
-def set_global_instances(the_output, the_requester, config):
-    global _global_output
+def set_global_instances(the_requester, config):
     global _global_requester
     global _global_config
 
     # TODO: pass here the configuration file, and make the work here (explicit!)
-    _global_output = the_output
     _global_requester = the_requester
     _global_config = config
 
 
-def get_global_instances():
-    return _global_output, _global_requester
-
-
 # Assign a default, will be overwritten in the factory of the ConanAPI
-set_global_instances(the_output=ConanOutput(sys.stdout, sys.stderr, True), the_requester=requests,
-                     config=None)
+set_global_instances(the_requester=requests, config=None)
 
 
 """
@@ -77,11 +68,11 @@ ftp_download = tools_net.ftp_download
 
 
 def download(*args, **kwargs):
-    return tools_net.download(out=_global_output, requester=_global_requester, *args, **kwargs)
+    return tools_net.download(requester=_global_requester, *args, **kwargs)
 
 
 def get(*args, **kwargs):
-    return tools_net.get(output=_global_output, requester=_global_requester, *args, **kwargs)
+    return tools_net.get(requester=_global_requester, *args, **kwargs)
 
 
 # from conans.client.tools.files
@@ -104,15 +95,15 @@ remove_files_by_mask = tools_files.remove_files_by_mask
 
 
 def unzip(*args, **kwargs):
-    return tools_files.unzip(output=_global_output, *args, **kwargs)
+    return tools_files.unzip(*args, **kwargs)
 
 
 def replace_in_file(*args, **kwargs):
-    return tools_files.replace_in_file(output=_global_output, *args, **kwargs)
+    return tools_files.replace_in_file(*args, **kwargs)
 
 
 def replace_path_in_file(*args, **kwargs):
-    return tools_files.replace_path_in_file(output=_global_output, *args, **kwargs)
+    return tools_files.replace_path_in_file(*args, **kwargs)
 
 
 # from conans.client.tools.oss
@@ -126,63 +117,63 @@ get_gnu_triplet = tools_oss.get_gnu_triplet
 
 
 def cpu_count(*args, **kwargs):
-    return tools_oss.cpu_count(output=_global_output, *args, **kwargs)
+    return tools_oss.cpu_count(*args, **kwargs)
 
 
 # from conans.client.tools.system_pm
 class SystemPackageTool(tools_system_pm.SystemPackageTool):
     def __init__(self, *args, **kwargs):
-        super(SystemPackageTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(SystemPackageTool, self).__init__(*args, **kwargs)
 
 
 class NullTool(tools_system_pm.NullTool):
     def __init__(self, *args, **kwargs):
-        super(NullTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(NullTool, self).__init__(*args, **kwargs)
 
 
 class AptTool(tools_system_pm.AptTool):
     def __init__(self, *args, **kwargs):
-        super(AptTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(AptTool, self).__init__(*args, **kwargs)
 
 
 class DnfTool(tools_system_pm.DnfTool):
     def __init__(self, *args, **kwargs):
-        super(DnfTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(DnfTool, self).__init__(*args, **kwargs)
 
 
 class YumTool(tools_system_pm.YumTool):
     def __init__(self, *args, **kwargs):
-        super(YumTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(YumTool, self).__init__(*args, **kwargs)
 
 
 class BrewTool(tools_system_pm.BrewTool):
     def __init__(self, *args, **kwargs):
-        super(BrewTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(BrewTool, self).__init__(*args, **kwargs)
 
 
 class PkgTool(tools_system_pm.PkgTool):
     def __init__(self, *args, **kwargs):
-        super(PkgTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(PkgTool, self).__init__(*args, **kwargs)
 
 
 class ChocolateyTool(tools_system_pm.ChocolateyTool):
     def __init__(self, *args, **kwargs):
-        super(ChocolateyTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(ChocolateyTool, self).__init__(*args, **kwargs)
 
 
 class PkgUtilTool(tools_system_pm.PkgUtilTool):
     def __init__(self, *args, **kwargs):
-        super(PkgUtilTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(PkgUtilTool, self).__init__(*args, **kwargs)
 
 
 class PacManTool(tools_system_pm.PacManTool):
     def __init__(self, *args, **kwargs):
-        super(PacManTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(PacManTool, self).__init__(*args, **kwargs)
 
 
 class ZypperTool(tools_system_pm.ZypperTool):
     def __init__(self, *args, **kwargs):
-        super(ZypperTool, self).__init__(output=_global_output, *args, **kwargs)
+        super(ZypperTool, self).__init__(*args, **kwargs)
 
 
 # from conans.client.tools.win
@@ -204,20 +195,20 @@ msvs_toolset = tools_win.msvs_toolset
 
 @contextmanager
 def vcvars(*args, **kwargs):
-    with tools_win.vcvars(output=_global_output, *args, **kwargs):
+    with tools_win.vcvars(*args, **kwargs):
         yield
 
 
 def vcvars_command(*args, **kwargs):
-    return tools_win.vcvars_command(output=_global_output, *args, **kwargs)
+    return tools_win.vcvars_command(*args, **kwargs)
 
 
 def vcvars_dict(*args, **kwargs):
-    return tools_win.vcvars_dict(output=_global_output, *args, **kwargs)
+    return tools_win.vcvars_dict(*args, **kwargs)
 
 
 def latest_vs_version_installed(*args, **kwargs):
-    return tools_win.latest_vs_version_installed(output=_global_output, *args, **kwargs)
+    return tools_win.latest_vs_version_installed(*args, **kwargs)
 
 
 
@@ -226,4 +217,4 @@ try:
     os_info = OSInfo()
 except Exception as exc:
     logger.error(exc)
-    _global_output.error("Error detecting os_info")
+    ConanOutput().error("Error detecting os_info")

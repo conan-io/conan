@@ -1,12 +1,9 @@
 import os
-import sys
 from collections import Counter, defaultdict, namedtuple
-
 from io import StringIO
 
 from conans import ConanFile, Options
-from conans.client.output import ConanOutput
-from conans.client.userio import UserIO
+from conans.client.userio import UserInput
 from conans.model.conf import ConfDefinition
 from conans.model.layout import Folders
 from conans.model.options import PackageOptions
@@ -31,28 +28,26 @@ class LocalDBMock(object):
         self.refresh_token = refresh_token
 
 
-class MockedUserIO(UserIO):
+class MockedUserInput(UserInput):
     """
     Mock for testing. If get_username or get_password is requested will raise
     an exception except we have a value to return.
     """
 
-    def __init__(self, logins, ins=sys.stdin, out=None):
+    def __init__(self, non_interactive):
         """
         logins is a dict of {remote: list(user, password)}
         will return sequentially
         """
-        assert isinstance(logins, dict)
-        self.logins = logins
+        self.logins = None
         self.login_index = Counter()
-        UserIO.__init__(self, ins, out)
+        UserInput.__init__(self, non_interactive=non_interactive)
 
     def get_username(self, remote_name):
         username_env = self._get_env_username(remote_name)
         if username_env:
             return username_env
 
-        self._raise_if_non_interactive()
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         if len(sub_dict) - 1 < index:
@@ -60,13 +55,8 @@ class MockedUserIO(UserIO):
                             "provide more tuples or input the right ones")
         return sub_dict[index][0]
 
-    def get_password(self, remote_name):
+    def get_pass(self, remote_name):
         """Overridable for testing purpose"""
-        password_env = self._get_env_password(remote_name)
-        if password_env:
-            return password_env
-
-        self._raise_if_non_interactive()
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         tmp = sub_dict[index][1]
@@ -99,13 +89,14 @@ class MockCppInfo(object):
 class MockConanfile(ConanFile):
 
     def __init__(self, settings, options=None, runner=None):
+        self.display_name = ""
+        self._conan_node = None
         self.folders = Folders()
         self.settings = settings
         self.settings_build = settings
         self.runner = runner
         self.options = options or MockOptions({})
         self.generators = []
-        self.output = TestBufferConanOutput()
 
         self.should_configure = True
         self.should_build = True
@@ -124,6 +115,8 @@ class ConanFileMock(ConanFile):
 
     def __init__(self, shared=None, options=None, options_values=None):
         options = options or ""
+        self.display_name = ""
+        self._conan_node = None
         self.command = None
         self.path = None
         self.settings = None
@@ -132,7 +125,6 @@ class ConanFileMock(ConanFile):
         if options_values:
             for var, value in options_values.items():
                 self.options._data[var] = value
-        self.output = TestBufferConanOutput()
         self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
@@ -164,35 +156,14 @@ class ConanFileMock(ConanFile):
 MockOptions = MockSettings
 
 
-class TestBufferConanOutput(ConanOutput):
-    """ wraps the normal output of the application, captures it into an stream
-    and gives it operators similar to string, so it can be compared in tests
-    """
-
-    def __init__(self):
-        ConanOutput.__init__(self, StringIO(), color=False)
-
-    def __repr__(self):
-        # FIXME: I'm sure there is a better approach. Look at six docs.
-        return self._stream.getvalue()
-
-    def __str__(self, *args, **kwargs):
-        return self.__repr__()
-
-    def __eq__(self, value):
-        return self.__repr__() == value
-
-    def __ne__(self, value):
-        return not self.__eq__(value)
-
-    def __contains__(self, value):
-        return value in self.__repr__()
-
-
 class RedirectedTestOutput(StringIO):
     def __init__(self):
         # Chage to super() for Py3
         StringIO.__init__(self)
+
+    def clear(self):
+        self.seek(0)
+        self.truncate(0)
 
     def __repr__(self):
         return self.getvalue()
