@@ -159,7 +159,7 @@ def test_config_home_custom_install():
     """
     cache_folder = os.path.join(temp_folder(), "custom")
     with environment_append({"CONAN_USER_HOME": cache_folder}):
-        client = TestClient(cache_folder=cache_folder, cache_autopopulate=False)
+        client = TestClient(cache_folder=cache_folder)
         client.save({"conanfile.py": GenConanfile()})
         client.run("install .")
         assert "conanfile.py: Installing package" in client.out
@@ -173,7 +173,7 @@ def test_init():
     assert os.path.exists(client.cache.conan_conf_path)
     assert os.path.exists(client.cache.remotes_path)
     assert os.path.exists(client.cache.settings_path)
-    assert os.path.exists(client.cache.default_profile_path)
+    assert not os.path.exists(client.cache.default_profile_path)
 
 
 def test_init_overwrite():
@@ -192,7 +192,7 @@ def test_init_overwrite():
     assert dummy_content not in load(client.cache.conan_conf_path)
     assert dummy_content not in load(client.cache.settings_path)
     assert dummy_content not in load(client.cache.remotes_path)
-    assert dummy_content not in load(client.cache.default_profile_path)
+    assert not os.path.exists(client.cache.default_profile_path)
 
 
 def test_config_list():

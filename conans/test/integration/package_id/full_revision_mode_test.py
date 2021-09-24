@@ -198,7 +198,7 @@ class FullRevisionModeTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
         client.run("create . libc/0.1@user/testing")
-        client.run("upload * --all -c")
+        client.run("upload * --all -c -r default")
         client.run("remove * -f")
 
         client.save({"conanfile.py": GenConanfile().with_require('libc/0.1@user/testing')})

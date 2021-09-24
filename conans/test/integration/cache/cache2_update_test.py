@@ -212,7 +212,7 @@ class TestUpdateFlows:
         # --> result: don't install that
         latest_rrev = self.client.cache.get_latest_rrev(self.liba)
         self.client.run(f"install {latest_rrev}@#{latest_rrev.revision}")
-        assert "liba/1.0.0 from 'server0' - Cache" in self.client.out
+        assert "liba/1.0.0 from local cache - Cache" in self.client.out
         assert "liba/1.0.0: Already installed!" in self.client.out
 
         self.client.run("remove * -f")

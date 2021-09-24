@@ -1,13 +1,13 @@
 import mock
 import os
 import textwrap
-from mock import Mock
 
 from conan.tools.microsoft import MSBuild, MSBuildToolchain
 from conans.model.conf import ConfDefinition
+from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.tools import load
-from conans import ConanFile, Settings
+from conans import ConanFile
 
 
 def test_msbuild_cpu_count():

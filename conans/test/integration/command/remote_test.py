@@ -23,67 +23,6 @@ class RemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
-    def test_removed_references(self):
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . lib/1.0@lasote/channel")
-        self.client.run('upload "*" -c -r remote1')
-        self.client.run('upload "*" -c -r remote2')
-
-        self.client.run('remote list_ref')
-        ref = self.client.cache.get_latest_rrev(ConanFileReference.loads("lib/1.0@lasote/channel"))
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        prev = self.client.get_latest_prev(pref)
-
-        self.assertIn(f"{ref.full_str()}: remote1", self.client.out)
-
-        # Remove from remote2, the reference should be kept there
-        self.client.run('remove "lib/1.0@lasote/channel" -f -r remote2')
-        self.client.run('remote list_ref')
-        self.assertIn(f"{ref.full_str()}: remote1", self.client.out)
-
-        # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
-        self.client.run('upload "*" -c -r remote2')
-        self.client.run('remove "lib/1.0@lasote/channel" -f -r remote1')
-        self.client.run('remote list_ref')
-        self.assertIn(f"{ref.full_str()}: remote1", self.client.out)
-
-        # Test the packages references now
-        self.client.run('upload "*" -c -r remote1 --all')
-        self.client.run('upload "*" -c -r remote2 --all')
-        self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("%s: remote1" % prev.full_str(), self.client.out)
-
-        # Remove from remote2, the reference should be kept there
-        self.client.run('remove "lib/1.0@lasote/channel" '
-                        '-p %s -f -r remote2' % NO_SETTINGS_PACKAGE_ID)
-        self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("%s: remote1" % prev.full_str(), self.client.out)
-
-        # Upload again to remote2 and remove from remote1, the ref shouldn't be removed
-        self.client.run('upload "*" -c -r remote2 --all')
-        self.client.run('remove "lib/1.0@lasote/channel" '
-                        '-p %s -f -r remote1' % NO_SETTINGS_PACKAGE_ID)
-        self.client.run('remote list_ref')
-        self.assertIn("%s: remote1" % ref.full_str(), self.client.out)
-        self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("%s: remote1" % prev.full_str(), self.client.out)
-
-        # Remove package locally
-        self.client.run('upload "*" -c -r remote1 --all')
-        self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertIn("%s: remote1" % prev.full_str(), self.client.out)
-        self.client.run('remove "lib/1.0@lasote/channel" '
-                        '-p %s -f' % NO_SETTINGS_PACKAGE_ID)
-        self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertNotIn("%s: remote1" % prev.full_str(), self.client.out)
-
-        # If I remove all in local, I also remove packages
-        self.client.run("create . lib/1.0@lasote/channel")
-        self.client.run('upload "*" -c -r remote1')
-        self.client.run('remove "lib/1.0@lasote/channel" -f')
-        self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertEqual("", self.client.out)
-
     def test_list_raw(self):
         self.client.run("remote list --raw")
         output = re.sub(r"http://fake.+.com", "http://fake.com", str(self.client.out))
@@ -117,83 +56,32 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("remote1: http://", output.splitlines()[0])
 
     def test_remove_remote(self):
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("export . Hello/0.1@user/testing")
-        self.client.run("export . Hello2/0.1@user/testing")
         self.client.run("remote list")
         self.assertIn("remote0: http://", self.client.out)
         self.assertIn("remote1: http://", self.client.out)
         self.assertIn("remote2: http://", self.client.out)
-        self.client.run("remote add_ref Hello/0.1@user/testing remote2")
-        self.client.run("remote add_ref Hello2/0.1@user/testing remote1")
         self.client.run("remote remove remote1")
         self.client.run("remote list")
         self.assertNotIn("remote1", self.client.out)
         self.assertIn("remote0", self.client.out)
         self.assertIn("remote2", self.client.out)
-        self.client.run("remote list_ref")
-        self.assertNotIn("Hello2/0.1@user/testing", self.client.out)
-        self.assertIn("Hello/0.1@user/testing", self.client.out)
-        registry = load(self.client.cache.remotes_path)
-        self.assertNotIn("Hello2/0.1@user/testing", registry)
-        ref = ConanFileReference.loads("Hello/0.1@user/testing")
-
-        latest_rrev = self.client.cache.get_latest_rrev(ref)
-        self.assertEqual(self.client.cache.get_remote(latest_rrev), "remote2")
-
         self.client.run("remote remove remote2")
         self.client.run("remote list")
         self.assertNotIn("remote1", self.client.out)
         self.assertIn("remote0", self.client.out)
         self.assertNotIn("remote2", self.client.out)
-        self.client.run("remote list_ref")
-        self.assertNotIn("Hello2/0.1@user/testing", self.client.out)
-        self.assertNotIn("Hello/0.1@user/testing", self.client.out)
-        registry = load(self.client.cache.remotes_path)
-        self.assertNotIn("Hello2/0.1@user/testing", registry)
-        self.assertNotIn("Hello/0.1@user/testing", registry)
-
-    def test_clean_remote(self):
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("export . Hello/0.1@user/testing")
-        self.client.run("remote add_ref Hello/0.1@user/testing remote0")
-        self.client.run("remote clean")
-        self.client.run("remote list")
-        self.assertEqual("", self.client.out)
-        self.client.run("remote list_ref")
-        self.assertEqual("", self.client.out)
-
-    def test_clean_remote_no_user(self):
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("export . Hello/0.1@")
-        self.client.run("remote add_ref Hello/0.1 remote0")
-        self.client.run("remote clean")
-        self.client.run("remote list")
-        self.assertEqual("", self.client.out)
-        self.client.run("remote list_ref")
-        self.assertEqual("", self.client.out)
 
     def test_remove_remote_no_user(self):
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("export . Hello/0.1@")
-        self.client.run("remote add_ref Hello/0.1 remote0")
         self.client.run("remote remove remote0")
         self.client.run("remote list")
         self.assertNotIn("remote0", self.client.out)
-        self.client.run("remote list_ref")
-        self.assertEqual("", self.client.out)
 
     def test_add_force(self):
         client = TestClient()
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("export . Hello/0.1@user/testing")
-        client.run("export . Hello2/0.1@user/testing")
-        client.run("remote add_ref Hello/0.1@user/testing r2")
-        client.run("remote add_ref Hello2/0.1@user/testing r1")
-
         client.run("remote add r4 https://r4 -f")
         client.run("remote list")
         lines = str(client.out).splitlines()
@@ -217,11 +105,6 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("r4: https://r4", lines[1])
         self.assertIn("r2: https://newr2", lines[2])
         self.assertIn("newr1: https://r1", lines[3])
-        client.run("remote list_ref")
-        rev2 = client.cache.get_latest_rrev(ConanFileReference.loads('Hello2/0.1@user/testing')).revision
-        rev1 = client.cache.get_latest_rrev(ConanFileReference.loads('Hello/0.1@user/testing')).revision
-        self.assertIn(f"Hello2/0.1@user/testing#{rev2}: newr1", client.out)
-        self.assertIn(f"Hello/0.1@user/testing#{rev1}: r2", client.out)
 
         client.run("remote add newr1 https://newr1 -f -i")
         client.run("remote list")
@@ -238,16 +121,12 @@ class RemoteTest(unittest.TestCase):
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
-        client.run("remote add_ref Hello/0.1@user/testing r2")
         client.run("remote rename r2 mynewr2")
         client.run("remote list")
         lines = str(client.out).splitlines()
         self.assertIn("r1: https://r1", lines[0])
         self.assertIn("mynewr2: https://r2", lines[1])
         self.assertIn("r3: https://r3", lines[2])
-        client.run("remote list_ref")
-        rev = client.cache.get_latest_rrev(ConanFileReference.loads("Hello/0.1@user/testing"))
-        self.assertIn(f"{rev.full_str()}: mynewr2", client.out)
 
         # Rename to an existing one
         client.run("remote rename r2 r1", assert_error=True)
@@ -411,78 +290,6 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote update remote1 %s" % url, assert_error=True)
         self.assertIn("Remote 'remote0' already exists with same URL", self.client.out)
 
-    def test_basic_refs(self):
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("export . Hello/0.1@user/testing")
-        self.client.run("export . Hello1/0.1@user/testing")
-        rev = self.client.cache.get_latest_rrev(
-            ConanFileReference.loads('Hello/0.1@user/testing'))
-        rev1 = self.client.cache.get_latest_rrev(
-            ConanFileReference.loads('Hello1/0.1@user/testing'))
-        self.client.run("remote add_ref Hello/0.1@user/testing remote0")
-        self.client.run("remote list_ref")
-        self.assertIn(f"{rev.full_str()}: remote0", self.client.out)
-
-        self.client.run("remote add_ref Hello1/0.1@user/testing remote1")
-        self.client.run("remote list_ref")
-        self.assertIn(f"{rev.full_str()}: remote0", self.client.out)
-        self.assertIn(f"{rev1.full_str()}: remote1", self.client.out)
-
-        self.client.run("remote remove_ref Hello1/0.1@user/testing")
-        self.client.run("remote list_ref")
-        self.assertIn(f"{rev.full_str()}: remote0", self.client.out)
-        self.assertNotIn("Hello1/0.1@user/testing", self.client.out)
-
-        self.client.run("remote add_ref Hello1/0.1@user/testing remote1")
-        self.client.run("remote list_ref")
-        self.assertIn(f"{rev.full_str()}: remote0", self.client.out)
-        self.assertIn(f"{rev1.full_str()}: remote1", self.client.out)
-
-        self.client.run("remote update_ref Hello1/0.1@user/testing remote2")
-        self.client.run("remote list_ref")
-        self.assertIn(f"{rev.full_str()}: remote0", self.client.out)
-        self.assertIn(f"{rev1.full_str()}: remote2", self.client.out)
-
-    def test_package_refs(self):
-
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . Hello/0.1@user/testing")
-        package_id0 = NO_SETTINGS_PACKAGE_ID
-        latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("Hello/0.1@user/testing"))
-        prev0 = self.client.cache.get_latest_prev(PackageReference(latest_rrev, package_id0))
-        self.client.save({"conanfile.py": GenConanfile().with_option("myoption", '"ANY"')})
-        self.client.run("create . Hello1/0.1@user/testing -o Hello1:myoption=1")
-        package_id1 = re.search(r"Hello1/0.1@user/testing:(\S+)", str(self.client.out)).group(1)
-        self.client.run("create . Hello1/0.1@user/testing -o Hello1:myoption=2")
-        package_id2 = re.search(r"Hello1/0.1@user/testing:(\S+)", str(self.client.out)).group(1)
-
-        latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("Hello1/0.1@user/testing"))
-        prev1 = self.client.cache.get_latest_prev(PackageReference(latest_rrev, package_id1))
-        prev2 = self.client.cache.get_latest_prev(PackageReference(latest_rrev, package_id2))
-
-        self.client.run("remote add_pref Hello/0.1@user/testing:{} remote0".format(package_id0))
-        self.client.run("remote list_pref Hello/0.1@user/testing")
-        self.assertIn("{}: remote0".format(prev0.full_str()), self.client.out)
-
-        self.client.run("remote add_pref Hello1/0.1@user/testing:{} remote1".format(package_id1))
-        self.client.run("remote list_pref Hello1/0.1@user/testing")
-        self.assertIn("{}: remote1".format(prev1.full_str()), self.client.out)
-
-        self.client.run("remote remove_pref Hello1/0.1@user/testing:{}".format(package_id1))
-        self.client.run("remote list_pref Hello1/0.1@user/testing")
-        self.assertNotIn("{}".format(prev1.full_str()), self.client.out)
-
-        self.client.run("remote add_pref Hello1/0.1@user/testing:{} remote0".format(package_id1))
-        self.client.run("remote add_pref Hello1/0.1@user/testing:{} remote1".format(package_id2))
-        self.client.run("remote list_pref Hello1/0.1@user/testing")
-        self.assertIn("{}: remote0".format(prev1.full_str()), self.client.out)
-        self.assertIn("{}: remote1".format(prev2.full_str()), self.client.out)
-
-        self.client.run("remote update_pref Hello1/0.1@user/testing:{} remote2".format(package_id1))
-        self.client.run("remote list_pref Hello1/0.1@user/testing")
-        self.assertIn("{}: remote2".format(prev1.full_str()), self.client.out)
-        self.assertIn("{}: remote1".format(prev2.full_str()), self.client.out)
-
     def test_missing_subarguments(self):
         self.client.run("remote", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", self.client.out)
@@ -538,9 +345,3 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list")
         self.assertNotIn("remote1", self.client.out)
         self.assertNotIn("remote0", self.client.out)
-
-    def test_remove_package_empty(self):
-        self.client.save({"conanfile.py": GenConanfile("name", "version")})
-        self.client.run("export . name/version@lasote/stable")
-        self.client.run("upload name/version@lasote/stable --remote remote1")
-        self.client.run("remove -f -p -r remote1 name/version@lasote/stable")

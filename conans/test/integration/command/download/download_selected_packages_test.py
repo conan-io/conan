@@ -18,7 +18,7 @@ def setup():
     client.run("install {} -s os=Windows --build missing".format(ref))
     client.run("install {} -s os=Linux --build missing".format(ref))
     client.run("install {} -s os=Linux -s arch=x86 --build missing".format(ref))
-    client.run("upload {} --all".format(ref))
+    client.run("upload {} --all -r default".format(ref))
     latest_rrev = client.cache.get_latest_rrev(ref)
     packages = client.cache.get_package_ids(latest_rrev)
     package_ids = [package.id for package in packages]
@@ -104,7 +104,7 @@ def test_download_all_but_no_packages():
     # Upload only the recipe
     new_client.save({"conanfile.py": GenConanfile()})
     new_client.run("export . Hello0/0.1@lasote/stable ")
-    new_client.run("upload  Hello0/0.1@lasote/stable --all")
+    new_client.run("upload  Hello0/0.1@lasote/stable --all -r default")
 
     # And try to download all
     new_client.run("download Hello0/0.1@lasote/stable")

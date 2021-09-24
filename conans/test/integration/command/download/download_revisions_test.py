@@ -13,7 +13,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/1.0@user/channel")
-        client.run("upload * --all --confirm")
+        client.run("upload * --all --confirm -r default")
         client.run("remove * -f")
         client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'pkg/1.0@user/channel#fakerevision'", client.out)
@@ -23,10 +23,10 @@ class DownloadRevisionsTest(unittest.TestCase):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile())
-        client.run("upload pkg/1.0@user/channel --all --confirm")
+        client.run("upload pkg/1.0@user/channel --all --confirm -r default")
         # create new revision from recipe
         client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))
-        client.run("upload pkg/1.0@user/channel --all --confirm")
+        client.run("upload pkg/1.0@user/channel --all --confirm -r default")
         client.run("remove * -f")
         client.run("download pkg/1.0@user/channel#{}".format(pref.ref.revision))
         self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.id), client.out)
@@ -41,10 +41,10 @@ class DownloadRevisionsTest(unittest.TestCase):
         client = TurboTestClient(servers=servers,
                                  users={"default": [("user", "password")]})
         pref = client.create(ref, conanfile=GenConanfile())
-        client.run("upload pkg/1.0@ --all --confirm")
+        client.run("upload pkg/1.0@ --all --confirm -r default")
         # create new revision from recipe
         client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))
-        client.run("upload pkg/1.0@ --all --confirm")
+        client.run("upload pkg/1.0@ --all --confirm -r default")
         client.run("remove * -f")
         client.run("download pkg/1.0@#{}".format(pref.ref.revision))
         self.assertIn("pkg/1.0: Package installed {}".format(pref.id), client.out)
@@ -57,9 +57,9 @@ class DownloadRevisionsTest(unittest.TestCase):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile())
-        client.run("upload pkg/1.0@user/channel --all --confirm")
+        client.run("upload pkg/1.0@user/channel --all --confirm -r default")
         client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))
-        client.run("upload pkg/1.0@user/channel --all --confirm")
+        client.run("upload pkg/1.0@user/channel --all --confirm -r default")
         client.run("remove * -f")
         client.run("download pkg/1.0@user/channel#{}:{}#{}".format(pref.ref.revision,
                                                                    pref.id,

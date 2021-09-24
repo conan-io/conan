@@ -228,7 +228,6 @@ class TestValidate(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "pkg2/0.1")})
         error = client.run("install .", assert_error=True)
-        print(client.out)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg1/0.1: ConfigurationError: Option 2 of 'dep' not supported", client.out)
 

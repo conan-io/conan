@@ -44,13 +44,13 @@ class MyPkg(ConanFile):
         self.assertNotIn("Pkg/0.1@lasote/channel", self.client.out)
 
     def test_upload(self):
-        self.client.run("upload * --all --confirm")
+        self.client.run("upload * --all --confirm -r default")
         self.client.run("remove Pkg* -f")
         self.client.run("install Pkg/0.1@lasote/channel")
         self.test_basic()
 
     def test_upload_change(self):
-        self.client.run("upload * --all --confirm")
+        self.client.run("upload * --all --confirm -r default")
         client = TestClient(servers={"default": self.test_server},
                             users={"default": [("lasote", "mypass")]})
         client.run("install Pkg/0.1@lasote/channel")

@@ -27,7 +27,7 @@ def download(app, ref, package_ids, remote, recipe, remotes):
     conanfile = loader.load_basic(conan_file_path, display=ref)
 
     # Download the sources too, don't be lazy
-    retrieve_exports_sources(remote_manager, cache, layout, conanfile, ref, remotes)
+    retrieve_exports_sources(remote_manager, layout, conanfile, ref, remotes)
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
@@ -51,7 +51,7 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
         pref = PackageReference(ref, package_id)
         try:
             if not pref.revision:
-                pref = remote_manager.get_latest_package_revision(pref, remote)
+                pref, _ = remote_manager.get_latest_package_revision(pref, remote)
         except NotFoundException:
             raise PackageNotFoundException(pref)
         else:

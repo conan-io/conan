@@ -23,8 +23,8 @@ class CacheDatabase:
         self._references.dump(output)
 
     def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_remote=None, new_timestamp=None, new_build_id=None):
-        self._references.update(old_ref, new_ref, new_path, new_remote, new_timestamp, new_build_id)
+                         new_path=None, new_timestamp=None, new_build_id=None):
+        self._references.update(old_ref, new_ref, new_path, new_timestamp, new_build_id)
 
     def delete_ref_by_path(self, path):
         self._references.delete_by_path(path)
@@ -58,6 +58,3 @@ class CacheDatabase:
     def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
         for it in self._references.get_recipe_revisions(ref, only_latest_rrev):
             yield it
-
-    def set_remote(self, ref: ConanReference, remote):
-        return self._references.set_remote(ref, remote)

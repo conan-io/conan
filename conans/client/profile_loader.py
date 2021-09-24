@@ -11,6 +11,7 @@ from conans.model.env_info import unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
+from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
 from conans.util.log import logger
@@ -256,18 +257,23 @@ def profile_from_args(profiles, settings, options, env, conf, cwd, cache, build_
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
-    # Ensures a default profile creating
-    default_profile = cache.default_profile
 
     if profiles is None:
-        default_name = "core:default_build_profile" if build_profile else "core:default_profile"
-        default_conf = cache.new_config[default_name]
-        if default_conf is not None:
-            default_profile_path = default_conf if os.path.isabs(default_conf) \
-                else os.path.join(cache.profiles_path, default_conf)
-            result, _ = read_profile(default_profile_path, os.getcwd(), cache.profiles_path)
+        if build_profile:
+            default_profile = cache.new_config["core:default_build_profile"] or DEFAULT_PROFILE_NAME
         else:
-            result = default_profile
+            default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
+            if default_profile is None:
+                default_profile = cache.new_config["core:default_profile"] or DEFAULT_PROFILE_NAME
+
+        default_profile = os.path.join(cache.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default profile file doesn't exist:\n"
+                   "{}\n"
+                   "You need to create a default profile or specify your own profile")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        result, _ = read_profile(default_profile, os.getcwd(), cache.profiles_path)
     else:
         result = Profile()
         for p in profiles:
