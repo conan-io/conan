@@ -1,7 +1,9 @@
 import os
 from io import StringIO
 
+from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
+from conans.client.userio import UserInput
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
@@ -83,8 +85,8 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, cache, remote_manager, user_io, remotes):
-        self._user_io = user_io
+    def __init__(self, cache, remote_manager, remotes):
+        self._user_input = UserInput(cache.config.non_interactive)
         self._cache = cache
         self._remote_manager = remote_manager
         self._remotes = remotes
@@ -121,7 +123,7 @@ class ConanRemover(object):
     #  in the future in case they remain
     def _local_remove(self, ref, src, build_ids, package_ids):
         if self._cache.installed_as_editable(ref):
-            self._user_io.out.warn(self._message_removing_editable(ref))
+            ConanOutput().warning(self._message_removing_editable(ref))
             return
 
         remove_recipe = False if package_ids is not None or build_ids is not None else True
@@ -211,7 +213,7 @@ class ConanRemover(object):
             else:
                 refs = search_recipes(self._cache, pattern)
                 if not refs:
-                    self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
+                    ConanOutput().warning("No package recipe matches '%s'" % str(pattern))
                     return
 
         deleted_refs = []
@@ -234,8 +236,8 @@ class ConanRemover(object):
                 else:
                     package_ids = packages
                 if not package_ids:
-                    self._user_io.out.warn("No matching packages to remove for %s"
-                                           % ref.full_str())
+                    ConanOutput().warning("No matching packages to remove for %s"
+                                              % ref.full_str())
                     continue
 
             if self._ask_permission(ref, src, build_ids, package_ids, force):
@@ -271,5 +273,5 @@ class ConanRemover(object):
                 aux_str.append(" %s packages" % stringlist(package_ids_filter))
             else:  # All packages to remove, no filter
                 aux_str.append(" all packages")
-        return self._user_io.request_boolean("Are you sure you want to delete%s from '%s'"
-                                             % (", ".join(aux_str), str(ref)))
+        return self._user_input.request_boolean("Are you sure you want to delete%s from '%s'"
+                                                 % (", ".join(aux_str), str(ref)))

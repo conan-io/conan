@@ -156,7 +156,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
 
 
 class ParseSCMFromConanDataTestCase(unittest.TestCase):
-    loader = ConanFileLoader(runner=None, output=Mock())
+    loader = ConanFileLoader(runner=None)
 
     def test_parse_data(self):
         conanfile = textwrap.dedent("""

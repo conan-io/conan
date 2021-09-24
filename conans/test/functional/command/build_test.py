@@ -70,9 +70,9 @@ from conans import ConanFile
 class AConan(ConanFile):
 
     def build(self):
-        self.output.warn("Build folder=>%s" % self.build_folder)
-        self.output.warn("Src folder=>%s" % self.source_folder)
-        self.output.warn("Package folder=>%s" % self.package_folder)
+        self.output.warning("Build folder=>%s" % self.build_folder)
+        self.output.warning("Src folder=>%s" % self.source_folder)
+        self.output.warning("Package folder=>%s" % self.package_folder)
         assert(os.path.exists(self.build_folder))
         assert(os.path.exists(self.source_folder))
         # package_folder will be created manually or by the CMake helper when local invocation

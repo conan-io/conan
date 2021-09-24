@@ -2,9 +2,10 @@ import fnmatch
 import os
 import stat
 
+from conans.cli.output import ConanOutput
+from conans.cli.output import ScopedOutput
 from conans.client import tools
 from conans.client.file_copier import FileCopier, report_copied_files
-from conans.client.output import ScopedOutput
 from conans.client.tools import no_op
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
@@ -15,7 +16,8 @@ from conans.util.files import load, md5sum, mkdir
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
 
-def undo_imports(current_path, output):
+def undo_imports(current_path):
+    output = ConanOutput()
     manifest_path = os.path.join(current_path, IMPORTS_MANIFESTS)
     try:
         manifest_content = load(manifest_path)
@@ -31,7 +33,7 @@ def undo_imports(current_path, output):
     files = manifest.files()
     for filepath in files:
         if not os.path.exists(filepath):
-            output.warn("File doesn't exist: %s" % filepath)
+            output.warning("File doesn't exist: %s" % filepath)
             continue
         try:
             os.remove(filepath)
@@ -50,8 +52,8 @@ def undo_imports(current_path, output):
         raise ConanException("Cannot remove manifest file (open or busy): %s" % manifest_path)
 
 
-def _report_save_manifest(copied_files, output, dest_folder, manifest_name):
-    report_copied_files(copied_files, output)
+def _report_save_manifest(copied_files, import_output, dest_folder, manifest_name):
+    report_copied_files(copied_files, import_output)
     if copied_files:
         date = timestamp_now()
         file_dict = {}
@@ -86,13 +88,13 @@ def run_imports(conanfile):
     return copied_files
 
 
-def remove_imports(conanfile, copied_files, output):
+def remove_imports(conanfile, copied_files):
     if not getattr(conanfile, "keep_imports", False):
         for f in copied_files:
             try:
                 os.remove(f)
             except OSError:
-                output.warn("Unable to remove imported file from build: %s" % f)
+                conanfile.output.warning("Unable to remove imported file from build: %s" % f)
 
 
 def run_deploy(conanfile, install_folder):

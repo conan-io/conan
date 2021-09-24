@@ -11,7 +11,7 @@ class AConan(ConanFile):
     version = "0.1"
 
     def build(self):
-        self.output.warn("CPU COUNT=> %s" % tools.cpu_count())
+        self.output.warning("CPU COUNT=> %s" % tools.cpu_count())
 
 """
 

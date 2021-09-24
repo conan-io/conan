@@ -11,9 +11,8 @@ from conans.model.ref import PackageReference
 
 class GraphBinariesAnalyzer(object):
 
-    def __init__(self, cache, output, remote_manager):
+    def __init__(self, cache, remote_manager):
         self._cache = cache
-        self._output = output
         self._remote_manager = remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
@@ -42,13 +41,13 @@ class GraphBinariesAnalyzer(object):
         with package_layout.package_lock():
             assert node.recipe != RECIPE_EDITABLE, "Editable package shouldn't reach this code"
             if package_layout.package_is_dirty():
-                node.conanfile.output.warn("Package binary is corrupted, removing: %s" % pref.id)
+                node.conanfile.output.warning("Package binary is corrupted, removing: %s" % pref.id)
                 package_layout.package_remove()
                 return
 
     def _evaluate_cache_pkg(self, node, pref, remote, remotes, update):
         if update:
-            output = node.conanfile.output
+            scoped_output = node.conanfile.output
             if remote:
                 try:
                     # if there's a later package revision in the remote we will take that one
@@ -59,20 +58,20 @@ class GraphBinariesAnalyzer(object):
                     remote_latest_prev_time = remote_prevs[0].get("time")
                     cache_time = self._cache.get_timestamp(pref)
                 except NotFoundException:
-                    output.warn("Can't update, no package in remote")
+                    scoped_output.warning("Can't update, no package in remote")
                 except NoRemoteAvailable:
-                    output.warn("Can't update, no remote defined")
+                    scoped_output.warning("Can't update, no remote defined")
                 else:
                     if cache_time < remote_latest_prev_time and remote_latest_prev != pref:
                         node.binary = BINARY_UPDATE
                         node.prev = remote_latest_prev.revision
-                        output.info("Current package revision is older than the remote one")
+                        scoped_output.info("Current package revision is older than the remote one")
                     else:
-                        output.warn("Current package revision is newer than the remote one")
+                        scoped_output.warning("Current package revision is newer than the remote one")
             elif remotes:
                 pass  # Current behavior: no remote explicit or in metadata, do not update
             else:
-                output.warn("Can't update, no remote defined")
+                scoped_output.warning("Can't update, no remote defined")
 
         if not node.binary:
             node.binary = BINARY_CACHE
@@ -174,7 +173,7 @@ class GraphBinariesAnalyzer(object):
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary in (BINARY_MISSING, BINARY_INVALID):
                 if node.conanfile.compatible_packages:
-                    compatible_build_mode = BuildMode(None, self._output)
+                    compatible_build_mode = BuildMode(None)
                     for compatible_package in node.conanfile.compatible_packages:
                         package_id = compatible_package.package_id()
                         if package_id == node.package_id:
@@ -261,7 +260,7 @@ class GraphBinariesAnalyzer(object):
         compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
-        build_mode = BuildMode(build_mode, self._output)
+        build_mode = BuildMode(build_mode)
         assert isinstance(build_mode, BuildMode)
 
         default_package_id_mode = self._cache.config.default_package_id_mode

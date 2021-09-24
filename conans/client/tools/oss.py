@@ -53,7 +53,7 @@ def cpu_count(output=None):
         else:
             return CpuProperties().get_cpus()
     except NotImplementedError:
-        output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
+        output.warning("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
 
 

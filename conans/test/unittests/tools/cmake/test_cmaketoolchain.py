@@ -11,7 +11,7 @@ from conans.model.conf import Conf
 
 @pytest.fixture
 def conanfile():
-    c = ConanFile(Mock(), None)
+    c = ConanFile(None)
     c.settings = "os", "compiler", "build_type", "arch"
     c.initialize(Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
@@ -144,7 +144,7 @@ def test_user_toolchain(conanfile):
 
 @pytest.fixture
 def conanfile_apple():
-    c = ConanFile(Mock(), None)
+    c = ConanFile(None)
     c.settings = "os", "compiler", "build_type", "arch"
     c.initialize(Settings({"os": {"Macos": {"version": ["10.15"]}},
                            "compiler": {"apple-clang": {"libcxx": ["libc++"]}},
@@ -173,7 +173,7 @@ def test_osx_deployment_target(conanfile_apple):
 
 @pytest.fixture
 def conanfile_msvc():
-    c = ConanFile(Mock(), None)
+    c = ConanFile(None)
     c.settings = "os", "compiler", "build_type", "arch"
     c.initialize(Settings({"os": ["Windows"],
                            "compiler": {"msvc": {"version": ["19.3"], "cppstd": ["20"]}},
