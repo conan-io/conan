@@ -87,19 +87,11 @@ class _UploadCollecter(object):
         for ref in refs:
             # TODO: cache2.0. For 2.0 we should always specify the revision of the reference
             #  that we want to upload, check if  we should move this to other place
-            # get the latest revision for the reference
             remote = remotes.selected
-            if remote:
-                ref_remote = remote
-            else:
-                # FIXME: The ref has already been obtained before, no sense to ask for latest
-                rrev = self._cache.get_latest_rrev(ref)
-                ref_remote = self._cache.get_remote(rrev) if rrev else None
-                ref_remote = remotes.get_remote(ref_remote)
 
             upload = True
             if not confirm:
-                msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), ref_remote.name)
+                msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), remote.name)
                 upload = self._user_input.request_boolean(msg)
             if upload:
                 try:
@@ -152,7 +144,7 @@ class _UploadCollecter(object):
                     package_id, package_revision = package.id, package.revision
                     assert package_revision is not None, "PREV cannot be None to upload"
                     prefs.append(PackageReference(ref, package_id, package_revision))
-                refs_by_remote[ref_remote].append((ref, conanfile, prefs))
+                refs_by_remote[remote].append((ref, conanfile, prefs))
 
         return refs_by_remote
 
@@ -173,11 +165,8 @@ class _PackagePreparator(object):
         - compare and decide which files need to be uploaded (and deleted from server)
         """
         recipe_layout = self._cache.ref_layout(ref)
-        current_remote_name = self._cache.get_remote(ref)
 
-        if remote.name != current_remote_name:
-            retrieve_exports_sources(self._remote_manager, self._cache, recipe_layout, conanfile,
-                                     ref, remotes)
+        retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, ref, remotes)
 
         conanfile_path = recipe_layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
@@ -208,7 +197,7 @@ class _PackagePreparator(object):
 
         files_to_upload, deleted = self._recipe_files_to_upload(ref, policy, cache_files, remote,
                                                                 remote_manifest, local_manifest)
-        return (files_to_upload, deleted, cache_files, conanfile_path, t1, current_remote_name,
+        return (files_to_upload, deleted, cache_files, conanfile_path, t1, remote.name,
                 recipe_layout)
 
     def _check_recipe_date(self, ref, remote, local_manifest):
@@ -566,10 +555,6 @@ class CmdUpload(object):
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
-        # The recipe wasn't in the registry or it has changed the revision field only
-        if not current_remote_name:
-            self._cache.set_remote(ref, remote.name)
-
         return ref
 
     def _upload_package(self, pref, retry=None, retry_wait=None, integrity_check=False,
@@ -605,9 +590,6 @@ class CmdUpload(object):
 
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        cur_package_remote = self._cache.get_remote(pref)
-        if not cur_package_remote:
-            self._cache.set_remote(pref, p_remote.name)
         return pref
 
 

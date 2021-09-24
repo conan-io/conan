@@ -50,7 +50,7 @@ def test_install_system_requirements(client):
     client.run("export . Pkg/0.1@lasote/testing")
     client.run(" install Pkg/0.1@lasote/testing --build")
     assert "Running system requirements!!" in client.out
-    client.run("upload * --all --confirm")
+    client.run("upload * --all --confirm -r default")
     client.run('remove "*" -f')
     client.run(" install Pkg/0.1@lasote/testing")
     assert "Running system requirements!!" in client.out
@@ -263,7 +263,7 @@ def test_install_anonymous(client):
     # https://github.com/conan-io/conan/issues/4871
     client.save({"conanfile.py": GenConanfile("Pkg", "0.1")})
     client.run("create . lasote/testing")
-    client.run("upload * --confirm --all")
+    client.run("upload * --confirm --all -r default")
 
     client2 = TestClient(servers=client.servers, users={})
     client2.run("install Pkg/0.1@lasote/testing")
@@ -275,7 +275,7 @@ def test_install_without_ref(client):
     client.run('create .')
     assert "lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
-    client.run('upload lib/1.0 -c --all')
+    client.run('upload lib/1.0 -c --all -r default')
     assert "Uploaded conan recipe 'lib/1.0' to 'default'" in client.out
 
     client.run('remove "*" -f')
@@ -287,7 +287,7 @@ def test_install_without_ref(client):
 
     # Try this syntax to upload too
     client.run('install lib/1.0@')
-    client.run('upload lib/1.0@ -c --all')
+    client.run('upload lib/1.0@ -c --all -r default')
 
 
 def test_install_disabled_remote(client):
@@ -300,7 +300,7 @@ def test_install_disabled_remote(client):
     client.run("remote enable default")
     client.run("install Pkg/0.1@lasote/testing -r default")
     client.run("remote disable default")
-    client.run("install Pkg/0.1@lasote/testing --update", assert_error=True)
+    client.run("install Pkg/0.1@lasote/testing --update -r default", assert_error=True)
     assert "Remote 'default' is disabled" in client.out
 
 

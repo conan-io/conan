@@ -192,8 +192,8 @@ class DataCache:
         return new_path
 
     def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_remote=None, new_timestamp=None, new_build_id=None):
-        self._db.update_reference(old_ref, new_ref, new_path, new_remote, new_timestamp, new_build_id)
+                         new_path=None, new_timestamp=None, new_build_id=None):
+        self._db.update_reference(old_ref, new_ref, new_path, new_timestamp, new_build_id)
 
     def list_references(self, only_latest_rrev=False):
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
@@ -218,16 +218,9 @@ class DataCache:
         ref_data = self._db.try_get_reference(ref)
         return ref_data.get("build_id")
 
-    def get_remote(self, ref: ConanReference):
-        ref_data = self._db.try_get_reference(ref)
-        return ref_data.get("remote")
-
     def get_timestamp(self, ref):
         ref_data = self._db.try_get_reference(ref)
         return ref_data.get("timestamp")
-
-    def set_remote(self, ref: ConanReference, new_remote):
-        self._db.set_remote(ref, new_remote)
 
     def remove(self, ref: ConanReference):
         self._db.remove(ref)

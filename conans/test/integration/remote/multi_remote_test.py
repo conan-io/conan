@@ -19,7 +19,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "source.txt": "somesource"})
         client.run("create . pkg/0.1@user/testing")
-        client.run("upload pkg/0.1@user/testing --all")
+        client.run("upload pkg/0.1@user/testing --all -r default")
 
         # Failure because remote is removed
         servers = OrderedDict(client.servers)
@@ -39,9 +39,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client2.run("install pkg/0.1@user/testing")
         client2.run("remove * -r=default -f")
         client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/testing: Upload recipe to 'new_server' failed: "
-                      "Recipe not found: 'pkg/0.1@user/testing#61bc64971c7f9e395cab628ca34202c5'."
-                      " [Remote: default]",
+        self.assertIn("ERROR: pkg/0.1@user/testing: Upload recipe to 'new_server' failed:",
                       client2.out)
         self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
                       "not found in local cache.", client2.out)
@@ -55,20 +53,6 @@ class MultiRemotesTest(unittest.TestCase):
         self.servers = OrderedDict()
         self.servers["default"] = TestServer()
         self.servers["local"] = TestServer()
-
-    def test_list_ref_no_remote(self):
-        client = TestClient(servers=self.servers)
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/1.0@")
-        client.run("remote list_ref")
-        self.assertNotIn("pkg", client.out)
-        client.run("remote list_pref pkg/1.0@")
-        self.assertNotIn("pkg", client.out)
-        client.run("remote list_ref --no-remote")
-        latest_prev = client.get_latest_prev("pkg/1.0")
-        self.assertIn(f"{latest_prev.ref.full_str()}: None", client.out)
-        client.run("remote list_pref pkg/1.0 --no-remote")
-        self.assertIn(f"{latest_prev.full_str()}: None", client.out)
 
     @staticmethod
     def _create(client, number, version, modifier=""):
@@ -90,14 +74,10 @@ class MultiRemotesTest(unittest.TestCase):
         self._create(client_a, "Hello0", "0.0")
         client_a.run("upload Hello0/0.0@lasote/stable -r local")
         client_a.run("upload Hello0/0.0@lasote/stable -r default")
-        client_a.run("remote list_ref")
-        self.assertIn(": local", str(client_a.out))
         sleep(1)  # For timestamp and updates checks
 
         # Download Hello0 from local with client_b
         client_b.run("install Hello0/0.0@lasote/stable -r local --build missing")
-        client_b.run("remote list_ref")
-        self.assertIn(": local", str(client_b.out))
 
         # Update Hello0 with client_a and reupload
         self._create(client_a, "Hello0", "0.0", modifier="\n")
@@ -111,12 +91,8 @@ class MultiRemotesTest(unittest.TestCase):
         # self.assertIn("Binary: Cache", client_b.out)
 
         # Now try to update the package with install -u
-        client_b.run("remote list_ref")
-        self.assertIn(": local", str(client_b.out))
         client_b.run("install Hello0/0.0@lasote/stable -u --build")
         self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client_b.out)
-        client_b.run("remote list_ref")
-        self.assertIn(": local", str(client_b.out))
 
         # Upload a new version from client A, but only to the default server (not the ref-listed)
         # Upload Hello0 to local and default from client_a
@@ -135,8 +111,6 @@ class MultiRemotesTest(unittest.TestCase):
         # client_b.run("info Hello0/0.0@lasote/stable -r default -u")
         # self.assertIn("Remote: local", client_b.out)
         # self.assertIn("Recipe: Update available", client_b.out)
-        client_b.run("remote list_ref")
-        self.assertIn(": local", str(client_b.out))
 
         # Well, now try to update the package with -r default -u
         client_b.run("install Hello0/0.0@lasote/stable -r default -u --build")
@@ -146,9 +120,6 @@ class MultiRemotesTest(unittest.TestCase):
         # client_b.run("info Hello0/0.0@lasote/stable -u")
         # self.assertIn("Recipe: Cache", client_b.out)
         # self.assertIn("Binary: Cache", client_b.out)
-        client_b.run("remote list_ref")
-        latest_rrev = client_b.cache.get_latest_rrev(ConanFileReference.loads("Hello0/0.0@lasote/stable"))
-        self.assertIn(f"{latest_rrev.full_str()}: default", client_b.out)
 
     def test_conan_install_update(self):
         """
@@ -198,36 +169,6 @@ class MultiRemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
-    def test_upload(self):
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        self.client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
-        self.client.run("export . lasote/stable")
-        self.client.run("upload %s" % str(ref))
-
-        self.client.run("info %s" % str(ref))
-        self.assertIn("remote0=http://", self.client.out)
-
-        # The remote, once fixed does not change
-        the_time = time.time() - 10.0
-        with patch.object(RevisionList, '_now', return_value=the_time):
-            self.client.run("upload %s -r=remote1" % str(ref))
-        self.client.run("info %s" % str(ref))
-        self.assertIn("remote0=http://", self.client.out)
-
-        # Now install it in other machine from remote 0
-        client2 = TestClient(servers=self.servers, users=self.users)
-        client2.run("install %s --build=missing" % str(ref))
-        client2.run("info %s" % str(ref))
-        self.assertIn("remote0=http://", client2.out)
-
-        # Now install it in other machine from remote 1
-        servers = self.servers.copy()
-        servers.pop("remote0")
-        client3 = TestClient(servers=servers, users=self.users)
-        client3.run("install %s --build=missing" % str(ref))
-        client3.run("info %s" % str(ref))
-        self.assertIn("remote1=http://", client3.out)
-
     def test_fail_when_not_notfound(self):
         """
         If a remote fails with a 404 it has to keep looking in the next remote, but if it fails by
@@ -261,9 +202,6 @@ class MultiRemoteTest(unittest.TestCase):
             self.client.run("export . lasote/stable")
             self.client.run("upload %s -r=remote%d" % (str(ref), i))
 
-            self.client.run("info %s" % str(ref))
-            self.assertIn("remote%d=http://" % i, self.client.out)
-
         # Now install it in other machine from remote 0
         client2 = TestClient(servers=self.servers, users=self.users)
 
@@ -273,7 +211,3 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable from 'remote0'", client2.out)
         self.assertIn("Hello1/0.1@lasote/stable from 'remote1'", client2.out)
         self.assertIn("Hello2/0.1@lasote/stable from 'remote2'", client2.out)
-        client2.run("info .")
-        self.assertIn("Remote: remote0=http://", client2.out)
-        self.assertIn("Remote: remote1=http://", client2.out)
-        self.assertIn("Remote: remote2=http://", client2.out)

@@ -1239,8 +1239,7 @@ class Command(object):
         """
         Uploads a recipe and binary packages to a remote.
 
-        If no remote is specified, the first configured remote (by default conan-center, use
-        'conan remote list' to list the remotes) will be used.
+        If no remote is specified, it fails.
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload",
@@ -1251,7 +1250,8 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument('-q', '--query', default=None, action=OnceArgument,
                             help="Only upload packages matching a specific query. " + _QUERY_HELP)
-        parser.add_argument("-r", "--remote", action=OnceArgument,
+        # using required, we may want to pass this as a positional argument?
+        parser.add_argument("-r", "--remote", action=OnceArgument, required=True,
                             help='upload to this specific remote')
         parser.add_argument("--all", action='store_true', default=False,
                             help='Upload both package recipe and packages')
@@ -1381,54 +1381,12 @@ class Command(object):
         parser_rename.add_argument('remote', help='The old remote name')
         parser_rename.add_argument('new_remote', help='The new remote name')
 
-        parser_list_ref = subparsers.add_parser('list_ref', help='List the package recipes '
-                                                                 'and its associated remotes')
-        parser_list_ref.add_argument("--no-remote", action='store_true', default=False,
-                                     help='List the ones without remote')
-        parser_padd = subparsers.add_parser('add_ref',
-                                            help="Associate a recipe's reference to a remote")
-        parser_padd.add_argument('reference', help='Package recipe reference')
-        parser_padd.add_argument('remote', help='Name of the remote')
-        parser_prm = subparsers.add_parser('remove_ref',
-                                           help="Dissociate a recipe's reference and its remote")
-        parser_prm.add_argument('reference', help='Package recipe reference')
-        parser_pupd = subparsers.add_parser('update_ref', help="Update the remote associated with "
-                                            "a package recipe")
-        parser_pupd.add_argument('reference', help='Package recipe reference')
-        parser_pupd.add_argument('remote', help='Name of the remote')
-
-        list_pref = subparsers.add_parser('list_pref', help='List the package binaries and '
-                                                            'its associated remotes')
-        list_pref.add_argument('reference', help='Package recipe reference')
-        list_pref.add_argument("--no-remote", action='store_true', default=False,
-                               help='List the ones without remote')
-
-        add_pref = subparsers.add_parser('add_pref',
-                                         help="Associate a package reference to a remote")
-        add_pref.add_argument('package_reference', help='Binary package reference')
-        add_pref.add_argument('remote', help='Name of the remote')
-
-        remove_pref = subparsers.add_parser('remove_pref', help="Dissociate a package's reference "
-                                                                "and its remote")
-        remove_pref.add_argument('package_reference', help='Binary package reference')
-
-        update_pref = subparsers.add_parser('update_pref', help="Update the remote associated with "
-                                            "a binary package")
-        update_pref.add_argument('package_reference', help='Bianary package reference')
-        update_pref.add_argument('remote', help='Name of the remote')
-
-        subparsers.add_parser('clean', help="Clean the list of remotes and all "
-                                            "recipe-remote associations")
-
         parser_enable = subparsers.add_parser('enable', help='Enable a remote')
         parser_enable.add_argument('remote', help='Name of the remote')
         parser_disable = subparsers.add_parser('disable', help='Disable a remote')
         parser_disable.add_argument('remote', help='Name of the remote')
 
         args = parser.parse_args(*args)
-
-        reference = args.reference if hasattr(args, 'reference') else None
-        package_reference = args.package_reference if hasattr(args, 'package_reference') else None
 
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
 
@@ -1447,26 +1405,6 @@ class Command(object):
             return self._conan.remote_rename(remote_name, new_remote)
         elif args.subcommand == "update":
             return self._conan.remote_update(remote_name, url, verify_ssl, args.insert)
-        elif args.subcommand == "list_ref":
-            refs = self._conan.remote_list_ref(args.no_remote)
-            self._outputer.remote_ref_list(refs)
-        elif args.subcommand == "add_ref":
-            return self._conan.remote_add_ref(reference, remote_name)
-        elif args.subcommand == "remove_ref":
-            return self._conan.remote_remove_ref(reference)
-        elif args.subcommand == "update_ref":
-            return self._conan.remote_update_ref(reference, remote_name)
-        elif args.subcommand == "list_pref":
-            refs = self._conan.remote_list_pref(reference, args.no_remote)
-            self._outputer.remote_pref_list(refs)
-        elif args.subcommand == "add_pref":
-            return self._conan.remote_add_pref(package_reference, remote_name)
-        elif args.subcommand == "remove_pref":
-            return self._conan.remote_remove_pref(package_reference)
-        elif args.subcommand == "update_pref":
-            return self._conan.remote_update_pref(package_reference, remote_name)
-        elif args.subcommand == "clean":
-            return self._conan.remote_clean()
         elif args.subcommand == "enable":
             return self._conan.remote_set_disabled_state(remote_name, False)
         elif args.subcommand == "disable":

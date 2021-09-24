@@ -61,9 +61,7 @@ class ConanProxy(object):
         # TODO: cache2.0: check with new --update flows
         recipe_layout = self._cache.ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
-        cur_remote = self._cache.get_remote(recipe_layout.reference)
-        cur_remote = remotes[cur_remote] if cur_remote else None
-        selected_remote = remotes.selected or cur_remote
+        selected_remote = remotes.selected
 
         if check_updates:
 
@@ -98,8 +96,7 @@ class ConanProxy(object):
                     else:
                         selected_remote = remote
                         self._cache.update_reference(ref,
-                                                     new_timestamp=remote_time,
-                                                     new_remote=selected_remote.name)
+                                                     new_timestamp=remote_time)
                         status = RECIPE_INCACHE_DATE_UPDATED
                 return conanfile_path, status, selected_remote, ref
             else:
@@ -107,25 +104,25 @@ class ConanProxy(object):
                 return conanfile_path, status, selected_remote, ref
         else:
             status = RECIPE_INCACHE
-            return conanfile_path, status, cur_remote, ref
+            return conanfile_path, status, None, ref
 
     def _get_rrev_from_remotes(self, reference, remotes, check_all_servers):
         scoped_output = ScopedOutput(str(reference), ConanOutput())
 
         results = []
         for remote in remotes:
+            scoped_output.info(f"Checking remote: {remote.name}")
             try:
-                scoped_output.info(f"Checking remote: {remote.name}")
-
-                remote_rrev = self._remote_manager.get_latest_recipe_revision_with_time(reference, remote)
-                if remote_rrev.get('reference'):
-                    results.append({'remote': remote,
-                                    'reference': remote_rrev.get("reference"),
-                                    'time': remote_rrev.get("time")})
-                if len(results) > 0 and not check_all_servers:
-                    break
+                rrev, rrev_time = self._remote_manager.get_latest_recipe_revision_with_time(reference,
+                                                                                            remote)
             except NotFoundException:
                 pass
+            else:
+                results.append({'remote': remote,
+                                'reference': rrev,
+                                'time': rrev_time})
+            if len(results) > 0 and not check_all_servers:
+                break
 
         if len(results) == 0:
             return None, None, None
@@ -149,15 +146,6 @@ class ConanProxy(object):
 
         if remote:
             scoped_output.info("Retrieving from server '%s' " % remote.name)
-        else:
-            latest_rrev = self._cache.get_latest_rrev(ref)
-            if latest_rrev:
-                remote_name = self._cache.get_remote(latest_rrev)
-                if remote_name:
-                    remote = remotes[remote_name]
-                    scoped_output.info("Retrieving from predefined remote '%s'" % remote.name)
-
-        if remote:
             try:
                 new_ref = _retrieve_from_remote(remote, ref)
                 return remote, new_ref
