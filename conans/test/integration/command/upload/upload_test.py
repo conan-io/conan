@@ -74,10 +74,12 @@ class UploadTest(unittest.TestCase):
             os.system('chmod +x "{}"'.format(package_file_path))
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
             client.run("upload * --all --confirm -r default")
+            # Doesn't change revision, doesn't reupload
             self.assertNotIn("Uploading conan_package.tgz", client.out)
             self.assertIn("skipping upload", client.out)
-            self.assertIn("Compressing package...", client.out)
+            self.assertNotIn("Compressing package...", client.out)
 
+        # with --force it really re-uploads it
         client.run("upload * --all --confirm --force -r default")
         self.assertIn("Uploading conanfile.py", client.out)
         self.assertIn("Uploading conan_package.tgz", client.out)
