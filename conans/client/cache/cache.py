@@ -257,7 +257,7 @@ class ClientCache(object):
 
     @property
     def default_profile_path(self):
-        # Used only in testing
+        # Used only in testing, and this class "reset_default_profile"
         return os.path.join(self.cache_folder, PROFILES_FOLDER, DEFAULT_PROFILE_NAME)
 
     @property
