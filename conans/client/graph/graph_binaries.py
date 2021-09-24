@@ -74,7 +74,7 @@ class GraphBinariesAnalyzer(object):
                 pass
 
         if not remotes and update:
-            node.conanfile.output.warn("Can't update, no remote defined")
+            node.conanfile.output.warning("Can't update, no remote defined")
 
         if len(results) > 0:
             remotes_results = sorted(results, key=lambda k: k['time'], reverse=True)
@@ -217,9 +217,9 @@ class GraphBinariesAnalyzer(object):
                     remote, remote_prev, prev_time = self._get_package_from_remotes(node, pref,
                                                                                     remotes, update)
                 except NotFoundException:
-                    output.warn("Can't update, no package in remote")
+                    output.warning("Can't update, no package in remote")
                 except NoRemoteAvailable:
-                    output.warn("Can't update, no remote defined")
+                    output.warning("Can't update, no remote defined")
                 else:
                     cache_time = self._cache.get_timestamp(cache_latest_prev)
                     # TODO: cache 2.0 should we update the date if the prev is the same?
