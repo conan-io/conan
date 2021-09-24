@@ -105,7 +105,15 @@ class NewCppInfo(object):
         self.components = DefaultOrderedDict(lambda: _NewComponent())
         # Main package is a component with None key
         self.components[None] = _NewComponent()
+
+    def init_defaults(self):
         self.components[None].clear_none()
+        self.components[None].includedirs.append("include")
+        self.components[None].libdirs.append("lib")
+        self.components[None].resdirs.append("res")
+        self.components[None].bindirs.append("bin")
+        self.components[None].builddirs.append("")
+        self.components[None].frameworkdirs.append("Frameworks")
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)

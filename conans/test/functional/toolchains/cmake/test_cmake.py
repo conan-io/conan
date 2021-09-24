@@ -98,12 +98,9 @@ class Base(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conans.tools import save
-            from conan.tools.layout import cmake_layout
             import os
             class Pkg(ConanFile):
                 settings = "build_type", "compiler"
-                def layout(self):
-                    cmake_layout(self)
                 def package(self):
                     save(os.path.join(self.package_folder, "include/hello.h"),
                          '''#include <iostream>
