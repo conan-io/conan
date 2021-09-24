@@ -2,7 +2,7 @@
 
 import unittest
 
-from conans import Settings
+from conans.model.settings import Settings
 from conans.client.conf import get_default_settings_yml
 from conans.client.settings_preprocessor import preprocess
 

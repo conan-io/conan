@@ -1,6 +1,4 @@
 from conans.model.conan_file import ConanFile
-from conans.model.options import Options
-from conans.model.settings import Settings
 from conans.util.files import load
 
 
