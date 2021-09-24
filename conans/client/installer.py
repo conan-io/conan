@@ -537,11 +537,10 @@ class BinaryInstaller(object):
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                            reference=ref)
                 if hasattr(conanfile, "layout"):
-                    # Old cpp info without defaults (the defaults are in the new one)
-                    conanfile.cpp_info = NewCppInfo()
                     if not is_editable:
                         package_cppinfo = conanfile.cpp.package.copy()
                         package_cppinfo.set_relative_base_folder(conanfile.folders.package)
+                        conanfile.cpp_info = package_cppinfo
                     else:
                         conanfile.cpp_info.filter_empty = False
 
