@@ -145,7 +145,6 @@ class ConanLib(ConanFile):
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         client.run('user -p -r default lasote')
-        self.assertIn('Please enter a password for "lasote" account:', client.out)
         client.run("user")
         self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
 
@@ -154,7 +153,6 @@ class ConanLib(ConanFile):
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         client.run('user -p')
-        self.assertIn('Please enter a password for "lasote" account:', client.out)
         client.run("user")
         self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
 
@@ -163,7 +161,7 @@ class ConanLib(ConanFile):
         """
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, mock_input=False)
         client.run('config set general.non_interactive=True')
         client.run('user -p -r default lasote', assert_error=True)
         self.assertIn('ERROR: Conan interactive mode disabled', client.out)

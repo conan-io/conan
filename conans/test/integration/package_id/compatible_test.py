@@ -370,7 +370,7 @@ class CompatibleIDsTest(unittest.TestCase):
     def package_id(self):
         p = self.info.clone()
         p.requires.recipe_revision_mode()
-        self.output.warn("Alternative package ID: {}".format(p.package_id()))
+        self.output.warning("Alternative package ID: {}".format(p.package_id()))
         self.compatible_packages.append(p)
 """
         c1 = str(c1) + tmp
@@ -382,7 +382,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
         client.save({"conanfile.py": c2})
         client.run("create .")
-        package_id = "2f0f7e3cf6fcfb1b950301b4ffee8f05394fefb7"
+        package_id = "c4597d37d3321fbd01d761b83d9cef4baed840db"
         self.assertIn(f"Package '{package_id}' created", client.out)
 
         # Back to semver mode

@@ -28,7 +28,6 @@ class BasicTest(unittest.TestCase):
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
 
-    @pytest.mark.tool_compiler
     def test_declarative(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile

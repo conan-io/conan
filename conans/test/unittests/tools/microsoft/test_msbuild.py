@@ -37,7 +37,7 @@ def test_msbuild_toolset():
                          "compiler": {"msvc": {"version": ["19.3"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile(None)
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.initialize(settings)
     conanfile.settings.build_type = "Release"
@@ -55,7 +55,7 @@ def test_msbuild_standard():
                          "compiler": {"msvc": {"version": ["19.3"], "cppstd": ["20"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile(None)
     conanfile.folders.set_base_generators(".")
     conanfile.install_folder = os.getcwd()
     conanfile.conf = ConfDefinition()

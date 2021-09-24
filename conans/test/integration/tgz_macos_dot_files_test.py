@@ -21,7 +21,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
     def _test_for_metadata_in_zip_file(self, tgz, annotated_file, dot_file_expected):
         tmp_folder = tempfile.mkdtemp()
         try:
-            uncompress_file(src_path=tgz, dest_folder=tmp_folder, output=Mock())
+            uncompress_file(src_path=tgz, dest_folder=tmp_folder)
             self.assertTrue(os.path.exists(os.path.join(tmp_folder, annotated_file)))
             self.assertEqual(dot_file_expected,
                              os.path.exists(os.path.join(tmp_folder, "._" + annotated_file)))

@@ -350,7 +350,7 @@ def test_auto_package_with_custom_package_too():
         LayoutPackager(self).package()
         assert os.path.exists(os.path.join(self.package_folder, "include", "mylib.header"))
         assert os.path.exists(os.path.join(self.package_folder, "lib", "mylib.a"))
-        self.output.warn("Package method called!")
+        self.output.warning("Package method called!")
 
     """
     client.save({"conanfile.py": conan_file})

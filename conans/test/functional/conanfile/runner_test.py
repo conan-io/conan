@@ -8,14 +8,12 @@ import pytest
 
 from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.tools import TestClient
 
 
 class RunnerTest(unittest.TestCase):
 
-    def _install_and_build(self, conanfile_text, runner=None):
-        client = TestClient(runner=runner)
+    def _install_and_build(self, client, conanfile_text):
         files = {"conanfile.py": conanfile_text}
         test_folder = os.path.join(client.current_folder, "test_folder")
         self.assertFalse(os.path.exists(test_folder))
@@ -48,7 +46,8 @@ class ConanFileToolsTest(ConanFile):
         self._runner = ConanRunner()
         self.run("mkdir test_folder")
     '''
-        client = self._install_and_build(conanfile)
+        client = TestClient()
+        self._install_and_build(client, conanfile)
         test_folder = os.path.join(client.current_folder, "test_folder")
         self.assertTrue(os.path.exists(test_folder))
 
@@ -73,72 +72,71 @@ class ConanFileToolsTest(ConanFile):
         self.run("cmake --version")
 '''
         # A runner logging everything
-        output = TestBufferConanOutput()
-        runner = ConanRunner(print_commands_to_output=True,
-                             generate_run_log_file=True,
-                             log_run_to_output=True,
-                             output=output)
-        self._install_and_build(conanfile, runner=runner)
-        self.assertIn("--Running---", output)
-        self.assertIn("> cmake --version", output)
-        self.assertIn("cmake version", output)
-        self.assertIn("Logging command output to file ", output)
+        client = TestClient()
+        client.run("config set log.print_run_commands=True")
+        client.run("config set log.run_to_file=True")
+        client.run("config set log.run_to_output=True")
+
+        self._install_and_build(client, conanfile)
+        self.assertIn("--Running---", client.out)
+        self.assertIn("> cmake --version", client.out)
+        self.assertIn("cmake version", client.out)
+        self.assertIn("Logging command output to file ", client.out)
 
         # A runner logging everything
-        output = TestBufferConanOutput()
-        runner = ConanRunner(print_commands_to_output=True,
-                             generate_run_log_file=False,
-                             log_run_to_output=True,
-                             output=output)
-        self._install_and_build(conanfile, runner=runner)
-        self.assertIn("--Running---", output)
-        self.assertIn("> cmake --version", output)
-        self.assertIn("cmake version", output)
-        self.assertNotIn("Logging command output to file ", output)
+        client = TestClient()
+        client.run("config set log.print_run_commands=True")
+        client.run("config set log.run_to_file=False")
+        client.run("config set log.run_to_output=True")
 
-        output = TestBufferConanOutput()
-        runner = ConanRunner(print_commands_to_output=False,
-                             generate_run_log_file=True,
-                             log_run_to_output=True,
-                             output=output)
-        self._install_and_build(conanfile, runner=runner)
-        self.assertNotIn("--Running---", output)
-        self.assertNotIn("> cmake --version", output)
-        self.assertIn("cmake version", output)
-        self.assertIn("Logging command output to file ", output)
+        self._install_and_build(client, conanfile)
+        self.assertIn("--Running---", client.out)
+        self.assertIn("> cmake --version", client.out)
+        self.assertIn("cmake version", client.out)
+        self.assertNotIn("Logging command output to file ", client.out)
 
-        output = TestBufferConanOutput()
-        runner = ConanRunner(print_commands_to_output=False,
-                             generate_run_log_file=False,
-                             log_run_to_output=True,
-                             output=output)
-        self._install_and_build(conanfile, runner=runner)
-        self.assertNotIn("--Running---", output)
-        self.assertNotIn("> cmake --version", output)
-        self.assertIn("cmake version", output)
-        self.assertNotIn("Logging command output to file ", output)
+        client = TestClient()
+        client.run("config set log.print_run_commands=False")
+        client.run("config set log.run_to_file=True")
+        client.run("config set log.run_to_output=True")
 
-        output = TestBufferConanOutput()
-        runner = ConanRunner(print_commands_to_output=False,
-                             generate_run_log_file=False,
-                             log_run_to_output=False,
-                             output=output)
-        self._install_and_build(conanfile, runner=runner)
-        self.assertNotIn("--Running---", output)
-        self.assertNotIn("> cmake --version", output)
-        self.assertNotIn("cmake version", output)
-        self.assertNotIn("Logging command output to file ", output)
+        self._install_and_build(client, conanfile)
+        self.assertNotIn("--Running---", client.out)
+        self.assertNotIn("> cmake --version", client.out)
+        self.assertIn("cmake version", client.out)
+        self.assertIn("Logging command output to file ", client.out)
 
-        output = TestBufferConanOutput()
-        runner = ConanRunner(print_commands_to_output=False,
-                             generate_run_log_file=True,
-                             log_run_to_output=False,
-                             output=output)
-        self._install_and_build(conanfile, runner=runner)
-        self.assertNotIn("--Running---", output)
-        self.assertNotIn("> cmake --version", output)
-        self.assertNotIn("cmake version", output)
-        self.assertIn("Logging command output to file ", output)
+        client = TestClient()
+        client.run("config set log.print_run_commands=False")
+        client.run("config set log.run_to_file=False")
+        client.run("config set log.run_to_output=True")
+
+        self._install_and_build(client, conanfile)
+        self.assertNotIn("--Running---", client.out)
+        self.assertNotIn("> cmake --version", client.out)
+        self.assertIn("cmake version", client.out)
+        self.assertNotIn("Logging command output to file ", client.out)
+
+        client = TestClient()
+        client.run("config set log.run_to_output=False")
+        client.run("config set log.print_run_commands=False")
+        client.run("config set log.run_to_file=False")
+
+        self._install_and_build(client, conanfile)
+        self.assertNotIn("--Running---", client.out)
+        self.assertNotIn("> cmake --version", client.out)
+        self.assertNotIn("cmake version", client.out)
+        self.assertNotIn("Logging command output to file ", client.out)
+
+        client = TestClient()
+        client.run("config set log.print_run_commands=False")
+        client.run("config set log.run_to_file=True")
+        client.run("config set log.run_to_output=False")
+        self._install_and_build(client, conanfile)
+        self.assertNotIn("--Running---", client.out)
+        self.assertNotIn("> cmake --version", client.out)
+        self.assertNotIn("cmake version", client.out)
+        self.assertIn("Logging command output to file ", client.out)
 
     def test_cwd(self):
         conanfile = '''

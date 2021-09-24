@@ -359,7 +359,7 @@ class GenConanfile(object):
             return None
         lines = []
         if self._build_messages:
-            lines = ['        self.output.warn("{}")'.format(m) for m in self._build_messages]
+            lines = ['        self.output.warning("{}")'.format(m) for m in self._build_messages]
         if self._cmake_build:
             lines.extend(['        cmake = CMake(self)',
                           '        cmake.configure()',

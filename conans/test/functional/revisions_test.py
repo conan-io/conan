@@ -251,13 +251,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client.run(command, assert_error=True)
         self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
 
-    def test_json_output(self):
-        client = TurboTestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . {} --json file.json".format(self.ref.full_str()))
-        data = json.loads(client.load("file.json"))
-        ref = ConanFileReference.loads(data["installed"][0]["recipe"]["id"])
-        self.assertIsNotNone(ref.revision)
 
 class RemoveWithRevisionsTest(unittest.TestCase):
 

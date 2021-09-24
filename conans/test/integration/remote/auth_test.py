@@ -50,13 +50,14 @@ class AuthorizeTest(unittest.TestCase):
         ref = self.ref.copy_with_rev(rev)
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
 
+        # FIXME: Mock user_input too to test this
         # Check that login failed two times before ok
-        self.assertEqual(self.conan.api.app.user_io.login_index["default"], 3)
+        self.assertEqual(self.conan.mocked_input.login_index["default"], 3)
 
     def test_auth_with_env(self):
 
         def _upload_with_credentials(credentials):
-            cli = TestClient(servers=self.servers, users={})
+            cli = TestClient(servers=self.servers, mock_input=False)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
             cli.run("export . lasote/testing")
             with tools.environment_append(credentials):
@@ -89,12 +90,12 @@ class AuthorizeTest(unittest.TestCase):
 
     def test_max_retries(self):
         """Bad login 3 times"""
-        self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
+        client = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
                                                                          ("baduser", "badpass2"),
                                                                          ("baduser3", "badpass3")]})
-        save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
-        self.conan.run("export . lasote/testing")
-        errors = self.conan.run("upload %s -r default" % str(self.ref), assert_error=True)
+        save(os.path.join(client.current_folder, CONANFILE), conan_content)
+        client.run("export . lasote/testing")
+        errors = client.run("upload %s -r default" % str(self.ref), assert_error=True)
         # Check that return was not ok
         self.assertTrue(errors)
         # Check that upload was not granted
@@ -102,19 +103,19 @@ class AuthorizeTest(unittest.TestCase):
         self.assertIsNone(rev)
 
         # Check that login failed all times
-        self.assertEqual(self.conan.api.app.user_io.login_index["default"], 3)
+        self.assertEqual(client.mocked_input.login_index["default"], 3)
 
     def test_no_client_username_checks(self):
         """Checks whether client username checks are disabled."""
 
         # Try with a load of names that contain special characters
-        self.conan = TestClient(servers=self.servers, users={"default": [
+        client = TestClient(servers=self.servers, users={"default": [
                                         ("some_random.special!characters", "badpass"),
                                         ("nacho@gmail.com", "nachopass"),
                                         ]})
-        save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
-        self.conan.run("export . lasote/testing")
-        self.conan.run("upload %s -r default" % str(self.ref))
+        save(os.path.join(client.current_folder, CONANFILE), conan_content)
+        client.run("export . lasote/testing")
+        client.run("upload %s -r default" % str(self.ref))
 
         # Check that upload was granted
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
@@ -122,7 +123,7 @@ class AuthorizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
 
         # Check that login failed once before ok
-        self.assertEqual(self.conan.api.app.user_io.login_index["default"], 2)
+        self.assertEqual(client.mocked_input.login_index["default"], 2)
 
 
 class AuthenticationTest(unittest.TestCase):
