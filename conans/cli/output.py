@@ -109,12 +109,16 @@ class ConanOutput(object):
         self._color = tmp_color
 
     def _write_message(self, msg, fg=None, bg=None):
+        tmp = ""
         if self._scope:
-            msg = "{}: {}".format(self.scope, msg)
-        if self._color:
-            msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+            if self._color:
+                tmp = "{}{}{}:{} ".format(fg or '', bg or '', self.scope, Style.RESET_ALL)
+            else:
+                tmp = "{}: ".format(self._scope)
 
-        self.stream.write("{}\n".format(msg))
+        tmp += "{}".format(msg)
+
+        self.stream.write("{}\n".format(tmp))
 
     def debug(self, msg):
         self._write_message(msg, logging.DEBUG)
