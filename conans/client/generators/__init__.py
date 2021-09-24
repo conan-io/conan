@@ -34,6 +34,7 @@ from .visualstudio import VisualStudioGenerator
 from .visualstudio_multi import VisualStudioMultiGenerator
 from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
+from .xcode_multi import XCodeMultiGenerator
 from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
 
@@ -55,6 +56,7 @@ class GeneratorManager(object):
                             "visual_studio_multi": VisualStudioMultiGenerator,
                             "visual_studio_legacy": VisualStudioLegacyGenerator,
                             "xcode": XCodeGenerator,
+                            "xcode_multi": XCodeMultiGenerator,
                             "ycm": YouCompleteMeGenerator,
                             "virtualenv": VirtualEnvGenerator,
                             "virtualenv_python": VirtualEnvPythonGenerator,
@@ -87,7 +89,7 @@ class GeneratorManager(object):
     def _new_generator(self, generator_name, output):
         if generator_name not in self._new_generators:
             return
-        if generator_name in self._generators:  # Avoid colisions with user custom generators
+        if generator_name in self._generators:  # Avoid collisions with user custom generators
             msg = ("******* Your custom generator name '{}' is colliding with a new experimental "
                    "built-in one. It is recommended to rename it. *******".format(generator_name))
             output.warn(msg)
@@ -136,7 +138,7 @@ class GeneratorManager(object):
             return BazelToolchain
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
-                                 "not commplete".format(generator_name))
+                                 "not complete".format(generator_name))
 
     def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
         """ produces auxiliary files, required to build a project or a package.
