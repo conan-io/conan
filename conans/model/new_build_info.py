@@ -38,6 +38,17 @@ class _NewComponent(object):
         self.sysroot = None
         self.requires = None
 
+    def clear_none(self):
+        for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            if getattr(self, varname) is None:
+                setattr(self, varname, [])
+        if self.requires is None:
+            self.requires = []
+        if self.sysroot is None:
+            self.sysroot = ""
+        if self._generator_properties is None:
+            self._generator_properties = {}
+
     @property
     def required_component_names(self):
         """ Names of the required components of the same package (not scoped with ::)"""
@@ -77,6 +88,7 @@ class NewCppInfo(object):
         self.components = DefaultOrderedDict(lambda: _NewComponent())
         # Main package is a component with None key
         self.components[None] = _NewComponent()
+        self.components[None].clear_none()
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
@@ -213,20 +225,6 @@ class NewCppInfo(object):
             ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
             ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
         return ret
-
-    def clear_none(self):
-        """A field with None meaning is 'not declared' but for consumers, that is irrelevant, an
-        empty list is easier to handle and makes perfect sense."""
-        for c in self.components.values():
-            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                if getattr(c, varname) is None:
-                    setattr(c, varname, [])
-            if c.requires is None:
-                c.requires = []
-        if self.sysroot is None:
-            self.sysroot = ""
-        if self._generator_properties is None:
-            self._generator_properties = {}
 
     def __str__(self):
         ret = []
