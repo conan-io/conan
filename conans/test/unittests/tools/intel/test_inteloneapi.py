@@ -4,11 +4,58 @@ import textwrap
 import pytest
 from mock import patch, Mock
 
+from conan.tools._compilers import architecture_flag, cppstd_flag
 from conan.tools.intel import IntelOneAPI
 from conans.client.tools import environment_append
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.test.utils.mocks import ConanFileMock, MockSettings
+
+
+@pytest.mark.parametrize("os_,arch,expected", [
+    ("Windows", "x86", "/Qm32"),
+    ("Windows", "x86_64", "/Qm64"),
+    ("Linux", "x86", "-m32"),
+    ("Linux", "x86_64", "-m64")
+])
+def test_architecture_flag_if_intel_cc(os_, arch, expected):
+    settings = MockSettings({
+        "compiler": "intel-cc",
+        "compiler.version": "2021.3",
+        "compiler.mode": "classic",
+        "arch": arch,
+        "os": os_
+    })
+    flag = architecture_flag(settings)
+    assert flag == expected
+
+
+@pytest.mark.parametrize("cppstd,flag", [
+    ("98", "c++98"),
+    ("gnu98", "gnu++98"),
+    ("03", "c++03"),
+    ("gnu03", "gnu++03"),
+    ("11", "c++11"),
+    ("gnu11", "gnu++11"),
+    ("14", "c++14"),
+    ("gnu14", "gnu++14"),
+    ("17", "c++17"),
+    ("gnu17", "gnu++17"),
+    ("20", "c++20"),
+    ("gnu20", "gnu++20"),
+    ("23", "c++2b"),
+    ("gnu23", "gnu++2b"),
+])
+def test_cppstd_flag_if_intel_cc(cppstd, flag):
+    settings = MockSettings({
+        "compiler": "intel-cc",
+        "compiler.version": "2021.3",
+        "compiler.mode": "classic",
+        "arch": "x86_64",
+        "os": "Linux",
+        "compiler.cppstd": cppstd
+    })
+    assert cppstd_flag(settings) == "-std=%s" % flag
 
 
 @pytest.mark.parametrize("mode", ["icx", "dpcpp"])
