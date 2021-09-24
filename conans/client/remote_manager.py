@@ -76,14 +76,6 @@ class RemoteManager(object):
         self._call_remote(remote, "upload_package", pref,
                           files_to_upload, deleted, retry, retry_wait)
 
-    def get_recipe_manifest(self, ref, remote):
-        ref = self._resolve_latest_ref(ref, remote)
-        return self._call_remote(remote, "get_recipe_manifest", ref), ref
-
-    def get_package_manifest(self, pref, remote):
-        pref = self._resolve_latest_pref(pref, remote, headers=None)
-        return self._call_remote(remote, "get_package_manifest", pref), pref
-
     def get_package_info(self, pref, remote, info=None):
         """ Read a package ConanInfo from remote
         """

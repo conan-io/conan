@@ -20,33 +20,6 @@ class ConanController(object):
 
         r = BottleRoutes()
 
-        @app.route(r.v1_recipe_digest, method=["GET"])
-        def get_recipe_manifest_url(name, version, username, channel, auth_user):
-            """
-            Get a dict with all files and the download url
-            """
-            conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            ref = ConanFileReference(name, version, username, channel)
-            urls = conan_service.get_conanfile_download_urls(ref, [CONAN_MANIFEST])
-            if not urls:
-                raise RecipeNotFoundException(ref)
-            return urls
-
-        @app.route(r.v1_package_digest, method=["GET"])
-        def get_package_manifest_url(name, version, username, channel, package_id, auth_user):
-            """
-            Get a dict with all files and the download url
-            """
-            conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            ref = ConanFileReference(name, version, username, channel)
-            pref = PackageReference(ref, package_id)
-
-            urls = conan_service.get_package_download_urls(pref, [CONAN_MANIFEST])
-            if not urls:
-                raise PackageNotFoundException(pref)
-            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
-            return urls_norm
-
         @app.route(r.recipe, method=["GET"])
         def get_recipe_snapshot(name, version, username, channel, auth_user):
             """

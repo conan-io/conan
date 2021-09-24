@@ -116,16 +116,6 @@ class RestApiTest(unittest.TestCase):
         self.assertIn(CONANFILE, os.listdir(tmp_dir))
         self.assertIn(CONAN_MANIFEST, os.listdir(tmp_dir))
 
-    def test_get_recipe_manifest(self):
-        # Upload a conans
-        ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing#myreciperev")
-        self._upload_recipe(ref)
-
-        # Get the conans digest
-        digest = self.api.get_recipe_manifest(ref)
-        self.assertEqual(digest.summary_hash, "6fae00c91be4d09178af3c6fdc4d59e9")
-        self.assertEqual(digest.time, 123123123)
-
     def test_get_package(self):
         # Upload a conans
         ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")

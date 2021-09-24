@@ -68,12 +68,6 @@ class RestApiClient(object):
                              self._requester, self._config, self._verify_ssl,
                              self._artifacts_properties, checksum_deploy, matrix_params)
 
-    def get_recipe_manifest(self, ref):
-        return self._get_api().get_recipe_manifest(ref)
-
-    def get_package_manifest(self, pref):
-        return self._get_api().get_package_manifest(pref)
-
     def get_package_info(self, pref, headers):
         return self._get_api().get_package_info(pref, headers=headers)
 
