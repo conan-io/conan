@@ -136,7 +136,8 @@ class ConanLib(ConanFile):
         client.run("user")
         self.assertNotIn("lasote", client.out)
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
-        client.run("upload lib/0.1@lasote/stable -r default")
+        # --force will force re-authentication, otherwise not necessary to auth
+        client.run("upload lib/0.1@lasote/stable -r default --force")
         client.run("user")
         self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
 

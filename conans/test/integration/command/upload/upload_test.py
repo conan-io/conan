@@ -75,7 +75,7 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
             client.run("upload * --all --confirm -r default")
             self.assertNotIn("Uploading conan_package.tgz", client.out)
-            self.assertIn("Package is up to date, upload skipped", client.out)
+            self.assertIn("skipping upload", client.out)
             self.assertIn("Compressing package...", client.out)
 
         client.run("upload * --all --confirm --force -r default")
