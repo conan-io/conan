@@ -210,7 +210,6 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
 
-        self.client.cache.default_profile  # Creates default
         tools.replace_in_file(self.client.cache.default_profile_path,
                               "compiler.libcxx", "#compiler.libcxx", strict=False)
 
@@ -369,7 +368,6 @@ class ProfileTest(unittest.TestCase):
         p1 = "include(p2)\n[env]\nA_VAR=1"
         p2 = "include(default)\n[env]\nA_VAR=2"
         self.client.cache.config  # Create the default conf
-        self.client.cache.default_profile  # Create default profile
         save(os.path.join(self.client.cache.profiles_path, "p1"), p1)
         save(os.path.join(self.client.cache.profiles_path, "p2"), p2)
         # Change default profile to p1 => p2 => default

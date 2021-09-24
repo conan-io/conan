@@ -4,7 +4,8 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
                                        BINARY_INVALID, BINARY_ERROR)
-from conans.errors import NoRemoteAvailable, NotFoundException, ConanException
+from conans.errors import NoRemoteAvailable, NotFoundException, ConanException, \
+    conanfile_exception_formatter
 from conans.model.info import PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.ref import PackageReference
 
@@ -258,6 +259,14 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_package_id(self, node):
         compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()
+
+        # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
+        # it could even be delayed until installation time, but if we got enough info here for
+        # package_id, we can run it
+        conanfile = node.conanfile
+        if hasattr(conanfile, "layout"):
+            with conanfile_exception_formatter(str(conanfile), "layout"):
+                conanfile.layout()
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
         build_mode = BuildMode(build_mode)

@@ -1,6 +1,5 @@
 import os
 import shutil
-from collections import OrderedDict
 from io import StringIO
 from typing import List
 
@@ -15,16 +14,12 @@ from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
     get_default_settings_yml
-from conans.client.conf.detect import detect_defaults_settings
-from conans.cli.output import Color
-from conans.client.profile_loader import read_profile
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
-from conans.paths import ARTIFACTS_PROPERTIES_FILE
+from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
 
@@ -262,10 +257,8 @@ class ClientCache(object):
 
     @property
     def default_profile_path(self):
-        if os.path.isabs(self.config.default_profile):
-            return self.config.default_profile
-        else:
-            return os.path.join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
+        # Used only in testing, and this class "reset_default_profile"
+        return os.path.join(self.cache_folder, PROFILES_FOLDER, DEFAULT_PROFILE_NAME)
 
     @property
     def hooks_path(self):
@@ -273,12 +266,6 @@ class ClientCache(object):
         :return: Hooks folder in client cache
         """
         return os.path.join(self.cache_folder, HOOKS_FOLDER)
-
-    @property
-    def default_profile(self):
-        self.initialize_default_profile()
-        default_profile, _ = read_profile(self.default_profile_path, os.getcwd(), self.profiles_path)
-        return default_profile
 
     @property
     def settings(self):
@@ -333,30 +320,9 @@ class ClientCache(object):
             remove(self.conan_conf_path)
         self.initialize_config()
 
-    def initialize_default_profile(self):
-        if not os.path.exists(self.default_profile_path):
-            self._output.info("Auto detecting your dev setup to initialize the "
-                                 "default profile (%s)" % self.default_profile_path,
-                                 Color.BRIGHT_YELLOW)
-
-            default_settings = detect_defaults_settings(profile_path=self.default_profile_path)
-            self._output.info("Default settings", Color.BRIGHT_YELLOW)
-            self._output.info("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
-                                 Color.BRIGHT_YELLOW)
-            self._output.info("*** You can change them in %s ***" % self.default_profile_path,
-                                 Color.BRIGHT_MAGENTA)
-            self._output.info("*** Or override with -s compiler='other' -s ...s***\n\n",
-                                 Color.BRIGHT_MAGENTA)
-
-            default_profile = Profile()
-            tmp = OrderedDict(default_settings)
-            default_profile.update_settings(tmp)
-            save(self.default_profile_path, default_profile.dumps())
-
     def reset_default_profile(self):
         if os.path.exists(self.default_profile_path):
             remove(self.default_profile_path)
-        self.initialize_default_profile()
 
     def initialize_settings(self):
         if not os.path.exists(self.settings_path):
