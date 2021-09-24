@@ -606,7 +606,7 @@ class ConanAPIV1(object):
             deps_install(app=self.app,
                          ref_or_path=conanfile_path,
                          install_folder=install_folder,
-                         base_folder=cwd,
+                         base_folder=os.path.dirname(conanfile_path),
                          remotes=remotes,
                          graph_info=graph_info,
                          build_modes=build,
