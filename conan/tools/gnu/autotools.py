@@ -22,10 +22,6 @@ class Autotools(object):
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         """
-        # FIXME: Conan 2.0 Are we keeping the "should_XXX" properties???
-        if not self._conanfile.should_configure:
-            return
-
         source = self._conanfile.source_folder
         if build_script_folder:
             source = os.path.join(self._conanfile.source_folder, build_script_folder)
@@ -49,8 +45,6 @@ class Autotools(object):
         self._conanfile.run(command)
 
     def install(self):
-        if not self._conanfile.should_install:
-            return
         self.make(target="install")
 
     def _use_win_mingw(self):

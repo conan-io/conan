@@ -98,11 +98,6 @@ class MockConanfile(ConanFile):
         self.options = options or MockOptions({})
         self.generators = []
 
-        self.should_configure = True
-        self.should_build = True
-        self.should_install = True
-        self.should_test = True
-
         self.package_folder = None
 
     def run(self, *args, **kwargs):
@@ -128,10 +123,6 @@ class ConanFileMock(ConanFile):
         self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
-        self.should_configure = True
-        self.should_build = True
-        self.should_install = True
-        self.should_test = True
         self.generators = []
         self.captured_env = {}
         self.folders = Folders()

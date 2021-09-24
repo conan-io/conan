@@ -742,22 +742,6 @@ class Command(object):
         parser.add_argument("--user", action=OnceArgument, help='Provide a user')
         parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("--should_build", default=None, action="store_true",
-                            help="Execute the build step (variable should_build=True). When "
-                                 "specified, configure/install/test won't run unless "
-                                 "--configure/--install/--test specified")
-        parser.add_argument("--should_configure", default=None, action="store_true",
-                            help="Execute the configuration step (variable should_configure=True). "
-                                 "When specified, build/install/test won't run unless "
-                                 "--build/--install/--test specified")
-        parser.add_argument("--should_install", default=None, action="store_true",
-                            help="Execute the install step (variable should_install=True). When "
-                                 "specified, configure/build/test won't run unless "
-                                 "--configure/--build/--test specified")
-        parser.add_argument("--should_test", default=None, action="store_true",
-                            help="Execute the test step (variable should_test=True). When "
-                                 "specified, configure/build/install won't run unless "
-                                 "--configure/--build/--install specified")
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="Directory to install the package (when the build system or "
                                  "build() method does it). Defaulted to the '{build_folder}/package' "
@@ -791,13 +775,6 @@ class Command(object):
 
         self._warn_python_version()
 
-        if args.should_build or args.should_configure or args.should_install or args.should_test:
-            should_build, should_config, should_install, should_test = \
-                (bool(args.should_build), bool(args.should_configure), bool(args.should_install),
-                 bool(args.should_test))
-        else:
-            should_build = should_config = should_install = should_test = True
-
         info = None
         try:
             info = self._conan.build(conanfile_path=args.path,
@@ -809,10 +786,6 @@ class Command(object):
                                      package_folder=args.package_folder,
                                      build_folder=args.build_folder,
                                      install_folder=args.install_folder,
-                                     should_configure=should_config,
-                                     should_build=should_build,
-                                     should_install=should_install,
-                                     should_test=should_test,
                                      settings=args.settings_host, options=args.options_host,
                                      env=args.env_host, profile_names=args.profile_host,
                                      profile_build=profile_build,

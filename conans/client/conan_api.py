@@ -529,8 +529,7 @@ class ConanAPIV1(object):
     @api_method
     def build(self, conanfile_path, name=None, version=None, user=None, channel=None,
               source_folder=None, package_folder=None, build_folder=None,
-              install_folder=None, should_configure=True, should_build=True, should_install=True,
-              should_test=True, cwd=None, settings=None, options=None, env=None,
+              install_folder=None, cwd=None, settings=None, options=None, env=None,
               remote_name=None, build=None, profile_names=None,
               update=False, generators=None, no_imports=False,
               lockfile=None, lockfile_out=None, profile_build=None, conf=None):
@@ -579,9 +578,7 @@ class ConanAPIV1(object):
             conanfile = deps_info.root.conanfile
             cmd_build(self.app, conanfile_path, conanfile, base_path=cwd,
                       source_folder=source_folder, build_folder=build_folder,
-                      package_folder=package_folder, install_folder=install_folder,
-                      should_configure=should_configure, should_build=should_build,
-                      should_install=should_install, should_test=should_test)
+                      package_folder=package_folder, install_folder=install_folder)
 
         except ConanException as exc:
             raise
