@@ -31,40 +31,29 @@ class _NewComponent(object):
 
     def __init__(self):
         # ###### PROPERTIES
-        self._generator_properties = None
+        self._generator_properties = {}
 
         # ###### DIRECTORIES
-        self.includedirs = None  # Ordered list of include paths
-        self.srcdirs = None  # Ordered list of source paths
-        self.libdirs = None  # Directories to find libraries
-        self.resdirs = None  # Directories to find resources, data, etc
-        self.bindirs = None  # Directories to find executables and shared libs
-        self.builddirs = None
-        self.frameworkdirs = None
+        self.includedirs = []  # Ordered list of include paths
+        self.srcdirs = []  # Ordered list of source paths
+        self.libdirs = []  # Directories to find libraries
+        self.resdirs = []  # Directories to find resources, data, etc
+        self.bindirs = []  # Directories to find executables and shared libs
+        self.builddirs = []
+        self.frameworkdirs = []
 
         # ##### FIELDS
-        self.system_libs = None  # Ordered list of system libraries
-        self.frameworks = None  # Macos .framework
-        self.libs = None  # The libs to link against
-        self.defines = None  # preprocessor definitions
-        self.cflags = None  # pure C flags
-        self.cxxflags = None  # C++ compilation flags
-        self.sharedlinkflags = None  # linker flags
-        self.exelinkflags = None  # linker flags
+        self.system_libs = []  # Ordered list of system libraries
+        self.frameworks = []  # Macos .framework
+        self.libs = []  # The libs to link against
+        self.defines = []  # preprocessor definitions
+        self.cflags = []  # pure C flags
+        self.cxxflags = []  # C++ compilation flags
+        self.sharedlinkflags = []  # linker flags
+        self.exelinkflags = []  # linker flags
 
-        self.sysroot = None
-        self.requires = None
-
-    def clear_none(self):
-        for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-            if getattr(self, varname) is None:
-                setattr(self, varname, [])
-        if self.requires is None:
-            self.requires = []
-        if self.sysroot is None:
-            self.sysroot = ""
-        if self._generator_properties is None:
-            self._generator_properties = {}
+        self.sysroot = ""
+        self.requires = []
 
     @property
     def required_component_names(self):
@@ -107,7 +96,6 @@ class NewCppInfo(object):
         self.components[None] = _NewComponent()
 
     def init_defaults(self):
-        self.components[None].clear_none()
         self.components[None].includedirs.append("include")
         self.components[None].libdirs.append("lib")
         self.components[None].resdirs.append("res")

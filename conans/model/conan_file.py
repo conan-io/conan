@@ -165,6 +165,10 @@ class ConanFile:
             self._cpp_info.init_defaults()
         return self._cpp_info
 
+    @cpp_info.setter
+    def cpp_info(self, value):
+        self._cpp_info = value
+
     @property
     def source_folder(self):
         return self.folders.source_folder
