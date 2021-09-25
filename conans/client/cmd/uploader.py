@@ -152,7 +152,7 @@ class _PackagePreparator(object):
         self._output = ConanOutput()
         self._hook_manager = hook_manager
 
-    def prepare_recipe(self, ref, conanfile, remote, remotes, policy):
+    def prepare_recipe(self, ref, conanfile, remote, remotes, policy, force):
         """ do a bunch of things that are necessary before actually executing the upload:
         - retrieve exports_sources to complete the recipe if necessary
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
@@ -186,7 +186,7 @@ class _PackagePreparator(object):
         if policy == UPLOAD_POLICY_SKIP:
             return
 
-        files_to_upload, deleted = self._recipe_files_to_upload(ref, cache_files, remote)
+        files_to_upload, deleted = self._recipe_files_to_upload(ref, cache_files, remote, force)
         return files_to_upload, deleted, cache_files, conanfile_path, t1, recipe_layout
 
     def _print_manifest_information(self, remote_recipe_manifest, local_manifest, ref, remote):
@@ -209,8 +209,12 @@ class _PackagePreparator(object):
         except Exception as e:
             self._output.info("Error printing information about the diff: %s" % str(e))
 
-    def _recipe_files_to_upload(self, ref, files, remote):
+    def _recipe_files_to_upload(self, ref, files, remote, force):
+        # TODO: Check this weird place to check credentials
         self._remote_manager.check_credentials(remote)
+        if not force:
+            return files, set()
+        # only check difference if it is a force upload
         remote_snapshot = self._remote_manager.get_recipe_snapshot(ref, remote)
         if not remote_snapshot:
             return files, set()
@@ -466,6 +470,7 @@ class CmdUpload(object):
                                        remote=remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
+        force = False
         try:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
@@ -476,12 +481,13 @@ class CmdUpload(object):
             pass
         else:
             if policy == UPLOAD_POLICY_FORCE:
+                force = True
                 self._progress_output.info("{} already in server, forcing upload".format(repr(ref)))
             else:
                 self._progress_output.info("{} already in server, skipping upload".format(repr(ref)))
                 return
 
-        prep = self._preparator.prepare_recipe(ref, conanfile, remote, remotes, policy)
+        prep = self._preparator.prepare_recipe(ref, conanfile, remote, remotes, policy, force)
 
         if policy == UPLOAD_POLICY_SKIP:
             return ref

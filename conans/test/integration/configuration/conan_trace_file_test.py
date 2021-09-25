@@ -5,7 +5,6 @@ import unittest
 
 
 from conans.client import tools
-from conans.client.runner import ConanRunner
 from conans.model.ref import ConanFileReference
 from conans.paths import RUN_LOG_NAME
 from conans.test.assets.genconanfile import GenConanfile
@@ -124,7 +123,7 @@ class ConanTraceTest(unittest.TestCase):
             self.assertEqual(num_post, 2)  # 2 get urls
 
         num_get = len([it for it in actions if "REST_API_CALL" in it and "GET" in it])
-        self.assertEqual(num_get, 11)
+        self.assertEqual(num_get, 8)
 
         # Check masked signature
         for action in actions:

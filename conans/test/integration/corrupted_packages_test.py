@@ -93,6 +93,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("Uploading conaninfo.txt", self.client.out)
         self._assert_all_package_files_in_server()
 
+    @pytest.mark.xfail(reason="It is the server the one reporting errors or Not found")
     def test_tgz_missing(self):
         os.unlink(self.tgz_path)
         # Try search
