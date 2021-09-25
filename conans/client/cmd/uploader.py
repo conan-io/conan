@@ -10,7 +10,6 @@ from conans.client.userio import UserInput
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
-from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files
@@ -260,8 +259,7 @@ class _PackagePreparator(object):
 
         if policy == UPLOAD_POLICY_SKIP:
             return None
-        files_to_upload, deleted = self._package_files_to_upload(pref, policy, cache_files, p_remote)
-        return files_to_upload, deleted, cache_files
+        return cache_files
 
     def _compress_package_files(self, layout, pref, integrity_check):
         t1 = time.time()
@@ -335,15 +333,6 @@ class _PackagePreparator(object):
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
 
-    def _package_files_to_upload(self, pref, policy, the_files, remote):
-        self._remote_manager.check_credentials(remote)
-        remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
-        if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            if not is_package_snapshot_complete(remote_snapshot):
-                return the_files, set()
-        deleted = set(remote_snapshot).difference(the_files)
-        return the_files, deleted
-
 
 class CmdUpload(object):
     """ This class is responsible for uploading packages to remotes. The flow is:
@@ -373,7 +362,6 @@ class CmdUpload(object):
     This requires calling to the remote API methods:
     - get_recipe_sources() to get the export_sources if they are missing
     - get_recipe_snapshot() to do the diff and know what files to upload
-    - get_package_snapshot() to do the diff and know what files to upload
     """
     def __init__(self, cache, remote_manager, loader, hook_manager):
         self._cache = cache
@@ -541,17 +529,12 @@ class CmdUpload(object):
                                    remote=remote)
 
         t1 = time.time()
-        prep = self._preparator.prepare_package(pref, integrity_check, policy, remote)
+        cache_files = self._preparator.prepare_package(pref, integrity_check, policy, remote)
         if policy == UPLOAD_POLICY_SKIP:
             return None
-        files_to_upload, deleted, cache_files = prep
 
-        if files_to_upload or deleted:
-            self._remote_manager.upload_package(pref, files_to_upload, deleted, remote, retry,
-                                                retry_wait)
-            logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
-        else:
-            self._progress_output.info("Package is up to date, upload skipped")
+        self._remote_manager.upload_package(pref, cache_files, remote, retry, retry_wait)
+        logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
 
         duration = time.time() - t1
         log_package_upload(pref, duration, cache_files, remote)

@@ -32,19 +32,6 @@ class ConanController(object):
                              for filename, the_md5 in snapshot.items()}
             return snapshot_norm
 
-        @app.route(r.package, method=["GET"])
-        def get_package_snapshot(name, version, username, channel, package_id, auth_user):
-            """
-            Get a dictionary with all files and their each md5s
-            """
-            conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            ref = ConanFileReference(name, version, username, channel)
-            pref = PackageReference(ref, package_id)
-            snapshot = conan_service.get_package_snapshot(pref)
-            snapshot_norm = {filename.replace("\\", "/"): the_md5
-                             for filename, the_md5 in snapshot.items()}
-            return snapshot_norm
-
         @app.route(r.v1_recipe_download_urls, method=["GET"])
         def get_conanfile_download_urls(name, version, username, channel, auth_user):
             """
