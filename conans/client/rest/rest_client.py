@@ -68,9 +68,6 @@ class RestApiClient(object):
                              self._requester, self._config, self._verify_ssl,
                              self._artifacts_properties, checksum_deploy, matrix_params)
 
-    def get_package_info(self, pref, headers):
-        return self._get_api().get_package_info(pref, headers=headers)
-
     def get_recipe(self, ref, dest_folder):
         return self._get_api().get_recipe(ref, dest_folder)
 

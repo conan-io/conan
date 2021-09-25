@@ -118,18 +118,6 @@ class ClientV2Router(ClientCommonRouter):
         """Remove package url"""
         return self.base_url + self._for_packages(ref)
 
-    def recipe_manifest(self, ref):
-        """Get the url for getting a conanmanifest.txt from a recipe"""
-        return self.base_url + self._for_recipe_file(ref, CONAN_MANIFEST, matrix_params=None)
-
-    def package_manifest(self, pref):
-        """Get the url for getting a conanmanifest.txt from a package"""
-        return self.base_url + self._for_package_file(pref, CONAN_MANIFEST, matrix_params=None)
-
-    def package_info(self, pref):
-        """Get the url for getting a conaninfo.txt from a package"""
-        return self.base_url + self._for_package_file(pref, CONANINFO, matrix_params=None)
-
     def recipe_snapshot(self, ref):
         """get recipe manifest url"""
         return self.base_url + self._for_recipe_files(ref)

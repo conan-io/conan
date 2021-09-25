@@ -130,32 +130,6 @@ class RestApiTest(unittest.TestCase):
         self.api.get_package(pref, tmp_dir)
         self.assertIn("hello.cpp", os.listdir(tmp_dir))
 
-    def test_get_package_info(self):
-        # Upload a conans
-        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")
-        self._upload_recipe(ref)
-
-        # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA", "mypackagerev")
-        conan_info = """[settings]
-    arch=x86_64
-    compiler=gcc
-    os=Linux
-[options]
-    386=False
-[requires]
-    Hello
-    Bye/2.9
-    Say/2.1@user/testing
-    Chat/2.1@user/testing:SHA_ABC
-"""
-        self._upload_package(pref, {CONANINFO: conan_info})
-
-        # Get the package info
-        info = self.api.get_package_info(pref, headers=None)
-        self.assertIsInstance(info, ConanInfo)
-        self.assertEqual(info, ConanInfo.loads(conan_info))
-
     def test_upload_huge_conan(self):
         if platform.system() != "Windows":
             # Upload a conans

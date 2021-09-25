@@ -70,14 +70,6 @@ class RemoteManager(object):
         assert pref.revision, "upload_package requires PREV"
         self._call_remote(remote, "upload_package", pref, files_to_upload, retry, retry_wait)
 
-    def get_package_info(self, pref, remote, info=None):
-        """ Read a package ConanInfo from remote
-        """
-        headers = _headers_for_info(info)
-        pref = self._resolve_latest_pref(pref, remote, headers=headers)
-        # FIXME Conan 2.0: With revisions, it is not needed to pass headers to this second function
-        return self._call_remote(remote, "get_package_info", pref, headers=headers), pref
-
     # FIXME: this method returns the latest package revision with the time or if a prev is specified
     #  it returns that prev if it exists in the server with the time
     def get_latest_package_revision_with_time(self, pref, remote, info=None):
