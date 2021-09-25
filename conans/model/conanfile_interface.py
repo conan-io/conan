@@ -88,11 +88,3 @@ class ConanFileInterface:
     @property
     def package_type(self):
         return self._conanfile.package_type
-
-    @property
-    def name(self):
-        return self._conanfile.name
-
-    @property
-    def version(self):
-        return self._conanfile.version
