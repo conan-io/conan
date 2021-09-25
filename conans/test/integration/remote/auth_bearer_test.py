@@ -70,7 +70,6 @@ class AuthorizeBearerTest(unittest.TestCase):
                           ('get_recipe_revisions', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
-                          ('get_recipe_file_list', 'Bearer'),
                           ('upload_recipe_file', 'Bearer')]
 
         self.assertEqual(len(expected_calls), len(auth.auths))
