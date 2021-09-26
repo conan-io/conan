@@ -37,7 +37,6 @@ from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_recipes
 from conans.util.conan_v2_mode import conan_v2_error
-from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files, load, save
 
 
@@ -846,10 +845,8 @@ class ConanAPIV1(object):
                 raise NotFoundException("The specified path doesn't exist")
 
             if os.path.isdir(abs_path):
-                # FIXME: 2.0: This env variable should not be declared here
-                keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
                 return sorted([path_ for path_ in os.listdir(abs_path)
-                               if not discarded_file(path, keep_python)])
+                               if not discarded_file(path)])
             else:
                 return load(abs_path)
 
