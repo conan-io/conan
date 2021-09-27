@@ -1130,7 +1130,7 @@ class Test(ConanFile):
         test_server = TestServer(users={"lasote": "password"},
                                  write_permissions=[("lib/1.0@*/*", "lasote")])
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        client = TestClient(servers=servers, inputs=["lasote", "password"])
         client.save({"conanfile.py": self.conanfile})
         client.run("create . ")
         client.run("upload * -r default -c --all")
@@ -1180,7 +1180,7 @@ class SearchRevisionsTest(unittest.TestCase):
     def test_search_recipe_revisions(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+        client = TestClient(servers=servers, inputs=["user", "password"])
 
         conanfile = """
 from conans import ConanFile
@@ -1256,7 +1256,7 @@ class Test(ConanFile):
     def test_search_package_revisions(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+        client = TestClient(servers=servers, inputs=["user", "password"])
 
         conanfile = """
 from conans import ConanFile
@@ -1327,7 +1327,7 @@ class Test(ConanFile):
         # Search not found for both package and recipe
         test_server = TestServer(users={"conan": "password"})  # exported users and passwords
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("conan", "password")]})
+        client = TestClient(servers=servers,  inputs=["conan", "password"])
         client.run("search missing/1.0@conan/stable --revisions", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'missing/1.0@conan/stable'", client.out)
 
@@ -1423,7 +1423,7 @@ class SearchRemoteAllTestCase(unittest.TestCase):
         """ Create a remote called 'all' with some recipe in it """
         self.remote_name = 'all'
         servers = {self.remote_name: TestServer(users={"user": "passwd"})}
-        self.client = TestClient(servers=servers, users={self.remote_name: [("user", "passwd")], })
+        self.client = TestClient(servers=servers, inputs=["user", "password"])
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile

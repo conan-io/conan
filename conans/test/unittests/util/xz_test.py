@@ -24,8 +24,7 @@ class XZTest(TestCase):
         save_files(export, {"conanfile.py": str(GenConanfile()),
                             "conanmanifest.txt": "#",
                             "conan_export.txz": "#"})
-        client = TestClient(servers={"default": server},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": server})
         client.run("install Pkg/0.1@user/channel", assert_error=True)
         self.assertIn("This Conan version is not prepared to handle "
                       "'conan_export.txz' file format", client.out)
@@ -34,8 +33,7 @@ class XZTest(TestCase):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
         ref = ref.copy_with_rev("myreciperev")
-        client = TestClient(servers={"default": server},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": server})
         server.server_store.update_last_revision(ref)
         export = server.server_store.export(ref)
         conanfile = """from conans import ConanFile
@@ -53,8 +51,7 @@ class Pkg(ConanFile):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
         ref = ref.copy_with_rev("myreciperev")
-        client = TestClient(servers={"default": server},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": server})
         server.server_store.update_last_revision(ref)
         export = server.server_store.export(ref)  # *1 the path can't be known before upload a revision
         conanfile = """from conans import ConanFile

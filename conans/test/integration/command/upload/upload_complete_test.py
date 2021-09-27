@@ -2,12 +2,10 @@ import json
 import os
 import platform
 import stat
-import sys
 import textwrap
 import unittest
 
 import pytest
-from mock import patch
 from requests import ConnectionError
 
 from conans.client.tools.files import untargz
@@ -88,18 +86,18 @@ def test_upload_with_pattern_and_package_error():
 
 
 def test_check_upload_confirm_question():
-    client = TestClient(default_server_user=True)
+    server = TestServer()
+    client = TestClient(servers={"default": server}, inputs=["yes", "admin", "password", "n", "n"])
     client.save({"conanfile.py": GenConanfile("Hello1", "1.2.1")})
     client.run("export . frodo/stable")
-    with patch.object(sys.stdin, "readline", return_value="y"):
-        client.run("upload Hello* -r default")
+    client.run("upload Hello* -r default")
+
     assert "Uploading Hello1/1.2.1@frodo/stable" in client.out
 
     client.save({"conanfile.py": GenConanfile("Hello2", "1.2.1")})
     client.run("export . frodo/stable")
+    client.run("upload Hello* -r default")
 
-    with patch.object(sys.stdin, "readline", return_value="n"):
-        client.run("upload Hello* -r default")
     assert "Uploading Hello2/1.2.1@frodo/stable" not in client.out
 
 
@@ -112,7 +110,7 @@ class UploadTest(unittest.TestCase):
         self.test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                       users={"lasote": "mypass"})
         servers["default"] = self.test_server
-        test_client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]},
+        test_client = TestClient(servers=servers, inputs=["lasote", "mypass"],
                                  requester_class=requester)
         save(test_client.cache.default_profile_path, "")
         return test_client

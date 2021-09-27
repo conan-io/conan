@@ -265,7 +265,7 @@ def test_install_anonymous(client):
     client.run("create . lasote/testing")
     client.run("upload * --confirm --all -r default")
 
-    client2 = TestClient(servers=client.servers, users={})
+    client2 = TestClient(servers=client.servers, inputs=[])
     client2.run("install Pkg/0.1@lasote/testing")
     assert "Pkg/0.1@lasote/testing: Package installed" in client2.out
 
@@ -308,8 +308,7 @@ def test_install_skip_disabled_remote():
     client = TestClient(servers=OrderedDict({"default": TestServer(),
                                              "server2": TestServer(),
                                              "server3": TestServer()}),
-                        users={"default": [("lasote", "mypass")],
-                               "server3": [("lasote", "mypass")]})
+                        inputs=2*["admin", "password"])
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload * --confirm --all -r default")

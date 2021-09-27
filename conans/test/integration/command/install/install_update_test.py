@@ -31,7 +31,7 @@ def test_update_binaries():
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload Pkg/0.1@lasote/testing --all -r default")
 
-    client2 = TestClient(servers=client.servers, users=client.users)
+    client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install Pkg/0.1@lasote/testing")
     value = load(os.path.join(client2.current_folder, "file.txt"))
 
@@ -119,7 +119,7 @@ def test_reuse():
     client.run("install Hello0/1.0@lasote/stable --build")
     client.run("upload Hello0/1.0@lasote/stable --all -r default")
 
-    client2 = TestClient(servers=client.servers, users=client.users)
+    client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install Hello0/1.0@lasote/stable")
 
     assert str(client2.out).count("Downloading conaninfo.txt") == 1
@@ -143,4 +143,5 @@ def test_update_binaries_failed():
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("install Pkg/0.1@lasote/testing --update")
-    assert "Pkg/0.1@lasote/testing: WARN: Can't update, there are no remotes configured or enabled" in client.out
+    assert "Pkg/0.1@lasote/testing: WARN: Can't update, there are no remotes configured or " \
+           "enabled" in client.out

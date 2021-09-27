@@ -42,7 +42,7 @@ class RequestHeadersTestCase(unittest.TestCase):
     def setUp(self):
         test_server = TestServer(users={"user": "mypass"})
         self.servers = {"default": test_server}
-        t = TestClient(servers=self.servers, users={"default": [("user", "mypass")]})
+        t = TestClient(servers=self.servers, inputs=["user", "mypass"])
         t.save({'conanfile.py': self.conanfile,
                 'profile': self.profile})
         t.run('create conanfile.py name/version@user/channel --profile:host=profile')
@@ -74,7 +74,7 @@ class RequestHeadersTestCase(unittest.TestCase):
 
     def _get_test_client(self):
         t = TestClient(requester_class=RequesterClass, servers=self.servers,
-                       users={"default": [("user", "mypass")]})
+                       inputs=["admin", "password"])
         return t
 
     def test_install_recipe_mismatch(self):

@@ -179,7 +179,7 @@ class HookTest(unittest.TestCase):
                               " folders of new cache")
     def test_complete_hook(self):
         server = TestServer([], users={"danimtb": "pass"})
-        client = TestClient(servers={"default": server}, users={"default": [("danimtb", "pass")]})
+        client = TestClient(servers={"default": server}, inputs=["danimtb", "pass"])
         hook_path = os.path.join(client.cache.hooks_path, "complete_hook", "complete_hook.py")
         client.save({hook_path: complete_hook, "conanfile.py": conanfile_basic})
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")

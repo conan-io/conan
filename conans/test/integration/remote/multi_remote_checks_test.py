@@ -2,12 +2,6 @@ import re
 import unittest
 from collections import OrderedDict
 
-import time
-from mock import patch
-
-from conans.model.ref import ConanFileReference
-from conans.server.revision_list import RevisionList
-from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
@@ -17,9 +11,7 @@ class RemoteChecksTest(unittest.TestCase):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer()),
                                ("server3", TestServer())])
-        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
-                                                    "server2": [("lasote", "mypass")],
-                                                    "server3": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=3*["admin", "password"])
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     pass"""
@@ -73,8 +65,7 @@ class Pkg(ConanFile):
         servers = OrderedDict()
         servers["server1"] = TestServer()
         servers["server2"] = TestServer()
-        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
-                                                    "server2": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=2*["admin", "password"])
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     options = {"opt": [1, 2, 3]}

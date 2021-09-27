@@ -21,7 +21,7 @@ class Error200NoJson(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": TestServer()},
                             requester_class=RequesterMock,
-                            users={"default": [("lasote", "mypass")]})
+                            inputs=["admin", "password"])
 
         client.run("install pkg/ref@user/testing", assert_error=True)
         self.assertIn("Response from remote is not json, but 'None'", client.out)
@@ -41,7 +41,7 @@ class Error200NoJson(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": TestServer()},
                             requester_class=RequesterMock,
-                            users={"default": [("lasote", "mypass")]})
+                            inputs=["admin", "password"])
 
         client.run("install pkg/ref@user/testing", assert_error=True)
         self.assertIn("Remote responded with broken json: <>", client.out)
@@ -61,7 +61,7 @@ class Error200NoJson(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": TestServer()},
                             requester_class=RequesterMock,
-                            users={"default": [("lasote", "mypass")]})
+                            inputs=["admin", "password"])
 
         client.run("install pkg/ref@user/testing", assert_error=True)
         self.assertIn("Unexpected server response [1, 2, 3]", client.out)

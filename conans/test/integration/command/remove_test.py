@@ -41,9 +41,9 @@ class RemoveOutdatedTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_remove_query(self):
-        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        test_server = TestServer(users={"admin": "password"})  # exported users and passwords
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
     settings = "os"
@@ -97,7 +97,7 @@ class RemoveTest(unittest.TestCase):
                                  base_path=self.server_folder)  # exported users and passwords
         self.server = test_server
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("myuser", "mypass")]})
+        client = TestClient(servers=servers, inputs=["myuser", "mypass"])
 
         # Conans with and without packages created
         self.root_folder = {"H1": 'Hello/1.4.10@myuser/testing',
@@ -405,7 +405,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.test_server = TestServer(users={"lasote": "password"},
                                       write_permissions=[("lib/1.0@*/*", "lasote")])
         servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        self.client = TestClient(servers=servers, inputs=["lasote", "password"])
 
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
@@ -444,7 +444,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.test_server = TestServer(users={"user": "password"},
                                       write_permissions=[("foobar/0.1@*/*", "user")])
         servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, users={"default": [("user", "password")]})
+        self.client = TestClient(servers=servers, inputs=["user", "password"])
 
     def test_remove_local_package_id_argument(self):
         """ Remove package ID based on recipe revision. The package must be deleted, but

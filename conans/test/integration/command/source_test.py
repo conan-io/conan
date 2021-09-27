@@ -194,7 +194,7 @@ class ConanLib(ConanFile):
         users = {"server0": [("user", "password")],
                  "server1": [("user", "password")]}
 
-        client = TestClient(servers=servers, users=users)
+        client = TestClient(servers=servers, inputs=3*["user", "password"])
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "sources.cpp": "sources"})
         client.run("create . hello/0.1@")

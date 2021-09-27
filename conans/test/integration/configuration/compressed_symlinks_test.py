@@ -14,7 +14,7 @@ class CompressSymlinksZeroSize(unittest.TestCase):
     @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
     def test_package_symlinks_zero_size(self):
         server = TestServer()
-        client = TurboTestClient(servers={"default": server})
+        client = TurboTestClient(servers={"default": server}, inputs=["admin", "password"])
 
         conanfile = """
 import os
