@@ -17,7 +17,7 @@ from conans.util.files import load
 class ConanTraceTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer()
+        test_server = TestServer(users={"lasote": "mypass"})
         self.servers = {"default": test_server}
 
     def test_run_log_file_packaged(self):
@@ -38,8 +38,7 @@ class ConanTraceTest(unittest.TestCase):
             """ % RUN_LOG_NAME)
 
         def _install_a_package(print_commands_to_output, generate_run_log_file):
-            client = TestClient(servers=self.servers,
-                                users={"default": [("lasote", "mypass")]})
+            client = TestClient(servers=self.servers)
             client.run("config set log.print_run_commands={}".format(print_commands_to_output))
             client.run("config set log.run_to_file={}".format(generate_run_log_file))
             client.run("config set log.run_to_output=True")
@@ -72,8 +71,7 @@ class ConanTraceTest(unittest.TestCase):
         self.assertFalse(os.path.exists(log_file_packaged))
 
     def test_trace_actions(self):
-        client = TestClient(servers=self.servers,
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=self.servers)
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE

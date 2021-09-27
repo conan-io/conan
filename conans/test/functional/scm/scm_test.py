@@ -375,7 +375,7 @@ class ConanLib(ConanFile):
     def test_install_checked_out(self):
         test_server = TestServer()
         self.servers = {"myremote": test_server}
-        self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=["admin", "password"])
 
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")
@@ -387,7 +387,7 @@ class ConanLib(ConanFile):
         self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
-        client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers)
         client2.run("install lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
@@ -806,7 +806,7 @@ class ConanLib(ConanFile):
     def test_install_checked_out(self):
         test_server = TestServer()
         self.servers = {"myremote": test_server}
-        self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=["admin", "password"])
 
         conanfile = base_svn.format(url=_quoted("auto"), revision="auto")
         project_url, _ = self.create_project(files={"conanfile.py": conanfile,
@@ -818,7 +818,7 @@ class ConanLib(ConanFile):
         self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
-        client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers)
         client2.run("install lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
@@ -1068,7 +1068,7 @@ class TestConan(ConanFile):
 """
         servers = {"upload_repo": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                              users={"lasote": "mypass"})}
-        client = TestClient(servers=servers, users={"upload_repo": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.save({"conanfile.py": conanfile + exports_sources, "include/file": "content"})
         client.run("create . danimtb/testing")
         client.run("upload test/1.0@danimtb/testing -r upload_repo")

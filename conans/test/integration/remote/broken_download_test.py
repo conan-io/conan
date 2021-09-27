@@ -15,7 +15,7 @@ class BrokenDownloadTest(unittest.TestCase):
     def test_basic(self):
         server = TestServer()
         servers = {"default": server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
         client.run("export . lasote/stable")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
@@ -43,7 +43,7 @@ class BrokenDownloadTest(unittest.TestCase):
         class ConanFileToolsTest(ConanFile):
             pass
         """)
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         client.save({"conanfile.py": conanfile})
         client.run("create . lib/1.0@lasote/stable")
         client.run("upload lib/1.0@lasote/stable -c --all -r default")
@@ -63,16 +63,14 @@ class BrokenDownloadTest(unittest.TestCase):
 
         def DownloadFilesBrokenRequesterTimesOne(*args, **kwargs):
             return DownloadFilesBrokenRequester(1, *args, **kwargs)
-        client = TestClient(servers=servers,
-                            users={"default": [("lasote", "mypass")]},
+        client = TestClient(servers=servers, inputs=["admin", "password"],
                             requester_class=DownloadFilesBrokenRequesterTimesOne)
         client.run("install lib/1.0@lasote/stable")
         self.assertIn("ERROR: Error downloading file", client.out)
         self.assertIn('Fake connection error exception', client.out)
         self.assertEqual(1, str(client.out).count("Waiting 0 seconds to retry..."))
 
-        client = TestClient(servers=servers,
-                            users={"default": [("lasote", "mypass")]},
+        client = TestClient(servers=servers, inputs=["admin", "password"],
                             requester_class=DownloadFilesBrokenRequesterTimesOne)
         client.run('config set general.retry_wait=1')
         client.run("install lib/1.0@lasote/stable")
@@ -80,8 +78,7 @@ class BrokenDownloadTest(unittest.TestCase):
 
         def DownloadFilesBrokenRequesterTimesTen(*args, **kwargs):
             return DownloadFilesBrokenRequester(10, *args, **kwargs)
-        client = TestClient(servers=servers,
-                            users={"default": [("lasote", "mypass")]},
+        client = TestClient(servers=servers, inputs=["admin", "password"],
                             requester_class=DownloadFilesBrokenRequesterTimesTen)
         client.run('config set general.retry=11')
         client.run('config set general.retry_wait=0')

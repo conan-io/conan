@@ -38,8 +38,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         ref = ConanFileReference.loads("pkg/1.0@")
         servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                          users={"user": "password"})}
-        client = TurboTestClient(servers=servers,
-                                 users={"default": [("user", "password")]})
+        client = TurboTestClient(servers=servers, inputs=["admin", "password"])
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@ --all --confirm -r default")
         # create new revision from recipe

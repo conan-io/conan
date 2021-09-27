@@ -149,7 +149,7 @@ class TestConan(ConanFile):
     def test_upload(self):
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
 
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})

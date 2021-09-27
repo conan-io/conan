@@ -82,15 +82,15 @@ class UserTest(unittest.TestCase):
         """
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         client.run('user dummy -p ping_pong2', assert_error=True)
         self.assertIn("ERROR: Wrong user or password", client.out)
-        client.run('user lasote -p mypass')
+        client.run('user admin -p password')
         self.assertNotIn("ERROR: Wrong user or password", client.out)
-        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'admin'",
                       client.out)
         client.run('user none')
-        self.assertIn("Changed user of remote 'default' from 'lasote' to 'None' (anonymous)",
+        self.assertIn("Changed user of remote 'default' from 'admin' to 'None' (anonymous)",
                       client.out)
         localdb = client.cache.localdb
         self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
@@ -104,7 +104,7 @@ class UserTest(unittest.TestCase):
         """
         test_server = TestServer(users={"lasote": 'my "password'})
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.run(r'user lasote -p="my \"password"')
         self.assertNotIn("ERROR: Wrong user or password", client.out)
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
@@ -118,7 +118,7 @@ class UserTest(unittest.TestCase):
     def test_clean(self):
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=2*["admin", "password"])
         base = '''
 from conans import ConanFile
 
@@ -131,41 +131,41 @@ class ConanLib(ConanFile):
         client.run("export . lasote/stable")
         client.run("upload lib/0.1@lasote/stable -r default")
         client.run("user")
-        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'admin'", client.out)
         client.run("user --clean")
         client.run("user")
-        self.assertNotIn("lasote", client.out)
+        self.assertNotIn("admin", client.out)
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
         client.run("upload lib/0.1@lasote/stable -r default")
         client.run("user")
-        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'admin'", client.out)
 
     def test_command_user_with_interactive_password(self):
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        client.run('user -p -r default lasote')
+        client = TestClient(servers=servers, inputs=["password"])
+        client.run('user -p -r default admin')
         client.run("user")
-        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'admin'", client.out)
 
     def test_command_interactive_only(self):
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         client.run('user -p')
         client.run("user")
-        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
+        self.assertIn("Current user of remote 'default' set to: 'admin'", client.out)
 
     def test_command_user_with_interactive_password_login_prompt_disabled(self):
         """ Interactive password should not work.
         """
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, mock_input=False)
+        client = TestClient(servers=servers,  inputs=[])
         client.run('config set general.non_interactive=True')
-        client.run('user -p -r default lasote', assert_error=True)
+        client.run('user -p -r default admin', assert_error=True)
         self.assertIn('ERROR: Conan interactive mode disabled', client.out)
-        self.assertNotIn("Please enter a password for \"lasote\" account:", client.out)
+        self.assertNotIn("Please enter a password for \"admin\" account:", client.out)
         client.run("user")
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
         client.run("user -p", assert_error=True)
@@ -177,9 +177,7 @@ class ConanLib(ConanFile):
         servers = OrderedDict()
         servers["default"] = test_server
         servers["other_server"] = TestServer()
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass"),
-                                                                ("danimtb", "passpass")],
-                                                    "other_server": []})
+        client = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass"])
         client.run("user")
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
         self.assertNotIn("[Authenticated]", client.out)
@@ -217,9 +215,7 @@ class ConanLib(ConanFile):
         servers = OrderedDict()
         servers["default"] = default_server
         servers["other_server"] = other_server
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass"),
-                                                                ("danimtb", "passpass")],
-                                                    "other_server": []})
+        client = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass"])
         client.run("user --json user.json")
         content = client.load("user.json")
         info = json.loads(content)
