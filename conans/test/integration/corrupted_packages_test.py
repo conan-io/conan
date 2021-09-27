@@ -16,7 +16,7 @@ class CorruptedPackagesTest(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
-        self.client = TestClient(servers={"default": self.server})
+        self.client = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm -r default")

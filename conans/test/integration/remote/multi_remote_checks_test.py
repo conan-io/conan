@@ -16,8 +16,7 @@ class RemoteChecksTest(unittest.TestCase):
     def test_multiple_remotes_single_upload(self):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer())])
-        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
-                                                    "server2": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=2*["admin", "password"])
         conanfile = GenConanfile().with_setting("build_type")
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Release")
@@ -32,8 +31,7 @@ class RemoteChecksTest(unittest.TestCase):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer()),
                                ("server3", TestServer())])
-        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
-                                                    "server2": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=2*["admin", "password"])
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     settings = "build_type"
@@ -73,8 +71,7 @@ class Pkg(ConanFile):
         client.run("remote list_pref Pkg/0.1@lasote/testing")
         self.assertIn("%s: server2" % pref, client.out)
         # Use another client to update the server2 binary and server1 recipe
-        client2 = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
-                                                     "server2": [("lasote", "mypass")]})
+        client2 = TestClient(servers=servers, inputs=2*["admin", "password"])
         conanfile = """from conans import ConanFile, tools
 class Pkg(ConanFile):
     settings = "build_type"
@@ -143,9 +140,7 @@ class Pkg(ConanFile):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer()),
                                ("server3", TestServer())])
-        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
-                                                    "server2": [("lasote", "mypass")],
-                                                    "server3": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=3*["admin", "password"])
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     pass"""
@@ -216,8 +211,7 @@ class Pkg(ConanFile):
         servers = OrderedDict()
         servers["server1"] = TestServer()
         servers["server2"] = TestServer()
-        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
-                                                    "server2": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=2*["admin", "password"])
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     options = {"opt": [1, 2, 3]}

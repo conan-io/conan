@@ -477,7 +477,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . base/1.1@user/testing")
         client.run("upload * --confirm")
 
-        client2 = TestClient(servers=client.servers, users={"default": [("user", "mypass")]})
+        client2 = TestClient(servers=client.servers, inputs=["user", "password"])
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class PkgTest(ConanFile):
@@ -515,7 +515,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . base/1.1@user/testing")
         client.run("upload * --confirm")
 
-        client2 = TestClient(servers=client.servers, users={"default": [("user", "password")]})
+        client2 = TestClient(servers=client.servers, inputs=["user", "password"])
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class PkgTest(ConanFile):

@@ -26,7 +26,7 @@ class ConanGetTest(unittest.TestCase):
 
         test_server = TestServer([], users={"lasote": "mypass"})
         servers = {"default": test_server}
-        self.client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        self.client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         files = {"conanfile.py": self.conanfile,
                  "path/to/exported_source": "1",
                  "other/path/to/exported": "2"}

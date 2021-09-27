@@ -67,7 +67,7 @@ def test_value_parse():
         """)
     server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
     servers = {"default": server}
-    client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+    client = TestClient(servers=servers, inputs=["lasote", "mypass"])
     client.save({"conanfile.py": conanfile,
                  "header.h": "header content"})
     client.run("create . danimtb/testing")

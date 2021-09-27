@@ -12,14 +12,12 @@ import uuid
 import zipfile
 from collections import OrderedDict
 from contextlib import contextmanager
-from unittest.mock import PropertyMock
+from urllib.parse import urlsplit, urlunsplit
 
 import bottle
-import mock
 import requests
 from mock import Mock
 from requests.exceptions import HTTPError
-from urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conan.cache.conan_reference import ConanReference
@@ -42,14 +40,11 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.artifactory import ARTIFACTORY_DEFAULT_USER, ARTIFACTORY_DEFAULT_PASSWORD, \
-    ArtifactoryServer
-from conans.test.utils.mocks import MockedUserInput, RedirectedTestOutput
+from conans.test.utils.artifactory import ArtifactoryServer
+from conans.test.utils.mocks import RedirectedInputStream, RedirectedTestOutput
 from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
     create_remote_svn_repo
-from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
-                                               TESTING_REMOTE_PRIVATE_USER,
-                                               TestServerLauncher)
+from conans.test.utils.server_launcher import (TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
@@ -258,9 +253,9 @@ class TestServer(object):
         if read_permissions is None:
             read_permissions = [("*/*@*/*", "*")]
         if write_permissions is None:
-            write_permissions = []
+            write_permissions = [("*/*@*/*", "*")]
         if users is None:
-            users = {"lasote": "mypass", "conan": "password"}
+            users = {"admin": "password"}
 
         if server_capabilities is None:
             server_capabilities = [REVISIONS]
@@ -366,15 +361,25 @@ def redirect_output(target):
         sys.stderr = original_stderr
 
 
+@contextmanager
+def redirect_input(target):
+    original_stdin = sys.stdin
+    sys.stdin = target
+    try:
+        yield
+    finally:
+        sys.stdin = original_stdin
+
+
 class TestClient(object):
     """ Test wrap of the conans application to launch tests in the same way as
     in command line
     """
 
-    def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
+    def __init__(self, cache_folder=None, current_folder=None, servers=None, inputs=None,
                  requester_class=None, path_with_spaces=True,
                  cpu_count=1, default_server_user=None,
-                 cache_autopopulate=True, mock_input=True):
+                 cache_autopopulate=True):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -382,23 +387,19 @@ class TestClient(object):
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
         if default_server_user is not None:
+            assert isinstance(default_server_user, bool), \
+                "default_server_user has to be True or False"
             if servers is not None:
                 raise Exception("Cannot define both 'servers' and 'default_server_user'")
-            if users is not None:
-                raise Exception("Cannot define both 'users' and 'default_server_user'")
-            if default_server_user is True:
-                server_users = {"user": "password"}
-                users = {"default": [("user", "password")]}
-            else:
-                server_users = default_server_user
-                users = {"default": list(default_server_user.items())}
+            if inputs is not None:
+                raise Exception("Cannot define both 'inputs' and 'default_server_user'")
+
+            server_users = {"admin": "password"}
+            inputs = ["admin", "password"]
+
             # Allow write permissions to users
             server = TestServer(users=server_users, write_permissions=[("*/*@*/*", "*")])
             servers = {"default": server}
-
-        self.users = users
-        if self.users is None:
-            self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
         if cache_autopopulate and (not cache_folder or not os.path.exists(cache_folder)):
             # Copy a cache folder already populated
@@ -427,7 +428,8 @@ class TestClient(object):
         self.tune_conan_conf(cache_folder, cpu_count)
 
         self.out = RedirectedTestOutput()
-        self.mock_input = mock_input
+        self.user_inputs = RedirectedInputStream(inputs)
+
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
@@ -487,8 +489,6 @@ class TestClient(object):
         for name, server in self.servers.items():
             if isinstance(server, ArtifactoryServer):
                 registry.add(name, server.repo_api_url)
-                self.users.update({name: [(ARTIFACTORY_DEFAULT_USER,
-                                           ARTIFACTORY_DEFAULT_PASSWORD)]})
             elif isinstance(server, TestServer):
                 registry.add(name, server.fake_url)
             else:
@@ -555,25 +555,12 @@ class TestClient(object):
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-
-        if not self.mock_input:
-            # Used by test_auth_with_env and some other tests that need the non mocked input
-            return self._run(command_line, assert_error)
-        else:
-            self.mocked_input = MockedUserInput(non_interactive=False)
-            self.mocked_input.logins = self.users
-            with mock.patch("conans.client.rest.auth_manager.UserInput") as mock_rest:
-                with mock.patch("conans.client.conan_api.UserInput") as mock_api:
-                    mock_rest.return_value = self.mocked_input
-                    mock_api.return_value = self.mocked_input
-                    return self._run(command_line, assert_error)
-
-    def _run(self, command_line, assert_error):
         from conans.test.utils.mocks import RedirectedTestOutput
         with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.out = RedirectedTestOutput()  # Initialize each command
             with redirect_output(self.out):
-                return self.run_cli(command_line, assert_error=assert_error)
+                with redirect_input(self.user_inputs):
+                    return self.run_cli(command_line, assert_error=assert_error)
 
     def run_command(self, command, cwd=None, assert_error=False):
         runner = ConanRunner()
@@ -709,10 +696,6 @@ class TestClient(object):
 class TurboTestClient(TestClient):
 
     def __init__(self, *args, **kwargs):
-        if "users" not in kwargs and "default_server_user" not in kwargs:
-            from collections import defaultdict
-            kwargs["users"] = defaultdict(lambda: [("conan", "password")])
-
         super(TurboTestClient, self).__init__(*args, **kwargs)
 
     def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):

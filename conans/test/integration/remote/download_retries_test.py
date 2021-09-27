@@ -10,8 +10,7 @@ class DownloadRetriesTest(unittest.TestCase):
     def test_do_not_retry_when_missing_file(self):
 
         test_server = TestServer(server_capabilities=[REVISIONS])
-        client = TestClient(servers={"default": test_server},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": test_server}, inputs=["admin", "password"])
         conanfile = '''from conans import ConanFile
 class MyConanfile(ConanFile):
     pass
@@ -23,8 +22,7 @@ class MyConanfile(ConanFile):
 
     def test_recipe_download_retry(self):
         test_server = TestServer()
-        client = TestClient(servers={"default": test_server},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": test_server}, inputs=["admin", "password"])
 
         conanfile = '''from conans import ConanFile
 class MyConanfile(ConanFile):
@@ -59,8 +57,7 @@ class MyConanfile(ConanFile):
                     return Response(False, 200)
 
         # The buggy requester will cause a failure only downloading files, not in regular requests
-        client = TestClient(servers={"default": test_server},
-                            users={"default": [("lasote", "mypass")]},
+        client = TestClient(servers={"default": test_server}, inputs=["admin", "password"],
                             requester_class=BuggyRequester)
         client.run("install Pkg/0.1@lasote/stable", assert_error=True)
         print(client.out)

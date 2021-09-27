@@ -1,9 +1,9 @@
 import os
-from collections import Counter, defaultdict, namedtuple
+from collections import namedtuple
 from io import StringIO
+from conans.util.log import logger
 
 from conans import ConanFile, Options
-from conans.client.userio import UserInput
 from conans.model.conf import ConfDefinition
 from conans.model.layout import Folders
 from conans.model.options import PackageOptions
@@ -28,40 +28,21 @@ class LocalDBMock(object):
         self.refresh_token = refresh_token
 
 
-class MockedUserInput(UserInput):
+class RedirectedInputStream:
     """
     Mock for testing. If get_username or get_password is requested will raise
     an exception except we have a value to return.
     """
 
-    def __init__(self, non_interactive):
-        """
-        logins is a dict of {remote: list(user, password)}
-        will return sequentially
-        """
-        self.logins = None
-        self.login_index = Counter()
-        UserInput.__init__(self, non_interactive=non_interactive)
+    def __init__(self, answers: list):
+        self.answers = answers
 
-    def get_username(self, remote_name):
-        username_env = self._get_env_username(remote_name)
-        if username_env:
-            return username_env
-
-        sub_dict = self.logins[remote_name]
-        index = self.login_index[remote_name]
-        if len(sub_dict) - 1 < index:
-            raise Exception("Bad user/password in testing framework, "
-                            "provide more tuples or input the right ones")
-        return sub_dict[index][0]
-
-    def get_pass(self, remote_name):
-        """Overridable for testing purpose"""
-        sub_dict = self.logins[remote_name]
-        index = self.login_index[remote_name]
-        tmp = sub_dict[index][1]
-        self.login_index.update([remote_name])
-        return tmp
+    def readline(self):
+        if not self.answers:
+            raise Exception("Class MockedInputStream: There are no more inputs to be returned")
+        ret = self.answers.pop(0)
+        logger.info("Testing: Reading fake input={}".format(ret))
+        return ret
 
 
 class MockSettings(object):

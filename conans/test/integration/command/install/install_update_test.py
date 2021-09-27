@@ -31,7 +31,7 @@ def test_update_binaries():
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload Pkg/0.1@lasote/testing --all")
 
-    client2 = TestClient(servers=client.servers, users=client.users)
+    client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install Pkg/0.1@lasote/testing")
     value = load(os.path.join(client2.current_folder, "file.txt"))
 
@@ -134,7 +134,7 @@ def test_reuse():
     client.run("install Hello0/1.0@lasote/stable --build")
     client.run("upload Hello0/1.0@lasote/stable --all")
 
-    client2 = TestClient(servers=client.servers, users=client.users)
+    client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install Hello0/1.0@lasote/stable")
 
     assert str(client2.out).count("Downloading conaninfo.txt") == 1
@@ -157,8 +157,7 @@ def test_upload_doesnt_follow_pref():
     servers = OrderedDict()
     servers['r1'] = TestServer()
     servers['r2'] = TestServer()
-    client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
-                                                "r2": [("lasote", "mypass")]})
+    client = TestClient(servers=servers, inputs=2*["admin", "password"])
     ref = "Pkg/0.1@lasote/testing"
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . Pkg/0.1@lasote/testing")
@@ -187,8 +186,7 @@ def test_install_update_following_pref():
     servers = OrderedDict()
     servers["r1"] = TestServer()
     servers["r2"] = TestServer()
-    client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
-                                                "r2": [("lasote", "mypass")]})
+    client = TestClient(servers=servers, inputs=2*["admin", "password"])
 
     ref = "Pkg/0.1@lasote/testing"
     client.save({"conanfile.py": conanfile})
@@ -201,7 +199,7 @@ def test_install_update_following_pref():
     client.run("remote update_ref %s r1" % ref)
 
     # Update package in r2 from a different client
-    client2 = TestClient(servers=servers, users=client.users)
+    client2 = TestClient(servers=servers, inputs=2*["admin", "password"])
     ref = "Pkg/0.1@lasote/testing"
     client2.save({"conanfile.py": conanfile})
     client2.run("create . %s" % ref)
@@ -236,7 +234,7 @@ def test_update_binaries_no_package_error():
 def test_fail_usefully_when_failing_retrieving_package():
     ref = ConanFileReference.loads("lib/1.0@conan/stable")
     ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
-    client = TurboTestClient(servers={"default": TestServer()})
+    client = TurboTestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
     pref1 = client.create(ref)
     client.upload_all(ref)
 

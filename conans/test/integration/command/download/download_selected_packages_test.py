@@ -27,7 +27,7 @@ def setup():
 
 def test_download_all(setup):
     client, ref, package_ids, _ = setup
-    new_client = TestClient(servers=client.servers, users=client.users)
+    new_client = TestClient(servers=client.servers, inputs=["admin", "password"])
     # Should retrieve the three packages
     new_client.run("download Hello0/0.1@lasote/stable")
     latest_rrev = new_client.cache.get_latest_rrev(ref)
@@ -38,7 +38,7 @@ def test_download_all(setup):
 
 def test_download_some_reference(setup):
     client, ref, package_ids, _ = setup
-    new_client = TestClient(servers=client.servers, users=client.users)
+    new_client = TestClient(servers=client.servers, inputs=["admin", "password"])
     # Should retrieve the specified packages
     new_client.run("download Hello0/0.1@lasote/stable -p %s" % package_ids[0])
     assert len(package_ids) == 3
@@ -59,7 +59,7 @@ def test_download_some_reference(setup):
 
 def test_download_recipe_twice(setup):
     client, ref, package_ids, conanfile = setup
-    new_client = TestClient(servers=client.servers, users=client.users)
+    new_client = TestClient(servers=client.servers, inputs=["admin", "password"])
     new_client.run("download Hello0/0.1@lasote/stable")
     ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
@@ -75,7 +75,7 @@ def test_download_recipe_twice(setup):
 
 def test_download_packages_twice(setup):
     client, ref, package_ids, _ = setup
-    new_client = TestClient(servers=client.servers, users=client.users)
+    new_client = TestClient(servers=client.servers, inputs=["admin", "password"])
     expected_header_contents = "x"
 
     new_client.run("download Hello0/0.1@lasote/stable")

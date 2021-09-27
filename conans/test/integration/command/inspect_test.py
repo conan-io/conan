@@ -60,7 +60,7 @@ class ConanInspectTest(unittest.TestCase):
 
     def test_name_version(self):
         server = TestServer()
-        client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": server}, inputs=["admin", "password"])
         client.save({"conanfile.py": GenConanfile().with_name("MyPkg").with_version("1.2.3")})
         client.run("inspect . -a=name")
         self.assertIn("name: MyPkg", client.out)

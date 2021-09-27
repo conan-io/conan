@@ -16,8 +16,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
 
     def test_update_remote(self):
         # https://github.com/conan-io/conan/issues/5333
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Boost(ConanFile):
@@ -52,8 +51,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         self.assertNotIn("boost/1.68.0", client.out)
 
     def test_update(self):
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
 
         client.save({"pkg.py": GenConanfile()})
         client.run("create pkg.py Pkg/1.1@lasote/testing")
@@ -89,8 +87,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0 revisit test")
     def test_update_pkg(self):
         server = TestServer()
-        client = TestClient(servers={"default": server},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": server}, inputs=["admin", "password"])
         conanfile = """from conans import ConanFile
 class HelloReuseConan(ConanFile):
     def package_info(self):
@@ -112,8 +109,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("Pkg/1.2@lasote/testing: PACKAGE_INFO 1.2", client.out)
 
         # modify remote 1.2
-        client2 = TestClient(servers={"default": server},
-                             users={"default": [("lasote", "mypass")]})
+        client2 = TestClient(servers={"default": server}, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile.format("*1.2*")})
         client2.run("create . Pkg/1.2@lasote/testing")
 
@@ -145,8 +141,7 @@ class VersionRangesMultiRemoteTest(unittest.TestCase):
         self.servers = OrderedDict()
         self.servers["default"] = TestServer()
         self.servers["other"] = TestServer()
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
-                                                              "other": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=2*["admin", "password"])
 
     def _export(self, name, version, deps=None, export=True, upload=True, remote="default"):
         deps = ", ".join(['"%s"' % d for d in deps or []]) or '""'
@@ -188,7 +183,7 @@ class VersionRangesDiamondTest(unittest.TestCase):
     def setUp(self):
         test_server = TestServer()
         self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=["admin", "password"])
 
     def _export(self, name, version, deps=None, export=True, upload=True):
         deps = ", ".join(['"%s"' % d for d in deps or []]) or '""'

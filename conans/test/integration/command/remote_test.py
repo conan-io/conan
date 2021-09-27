@@ -15,13 +15,11 @@ class RemoteTest(unittest.TestCase):
 
     def setUp(self):
         self.servers = OrderedDict()
-        self.users = {}
         for i in range(3):
             test_server = TestServer()
             self.servers["remote%d" % i] = test_server
-            self.users["remote%d" % i] = [("lasote", "mypass")]
 
-        self.client = TestClient(servers=self.servers, users=self.users)
+        self.client = TestClient(servers=self.servers, inputs=3*["admin", "password"])
 
     def test_removed_references(self):
         self.client.save({"conanfile.py": GenConanfile()})

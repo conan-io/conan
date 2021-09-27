@@ -29,7 +29,7 @@ class EmptyCacheTestMixin(object):
     """ Will check that the cache after using the link is empty """
     def setUp(self):
         self.servers = {"default": TestServer()}
-        self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
+        self.t = TestClient(servers=self.servers,  inputs=["admin", "password"],
                             path_with_spaces=False)
         self.ref = ConanFileReference.loads('lib/version@user/channel')
         self.assertFalse(os.path.exists(self.t.get_latest_ref_layout(self.ref).base_folder))
@@ -43,7 +43,7 @@ class ExistingCacheTestMixin(object):
     """ Will check that the cache after using the link contains the same data as before """
     def setUp(self):
         self.servers = {"default": TestServer()}
-        self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
+        self.t = TestClient(servers=self.servers, inputs=["admin", "password"],
                             path_with_spaces=False)
         self.ref = ConanFileReference.loads('lib/version@user/channel')
         self.t.save(files={'conanfile.py': conanfile})

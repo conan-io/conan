@@ -37,9 +37,9 @@ class AuthorizeTest(unittest.TestCase):
 
     def test_retries(self):
         """Bad login 2 times"""
-        self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
-                                                                         ("baduser", "badpass2"),
-                                                                         ("pepe", "pepepass")]})
+        self.conan = TestClient(servers=self.servers, inputs=["bad", "1",
+                                                              "bad2", "2",
+                                                              "nacho@gmail.com", "nachopass"])
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export . lasote/testing")
         errors = self.conan.run("upload %s" % str(self.ref))
@@ -49,15 +49,14 @@ class AuthorizeTest(unittest.TestCase):
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
         ref = self.ref.copy_with_rev(rev)
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
-
-        # FIXME: Mock user_input too to test this
-        # Check that login failed two times before ok
-        self.assertEqual(self.conan.mocked_input.login_index["default"], 3)
+        self.assertIn('Please enter a password for "bad"', self.conan.out)
+        self.assertIn('Please enter a password for "bad2"', self.conan.out)
+        self.assertIn('Please enter a password for "nacho@gmail.com"', self.conan.out)
 
     def test_auth_with_env(self):
 
         def _upload_with_credentials(credentials):
-            cli = TestClient(servers=self.servers, mock_input=False)
+            cli = TestClient(servers=self.servers)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
             cli.run("export . lasote/testing")
             with tools.environment_append(credentials):
@@ -90,9 +89,9 @@ class AuthorizeTest(unittest.TestCase):
 
     def test_max_retries(self):
         """Bad login 3 times"""
-        client = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
-                                                                         ("baduser", "badpass2"),
-                                                                         ("baduser3", "badpass3")]})
+        client = TestClient(servers=self.servers, inputs=["baduser", "badpass",
+                                                          "baduser", "badpass2",
+                                                          "baduser3", "badpass3"])
         save(os.path.join(client.current_folder, CONANFILE), conan_content)
         client.run("export . lasote/testing")
         errors = client.run("upload %s" % str(self.ref), assert_error=True)
@@ -103,16 +102,16 @@ class AuthorizeTest(unittest.TestCase):
         self.assertIsNone(rev)
 
         # Check that login failed all times
-        self.assertEqual(client.mocked_input.login_index["default"], 3)
+        self.assertIn("Too many failed login attempts, bye!", client.out)
 
     def test_no_client_username_checks(self):
         """Checks whether client username checks are disabled."""
 
         # Try with a load of names that contain special characters
-        client = TestClient(servers=self.servers, users={"default": [
-                                        ("some_random.special!characters", "badpass"),
-                                        ("nacho@gmail.com", "nachopass"),
-                                        ]})
+        client = TestClient(servers=self.servers, inputs=["some_random.special!characters",
+                                                          "badpass",
+                                                          "nacho@gmail.com", "nachopass"])
+
         save(os.path.join(client.current_folder, CONANFILE), conan_content)
         client.run("export . lasote/testing")
         client.run("upload %s" % str(self.ref))
@@ -121,9 +120,7 @@ class AuthorizeTest(unittest.TestCase):
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
         ref = self.ref.copy_with_rev(rev)
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
-
-        # Check that login failed once before ok
-        self.assertEqual(client.mocked_input.login_index["default"], 2)
+        self.assertIn('Please enter a password for "some_random.special!characters"', client.out)
 
 
 class AuthenticationTest(unittest.TestCase):

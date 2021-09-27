@@ -59,7 +59,7 @@ class UploadTest(unittest.TestCase):
     @pytest.mark.artifactory_ready
     def test_upload_force(self):
         ref = ConanFileReference.loads("Hello/0.1@conan/testing")
-        client = TurboTestClient(servers={"default": TestServer()})
+        client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile().with_package_file("myfile.sh", "foo"))
         client.run("upload * --all --confirm")
         self.assertIn("Uploading conan_package.tgz", client.out)
@@ -298,7 +298,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading conanmanifest.txt", client.out)
         assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client.out
 
-        client2 = TestClient(servers=client.servers, users=client.users)
+        client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile + "\r\n#end",
                       "hello.cpp": "int i=1"})
         client2.run("export . frodo/stable")
@@ -325,7 +325,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading conanmanifest.txt", client.out)
         assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client.out
 
-        client2 = TestClient(servers=client.servers, users=client.users)
+        client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save(files)
         client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
@@ -352,7 +352,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable --all")
 
-        client2 = TestClient(servers=client.servers, users=client.users)
+        client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile,
                       "hello.cpp": ""})
         client2.run("create . frodo/stable")
@@ -542,12 +542,12 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@user/testing")
         client.run("upload * --all --confirm")
-        client2 = TestClient(servers=client.servers, users=client.users)
+        client2 = TestClient(servers=client.servers, inputs=["admin", "password",
+                                                             "lasote", "mypass"])
         client2.run("install Pkg/0.1@user/testing")
         client2.run("remote remove default")
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                              users={"lasote": "mypass"})
-        client2.users = {"server2": [("lasote", "mypass")]}
         client2.servers = {"server2": server2}
         client2.update_servers()
         client2.run("upload * --all --confirm -r=server2")
@@ -558,7 +558,7 @@ class MyPkg(ConanFile):
         """ Without user info, uploads should fail when login prompt has been disabled.
         """
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
-        client = TestClient(default_server_user=True, mock_input=False)
+        client = TestClient(default_server_user=True)
         client.save(files)
         client.run("config set general.non_interactive=True")
         client.run("create . user/testing")
@@ -574,7 +574,7 @@ class MyPkg(ConanFile):
     def test_upload_login_prompt_disabled_user_not_authenticated(self):
         # When a user is not authenticated, uploads should fail when login prompt has been disabled.
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
-        client = TestClient(default_server_user=True, mock_input=False)
+        client = TestClient(default_server_user=True)
         client.save(files)
         client.run("config set general.non_interactive=True")
         client.run("create . user/testing")
@@ -595,7 +595,7 @@ class MyPkg(ConanFile):
         client.run("config set general.non_interactive=True")
         client.run("create . user/testing")
         client.run("user -c")
-        client.run("user user -p password")
+        client.run("user admin -p password")
         client.run("upload Hello0/1.2.1@user/testing")
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
@@ -645,8 +645,8 @@ class MyPkg(ConanFile):
         # https://github.com/conan-io/conan/issues/4953
         server = TestServer()
         servers = OrderedDict([("default", server)])
-        client = TurboTestClient(servers=servers)
-        client2 = TurboTestClient(servers=servers)
+        client = TurboTestClient(servers=servers, inputs=["admin", "password"])
+        client2 = TurboTestClient(servers=servers, inputs=["admin", "password"])
 
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client.create(ref)
@@ -665,8 +665,8 @@ class MyPkg(ConanFile):
         # https://github.com/conan-io/conan/issues/4953
         server = TestServer()
         servers = OrderedDict([("default", server)])
-        client = TurboTestClient(servers=servers)
-        client2 = TurboTestClient(servers=servers)
+        client = TurboTestClient(servers=servers, inputs=["admin", "password"])
+        client2 = TurboTestClient(servers=servers, inputs=["admin", "password"])
 
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client.create(ref)
@@ -703,7 +703,7 @@ class MyPkg(ConanFile):
     def test_upload_without_user_channel(self):
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         servers = {"default": server}
-        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+        client = TestClient(servers=servers, inputs=["user", "password"])
 
         client.save({"conanfile.py": GenConanfile()})
 
@@ -797,7 +797,8 @@ class MyPkg(ConanFile):
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")],
                             server_capabilities=[REVISIONS])
         servers = {"default": server}
-        client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers)
+        client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers,
+                            inputs=["user", "password"])
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         client.save(files)
         client.run("create . user/testing")

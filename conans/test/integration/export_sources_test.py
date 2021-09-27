@@ -75,8 +75,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.other_server = TestServer()
         servers = OrderedDict([("default", self.server),
                                ("other", self.other_server)])
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")],
-                                                    "other": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=2*["admin", "password"])
         self.client = client
         self.ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         self.pref = PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID)

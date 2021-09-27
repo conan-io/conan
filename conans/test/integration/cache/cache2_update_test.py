@@ -19,12 +19,8 @@ class TestUpdateFlows:
             servers[f"server{index}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                                    users={"user": "password"})
 
-        users = {"server0": [("user", "password")],
-                 "server1": [("user", "password")],
-                 "server2": [("user", "password")]}
-
-        self.client = TestClient(servers=servers, users=users)
-        self.client2 = TestClient(servers=servers, users=users)
+        self.client = TestClient(servers=servers, inputs=3*["user", "password"])
+        self.client2 = TestClient(servers=servers, inputs=3*["user", "password"])
         self.the_time = 0.0
         self.server_times = {}
 

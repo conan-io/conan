@@ -11,7 +11,7 @@ from conans.util.files import load
 class DownloadTest(unittest.TestCase):
 
     def test_download_recipe(self):
-        client = TurboTestClient(default_server_user={"lasote": "pass"})
+        client = TurboTestClient(default_server_user=True)
         # Test download of the recipe only
         conanfile = str(GenConanfile().with_name("pkg").with_version("0.1"))
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
@@ -36,8 +36,7 @@ class DownloadTest(unittest.TestCase):
         servers["default"] = server
         servers["other"] = TestServer()
 
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")],
-                                                    "other": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
@@ -74,10 +73,7 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).conanfile()))
 
     def test_download_reference_with_packages(self):
-        server = TestServer()
-        servers = {"default": server}
-
-        client = TurboTestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TurboTestClient(default_server_user=True)
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
@@ -104,9 +100,7 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(package_folder))
 
     def test_download_wrong_id(self):
-        client = TurboTestClient(servers={"default": TestServer()},
-                                 users={"default": [("lasote", "mypass")]})
-
+        client = TurboTestClient(default_server_user=True)
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
         client.export(ref)
         client.upload_all(ref)
@@ -126,14 +120,14 @@ class Pkg(ConanFile):
         server = TestServer()
         servers = {"default": server}
 
-        client = TurboTestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TurboTestClient(servers=servers, inputs=["admin", "password"])
 
-        ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
+        ref = ConanFileReference.loads("pkg/0.1")
         client.create(ref)
         client.upload_all(ref)
         client.remove_all()
 
-        client.run("download pkg/0.1@lasote/stable:{}".format(NO_SETTINGS_PACKAGE_ID))
+        client.run("download pkg/0.1:{}".format(NO_SETTINGS_PACKAGE_ID))
 
         rrev = client.cache.get_latest_rrev(ref)
         pkgids = client.cache.get_package_ids(rrev)
@@ -163,10 +157,7 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: recipe parameter cannot be used together with package", client.out)
 
     def test_download_package_argument(self):
-        server = TestServer()
-        servers = {"default": server}
-
-        client = TurboTestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TurboTestClient(default_server_user=True)
 
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
         client.create(ref)
@@ -188,16 +179,13 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(package_folder))
 
     def test_download_not_found_reference(self):
-        server = TestServer()
-        servers = {"default": server}
-        client = TurboTestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TurboTestClient(default_server_user=True)
         client.run("download pkg/0.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'pkg/0.1@lasote/stable'", client.out)
 
     def test_no_user_channel(self):
         # https://github.com/conan-io/conan/issues/6009
-        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
-        client = TestClient(servers={"default": server}, users={"default": [("user", "password")]})
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/1.0@")
         client.run("upload * --all --confirm")

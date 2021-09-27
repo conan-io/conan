@@ -47,7 +47,7 @@ class PutPropertiesTest(unittest.TestCase):
                 return super(RequesterCheckArtifactProperties, self_requester).put(url, **kwargs)
 
         client = TestClient(requester_class=RequesterCheckArtifactProperties,
-                            servers=servers, users={"default": [("lasote", "mypass")]})
+                            servers=servers, inputs=["admin", "password"])
         _create_property_files(client, wanted_vars)
 
         client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
@@ -87,7 +87,7 @@ class PutPropertiesTest(unittest.TestCase):
                 return super(RequesterCheckArtifactProperties, self_requester).put(url, **kwargs)
 
         client = TestClient(requester_class=RequesterCheckArtifactProperties,
-                            servers=servers, users={"default": [("lasote", "mypass")]})
+                            servers=servers, inputs=["admin", "password"])
         _create_property_files(client, wanted_vars)
 
         client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
