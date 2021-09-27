@@ -453,7 +453,7 @@ class ConanAPIV1(object):
             export_pkg(self.app, recorder, new_ref, source_folder=source_folder,
                        build_folder=build_folder, package_folder=package_folder,
                        install_folder=install_folder, graph_info=graph_info, force=force,
-                       remotes=remotes)
+                       remotes=remotes, source_conanfile_path=conanfile_path)
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,

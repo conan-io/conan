@@ -140,7 +140,19 @@ class CMake(object):
         if not self._conanfile.should_install:
             return
         mkdir(self._conanfile, self._conanfile.package_folder)
-        self._build(build_type=build_type, target="install")
+
+        bt = build_type or self._conanfile.settings.get_safe("build_type")
+        if not bt:
+            raise ConanException("build_type setting should be defined.")
+        is_multi = is_multi_configuration(self._generator)
+        build_config = "--config {}".format(bt) if bt and is_multi else ""
+
+        pkg_folder = self._conanfile.package_folder.replace("\\", "/")
+        arg_list = ["--install", self._conanfile.build_folder, build_config, "--prefix", pkg_folder]
+        arg_list = " ".join(filter(None, arg_list))
+        command = "%s %s" % (self._cmake_program, arg_list)
+        self._conanfile.output.info("CMake command: %s" % command)
+        self._conanfile.run(command)
 
     def test(self, build_type=None, target=None, output_on_failure=False):
         if not self._conanfile.should_test:
