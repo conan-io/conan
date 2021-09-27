@@ -323,11 +323,6 @@ def export_recipe(conanfile, origin_folder, destination_folder):
 
     included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
-    try:
-        os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
-    except OSError:
-        pass
-
     copier = FileCopier([origin_folder], destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
