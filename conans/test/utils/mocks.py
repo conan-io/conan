@@ -39,7 +39,9 @@ class RedirectedInputStream:
 
     def readline(self):
         if not self.answers:
-            raise Exception("Class MockedInputStream: There are no more inputs to be returned")
+            raise Exception("\n\n**********\n\nClass MockedInputStream: "
+                            "There are no more inputs to be returned.\n"
+                            "CHECK THE 'inputs=[]' ARGUMENT OF THE TESTCLIENT\n**********+*\n\n\n")
         ret = self.answers.pop(0)
         logger.info("Testing: Reading fake input={}".format(ret))
         return ret
