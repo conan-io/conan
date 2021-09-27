@@ -161,8 +161,6 @@ class ConanFile:
     def cpp_info(self):
         if not self._cpp_info:
             self._cpp_info = NewCppInfo()
-            # FIXME: compatibility with 1.x: remove this in the future?
-            self._cpp_info.init_defaults()
         return self._cpp_info
 
     @cpp_info.setter

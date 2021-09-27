@@ -54,6 +54,16 @@ class _NewComponent(object):
 
         self.sysroot = ""
         self.requires = []
+        # FIXME: compatibility with 1.x: remove this in the future?
+        self.init_defaults()
+
+    def init_defaults(self):
+        self.includedirs.append("include")
+        self.libdirs.append("lib")
+        self.resdirs.append("res")
+        self.bindirs.append("bin")
+        self.builddirs.append("")
+        self.frameworkdirs.append("Frameworks")
 
     @property
     def required_component_names(self):
@@ -94,14 +104,6 @@ class NewCppInfo(object):
         self.components = DefaultOrderedDict(lambda: _NewComponent())
         # Main package is a component with None key
         self.components[None] = _NewComponent()
-
-    def init_defaults(self):
-        self.components[None].includedirs.append("include")
-        self.components[None].libdirs.append("lib")
-        self.components[None].resdirs.append("res")
-        self.components[None].bindirs.append("bin")
-        self.components[None].builddirs.append("")
-        self.components[None].frameworkdirs.append("Frameworks")
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
