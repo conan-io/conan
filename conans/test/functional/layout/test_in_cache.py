@@ -147,6 +147,7 @@ def test_cache_in_layout(conanfile):
     assert "Package_ID: {}".format(package_id) in client.out
 
 
+@pytest.mark.xfail(reason="The conan-source command do not handle yet the layout, to do in other PR")
 def test_same_conanfile_local(conanfile):
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})

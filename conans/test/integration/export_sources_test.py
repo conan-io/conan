@@ -171,7 +171,8 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports.append("license.lic")
 
         self.assertEqual(scan_folder(self.export_folder), sorted(expected_exports))
-        self.assertFalse(os.path.exists(self.export_sources_folder))
+        if mode == "exports":
+            self.assertFalse(os.path.exists(self.export_sources_folder))
 
     def _check_export_uploaded_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
@@ -266,7 +267,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_package_folder(mode)
 
         # upload to remote
-        self.client.run("upload Hello/0.1@lasote/testing --all")
+        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
 
@@ -288,7 +289,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("export . lasote/testing")
         self._get_folders()
 
-        self.client.run("upload Hello/0.1@lasote/testing")
+        self.client.run("upload Hello/0.1@lasote/testing -r default")
         self.assertFalse(os.path.exists(self.source_folder))
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
@@ -313,13 +314,13 @@ class ExportsSourcesTest(unittest.TestCase):
 
         self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload Hello/0.1@lasote/testing --all")
+        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
         self.client.run('remove Hello/0.1@lasote/testing -f')
         self.client.run("install Hello/0.1@lasote/testing")
         self._get_folders()
 
         # upload to remote again, the folder remains as installed
-        self.client.run("upload Hello/0.1@lasote/testing --all")
+        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
         self._check_export_installed_folder(mode)
         self._check_server_folder(mode)
 
@@ -334,7 +335,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
         self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload Hello/0.1@lasote/testing --all")
+        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
         self.client.run('remove Hello/0.1@lasote/testing -f')
         self.client.run("install Hello/0.1@lasote/testing")
 
@@ -349,7 +350,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
         the_time = time.time() + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
-            self.client.run("upload Hello/0.1@lasote/testing --all")
+            self.client.run("upload Hello/0.1@lasote/testing --all -r default")
 
         ref = ConanFileReference.loads('Hello/0.1@lasote/testing')
         self.client.run(f"remove Hello/0.1@lasote/testing"

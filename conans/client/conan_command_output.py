@@ -134,14 +134,6 @@ class CommandOutputer(object):
                 item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
                 item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
 
-            try:
-                reg_remote = self._cache.get_remote(ref)
-                reg_remote = remotes.get(reg_remote)
-                if reg_remote:
-                    item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
-            except Exception:
-                pass
-
             def _add_if_exists(attrib, as_list=False):
                 value = getattr(conanfile, attrib, None)
                 if value:

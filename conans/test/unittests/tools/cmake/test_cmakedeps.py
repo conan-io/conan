@@ -3,11 +3,12 @@ import pytest
 from mock import Mock
 
 from conan.tools.cmake import CMakeDeps
-from conans import ConanFile, Settings
+from conans import ConanFile
 from conans.model.build_info import CppInfo
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
 from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
 
 
 @pytest.mark.xfail(reason="ConanFile.dependencies has changed")

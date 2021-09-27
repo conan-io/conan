@@ -81,7 +81,7 @@ class ConanTraceTest(unittest.TestCase):
             client.run("user lasote -p mypass -r default")
             client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(ref))
-            client.run("upload %s --all" % str(ref))
+            client.run("upload %s --all -r default" % str(ref))
 
         traces = load(trace_file)
         self.assertNotIn("mypass", traces)

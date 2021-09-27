@@ -80,7 +80,7 @@ def test_beat_character_long_upload():
     client.run("user admin --password=password")
     with patch("conans.util.progress_bar.TIMEOUT_BEAT_SECONDS", -1):
         with patch("conans.util.progress_bar.TIMEOUT_BEAT_CHARACTER", "%&$"):
-            client.run("upload pkg/0.1@user/stable --all")
+            client.run("upload pkg/0.1@user/stable --all -r default")
     out = "".join(str(client.out).splitlines())
     assert "Compressing package...%&$Uploading conan_package.tgz -> pkg/0.1@user/stable" in out
     assert "%&$Uploading conan_export.tgz" in out

@@ -355,7 +355,7 @@ def test_mixed_user_channel():
     t.run("create . pkg/1.0@user/testing")
     t.run("create . pkg/1.1@user/testing")
     t.run("create . pkg/2.0@user/testing")
-    t.run("upload * --all --confirm")
+    t.run("upload * --all --confirm -r default")
     t.run("remove * -f")
 
     t.run('install "pkg/[>0 <2]@"')
@@ -371,7 +371,7 @@ def test_remote_version_ranges():
     t.save({"conanfile.py": GenConanfile()})
     for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
         t.run(f"create . dep/{v}@")
-    t.run("upload * --all --confirm")
+    t.run("upload * --all --confirm -r default")
     # TODO: Deprecate the comma separator for expressions
     for expr, solution in [(">0.0", "2.2.1"),
                            (">0.1,<1", "0.3"),

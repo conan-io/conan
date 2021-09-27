@@ -79,8 +79,8 @@ class RelatedToGraphBehavior(object):
         ref_parent = ConanFileReference.loads("parent/version@lasote/channel")
         self.t.save(files={'conanfile.py': conanfile})
         self.t.run('create . {}'.format(ref_parent))
-        self.t.run('upload {} --all'.format(ref_parent))
-        self.t.run('remove {} --force'.format(ref_parent))
+        self.t.run('upload {} --all -r default'.format(ref_parent))
+        self.t.run('remove {} --force -r default'.format(ref_parent))
         self.assertFalse(os.path.exists(self.t.get_latest_ref_layout(ref_parent).base_folder))
 
         # Create our project and link it

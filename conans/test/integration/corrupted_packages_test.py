@@ -71,7 +71,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn(NO_SETTINGS_PACKAGE_ID, self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm")
+        self.client.run("upload * --all --confirm -r default")
         self._assert_all_package_files_in_server()
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
@@ -88,7 +88,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm")
+        self.client.run("upload * --all --confirm -r default")
         self.assertIn("Uploading conan_package.tgz", self.client.out)
         self.assertIn("Uploading conaninfo.txt", self.client.out)
         self._assert_all_package_files_in_server()
@@ -103,7 +103,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("ERROR: Binary package not found", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm")
+        self.client.run("upload * --all --confirm -r default")
         self.assertIn("Uploading conan_package.tgz", self.client.out)
         self._assert_all_package_files_in_server()
 
@@ -120,7 +120,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("ERROR: Binary package not found", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm")
+        self.client.run("upload * --all --confirm -r default")
         self._assert_all_package_files_in_server()
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
@@ -138,5 +138,5 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm")
+        self.client.run("upload * --all --confirm -r default")
         self._assert_all_package_files_in_server()

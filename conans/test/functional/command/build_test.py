@@ -41,50 +41,6 @@ class AConan(ConanFile):
 
 class ConanBuildTest(unittest.TestCase):
 
-    def test_partial_build(self):
-        client = TestClient()
-        conanfile = """from conans import ConanFile
-
-class Conan(ConanFile):
-    def build(self):
-        self.output.info("CONFIGURE=%s!" % self.should_configure)
-        self.output.info("BUILD=%s!" % self.should_build)
-        self.output.info("INSTALL=%s!" % self.should_install)
-        self.output.info("TEST=%s!" % self.should_test)
-"""
-        client.save({CONANFILE: conanfile})
-        client.run("build .")
-        self.assertIn("CONFIGURE=True!", client.out)
-        self.assertIn("BUILD=True!", client.out)
-        self.assertIn("INSTALL=True!", client.out)
-        self.assertIn("TEST=True!", client.out)
-        client.run("build . --should_configure")
-        self.assertIn("CONFIGURE=True!", client.out)
-        self.assertIn("BUILD=False!", client.out)
-        self.assertIn("INSTALL=False!", client.out)
-        self.assertIn("TEST=False!", client.out)
-        client.run("build . --should_build")
-        self.assertIn("CONFIGURE=False!", client.out)
-        self.assertIn("BUILD=True!", client.out)
-        self.assertIn("INSTALL=False!", client.out)
-        self.assertIn("TEST=False!", client.out)
-        client.run("build . --should_install")
-        self.assertIn("CONFIGURE=False!", client.out)
-        self.assertIn("BUILD=False!", client.out)
-        self.assertIn("INSTALL=True!", client.out)
-        self.assertIn("TEST=False!", client.out)
-        client.run("build . --should_test")
-        self.assertIn("CONFIGURE=False!", client.out)
-        self.assertIn("BUILD=False!", client.out)
-        self.assertIn("INSTALL=False!", client.out)
-        self.assertIn("TEST=True!", client.out)
-
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("CONFIGURE=True!", client.out)
-        self.assertIn("BUILD=True!", client.out)
-        self.assertIn("INSTALL=True!", client.out)
-        self.assertIn("TEST=True!", client.out)
-
     @pytest.mark.xfail(reason="deps_cpp_info access removed")
     def test_build(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info

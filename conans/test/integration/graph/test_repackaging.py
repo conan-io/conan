@@ -41,11 +41,9 @@ def test_repackage():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . repackager/1.0@ -s os=Linux -s arch=x86 -s build_type=RelWithDebInfo")
-    print(client.out)
 
     client.save({"conanfile.py": GenConanfile().with_requires("repackager/1.0")}, clean_first=True)
     client.run("install . -s os=Linux")
-    print(client.out)
     assert "liba/1.0:INVALID - Skip" in client.out
     assert "libb/1.0:INVALID - Skip" in client.out
     assert "repackager/1.0: Already installed!" in client.out

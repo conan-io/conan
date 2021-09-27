@@ -37,22 +37,6 @@ class RemoveLocksTest(unittest.TestCase):
         self.assertFalse(os.path.exists(conan_folder + ".count.lock"))
 
 
-class RemoveRegistryTest(unittest.TestCase):
-
-    def test_remove_registry(self):
-        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, inputs=["lasote", "password"])
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . Test/0.1@lasote/testing")
-        client.run("upload * --all --confirm")
-        client.run('remove "*" -f')
-        client.run("remote list_pref Test/0.1@lasote/testing")
-        self.assertNotIn("Test/0.1@lasote/testing", client.out)
-        registry_content = load(client.cache.remotes_path)
-        self.assertNotIn("Test/0.1@lasote/testing", registry_content)
-
-
 class RemoveOutdatedTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
@@ -69,7 +53,7 @@ class Test(ConanFile):
         client.run("create . Test/0.1@lasote/testing -s os=Linux")
         client.save({"conanfile.py": conanfile.replace("settings", "pass #")})
         client.run("create . Test2/0.1@lasote/testing")
-        client.run("upload * --all --confirm")
+        client.run("upload * --all --confirm -r default")
         for remote in ("", "-r=default"):
             client.run("remove Test/0.1@lasote/testing -q=os=Windows -f %s" % remote)
             client.run("search Test/0.1@lasote/testing %s" % remote)
@@ -159,7 +143,7 @@ class RemoveTest(unittest.TestCase):
         self.client = client
 
         for folder in self.root_folder.values():
-            client.run("upload %s --all" % folder)
+            client.run("upload %s --all -r default" % folder)
 
         self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},

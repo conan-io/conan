@@ -109,12 +109,19 @@ class ConanOutput(object):
         self._color = tmp_color
 
     def _write_message(self, msg, fg=None, bg=None):
+        tmp = ""
         if self._scope:
-            msg = "{}: {}".format(self.scope, msg)
-        if self._color:
-            msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+            if self._color:
+                tmp = "{}{}{}:{} ".format(fg or '', bg or '', self.scope, Style.RESET_ALL)
+            else:
+                tmp = "{}: ".format(self._scope)
 
-        self.stream.write("{}\n".format(msg))
+        if self._color and not self._scope:
+            tmp += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
+        else:
+            tmp += "{}".format(msg)
+
+        self.stream.write("{}\n".format(tmp))
 
     def debug(self, msg):
         self._write_message(msg, logging.DEBUG)
@@ -123,10 +130,10 @@ class ConanOutput(object):
         self._write_message(msg, fg=fg, bg=bg)
 
     def highlight(self, data):
-        self.info(data, Color.BRIGHT_MAGENTA)
+        self.info(data, fg=Color.BRIGHT_MAGENTA)
 
     def success(self, data):
-        self.info(data, Color.BRIGHT_GREEN)
+        self.info(data, fg=Color.BRIGHT_GREEN)
 
     def warning(self, msg):
         self._write_message("WARN: {}".format(msg), Color.YELLOW)

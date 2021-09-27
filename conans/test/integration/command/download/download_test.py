@@ -49,7 +49,7 @@ class Pkg(ConanFile):
         client.run("export . lasote/stable")
 
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
-        client.run("upload pkg/0.1@lasote/stable")
+        client.run("upload pkg/0.1@lasote/stable -r default")
         client.run("remove pkg/0.1@lasote/stable -f")
 
         client.run("download pkg/0.1@lasote/stable")
@@ -62,7 +62,7 @@ class Pkg(ConanFile):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
         client.run("export . user/stable")
-        client.run("upload pkg/0.1@user/stable")
+        client.run("upload pkg/0.1@user/stable -r default")
         client.run("remove pkg/0.1@user/stable -f")
 
         client.run("download pkg/0.1@user/stable")
@@ -188,7 +188,7 @@ class Pkg(ConanFile):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/1.0@")
-        client.run("upload * --all --confirm")
+        client.run("upload * --all --confirm -r default")
         client.run("remove * -f")
 
         client.run("download pkg/1.0:{}".format(NO_SETTINGS_PACKAGE_ID))

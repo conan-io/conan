@@ -201,7 +201,7 @@ class HelloReuseConan(ConanFile):
         if export:
             self.client.run("export . lasote/stable")
             if upload:
-                self.client.run("upload %s/%s@lasote/stable" % (name, version))
+                self.client.run("upload %s/%s@lasote/stable -r default" % (name, version))
 
     def test_local_then_remote(self):
         self._export("Hello0", "0.1")
