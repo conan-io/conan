@@ -54,9 +54,8 @@ class _NewComponent(object):
 
         self.sysroot = ""
         self.requires = []
-        # FIXME: compatibility with 1.x: remove this in the future?
-        self.init_defaults()
 
+    # FIXME: compatibility with 1.x: remove this in the future?
     def init_defaults(self):
         self.includedirs.append("include")
         self.libdirs.append("lib")
@@ -64,14 +63,6 @@ class _NewComponent(object):
         self.bindirs.append("bin")
         self.builddirs.append("")
         self.frameworkdirs.append("Frameworks")
-
-    def reset_defaults(self):
-        self.includedirs = []
-        self.libdirs = []
-        self.resdirs = []
-        self.bindirs = []
-        self.builddirs = []
-        self.frameworkdirs = []
 
     @property
     def required_component_names(self):
@@ -265,6 +256,6 @@ class NewCppInfo(object):
                            "Value: '{}'".format(cname, n, getattr(c, n)))
         return "\n".join(ret)
 
-    def reset_defaults(self):
+    def init_defaults(self):
         for c in self.components.values():
-            c.reset_defaults()
+            c.init_defaults()

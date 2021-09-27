@@ -31,10 +31,6 @@ class Infos(object):
         self.build = NewCppInfo()
         self.package = NewCppInfo()
 
-        self.source.reset_defaults()
-        self.build.reset_defaults()
-        self.package.reset_defaults()
-
 
 class Folders(object):
 
