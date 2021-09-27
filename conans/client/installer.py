@@ -545,7 +545,7 @@ class BinaryInstaller(object):
 
                 # FIXME: compatibility with old default folders in old CppInfo
                 if not hasattr(conanfile, "layout"):
-                        conanfile.cpp_info.init_defaults()
+                    conanfile.cpp_info.init_defaults()
 
                 if hasattr(conanfile, "layout") and is_editable:
                     # Adjust the folders of the layout to consolidate the rootfolder of the

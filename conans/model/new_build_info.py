@@ -57,12 +57,18 @@ class _NewComponent(object):
 
     # FIXME: compatibility with 1.x: remove this in the future?
     def init_defaults(self):
-        self.includedirs.append("include")
-        self.libdirs.append("lib")
-        self.resdirs.append("res")
-        self.bindirs.append("bin")
-        self.builddirs.append("")
-        self.frameworkdirs.append("Frameworks")
+        if not self.includedirs:
+            self.includedirs.append("include")
+        if not self.libdirs:
+            self.libdirs.append("lib")
+        if not self.resdirs:
+            self.resdirs.append("res")
+        if not self.bindirs:
+            self.bindirs.append("bin")
+        if not self.builddirs:
+            self.builddirs.append("")
+        if not self.frameworkdirs:
+            self.frameworkdirs.append("Frameworks")
 
     @property
     def required_component_names(self):
