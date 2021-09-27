@@ -540,8 +540,6 @@ class BinaryInstaller(object):
                         package_cppinfo = conanfile.cpp.package.copy()
                         package_cppinfo.set_relative_base_folder(conanfile.folders.package)
                         conanfile.cpp_info = package_cppinfo
-                    else:
-                        conanfile.cpp_info.filter_empty = False
 
                 conanfile.package_info()
 
@@ -561,8 +559,10 @@ class BinaryInstaller(object):
                     source_cppinfo.set_relative_base_folder(conanfile.folders.source)
 
                     full_editable_cppinfo = NewCppInfo()
+                    full_editable_cppinfo.reset_defaults()
                     full_editable_cppinfo.merge(source_cppinfo)
                     full_editable_cppinfo.merge(build_cppinfo)
+                    conanfile.cpp_info.merge(full_editable_cppinfo, overwrite=True)
 
                 self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                            reference=ref)

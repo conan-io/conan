@@ -65,6 +65,14 @@ class _NewComponent(object):
         self.builddirs.append("")
         self.frameworkdirs.append("Frameworks")
 
+    def reset_defaults(self):
+        self.includedirs = []
+        self.libdirs = []
+        self.resdirs = []
+        self.bindirs = []
+        self.builddirs = []
+        self.frameworkdirs = []
+
     @property
     def required_component_names(self):
         """ Names of the required components of the same package (not scoped with ::)"""
@@ -122,18 +130,23 @@ class NewCppInfo(object):
     def component_names(self):
         return filter(None, self.components.keys())
 
-    def merge(self, other):
-        """Merge 'other' into self. 'other' can be an old cpp_info object"""
+    def merge(self, other, overwrite=False):
+        """Merge 'other' into self. If overwrite == True, if one value from the other exists
+            we remove the original value and substitute with this value
+        """
+
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
 
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
             other_values = getattr(other, varname)
-            if other_values is not None:
+            if overwrite and other_values:
+                setattr(self, varname, other_values)
+            else:
                 current_values = self.components[None].get_init(varname, [])
                 merge_list(other_values, current_values)
 
-        if self.sysroot is None and other.sysroot:
+        if self.sysroot == "" and other.sysroot:
             self.sysroot = other.sysroot
 
         if other.requires:
@@ -150,7 +163,9 @@ class NewCppInfo(object):
                 continue
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 other_values = getattr(c, varname)
-                if other_values is not None:
+                if overwrite and other_values:
+                    setattr(self.components[cname], varname, other_values)
+                else:
                     current_values = self.components[cname].get_init(varname, [])
                     merge_list(other_values, current_values)
 
@@ -250,3 +265,6 @@ class NewCppInfo(object):
                            "Value: '{}'".format(cname, n, getattr(c, n)))
         return "\n".join(ret)
 
+    def reset_defaults(self):
+        for c in self.components.values():
+            c.reset_defaults()
