@@ -54,9 +54,8 @@ class _NewComponent(object):
 
         self.sysroot = ""
         self.requires = []
-        # FIXME: compatibility with 1.x: remove this in the future?
-        self.init_defaults()
 
+    # FIXME: for compatibility with 1.X
     def init_defaults(self):
         self.includedirs.append("include")
         self.libdirs.append("lib")
@@ -112,6 +111,8 @@ class NewCppInfo(object):
         self.components = DefaultOrderedDict(lambda: _NewComponent())
         # Main package is a component with None key
         self.components[None] = _NewComponent()
+        # FIXME: compatibility with 1.x: remove this in the future?
+        self.init_defaults()
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
