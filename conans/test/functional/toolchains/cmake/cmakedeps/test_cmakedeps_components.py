@@ -56,7 +56,6 @@ class PropagateSpecificComponents(unittest.TestCase):
         client.run('create middle.py middle/version@')
         self.cache_folder = client.cache_folder
 
-    @pytest.mark.tool_compiler
     def test_cmakedeps_app(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.save({'conanfile.py': self.app})

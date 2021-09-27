@@ -1,7 +1,7 @@
 import fnmatch
 from collections import OrderedDict
 
-from conans.client.output import Color
+from conans.cli.output import Color
 from conans.model.ref import ConanFileReference
 
 
@@ -67,14 +67,6 @@ class Printer(object):
                 _print("build_folder")
                 _print("package_folder")
 
-            if show("remote") and is_ref:
-                if "remote" in it:
-                    self._out.writeln("    Remote: %s=%s" % (it["remote"]["name"],
-                                                             it["remote"]["url"]),
-                                      Color.BRIGHT_GREEN)
-                else:
-                    self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
-
             _print("url", name="URL")
             _print("homepage", name="Homepage")
 
@@ -98,12 +90,6 @@ class Printer(object):
             _print("revision", name="Revision", color=None)
             _print("package_revision", name="Package revision", color=None)
             _print("binary", name="Binary", color=None)
-
-            if show("binary_remote") and is_ref:
-                if "binary_remote" in it:
-                    self._out.writeln("    Binary remote: %s" % it["binary_remote"])
-                else:
-                    self._out.writeln("    Binary remote: None")
 
             _print("creation_date", show_field="date", name="Creation date")
 
@@ -229,7 +215,7 @@ class Printer(object):
         indent_text = ' ' * Printer.INDENT_SPACES * indent
         if value is not None:
             value_color = Color.BRIGHT_WHITE
-            self._out.write('%s%s%s' % (indent_text, text, separator), text_color)
-            self._out.writeln(value, value_color)
+            self._out.write('%s%s%s' % (indent_text, text, separator), fg=text_color)
+            self._out.writeln(value, fg=value_color)
         else:
             self._out.writeln('%s%s' % (indent_text, text), text_color)

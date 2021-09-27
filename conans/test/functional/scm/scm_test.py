@@ -45,7 +45,7 @@ class ConanLib(ConanFile):
     def build(self):
         sf = self.scm.get("subfolder")
         path = os.path.join(sf, "myfile.txt") if sf else "myfile.txt"
-        self.output.warn(tools.load(path))
+        self.output.warning(tools.load(path))
 '''
 
 base_git = base % "git"
@@ -80,7 +80,7 @@ class ConanLib(ConanFile):
     scm = ["Other stuff"]
 
     def build(self):
-        self.output.writeln("scm: {}".format(self.scm))
+        self.output.info("scm: {}".format(self.scm))
 '''
         self.client.save({"conanfile.py": conanfile})
         # nothing breaks
@@ -289,7 +289,7 @@ class ConanLib(ConanFile):
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")
         conanfile += """
     def source(self):
-        self.output.warn("SOURCE METHOD CALLED")
+        self.output.warning("SOURCE METHOD CALLED")
 """
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self.client.init_git_repo()
@@ -309,7 +309,7 @@ class ConanLib(ConanFile):
                                     revision=git.get_revision())
         conanfile += """
     def source(self):
-        self.output.warn("SOURCE METHOD CALLED")
+        self.output.warning("SOURCE METHOD CALLED")
 """
         self.client.save({"conanfile.py": conanfile,
                           "myfile2.txt": "My file is copied"})
@@ -330,7 +330,7 @@ class ConanLib(ConanFile):
         conanfile = conanfile.format(url=_quoted("auto"), revision="auto")
         conanfile += """
     def source(self):
-        self.output.warn("SOURCE METHOD CALLED")
+        self.output.warning("SOURCE METHOD CALLED")
 """
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self.client.init_git_repo()
@@ -375,7 +375,7 @@ class ConanLib(ConanFile):
     def test_install_checked_out(self):
         test_server = TestServer()
         self.servers = {"myremote": test_server}
-        self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=["admin", "password"])
 
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")
@@ -384,10 +384,10 @@ class ConanLib(ConanFile):
         cmd = 'git remote add origin "%s"' % curdir
         self.client.run_command(cmd)
         self.client.run("export . lasote/channel")
-        self.client.run("upload lib* -c")
+        self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
-        client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers)
         client2.run("install lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
@@ -404,7 +404,7 @@ class ConanLib(ConanFile):
 
                 def build(self):
                     contents = tools.load("myfile")
-                    self.output.warn("Contents: %s" % contents)
+                    self.output.warning("Contents: %s" % contents)
             ''')
 
         self.client.init_git_repo({"myfile": "contents", "conanfile.py": conanfile},
@@ -540,7 +540,7 @@ class ConanLib(ConanFile):
     }
 
     def source(self):
-        self.output.warn("SOURCE METHOD CALLED")
+        self.output.warning("SOURCE METHOD CALLED")
         assert(os.path.exists("file.txt"))
         assert(os.path.exists(os.path.join("src", "nested", "myfile")))
         tools.save("cosa.txt", "contents")
@@ -548,7 +548,7 @@ class ConanLib(ConanFile):
     def build(self):
         assert(os.path.exists("file.txt"))
         assert(os.path.exists("cosa.txt"))
-        self.output.warn("BUILD METHOD CALLED")
+        self.output.warning("BUILD METHOD CALLED")
 ''' % path
         self.client.save({"conanfile.py": conanfile, "file.txt": "My file is copied"})
         self.client.run("create . user/channel")
@@ -614,7 +614,7 @@ class ConanLib(ConanFile):
     scm = ["Other stuff"]
 
     def build(self):
-        self.output.writeln("scm: {}".format(self.scm))
+        self.output.info("scm: {}".format(self.scm))
 '''
         self.client.save({"conanfile.py": conanfile})
         # nothing breaks
@@ -746,7 +746,7 @@ class ConanLib(ConanFile):
         conanfile = base_svn.format(url=_quoted("auto"), revision="auto")
         conanfile += """
     def source(self):
-        self.output.warn("SOURCE METHOD CALLED")
+        self.output.warning("SOURCE METHOD CALLED")
 """
         project_url, _ = self.create_project(files={"conanfile.py": conanfile,
                                                     "myfile.txt": "My file is copied"})
@@ -767,7 +767,7 @@ class ConanLib(ConanFile):
         conanfile = base_svn.format(url=_quoted(svn.get_remote_url()), revision=svn.get_revision())
         conanfile += """
     def source(self):
-        self.output.warn("SOURCE METHOD CALLED")
+        self.output.warning("SOURCE METHOD CALLED")
 """
         self.client.save({"conanfile.py": conanfile,
                           "myfile2.txt": "My file is copied"})
@@ -790,7 +790,7 @@ class ConanLib(ConanFile):
         conanfile = conanfile.format(url=_quoted("auto"), revision="auto")
         conanfile += """
     def source(self):
-        self.output.warn("SOURCE METHOD CALLED")
+        self.output.warning("SOURCE METHOD CALLED")
 """
         project_url, _ = self.create_project(files={"conanfile.py": conanfile,
                                                     "myfile.txt": "My file is copied"})
@@ -806,7 +806,7 @@ class ConanLib(ConanFile):
     def test_install_checked_out(self):
         test_server = TestServer()
         self.servers = {"myremote": test_server}
-        self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=["admin", "password"])
 
         conanfile = base_svn.format(url=_quoted("auto"), revision="auto")
         project_url, _ = self.create_project(files={"conanfile.py": conanfile,
@@ -815,10 +815,10 @@ class ConanLib(ConanFile):
         self.client.run_command('svn co "{url}" "{path}"'.format(url=project_url,
                                                                  path=self.client.current_folder))
         self.client.run("export . lasote/channel")
-        self.client.run("upload lib* -c")
+        self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
-        client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers)
         client2.run("install lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
@@ -835,7 +835,7 @@ class ConanLib(ConanFile):
 
     def build(self):
         contents = tools.load("myfile")
-        self.output.warn("Contents: %s" % contents)
+        self.output.warning("Contents: %s" % contents)
 
 '''
         project_url, _ = self.create_project(files={"myfile": "contents",
@@ -876,7 +876,7 @@ class ConanLib(ConanFile):
     }}
 
     def source(self):
-        self.output.warn("SOURCE METHOD CALLED")
+        self.output.warning("SOURCE METHOD CALLED")
         assert(os.path.exists("file.txt"))
         assert(os.path.exists(os.path.join("src", "myfile")))
         tools.save("cosa.txt", "contents")
@@ -884,7 +884,7 @@ class ConanLib(ConanFile):
     def build(self):
         assert(os.path.exists("file.txt"))
         assert(os.path.exists("cosa.txt"))
-        self.output.warn("BUILD METHOD CALLED")
+        self.output.warning("BUILD METHOD CALLED")
 '''.format(url=project_url, rev=rev)
         self.client.save({"conanfile.py": conanfile, "file.txt": "My file is copied"})
         self.client.run("create . user/channel")
@@ -934,7 +934,7 @@ class ConanLib(ConanFile):
         conanfile += """
     def build(self):
         contents = tools.load("bla.sh")
-        self.output.warn("Bla? {}".format(contents))
+        self.output.warning("Bla? {}".format(contents))
         """
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self.client.init_git_repo()
@@ -1068,7 +1068,7 @@ class TestConan(ConanFile):
 """
         servers = {"upload_repo": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                              users={"lasote": "mypass"})}
-        client = TestClient(servers=servers, users={"upload_repo": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.save({"conanfile.py": conanfile + exports_sources, "include/file": "content"})
         client.run("create . danimtb/testing")
         client.run("upload test/1.0@danimtb/testing -r upload_repo")

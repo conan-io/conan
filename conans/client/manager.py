@@ -1,5 +1,6 @@
 import os
 
+from conans.cli.output import ConanOutput
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_VIRTUAL
@@ -13,7 +14,7 @@ from conans.model.ref import ConanFileReference
 
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, remotes=None, build_modes=None, update=False, generators=None,
-                 no_imports=False, create_reference=None, recorder=None, lockfile_node_id=None,
+                 no_imports=False, create_reference=None, lockfile_node_id=None,
                  is_build_require=False, require_overrides=None):
 
     """ Fetch and build all dependencies for the given reference
@@ -28,16 +29,17 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     assert profile_host is not None
     assert profile_build is not None
 
-    out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
+    graph_manager, cache = app.graph_manager, app.cache
 
+    out = ConanOutput()
     out.info("Configuration (profile_host):")
-    out.writeln(profile_host.dumps())
+    out.info(profile_host.dumps())
     out.info("Configuration (profile_build):")
-    out.writeln(profile_build.dumps())
+    out.info(profile_build.dumps())
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host, profile_build,
                                           graph_lock, root_ref, build_modes, False, update, remotes,
-                                          recorder, lockfile_node_id=lockfile_node_id,
+                                          lockfile_node_id=lockfile_node_id,
                                           is_build_require=is_build_require,
                                           require_overrides=require_overrides)
 
@@ -50,11 +52,11 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         out.highlight("Installing package: %s" % str(ref_or_path))
     else:
         conanfile.output.highlight("Installing package")
-    print_graph(deps_graph, out)
+    print_graph(deps_graph)
 
-    installer = BinaryInstaller(app, recorder=recorder)
+    installer = BinaryInstaller(app)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
-    build_modes = BuildMode(build_modes, out)
+    build_modes = BuildMode(build_modes)
     installer.install(deps_graph, remotes, build_modes, update)
 
     graph_lock.complete_matching_prevs()
@@ -63,15 +65,13 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     conanfile.folders.set_base_imports(install_folder)
     conanfile.folders.set_base_generators(base_folder)
 
-    output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
-
     if install_folder:
         # Write generators
         tmp = list(conanfile.generators)  # Add the command line specified generators
         generators = set(generators) if generators else set()
         tmp.extend([g for g in generators if g not in tmp])
         conanfile.generators = tmp
-        write_generators(conanfile, output)
+        write_generators(conanfile)
 
         if not isinstance(ref_or_path, ConanFileReference):
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
@@ -79,7 +79,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         if not no_imports:
             run_imports(conanfile)
         if type(conanfile).system_requirements != ConanFile.system_requirements:
-            call_system_requirements(conanfile, conanfile.output)
+            call_system_requirements(conanfile)
 
         if not create_reference and isinstance(ref_or_path, ConanFileReference):
             # The conanfile loaded is a virtual one. The one w deploy is the first level one

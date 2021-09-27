@@ -5,24 +5,22 @@ from collections import namedtuple, Counter
 
 from mock import Mock
 
+from conans.cli.output import ConanOutput
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
-
 from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
-from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -39,9 +37,8 @@ class MockRemoteManager(object):
 class GraphManagerTest(unittest.TestCase):
 
     def setUp(self):
-        self.output = TestBufferConanOutput()
         cache_folder = temp_folder()
-        cache = ClientCache(cache_folder, self.output)
+        cache = ClientCache(cache_folder)
         save(cache.default_profile_path, "")
         save(cache.settings_path, "os: [Windows, Linux]")
         self.cache = cache
@@ -50,20 +47,18 @@ class GraphManagerTest(unittest.TestCase):
         self.remote_manager = MockRemoteManager()
         cache = self.cache
         self.resolver = RangeResolver(self.cache, self.remote_manager)
-        proxy = ConanProxy(cache, self.output, self.remote_manager)
+        proxy = ConanProxy(cache, self.remote_manager)
 
         pyreq_loader = PyRequireLoader(proxy, self.resolver)
         pyreq_loader.enable_remotes(remotes=Remotes())
-        self.loader = ConanFileLoader(None, self.output, pyreq_loader=pyreq_loader)
+        self.loader = ConanFileLoader(None, pyreq_loader=pyreq_loader)
 
-        binaries = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
-        self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
-                                    self.resolver, binaries)
+        binaries = GraphBinariesAnalyzer(cache, self.remote_manager)
+        self.manager = GraphManager(cache, self.loader, proxy, self.resolver, binaries)
         hook_manager = Mock()
-        app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager"
+        app_type = namedtuple("ConanApp", "cache remote_manager hook_manager graph_manager"
                               " binaries_analyzer")
-        app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager,
-                       binaries)
+        app = app_type(self.cache, self.remote_manager, hook_manager, self.manager, binaries)
         return app
 
     def recipe_cache(self, reference, requires=None, option_shared=None):
@@ -150,7 +145,6 @@ class GraphManagerTest(unittest.TestCase):
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
         update = check_updates = False
-        recorder = ActionRecorder()
         remotes = Remotes()
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
@@ -158,11 +152,11 @@ class GraphManagerTest(unittest.TestCase):
 
         deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
                                                   None, ref, build_mode, check_updates, update,
-                                                  remotes, recorder)
+                                                  remotes)
         if install:
             deps_graph.report_graph_error()
-            binary_installer = BinaryInstaller(app, recorder)
-            build_mode = BuildMode(build_mode, app.out)
+            binary_installer = BinaryInstaller(app)
+            build_mode = BuildMode(build_mode)
             binary_installer.install(deps_graph, None, build_mode, update)
         return deps_graph
 

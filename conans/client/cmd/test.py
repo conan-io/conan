@@ -10,7 +10,7 @@ from conans.util.files import rmdir
 
 def install_build_and_test(app, conanfile_abs_path, reference, profile_host, profile_build,
                            graph_lock, root_ref, remotes, update, build_modes=None,
-                           test_build_folder=None, recorder=None, require_overrides=None):
+                           test_build_folder=None, require_overrides=None):
     """
     Installs the reference (specified by the parameters or extracted from the test conanfile)
     and builds the test_package/conanfile.py running the test() method.
@@ -34,7 +34,6 @@ def install_build_and_test(app, conanfile_abs_path, reference, profile_host, pro
                                  root_ref=root_ref,
                                  update=update,
                                  build_modes=build_modes,
-                                 recorder=recorder,
                                  require_overrides=require_overrides)
         conanfile = deps_info.root.conanfile
         cmd_build(app, conanfile_abs_path, conanfile, test_build_folder,

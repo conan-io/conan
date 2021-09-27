@@ -42,12 +42,12 @@ def update_package_metadata(prev, layout, package_id, rrev):
         metadata.packages[package_id].recipe_revision = rrev
 
 
-def report_files_from_manifest(output, manifest):
+def report_files_from_manifest(scoped_output, manifest):
     copied_files = list(manifest.files())
     copied_files.remove(CONANINFO)
 
     if not copied_files:
-        output.warn("No files in this package!")
+        scoped_output.warning("No files in this package!")
         return
 
-    report_copied_files(copied_files, output, message_suffix="Packaged")
+    report_copied_files(copied_files, scoped_output, message_suffix="Packaged")

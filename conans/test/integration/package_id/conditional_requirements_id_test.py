@@ -45,7 +45,6 @@ class ConanLib(ConanFile):
 
         client.save({"conanfile.py": conanfile.replace("pkgA", "pkgC")})
         client.run("install .")
-        print(client.out)
         self.assertIn("pkgA/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("pkgB/0.1@user/testing:6d027ca5b485c4bb8d95034b659613b57e5192d6", client.out)
         self.assertIn("pkgC/0.1@user/testing:51ac26b3b7f3497f8e15e77491c4d1fcc8bb58dd", client.out)

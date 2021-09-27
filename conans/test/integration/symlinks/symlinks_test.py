@@ -149,7 +149,7 @@ class TestConan(ConanFile):
     def test_upload(self):
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
 
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
@@ -158,7 +158,7 @@ class TestConan(ConanFile):
         client.run("install conanfile.txt --build")
         pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
-        client.run("upload Hello/0.1@lasote/stable --all")
+        client.run("upload Hello/0.1@lasote/stable --all -r default")
         client.run('remove "*" -f')
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
         client.run("install conanfile.txt")

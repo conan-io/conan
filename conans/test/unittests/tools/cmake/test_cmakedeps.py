@@ -3,17 +3,18 @@ import pytest
 from mock import Mock
 
 from conan.tools.cmake import CMakeDeps
-from conans import ConanFile, Settings
+from conans import ConanFile
 from conans.model.build_info import CppInfo
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
 from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
 
 
 @pytest.mark.xfail(reason="ConanFile.dependencies has changed")
 @pytest.mark.parametrize("using_properties", [True, False])
 def test_cpp_info_name_cmakedeps(using_properties):
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile(None)
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -32,7 +33,7 @@ def test_cpp_info_name_cmakedeps(using_properties):
         cpp_info.names["cmake_find_package_multi"] = "MySuperPkg1"
         cpp_info.filenames["cmake_find_package_multi"] = "ComplexFileName1"
 
-    conanfile_dep = ConanFile(Mock(), None)
+    conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
@@ -54,7 +55,7 @@ def test_cpp_info_name_cmakedeps(using_properties):
 @pytest.mark.xfail(reason="ConanFile.dependencies has changed")
 @pytest.mark.parametrize("using_properties", [True, False])
 def test_cpp_info_name_cmakedeps_components(using_properties):
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile(None)
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -75,7 +76,7 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
         cpp_info.components["mycomp"].names["cmake_find_package_multi"] = "MySuperPkg1"
         cpp_info.filenames["cmake_find_package_multi"] = "ComplexFileName1"
 
-    conanfile_dep = ConanFile(Mock(), None)
+    conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
@@ -100,7 +101,7 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
 @pytest.mark.xfail(reason="ConanFile.dependencies has changed")
 def test_cmake_deps_links_flags():
     # https://github.com/conan-io/conan/issues/8703
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile(None)
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -115,7 +116,7 @@ def test_cmake_deps_links_flags():
     # https://github.com/conan-io/conan/issues/8811 regression, fix with explicit - instead of /
     cpp_info.sharedlinkflags = ["-NODEFAULTLIB", "-OTHERFLAG"]
     cpp_info.exelinkflags = ["-OPT:NOICF"]
-    conanfile_dep = ConanFile(Mock(), None)
+    conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("mypkg/1.0")
@@ -138,7 +139,7 @@ def test_component_name_same_package():
     When the package and the component are the same the variables declared in data and linked
     to the target have to be the same.
     https://github.com/conan-io/conan/issues/9071"""
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile(None)
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -154,7 +155,7 @@ def test_component_name_same_package():
     # We adjust the component with the same name as the package on purpose
     cpp_info.components["mypkg"].includedirs = ["includedirs1"]
 
-    conanfile_dep = ConanFile(Mock(), None)
+    conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.context = "host"

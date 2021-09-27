@@ -13,7 +13,7 @@ def cppstd_from_settings(settings):
 
     if cppstd and compiler_cppstd:
         # Both should never arrive with a value to build_helpers
-        warnings.warn("Both settings, 'cppstd' and 'compiler.cppstd', should never arrive"
+        warnings.warning("Both settings, 'cppstd' and 'compiler.cppstd', should never arrive"
                       " with values to build_helpers")
         if cppstd != compiler_cppstd:
             raise ConanException("Can't decide value for C++ standard, settings mismatch: "

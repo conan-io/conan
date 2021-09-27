@@ -12,17 +12,17 @@ except ImportError:
 
 
 class PatchLogHandler(logging.Handler):
-    def __init__(self, conanfile, patch_file):
+    def __init__(self, scoped_output, patch_file):
         logging.Handler.__init__(self, logging.DEBUG)
-        self._output = conanfile.output
+        self._scoped_output = scoped_output
         self.patchname = patch_file or "patch_ng"
 
     def emit(self, record):
         logstr = self.format(record)
         if record.levelno == logging.WARN:
-            self._output.warn("%s: %s" % (self.patchname, logstr))
+            self._scoped_output.warning("%s: %s" % (self.patchname, logstr))
         else:
-            self._output.info("%s: %s" % (self.patchname, logstr))
+            self._scoped_output.info("%s: %s" % (self.patchname, logstr))
 
 
 def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0, fuzz=False, **kwargs):
@@ -47,7 +47,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
 
     patchlog = logging.getLogger("patch_ng")
     patchlog.handlers = []
-    patchlog.addHandler(PatchLogHandler(conanfile, patch_file))
+    patchlog.addHandler(PatchLogHandler(conanfile.output, patch_file))
 
     if patch_file:
         patchset = patch_ng.fromfile(patch_file)
@@ -58,7 +58,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
     root = os.path.join(conanfile.source_folder, base_path) if base_path else conanfile.source_folder
-    if not patchset.apply(root, strip=strip, fuzz=fuzz):
+    if not patchset.apply(strip=strip, root=root, fuzz=fuzz):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 

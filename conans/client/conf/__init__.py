@@ -177,8 +177,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # config_install_interval = 1h
     # required_conan_version = >=1.26
 
-    # keep_python_files = False           # environment CONAN_KEEP_PYTHON_FILES
-
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
     # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
@@ -251,7 +249,6 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_MSBUILD_VERBOSITY", "msbuild_verbosity", None),
             ("CONAN_CACERT_PATH", "cacert_path", None),
             ("CONAN_DEFAULT_PACKAGE_ID_MODE", "default_package_id_mode", None),
-            ("CONAN_KEEP_PYTHON_FILES", "keep_python_files", False),
             # ("CONAN_DEFAULT_PROFILE_PATH", "default_profile", DEFAULT_PROFILE_NAME),
         ],
         "hooks": [
@@ -263,6 +260,7 @@ class ConanClientConfigParser(ConfigParser, object):
         super(ConanClientConfigParser, self).__init__(allow_no_value=True)
         self.read(filename)
         self.filename = filename
+        self._non_interactive = None
 
     @property
     def env_vars(self):
@@ -361,25 +359,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return self.items(varname)
         except NoSectionError:
             raise ConanException("Invalid configuration, missing %s" % varname)
-
-    @property
-    def default_profile(self):
-        ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
-        if ret:
-            if not os.path.isabs(ret):
-                from conans.client.cache.cache import PROFILES_FOLDER
-                profiles_folder = os.path.join(os.path.dirname(self.filename), PROFILES_FOLDER)
-                ret = os.path.abspath(os.path.join(profiles_folder, ret))
-
-            if not os.path.exists(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' "
-                                     "must point to an existing profile file.")
-            return ret
-        else:
-            try:
-                return unquote(self.get_item("general.default_profile"))
-            except ConanException:
-                return DEFAULT_PROFILE_NAME
 
     @property
     def cache_no_locks(self):
@@ -550,13 +529,22 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def non_interactive(self):
-        try:
-            non_interactive = get_env("CONAN_NON_INTERACTIVE")
-            if non_interactive is None:
-                non_interactive = self.get_item("general.non_interactive")
-            return non_interactive.lower() in ("1", "true")
-        except ConanException:
-            return False
+        if self._non_interactive is None:
+            try:
+                non_interactive = get_env("CONAN_NON_INTERACTIVE")
+                if non_interactive is None:
+                    non_interactive = self.get_item("general.non_interactive")
+                self._non_interactive = non_interactive.lower() in ("1", "true")
+            except ConanException:
+                self._non_interactive = False
+        return self._non_interactive
+
+    @non_interactive.setter
+    def non_interactive(self, value):
+        # Made this because uploads in parallel need a way to disable the interactive
+        # FIXME: Can't we fail in the command line directly if no interactive?
+        #        see uploader.py  if parallel_upload:
+        self._non_interactive = value
 
     @property
     def logging_level(self):

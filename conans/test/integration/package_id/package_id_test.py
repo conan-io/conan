@@ -67,13 +67,13 @@ def test_value_parse():
         """)
     server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
     servers = {"default": server}
-    client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+    client = TestClient(servers=servers, inputs=["lasote", "mypass"])
     client.save({"conanfile.py": conanfile,
                  "header.h": "header content"})
     client.run("create . danimtb/testing")
     client.run("search test/0.1@danimtb/testing")
     assert "arch: kk=kk" in client.out
-    client.run("upload test/0.1@danimtb/testing --all")
+    client.run("upload test/0.1@danimtb/testing --all -r default")
     client.run("remove test/0.1@danimtb/testing --force")
     client.run("install test/0.1@danimtb/testing")
     client.run("search test/0.1@danimtb/testing")

@@ -2,12 +2,10 @@ import json
 import os
 import platform
 import stat
-import sys
 import textwrap
 import unittest
 
 import pytest
-from mock import patch
 from requests import ConnectionError
 
 from conans.client.tools.files import untargz
@@ -57,7 +55,7 @@ def test_try_upload_bad_recipe():
     ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
     latest_rrev = client.cache.get_latest_rrev(ref)
     os.unlink(os.path.join(client.cache.ref_layout(latest_rrev).export(), CONAN_MANIFEST))
-    client.run("upload %s" % str(ref), assert_error=True)
+    client.run("upload %s -r default" % str(ref), assert_error=True)
     assert "Cannot upload corrupted recipe" in client.out
 
 
@@ -67,11 +65,11 @@ def test_upload_with_pattern():
         client.save({"conanfile.py": GenConanfile("hello{}".format(num), "1.2.1")})
         client.run("export . frodo/stable")
 
-    client.run("upload hello* --confirm")
+    client.run("upload hello* --confirm -r default")
     for num in range(3):
         assert "Uploading hello%s/1.2.1@frodo/stable" % num in client.out
 
-    client.run("upload hello0* --confirm")
+    client.run("upload hello0* --confirm -r default")
     assert "Uploading hello0/1.2.1@frodo/stable" in client.out
     assert "Recipe is up to date, upload skipped" in client.out
     assert "Hello1" not in client.out
@@ -79,26 +77,26 @@ def test_upload_with_pattern():
 
 
 def test_upload_with_pattern_and_package_error():
-    client = TestClient()
+    client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile("Hello1", "1.2.1")})
     client.run("export . frodo/stable")
-    client.run("upload Hello* --confirm -p 234234234", assert_error=True)
+    client.run("upload Hello* --confirm -p 234234234 -r default", assert_error=True)
     assert "-p parameter only allowed with a valid recipe reference" in client.out
 
 
 def test_check_upload_confirm_question():
-    client = TestClient(default_server_user=True)
+    server = TestServer()
+    client = TestClient(servers={"default": server}, inputs=["yes", "admin", "password", "n", "n"])
     client.save({"conanfile.py": GenConanfile("Hello1", "1.2.1")})
     client.run("export . frodo/stable")
-    with patch.object(sys.stdin, "readline", return_value="y"):
-        client.run("upload Hello*")
+    client.run("upload Hello* -r default")
+
     assert "Uploading Hello1/1.2.1@frodo/stable" in client.out
 
     client.save({"conanfile.py": GenConanfile("Hello2", "1.2.1")})
     client.run("export . frodo/stable")
+    client.run("upload Hello* -r default")
 
-    with patch.object(sys.stdin, "readline", return_value="n"):
-        client.run("upload Hello*")
     assert "Uploading Hello2/1.2.1@frodo/stable" not in client.out
 
 
@@ -111,7 +109,7 @@ class UploadTest(unittest.TestCase):
         self.test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                       users={"lasote": "mypass"})
         servers["default"] = self.test_server
-        test_client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]},
+        test_client = TestClient(servers=servers, inputs=["lasote", "mypass"],
                                  requester_class=requester)
         save(test_client.cache.default_profile_path, "")
         return test_client
@@ -122,7 +120,7 @@ class UploadTest(unittest.TestCase):
         self.pref = PackageReference(self.ref, "myfakeid", "mypackagerev")
         reg_folder = self.client.get_latest_ref_layout(self.ref).export()
 
-        self.client.run('upload %s' % str(self.ref), assert_error=True)
+        self.client.run('upload %s -r default' % str(self.ref), assert_error=True)
         self.assertIn("ERROR: Recipe not found: '%s'" % str(self.ref), self.client.out)
 
         files = {}
@@ -170,7 +168,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("upload Hello* --confirm")
+        client.run("upload Hello* --confirm -r default")
         self.assertIn("Can't connect because of the evil mock", client.out)
         self.assertIn("Waiting 5 seconds to retry...", client.out)
 
@@ -180,7 +178,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("upload Hello* --confirm --retry-wait=0")
+        client.run("upload Hello* --confirm --retry-wait=0 -r default")
         self.assertIn("Can't connect because of the evil mock", client.out)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
 
@@ -190,7 +188,7 @@ class UploadTest(unittest.TestCase):
                  "somefile.txt": ""}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("upload Hello* --confirm --retry 0 --retry-wait=1", assert_error=True)
+        client.run("upload Hello* --confirm --retry 0 --retry-wait=1 -r default", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.out)
         self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
                       "Execute upload again to retry upload the failed files: "
@@ -201,7 +199,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("upload Hello* --confirm --retry 10 --retry-wait=0", assert_error=True)
+        client.run("upload Hello* --confirm --retry 10 --retry-wait=0 -r default", assert_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
         self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
                       "Execute upload again to retry upload the failed files", client.out)
@@ -211,7 +209,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("install Hello0/1.2.1@frodo/stable --build")
+        client.run("install Hello0/1.2.1@frodo/stable --build -r default")
         client.run("upload Hello* --confirm --retry 3 --retry-wait=0 --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
@@ -237,7 +235,7 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run('config set general.retry=0')
         client.run('config set general.retry_wait=1')
-        client.run("upload Hello* --confirm", assert_error=True)
+        client.run("upload Hello* --confirm -r default", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.out)
         self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
                       "Execute upload again to retry upload the failed files: "
@@ -250,7 +248,7 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run('config set general.retry=10')
         client.run('config set general.retry_wait=0')
-        client.run("upload Hello* --confirm", assert_error=True)
+        client.run("upload Hello* --confirm -r default", assert_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
         self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
                       "Execute upload again to retry upload the failed files", client.out)
@@ -298,18 +296,18 @@ class UploadTest(unittest.TestCase):
 
     def test_single_binary(self):
         # Try to upload an package without upload conans first
-        self.client.run('upload %s -p %s' % (self.ref, str(self.pref.id)))
+        self.client.run('upload %s -p %s -r default' % (self.ref, str(self.pref.id)))
         self.assertIn("Uploading %s to remote" % str(self.ref), self.client.out)
 
     def test_simple(self):
         # Upload package
-        self.client.run('upload %s' % str(self.ref))
+        self.client.run('upload %s -r default' % str(self.ref))
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
 
         # Upload package
-        self.client.run('upload %s -p %s' % (str(self.ref), str(self.pref.id)))
+        self.client.run('upload %s -p %s -r default' % (str(self.ref), str(self.pref.id)))
 
         self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
@@ -348,7 +346,7 @@ class UploadTest(unittest.TestCase):
         """Upload recipe and package together"""
         # Try to upload all conans and packages
         self.client.run('user -p mypass -r default lasote')
-        self.client.run('upload %s --all' % str(self.ref))
+        self.client.run('upload %s --all -r default' % str(self.ref))
         lines = [line.strip() for line in str(self.client.out).splitlines()
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading to remote 'default':",
@@ -376,7 +374,7 @@ class UploadTest(unittest.TestCase):
     def test_force(self):
         # Tries to upload a package exported after than remote version.
         # Upload all recipes and packages
-        self.client.run('upload %s --all' % str(self.ref))
+        self.client.run('upload %s --all -r default' % str(self.ref))
 
         rev = self.client.cache.get_latest_rrev(self.ref).revision
         prev = self.client.cache.get_latest_prev(self.ref).revision
@@ -396,15 +394,15 @@ class UploadTest(unittest.TestCase):
         fake_digest = FileTreeManifest(2, old_digest.file_sums)
         fake_digest.save(self.client.get_latest_ref_layout(self.ref).export())
 
-        self.client.run('upload %s' % str(self.ref), assert_error=True)
+        self.client.run('upload %s -r default' % str(self.ref), assert_error=True)
         self.assertIn("Remote recipe is newer than local recipe", self.client.out)
 
-        self.client.run('upload %s --force' % str(self.ref))
+        self.client.run('upload %s --force -r default' % str(self.ref))
         self.assertIn("Uploading %s" % str(self.ref),
                       self.client.out)
 
         # Repeat transfer, to make sure it is uploading again
-        self.client.run('upload %s --force' % str(self.ref))
+        self.client.run('upload %s --force -r default' % str(self.ref))
         self.assertIn("Uploading conan_export.tgz", self.client.out)
         self.assertIn("Uploading conanfile.py", self.client.out)
 

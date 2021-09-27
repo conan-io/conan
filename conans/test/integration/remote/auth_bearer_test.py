@@ -58,12 +58,12 @@ class AuthorizeBearerTest(unittest.TestCase):
         auth = AuthorizationHeaderSpy()
         server = TestServer(plugins=[auth])
         servers = {"default": server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         if artifacts_properties:
             save(client.cache.artifacts_properties_path, "key=value")
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
-        errors = client.run("upload Hello/0.1@lasote/stable")
+        errors = client.run("upload Hello/0.1@lasote/stable -r default")
         self.assertFalse(errors)
 
         expected_calls = [('ping', None),

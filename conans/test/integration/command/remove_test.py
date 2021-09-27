@@ -37,29 +37,13 @@ class RemoveLocksTest(unittest.TestCase):
         self.assertFalse(os.path.exists(conan_folder + ".count.lock"))
 
 
-class RemoveRegistryTest(unittest.TestCase):
-
-    def test_remove_registry(self):
-        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . Test/0.1@lasote/testing")
-        client.run("upload * --all --confirm")
-        client.run('remove "*" -f')
-        client.run("remote list_pref Test/0.1@lasote/testing")
-        self.assertNotIn("Test/0.1@lasote/testing", client.out)
-        registry_content = load(client.cache.remotes_path)
-        self.assertNotIn("Test/0.1@lasote/testing", registry_content)
-
-
 class RemoveOutdatedTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_remove_query(self):
-        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        test_server = TestServer(users={"admin": "password"})  # exported users and passwords
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
     settings = "os"
@@ -69,7 +53,7 @@ class Test(ConanFile):
         client.run("create . Test/0.1@lasote/testing -s os=Linux")
         client.save({"conanfile.py": conanfile.replace("settings", "pass #")})
         client.run("create . Test2/0.1@lasote/testing")
-        client.run("upload * --all --confirm")
+        client.run("upload * --all --confirm -r default")
         for remote in ("", "-r=default"):
             client.run("remove Test/0.1@lasote/testing -q=os=Windows -f %s" % remote)
             client.run("search Test/0.1@lasote/testing %s" % remote)
@@ -113,7 +97,7 @@ class RemoveTest(unittest.TestCase):
                                  base_path=self.server_folder)  # exported users and passwords
         self.server = test_server
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("myuser", "mypass")]})
+        client = TestClient(servers=servers, inputs=["myuser", "mypass"])
 
         # Conans with and without packages created
         self.root_folder = {"H1": 'Hello/1.4.10@myuser/testing',
@@ -159,7 +143,7 @@ class RemoveTest(unittest.TestCase):
         self.client = client
 
         for folder in self.root_folder.values():
-            client.run("upload %s --all" % folder)
+            client.run("upload %s --all -r default" % folder)
 
         self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
@@ -421,7 +405,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.test_server = TestServer(users={"lasote": "password"},
                                       write_permissions=[("lib/1.0@*/*", "lasote")])
         servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        self.client = TestClient(servers=servers, inputs=["lasote", "password"])
 
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
@@ -460,7 +444,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.test_server = TestServer(users={"user": "password"},
                                       write_permissions=[("foobar/0.1@*/*", "user")])
         servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, users={"default": [("user", "password")]})
+        self.client = TestClient(servers=servers, inputs=["user", "password"])
 
     def test_remove_local_package_id_argument(self):
         """ Remove package ID based on recipe revision. The package must be deleted, but

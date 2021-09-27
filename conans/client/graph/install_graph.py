@@ -65,7 +65,7 @@ class _InstallGraphNode:
 
     def merge(self, other):
         assert self.ref == other.ref
-        
+
 
     def add(self, node):
         if node.pref.id == PACKAGE_ID_UNKNOWN:
@@ -218,7 +218,7 @@ def raise_missing(missing, out):
        - Requirements: %s
        - Package ID: %s
        ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
-    conanfile.output.warn(msg)
+    conanfile.output.warning(msg)
     missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
     if len(missing_prefs) >= 5:
         build_str = "--build=missing"

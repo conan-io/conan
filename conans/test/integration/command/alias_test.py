@@ -65,7 +65,7 @@ class Pkg(ConanFile):
         self.assertIn("Hello/0.1", conaninfo)
         self.assertNotIn("Hello/0.X", conaninfo)
 
-        client.run('upload "*" --all --confirm')
+        client.run('upload "*" --all --confirm -r default')
         client.run('remove "*" -f')
 
         client.run("install .")

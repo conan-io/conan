@@ -323,7 +323,7 @@ class MyPkg(ConanFile):
                 version = "0.1"
 
                 def package_info(self):
-                    self.output.warn("Hello, I'm HelloBar")
+                    self.output.warning("Hello, I'm HelloBar")
             ''')
 
         client.save({"conanfile.py": conanfile})
@@ -356,6 +356,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("/_", conaninfo)
         self.assertIn("[requires]\n    Hello/0.1\n", conaninfo)
 
+    @pytest.mark.xfail(reason="--json output has been disabled")
     def test_compoents_json_output(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""

@@ -26,7 +26,7 @@ class ConanGetTest(unittest.TestCase):
 
         test_server = TestServer([], users={"lasote": "mypass"})
         servers = {"default": test_server}
-        self.client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        self.client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         files = {"conanfile.py": self.conanfile,
                  "path/to/exported_source": "1",
                  "other/path/to/exported": "2"}
@@ -103,7 +103,7 @@ class ConanGetTest(unittest.TestCase):
         assert_cmp("conaninfo.txt\nconanmanifest.txt\n", self.client.out)
 
     def test_get_remote_reference(self):
-        self.client.run('upload "Hello*" --all -c')
+        self.client.run('upload "Hello*" --all -c -r default')
 
         # Remote search, dir list
         self.client.run('get {} . -r default --raw'.format(self.reference))
@@ -120,7 +120,7 @@ class ConanGetTest(unittest.TestCase):
             "{}:{}".format(self.reference, NO_SETTINGS_PACKAGE_ID)
         args_package = " -p {}".format(NO_SETTINGS_PACKAGE_ID) if not use_pkg_reference else ""
 
-        self.client.run('upload "Hello*" --all -c')
+        self.client.run('upload "Hello*" --all -c -r default')
 
         # List package dir
         self.client.run('get {} "." {} --raw -r default'.format(args_reference, args_package))

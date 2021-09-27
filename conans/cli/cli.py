@@ -11,6 +11,7 @@ from conans import __version__ as client_version
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
+from conans.cli.output import ConanOutput
 from conans.client.api.conan_api import Conan
 from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
@@ -35,7 +36,6 @@ class Cli(object):
         assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(
             type(conan_api))
         self._conan_api = conan_api
-        self._out = conan_api.out
         self._groups = defaultdict(list)
         self._commands = {}
         conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
@@ -70,6 +70,7 @@ class Cli(object):
     def _print_similar(self, command):
         """ Looks for similar commands and prints them if found.
         """
+        output = ConanOutput()
         matches = get_close_matches(
             word=command, possibilities=self._commands.keys(), n=5, cutoff=0.75)
 
@@ -77,14 +78,14 @@ class Cli(object):
             return
 
         if len(matches) > 1:
-            self._out.info("The most similar commands are")
+            output.info("The most similar commands are")
         else:
-            self._out.info("The most similar command is")
+            output.info("The most similar command is")
 
         for match in matches:
-            self._out.info("    %s" % match)
+            output.info("    %s" % match)
 
-        self._out.info("")
+        output.writeln("")
 
     def help_message(self):
         self._commands["help"].method(self._conan_api, self._commands["help"].parser,
@@ -94,6 +95,7 @@ class Cli(object):
         """ Entry point for executing commands, dispatcher to class
         methods
         """
+        output = ConanOutput()
         version = sys.version_info
         if version.major == 2 or version.minor <= 4:
             raise ConanException(
@@ -108,19 +110,19 @@ class Cli(object):
                 command = self._commands[command_argument]
             except KeyError as exc:
                 if command_argument in ["-v", "--version"]:
-                    self._out.info("Conan version %s" % client_version)
+                    output.info("Conan version %s" % client_version)
                     return SUCCESS
 
                 if command_argument in ["-h", "--help"]:
                     self.help_message()
                     return SUCCESS
 
-                self._out.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
-                self._out.info("")
+                output.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
+                output.info("")
                 self._print_similar(command_argument)
                 raise ConanException("Unknown command %s" % str(exc))
         except ConanException as exc:
-            self._out.error(exc)
+            output.error(exc)
             return ERROR_GENERAL
 
         if (
@@ -138,20 +140,20 @@ class Cli(object):
         except SystemExit as exc:
             if exc.code != 0:
                 logger.error(exc)
-                self._conan_api.out.error("Exiting with code: %d" % exc.code)
+                output.error("Exiting with code: %d" % exc.code)
             exit_error = exc.code
         except ConanInvalidConfiguration as exc:
             exit_error = ERROR_INVALID_CONFIGURATION
-            self._conan_api.out.error(exc)
+            output.error(exc)
         except ConanException as exc:
             exit_error = ERROR_GENERAL
-            self._conan_api.out.error(exc)
+            output.error(exc)
         except Exception as exc:
             import traceback
             print(traceback.format_exc())
             exit_error = ERROR_GENERAL
             msg = exception_message_safe(exc)
-            self._conan_api.out.error(msg)
+            output.error(msg)
 
         return exit_error
 
@@ -174,11 +176,11 @@ def main(args):
     # Temporary hack to call the legacy command system if the command is not yet implemented in V2
     command_argument = args[0] if args else None
     if command_argument in CLI_V1_COMMANDS:
-        from conans.client.command import main as v1_main
+        from conans.client.command import v1_main
         return v1_main(args)
 
     try:
-        conan_api = Conan(quiet=False)
+        conan_api = Conan()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:

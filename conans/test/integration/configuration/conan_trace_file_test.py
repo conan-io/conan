@@ -11,14 +11,13 @@ from conans.paths import RUN_LOG_NAME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load
 
 
 class ConanTraceTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer()
+        test_server = TestServer(users={"lasote": "mypass"})
         self.servers = {"default": test_server}
 
     def test_run_log_file_packaged(self):
@@ -39,20 +38,18 @@ class ConanTraceTest(unittest.TestCase):
             """ % RUN_LOG_NAME)
 
         def _install_a_package(print_commands_to_output, generate_run_log_file):
-            out = TestBufferConanOutput()
-            runner = ConanRunner(print_commands_to_output, generate_run_log_file,
-                                 log_run_to_output=True, output=out)
+            client = TestClient(servers=self.servers)
+            client.run("config set log.print_run_commands={}".format(print_commands_to_output))
+            client.run("config set log.run_to_file={}".format(generate_run_log_file))
+            client.run("config set log.run_to_output=True")
 
-            client = TestClient(servers=self.servers,
-                                users={"default": [("lasote", "mypass")]},
-                                runner=runner)
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": base})
             client.run("create . lasote/stable")
             pref = client.get_latest_prev(ref)
             package_dir = client.get_latest_pkg_layout(pref).package()
             log_file_packaged_ = os.path.join(package_dir, RUN_LOG_NAME)
-            out = "\n".join([str(out), str(client.out)])
+            out = "\n".join([str(client.out), str(client.out)])
             return log_file_packaged_, out
 
         log_file_packaged, output = _install_a_package(False, True)
@@ -74,8 +71,7 @@ class ConanTraceTest(unittest.TestCase):
         self.assertFalse(os.path.exists(log_file_packaged))
 
     def test_trace_actions(self):
-        client = TestClient(servers=self.servers,
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=self.servers)
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
@@ -85,7 +81,7 @@ class ConanTraceTest(unittest.TestCase):
             client.run("user lasote -p mypass -r default")
             client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(ref))
-            client.run("upload %s --all" % str(ref))
+            client.run("upload %s --all -r default" % str(ref))
 
         traces = load(trace_file)
         self.assertNotIn("mypass", traces)

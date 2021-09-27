@@ -12,20 +12,18 @@ class ReadOnlyTest(unittest.TestCase):
 
     def setUp(self):
         self.test_server = TestServer()
-        client = TestClient(servers={"default": self.test_server},
-                            users={"default": [("lasote", "mypass")]})
-        client.run("--version")
-        client.run("config set general.read_only_cache=True")
+        self.client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
+        self.client.run("--version")
+        self.client.run("config set general.read_only_cache=True")
         conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
     exports_sources = "*.h"
     def package(self):
         self.copy("*")
 """
-        client.save({"conanfile.py": conanfile,
+        self.client.save({"conanfile.py": conanfile,
                      "myheader.h": "my header"})
-        client.run("create . Pkg/0.1@lasote/channel")
-        self.client = client
+        self.client.run("create . Pkg/0.1@lasote/channel")
 
     def test_basic(self):
         pref = self.client.get_latest_prev(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
@@ -44,15 +42,15 @@ class MyPkg(ConanFile):
         self.assertNotIn("Pkg/0.1@lasote/channel", self.client.out)
 
     def test_upload(self):
-        self.client.run("upload * --all --confirm")
+        self.client.run("upload * --all --confirm -r default")
         self.client.run("remove Pkg* -f")
         self.client.run("install Pkg/0.1@lasote/channel")
         self.test_basic()
 
     def test_upload_change(self):
-        self.client.run("upload * --all --confirm")
-        client = TestClient(servers={"default": self.test_server},
-                            users={"default": [("lasote", "mypass")]})
+        self.client.run("upload * --all --confirm -r default")
+        client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
+
         client.run("install Pkg/0.1@lasote/channel")
         pref = self.client.get_latest_prev(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
                                            NO_SETTINGS_PACKAGE_ID)
