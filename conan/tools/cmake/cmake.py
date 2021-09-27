@@ -147,8 +147,9 @@ class CMake(object):
         is_multi = is_multi_configuration(self._generator)
         build_config = "--config {}".format(bt) if bt and is_multi else ""
 
-        pkg_folder = self._conanfile.package_folder.replace("\\", "/")
-        arg_list = ["--install", self._conanfile.build_folder, build_config, "--prefix", pkg_folder]
+        pkg_folder = args_to_string([self._conanfile.package_folder.replace("\\", "/")])
+        build_folder = args_to_string([self._conanfile.build_folder])
+        arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
