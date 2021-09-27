@@ -92,7 +92,7 @@ def test_cpp_info_editable():
     assert "**libs:['hello']**" in out
     assert "**cxxflags:['my_cxx_flag']**" in out
     assert "**cflags:['my_c_flag']**" in out
-    assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in client2.out
+    assert "**frameworkdirs:['package_frameworks_path']**" in client2.out
 
 
 def test_cpp_info_components_editable():
