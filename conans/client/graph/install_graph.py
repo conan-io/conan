@@ -7,17 +7,23 @@ from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import PackageReference, ConanFileReference
 
 
-class _InstallGraphPackage:
+class _InstallPackageReference:
+    """ Represents a single, unique PackageReference to be downloaded, built, etc.
+    Same PREF should only be built or downloaded once, but it is possible to have multiple
+    nodes in the DepsGraph that share the same PREF.
+    PREF could have PREV if to be downloaded (must be the same for all), but won't if to be built
+    """
     def __init__(self):
         self.pref = None
         self.nodes = []  # GraphNode
-        self.binary = None
-        self.context = None
-        self.options = []
+        self.binary = None  # The action BINARY_DOWNLOAD, etc must be the same for all nodes
+        self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
+        # be able to reproduce, typically host preferrably
+        self.options = []  # to be able to fire a build, the options will be necessary
 
     @staticmethod
     def create(node):
-        result = _InstallGraphPackage()
+        result = _InstallPackageReference()
         result.pref = node.pref
         result.binary = node.binary
         result.context = node.context
@@ -41,7 +47,7 @@ class _InstallGraphPackage:
 
     @staticmethod
     def deserialize(data):
-        result = _InstallGraphPackage()
+        result = _InstallPackageReference()
         result.pref = PackageReference.loads(data["pref"])
         result.binary = data["binary"]
         result.context = data["context"]
@@ -49,16 +55,21 @@ class _InstallGraphPackage:
         return result
 
 
-class _InstallGraphNode:
+class _InstallRecipeReference:
+    """ represents a single, unique Recipe reference (including revision, must have it) containing
+    all the _InstallPackageReference that belongs to this RecipeReference. This approach is
+    oriented towards a user-intuitive grouping specially in CI, in which all binary variants for the
+    same recipe revision (repo+commit) are to be built grouped together"""
     def __init__(self):
         self.ref = None
-        self.packages = []
-        self._package_ids = {}
-        self.depends = []  # Other refs
+        self.packages = []  # _InstallPackageReference
+        self.depends = []  # Other REFs, defines the graph topology and operation ordering
+        # implementation detail
+        self._package_ids = {}  # caching {package_id: _InstallPackageReference}
 
     @staticmethod
     def create(node):
-        result = _InstallGraphNode()
+        result = _InstallRecipeReference()
         result.ref = node.ref
         result.add(node)
         return result
@@ -66,16 +77,27 @@ class _InstallGraphNode:
     def merge(self, other):
         assert self.ref == other.ref
 
+    def update_unknown(self, package):
+        package_id = package.pref.id
+        if package_id == PACKAGE_ID_UNKNOWN:
+            return False
+        existing = self._package_ids.get(package_id)
+        if existing:
+            return False
+        self._package_ids[package_id] = package
+        return True
 
     def add(self, node):
         if node.pref.id == PACKAGE_ID_UNKNOWN:
-            self.packages.append(_InstallGraphPackage.create(node))
+            # PACKAGE_ID_UNKNOWN are all different items, because when package_id is computed
+            # it could be different
+            self.packages.append(_InstallPackageReference.create(node))
         else:
             existing = self._package_ids.get(node.pref.id)
             if existing is not None:
                 existing.add(node)
             else:
-                pkg = _InstallGraphPackage.create(node)
+                pkg = _InstallPackageReference.create(node)
                 self.packages.append(pkg)
                 self._package_ids[node.pref.id] = pkg
 
@@ -91,12 +113,12 @@ class _InstallGraphNode:
 
     @staticmethod
     def deserialize(data):
-        result = _InstallGraphNode()
+        result = _InstallRecipeReference()
         result.ref = ConanFileReference.loads(data["ref"])
         for d in data["depends"]:
             result.depends.append(ConanFileReference.loads(d))
         for p in data["packages"]:
-            result.packages.append(_InstallGraphPackage.deserialize(p))
+            result.packages.append(_InstallPackageReference.deserialize(p))
         return result
 
 
@@ -111,6 +133,10 @@ class InstallGraph:
             self._initialize_deps_graph(deps_graph)
 
     def merge(self, other):
+        """
+
+        @type other: InstallGraph
+        """
         for ref, install_node in other._nodes.items():
             existing = self._nodes.get(ref)
             if existing is None:
@@ -123,7 +149,7 @@ class InstallGraph:
         result = InstallGraph()
         for level in data:
             for item in level:
-                elem = _InstallGraphNode.deserialize(item)
+                elem = _InstallRecipeReference.deserialize(item)
                 result._nodes[elem.ref] = elem
         return result
 
@@ -134,7 +160,7 @@ class InstallGraph:
 
             existing = self._nodes.get(node.ref)
             if existing is None:
-                self._nodes[node.ref] = _InstallGraphNode.create(node)
+                self._nodes[node.ref] = _InstallRecipeReference.create(node)
             else:
                 existing.add(node)
 

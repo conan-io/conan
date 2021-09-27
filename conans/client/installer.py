@@ -249,7 +249,6 @@ def _handle_system_requirements(install_node, package_layout):
     """
     node = install_node.nodes[0]
     conanfile = node.conanfile
-    out = conanfile.output
     # TODO: Check if this idiom should be generalize to all methods defined in base ConanFile
     # Instead of calling empty methods
     if type(conanfile).system_requirements == ConanFile.system_requirements:
@@ -339,24 +338,29 @@ class BinaryInstaller(object):
 
     def _build(self, install_order, remotes, build_mode, update):
         for level in install_order:
-            for level_node in level:
-                for package in level_node.packages:
+            for install_reference in level:
+                for package in install_reference.packages:
                     if package.binary == BINARY_EDITABLE:
                         self._handle_node_editable(package)
                     else:
                         assert package.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN,
                                                   BINARY_DOWNLOAD, BINARY_UPDATE)
-                        assert level_node.ref.revision is not None, "Installer should receive RREV always"
+                        assert install_reference.ref.revision is not None, \
+                            "Installer should receive RREV always"
+                        not_processed = True
                         if package.binary == BINARY_UNKNOWN:
                             assert len(package.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
                             node = package.nodes[0]
                             self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                             package.pref = node.pref  # Just in case it was recomputed
                             package.binary = node.binary
-                            if node.binary == BINARY_MISSING:
-                                raise_missing([package], self._out)
-                            elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                                self._download_pkg(package)
+                            not_processed = install_reference.update_unknown(package)
+                            if not_processed:
+                                # The new computed package_id has not been processed yet
+                                if node.binary == BINARY_MISSING:
+                                    raise_missing([package], self._out)
+                                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                                    self._download_pkg(package)
 
                         if package.pref.revision is None:
                             assert package.binary == BINARY_BUILD
@@ -364,12 +368,20 @@ class BinaryInstaller(object):
                         else:
                             package_layout = self._cache.get_or_create_pkg_layout(package.pref)
 
-                        _handle_system_requirements(package, package_layout)
+                        if not_processed:
+                            _handle_system_requirements(package, package_layout)
 
-                        if package.binary in (BINARY_BUILD, BINARY_CACHE):
-                            self._handle_node_cache(package, remotes, package_layout)
-                            # Just in case it was recomputed
-                            package.pref = package.nodes[0].pref
+                            if package.binary == BINARY_BUILD:
+                                self._handle_node_build(package, remotes, package_layout)
+                                # Just in case it was recomputed
+                                package.pref = package.nodes[0].pref
+                            elif package.binary == BINARY_CACHE:
+                                node = package.nodes[0]
+                                pref = node.pref
+                                assert node.prev, "PREV for %s is None" % str(pref)
+                                output = node.conanfile.output
+                                output.success('Already installed!')
+                                log_package_got_from_local_cache(pref)
 
                         # Make sure that all nodes with same pref compute package_info()
                         package_folder = package_layout.package()
@@ -414,33 +426,25 @@ class BinaryInstaller(object):
         copied_files = run_imports(conanfile)
         report_copied_files(copied_files, output)
 
-    def _handle_node_cache(self, install_node, remotes, pkg_layout):
-        node = install_node.nodes[0]
+    def _handle_node_build(self, package, remotes, pkg_layout):
+        node = package.nodes[0]
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         assert pkg_layout, "The pkg_layout should be declared here"
-        conanfile = node.conanfile
-        output = conanfile.output
+        assert node.binary == BINARY_BUILD
 
         with pkg_layout.package_lock():
-            if node.binary == BINARY_BUILD:
-                assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
-                pkg_layout.package_remove()
-                with pkg_layout.set_dirty_context_manager():
-                    pref = self._build_package(node, remotes, pkg_layout)
-                assert node.prev, "Node PREV shouldn't be empty"
-                assert node.pref.revision, "Node PREF revision shouldn't be empty"
-                assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
-                # at this point the package reference should be complete
-                if pkg_layout.reference != pref:
-                    self._cache.assign_prev(pkg_layout, ConanReference(pref))
-            elif node.binary == BINARY_CACHE:
-                assert node.prev, "PREV for %s is None" % str(pref)
-                output.success('Already installed!')
-                log_package_got_from_local_cache(pref)
-            else:
-                raise Exception("Unexpected node.binary {}".format(node.binary))
+            assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
+            pkg_layout.package_remove()
+            with pkg_layout.set_dirty_context_manager():
+                pref = self._build_package(node, remotes, pkg_layout)
+            assert node.prev, "Node PREV shouldn't be empty"
+            assert node.pref.revision, "Node PREF revision shouldn't be empty"
+            assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
+            # at this point the package reference should be complete
+            if pkg_layout.reference != pref:
+                self._cache.assign_prev(pkg_layout, ConanReference(pref))
 
     def _build_package(self, node, remotes, pkg_layout):
         builder = _PackageBuilder(self._cache, node.conanfile.output,
