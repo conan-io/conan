@@ -37,7 +37,7 @@ from conans.util.tracer import log_command
 
 
 class ConanApp(object):
-    def __init__(self, cache_folder, http_requester=None):
+    def __init__(self, cache_folder):
 
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder)
@@ -50,7 +50,7 @@ class ConanApp(object):
 
         self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks)
         # Wraps an http_requester to inject proxies, certs, etc
-        self.requester = ConanRequester(self.config, http_requester)
+        self.requester = ConanRequester(self.config)
         # To handle remote connections
         artifacts_properties = self.cache.read_artifacts_properties()
         rest_client_factory = RestApiClientFactory(self.requester, self.config,
@@ -122,11 +122,10 @@ def api_method(f):
 
 
 class ConanAPIV2(object):
-    def __init__(self, cache_folder=None, http_requester=None):
+    def __init__(self, cache_folder=None):
 
         self.out = ConanOutput()
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
-        self.http_requester = http_requester
         self.app = None  # Api calls will create a new one every call
 
         # Migration system
@@ -135,7 +134,7 @@ class ConanAPIV2(object):
         check_required_conan_version(self.cache_folder)
 
     def create_app(self):
-        self.app = ConanApp(self.cache_folder, self.http_requester)
+        self.app = ConanApp(self.cache_folder)
 
     @api_method
     def user_list(self, remote_name=None):

@@ -16,6 +16,7 @@ from contextlib import contextmanager
 from urllib.parse import urlsplit, urlunsplit
 
 import bottle
+import mock
 import requests
 from mock import Mock
 from requests.exceptions import HTTPError
@@ -142,12 +143,14 @@ class TestingResponse(object):
             raise ValueError("The response is not a JSON")
 
 
-class TestRequester(object):
+class TestRequester:
     """Fake requests module calling server applications
     with TestApp"""
 
     def __init__(self, test_servers):
         self.test_servers = test_servers
+        self.utils = Mock()
+        self.utils.default_user_agent.return_value = "TestRequester Agent"
 
     @staticmethod
     def _get_url_path(url):
@@ -408,7 +411,6 @@ class TestClient(object):
         self.out = RedirectedTestOutput()
         self.user_inputs = RedirectedInputStream(inputs)
 
-
         # create default profile
         text = default_profiles[platform.system()]
         save(self.cache.default_profile_path, text)
@@ -431,27 +433,10 @@ class TestClient(object):
         return self.cache.store
 
     @property
-    def requester(self):
-        api = self.get_conan_api()
-        api.create_app()
-        return api.app.requester
-
-    @property
     def proxy(self):
         api = self.get_conan_api()
         api.create_app()
         return api.app.proxy
-
-    @property
-    def _http_requester(self):
-        # Check if servers are real
-        real_servers = any(isinstance(s, (str, ArtifactoryServer))
-                           for s in self.servers.values())
-        if not real_servers:
-            if self.requester_class:
-                return self.requester_class(self.servers)
-            else:
-                return TestRequester(self.servers)
 
     def tune_conan_conf(self, cache_folder, cpu_count):
         # Create the default
@@ -490,9 +475,9 @@ class TestClient(object):
 
     def get_conan_api(self, args=None):
         if self.is_conan_cli_v2_command(args):
-            return ConanAPIV2(cache_folder=self.cache_folder, http_requester=self._http_requester)
+            return ConanAPIV2(cache_folder=self.cache_folder)
         else:
-            return Conan(cache_folder=self.cache_folder, http_requester=self._http_requester)
+            return Conan(cache_folder=self.cache_folder)
 
     def get_conan_command(self, args=None):
         if self.is_conan_cli_v2_command(args):
@@ -542,7 +527,12 @@ class TestClient(object):
             self.out = RedirectedTestOutput()  # Initialize each command
             with redirect_output(self.out):
                 with redirect_input(self.user_inputs):
-                    return self.run_cli(command_line, assert_error=assert_error)
+                    if self.requester_class:
+                        http_requester = self.requester_class(self.servers)
+                    else:
+                        http_requester = TestRequester(self.servers)
+                    with mock.patch("conans.client.rest.conan_requester.requests", http_requester):
+                        return self.run_cli(command_line, assert_error=assert_error)
 
     def run_command(self, command, cwd=None, assert_error=False):
         runner = ConanRunner()
