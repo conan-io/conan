@@ -14,7 +14,7 @@ from conans.util.files import save
 class MockPatchset:
     apply_args = None
 
-    def apply(self, root, strip, fuzz):
+    def apply(self, strip=0, root=None, fuzz=False):
         self.apply_args = (root, strip, fuzz)
         return True
 
