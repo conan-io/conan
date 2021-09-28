@@ -527,11 +527,20 @@ class TestClient(object):
             self.out = RedirectedTestOutput()  # Initialize each command
             with redirect_output(self.out):
                 with redirect_input(self.user_inputs):
-                    if self.requester_class:
-                        http_requester = self.requester_class(self.servers)
+                    real_servers = any(isinstance(s, (str, ArtifactoryServer))
+                                       for s in self.servers.values())
+                    http_requester = None
+                    if not real_servers:
+                        if self.requester_class:
+                            http_requester = self.requester_class(self.servers)
+                        else:
+                            http_requester = TestRequester(self.servers)
+
+                    if http_requester:
+                        with mock.patch("conans.client.rest.conan_requester.requests",
+                                        http_requester):
+                            return self.run_cli(command_line, assert_error=assert_error)
                     else:
-                        http_requester = TestRequester(self.servers)
-                    with mock.patch("conans.client.rest.conan_requester.requests", http_requester):
                         return self.run_cli(command_line, assert_error=assert_error)
 
     def run_command(self, command, cwd=None, assert_error=False):
