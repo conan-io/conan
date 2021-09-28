@@ -545,6 +545,9 @@ class BinaryInstaller(object):
 
                 conanfile.package_info()
 
+                # FIXME?: for components that were defined
+                conanfile.cpp_info.clear_none()
+
                 if hasattr(conanfile, "layout") and is_editable:
                     # Adjust the folders of the layout to consolidate the rootfolder of the
                     # cppinfos inside
