@@ -179,6 +179,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         with environment_append({"MY_VAR": "1"}):
             pref = client.create(self.ref, conanfile=conanfile)
 
+        time.sleep(1)
+
         with patch.object(RevisionList, '_now', return_value=time.time()):
             client.upload_all(self.ref)
 
@@ -193,7 +195,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)  # Two package revisions
 
         client.run("install {} --update".format(self.ref))
-        self.assertIn("{} from local cache - Cache".format(self.ref), client.out)
+        self.assertIn("{} from 'default' - Cache (Updated date)".format(self.ref), client.out)
         self.assertIn("Retrieving package {}".format(pref.id), client.out)
 
         prev = client.package_revision(pref)
