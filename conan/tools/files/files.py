@@ -191,6 +191,7 @@ def load_toolchain_args(generators_folder=None, namespace=None):
     Helper function to load the content of any CONAN_TOOLCHAIN_ARGS_FILE
 
     :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE.
+    :param namespace: `str` namespace to be prepended to the filename.
     :return: <class 'configparser.SectionProxy'>
     """
     namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
@@ -215,6 +216,7 @@ def save_toolchain_args(content, generators_folder=None, namespace=None):
     Helper function to save the content into the CONAN_TOOLCHAIN_ARGS_FILE
 
     :param content: `dict` all the information to be saved into the toolchain file.
+    :param namespace: `str` namespace to be prepended to the filename.
     :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE
     """
     # Let's prune None values
