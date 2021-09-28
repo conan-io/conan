@@ -176,7 +176,7 @@ class MSBuildDeps(object):
             'host_context': not build
         }
         formatted_template = Template(self._vars_props, trim_blocks=True,
-                                      lstrip_blocks=True).render(**fields,)
+                                      lstrip_blocks=True).render(**fields)
         return formatted_template
 
     def _conf_props_file(self, dep_name, vars_props_name, deps, build=False):
