@@ -411,6 +411,8 @@ def test_same_names():
             def package_info(self):
                 self.cpp_info.components["global"].name = "hello"
                 self.cpp_info.components["global"].libs = ["hello"]
+                self.cpp_info.components["global"].includedirs = ["include"]
+                self.cpp_info.components["global"].libdirs = ["lib"]
         """)
     hello_h = gen_function_h(name="hello")
     hello_cpp = gen_function_cpp(name="hello", includes=["hello"])
