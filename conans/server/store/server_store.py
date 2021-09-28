@@ -67,12 +67,6 @@ class ServerStore(object):
         assert isinstance(ref, ConanFileReference)
         return self._get_snapshot_of_files(self.export(ref))
 
-    def get_package_snapshot(self, pref):
-        """Returns a {filepath: md5} """
-        assert isinstance(pref, PackageReference)
-        path = self.package(pref)
-        return self._get_snapshot_of_files(path)
-
     def _get_snapshot_of_files(self, relative_path):
         snapshot = self._storage_adapter.get_snapshot(relative_path)
         snapshot = self._relativize_keys(snapshot, relative_path)

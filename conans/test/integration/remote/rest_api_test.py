@@ -116,16 +116,6 @@ class RestApiTest(unittest.TestCase):
         self.assertIn(CONANFILE, os.listdir(tmp_dir))
         self.assertIn(CONAN_MANIFEST, os.listdir(tmp_dir))
 
-    def test_get_recipe_manifest(self):
-        # Upload a conans
-        ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing#myreciperev")
-        self._upload_recipe(ref)
-
-        # Get the conans digest
-        digest = self.api.get_recipe_manifest(ref)
-        self.assertEqual(digest.summary_hash, "6fae00c91be4d09178af3c6fdc4d59e9")
-        self.assertEqual(digest.time, 123123123)
-
     def test_get_package(self):
         # Upload a conans
         ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")
@@ -139,32 +129,6 @@ class RestApiTest(unittest.TestCase):
         tmp_dir = temp_folder()
         self.api.get_package(pref, tmp_dir)
         self.assertIn("hello.cpp", os.listdir(tmp_dir))
-
-    def test_get_package_info(self):
-        # Upload a conans
-        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")
-        self._upload_recipe(ref)
-
-        # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA", "mypackagerev")
-        conan_info = """[settings]
-    arch=x86_64
-    compiler=gcc
-    os=Linux
-[options]
-    386=False
-[requires]
-    Hello
-    Bye/2.9
-    Say/2.1@user/testing
-    Chat/2.1@user/testing:SHA_ABC
-"""
-        self._upload_package(pref, {CONANINFO: conan_info})
-
-        # Get the package info
-        info = self.api.get_package_info(pref, headers=None)
-        self.assertIsInstance(info, ConanInfo)
-        self.assertEqual(info, ConanInfo.loads(conan_info))
 
     def test_upload_huge_conan(self):
         if platform.system() != "Windows":
@@ -277,7 +241,7 @@ class RestApiTest(unittest.TestCase):
             save(abs_path, str(content))
             abs_paths[filename] = abs_path
 
-        self.api.upload_package(package_reference, abs_paths, None, retry=1, retry_wait=0)
+        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0)
 
     def _upload_recipe(self, ref, base_files=None, retry=1, retry_wait=0):
 

@@ -220,20 +220,8 @@ class RestCommonMethods(object):
         snap = self._get_snapshot(url)
         return snap
 
-    def get_package_snapshot(self, pref):
-        # this method is also used to check the integrity of the package upstream
-        # while installing, so check_credentials is done in uploader.
-        url = self.router.package_snapshot(pref)
-        snap = self._get_snapshot(url)
-        return snap
-
-    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
-        if files_to_upload:
-            self._upload_package(pref, files_to_upload, retry, retry_wait)
-        if deleted:
-            raise Exception("This shouldn't be happening, deleted files "
-                            "in local package present in remote: %s.\n Please, report it at "
-                            "https://github.com/conan-io/conan/issues " % str(deleted))
+    def upload_package(self, pref, files_to_upload, retry, retry_wait):
+        self._upload_package(pref, files_to_upload, retry, retry_wait)
 
     def search(self, pattern=None, ignorecase=True):
         """
