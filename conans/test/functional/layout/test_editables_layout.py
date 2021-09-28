@@ -35,10 +35,7 @@ def test_cpp_info_editable():
         # when editable: This one will be discarded because declared in source
         self.cpp_info.cxxflags.append("my_cxx_flag2")
 
-        # when editable: This one WONT be discarded because it was set to an empty list
-        # TODO: Check if this is the default behaviour we want, this changes the logic from the
-        # previous layouts implementation where declaring self.cpp.build.frameworkdirs = []
-        # discards this value
+        # when editable: This one will be discarded because declared in source
         self.cpp_info.frameworkdirs.append("package_frameworks_path")
 
         # when editable: This one WONT be discarded as has not been declared in the editables layout
@@ -92,7 +89,7 @@ def test_cpp_info_editable():
     assert "**libs:['hello']**" in out
     assert "**cxxflags:['my_cxx_flag']**" in out
     assert "**cflags:['my_c_flag']**" in out
-    assert "**frameworkdirs:['package_frameworks_path']**" in client2.out
+    assert "**frameworkdirs:[]**" in client2.out
 
 
 def test_cpp_info_components_editable():
@@ -217,4 +214,3 @@ def test_cpp_info_components_editable():
     assert "**VAR libs:['hello_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
-
