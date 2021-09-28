@@ -182,7 +182,6 @@ vswhere = tools_win.vswhere
 vs_comntools = tools_win.vs_comntools
 find_windows_10_sdk = tools_win.find_windows_10_sdk
 escape_windows_cmd = tools_win.escape_windows_cmd
-get_cased_path = tools_win.get_cased_path
 MSYS2 = tools_win.MSYS2
 MSYS = tools_win.MSYS
 CYGWIN = tools_win.CYGWIN
