@@ -54,31 +54,6 @@ class RestV2Methods(RestCommonMethods):
             files_list = []
         return files_list
 
-    def get_recipe_manifest(self, ref):
-        # If revision not specified, check latest
-        if not ref.revision:
-            ref, _ = self.get_latest_recipe_revision(ref)
-        url = self.router.recipe_manifest(ref)
-        content = self._get_remote_file_contents(url, use_cache=True)
-        return FileTreeManifest.loads(decode_text(content))
-
-    def get_package_manifest(self, pref):
-        url = self.router.package_manifest(pref)
-        content = self._get_remote_file_contents(url, use_cache=True)
-        try:
-            return FileTreeManifest.loads(decode_text(content))
-        except Exception as e:
-            msg = "Error retrieving manifest file for package " \
-                  "'{}' from remote ({}): '{}'".format(repr(pref), self.remote_url, e)
-            logger.error(msg)
-            logger.error(traceback.format_exc())
-            raise ConanException(msg)
-
-    def get_package_info(self, pref, headers):
-        url = self.router.package_info(pref)
-        content = self._get_remote_file_contents(url, use_cache=True, headers=headers)
-        return ConanInfo.loads(decode_text(content))
-
     def get_recipe(self, ref, dest_folder):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)

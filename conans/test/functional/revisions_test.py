@@ -765,7 +765,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
                               args=" -s os=Linux")
 
         self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0], pref.ref.revision)
-        client.upload_all(self.ref, args="--no-overwrite")
+        client.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0], pref2.ref.revision)
 
     def test_upload_no_overwrite_packages(self):
@@ -786,7 +786,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 
         self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
                          pref.revision)
-        client.upload_all(self.ref, args="--no-overwrite")
+        client.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
                          pref2.revision)
 

@@ -60,37 +60,15 @@ class RemoteManager(object):
         assert ref.revision, "get_recipe_snapshot requires revision"
         return self._call_remote(remote, "get_recipe_snapshot", ref)
 
-    def get_package_snapshot(self, pref, remote):
-        assert pref.ref.revision, "get_package_snapshot requires RREV"
-        assert pref.revision, "get_package_snapshot requires PREV"
-        return self._call_remote(remote, "get_package_snapshot", pref)
-
     def upload_recipe(self, ref, files_to_upload, deleted, remote, retry, retry_wait):
         assert ref.revision, "upload_recipe requires RREV"
         self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted,
                           retry, retry_wait)
 
-    def upload_package(self, pref, files_to_upload, deleted, remote, retry, retry_wait):
+    def upload_package(self, pref, files_to_upload, remote, retry, retry_wait):
         assert pref.ref.revision, "upload_package requires RREV"
         assert pref.revision, "upload_package requires PREV"
-        self._call_remote(remote, "upload_package", pref,
-                          files_to_upload, deleted, retry, retry_wait)
-
-    def get_recipe_manifest(self, ref, remote):
-        ref = self._resolve_latest_ref(ref, remote)
-        return self._call_remote(remote, "get_recipe_manifest", ref), ref
-
-    def get_package_manifest(self, pref, remote):
-        pref = self._resolve_latest_pref(pref, remote, headers=None)
-        return self._call_remote(remote, "get_package_manifest", pref), pref
-
-    def get_package_info(self, pref, remote, info=None):
-        """ Read a package ConanInfo from remote
-        """
-        headers = _headers_for_info(info)
-        pref = self._resolve_latest_pref(pref, remote, headers=headers)
-        # FIXME Conan 2.0: With revisions, it is not needed to pass headers to this second function
-        return self._call_remote(remote, "get_package_info", pref, headers=headers), pref
+        self._call_remote(remote, "upload_package", pref, files_to_upload, retry, retry_wait)
 
     # FIXME: this method returns the latest package revision with the time or if a prev is specified
     #  it returns that prev if it exists in the server with the time
@@ -188,9 +166,6 @@ class RemoteManager(object):
         try:
             headers = _headers_for_info(info)
             pref = self._resolve_latest_pref(pref, remote, headers=headers)
-            snapshot = self._call_remote(remote, "get_package_snapshot", pref)
-            if not is_package_snapshot_complete(snapshot):
-                raise PackageNotFoundException(pref)
 
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
@@ -305,13 +280,6 @@ class RemoteManager(object):
 def calc_files_checksum(files):
     return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)}
             for file_name, path in files.items()}
-
-
-def is_package_snapshot_complete(snapshot):
-    for keyword in ["conaninfo", "conanmanifest", "conan_package"]:
-        if not any(keyword in key for key in snapshot):
-            return False
-    return True
 
 
 def check_compressed_files(tgz_name, files):

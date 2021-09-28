@@ -68,15 +68,6 @@ class RestApiClient(object):
                              self._requester, self._config, self._verify_ssl,
                              self._artifacts_properties, checksum_deploy, matrix_params)
 
-    def get_recipe_manifest(self, ref):
-        return self._get_api().get_recipe_manifest(ref)
-
-    def get_package_manifest(self, pref):
-        return self._get_api().get_package_manifest(pref)
-
-    def get_package_info(self, pref, headers):
-        return self._get_api().get_package_info(pref, headers=headers)
-
     def get_recipe(self, ref, dest_folder):
         return self._get_api().get_recipe(ref, dest_folder)
 
@@ -89,9 +80,6 @@ class RestApiClient(object):
     def get_package(self, pref, dest_folder):
         return self._get_api().get_package(pref, dest_folder)
 
-    def get_package_snapshot(self, ref):
-        return self._get_api().get_package_snapshot(ref)
-
     def get_recipe_path(self, ref, path):
         return self._get_api().get_recipe_path(ref, path)
 
@@ -101,8 +89,8 @@ class RestApiClient(object):
     def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
         return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
 
-    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
-        return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
+    def upload_package(self, pref, files_to_upload, retry, retry_wait):
+        return self._get_api().upload_package(pref, files_to_upload, retry, retry_wait)
 
     def authenticate(self, user, password):
         api_v2 = RestV2Methods(self._remote_url, self._token, self._custom_headers,
