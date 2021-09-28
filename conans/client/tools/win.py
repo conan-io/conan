@@ -525,33 +525,6 @@ def escape_windows_cmd(command):
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
-def get_cased_path(name):
-    if platform.system() != "Windows":
-        return name
-    if not os.path.isabs(name):
-        name = os.path.abspath(name)
-
-    result = []
-    current = name
-    while True:
-        parent, child = os.path.split(current)
-        if parent == current:
-            break
-
-        child_cased = child
-        if os.path.exists(parent):
-            children = os.listdir(parent)
-            for c in children:
-                if c.upper() == child.upper():
-                    child_cased = c
-                    break
-        result.append(child_cased)
-        current = parent
-    drive, _ = os.path.splitdrive(current)
-    result.append(drive)
-    return os.sep.join(reversed(result))
-
-
 MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
