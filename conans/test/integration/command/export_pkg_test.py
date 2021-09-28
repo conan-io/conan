@@ -328,7 +328,7 @@ class TestConan(ConanFile):
                                   .with_import("from conans import tools").with_require(hello_ref)
 
         conanfile = str(conanfile) + """\n    def package_info(self):
-        self.cpp_info.libs = tools.collect_libs(self, "lib")
+        self.cpp_info.libs = tools.collect_libs(self)
     def package(self):
         self.copy("*")
         """
