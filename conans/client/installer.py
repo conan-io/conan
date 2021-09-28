@@ -541,6 +541,8 @@ class BinaryInstaller(object):
                         package_cppinfo.set_relative_base_folder(conanfile.folders.package)
                         conanfile.cpp_info = package_cppinfo
 
+                conanfile.cpp_info.clear_none()
+
                 conanfile.package_info()
 
                 if hasattr(conanfile, "layout") and is_editable:
@@ -561,6 +563,8 @@ class BinaryInstaller(object):
                     full_editable_cppinfo = NewCppInfo()
                     full_editable_cppinfo.merge(source_cppinfo)
                     full_editable_cppinfo.merge(build_cppinfo)
+                    # In editables if we defined anything in the cpp infos we want to discard
+                    # the one defined in the conanfile cpp_info
                     conanfile.cpp_info.merge(full_editable_cppinfo, overwrite=True)
 
                 self._hook_manager.execute("post_package_info", conanfile=conanfile,

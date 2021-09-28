@@ -29,7 +29,7 @@ class Infos(object):
     def __init__(self):
         self.source = NewCppInfo()
         self.build = NewCppInfo()
-        self.package = NewCppInfo()
+        self.package = NewCppInfo(set_defaults=True)
 
 
 class Folders(object):

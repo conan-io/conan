@@ -98,13 +98,12 @@ class NewCppInfo(object):
             self.init_defaults()
 
     def init_defaults(self):
-        self.clear_none()
-        self.includedirs.append("include")
-        self.libdirs.append("lib")
-        self.resdirs.append("res")
-        self.bindirs.append("bin")
-        self.builddirs.append("")
-        self.frameworkdirs.append("Frameworks")
+        self.includedirs = ["include"]
+        self.libdirs = ["lib"]
+        self.resdirs = ["res"]
+        self.bindirs = ["bin"]
+        self.builddirs = [""]
+        self.frameworkdirs = ["Frameworks"]
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
@@ -123,7 +122,7 @@ class NewCppInfo(object):
     def component_names(self):
         return filter(None, self.components.keys())
 
-    def merge(self, other):
+    def merge(self, other, overwrite=False):
         """Merge 'other' into self. 'other' can be an old cpp_info object"""
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
@@ -131,8 +130,11 @@ class NewCppInfo(object):
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
             other_values = getattr(other, varname)
             if other_values is not None:
-                current_values = self.components[None].get_init(varname, [])
-                merge_list(other_values, current_values)
+                if not overwrite:
+                    current_values = self.components[None].get_init(varname, [])
+                    merge_list(other_values, current_values)
+                else:
+                    setattr(self, varname, other_values)
 
         if self.sysroot is None and other.sysroot:
             self.sysroot = other.sysroot
@@ -152,8 +154,11 @@ class NewCppInfo(object):
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 other_values = getattr(c, varname)
                 if other_values is not None:
-                    current_values = self.components[cname].get_init(varname, [])
-                    merge_list(other_values, current_values)
+                    if not overwrite:
+                        current_values = self.components[cname].get_init(varname, [])
+                        merge_list(other_values, current_values)
+                    else:
+                        setattr(self.components[cname], varname, other_values)
 
             if c.requires:
                 current_values = self.components[cname].get_init("requires", [])
