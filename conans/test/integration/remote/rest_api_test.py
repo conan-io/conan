@@ -73,7 +73,7 @@ class RestApiTest(unittest.TestCase):
                 filename = os.path.join(temp_folder(), "conan.conf")
                 save(filename, "")
                 config = ConanClientConfigParser(filename)
-                requester = ConanRequester(config, requests)
+                requester = ConanRequester(config)
                 client_factory = RestApiClientFactory(requester=requester,
                                                       config=config)
                 localdb = LocalDBMock()

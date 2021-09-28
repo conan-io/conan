@@ -1,48 +1,30 @@
 import os
-import unittest
 import textwrap
-import warnings
-from mock import patch
+import unittest
 
+from mock import patch
+from requests import Response
 
 from conans.client import tools
-from conans.client.rest.conan_requester import ConanRequester
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestRequester
 from conans.util.files import save
 
 
 @patch.dict('os.environ', {})
 class ProxiesConfTest(unittest.TestCase):
 
-    def test_requester(self):
-        client = TestClient()
-        conf = """
-[proxies]
-https=None
-no_proxy=http://someurl,http://otherurl.com
-http=http://conan.url
-        """
-        save(client.cache.conan_conf_path, conf)
-        with warnings.catch_warnings(record=True) as warn:
-            warnings.simplefilter("always")
-            requester = ConanRequester(client.cache.config)
-
-            def verify_proxies(url, **kwargs):
-                self.assertEqual(kwargs["proxies"], {"https": None, "http": "http://conan.url"})
-                return "mocked ok!"
-
-            requester._http_requester.get = verify_proxies
-            self.assertEqual(os.environ["NO_PROXY"], "http://someurl,http://otherurl.com")
-
-            self.assertEqual(requester.get("MyUrl"), "mocked ok!")
-
-            self.assertEqual(1, len(warn))
-            self.assertTrue(issubclass(warn[-1].category, UserWarning))
-            self.assertIn("proxies.no_proxy has been deprecated. "
-                          "Use proxies.no_proxy_match instead", str(warn[-1].message))
-
     def test_requester_with_host_specific_proxies(self):
-        client = TestClient()
+        class MyHttpRequester(TestRequester):
+
+            def get(self, _, **kwargs):
+                resp = Response()
+                # resp._content = b'{"results": []}'
+                resp.status_code = 200
+                resp._content = b''
+                print(kwargs["proxies"])
+                return resp
+
+        client = TestClient(requester_class=MyHttpRequester)
         conf = textwrap.dedent("""
             [proxies]
             https=http://conan.url
@@ -52,33 +34,36 @@ http=http://conan.url
               only.for.the.other.conan.url = http://other.special.url
                     """)
         save(client.cache.conan_conf_path, conf)
-        requester = ConanRequester(client.cache.config)
+        conanfile = textwrap.dedent("""
+              from conans import ConanFile
+              from conans import tools
 
-        def verify_proxies(url, **kwargs):
-            self.assertEqual(kwargs["proxies"],
-                             {"http://only.for.the.other.conan.url": "http://other.special.url",
-                              "https": "http://conan.url",
-                              "https://only.for.this.conan.url": "http://special.url",
-                              "https://only.for.that.conan.url":
-                              "http://user:pass@extra.special.url"})
-            return "mocked ok!"
+              class Pkg(ConanFile):
+                  settings = "os", "compiler"
 
-        requester._http_requester.get = verify_proxies
-        self.assertFalse("NO_PROXY" in os.environ, "Error: NO_PROXY=%s" % os.getenv("NO_PROXY"))
-
-        self.assertEqual(requester.get("MyUrl"), "mocked ok!")
+                  def source(self):
+                      tools.download("MyUrl", "filename.txt")
+        """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . foo/1.0@")
+        assert "{'https': 'http://conan.url', " \
+               "'https://only.for.this.conan.url': 'http://special.url', " \
+               "'https://only.for.that.conan.url': 'http://user:pass@extra.special.url', " \
+               "'http://only.for.the.other.conan.url': 'http://other.special.url'}" in client.out
 
     def test_new_proxy_exclude(self):
 
-        class MyRequester(object):
-
-            def __init__(self, *args, **kwargs):
-                pass
+        class MyHttpRequester(TestRequester):
 
             def get(self, _, **kwargs):
-                return "excluded!" if "proxies" not in kwargs else "not excluded!"
+                resp = Response()
+                # resp._content = b'{"results": []}'
+                resp.status_code = 200
+                resp._content = b''
+                print("is excluded!" if "proxies" not in kwargs else "is not excluded!")
+                return resp
 
-        client = TestClient(requester_class=MyRequester)
+        client = TestClient(requester_class=MyHttpRequester)
         conf = """
 [proxies]
 https=None
@@ -86,47 +71,96 @@ no_proxy_match=MyExcludedUrl*, *otherexcluded_one*
 http=http://conan.url
         """
         save(client.cache.conan_conf_path, conf)
+        for url in ("**otherexcluded_one***", "MyUrl", "MyExcludedUrl***", "**MyExcludedUrl***"):
+            conanfile = textwrap.dedent("""
+                      from conans import ConanFile
+                      from conans import tools
 
-        self.assertEqual(client.requester.get("MyUrl"), "not excluded!")
-        self.assertEqual(client.requester.get("**otherexcluded_one***"), "excluded!")
-        self.assertEqual(client.requester.get("MyExcludedUrl***"), "excluded!")
-        self.assertEqual(client.requester.get("**MyExcludedUrl***"), "not excluded!")
+                      class Pkg(ConanFile):
+                          settings = "os", "compiler"
+
+                          def source(self):
+                              tools.download("{}", "filename.txt")
+                      """).format(url)
+            client.save({"conanfile.py": conanfile})
+            client.run("create . foo/1.0@")
+            if url in ("MyUrl", "**MyExcludedUrl***"):
+                assert "is not excluded!" in client.out
+            else:
+                assert "is excluded!" in client.out
 
     def test_environ_kept(self):
-        client = TestClient()
+
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+                from conans import tools
+
+                class Pkg(ConanFile):
+                    settings = "os", "compiler"
+
+                    def source(self):
+                        tools.download("http://foo.bar/file", "filename.txt")
+                """)
+
+        class MyHttpRequester(TestRequester):
+
+            def get(self, _, **kwargs):
+                resp = Response()
+                # resp._content = b'{"results": []}'
+                resp.status_code = 200
+                resp._content = b''
+                assert "HTTP_PROXY" in os.environ
+                print("My requester!")
+                return resp
+
+        client = TestClient(requester_class=MyHttpRequester)
         conf = """
 [proxies]
         """
         save(client.cache.conan_conf_path, conf)
-        requester = ConanRequester(client.cache.config)
 
-        def verify_env(url, **kwargs):
-            self.assertTrue("HTTP_PROXY" in os.environ)
+        client.save({"conanfile.py": conanfile})
 
         with tools.environment_append({"HTTP_PROXY": "my_system_proxy"}):
-            requester._http_requester.get = verify_env
-            requester.get("MyUrl")
+            client.run("create . foo/1.0@")
+
+        assert "My requester!" in client.out
 
     def test_environ_removed(self):
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+                from conans import tools
 
-        client = TestClient()
+                class Pkg(ConanFile):
+                    settings = "os", "compiler"
+
+                    def source(self):
+                        tools.download("http://MyExcludedUrl/file", "filename.txt")
+                """)
+
+        class MyHttpRequester(TestRequester):
+
+            def get(self, _, **kwargs):
+                resp = Response()
+                # resp._content = b'{"results": []}'
+                resp.status_code = 200
+                resp._content = b''
+                assert "HTTP_PROXY" not in os.environ
+                assert "http_proxy" not in os.environ
+                print("My requester!")
+                return resp
+
+        client = TestClient(requester_class=MyHttpRequester)
         conf = """
 [proxies]
 no_proxy_match=MyExcludedUrl*
 """
         save(client.cache.conan_conf_path, conf)
-        requester = ConanRequester(client.cache.config)
-
-        def verify_env(url, **kwargs):
-            self.assertFalse("HTTP_PROXY" in os.environ)
-            self.assertFalse("http_proxy" in os.environ)
 
         with tools.environment_append({"http_proxy": "my_system_proxy"}):
-            requester._http_requester.get = verify_env
-            requester.get("MyUrl")
-            self.assertEqual(os.environ["http_proxy"], "my_system_proxy")
+            client.save({"conanfile.py": conanfile})
+            client.run("create . foo/1.0@")
+            assert "My requester!" in client.out
 
         with tools.environment_append({"HTTP_PROXY": "my_system_proxy"}):
-            requester._http_requester.get = verify_env
-            requester.get("MyUrl")
             self.assertEqual(os.environ["HTTP_PROXY"], "my_system_proxy")
