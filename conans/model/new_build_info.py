@@ -94,6 +94,15 @@ class NewCppInfo(object):
         self.components = DefaultOrderedDict(lambda: _NewComponent())
         # Main package is a component with None key
         self.components[None] = _NewComponent()
+        self.init_defaults()
+
+    def init_defaults(self):
+        self.includedirs.append("include")
+        self.libdirs.append("lib")
+        self.resdirs.append("res")
+        self.bindirs.append("bin")
+        self.builddirs.append("")
+        self.frameworkdirs.append("Frameworks")
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
@@ -247,10 +256,3 @@ class NewCppInfo(object):
                            "Value: '{}'".format(cname, n, getattr(c, n)))
         return "\n".join(ret)
 
-    def init_defaults(self):
-        self.includedirs.append("include")
-        self.libdirs.append("lib")
-        self.resdirs.append("res")
-        self.bindirs.append("bin")
-        self.builddirs.append("")
-        self.frameworkdirs.append("Frameworks")
