@@ -71,9 +71,10 @@ def test_upload_with_pattern():
 
     client.run("upload hello0* --confirm -r default")
     assert "Uploading hello0/1.2.1@frodo/stable" in client.out
-    assert "Recipe is up to date, upload skipped" in client.out
-    assert "Hello1" not in client.out
-    assert "Hello2" not in client.out
+    assert "hello0/1.2.1@frodo/stable#e895a89b63c4eb2055704f63e6a0d06f "\
+           "already in server, skipping upload" in client.out
+    assert "hello1" not in client.out
+    assert "hello2" not in client.out
 
 
 def test_upload_with_pattern_and_package_error():
