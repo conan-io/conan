@@ -407,9 +407,9 @@ class FindConfigFiles(Block):
 
         # To support cross building to iOS, watchOS and tvOS where CMake looks for config files
         # only in the system frameworks unless you declare the XXX_DIR variables
-        {% for name in find_names %}
-        set({{ name }}_DIR "{{ generators_folder }}")
-        {% endfor %}
+        {% if cross_ios %}
+            set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+        {% endif %}
         """)
 
     def context(self):
@@ -424,9 +424,7 @@ class FindConfigFiles(Block):
         android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
 
         host_req = self._conanfile.dependencies.host.values()
-        find_names_needed = os_ in ('iOS', "watchOS", "tvOS")
-        find_names = [get_file_name(req)
-                      for req in host_req] if find_names_needed else []
+        cross_ios = os_ in ('iOS', "watchOS", "tvOS")
 
         # Read the buildirs
         build_paths = []
@@ -448,7 +446,7 @@ class FindConfigFiles(Block):
                 "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
                 "cmake_module_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
                 "android_prefix_path": android_prefix,
-                "find_names": find_names,
+                "cross_ios": cross_ios,
                 "generators_folder": "${CMAKE_CURRENT_LIST_DIR}"}
 
 
