@@ -31,29 +31,29 @@ class _NewComponent(object):
 
     def __init__(self):
         # ###### PROPERTIES
-        self._generator_properties = {}
+        self._generator_properties = None
 
         # ###### DIRECTORIES
-        self.includedirs = []  # Ordered list of include paths
-        self.srcdirs = []  # Ordered list of source paths
-        self.libdirs = []  # Directories to find libraries
-        self.resdirs = []  # Directories to find resources, data, etc
-        self.bindirs = []  # Directories to find executables and shared libs
-        self.builddirs = []
-        self.frameworkdirs = []
+        self.includedirs = None  # Ordered list of include paths
+        self.srcdirs = None  # Ordered list of source paths
+        self.libdirs = None  # Directories to find libraries
+        self.resdirs = None  # Directories to find resources, data, etc
+        self.bindirs = None  # Directories to find executables and shared libs
+        self.builddirs = None
+        self.frameworkdirs = None
 
         # ##### FIELDS
-        self.system_libs = []  # Ordered list of system libraries
-        self.frameworks = []  # Macos .framework
-        self.libs = []  # The libs to link against
-        self.defines = []  # preprocessor definitions
-        self.cflags = []  # pure C flags
-        self.cxxflags = []  # C++ compilation flags
-        self.sharedlinkflags = []  # linker flags
-        self.exelinkflags = []  # linker flags
+        self.system_libs = None  # Ordered list of system libraries
+        self.frameworks = None  # Macos .framework
+        self.libs = None  # The libs to link against
+        self.defines = None  # preprocessor definitions
+        self.cflags = None  # pure C flags
+        self.cxxflags = None  # C++ compilation flags
+        self.sharedlinkflags = None  # linker flags
+        self.exelinkflags = None  # linker flags
 
-        self.sysroot = ""
-        self.requires = []
+        self.sysroot = None
+        self.requires = None
 
     @property
     def required_component_names(self):
@@ -98,6 +98,7 @@ class NewCppInfo(object):
             self.init_defaults()
 
     def init_defaults(self):
+        self.clear_none()
         self.includedirs.append("include")
         self.libdirs.append("lib")
         self.resdirs.append("res")
@@ -122,23 +123,18 @@ class NewCppInfo(object):
     def component_names(self):
         return filter(None, self.components.keys())
 
-    def merge(self, other, overwrite=False):
-        """Merge 'other' into self. If overwrite == True, if one value from the other exists
-            we remove the original value and substitute with this value
-        """
-
+    def merge(self, other):
+        """Merge 'other' into self. 'other' can be an old cpp_info object"""
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
 
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
             other_values = getattr(other, varname)
-            if overwrite and other_values:
-                setattr(self, varname, other_values)
-            else:
+            if other_values is not None:
                 current_values = self.components[None].get_init(varname, [])
                 merge_list(other_values, current_values)
 
-        if self.sysroot == "" and other.sysroot:
+        if self.sysroot is None and other.sysroot:
             self.sysroot = other.sysroot
 
         if other.requires:
@@ -155,9 +151,7 @@ class NewCppInfo(object):
                 continue
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 other_values = getattr(c, varname)
-                if overwrite and other_values:
-                    setattr(self.components[cname], varname, other_values)
-                else:
+                if other_values is not None:
                     current_values = self.components[cname].get_init(varname, [])
                     merge_list(other_values, current_values)
 
@@ -257,3 +251,16 @@ class NewCppInfo(object):
                            "Value: '{}'".format(cname, n, getattr(c, n)))
         return "\n".join(ret)
 
+    def clear_none(self):
+        """A field with None meaning is 'not declared' but for consumers, that is irrelevant, an
+        empty list is easier to handle and makes perfect sense."""
+        for c in self.components.values():
+            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+                if getattr(c, varname) is None:
+                    setattr(c, varname, [])
+            if c.requires is None:
+                c.requires = []
+        if self.sysroot is None:
+            self.sysroot = ""
+        if self._generator_properties is None:
+            self._generator_properties = {}
