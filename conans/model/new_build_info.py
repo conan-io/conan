@@ -55,21 +55,6 @@ class _NewComponent(object):
         self.sysroot = ""
         self.requires = []
 
-    # FIXME: compatibility with 1.x: remove this in the future?
-    def init_defaults(self):
-        if not self.includedirs:
-            self.includedirs.append("include")
-        if not self.libdirs:
-            self.libdirs.append("lib")
-        if not self.resdirs:
-            self.resdirs.append("res")
-        if not self.bindirs:
-            self.bindirs.append("bin")
-        if not self.builddirs:
-            self.builddirs.append("")
-        if not self.frameworkdirs:
-            self.frameworkdirs.append("Frameworks")
-
     @property
     def required_component_names(self):
         """ Names of the required components of the same package (not scoped with ::)"""
@@ -263,5 +248,9 @@ class NewCppInfo(object):
         return "\n".join(ret)
 
     def init_defaults(self):
-        for c in self.components.values():
-            c.init_defaults()
+        self.includedirs.append("include")
+        self.libdirs.append("lib")
+        self.resdirs.append("res")
+        self.bindirs.append("bin")
+        self.builddirs.append("")
+        self.frameworkdirs.append("Frameworks")

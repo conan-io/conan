@@ -541,11 +541,11 @@ class BinaryInstaller(object):
                         package_cppinfo.set_relative_base_folder(conanfile.folders.package)
                         conanfile.cpp_info = package_cppinfo
 
-                conanfile.package_info()
-
                 # FIXME: compatibility with old default folders in old CppInfo
                 if not hasattr(conanfile, "layout"):
                     conanfile.cpp_info.init_defaults()
+
+                conanfile.package_info()
 
                 if hasattr(conanfile, "layout") and is_editable:
                     # Adjust the folders of the layout to consolidate the rootfolder of the
