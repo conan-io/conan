@@ -267,8 +267,8 @@ def test_pkg_with_component_requires():
             requires = "other/0.1@user/channel"
 
             def package_info(self):
-                self.cpp_info.components["mycomponent"].requires.append("other::other")
-                self.cpp_info.components["myothercomp"].requires.append("mycomponent")
+                self.cpp_info.components["mycomponent"].requires = ["other::other"]
+                self.cpp_info.components["myothercomp"].requires = ["mycomponent"]
 
         """)
     client.save({"conanfile.py": conanfile})
@@ -302,7 +302,7 @@ def test_pkg_getting_public_requires():
             def package_info(self):
                 self.cpp_info.components["cmp1"].libs = ["other_cmp1"]
                 self.cpp_info.components["cmp2"].libs = ["other_cmp2"]
-                self.cpp_info.components["cmp3"].requires.append("cmp1")
+                self.cpp_info.components["cmp3"].requires = ["cmp1"]
 
     """)
     client.save({"conanfile.py": conanfile})

@@ -52,6 +52,8 @@ def client():
                                            "mi_dependencia_namespace")
 
                 self.cpp_info.components["crispin"].libs = ["mydep"]
+                self.cpp_info.components["crispin"].libdirs = ["lib"]
+                self.cpp_info.components["crispin"].includedirs = ["include"]
                 self.cpp_info.components["crispin"].set_property("cmake_target_name",
                                                                  "MyCrispinTarget")
                 self.cpp_info.components["crispin"].set_property("cmake_module_target_name",
