@@ -90,11 +90,12 @@ class _NewComponent(object):
 
 class NewCppInfo(object):
 
-    def __init__(self):
+    def __init__(self, set_defaults=False):
         self.components = DefaultOrderedDict(lambda: _NewComponent())
         # Main package is a component with None key
         self.components[None] = _NewComponent()
-        self.init_defaults()
+        if set_defaults:
+            self.init_defaults()
 
     def init_defaults(self):
         self.includedirs.append("include")

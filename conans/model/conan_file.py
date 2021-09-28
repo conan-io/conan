@@ -160,7 +160,7 @@ class ConanFile:
     @property
     def cpp_info(self):
         if not self._cpp_info:
-            self._cpp_info = NewCppInfo()
+            self._cpp_info = NewCppInfo(set_defaults=True)
         return self._cpp_info
 
     @cpp_info.setter
