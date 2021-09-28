@@ -140,7 +140,7 @@ def test_setvars_command_with_custom_arguments(platform_system, os_, call_comman
         "os": os_
     })
     fake_path = "mysuper/path/to/intel/oneapi"
-    args = "arg1 arg2"
+    args = "arg1 arg2 --force"
     conanfile.conf = ConfDefinition()
     conanfile.conf.loads(textwrap.dedent("""\
         tools.intel:installation_path=%s
@@ -148,42 +148,3 @@ def test_setvars_command_with_custom_arguments(platform_system, os_, call_comman
     """ % (fake_path, args)))
     expected = '%s "%s" %s' % (call_command, os.path.join(fake_path, setvars_file), args)
     assert IntelOneAPI(conanfile).command == expected
-
-
-def test_setvars_command_is_already_loaded():
-    conanfile = ConanFileMock()
-    conanfile.settings = MockSettings({
-        "compiler.version": "2021.3",
-        "compiler.mode": "icx",
-        "os": "Linux"
-    })
-    fake_path = "mysuper/path/to/intel/oneapi"
-    args = "arg1 arg2"
-    conanfile.conf = ConfDefinition()
-    conanfile.conf.loads(textwrap.dedent("""\
-        tools.intel:installation_path=%s
-        tools.intel:setvars_args=%s
-    """ % (fake_path, args)))
-    with environment_append({"SETVARS_COMPLETED": "1"}):
-        assert IntelOneAPI(conanfile).command == "echo Conan:intel_setvars already set! " \
-                                                 "Pass --force if you want to reload it"
-
-
-@patch("conan.tools.intel.inteloneapi.platform.system", new=Mock(return_value="Linux"))
-def test_setvars_command_is_already_loaded_but_force_is_passed():
-    conanfile = ConanFileMock()
-    conanfile.settings = MockSettings({
-        "compiler.version": "2021.3",
-        "compiler.mode": "icx",
-        "os": "Linux"
-    })
-    fake_path = "mysuper/path/to/intel/oneapi"
-    args = "arg1 arg2 --force"
-    conanfile.conf = ConfDefinition()
-    conanfile.conf.loads(textwrap.dedent("""\
-        tools.intel:installation_path=%s
-        tools.intel:setvars_args=%s
-    """ % (fake_path, args)))
-    expected = '. "%s" %s' % (os.path.join(fake_path, "setvars.sh"), args)
-    with environment_append({"SETVARS_COMPLETED": "1"}):
-        assert IntelOneAPI(conanfile).command == expected

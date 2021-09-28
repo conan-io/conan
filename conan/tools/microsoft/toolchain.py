@@ -97,7 +97,7 @@ class MSBuildToolchain(object):
     def _runtime_library(settings):
         compiler = settings.compiler
         runtime = settings.get_safe("compiler.runtime")
-        if compiler == "msvc":
+        if compiler == "msvc" or compiler == "intel-cc":
             build_type = settings.get_safe("build_type")
             if build_type != "Debug":
                 runtime_library = {"static": "MultiThreaded",

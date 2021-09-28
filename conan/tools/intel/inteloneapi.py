@@ -26,7 +26,7 @@ from conans.client.tools.win import is_win64, _system_registry_key
 from conans.errors import ConanException
 
 
-def is_using_intel_oneapi(compiler_version):
+def _is_using_intel_oneapi(compiler_version):
     """Check if the Intel compiler to be used belongs to Intel oneAPI
 
     Note: Intel oneAPI Toolkit first version is 2021.1
@@ -34,7 +34,7 @@ def is_using_intel_oneapi(compiler_version):
     return int(compiler_version.split(".")[0]) >= 2021
 
 
-def get_inteloneapi_installation_path():
+def _get_inteloneapi_installation_path():
     system = platform.system()
     # Let's try the default dirs
     if system == "Windows":
@@ -72,7 +72,7 @@ class IntelOneAPI:
         # Let's check the compatibility
         compiler_version = conanfile.settings.get_safe("compiler.version")
         mode = conanfile.settings.get_safe("compiler.mode")
-        if is_using_intel_oneapi(compiler_version):
+        if _is_using_intel_oneapi(compiler_version):
             if mode != "classic" and conanfile.settings.get_safe("os") == "Darwin":
                 raise ConanException(
                     'macOS* is not supported for the icx/icpx or dpcpp compilers. '
@@ -115,7 +115,7 @@ class IntelOneAPI:
     @property
     def installation_path(self):
         installation_path = self._conanfile.conf["tools.intel:installation_path"] or \
-                            get_inteloneapi_installation_path()
+                            _get_inteloneapi_installation_path()
         self._out.info("Got Intel oneAPI installation folder: %s" % installation_path)
         return installation_path
 
@@ -151,11 +151,6 @@ class IntelOneAPI:
         """
         # Let's check if user wants to use some custom arguments to run the setvars script
         command_args = self._conanfile.conf["tools.intel:setvars_args"] or ""
-        # The setvars script is going to be loaded/cleared up every conanfile.run() execution
-        # but we will check this env variable just in case
-        if str(os.getenv("SETVARS_COMPLETED", "")) == "1" and "force" not in command_args:
-            return "echo Conan:intel_setvars already set! Pass --force if you want to reload it"
-
         system = platform.system()
         svars = "setvars.bat" if system == "Windows" else "setvars.sh"
         command = '"%s"' % os.path.join(self.installation_path, svars)
