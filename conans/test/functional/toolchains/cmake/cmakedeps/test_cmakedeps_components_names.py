@@ -45,13 +45,17 @@ def setup_client_with_greetings():
                 self.copy("*.a", dst="lib", keep_path=False)
 
             def package_info(self):
-                self.cpp_info.components["hello"].includedirs = ["include"]
-                self.cpp_info.components["hello"].libdirs = ["lib"]
-                self.cpp_info.components["bye"].includedirs = ["include"]
-                self.cpp_info.components["bye"].libdirs = ["lib"]
+                def set_comp_default_dirs():
+                    self.cpp_info.components["hello"].includedirs = ["include"]
+                    self.cpp_info.components["hello"].libdirs = ["lib"]
+                    self.cpp_info.components["bye"].includedirs = ["include"]
+                    self.cpp_info.components["bye"].libdirs = ["lib"]
+
                 if self.options.components == "standard":
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
+                    set_comp_default_dirs()
+
                 elif self.options.components == "custom":
                     self.cpp_info.set_property("cmake_file_name", "MYG")
                     self.cpp_info.set_property("cmake_target_name", "MyGreetings")
@@ -61,6 +65,8 @@ def setup_client_with_greetings():
 
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
+
+                    set_comp_default_dirs()
                 else:
                     self.cpp_info.libs = ["hello", "bye"]
 
