@@ -258,12 +258,7 @@ def _handle_system_requirements(install_node, package_layout):
     system_reqs_package_path = package_layout.system_reqs_package()
 
     ret = call_system_requirements(conanfile)
-
-    try:
-        ret = str(ret or "")
-    except Exception:
-        conanfile.out.warning("System requirements didn't return a string")
-        ret = ""
+    ret = str(ret or "")
     if getattr(conanfile, "global_system_requirements", None):
         save(system_reqs_path, ret)
     else:
@@ -306,7 +301,10 @@ class BinaryInstaller(object):
         install_order = install_graph.install_order()
 
         self._download_bulk(install_order)
-        self._build(install_order, remotes, build_mode, update)
+        for level in install_order:
+            for install_reference in level:
+                for package in install_reference.packages:
+                    self._handle_package(package, install_reference, remotes, build_mode, update)
 
     def _download_bulk(self, install_order):
         """ executes the download of packages (both download and update), only once for a given
@@ -336,64 +334,60 @@ class BinaryInstaller(object):
         assert node.pref.revision is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
-    def _build(self, install_order, remotes, build_mode, update):
-        for level in install_order:
-            for install_reference in level:
-                for package in install_reference.packages:
-                    if package.binary == BINARY_EDITABLE:
-                        self._handle_node_editable(package)
-                    else:
-                        assert package.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN,
-                                                  BINARY_DOWNLOAD, BINARY_UPDATE)
-                        assert install_reference.ref.revision is not None, \
-                            "Installer should receive RREV always"
-                        not_processed = True
-                        if package.binary == BINARY_UNKNOWN:
-                            assert len(package.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
-                            node = package.nodes[0]
-                            self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
-                            package.pref = node.pref  # Just in case it was recomputed
-                            package.binary = node.binary
-                            not_processed = install_reference.update_unknown(package)
-                            if not_processed:
-                                # The new computed package_id has not been processed yet
-                                if node.binary == BINARY_MISSING:
-                                    raise_missing([package], self._out)
-                                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                                    self._download_pkg(package)
+    def _handle_package(self, package, install_reference, remotes, build_mode, update):
+        if package.binary == BINARY_EDITABLE:
+            self._handle_node_editable(package)
+            return
 
-                        if package.pref.revision is None:
-                            assert package.binary == BINARY_BUILD
-                            package_layout = self._cache.create_temp_pkg_layout(package.pref)
-                        else:
-                            package_layout = self._cache.get_or_create_pkg_layout(package.pref)
+        assert package.binary in (BINARY_CACHE, BINARY_BUILD, BINARY_UNKNOWN, BINARY_DOWNLOAD,
+                                  BINARY_UPDATE)
+        assert install_reference.ref.revision is not None, "Installer should receive RREV always"
+        not_processed = True
+        if package.binary == BINARY_UNKNOWN:
+            assert len(package.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
+            node = package.nodes[0]
+            self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
+            package.pref = node.pref  # Just in case it was recomputed
+            package.binary = node.binary
+            not_processed = install_reference.update_unknown(package)
+            if not_processed:
+                # The new computed package_id has not been processed yet
+                if node.binary == BINARY_MISSING:
+                    raise_missing([package], self._out)
+                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                    self._download_pkg(package)
 
-                        if not_processed:
-                            _handle_system_requirements(package, package_layout)
+        if package.pref.revision is None:
+            assert package.binary == BINARY_BUILD
+            package_layout = self._cache.create_temp_pkg_layout(package.pref)
+        else:
+            package_layout = self._cache.get_or_create_pkg_layout(package.pref)
 
-                            if package.binary == BINARY_BUILD:
-                                self._handle_node_build(package, remotes, package_layout)
-                                # Just in case it was recomputed
-                                package.pref = package.nodes[0].pref
-                            elif package.binary == BINARY_CACHE:
-                                node = package.nodes[0]
-                                pref = node.pref
-                                assert node.prev, "PREV for %s is None" % str(pref)
-                                output = node.conanfile.output
-                                output.success('Already installed!')
-                                log_package_got_from_local_cache(pref)
+        if not_processed:
+            _handle_system_requirements(package, package_layout)
 
-                        # Make sure that all nodes with same pref compute package_info()
-                        package_folder = package_layout.package()
-                        pref = package.pref
-                        assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
-                                                               % (str(pref), package_folder))
-                        for n in package.nodes:
-                            n.prev = pref.revision  # Make sure the prev is assigned
-                            conanfile = n.conanfile
-                            # Call the info method
-                            self._call_package_info(conanfile, package_folder, ref=pref.ref,
-                                                    is_editable=False)
+            if package.binary == BINARY_BUILD:
+                self._handle_node_build(package, remotes, package_layout)
+                # Just in case it was recomputed
+                package.pref = package.nodes[0].pref
+            elif package.binary == BINARY_CACHE:
+                node = package.nodes[0]
+                pref = node.pref
+                assert node.prev, "PREV for %s is None" % str(pref)
+                output = node.conanfile.output
+                output.success('Already installed!')
+                log_package_got_from_local_cache(pref)
+
+        # Make sure that all nodes with same pref compute package_info()
+        pkg_folder = package_layout.package()
+        pref = package.pref
+        assert os.path.isdir(pkg_folder), \
+            "Package '%s' folder must exist: %s" % (str(pref), pkg_folder)
+        for n in package.nodes:
+            n.prev = pref.revision  # Make sure the prev is assigned
+            conanfile = n.conanfile
+            # Call the info method
+            self._call_package_info(conanfile, pkg_folder, ref=pref.ref, is_editable=False)
 
     def _handle_node_editable(self, install_node):
         for node in install_node.nodes:
