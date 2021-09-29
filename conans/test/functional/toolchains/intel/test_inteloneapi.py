@@ -6,8 +6,9 @@ from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool_cmake
 @pytest.mark.tool_intel_oneapi
-@pytest.mark.skipif(platform.system() != "Linux", reason="Requires Intel oneAPI")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux")
 class TestInteloneAPI:
 
     @pytest.fixture(autouse=True)

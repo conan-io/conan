@@ -102,6 +102,10 @@ tools_locations = {
         "default": "system",
         "system": {"path": {'Windows': 'C:/bazel/bin',
                             "Darwin": '/Users/jenkins/bin'}},
+    },
+    "intel_oneapi": {
+        "default": "2021.3",
+        "2021.3": {"path": {"Linux": "/opt/intel/oneapi/compiler/2021.3.0/linux/bin"}}
     }
 }
 
