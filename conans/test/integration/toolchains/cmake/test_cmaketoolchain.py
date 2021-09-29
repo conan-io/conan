@@ -240,33 +240,3 @@ def test_find_builddirs(find_builddir):
             assert "/path/to/builddir" in contents
         else:
             assert "/path/to/builddir" not in contents
-
-
-def test_namespace():
-    client = TestClient()
-    namespace = "somename"
-    conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conan.tools.cmake import CMakeToolchain, CMake
-
-            class Conan(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                def generate(self):
-                    cmake = CMakeToolchain(self, namespace='{0}')
-                    cmake.generate()
-                def build(self):
-                    cmake = CMake(self, namespace='{0}')
-                    self.output.info(cmake._generator)
-                    self.output.info(cmake._toolchain_file)
-            """.format(namespace))
-
-    client.save({"conanfile.py": conanfile})
-    client.run("install . ")
-    assert os.path.isfile(os.path.join(client.current_folder,
-                                       "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE)))
-    content = load_toolchain_args(generators_folder=client.current_folder, namespace=namespace)
-    generator = content.get("cmake_generator")
-    toolchain_file = content.get("cmake_toolchain_file")
-    client.run("build . ")
-    assert generator in client.out
-    assert toolchain_file in client.out
