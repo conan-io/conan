@@ -67,7 +67,6 @@ def test_test_package():
     assert "gtest" not in cmake_data
 
 
-@pytest.mark.xfail(reason="Update for NewCppInfo")
 def test_components_error():
     # https://github.com/conan-io/conan/issues/9331
     client = TestClient()

@@ -124,47 +124,6 @@ class TestPackageTest(unittest.TestCase):
                                                     "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
 
-    @pytest.mark.xfail(reason="Update for NewCppInfo")
-    def test_check_version(self):
-        client = TestClient()
-        dep = textwrap.dedent("""
-            from conans import ConanFile
-            class Dep(ConanFile):
-                def package_info(self):
-                    self.cpp_info.name = "MyDep"
-            """)
-        client.save({CONANFILE: dep})
-        client.run("create . dep/1.1@")
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                requires = "dep/1.1"
-                def build(self):
-                    info = self.dependencies["dep"].cpp_info
-                    self.output.info("BUILD Dep %s VERSION %s" %
-                        (info.get_name("txt"), info.version))
-                def package_info(self):
-                    self.cpp_info.names["txt"] = "MyHello"
-            """)
-        test_conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                def build(self):
-                    info = self.dependencies["hello"].cpp_info
-                    self.output.info("BUILD HELLO %s VERSION %s" %
-                        (info.get_name("txt"), info.version))
-                def test(self):
-                    info = self.dependencies["hello"].cpp_info
-                    self.output.info("TEST HELLO %s VERSION %s" %
-                        (info.get_name("txt"), info.version))
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": test_conanfile})
-        client.run("create . hello/0.1@")
-        self.assertIn("hello/0.1: BUILD Dep MyDep VERSION 1.1", client.out)
-        self.assertIn("hello/0.1 (test package): BUILD HELLO MyHello VERSION 0.1", client.out)
-        self.assertIn("hello/0.1 (test package): TEST HELLO MyHello VERSION 0.1", client.out)
-
 
 class ConanTestTest(unittest.TestCase):
 

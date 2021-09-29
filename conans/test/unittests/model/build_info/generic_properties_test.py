@@ -1,9 +1,8 @@
-import pytest
+from conans.model.new_build_info import CppInfo
 
 
-@pytest.mark.xfail(reason="update tests for NewCppInfo")
 def test_set_get_properties():
-    cpp_info = _CppInfo()
+    cpp_info = CppInfo()
 
     assert not cpp_info.get_property("my_property")
     assert not cpp_info.get_property("my_property", "some_generator")
