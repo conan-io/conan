@@ -105,6 +105,7 @@ tools_locations = {
     },
     "intel_oneapi": {
         "default": "2021.3",
+        "exe": "dpcpp",
         "2021.3": {"path": {"Linux": "/opt/intel/oneapi/compiler/2021.3.0/linux/bin"}}
     }
 }
