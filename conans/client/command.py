@@ -10,7 +10,7 @@ from difflib import get_close_matches
 from conans import __version__ as client_version
 from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import Conan, _make_abs_path, ProfileData
+from conans.client.conan_api import ConanAPIV1, _make_abs_path, ProfileData
 from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.conan_command_output import CommandOutputer
 from conans.cli.output import Color, ConanOutput
@@ -103,7 +103,7 @@ class Command(object):
     help of the tool.
     """
     def __init__(self, conan_api):
-        assert isinstance(conan_api, Conan)
+        assert isinstance(conan_api, ConanAPIV1)
         self._conan = conan_api
         self._out = ConanOutput()
 
@@ -1990,48 +1990,3 @@ _help_build_policies = '''Optional, specify which packages to build from source.
     Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
     will be used if it exists, otherwise the behavior is like '--build={}'.
 '''
-
-
-def v1_main(args):
-    """ main entry point of the conan application, using a Command to
-    parse parameters
-
-    Exit codes for conan command:
-
-        0: Success (done)
-        1: General ConanException error (done)
-        2: Migration error
-        3: Ctrl+C
-        4: Ctrl+Break
-        5: SIGTERM
-        6: Invalid configuration (done)
-    """
-    try:
-        conan_api, _, _ = Conan.factory()
-    except ConanMigrationError:  # Error migrating
-        sys.exit(ERROR_MIGRATION)
-    except ConanException as e:
-        sys.stderr.write("Error in Conan initialization: {}".format(e))
-        sys.exit(ERROR_GENERAL)
-
-    def ctrl_c_handler(_, __):
-        print('You pressed Ctrl+C!')
-        sys.exit(USER_CTRL_C)
-
-    def sigterm_handler(_, __):
-        print('Received SIGTERM!')
-        sys.exit(ERROR_SIGTERM)
-
-    def ctrl_break_handler(_, __):
-        print('You pressed Ctrl+Break!')
-        sys.exit(USER_CTRL_BREAK)
-
-    signal.signal(signal.SIGINT, ctrl_c_handler)
-    signal.signal(signal.SIGTERM, sigterm_handler)
-
-    if sys.platform == 'win32':
-        signal.signal(signal.SIGBREAK, ctrl_break_handler)
-
-    command = Command(conan_api)
-    error = command.run(args)
-    sys.exit(error)

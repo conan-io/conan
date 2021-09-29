@@ -1,5 +1,4 @@
 import functools
-import logging
 import os
 import sys
 import time
@@ -26,7 +25,7 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.tools.env import environment_append
-from conans.client.userio import color_enabled, init_colorama
+from conans.client.userio import init_colorama
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
@@ -75,13 +74,6 @@ class ConanApp(object):
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.remote_manager)
         self.graph_manager = GraphManager(self.cache, self.loader, self.proxy, self.range_resolver,
                                           self.binaries_analyzer)
-
-    def load_remotes(self, remote_name=None, update=False, check_updates=False):
-        remotes = self.cache.registry.load_remotes()
-        if remote_name:
-            remotes.select(remote_name)
-        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
-        return remotes
 
 
 def api_method(f):

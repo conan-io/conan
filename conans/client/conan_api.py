@@ -3,7 +3,6 @@ import os
 import sys
 from collections import OrderedDict
 from collections import namedtuple
-from io import StringIO
 
 from conans import __version__ as client_version
 from conans.cli.output import ConanOutput
@@ -44,28 +43,6 @@ class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", 
     def __bool__(self):
         return bool(self.profiles or self.settings or self.options or self.env or self.conf)
     __nonzero__ = __bool__
-
-
-# FIXME: Move to another place, this is a copy of RedirectedTestOutput
-class BufferOutput(StringIO):
-    def __init__(self):
-        # Chage to super() for Py3
-        StringIO.__init__(self)
-
-    def __repr__(self):
-        return self.getvalue()
-
-    def __str__(self, *args, **kwargs):
-        return self.__repr__()
-
-    def __eq__(self, value):
-        return self.__repr__() == value
-
-    def __ne__(self, value):
-        return not self.__eq__(value)
-
-    def __contains__(self, value):
-        return value in self.__repr__()
 
 
 def _make_abs_path(path, cwd=None, default=None):
@@ -117,9 +94,6 @@ def _get_conanfile_path(path, cwd, py):
 
 
 class ConanAPIV1(object):
-    @classmethod
-    def factory(cls):
-        return cls(), None, None
 
     def __init__(self, cache_folder=None):
         self.quiet = False
@@ -1134,9 +1108,6 @@ class ConanAPIV1(object):
         lockfile_out = _make_abs_path(lockfile_out or "conan.lock")
         graph_lock_file.save(lockfile_out)
         ConanOutput().info("Generated lockfile: %s" % lockfile_out)
-
-
-Conan = ConanAPIV1
 
 
 def get_graph_info(profile_host, profile_build, cwd, cache,
