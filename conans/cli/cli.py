@@ -177,10 +177,10 @@ def main(args):
 
     # Temporary hack to call the legacy command system if the command is not yet implemented in V2
     command_argument = args[0] if args else None
-    is_v1_command =  command_argument in CLI_V1_COMMANDS
+    is_v1_command = command_argument in CLI_V1_COMMANDS
 
     try:
-        conan_api = Conan() if is_v1_command else ConanAPIV1()
+        conan_api = ConanAPIV1() if is_v1_command else Conan()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
