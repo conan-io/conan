@@ -75,6 +75,13 @@ class ConanApp(object):
         self.graph_manager = GraphManager(self.cache, self.loader, self.proxy, self.range_resolver,
                                           self.binaries_analyzer)
 
+    def load_remotes(self, remote_name=None, update=False, check_updates=False):
+        remotes = self.cache.registry.load_remotes()
+        if remote_name:
+            remotes.select(remote_name)
+        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
+        return remotes
+
 
 def api_method(f):
     """Useful decorator to manage Conan API methods"""
