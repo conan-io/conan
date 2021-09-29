@@ -1,10 +1,10 @@
 import pytest
 
-from conans.model.new_build_info import NewCppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES
+from conans.model.new_build_info import CppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES
 
 
 def test_components_order():
-    cppinfo = NewCppInfo()
+    cppinfo = CppInfo()
     cppinfo.components["c1"].requires = ["c4", "OtherPackage::OtherComponent2"]
     cppinfo.components["c2"].requires = ["OtherPackage::OtherComponent"]
     cppinfo.components["c3"].requires = ["c2"]
@@ -14,7 +14,7 @@ def test_components_order():
 
 
 def test_generator_properties_copy():
-    cppinfo = NewCppInfo()
+    cppinfo = CppInfo()
     cppinfo.set_property("foo", "foo_value", "generator1")
     cppinfo.set_property("foo", "var_value", "generator2")
     cppinfo.set_property("foo2", "foo2_value", "generator1")
@@ -27,7 +27,7 @@ def test_generator_properties_copy():
 
 
 def test_component_aggregation():
-    cppinfo = NewCppInfo()
+    cppinfo = CppInfo()
 
     cppinfo.includedirs = ["includedir"]
     cppinfo.libdirs = ["libdir"]
@@ -97,16 +97,16 @@ def test_component_aggregation():
 @pytest.mark.xfail(reason="update tests for NewCppInfo")
 def test_cpp_info_sysroot_merge():
     # If the value was already set is kept in the merge
-    one = NewCppInfo()
+    one = CppInfo()
     one.sysroot = "sys1"
-    two = NewCppInfo()
+    two = CppInfo()
     two.sysroot = "sys2"
     one.merge(two)
     assert one.sysroot == "sys1"
 
     # If the value was not set it is assigned
-    one = NewCppInfo()
-    two = NewCppInfo()
+    one = CppInfo()
+    two = CppInfo()
     two.sysroot = "sys2"
     one.merge(two)
     assert one.sysroot == "sys2"
@@ -115,14 +115,14 @@ def test_cpp_info_sysroot_merge():
 @pytest.mark.xfail(reason="update tests for NewCppInfo")
 @pytest.mark.parametrize("aggregate_first", [True, False])
 def test_cpp_info_merge_aggregating_components_first(aggregate_first):
-    cppinfo = NewCppInfo()
+    cppinfo = CppInfo()
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(cppinfo.components["foo"], n, ["var_{}_1".format(n), "var_{}_2".format(n)])
         setattr(cppinfo.components["foo2"], n, ["var2_{}_1".format(n), "var2_{}_2".format(n)])
 
     cppinfo.components["foo"].requires = ["foo2"]  # Deterministic order
 
-    other = NewCppInfo()
+    other = CppInfo()
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(other.components["boo"], n, ["jar_{}_1".format(n), "jar_{}_2".format(n)])
         setattr(other.components["boo2"], n, ["jar2_{}_1".format(n), "jar2_{}_2".format(n)])

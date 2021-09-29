@@ -27,7 +27,7 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
-class _NewComponent(object):
+class _Component(object):
 
     def __init__(self):
         # ###### PROPERTIES
@@ -88,12 +88,12 @@ class _NewComponent(object):
         return default
 
 
-class NewCppInfo(object):
+class CppInfo(object):
 
     def __init__(self, set_defaults=False):
-        self.components = DefaultOrderedDict(lambda: _NewComponent())
+        self.components = DefaultOrderedDict(lambda: _Component())
         # Main package is a component with None key
-        self.components[None] = _NewComponent()
+        self.components[None] = _Component()
         if set_defaults:
             self.init_defaults()
 
@@ -110,7 +110,7 @@ class NewCppInfo(object):
 
     def __setattr__(self, attr, value):
         if attr == "components":
-            super(NewCppInfo, self).__setattr__(attr, value)
+            super(CppInfo, self).__setattr__(attr, value)
         else:
             setattr(self.components[None], attr, value)
 
@@ -225,13 +225,13 @@ class NewCppInfo(object):
             # FIXME: What to do about sysroot?
             # Leave only the aggregated value
             main_value = self.components[None]
-            self.components = DefaultOrderedDict(lambda: _NewComponent())
+            self.components = DefaultOrderedDict(lambda: _Component())
             self.components[None] = main_value
 
     def copy(self):
-        ret = NewCppInfo()
+        ret = CppInfo()
         ret._generator_properties = copy.copy(self._generator_properties)
-        ret.components = DefaultOrderedDict(lambda: _NewComponent())
+        ret.components = DefaultOrderedDict(lambda: _Component())
         for comp_name in self.components:
             ret.components[comp_name] = copy.copy(self.components[comp_name])
         return ret

@@ -1,6 +1,6 @@
 import os
 
-from conans.model.new_build_info import NewCppInfo
+from conans.model.new_build_info import CppInfo
 
 
 class _PatternEntry(object):
@@ -27,9 +27,9 @@ class Patterns(object):
 class Infos(object):
 
     def __init__(self):
-        self.source = NewCppInfo()
-        self.build = NewCppInfo()
-        self.package = NewCppInfo(set_defaults=True)
+        self.source = CppInfo()
+        self.build = CppInfo()
+        self.package = CppInfo(set_defaults=True)
 
 
 class Folders(object):

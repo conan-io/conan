@@ -9,7 +9,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Patterns, Infos
-from conans.model.new_build_info import NewCppInfo
+from conans.model.new_build_info import CppInfo
 from conans.model.options import Options
 from conans.model.requires import Requirements
 from conans.paths import RUN_LOG_NAME
@@ -153,7 +153,7 @@ class ConanFile:
     @property
     def cpp_info(self):
         if not self._cpp_info:
-            self._cpp_info = NewCppInfo(set_defaults=True)
+            self._cpp_info = CppInfo(set_defaults=True)
         return self._cpp_info
 
     @cpp_info.setter
