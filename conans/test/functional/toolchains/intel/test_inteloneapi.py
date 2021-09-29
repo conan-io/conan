@@ -94,4 +94,4 @@ class TestInteloneAPI:
         assert ":: initializing oneAPI environment ..." in self.client.out
         assert ":: oneAPI environment initialized ::" in self.client.out
         assert "Check for working CXX compiler: /opt/intel/oneapi/compiler/2021.3.0/linux/bin/dpcpp -- works" in self.client.out
-        assert "hello/0.1: Package '7d9c7d5fa3c48c9705c2cb864656c00fa8672524' created" in self.client.out
+        assert "hello/0.1: Package '5d42bcd2e9be3378ed0c2f2928fe6dc9ea1b0922' created" in self.client.out
