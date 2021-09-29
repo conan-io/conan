@@ -30,6 +30,11 @@ def conanfile_exception_formatter(conanfile_name, func_name):
     :param reference: Reference of the conanfile
     :return:
     """
+
+    def _raise_conanfile_exc(exc):
+        msg = _format_conanfile_exception(conanfile_name, func_name, exc)
+        raise ConanExceptionInUserConanfileMethod(msg)
+
     try:
         yield
     except ConanInvalidConfiguration as exc:
@@ -43,10 +48,9 @@ def conanfile_exception_formatter(conanfile_name, func_name):
                                  "trying to manipulate a component attribute in the '{}' method "
                                  "without defining it previously".format(conanfile_name, exc, func_name))
         else:
-            raise
+            _raise_conanfile_exc(exc)
     except Exception as exc:
-        msg = _format_conanfile_exception(conanfile_name, func_name, exc)
-        raise ConanExceptionInUserConanfileMethod(msg)
+        _raise_conanfile_exc(exc)
 
 
 def _format_conanfile_exception(scope, method, exception):
