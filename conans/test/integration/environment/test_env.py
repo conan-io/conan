@@ -6,7 +6,7 @@ import pytest
 
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
 
 
@@ -389,3 +389,60 @@ def test_diamond_repeated():
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
     assert "MYVAR4: PkgDValue4!!!" in client.out
+
+
+def test_environment_scripts_generated_envvars():
+    consumer_pkg = textwrap.dedent(r"""
+        from conans import ConanFile
+        from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
+        class Pkg(ConanFile):
+            settings = "os"
+            requires = "require_pkg/1.0"
+            build_requires = "build_require_pkg/1.0"
+            generators = "VirtualRunEnv", "VirtualBuildEnv"
+        """)
+
+    client = TestClient()
+    conanfile = (GenConanfile().with_package_file("bin/myapp", "myexe")
+                               .with_package_file("lib/mylib", "mylibcontent")
+                               .with_settings("os"))
+    client.save({"build_require_pkg/conanfile.py": conanfile,
+                 "require_pkg/conanfile.py": conanfile,
+                 "consumer_pkg/conanfile.py": consumer_pkg})
+
+    client.run("export build_require_pkg build_require_pkg/1.0@")
+    client.run("export require_pkg require_pkg/1.0@")
+
+    client.run("install consumer_pkg --build")
+    conanbuildenv = client.load("conanbuildenv.sh")
+    conanrunenv = client.load("conanrunenv.sh")
+    assert "LD_LIBRARY_PATH" in conanbuildenv
+    assert "LD_LIBRARY_PATH" in conanrunenv
+
+    # Build context LINUX - Host context LINUX
+    client.run("install consumer_pkg -s:b os=Linux -s:h os=Linux --build")
+    conanbuildenv = client.load("conanbuildenv.sh")
+    conanrunenv = client.load("conanrunenv.sh")
+    assert "LD_LIBRARY_PATH" in conanbuildenv
+    assert "LD_LIBRARY_PATH" in conanrunenv
+
+    # Build context WINDOWS - Host context WINDOWS
+    client.run("install consumer_pkg -s:b os=Windows -s:h os=Windows --build")
+    conanbuildenv = client.load("conanbuildenv.bat")
+    conanrunenv = client.load("conanrunenv.bat")
+    assert "LD_LIBRARY_PATH" not in conanbuildenv
+    assert "LD_LIBRARY_PATH" not in conanrunenv
+
+    # Build context LINUX - Host context WINDOWS
+    client.run("install consumer_pkg -s:b os=Linux -s:h os=Windows --build")
+    conanbuildenv = client.load("conanbuildenv.sh")
+    conanrunenv = client.load("conanrunenv.bat")
+    assert "LD_LIBRARY_PATH" in conanbuildenv
+    assert "LD_LIBRARY_PATH" not in conanrunenv
+
+    # Build context WINDOWS - Host context LINUX
+    client.run("install consumer_pkg -s:b os=Windows -s:h os=Linux --build")
+    conanbuildenv = client.load("conanbuildenv.bat")
+    conanrunenv = client.load("conanrunenv.sh")
+    assert "LD_LIBRARY_PATH" not in conanbuildenv
+    assert "LD_LIBRARY_PATH" in conanrunenv

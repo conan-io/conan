@@ -274,8 +274,20 @@ class Environment:
         save(filename, content)
 
     def save_script(self, name, group="build"):
-        # FIXME: using platform is not ideal but settings might be incomplete
-        if platform.system() == "Windows" and not self._conanfile.win_bash:
+        if group == "build":
+            # FIXME: In Conan 2.0, replace this if/elif/else with just this:
+            # is_windows = str(self._conanfile.settings_build.get_safe("os")).startswith("Windows")
+
+            if hasattr(self._conanfile, "settings_build"):
+                is_windows = str(self._conanfile.settings_build.get_safe("os")).startswith("Windows")
+            elif platform.system() == "Windows" and not self._conanfile.win_bash:
+                is_windows = True
+            else:
+                is_windows = False
+        else:
+            is_windows = str(self._conanfile.settings.get_safe("os")).startswith("Windows")
+
+        if is_windows:
             path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
             self.save_bat(path)
         else:
