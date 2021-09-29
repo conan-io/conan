@@ -306,15 +306,18 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 </Project>
 """
 
+
 @pytest.mark.tool_visual_studio(version='15')
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2017():
     check_msvc_runtime_flag("15", "19.1")
 
+
 @pytest.mark.tool_visual_studio(version='17')
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2022():
     check_msvc_runtime_flag("17", "19.3")
+
 
 def check_msvc_runtime_flag(vs_version, msvc_version):
     client = TestClient()
@@ -341,10 +344,12 @@ def check_msvc_runtime_flag(vs_version, msvc_version):
                '-s compiler.cppstd=14'.format(msvc_version=msvc_version))
     assert "MSVC FLAG=MD!!" in client.out
 
+
 vs_versions = [{"vs_version": "15", "msvc_version": "19.1", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
     vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
+
 
 @parameterized_class(vs_versions)
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -362,6 +367,7 @@ class WinTest(unittest.TestCase):
 
             def layout(self):
                 self.folders.generators = "conan"
+                self.folders.build = "conan"
 
             def generate(self):
                 tc = MSBuildToolchain(self)

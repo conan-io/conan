@@ -22,10 +22,10 @@ def editable_cmake(generator):
            path=os.path.join(c.current_folder, "pkg"))
 
     def build_dep():
-        c.run("install .")
-        c.run("build .")
-        c.run("install . -s build_type=Debug")
-        c.run("build .")
+        c.run("install . -if=install_release")
+        c.run("build . -if=install_release")
+        c.run("install . -s build_type=Debug -if=install_debug")
+        c.run("build . -if=install_debug")
 
     with c.chdir("dep"):
         c.run("editable add . dep/0.1@")
