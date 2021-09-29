@@ -257,7 +257,7 @@ class HelloConan(ConanFile):
         os.mkdir(os.path.join(tmp, ".conan"))
         save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            conan_api, _, _ = ConanAPIV1.factory()
+            conan_api = ConanAPIV1()
         conan_api.remote_list()
         from conans.tools import _global_requester
         self.assertEqual(_global_requester.proxies, {"http": "http://myproxy.com"})

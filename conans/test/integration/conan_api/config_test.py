@@ -17,7 +17,7 @@ class ConfigTest(unittest.TestCase):
         os.mkdir(os.path.join(tmp, ".conan"))
         save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            self.api, _, _ = conan_api.ConanAPIV1.factory()
+            self.api = conan_api.ConanAPIV1()
 
     def test_config_rm(self):
         self.api.config_set("proxies.https", "http://10.10.1.10:1080")
