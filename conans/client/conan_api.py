@@ -121,10 +121,9 @@ class ConanAPIV1(object):
     def factory(cls):
         return cls(), None, None
 
-    def __init__(self, cache_folder=None, http_requester=None):
+    def __init__(self, cache_folder=None):
         self.quiet = False
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
-        self.http_requester = http_requester
         self.app = None  # Api calls will create a new one every call
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
@@ -135,7 +134,7 @@ class ConanAPIV1(object):
         sys.path.append(python_folder)
 
     def create_app(self):
-        self.app = ConanApp(self.cache_folder, self.http_requester)
+        self.app = ConanApp(self.cache_folder)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
