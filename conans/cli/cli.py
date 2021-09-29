@@ -12,7 +12,7 @@ from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 from conans.cli.output import ConanOutput
-from conans.client.api.conan_api import Conan
+from conans.client.api.conan_api import Conan, ConanAPIV2
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf.config_installer import is_config_install_scheduled
@@ -35,8 +35,8 @@ class Cli(object):
     """
 
     def __init__(self, conan_api):
-        assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(
-            type(conan_api))
+        assert isinstance(conan_api, (ConanAPIV1, ConanAPIV2)), \
+            "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan_api = conan_api
         self._groups = defaultdict(list)
         self._commands = {}
