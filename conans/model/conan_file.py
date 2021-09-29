@@ -77,7 +77,7 @@ class ConanFile:
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None))
 
-        self._cpp_info = None  # Will be initialized at processing time
+        self._conan_cpp_info = None  # Will be initialized at processing time
         # user declared variables
         self.user_info = None
         self._conan_dependencies = None
@@ -152,13 +152,13 @@ class ConanFile:
 
     @property
     def cpp_info(self):
-        if not self._cpp_info:
-            self._cpp_info = CppInfo(set_defaults=True)
-        return self._cpp_info
+        if not self._conan_cpp_info:
+            self._conan_cpp_info = CppInfo(set_defaults=True)
+        return self._conan_cpp_info
 
     @cpp_info.setter
     def cpp_info(self, value):
-        self._cpp_info = value
+        self._conan_cpp_info = value
 
     @property
     def source_folder(self):
