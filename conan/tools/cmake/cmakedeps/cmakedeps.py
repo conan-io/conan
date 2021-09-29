@@ -1,5 +1,4 @@
 import os
-from fnmatch import fnmatch
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
@@ -16,6 +15,7 @@ FIND_MODE_MODULE = "module"
 FIND_MODE_CONFIG = "config"
 FIND_MODE_NONE = "none"
 FIND_MODE_BOTH = "both"
+
 
 class CMakeDeps(object):
 
@@ -81,7 +81,8 @@ class CMakeDeps(object):
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            cmake_find_mode = dep.new_cpp_info.get_property("cmake_find_mode", "CMakeDeps") or FIND_MODE_CONFIG
+            cmake_find_mode = dep.new_cpp_info.get_property("cmake_find_mode", "CMakeDeps")
+            cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
             # Skip from the requirement
             if cmake_find_mode == FIND_MODE_NONE:
