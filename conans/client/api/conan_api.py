@@ -86,9 +86,6 @@ class ConanApp(object):
 def api_method(f):
     """Useful decorator to manage Conan API methods"""
 
-    def _init_stream(stream):
-        init_colorama(stream)
-
     @functools.wraps(f)
     def wrapper(api, *args, **kwargs):
         quiet = kwargs.pop("quiet", False)
@@ -104,7 +101,7 @@ def api_method(f):
             sys.stdout = devnull
             sys.stderr = devnull
 
-        _init_stream(sys.stderr)
+        init_colorama(sys.stderr)
 
         try:
             log_command(f.__name__, kwargs)

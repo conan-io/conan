@@ -96,7 +96,6 @@ def _get_conanfile_path(path, cwd, py):
 class ConanAPIV1(object):
 
     def __init__(self, cache_folder=None):
-        self.quiet = False
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
         self.app = None  # Api calls will create a new one every call
         # Migration system
