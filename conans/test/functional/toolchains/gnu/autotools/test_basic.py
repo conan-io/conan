@@ -5,9 +5,7 @@ import time
 
 import pytest
 
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools.env.environment import environment_wrap_command
-from conan.tools.files import load_toolchain_args
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
