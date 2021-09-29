@@ -146,17 +146,3 @@ def test_editable_cmake_linux_exe(generator):
 @pytest.mark.tool_cmake(version="3.19")
 def test_editable_cmake_osx_exe(generator):
     editable_cmake_exe(generator)
-
-
-def test_start_dir_failure():
-    c = TestClient()
-    c.save(pkg_cmake("dep", "0.1"))
-    c.run("editable add . dep/0.1@")
-    c.run("install .")
-    build = "build" if platform.system() == "Windows" else "cmake-build-release"
-    expected_path = os.path.join(c.current_folder, build, "conan", "conan_toolchain.cmake")
-    assert os.path.exists(expected_path)
-    os.unlink(expected_path)
-    with c.chdir("build"):
-        c.run("install ..")
-    assert os.path.exists(expected_path)

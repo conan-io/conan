@@ -617,7 +617,8 @@ class ConanAPIV1(object):
                          generators=generators,
                          no_imports=no_imports,
                          recorder=recorder,
-                         require_overrides=require_overrides)
+                         require_overrides=require_overrides,
+                         cwd=cwd)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
