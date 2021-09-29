@@ -3,20 +3,20 @@ import platform
 from collections import OrderedDict
 
 import mock
-import pytest
 from mock import Mock
 
 from conan.tools.gnu import AutotoolsDeps
 from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
+from conans.model.new_build_info import CppInfo
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import MockSettings
 from conans.test.utils.test_files import temp_folder
 
 
 def get_cpp_info(name):
-    cppinfo = CppInfo("{}/1.0".format(name), "/tmp/root")
+    cppinfo = CppInfo()
     cppinfo.includedirs = []
     cppinfo.includedirs.append("path/includes/{}".format(name))
     cppinfo.includedirs.append("other\\include\\path\\{}".format(name))
@@ -45,7 +45,6 @@ def get_cpp_info(name):
     return cppinfo
 
 
-@pytest.mark.xfail(reason="update tests for NewCppInfo")
 def test_foo():
     dep1 = ConanFile(None)
     dep1.cpp_info = get_cpp_info("dep1")
