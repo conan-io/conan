@@ -31,7 +31,8 @@ def run_in_windows_bash(conanfile, command, cwd=None, env=None):
         raise ConanException("Command only for Windows operating system")
 
     if not subsystem or not shell_path:
-        raise ConanException("The config 'tools.microsoft.bash:subsystem' and 'tools.microsoft.bash:path' are "
+        raise ConanException("The config 'tools.microsoft.bash:subsystem' and "
+                             "'tools.microsoft.bash:path' are "
                              "needed to run commands in a Windows subsystem")
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH

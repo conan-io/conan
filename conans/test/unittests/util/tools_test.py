@@ -514,14 +514,6 @@ class HelloConan(ConanFile):
         with self.assertRaises(ConanException):
             tools.get_gnu_triplet("Windows", "x86")
 
-    def test_detect_windows_subsystem(self):
-        # Don't raise test
-        result = OSInfo.detect_windows_subsystem()
-        if not OSInfo.bash_path() or platform.system() != "Windows":
-            self.assertEqual(None, result)
-        else:
-            self.assertEqual(str, type(result))
-
     @pytest.mark.slow
     @pytest.mark.local_bottle
     def test_get_filename_download(self):
