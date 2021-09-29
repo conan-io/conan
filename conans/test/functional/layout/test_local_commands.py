@@ -381,11 +381,16 @@ def test_importdir_failure():
     c = TestClient()
     conanfile = textwrap.dedent("""
         from conans import ConanFile
+        from conan.tools.files import save
         class Cosumer(ConanFile):
             requires = "dep/0.1"
             settings = "build_type"
             def layout(self):
                 self.folders.imports = "Import" + str(self.settings.build_type)
+                self.folders.build = "build"
+            def build(self):
+                self.output.info("saving file")
+                save(self, "mybuild.txt", "mybuild")
             def imports(self):
                 self.copy("myfile.txt")
         """)
@@ -396,14 +401,20 @@ def test_importdir_failure():
         c.run("install . -s build_type=Release")
         expected_path_release = os.path.join(c.current_folder, "ImportRelease", "myfile.txt")
         assert os.path.exists(expected_path_release)
+        c.run("build .")
+        expected_build_file = os.path.join(c.current_folder, "build", "mybuild.txt")
+        assert os.path.exists(expected_build_file)
         c.run("install . -s build_type=Debug")
         expected_path_debug = os.path.join(c.current_folder, "ImportDebug", "myfile.txt")
         assert os.path.exists(expected_path_debug)
 
         os.unlink(expected_path_release)
         os.unlink(expected_path_debug)
+        os.unlink(expected_build_file)
         with c.chdir("build"):
             c.run("install .. -s build_type=Release")
             assert os.path.exists(expected_path_release)
+            c.run("build ..")
+            assert os.path.exists(expected_build_file)
             c.run("install .. -s build_type=Debug")
             assert os.path.exists(expected_path_debug)
