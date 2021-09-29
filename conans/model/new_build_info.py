@@ -269,3 +269,13 @@ class CppInfo(object):
             self.sysroot = ""
         if self._generator_properties is None:
             self._generator_properties = {}
+
+    def clear(self):
+        """A field with None meaning is 'not declared' but for consumers, that is irrelevant, an
+        empty list is easier to handle and makes perfect sense."""
+        for c in self.components.values():
+            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+                setattr(c, varname, [])
+            c.requires = []
+        self.sysroot = ""
+        self._generator_properties = {}
