@@ -329,4 +329,4 @@ class ConanAPIV2(object):
         }
 
 
-Conan = ConanAPIV2
+ConanAPI = ConanAPIV2

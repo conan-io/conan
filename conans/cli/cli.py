@@ -12,7 +12,7 @@ from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 from conans.cli.output import ConanOutput
-from conans.client.api.conan_api import Conan, ConanAPIV2
+from conans.client.api.conan_api import ConanAPI, ConanAPIV2
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf.config_installer import is_config_install_scheduled
@@ -180,7 +180,7 @@ def main(args):
     is_v1_command = command_argument in CLI_V1_COMMANDS
 
     try:
-        conan_api = ConanAPIV1() if is_v1_command else Conan()
+        conan_api = ConanAPIV1() if is_v1_command else ConanAPI()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
