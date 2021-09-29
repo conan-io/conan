@@ -5,8 +5,9 @@ from collections import OrderedDict
 from collections import namedtuple
 
 from conans import __version__ as client_version
+from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.api.conan_api import api_method, ConanApp
+from conans.client.api.conan_api import api_method
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download

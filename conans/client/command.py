@@ -2,31 +2,27 @@ import argparse
 import inspect
 import json
 import os
-import signal
 import sys
 from argparse import ArgumentError
 from difflib import get_close_matches
 
-from conans import __version__ as client_version
+from conans.assets import templates
+from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION
+from conans.cli.output import Color, ConanOutput
 from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import ConanAPIV1, _make_abs_path, ProfileData
-from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.conan_command_output import CommandOutputer
-from conans.cli.output import Color, ConanOutput
+from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.printer import Printer
-from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
-    ConanMigrationError
+from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable
+from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
-from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
-from conans.assets import templates
-from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
-    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 
 
 class Extender(argparse.Action):
