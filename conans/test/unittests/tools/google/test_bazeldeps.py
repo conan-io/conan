@@ -7,14 +7,14 @@ from conan.tools.google import BazelDeps
 from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import Requirement, ConanFileDependencies
+from conans.model.new_build_info import CppInfo
 from conans.model.ref import ConanFileReference
 
 
-@pytest.mark.xfail(reason="update tests for NewCppInfo")
 def test_bazeldeps_dependency_buildfiles():
     conanfile = ConanFile(None)
 
-    cpp_info = CppInfo("mypkg", "dummy_root_folder1")
+    cpp_info = CppInfo(set_defaults=True)
     cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
     cpp_info.system_libs = ["system_lib1"]
     cpp_info.libs = ["lib1"]
@@ -38,11 +38,11 @@ def test_bazeldeps_dependency_buildfiles():
             assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
             assert 'deps = [\n    \n    ":lib1_precompiled",' in dependency_content
 
-@pytest.mark.xfail(reason="update tests for NewCppInfo")
 def test_bazeldeps_interface_buildfiles():
     conanfile = ConanFile(None)
 
-    cpp_info = CppInfo("mypkg", "dummy_root_folder2")
+    cpp_info = CppInfo(set_defaults=True)
+    cpp_info.clear_none()
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
@@ -59,7 +59,6 @@ def test_bazeldeps_interface_buildfiles():
         dependency_content = re.sub(r"\s", "", bazeldeps._get_dependency_buildfile_content(dependency))
         assert(dependency_content == 'load("@rules_cc//cc:defs.bzl","cc_import","cc_library")cc_library(name="OriginalDepName",hdrs=glob(["include/**"]),includes=["include"],visibility=["//visibility:public"],)')
 
-@pytest.mark.xfail(reason="update tests for NewCppInfo")
 def test_bazeldeps_main_buildfile():
     expected_content = [
         'def load_conan_dependencies():',
@@ -71,7 +70,7 @@ def test_bazeldeps_main_buildfile():
 
     conanfile = ConanFile(None)
 
-    cpp_info = CppInfo("mypkg", "dummy_root_folder1")
+    cpp_info = CppInfo(set_defaults=True)
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info

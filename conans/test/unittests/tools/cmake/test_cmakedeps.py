@@ -6,6 +6,7 @@ from conan.tools.cmake import CMakeDeps
 from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
+from conans.model.new_build_info import CppInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 
@@ -133,7 +134,6 @@ def test_cmake_deps_links_flags():
         assert "set(mypkg_EXE_LINK_FLAGS_RELEASE -OPT:NOICF)" in data_cmake
 
 
-@pytest.mark.xfail(reason="update tests for NewCppInfo")
 def test_component_name_same_package():
     """
     When the package and the component are the same the variables declared in data and linked
@@ -150,10 +150,11 @@ def test_component_name_same_package():
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
-    cpp_info = CppInfo("mypkg", "dummy_root_folder1")
+    cpp_info = CppInfo(set_defaults=True)
 
     # We adjust the component with the same name as the package on purpose
     cpp_info.components["mypkg"].includedirs = ["includedirs1"]
+    cpp_info.clear_none()
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
