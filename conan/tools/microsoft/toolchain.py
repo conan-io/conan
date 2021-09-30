@@ -58,7 +58,10 @@ class MSBuildToolchain(object):
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
-        VCVars(self._conanfile).generate()
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelOneAPI(self._conanfile).generate()
+        else:
+            VCVars(self._conanfile).generate()
 
     @staticmethod
     def _msvs_toolset(conanfile):
