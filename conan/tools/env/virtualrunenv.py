@@ -11,7 +11,7 @@ def runenv_from_cpp_info(conanfile, cpp_info, os_name):
         dyn_runenv.prepend_path("PATH", cpp_info.bin_paths)
     # If it is a build_require this will be the build-os, otherwise it will be the host-os
 
-    if not os_name.startswith("Windows"):
+    if os_name and not os_name.startswith("Windows"):
         if cpp_info.lib_paths:
             dyn_runenv.prepend_path("LD_LIBRARY_PATH", cpp_info.lib_paths)
             dyn_runenv.prepend_path("DYLD_LIBRARY_PATH", cpp_info.lib_paths)
