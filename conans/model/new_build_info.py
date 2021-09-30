@@ -95,15 +95,12 @@ class CppInfo(object):
         # Main package is a component with None key
         self.components[None] = _Component()
         if set_defaults:
-            self.init_defaults()
-
-    def init_defaults(self):
-        self.includedirs = ["include"]
-        self.libdirs = ["lib"]
-        self.resdirs = ["res"]
-        self.bindirs = ["bin"]
-        self.builddirs = [""]
-        self.frameworkdirs = ["Frameworks"]
+            self.includedirs = ["include"]
+            self.libdirs = ["lib"]
+            self.resdirs = ["res"]
+            self.bindirs = ["bin"]
+            self.builddirs = [""]
+            self.frameworkdirs = ["Frameworks"]
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
