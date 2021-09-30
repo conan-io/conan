@@ -2,6 +2,7 @@ import pytest
 import platform
 import textwrap
 
+from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.utils.tools import TestClient
 
 
@@ -15,7 +16,8 @@ class TestInteloneAPI:
     def _setUp(self):
         self.client = TestClient()
         # Let's create a default hello/0.1 example
-        self.client.run("new hello/0.1 -m=cmake_lib")
+        files = pkg_cmake("hello", "0.1")
+        self.client.save(files)
 
     def test_intel_oneapi_and_dpcpp(self):
         intel_profile = textwrap.dedent("""
