@@ -96,7 +96,7 @@ def test_complete(client):
 
             def build(self):
                 self.run("mycmake.bat", env="conanbuildenv")
-                assert os.path.exists(os.path.join(self.generators_folder, "conanrunenv.sh"))
+                assert os.path.exists(os.path.join(self.generators_folder, "conanrunenv.bat"))
        """)
 
     client.save({"conanfile.py": conanfile})
