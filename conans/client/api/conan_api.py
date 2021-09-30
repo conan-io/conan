@@ -9,6 +9,7 @@ from conans import __version__ as client_version
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.api.helpers.search import Search
+from conans.client.cache.cache import ClientCache
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator
 from conans.client.tools.env import environment_append
@@ -42,8 +43,9 @@ def api_method(f):
 
         try:
             log_command(f.__name__, kwargs)
-            api.create_app()
-            with environment_append(api.app.cache.config.env_vars):
+            # FIXME: Not pretty to instance here a ClientCache
+            config = ClientCache(api.cache_folder).config
+            with environment_append(config.env_vars):
                 return f(api, *args, **kwargs)
         finally:
             if old_curdir:
@@ -59,15 +61,11 @@ class ConanAPIV2(object):
 
         self.out = ConanOutput()
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
-        self.app = None  # Api calls will create a new one every call
 
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
         check_required_conan_version(self.cache_folder)
-
-    def create_app(self):
-        self.app = ConanApp(self.cache_folder)
 
     @api_method
     def user_list(self, remote_name=None):
@@ -105,7 +103,8 @@ class ConanAPIV2(object):
 
     @api_method
     def get_active_remotes(self, remote_names):
-        remotes = self.app.cache.registry.load_remotes()
+        app = ConanApp(self.cache_folder)
+        remotes = app.cache.registry.load_remotes()
         all_remotes = remotes.all_values()
 
         if not all_remotes:
@@ -126,8 +125,9 @@ class ConanAPIV2(object):
 
     @api_method
     def search_local_recipes(self, query):
-        remotes = self.app.cache.registry.load_remotes()
-        search = Search(self.app.cache, self.app.remote_manager, remotes)
+        app = ConanApp(self.cache_folder)
+        remotes = app.cache.registry.load_remotes()
+        search = Search(app.cache, app.remote_manager, remotes)
         references = search.search_local_recipes(query)
         results = []
         for reference in references:
@@ -140,8 +140,9 @@ class ConanAPIV2(object):
 
     @api_method
     def search_remote_recipes(self, query, remote):
-        remotes = self.app.cache.registry.load_remotes()
-        search = Search(self.app.cache, self.app.remote_manager, remotes)
+        app = ConanApp(self.cache_folder)
+        remotes = app.cache.registry.load_remotes()
+        search = Search(app.cache, app.remote_manager, remotes)
         results = []
         remote_references = search.search_remote_recipes(query, remote.name)
         for remote_name, references in remote_references.items():
@@ -171,15 +172,16 @@ class ConanAPIV2(object):
                       }
                     ]
         """
+        app = ConanApp(self.cache_folder)
         # Let's get all the revisions from a remote server
         if remote:
-            results = getattr(self.app.remote_manager, getter_name)(ref, remote=remote)
+            results = getattr(app.remote_manager, getter_name)(ref, remote=remote)
         else:
             # Let's get the revisions from the local cache
-            revs = getattr(self.app.cache, getter_name)(ref)
+            revs = getattr(app.cache, getter_name)(ref)
             results = []
             for revision in revs:
-                timestamp = self.app.cache.get_timestamp(revision)
+                timestamp = app.cache.get_timestamp(revision)
                 result = {
                     "revision": revision.revision,
                     "time": timestamp
@@ -247,17 +249,18 @@ class ConanAPIV2(object):
                     }
                   }
         """
+        app = ConanApp(self.cache_folder)
         if remote:
             rrev, _ = reference, None if reference.revision else \
-                self.app.remote_manager.get_latest_recipe_revision(reference, remote)
-            packages_props = self.app.remote_manager.search_packages(remote, rrev, None)
+                app.remote_manager.get_latest_recipe_revision(reference, remote)
+            packages_props = app.remote_manager.search_packages(remote, rrev, None)
         else:
-            rrev = reference if reference.revision else self.app.cache.get_latest_rrev(reference)
-            package_ids = self.app.cache.get_package_ids(rrev)
+            rrev = reference if reference.revision else app.cache.get_latest_rrev(reference)
+            package_ids = app.cache.get_package_ids(rrev)
             package_layouts = []
             for pkg in package_ids:
-                latest_prev = self.app.cache.get_latest_prev(pkg)
-                package_layouts.append(self.app.cache.pkg_layout(latest_prev))
+                latest_prev = app.cache.get_latest_prev(pkg)
+                package_layouts.append(app.cache.pkg_layout(latest_prev))
             packages_props = search_packages(package_layouts, None)
 
         return {
