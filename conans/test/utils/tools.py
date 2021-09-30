@@ -30,7 +30,7 @@ from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
-from conans.client.conan_api import Conan
+from conans.client.conan_api import ConanAPIV1
 from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
@@ -477,7 +477,7 @@ class TestClient(object):
         if self.is_conan_cli_v2_command(args):
             return ConanAPIV2(cache_folder=self.cache_folder)
         else:
-            return Conan(cache_folder=self.cache_folder)
+            return ConanAPIV1(cache_folder=self.cache_folder)
 
     def get_conan_command(self, args=None):
         if self.is_conan_cli_v2_command(args):

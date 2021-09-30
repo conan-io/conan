@@ -12,7 +12,9 @@ from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 from conans.cli.output import ConanOutput
-from conans.client.api.conan_api import Conan
+from conans.client.api.conan_api import ConanAPI, ConanAPIV2
+from conans.client.command import Command
+from conans.client.conan_api import ConanAPIV1
 from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
@@ -33,8 +35,8 @@ class Cli(object):
     """
 
     def __init__(self, conan_api):
-        assert isinstance(conan_api, Conan), "Expected 'Conan' type, got '{}'".format(
-            type(conan_api))
+        assert isinstance(conan_api, (ConanAPIV1, ConanAPIV2)), \
+            "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan_api = conan_api
         self._groups = defaultdict(list)
         self._commands = {}
@@ -175,12 +177,10 @@ def main(args):
 
     # Temporary hack to call the legacy command system if the command is not yet implemented in V2
     command_argument = args[0] if args else None
-    if command_argument in CLI_V1_COMMANDS:
-        from conans.client.command import v1_main
-        return v1_main(args)
+    is_v1_command = command_argument in CLI_V1_COMMANDS
 
     try:
-        conan_api = Conan()
+        conan_api = ConanAPIV1() if is_v1_command else ConanAPI()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
@@ -205,6 +205,11 @@ def main(args):
     if sys.platform == 'win32':
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
 
-    cli = Cli(conan_api)
-    exit_error = cli.run(args)
+    if is_v1_command:
+        command = Command(conan_api)
+        exit_error = command.run(args)
+    else:
+        cli = Cli(conan_api)
+        exit_error = cli.run(args)
+
     sys.exit(exit_error)

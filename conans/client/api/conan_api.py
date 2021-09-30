@@ -1,94 +1,28 @@
 import functools
-import logging
 import os
 import sys
 import time
 
 from tqdm import tqdm
 
-import conans
 from conans import __version__ as client_version
+from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.api.helpers.search import Search
 from conans.client.cache.cache import ClientCache
 from conans.client.conf.required_version import check_required_conan_version
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.graph_manager import GraphManager
-from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.python_requires import PyRequireLoader
-from conans.client.graph.range_resolver import RangeResolver
-from conans.client.hook_manager import HookManager
-from conans.client.loader import ConanFileLoader
 from conans.client.migrations import ClientMigrator
-from conans.client.remote_manager import RemoteManager
-from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.rest.conan_requester import ConanRequester
-from conans.client.rest.rest_client import RestApiClientFactory
-from conans.client.runner import ConanRunner
 from conans.client.tools.env import environment_append
-from conans.client.userio import color_enabled, init_colorama
+from conans.client.userio import init_colorama
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_packages
-from conans.tools import set_global_instances
-from conans.util.log import configure_logger
 from conans.util.tracer import log_command
-
-
-class ConanApp(object):
-    def __init__(self, cache_folder):
-
-        self.cache_folder = cache_folder
-        self.cache = ClientCache(self.cache_folder)
-        self.config = self.cache.config
-
-        # Adjust CONAN_LOGGING_LEVEL with the env readed
-        conans.util.log.logger = configure_logger(self.config.logging_level,
-                                                  self.config.logging_file)
-        conans.util.log.logger.debug("INIT: Using config '%s'" % self.cache.conan_conf_path)
-
-        self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks)
-        # Wraps an http_requester to inject proxies, certs, etc
-        self.requester = ConanRequester(self.config)
-        # To handle remote connections
-        artifacts_properties = self.cache.read_artifacts_properties()
-        rest_client_factory = RestApiClientFactory(self.requester, self.config,
-                                                   artifacts_properties=artifacts_properties)
-        # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(rest_client_factory, self.cache)
-        # Handle remote connections
-        self.remote_manager = RemoteManager(self.cache, auth_manager, self.hook_manager)
-
-        # Adjust global tool variables
-        set_global_instances(self.requester, self.config)
-
-        self.runner = ConanRunner(self.config.print_commands_to_output,
-                                  self.config.generate_run_log_file,
-                                  self.config.log_run_to_output)
-
-        self.proxy = ConanProxy(self.cache, self.remote_manager)
-        self.range_resolver = RangeResolver(self.cache, self.remote_manager)
-
-        self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.pyreq_loader, self.requester)
-        self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.remote_manager)
-        self.graph_manager = GraphManager(self.cache, self.loader, self.proxy, self.range_resolver,
-                                          self.binaries_analyzer)
-
-    def load_remotes(self, remote_name=None, update=False, check_updates=False):
-        remotes = self.cache.registry.load_remotes()
-        if remote_name:
-            remotes.select(remote_name)
-        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
-        return remotes
 
 
 def api_method(f):
     """Useful decorator to manage Conan API methods"""
-
-    def _init_stream(stream):
-        init_colorama(stream)
 
     @functools.wraps(f)
     def wrapper(api, *args, **kwargs):
@@ -105,12 +39,13 @@ def api_method(f):
             sys.stdout = devnull
             sys.stderr = devnull
 
-        _init_stream(sys.stderr)
+        init_colorama(sys.stderr)
 
         try:
             log_command(f.__name__, kwargs)
-            api.create_app()
-            with environment_append(api.app.cache.config.env_vars):
+            # FIXME: Not pretty to instance here a ClientCache
+            config = ClientCache(api.cache_folder).config
+            with environment_append(config.env_vars):
                 return f(api, *args, **kwargs)
         finally:
             if old_curdir:
@@ -126,15 +61,11 @@ class ConanAPIV2(object):
 
         self.out = ConanOutput()
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
-        self.app = None  # Api calls will create a new one every call
 
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
         check_required_conan_version(self.cache_folder)
-
-    def create_app(self):
-        self.app = ConanApp(self.cache_folder)
 
     @api_method
     def user_list(self, remote_name=None):
@@ -172,7 +103,8 @@ class ConanAPIV2(object):
 
     @api_method
     def get_active_remotes(self, remote_names):
-        remotes = self.app.cache.registry.load_remotes()
+        app = ConanApp(self.cache_folder)
+        remotes = app.cache.registry.load_remotes()
         all_remotes = remotes.all_values()
 
         if not all_remotes:
@@ -193,8 +125,9 @@ class ConanAPIV2(object):
 
     @api_method
     def search_local_recipes(self, query):
-        remotes = self.app.cache.registry.load_remotes()
-        search = Search(self.app.cache, self.app.remote_manager, remotes)
+        app = ConanApp(self.cache_folder)
+        remotes = app.cache.registry.load_remotes()
+        search = Search(app.cache, app.remote_manager, remotes)
         references = search.search_local_recipes(query)
         results = []
         for reference in references:
@@ -207,8 +140,9 @@ class ConanAPIV2(object):
 
     @api_method
     def search_remote_recipes(self, query, remote):
-        remotes = self.app.cache.registry.load_remotes()
-        search = Search(self.app.cache, self.app.remote_manager, remotes)
+        app = ConanApp(self.cache_folder)
+        remotes = app.cache.registry.load_remotes()
+        search = Search(app.cache, app.remote_manager, remotes)
         results = []
         remote_references = search.search_remote_recipes(query, remote.name)
         for remote_name, references in remote_references.items():
@@ -238,15 +172,16 @@ class ConanAPIV2(object):
                       }
                     ]
         """
+        app = ConanApp(self.cache_folder)
         # Let's get all the revisions from a remote server
         if remote:
-            results = getattr(self.app.remote_manager, getter_name)(ref, remote=remote)
+            results = getattr(app.remote_manager, getter_name)(ref, remote=remote)
         else:
             # Let's get the revisions from the local cache
-            revs = getattr(self.app.cache, getter_name)(ref)
+            revs = getattr(app.cache, getter_name)(ref)
             results = []
             for revision in revs:
-                timestamp = self.app.cache.get_timestamp(revision)
+                timestamp = app.cache.get_timestamp(revision)
                 result = {
                     "revision": revision.revision,
                     "time": timestamp
@@ -314,17 +249,18 @@ class ConanAPIV2(object):
                     }
                   }
         """
+        app = ConanApp(self.cache_folder)
         if remote:
             rrev, _ = reference, None if reference.revision else \
-                self.app.remote_manager.get_latest_recipe_revision(reference, remote)
-            packages_props = self.app.remote_manager.search_packages(remote, rrev, None)
+                app.remote_manager.get_latest_recipe_revision(reference, remote)
+            packages_props = app.remote_manager.search_packages(remote, rrev, None)
         else:
-            rrev = reference if reference.revision else self.app.cache.get_latest_rrev(reference)
-            package_ids = self.app.cache.get_package_ids(rrev)
+            rrev = reference if reference.revision else app.cache.get_latest_rrev(reference)
+            package_ids = app.cache.get_package_ids(rrev)
             package_layouts = []
             for pkg in package_ids:
-                latest_prev = self.app.cache.get_latest_prev(pkg)
-                package_layouts.append(self.app.cache.pkg_layout(latest_prev))
+                latest_prev = app.cache.get_latest_prev(pkg)
+                package_layouts.append(app.cache.pkg_layout(latest_prev))
             packages_props = search_packages(package_layouts, None)
 
         return {
@@ -333,4 +269,4 @@ class ConanAPIV2(object):
         }
 
 
-Conan = ConanAPIV2
+ConanAPI = ConanAPIV2
