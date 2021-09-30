@@ -118,7 +118,7 @@ def remove_buggy_cacert(cache, out):
     Needed migration because otherwise the cacert is kept in the cache even upgrading conan"""
     cacert_path = os.path.join(cache.cache_folder, CACERT_FILE)
     if os.path.exists(cacert_path):
-        out.info("Removing the 'cacert.pem' file to include the new lets encrypt root authority...")
+        out.info("Removing the 'cacert.pem' file...")
         os.unlink(cacert_path)
 
 
