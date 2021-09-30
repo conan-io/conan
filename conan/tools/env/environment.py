@@ -428,7 +428,7 @@ class ProfileEnvironment:
 
 def create_env_script(conanfile, content, filename, group):
     """
-    Create a simple script executing a command and register it.
+    Create a file with any content which will be registered as a new script for the defined "group".
     """
     path = os.path.join(conanfile.generators_folder, filename)
     save(path, content)
