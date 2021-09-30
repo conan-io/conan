@@ -83,7 +83,7 @@ def client():
 
 def test_complete(client):
     conanfile = textwrap.dedent("""
-        import platform
+        import os
         from conans import ConanFile
 
         class Pkg(ConanFile):
@@ -95,35 +95,33 @@ def test_complete(client):
                 self.build_requires("mygtest/1.0", force_host_context=True)
 
             def build(self):
-                mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
-                self.run(mybuild_cmd, env="conanbuildenv")
-                mytest_cmd = "mygtest.bat" if platform.system() == "Windows" else "mygtest.sh"
-                self.run(mytest_cmd, env="conanrunenv")
+                self.run("mycmake.bat", env="conanbuildenv")
+                assert os.path.exists(os.path.join(self.generators_folder, "conanrunenv.sh"))
        """)
 
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
-    ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv.{}".format(ext), "mycmake.{}".format(ext),
-                                   cwd=client.current_folder)
-    client.run_command(cmd)
-    assert "MYCMAKE=Windows!!" in client.out
-    assert "MYOPENSSL=Windows!!" in client.out
+    if platform.system() == "Windows":
+        cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycmake.bat",
+                                       cwd=client.current_folder)
+        client.run_command(cmd)
+        assert "MYCMAKE=Windows!!" in client.out
+        assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command(ConanFileMock(), "conanrunenv.{}".format(ext),
-                                   "mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
-                                                                                  sep=os.sep),
-                                   cwd=client.current_folder)
-    client.run_command(cmd)
-    assert "MYGTEST=Linux!!" in client.out
-    assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
+    if platform.system() != "Windows":
+        cmd = environment_wrap_command(ConanFileMock(), "conanrunenv",
+                                       "mygtest.sh && .{}myrunner.sh".format(os.sep),
+                                       cwd=client.current_folder)
+        client.run_command(cmd)
+        assert "MYGTEST=Linux!!" in client.out
+        assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
 
-    client.run("build .")
-    assert "MYCMAKE=Windows!!" in client.out
-    assert "MYOPENSSL=Windows!!" in client.out
-    assert "MYGTEST=Linux!!" in client.out
+    if platform.system() == "Windows":
+        client.run("build .")
+        assert "MYCMAKE=Windows!!" in client.out
+        assert "MYOPENSSL=Windows!!" in client.out
 
 
 def test_profile_included_multiple():
