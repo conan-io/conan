@@ -22,7 +22,6 @@ import platform
 import textwrap
 
 from conan.tools.env.environment import create_env_script
-from conans.client.tools.win import is_win64, _system_registry_key
 from conans.errors import ConanException
 
 
