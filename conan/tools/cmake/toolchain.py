@@ -10,7 +10,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration, get_file_name
 from conan.tools.files import save_toolchain_args
-from conan.tools.intel import IntelOneAPI
+from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
 from conans.errors import ConanException
@@ -532,7 +532,7 @@ class GenericSystemBlock(Block):
                     "%s.0" % compiler_version
                 return "Intel C++ Compiler " + compiler_version
         elif compiler == "intel-cc":
-            return IntelOneAPI(self._conanfile).ms_toolset
+            return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
             compiler_version = str(settings.compiler.version)
             version_components = compiler_version.split(".")
@@ -771,7 +771,7 @@ class CMakeToolchain(object):
             save(self.filename, self.content)
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
-            IntelOneAPI(self._conanfile).generate()
+            IntelCC(self._conanfile).generate()
         # Generators like Ninja or NMake requires an active vcvars
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()

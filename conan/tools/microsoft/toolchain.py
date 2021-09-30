@@ -3,7 +3,7 @@ import textwrap
 from xml.dom import minidom
 
 from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools.intel import IntelOneAPI
+from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import VCVars
 from conans.errors import ConanException
 from conans.util.files import save, load
@@ -59,7 +59,7 @@ class MSBuildToolchain(object):
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
-            IntelOneAPI(self._conanfile).generate()
+            IntelCC(self._conanfile).generate()
         else:
             VCVars(self._conanfile).generate()
 
@@ -80,7 +80,7 @@ class MSBuildToolchain(object):
                 "%s.0" % compiler_version
             return "Intel C++ Compiler " + compiler_version
         if compiler == "intel-cc":
-            return IntelOneAPI(conanfile).ms_toolset
+            return IntelCC(conanfile).ms_toolset
         if compiler == "Visual Studio":
             toolset = settings.get_safe("compiler.toolset")
             if not toolset:

@@ -2,11 +2,10 @@ import os
 import textwrap
 
 import pytest
-from mock import patch, Mock
+from mock import patch
 
 from conan.tools._compilers import architecture_flag, cppstd_flag
-from conan.tools.intel import IntelOneAPI
-from conans.client.tools import environment_append
+from conan.tools.intel import IntelCC
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.test.utils.mocks import ConanFileMock, MockSettings
@@ -67,7 +66,7 @@ def test_macos_not_supported_for_new_compilers(mode):
         "os": "Darwin"
     })
     with pytest.raises(ConanException) as excinfo:
-        IntelOneAPI(conanfile)
+        IntelCC(conanfile)
     assert "macOS* is not supported for the icx/icpx or dpcpp compilers." in str(excinfo.value)
 
 
@@ -80,7 +79,7 @@ def test_error_if_detected_intel_legacy_version(os_):
         "os": os_
     })
     with pytest.raises(ConanException) as excinfo:
-        IntelOneAPI(conanfile)
+        IntelCC(conanfile)
     assert "You have to use 'intel' compiler which is meant for legacy" in str(excinfo.value)
 
 
@@ -93,7 +92,7 @@ def test_classic_compiler_supports_every_os(os_):
         "os": os_,
         "arch": "x86_64"
     })
-    assert IntelOneAPI(conanfile).arch == "x86_64"
+    assert IntelCC(conanfile).arch == "x86_64"
 
 
 @pytest.mark.parametrize("mode,expected", [
@@ -108,7 +107,7 @@ def test_check_ms_toolsets(mode, expected):
         "compiler.mode": mode,
         "os": "Windows"
     })
-    assert IntelOneAPI(conanfile).ms_toolset == expected
+    assert IntelCC(conanfile).ms_toolset == expected
 
 
 def test_installation_path_in_conf():
@@ -123,14 +122,14 @@ def test_installation_path_in_conf():
     conanfile.conf.loads(textwrap.dedent("""\
         tools.intel:installation_path=%s
     """ % fake_path))
-    assert IntelOneAPI(conanfile).installation_path == fake_path
+    assert IntelCC(conanfile).installation_path == fake_path
 
 
 @pytest.mark.parametrize("os_,call_command,setvars_file", [
     ("Windows", "call", "setvars.bat"),
     ("Linux", ".", "setvars.sh")
 ])
-@patch("conan.tools.intel.inteloneapi.platform.system")
+@patch("conan.tools.intel.intel_cc.platform.system")
 def test_setvars_command_with_custom_arguments(platform_system, os_, call_command, setvars_file):
     platform_system.return_value = os_
     conanfile = ConanFileMock()
@@ -147,4 +146,4 @@ def test_setvars_command_with_custom_arguments(platform_system, os_, call_comman
         tools.intel:setvars_args=%s
     """ % (fake_path, args)))
     expected = '%s "%s" %s' % (call_command, os.path.join(fake_path, setvars_file), args)
-    assert IntelOneAPI(conanfile).command == expected
+    assert IntelCC(conanfile).command == expected

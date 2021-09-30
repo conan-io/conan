@@ -1,1 +1,1 @@
-from conan.tools.intel.inteloneapi import IntelOneAPI
+from conan.tools.intel.intel_cc import IntelCC

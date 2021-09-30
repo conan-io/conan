@@ -34,7 +34,8 @@ def _is_using_intel_oneapi(compiler_version):
     return int(compiler_version.split(".")[0]) >= 2021
 
 
-def _get_inteloneapi_installation_path():
+def _get_intel_cc_installation_path():
+    """Get the Intel oneAPI installation root path from the system"""
     system = platform.system()
     # Let's try the default dirs
     if system == "Windows":
@@ -63,8 +64,8 @@ def _get_inteloneapi_installation_path():
     return installation_path
 
 
-class IntelOneAPI:
-    """Intel oneAPI DPC++/C++/Classic Compilers"""
+class IntelCC:
+    """Class that manages Intel oneAPI DPC++/C++/Classic Compilers vars generation"""
 
     filename = "conanintelsetvars"
 
@@ -92,6 +93,7 @@ class IntelOneAPI:
 
     @property
     def ms_toolset(self):
+        """Get Microsoft Visual Studio Toolset depending on the mode selected"""
         if self._mode == "classic":
             # TODO: Get automatically the classic compiler version
             return "Intel C++ Compiler 19.2"
@@ -101,6 +103,7 @@ class IntelOneAPI:
             return "Intel(R) oneAPI DPC++ Compiler"
 
     def generate(self, group="build"):
+        """Generate the Conan Intel file to be loaded in build environment by default"""
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\
                 @echo off
@@ -114,8 +117,9 @@ class IntelOneAPI:
 
     @property
     def installation_path(self):
+        """Get the Intel oneAPI installation root path"""
         installation_path = self._conanfile.conf["tools.intel:installation_path"] or \
-                            _get_inteloneapi_installation_path()
+                            _get_intel_cc_installation_path()
         self._out.info("Got Intel oneAPI installation folder: %s" % installation_path)
         return installation_path
 
