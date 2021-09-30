@@ -34,36 +34,6 @@ def _is_using_intel_oneapi(compiler_version):
     return int(compiler_version.split(".")[0]) >= 2021
 
 
-def _get_intel_cc_installation_path():
-    """Get the Intel oneAPI installation root path from the system"""
-    system = platform.system()
-    # Let's try the default dirs
-    if system == "Windows":
-        if is_win64():
-            base = r"SOFTWARE\WOW6432Node"
-        else:
-            base = r"SOFTWARE"
-        path = r"{base}\Intel\Products\IntelOneAPI".format(base=base)
-        from six.moves import winreg  # @UnresolvedImport
-        installation_path = _system_registry_key(winreg.HKEY_LOCAL_MACHINE, path,
-                                                 "ProductDIr")
-        if not installation_path:
-            raise ConanException("unable to find Intel oneAPI folder "
-                                 "installation from Windows registry: %s" % path)
-    elif system in ("Linux", "Darwin"):
-        # If it was installed as root
-        installation_path = os.path.join(os.sep, "opt", "intel", "oneapi")
-        if not os.path.exists(installation_path):
-            # Try if it was installed as a normal user
-            installation_path = os.path.join(os.path.expanduser("~"), "intel", "oneapi")
-        if not os.path.exists(installation_path):
-            raise ConanException("Don't know how to find Intel oneAPI folder on %s" % system)
-    else:
-        raise ConanException("Your system is not supported by Intel oneAPI compilers.")
-
-    return installation_path
-
-
 class IntelCC:
     """Class that manages Intel oneAPI DPC++/C++/Classic Compilers vars generation"""
 
@@ -118,8 +88,11 @@ class IntelCC:
     @property
     def installation_path(self):
         """Get the Intel oneAPI installation root path"""
-        installation_path = self._conanfile.conf["tools.intel:installation_path"] or \
-                            _get_intel_cc_installation_path()
+        installation_path = self._conanfile.conf["tools.intel:installation_path"]
+        if not installation_path:
+            raise ConanException("Don't know how to find the Intel oneAPI folder in your system. "
+                                 "Please, provide a path through the [conf] section and the "
+                                 "tools.intel:installation_path variable")
         self._out.info("Got Intel oneAPI installation folder: %s" % installation_path)
         return installation_path
 
