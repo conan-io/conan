@@ -4,9 +4,7 @@
 import mock
 import unittest
 
-from conans.client.tools import OSInfo, environment_append, CYGWIN, MSYS2, MSYS, WSL, \
-    remove_from_path
-from conans.errors import ConanException
+from conans.client.tools import OSInfo, environment_append
 
 
 class OSInfoTest(unittest.TestCase):
@@ -28,17 +26,15 @@ class OSInfoTest(unittest.TestCase):
         self._uname = None
         self._version = None
         with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
-            with remove_from_path("uname"):
-                with remove_from_path("bash"):
-                    with environment_append({'CONAN_BASH_PATH': None}):
-                        self.assertTrue(OSInfo().is_windows)
-                        self.assertFalse(OSInfo().is_cygwin)
-                        self.assertFalse(OSInfo().is_msys)
-                        self.assertFalse(OSInfo().is_linux)
-                        self.assertFalse(OSInfo().is_freebsd)
-                        self.assertFalse(OSInfo().is_macos)
-                        self.assertFalse(OSInfo().is_solaris)
-                        self.assertFalse(OSInfo().is_aix)
+            with environment_append({'CONAN_BASH_PATH': None}):
+                self.assertTrue(OSInfo().is_windows)
+                self.assertFalse(OSInfo().is_cygwin)
+                self.assertFalse(OSInfo().is_msys)
+                self.assertFalse(OSInfo().is_linux)
+                self.assertFalse(OSInfo().is_freebsd)
+                self.assertFalse(OSInfo().is_macos)
+                self.assertFalse(OSInfo().is_solaris)
+                self.assertFalse(OSInfo().is_aix)
 
     def test_cygwin(self):
         self._uname = 'CYGWIN_NT-10.0'
@@ -150,8 +146,6 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_aix)
 
     def test_wsl(self):
-        import builtins
-
         with mock.patch("platform.system", mock.MagicMock(return_value='Linux')):
             with mock.patch.object(OSInfo, '_get_linux_distro_info'):
                 self.assertFalse(OSInfo().is_windows)

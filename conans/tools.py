@@ -22,7 +22,6 @@ from conans.client.tools.scm import *  # pylint: disable=unused-import
 from conans.client.tools.settings import *  # pylint: disable=unused-import
 from conans.client.tools.intel import *  # pylint: disable=unused-import
 from conans.client.tools.apple import *
-from conans.client.tools.android import *
 # Tools form conans.util
 from conans.util.env_reader import get_env
 from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \
@@ -181,27 +180,12 @@ vs_installation_path = tools_win.vs_installation_path
 vswhere = tools_win.vswhere
 vs_comntools = tools_win.vs_comntools
 find_windows_10_sdk = tools_win.find_windows_10_sdk
-escape_windows_cmd = tools_win.escape_windows_cmd
 MSYS2 = tools_win.MSYS2
 MSYS = tools_win.MSYS
 CYGWIN = tools_win.CYGWIN
 WSL = tools_win.WSL
 SFU = tools_win.SFU
 msvs_toolset = tools_win.msvs_toolset
-
-
-@contextmanager
-def vcvars(*args, **kwargs):
-    with tools_win.vcvars(*args, **kwargs):
-        yield
-
-
-def vcvars_command(*args, **kwargs):
-    return tools_win.vcvars_command(*args, **kwargs)
-
-
-def vcvars_dict(*args, **kwargs):
-    return tools_win.vcvars_dict(*args, **kwargs)
 
 
 def latest_vs_version_installed(*args, **kwargs):

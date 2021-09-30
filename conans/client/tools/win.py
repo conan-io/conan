@@ -19,27 +19,6 @@ from conans.util.files import mkdir_tmp, save
 from conans.util.runners import check_output_runner
 
 
-def _visual_compiler_cygwin(version):
-    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/"
-                      "CurrentVersion/ProgramFilesDir (x86)"):
-        is_64bits = True
-    else:
-        is_64bits = False
-
-    if is_64bits:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
-    else:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
-
-    if not os.path.isfile("/proc/registry/" + key_name.replace('\\', '/') + "/" + version):
-        return None
-
-    installed_version = Version(version).major(fill=False)
-    compiler = "Visual Studio"
-    ConanOutput().success("CYGWIN: Found %s %s" % (compiler, installed_version))
-    return compiler, installed_version
-
-
 def _system_registry_key(key, subkey, query):
     import winreg
     try:
@@ -65,9 +44,6 @@ def is_win64():
 
 def _visual_compiler(version):
     """"version have to be 8.0, or 9.0 or... anything .0"""
-    if platform.system().startswith("CYGWIN"):
-        return _visual_compiler_cygwin(version)
-
     if Version(version) >= "15":
         vs_path = os.getenv('vs%s0comntools' % version)
         path = vs_path or vs_installation_path(version)
@@ -88,7 +64,7 @@ def _visual_compiler(version):
     if _system_registry_key(winreg.HKEY_LOCAL_MACHINE, key_name, version):
         installed_version = Version(version).major(fill=False)
         compiler = "Visual Studio"
-        output.success("Found %s %s" % (compiler, installed_version))
+        ConanOutput().success("Found %s %s" % (compiler, installed_version))
         return compiler, installed_version
 
     return None
@@ -502,27 +478,6 @@ def vcvars_dict(conanfile=None, arch=None, compiler_version=None, force=False,
             new_env[path_key] = ";".join(path)
 
     return new_env
-
-
-@contextmanager
-def vcvars(*args, **kwargs):
-    if platform.system() == "Windows":
-        new_env = vcvars_dict(*args, **kwargs)
-        with environment_append(new_env):
-            yield
-    else:
-        yield
-
-
-def escape_windows_cmd(command):
-    """ To use in a regular windows cmd.exe
-        1. Adds escapes so the argument can be unpacked by CommandLineToArgvW()
-        2. Adds escapes for cmd.exe so the argument survives cmd.exe's substitutions.
-
-        Useful to escape commands to be executed in a windows bash (msys2, cygwin etc)
-    """
-    quoted_arg = subprocess.list2cmdline([command])
-    return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
 MSYS2 = 'msys2'
