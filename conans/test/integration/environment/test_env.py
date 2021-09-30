@@ -105,14 +105,14 @@ def test_complete(client):
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycmake.{}".format(ext),
+    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv.{}".format(ext), "mycmake.{}".format(ext),
                                    cwd=client.current_folder)
     client.run_command(cmd)
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command(ConanFileMock(), "conanrunenv",
+    cmd = environment_wrap_command(ConanFileMock(), "conanrunenv.{}".format(ext),
                                    "mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
                                                                                   sep=os.sep),
                                    cwd=client.current_folder)

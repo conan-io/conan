@@ -285,7 +285,12 @@ class Environment:
             else:
                 is_windows = False
         else:
-            is_windows = str(self._conanfile.settings.get_safe("os")).startswith("Windows")
+            if self._conanfile.settings.get_safe("os"):
+                is_windows = str(self._conanfile.settings.get_safe("os")).startswith("Windows")
+            elif platform.system() == "Windows" and not self._conanfile.win_bash:
+                is_windows = True
+            else:
+                is_windows = False
 
         if is_windows:
             path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
