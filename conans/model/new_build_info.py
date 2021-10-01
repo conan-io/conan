@@ -34,26 +34,26 @@ class _Component(object):
         self._generator_properties = None
 
         # ###### DIRECTORIES
-        self.includedirs = None  # Ordered list of include paths
-        self.srcdirs = None  # Ordered list of source paths
-        self.libdirs = None  # Directories to find libraries
-        self.resdirs = None  # Directories to find resources, data, etc
-        self.bindirs = None  # Directories to find executables and shared libs
-        self.builddirs = None
-        self.frameworkdirs = None
+        self.includedirs = []  # Ordered list of include paths
+        self.srcdirs = []  # Ordered list of source paths
+        self.libdirs = []  # Directories to find libraries
+        self.resdirs = []  # Directories to find resources, data, etc
+        self.bindirs = []  # Directories to find executables and shared libs
+        self.builddirs = []
+        self.frameworkdirs = []
 
         # ##### FIELDS
-        self.system_libs = None  # Ordered list of system libraries
-        self.frameworks = None  # Macos .framework
-        self.libs = None  # The libs to link against
-        self.defines = None  # preprocessor definitions
-        self.cflags = None  # pure C flags
-        self.cxxflags = None  # C++ compilation flags
-        self.sharedlinkflags = None  # linker flags
-        self.exelinkflags = None  # linker flags
+        self.system_libs = []  # Ordered list of system libraries
+        self.frameworks = []  # Macos .framework
+        self.libs = []  # The libs to link against
+        self.defines = []  # preprocessor definitions
+        self.cflags = []  # pure C flags
+        self.cxxflags = []  # C++ compilation flags
+        self.sharedlinkflags = []  # linker flags
+        self.exelinkflags = []  # linker flags
 
-        self.sysroot = None
-        self.requires = None
+        self.sysroot = ""
+        self.requires = {}
 
     @property
     def required_component_names(self):
@@ -90,16 +90,17 @@ class _Component(object):
 
 class CppInfo(object):
 
-    def __init__(self, set_defaults=False):
+    def __init__(self, set_defaults=True):
         self.components = DefaultOrderedDict(lambda: _Component())
         # Main package is a component with None key
         self.components[None] = _Component()
-        self.includedirs = ["include"]
-        self.libdirs = ["lib"]
-        self.resdirs = ["res"]
-        self.bindirs = ["bin"]
-        self.builddirs = [""]
-        self.frameworkdirs = ["Frameworks"]
+        if set_defaults:
+            self.includedirs = ["include"]
+            self.libdirs = ["lib"]
+            self.resdirs = ["res"]
+            self.bindirs = ["bin"]
+            self.builddirs = [""]
+            self.frameworkdirs = ["Frameworks"]
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
@@ -125,7 +126,7 @@ class CppInfo(object):
 
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
             other_values = getattr(other, varname)
-            if other_values is not None:
+            if other_values:
                 if not overwrite:
                     current_values = self.components[None].get_init(varname, [])
                     merge_list(other_values, current_values)
@@ -149,7 +150,7 @@ class CppInfo(object):
                 continue
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 other_values = getattr(c, varname)
-                if other_values is not None:
+                if other_values:
                     if not overwrite:
                         current_values = self.components[cname].get_init(varname, [])
                         merge_list(other_values, current_values)
@@ -251,17 +252,3 @@ class CppInfo(object):
                            "Var: '{}' "
                            "Value: '{}'".format(cname, n, getattr(c, n)))
         return "\n".join(ret)
-
-    def clear_none(self):
-        """A field with None meaning is 'not declared' but for consumers, that is irrelevant, an
-        empty list is easier to handle and makes perfect sense."""
-        for c in self.components.values():
-            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                if getattr(c, varname) is None:
-                    setattr(c, varname, [])
-            if c.requires is None:
-                c.requires = []
-        if self.sysroot is None:
-            self.sysroot = ""
-        if self._generator_properties is None:
-            self._generator_properties = {}

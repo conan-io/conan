@@ -528,28 +528,12 @@ class BinaryInstaller(object):
 
         conanfile.user_info = UserInfo()
 
-        # Once the node is build, execute package info, so it has access to the
-        # package folder and artifacts
-
         with tools.chdir(package_folder):
             with conanfile_exception_formatter(str(conanfile), "package_info"):
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                            reference=ref)
-                if hasattr(conanfile, "layout"):
-                    if not is_editable:
-                        package_cppinfo = conanfile.cpp.package.copy()
-                        package_cppinfo.set_relative_base_folder(conanfile.folders.package)
-                        conanfile.cpp_info = package_cppinfo
-                    else:
-                        conanfile.cpp_info = conanfile.cpp.package.copy()
-                        conanfile.cpp_info.clear()
-
-                conanfile.cpp_info.clear_none()
 
                 conanfile.package_info()
-
-                # FIXME?: for components that were defined
-                conanfile.cpp_info.clear_none()
 
                 if hasattr(conanfile, "layout") and is_editable:
                     # Adjust the folders of the layout to consolidate the rootfolder of the
@@ -566,7 +550,7 @@ class BinaryInstaller(object):
                     source_cppinfo = conanfile.cpp.source.copy()
                     source_cppinfo.set_relative_base_folder(conanfile.folders.source)
 
-                    full_editable_cppinfo = CppInfo()
+                    full_editable_cppinfo = CppInfo(set_defaults=False)
                     full_editable_cppinfo.merge(source_cppinfo)
                     full_editable_cppinfo.merge(build_cppinfo)
                     # In editables if we defined anything in the cpp infos we want to discard

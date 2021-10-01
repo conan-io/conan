@@ -27,8 +27,8 @@ class Patterns(object):
 class Infos(object):
 
     def __init__(self):
-        self.source = CppInfo()
-        self.build = CppInfo()
+        self.source = CppInfo(set_defaults=False)
+        self.build = CppInfo(set_defaults=False)
         self.package = CppInfo()
 
 
