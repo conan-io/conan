@@ -802,7 +802,8 @@ class ConanAPIV1(object):
             conanfile.folders.set_base_generators(dir_path)
             conanfile.folders.set_base_build(dir_path)
             conanfile.folders.set_base_source(dir_path)
-            conanfile.folders.set_base_package(dir_path)
+            # FIXME: this is bad, but conanfile.folders.package=xxx is broken atm, cant be used
+            conanfile.folders.set_base_package(os.path.join(dir_path, "package"))
             conanfile.folders.set_base_install(install_folder)
         else:
             conanfile.folders.set_base_build(build_folder)
