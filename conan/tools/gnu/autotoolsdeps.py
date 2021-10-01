@@ -1,7 +1,7 @@
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.model.new_build_info import CppInfo
+from conans.model.build_info import CppInfo
 
 
 class AutotoolsDeps:

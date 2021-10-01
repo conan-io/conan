@@ -21,7 +21,7 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
 from conans.model.conan_file import ConanFile
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.new_build_info import CppInfo
+from conans.model.build_info import CppInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME

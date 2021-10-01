@@ -1,4 +1,4 @@
-from conans.model.new_build_info import CppInfo
+from conans.model.build_info import CppInfo
 
 
 def test_set_get_properties():

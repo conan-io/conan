@@ -1,6 +1,6 @@
 import os
 
-from conans.model.new_build_info import CppInfo
+from conans.model.build_info import CppInfo
 
 
 class _PatternEntry(object):

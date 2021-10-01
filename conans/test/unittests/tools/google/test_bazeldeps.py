@@ -7,7 +7,7 @@ from conan.tools.google import BazelDeps
 from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import Requirement, ConanFileDependencies
-from conans.model.new_build_info import CppInfo
+from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
 
 
