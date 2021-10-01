@@ -23,7 +23,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None,
                  is_build_require=False, add_txt_generator=True, require_overrides=None,
-                 cwd=None):
+                 conanfile_path=None, test=None):
 
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
@@ -95,14 +95,14 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
                                      interactive=manifest_interactive)
         manifest_manager.print_log()
 
-    if hasattr(conanfile, "layout"):
-        conanfile.folders.set_base_install(base_folder)
-        conanfile.folders.set_base_imports(base_folder)
-        conanfile.folders.set_base_generators(base_folder)
+    if hasattr(conanfile, "layout") and not test:
+        conanfile.folders.set_base_install(conanfile_path)
+        conanfile.folders.set_base_imports(conanfile_path)
+        conanfile.folders.set_base_generators(conanfile_path)
     else:
         conanfile.folders.set_base_install(install_folder)
         conanfile.folders.set_base_imports(install_folder)
-        conanfile.folders.set_base_generators(cwd)
+        conanfile.folders.set_base_generators(base_folder)
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
 

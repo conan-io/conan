@@ -56,7 +56,7 @@ def cmd_build(app, conanfile_path, base_path, source_folder, build_folder, packa
             conan_file.folders.set_base_install(install_folder)
 
         mkdir(conan_file.build_folder)
-        os.chdir(conan_file.build_folder)  # Only change to build_folder if not layout defined
+        os.chdir(conan_file.build_folder)
 
         run_build_method(conan_file, app.hook_manager, conanfile_path=conanfile_path)
         if test:
