@@ -6,6 +6,7 @@ from io import StringIO
 from jinja2 import Template
 from conans import tools
 from conans.errors import ConanException
+from conan.tools.env import VirtualBuildEnv
 from conans.util.files import save
 
 _profile_name = 'conan'
@@ -130,9 +131,9 @@ def _settings_dir(conanfile):
     return '%s/conan_qbs_toolchain_settings_dir' % conanfile.install_folder
 
 
-def _setup_toolchains(conanfile):
-    if tools.get_env('CC'):
-        compiler = tools.get_env('CC')
+def _setup_toolchains(conanfile, build_env):
+    if build_env.get('CC'):
+        compiler = build_env.get('CC')
     else:
         compiler = _default_compiler_name(conanfile)
 
@@ -181,22 +182,22 @@ class LinkerFlagsParser(object):
                 self.driver_linker_flags.append(item)
 
 
-def _flags_from_env():
+def _flags_from_env(build_env):
     flags_from_env = {}
-    if tools.get_env('ASFLAGS'):
+    if build_env.get('ASFLAGS'):
         flags_from_env['cpp.assemblerFlags'] = '%s' % (
-            _env_var_to_list(tools.get_env('ASFLAGS')))
-    if tools.get_env('CFLAGS'):
+            _env_var_to_list(build_env.get('ASFLAGS')))
+    if build_env.get('CFLAGS'):
         flags_from_env['cpp.cFlags'] = '%s' % (
-            _env_var_to_list(tools.get_env('CFLAGS')))
-    if tools.get_env('CPPFLAGS'):
+            _env_var_to_list(build_env.get('CFLAGS')))
+    if build_env.get('CPPFLAGS'):
         flags_from_env['cpp.cppFlags'] = '%s' % (
-            _env_var_to_list(tools.get_env('CPPFLAGS')))
-    if tools.get_env('CXXFLAGS'):
+            _env_var_to_list(build_env.get('CPPFLAGS')))
+    if build_env.get('CXXFLAGS'):
         flags_from_env['cpp.cxxFlags'] = '%s' % (
-            _env_var_to_list(tools.get_env('CXXFLAGS')))
-    if tools.get_env('LDFLAGS'):
-        parser = LinkerFlagsParser(_env_var_to_list(tools.get_env('LDFLAGS')))
+            _env_var_to_list(build_env.get('CXXFLAGS')))
+    if build_env.get('LDFLAGS'):
+        parser = LinkerFlagsParser(_env_var_to_list(build_env.get('LDFLAGS')))
         flags_from_env['cpp.linkerFlags'] = str(parser.linker_flags)
         flags_from_env['cpp.driverLinkerFlags'] = str(
             parser.driver_linker_flags)
@@ -262,11 +263,11 @@ class QbsProfile(object):
     def __init__(self, conanfile):
         _check_for_compiler(conanfile)
         self._conanfile = conanfile
-        _setup_toolchains(conanfile)
+        build_env = VirtualBuildEnv(conanfile).environment()
+        _setup_toolchains(conanfile, build_env)
         self._profile_values_from_setup = (
             _read_qbs_toolchain_from_config(conanfile))
-        self._profile_values_from_env = _flags_from_env()
-        tools.rmdir(_settings_dir(conanfile))
+        self._profile_values_from_env = _flags_from_env(build_env)
 
         self._architecture = _architecture.get(
             conanfile.settings.get_safe('arch'))
@@ -280,7 +281,7 @@ class QbsProfile(object):
             conanfile.settings.get_safe('os'))
         self._runtime_library = _runtime_library.get(
             conanfile.settings.get_safe('compiler.runtime'))
-        self._sysroot = tools.get_env('SYSROOT')
+        self._sysroot = build_env.get('SYSROOT')
         self._position_independent_code = _bool(
             conanfile.options.get_safe('fPIC'))
 
