@@ -154,22 +154,3 @@ def test_notduplicate_requires_py():
     client.save(files)
     client.run("export .")
     assert "Hello/0.1: Exported" in client.out
-
-
-@pytest.mark.parametrize("method", ["layout", "package_info"])
-def test_manipulate_undefined_component_attribute(method):
-    # components are not initialized with default values, so if you try to
-    # append, extend... to a component without assigning a value before it will fail
-    dep = textwrap.dedent("""
-        import os
-        from conans import ConanFile
-        class Dep(ConanFile):
-            def {}(self):
-                self.cpp_info.components["dep1"].libs.append("libdep1")
-            """.format(method))
-    client = TestClient()
-    client.save({"conanfile.py": dep})
-    client.run("create . dep/1.0@", assert_error=True)
-    assert "ERROR: dep/1.0: 'NoneType' object has no attribute 'append'. No default values are " \
-           "set for components. You are probably trying to manipulate a component attribute in " \
-           "the '{}' method without defining it previously".format(method) in client.out
