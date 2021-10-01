@@ -8,7 +8,7 @@ from jinja2 import Template
 from conans import tools
 from conans.errors import ConanException
 from conan.tools.env import VirtualBuildEnv
-from conan.tools.microsoft import MSBuildToolchain
+from conan.tools.microsoft import MSBuildToolchain, VCVars
 from conans.util.files import save
 
 _profile_name = 'conan'
@@ -139,15 +139,15 @@ def _setup_toolchains(conanfile, build_env):
     else:
         compiler = _default_compiler_name(conanfile)
 
-    env_context = tools.no_op()
+    env = None
     if platform.system() == 'Windows':
         if compiler in ['cl', 'clang-cl']:
-            env_context = tools.vcvars(conanfile)
+            VCVars(conanfile).generate(group=None)
+            env = "conanvcvars"
 
-    with env_context:
-        cmd = 'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
-              _settings_dir(conanfile), compiler, _profile_name)
-        conanfile.run(cmd)
+    cmd = 'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
+        _settings_dir(conanfile), compiler, _profile_name)
+    conanfile.run(cmd, env=env)
 
 
 def _read_qbs_toolchain_from_config(conanfile):
