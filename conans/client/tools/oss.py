@@ -57,14 +57,6 @@ def cpu_count(output=None):
     return 1  # Safe guess
 
 
-def detected_os():
-    if OSInfo().is_macos:
-        return "Macos"
-    if OSInfo().is_windows:
-        return "Windows"
-    return platform.system()
-
-
 def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
     machine = platform.machine()
