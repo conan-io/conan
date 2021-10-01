@@ -271,7 +271,7 @@ class MyPkg(ConanFile):
                                     [general]
                                     temp_test_folder=True
                                 """)
-        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("create . lasote/stable")
         self.assertFalse(os.path.exists(default_build_dir))
 
