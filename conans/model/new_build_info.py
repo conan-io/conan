@@ -90,7 +90,7 @@ class _Component(object):
 
 class CppInfo(object):
 
-    def __init__(self, set_defaults=True):
+    def __init__(self, set_defaults=False):
         self.components = DefaultOrderedDict(lambda: _Component())
         # Main package is a component with None key
         self.components[None] = _Component()
@@ -133,7 +133,7 @@ class CppInfo(object):
                 else:
                     setattr(self, varname, other_values)
 
-        if self.sysroot is None and other.sysroot:
+        if self.sysroot is "" and other.sysroot:
             self.sysroot = other.sysroot
 
         if other.requires:

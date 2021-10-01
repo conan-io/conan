@@ -550,7 +550,7 @@ class BinaryInstaller(object):
                     source_cppinfo = conanfile.cpp.source.copy()
                     source_cppinfo.set_relative_base_folder(conanfile.folders.source)
 
-                    full_editable_cppinfo = CppInfo(set_defaults=False)
+                    full_editable_cppinfo = CppInfo()
                     full_editable_cppinfo.merge(source_cppinfo)
                     full_editable_cppinfo.merge(build_cppinfo)
                     # In editables if we defined anything in the cpp infos we want to discard
