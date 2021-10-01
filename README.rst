@@ -47,7 +47,7 @@ install and start using Conan. TL;DR:
    $ pip install conan
 
 
-Install a development version
+Install development version
 -----------------------------
 
 You can run **Conan** client and server in Windows, MacOS, and Linux.
@@ -68,7 +68,7 @@ You can run **Conan** client and server in Windows, MacOS, and Linux.
 
       $ cd conan-io && sudo pip install -e .
 
-  If you are in Windows, using ``sudo`` is not required.
+  If you are a Windows user , using ``sudo`` is not required.
 
 - **You are ready, try to run Conan:**
 
