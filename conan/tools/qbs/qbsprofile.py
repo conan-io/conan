@@ -7,6 +7,7 @@ from jinja2 import Template
 from conans import tools
 from conans.errors import ConanException
 from conan.tools.env import VirtualBuildEnv
+from conan.tools.microsoft import MSBuildToolchain
 from conans.util.files import save
 
 _profile_name = 'conan'
@@ -115,7 +116,7 @@ def _default_compiler_name(conanfile):
         if compiler == 'gcc':
             return 'mingw'
         if compiler == 'Visual Studio':
-            if tools.msvs_toolset(conanfile) == 'ClangCL':
+            if MSBuildToolchain._msvs_toolset(conanfile.settings) == 'ClangCL':
                 return 'clang-cl'
             return 'cl'
         if compiler == 'msvc':
