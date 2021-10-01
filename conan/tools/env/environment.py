@@ -444,6 +444,17 @@ class ProfileEnvironment:
         return result
 
 
+def create_env_script(conanfile, content, filename, group):
+    """
+    Create a file with any content which will be registered as a new script for the defined "group".
+    """
+    path = os.path.join(conanfile.generators_folder, filename)
+    save(path, content)
+
+    if group:
+        register_env_script(conanfile, path, group)
+
+
 def register_env_script(conanfile, env_script_path, group):
     """
     Add the "env_script_path" to the current list of registered scripts for defined "group"
