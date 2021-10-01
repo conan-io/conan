@@ -22,6 +22,8 @@ def cmake_layout(conanfile, generator=None):
         build_type = str(conanfile.settings.build_type).lower()
         conanfile.folders.build = "cmake-build-{}".format(build_type)
         conanfile.folders.generators = os.path.join(conanfile.folders.build, "conan")
+    # If we don't define this as default "conan package" packages in the current folder
+    conanfile.folders.package = "package"
 
     conanfile.cpp.source.includedirs = ["src"]
     if multi:
@@ -41,6 +43,7 @@ def clion_layout(conanfile):
     conanfile.folders.generators = os.path.join(base, "generators")
     conanfile.folders.source = "."
     conanfile.cpp.source.includedirs = ["."]
+    conanfile.folders.package = "package"
 
 
 def vs_layout(conanfile):
@@ -63,6 +66,7 @@ def vs_layout(conanfile):
     conanfile.folders.generators = os.path.join(base, "generators")
     conanfile.folders.source = "."
     conanfile.cpp.source.includedirs = ["."]
+    conanfile.folders.package = "package"
 
 
 class LayoutPackager(object):

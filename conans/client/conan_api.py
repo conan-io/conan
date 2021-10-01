@@ -803,7 +803,7 @@ class ConanAPIV1(object):
             conanfile.folders.set_base_build(dir_path)
             conanfile.folders.set_base_source(dir_path)
             conanfile.folders.set_base_package(dir_path)
-            conanfile.folders.set_base_install(dir_path)
+            conanfile.folders.set_base_install(install_folder)
         else:
             conanfile.folders.set_base_build(build_folder)
             conanfile.folders.set_base_source(source_folder)
