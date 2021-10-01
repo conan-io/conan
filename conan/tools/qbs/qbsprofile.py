@@ -1,4 +1,5 @@
 import shlex
+import shutil
 import platform
 import textwrap
 
@@ -269,6 +270,7 @@ class QbsProfile(object):
         self._profile_values_from_setup = (
             _read_qbs_toolchain_from_config(conanfile))
         self._profile_values_from_env = _flags_from_env(build_env)
+        shutil.rmtree(_settings_dir(conanfile))
 
         self._architecture = _architecture.get(
             conanfile.settings.get_safe('arch'))
