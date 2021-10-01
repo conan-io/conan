@@ -785,7 +785,6 @@ class ConanAPIV1(object):
 
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        conanfile_dir = os.path.dirname(conanfile_path)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
@@ -798,11 +797,18 @@ class ConanAPIV1(object):
         else:
             package_folder = _make_abs_path(package_folder, cwd, default=build_folder)
 
-        conanfile.folders.set_base_build(build_folder)
-        conanfile.folders.set_base_source(source_folder)
-        conanfile.folders.set_base_package(package_folder)
-        conanfile.folders.set_base_install(install_folder)
-        conanfile.folders.set_base_generators(conanfile_dir)
+        if hasattr(conanfile, "layout"):
+            dir_path = os.path.dirname(conanfile_path)
+            conanfile.folders.set_base_generators(dir_path)
+            conanfile.folders.set_base_build(dir_path)
+            conanfile.folders.set_base_source(dir_path)
+            conanfile.folders.set_base_package(dir_path)
+            conanfile.folders.set_base_install(dir_path)
+        else:
+            conanfile.folders.set_base_build(build_folder)
+            conanfile.folders.set_base_source(source_folder)
+            conanfile.folders.set_base_package(package_folder)
+            conanfile.folders.set_base_install(install_folder)
 
         # Use the complete package layout for the local method
         if conanfile.folders.package:

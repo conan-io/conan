@@ -94,10 +94,10 @@ def editable_cmake_exe(generator):
     c.save(pkg_cmake("dep", "0.1", exe=True), path=os.path.join(c.current_folder, "dep"))
 
     def build_dep():
-        c.run("install . -o dep:shared=True")
-        c.run("build .")
-        c.run("install . -s build_type=Debug -o dep:shared=True")
-        c.run("build .")
+        c.run("install . -o dep:shared=True -if=install_release")
+        c.run("build . -if=install_release")
+        c.run("install . -s build_type=Debug -o dep:shared=True -if=install_debug")
+        c.run("build . -if=install_debug")
 
     with c.chdir("dep"):
         c.run("editable add . dep/0.1@")
