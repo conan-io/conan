@@ -10,6 +10,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration, get_file_name
 from conan.tools.files import save_toolchain_args
+from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
 from conans.errors import ConanException
@@ -102,7 +103,7 @@ class VSRuntimeBlock(Block):
         # Parsing existing toolchain file to get existing configured runtimes
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc"):
+        if compiler not in ("Visual Studio", "msvc", "intel-cc"):
             return
 
         config_dict = {}
@@ -122,7 +123,7 @@ class VSRuntimeBlock(Block):
                                        "MTd": "MultiThreadedDebug",
                                        "MD": "MultiThreadedDLL",
                                        "MDd": "MultiThreadedDebugDLL"}[runtime]
-        if compiler == "msvc":
+        if compiler == "msvc" or compiler == "intel-cc":
             runtime_type = settings.get_safe("compiler.runtime_type")
             rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
             if runtime != "static":
@@ -172,7 +173,7 @@ class GLibCXXBlock(Block):
         if compiler == "apple-clang":
             # In apple-clang 2 only values atm are "libc++" and "libstdc++"
             lib = "-stdlib={}".format(libcxx)
-        elif compiler == "clang":
+        elif compiler == "clang" or compiler == "intel-cc":
             if libcxx == "libc++":
                 lib = "-stdlib=libc++"
             elif libcxx == "libstdc++" or libcxx == "libstdc++11":
@@ -530,6 +531,8 @@ class GenericSystemBlock(Block):
                 compiler_version = compiler_version if "." in compiler_version else \
                     "%s.0" % compiler_version
                 return "Intel C++ Compiler " + compiler_version
+        elif compiler == "intel-cc":
+            return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
             compiler_version = str(settings.compiler.version)
             version_components = compiler_version.split(".")
@@ -766,8 +769,11 @@ class CMakeToolchain(object):
         toolchain_file = self._conanfile.conf["tools.cmake.cmaketoolchain:toolchain_file"]
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(self.filename, self.content)
+        # If we're using Intel oneAPI, we need to generate the environment file and run it
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()
         # Generators like Ninja or NMake requires an active vcvars
-        if self.generator is not None and "Visual" not in self.generator:
+        elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
         self._writebuild(toolchain_file)
 

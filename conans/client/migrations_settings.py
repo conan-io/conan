@@ -2404,6 +2404,7 @@ compiler:
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     intel:
         version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
+            update: [None, ANY]
         base:
             gcc:
                 <<: *gcc
@@ -2650,6 +2651,7 @@ compiler:
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     intel:
         version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
+        update: [None, ANY]
         base:
             gcc:
                 <<: *gcc
@@ -2659,6 +2661,14 @@ compiler:
                 <<: *visual_studio
             apple-clang:
                 <<: *apple_clang
+    intel-cc:
+        version: ["2021.1", "2021.2", "2021.3"]
+        update: [None, ANY]
+        mode: ["icx", "classic", "dpcpp"]
+        libcxx: [None, libstdc++, libstdc++11, libc++]
+        cppstd: [None, 98, gnu98, 03, gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+        runtime: [None, static, dynamic]
+        runtime_type: [None, Debug, Release]
     qcc:
         version: ["4.4", "5.4", "8.3"]
         libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
