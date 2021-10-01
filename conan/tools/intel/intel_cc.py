@@ -89,9 +89,9 @@ class IntelCC:
         """Get the Intel oneAPI installation root path"""
         installation_path = self._conanfile.conf["tools.intel:installation_path"]
         if not installation_path:
-            raise ConanException("Don't know how to find the Intel oneAPI folder in your system. "
-                                 "Please, provide a path through the [conf] section and the "
-                                 "tools.intel:installation_path variable")
+            raise ConanException("To use Intel oneAPI, specify a [conf] entry " 
+                                 "'tools.intel:installation_path' containing the path to the "
+                                 "installation folder.")
         self._out.info("Got Intel oneAPI installation folder: %s" % installation_path)
         return installation_path
 
