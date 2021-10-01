@@ -402,21 +402,6 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def config_get(self, item):
-        app = ConanApp(self.cache_folder)
-        if item == "storage.path":
-            result = app.config.storage_path
-        else:
-            result = app.config.get_item(item)
-        ConanOutput().info(result)
-        return result
-
-    @api_method
-    def config_set(self, item, value):
-        app = ConanApp(self.cache_folder)
-        app.config.set_item(item, value)
-
-    @api_method
     def config_rm(self, item):
         app = ConanApp(self.cache_folder)
         app.config.rm_item(item)

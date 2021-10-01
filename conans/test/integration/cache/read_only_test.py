@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 import pytest
@@ -14,7 +15,13 @@ class ReadOnlyTest(unittest.TestCase):
         self.test_server = TestServer()
         self.client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
         self.client.run("--version")
-        self.client.run("config set general.read_only_cache=True")
+        conan_conf = textwrap.dedent("""
+                            [storage]
+                            path = ./data
+                            [general]
+                            read_only_cache=True
+                        """)
+        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
         conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
     exports_sources = "*.h"

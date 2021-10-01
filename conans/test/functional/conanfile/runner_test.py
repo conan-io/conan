@@ -73,10 +73,15 @@ class ConanFileToolsTest(ConanFile):
 '''
         # A runner logging everything
         client = TestClient()
-        client.run("config set log.print_run_commands=True")
-        client.run("config set log.run_to_file=True")
-        client.run("config set log.run_to_output=True")
-
+        conan_conf = textwrap.dedent("""
+                            [storage]
+                            path = ./data
+                            [log]
+                            print_run_commands=True
+                            run_to_file=True
+                            run_to_output=True
+                        """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         self._install_and_build(client, conanfile)
         self.assertIn("--Running---", client.out)
         self.assertIn("> cmake --version", client.out)
@@ -85,9 +90,15 @@ class ConanFileToolsTest(ConanFile):
 
         # A runner logging everything
         client = TestClient()
-        client.run("config set log.print_run_commands=True")
-        client.run("config set log.run_to_file=False")
-        client.run("config set log.run_to_output=True")
+        conan_conf = textwrap.dedent("""
+                            [storage]
+                            path = ./data
+                            [log]
+                            print_run_commands=True
+                            run_to_file=False
+                            run_to_output=True
+                        """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         self._install_and_build(client, conanfile)
         self.assertIn("--Running---", client.out)
@@ -96,9 +107,15 @@ class ConanFileToolsTest(ConanFile):
         self.assertNotIn("Logging command output to file ", client.out)
 
         client = TestClient()
-        client.run("config set log.print_run_commands=False")
-        client.run("config set log.run_to_file=True")
-        client.run("config set log.run_to_output=True")
+        conan_conf = textwrap.dedent("""
+                            [storage]
+                            path = ./data
+                            [log]
+                            print_run_commands=False
+                            run_to_file=True
+                            run_to_output=True
+                        """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         self._install_and_build(client, conanfile)
         self.assertNotIn("--Running---", client.out)
@@ -107,9 +124,15 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Logging command output to file ", client.out)
 
         client = TestClient()
-        client.run("config set log.print_run_commands=False")
-        client.run("config set log.run_to_file=False")
-        client.run("config set log.run_to_output=True")
+        conan_conf = textwrap.dedent("""
+                            [storage]
+                            path = ./data
+                            [log]
+                            print_run_commands=False
+                            run_to_file=False
+                            run_to_output=True
+                        """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         self._install_and_build(client, conanfile)
         self.assertNotIn("--Running---", client.out)
@@ -118,9 +141,15 @@ class ConanFileToolsTest(ConanFile):
         self.assertNotIn("Logging command output to file ", client.out)
 
         client = TestClient()
-        client.run("config set log.run_to_output=False")
-        client.run("config set log.print_run_commands=False")
-        client.run("config set log.run_to_file=False")
+        conan_conf = textwrap.dedent("""
+                            [storage]
+                            path = ./data
+                            [log]
+                            print_run_commands=False
+                            run_to_file=False
+                            run_to_output=False
+                        """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         self._install_and_build(client, conanfile)
         self.assertNotIn("--Running---", client.out)
@@ -129,9 +158,15 @@ class ConanFileToolsTest(ConanFile):
         self.assertNotIn("Logging command output to file ", client.out)
 
         client = TestClient()
-        client.run("config set log.print_run_commands=False")
-        client.run("config set log.run_to_file=True")
-        client.run("config set log.run_to_output=False")
+        conan_conf = textwrap.dedent("""
+                            [storage]
+                            path = ./data
+                            [log]
+                            print_run_commands=False
+                            run_to_file=True
+                            run_to_output=False
+                        """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         self._install_and_build(client, conanfile)
         self.assertNotIn("--Running---", client.out)
         self.assertNotIn("> cmake --version", client.out)

@@ -111,7 +111,13 @@ class TestPackageTest(unittest.TestCase):
         self.assertFalse(os.path.exists(default_build_dir))
 
         # Test if using a temporary test folder can be enabled via the config file.
-        client.run('config set general.temp_test_folder=True')
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    temp_test_folder=True
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("test test_package Hello/0.1@lasote/stable")
         self.assertFalse(os.path.exists(default_build_dir))
 

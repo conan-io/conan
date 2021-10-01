@@ -265,7 +265,13 @@ class MyPkg(ConanFile):
         self.assertFalse(os.path.exists(default_build_dir))
 
         # # Test if using a temporary test folder can be enabled via the config file.
-        client.run('config set general.temp_test_folder=True')
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    temp_test_folder=True
+                                """)
+        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
         client.run("create . lasote/stable")
         self.assertFalse(os.path.exists(default_build_dir))
 

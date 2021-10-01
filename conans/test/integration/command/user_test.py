@@ -1,4 +1,5 @@
 import json
+import textwrap
 import unittest
 from collections import OrderedDict
 
@@ -163,7 +164,13 @@ class ConanLib(ConanFile):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers,  inputs=[])
-        client.run('config set general.non_interactive=True')
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    non_interactive=True
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run('user -p -r default admin', assert_error=True)
         self.assertIn('ERROR: Conan interactive mode disabled', client.out)
         self.assertNotIn("Please enter a password for \"admin\" account:", client.out)

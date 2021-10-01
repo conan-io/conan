@@ -31,8 +31,15 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("upload * --all --confirm -r default")
         cache_folder = temp_folder()
         log_trace_file = os.path.join(temp_folder(), "mylog.txt")
-        client.run('config set storage.download_cache="%s"' % cache_folder)
-        client.run('config set log.trace_file="%s"' % log_trace_file)
+        conan_conf = textwrap.dedent("""
+            [storage]
+            path = ./data
+            download_cache = {}
+            [log]
+            trace_file = {}
+        """.format(cache_folder, log_trace_file))
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         client.run("remove * -f")
         client.run("install mypkg/0.1@user/testing")
         content = load(log_trace_file)
@@ -49,10 +56,15 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("DOWNLOADED_PACKAGE", content)
 
         # removing the config downloads things
-        client.run('config rm storage.download_cache')
+        conan_conf = textwrap.dedent("""
+            [storage]
+            path = ./data
+            [log]
+            trace_file = {}
+            """.format(log_trace_file))
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         os.remove(log_trace_file)
         client.run("remove * -f")
-        client.run('config set log.trace_file="%s"' % log_trace_file)
         client.run("install mypkg/0.1@user/testing")
         content = load(log_trace_file)
 
@@ -60,7 +72,15 @@ class DownloadCacheTest(unittest.TestCase):
 
         # restoring config cache works again
         os.remove(log_trace_file)
-        client.run('config set storage.download_cache="%s"' % cache_folder)
+        conan_conf = textwrap.dedent("""
+            [storage]
+            path = ./data
+            download_cache = {}
+            [log]
+            trace_file = {}
+            """.format(cache_folder, log_trace_file))
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         client.run("remove * -f")
         client.run("install mypkg/0.1@user/testing")
         content = load(log_trace_file)
@@ -70,7 +90,15 @@ class DownloadCacheTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/8578
         client = TestClient(default_server_user=True)
         cache_folder = temp_folder()
-        client.run('config set storage.download_cache="%s"' % cache_folder)
+
+        conan_conf = textwrap.dedent("""
+                    [storage]
+                    path = ./data
+                    download_cache = {}
+                    [log]
+                    """.format(cache_folder))
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
         client.run("create . pkg/0.1@")
         client.run("upload * --all -c -r default")
@@ -104,7 +132,15 @@ class DownloadCacheTest(unittest.TestCase):
 
         client = TestClient()
         cache_folder = temp_folder()
-        client.run('config set storage.download_cache="%s"' % cache_folder)
+
+        conan_conf = textwrap.dedent("""
+                    [storage]
+                    path = ./data
+                    download_cache = {}
+                    [log]
+                    """.format(cache_folder))
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         # badchecksums are not cached
         conanfile = textwrap.dedent("""
            from conans import ConanFile, tools
@@ -157,7 +193,14 @@ class DownloadCacheTest(unittest.TestCase):
         # disabling cache will make it fail
         os.remove(local_path)
         os.remove(local_path2)
-        client.run("config rm storage.download_cache")
+
+        conan_conf = textwrap.dedent("""
+            [storage]
+            path = ./data
+            [log]
+            """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         client.run("source .", assert_error=True)
         self.assertIn("ERROR: conanfile.py: Error in source() method, line 7", client.out)
         self.assertIn("Not found: http://localhost", client.out)
@@ -180,7 +223,15 @@ class DownloadCacheTest(unittest.TestCase):
 
         client2 = TestClient(servers=client.servers)
         cache_folder = temp_folder()
-        client2.run('config set storage.download_cache="%s"' % cache_folder)
+
+        conan_conf = textwrap.dedent("""
+            [storage]
+            path = ./data
+            download_cache = {}
+            [log]
+            """.format(cache_folder))
+        client2.save({"conan.conf": conan_conf}, path=client2.cache.cache_folder)
+
         client2.run("install mypkg/0.1@user/testing")
         self.assertEqual("header", client2.load("header.h"))
 
