@@ -154,7 +154,6 @@ def test_component_name_same_package():
 
     # We adjust the component with the same name as the package on purpose
     cpp_info.components["mypkg"].includedirs = ["includedirs1"]
-    cpp_info.clear_none()
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info

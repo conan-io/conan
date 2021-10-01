@@ -42,7 +42,6 @@ def test_bazeldeps_interface_buildfiles():
     conanfile = ConanFile(None)
 
     cpp_info = CppInfo(set_defaults=True)
-    cpp_info.clear_none()
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info

@@ -53,7 +53,7 @@ class _Component(object):
         self.exelinkflags = []  # linker flags
 
         self.sysroot = ""
-        self.requires = {}
+        self.requires = []
 
     @property
     def required_component_names(self):
