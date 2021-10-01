@@ -412,10 +412,16 @@ def test_environment_scripts_generated_envvars():
     client.run("export require_pkg require_pkg/1.0@")
 
     client.run("install consumer_pkg --build")
-    conanbuildenv = client.load("conanbuildenv.sh")
-    conanrunenv = client.load("conanrunenv.sh")
-    assert "LD_LIBRARY_PATH" in conanbuildenv
-    assert "LD_LIBRARY_PATH" in conanrunenv
+    if platform.system() == "Windows":
+        conanbuildenv = client.load("conanbuildenv.bat")
+        conanrunenv = client.load("conanrunenv.bat")
+        assert "LD_LIBRARY_PATH" not in conanbuildenv
+        assert "LD_LIBRARY_PATH" not in conanrunenv
+    else:
+        conanbuildenv = client.load("conanbuildenv.sh")
+        conanrunenv = client.load("conanrunenv.sh")
+        assert "LD_LIBRARY_PATH" in conanbuildenv
+        assert "LD_LIBRARY_PATH" in conanrunenv
 
     # Build context LINUX - Host context LINUX
     client.run("install consumer_pkg -s:b os=Linux -s:h os=Linux --build")
