@@ -5,9 +5,8 @@ import textwrap
 import unittest
 
 import pytest
-from parameterized import parameterized
 
-from conans.client.tools.apple import XCRun, to_apple_arch
+from conans.client.tools.apple import XCRun
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
@@ -15,7 +14,7 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.tool_meson
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
-class IOSMesonTestCase(unittest.TestCase):
+class M1MesonTestCase(unittest.TestCase):
 
     _conanfile_py = textwrap.dedent("""
     from conans import ConanFile, tools
@@ -54,9 +53,8 @@ class IOSMesonTestCase(unittest.TestCase):
     """)
 
     def settings(self):
-        return [("os", self.os),
-                ("os.version", self.os_version),
-                ("arch", self.arch),
+        return [("os", "Macos"),
+                ("arch", "armv8"),
                 ("compiler", "apple-clang"),
                 ("compiler.version", "12.0"),
                 ("compiler.libcxx", "libc++")]
@@ -70,16 +68,8 @@ class IOSMesonTestCase(unittest.TestCase):
         settings = '\n'.join(["%s = %s" % (s[0], s[1]) for s in self.settings()])
         return template.format(settings=settings)
 
-    @parameterized.expand([('armv8', 'iOS', '10.0', 'iphoneos'),
-                           ('armv7', 'iOS', '10.0', 'iphoneos'),
-                           ('x86', 'iOS', '10.0', 'iphonesimulator'),
-                           ('x86_64', 'iOS', '10.0', 'iphonesimulator')
-                           ])
-    def test_meson_toolchain(self, arch, os_, os_version, sdk):
-        self.xcrun = XCRun(None, sdk)
-        self.arch = arch
-        self.os = os_
-        self.os_version = os_version
+    def test_meson_toolchain(self):
+        self.xcrun = XCRun(None)
 
         hello_h = gen_function_h(name="hello")
         hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
@@ -107,7 +97,7 @@ class IOSMesonTestCase(unittest.TestCase):
         lipo = self.xcrun.find('lipo')
 
         self.t.run_command('"%s" -info "%s"' % (lipo, libhello))
-        self.assertIn("architecture: %s" % to_apple_arch(self.arch), self.t.out)
+        self.assertIn("architecture: arm64", self.t.out)
 
         self.t.run_command('"%s" -info "%s"' % (lipo, demo))
-        self.assertIn("architecture: %s" % to_apple_arch(self.arch), self.t.out)
+        self.assertIn("architecture: arm64", self.t.out)

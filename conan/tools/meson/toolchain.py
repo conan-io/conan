@@ -3,6 +3,7 @@ import textwrap
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.apple.apple import is_apple_os, to_apple_arch, apple_min_version_flag, XCRun
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
 from conans.client.build.cppstd_flags import cppstd_from_settings
@@ -10,7 +11,7 @@ from conan.tools.cross_building import cross_building, get_cross_building_settin
 from conans.util.files import save
 
 
-class MesonToolchain(object):
+class MesonBaseToolchain(object):
     native_filename = "conan_meson_native.ini"
     cross_filename = "conan_meson_cross.ini"
 
@@ -46,7 +47,14 @@ class MesonToolchain(object):
     c_link_args = {{c_link_args}}
     cpp_args = {{cpp_args}} + preprocessor_definitions
     cpp_link_args = {{cpp_link_args}}
+    objc_args = {{objc_args}} + preprocessor_definitions
+    objc_link_args = {{objc_link_args}}
+    objcpp_args = {{objcpp_args}} + preprocessor_definitions
+    objcpp_link_args = {{objcpp_link_args}}
     {% if pkg_config_path %}pkg_config_path = {{pkg_config_path}}{% endif %}
+
+    [properties]
+    {% if root %}root = {{root}}{% endif %}
     """)
 
     _cross_file_template = _native_file_template + textwrap.dedent("""
@@ -111,14 +119,29 @@ class MesonToolchain(object):
 
         # https://mesonbuild.com/Builtin-options.html#compiler-options
         self.cpp_std = self._to_meson_cppstd(self._cppstd) if self._cppstd else None
-        self.c_args = self._to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CFLAGS'))
-        self.c_link_args = self._to_meson_value(self._env_array('LDFLAGS'))
-        self.cpp_args = self._to_meson_value(self._env_array('CPPFLAGS') +
-                                             self._env_array('CXXFLAGS'))
-        self.cpp_link_args = self._to_meson_value(self._env_array('LDFLAGS'))
+        self.c_args = self._env_array('CPPFLAGS') + self._env_array('CFLAGS')
+        self.c_link_args = self._env_array('LDFLAGS')
+        self.cpp_args = self._env_array('CPPFLAGS') + self._env_array('CXXFLAGS')
+        self.cpp_link_args = self._env_array('LDFLAGS')
+        self.objc_args = self._env_array('CPPFLAGS') + self._env_array('OBJCFLAGS')
+        self.objc_link_args = self._env_array('LDFLAGS')
+        self.objcpp_args = self._env_array('CPPFLAGS') + self._env_array('OBJCXXFLAGS')
+        self.objcpp_link_args = self._env_array('LDFLAGS')
         self.pkg_config_path = "'%s'" % self._conanfile.generators_folder
+        self.root = None
 
         check_using_build_profile(self._conanfile)
+
+        super(MesonBaseToolchain, self).__init__(conanfile)
+
+        self.c_args = self._to_meson_value(self.c_args)
+        self.c_link_args = self._to_meson_value(self.c_link_args)
+        self.cpp_args = self._to_meson_value(self.cpp_args)
+        self.cpp_link_args = self._to_meson_value(self.cpp_link_args)
+        self.objc_args = self._to_meson_value(self.objc_args)
+        self.objc_link_args = self._to_meson_value(self.objc_link_args)
+        self.objcpp_args = self._to_meson_value(self.objcpp_args)
+        self.objcpp_link_args = self._to_meson_value(self.objcpp_link_args)
 
     def _get_backend(self, recipe_backend):
         # Returns the name of the backend used by Meson
@@ -238,8 +261,13 @@ class MesonToolchain(object):
             "c_link_args": self.c_link_args,
             "cpp_args": self.cpp_args,
             "cpp_link_args": self.cpp_link_args,
+            "objc_args": self.objc_args,
+            "objc_link_args": self.objc_link_args,
+            "objcpp_args": self.objcpp_args,
+            "objcpp_link_args": self.objcpp_link_args,
             "pkg_config_path": self.pkg_config_path,
-            "preprocessor_definitions": self.preprocessor_definitions
+            "preprocessor_definitions": self.preprocessor_definitions,
+            "root": self.root
         }
         return context
 
@@ -333,3 +361,45 @@ class MesonToolchain(object):
         else:
             self._write_native_file()
         VCVars(self._conanfile).generate()
+
+
+class MesonAppleMixin(object):
+    def __init__(self, conanfile):
+        if not cross_building(conanfile):
+            return
+        if self._base_compiler != 'apple-clang':
+            return
+        if not is_apple_os(conanfile.settings.get_safe("os")):
+            return
+
+        xcrun = XCRun(conanfile.settings)
+        self.c = self.c or self._to_meson_value(xcrun.cc)
+        self.cpp = self.cpp or self._to_meson_value(xcrun.cxx)
+
+        arch = to_apple_arch(conanfile.settings.get_safe("arch"))
+        if arch:
+            self.extend_args(["-arch", arch])
+
+        os_version = conanfile.settings.get_safe("os.version")
+        if os_version:
+            flag = apple_min_version_flag(conanfile)
+            self.extend_args([flag])
+
+        if xcrun.sdk_path:
+            self.extend_args(["-isysroot", xcrun.sdk_path])
+            self.root = self._to_meson_value(xcrun.sdk_path)
+
+    def extend_args(self, args):
+        self.c_args.extend(args)
+        self.c_link_args.extend(args)
+        self.cpp_args.extend(args)
+        self.cpp_link_args.extend(args)
+        self.objc_args.extend(args)
+        self.objc_link_args.extend(args)
+        self.objcpp_args.extend(args)
+        self.objcpp_link_args.extend(args)
+
+
+class MesonToolchain(MesonBaseToolchain, MesonAppleMixin):
+    def __init__(self, conanfile):
+        super(MesonToolchain, self).__init__(conanfile)
