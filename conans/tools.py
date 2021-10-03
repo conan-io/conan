@@ -72,7 +72,7 @@ def save(path, content, append=False):
 
 
 # From conans.client.tools.net
-#ftp_download = tools_net.ftp_download
+ftp_download = tools_net.ftp_download
 
 
 def download(*args, **kwargs):
