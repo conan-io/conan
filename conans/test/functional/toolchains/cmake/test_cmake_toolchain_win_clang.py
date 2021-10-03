@@ -48,7 +48,7 @@ def client():
         """)
     c.save({"conanfile.py": conanfile,
             "clang": clang_profile,
-            "src/CMakeLists.txt": gen_cmakelists(appname="my_app", appsources=["main.cpp"]),
+            "CMakeLists.txt": gen_cmakelists(appname="my_app", appsources=["src/main.cpp"]),
             "src/main.cpp": gen_function_cpp(name="main")})
     return c
 
