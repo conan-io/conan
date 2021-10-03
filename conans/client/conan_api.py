@@ -602,6 +602,7 @@ class ConanAPIV1(object):
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
+            graph_info.profile_host.profiles = profile_host.profiles
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(app=self.app,
                          ref_or_path=conanfile_path,
@@ -618,7 +619,8 @@ class ConanAPIV1(object):
                          no_imports=no_imports,
                          recorder=recorder,
                          require_overrides=require_overrides,
-                         conanfile_path=os.path.dirname(conanfile_path))
+                         conanfile_path=os.path.dirname(conanfile_path),
+                         api=self)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)

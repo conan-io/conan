@@ -1,7 +1,11 @@
+import os
+import shutil
+import tempfile
 import time
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
+from conans.client.tools import Git
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -48,7 +52,7 @@ class DepsGraphBuilder(object):
         self._recorder = recorder
 
     def load_graph(self, root_node, check_updates, update, remotes, profile_host, profile_build,
-                   graph_lock=None):
+                   graph_lock=None, api=None):
         check_updates = check_updates or update
         initial = graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
@@ -64,7 +68,7 @@ class DepsGraphBuilder(object):
         # enter recursive computation
         t1 = time.time()
         self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
-                          update, remotes, profile_host, profile_build, graph_lock)
+                          update, remotes, profile_host, profile_build, graph_lock, api=api)
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         return dep_graph
 
@@ -112,7 +116,7 @@ class DepsGraphBuilder(object):
         return new_nodes
 
     def _expand_node(self, node, graph, down_reqs, down_ref, down_options, check_updates, update,
-                     remotes, profile_host, profile_build, graph_lock):
+                     remotes, profile_host, profile_build, graph_lock, api=None):
         """ expands the dependencies of the node, recursively
 
         param node: Node object to be expanded in this step
@@ -128,6 +132,21 @@ class DepsGraphBuilder(object):
         for require in node.conanfile.requires.values():
             if require.override:
                 continue
+
+            def _retrieve_from_git(the_remote_url):
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    git = Git(tmpdirname)
+                    git.clone(the_remote_url)
+                    logger.debug("Try to install package by url[%s] with name = %s and version = %s" %
+                                 (the_remote_url, require.ref.name, require.ref.version))
+                    api.create(os.path.join(tmpdirname, "conanfile.py"),
+                               name=require.ref.name,
+                               version=require.ref.version,
+                               profile_names=profile_host.profiles)
+
+            if require.ref.protocol:
+                if require.ref.protocol == 'git':
+                    _retrieve_from_git(require.ref.url)
             self._expand_require(require, node, graph, check_updates, update, remotes, profile_host,
                                  profile_build, new_reqs, new_options, graph_lock,
                                  context_switch=False)

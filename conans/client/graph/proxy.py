@@ -113,7 +113,6 @@ class ConanProxy(object):
         return conanfile_path, status, selected_remote, ref
 
     def _download_recipe(self, layout, ref, output, remotes, remote, recorder):
-
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server

@@ -7,6 +7,10 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
+external_package = r"(?P<package>(-|\w)+)\/(?P<version>[.\d]+)(@((?P<user>\w+)\/(?P<channel>\w+))?)?\s+\{\s+(?P<protocol>(git|https))\s+=\s+\"(?P<url>.+)\"\s+\}"
+external_package_re = re.compile(external_package)
+
+
 def _split_pair(pair, split_char):
     if not pair or pair == split_char:
         return None, None
@@ -40,6 +44,19 @@ def get_reference_fields(arg_reference, user_channel_input=False):
         return None, None, None, None, None
 
     revision = None
+    protocol = None
+    url = None
+
+    external_package_match = external_package_re.match(arg_reference)
+    if external_package_match:
+        name = external_package_match.group('package')
+        version = external_package_match.group('version')
+        user = external_package_match.group('user')
+        channel = external_package_match.group('channel')
+        protocol = external_package_match.group('protocol')
+        url = external_package_match.group('url')
+        return _noneize(name), _noneize(version), _noneize(user), _noneize(channel), \
+               _noneize(revision), _noneize(protocol), _noneize(url)
 
     if "#" in arg_reference:
         tmp = arg_reference.split("#", 1)
@@ -97,6 +114,7 @@ class ConanName(object):
                                      % (_min_chars - 1, _max_chars - 1))
 
     _validation_revision_pattern = re.compile("^[a-zA-Z0-9]{1,%s}$" % _max_chars)
+    _validation_protocol_pattern = re.compile("^(git|http)$")
 
     @staticmethod
     def invalid_name_message(value, reference_token=None):
@@ -147,19 +165,28 @@ class ConanName(object):
                                        "and numbers with a length between 1 and "
                                        "%s" % ConanName._max_chars)
 
+    @staticmethod
+    def validate_protocol(protocol):
+        if ConanName._validation_protocol_pattern.match(protocol) is None:
+            raise InvalidNameException("The protocol field, must contain only letters "
+                                       "and numbers with a length between 1 and "
+                                       "%s" % ConanName._max_chars)
 
-class ConanFileReference(namedtuple("ConanFileReference", "name version user channel revision")):
+
+class ConanFileReference(namedtuple("ConanFileReference", "name version user channel revision protocol url")):
     """ Full reference of a package recipes, e.g.:
     opencv/2.4.10@lasote/testing
     """
 
-    def __new__(cls, name, version, user, channel, revision=None, validate=True):
+    def __new__(cls, name, version, user, channel, revision=None, protocol=None, url=None, validate=True):
         """Simple name creation.
         @param name:        string containing the desired name
         @param version:     string containing the desired version
         @param user:        string containing the user name
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
+        @param protocol:    string containing the protocol (optional)
+        @param url:         string containing the url (optional)
         """
         if (user and not channel) or (channel and not user):
             raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
@@ -168,7 +195,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         user = _noneize(user)
         channel = _noneize(channel)
 
-        obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
+        obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision, protocol, url)
         if validate:
             obj._validate()
         return obj
@@ -184,6 +211,10 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision is not None:
             ConanName.validate_revision(self.revision)
+        if self.protocol is not None:
+            ConanName.validate_protocol(self.protocol)
+            if not self.url:
+                raise InvalidNameException("Specify the 'url' for package {self.name}")
 
         if not self.name or not self.version:
             raise InvalidNameException("Specify the 'name' and the 'version'")
@@ -195,8 +226,8 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def loads(text, validate=True):
         """ Parses a text string to generate a ConanFileReference object
         """
-        name, version, user, channel, revision = get_reference_fields(text)
-        ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
+        name, version, user, channel, revision, protocol, url = get_reference_fields(text)
+        ref = ConanFileReference(name, version, user, channel, revision, protocol, url, validate=validate)
         return ref
 
     @staticmethod
