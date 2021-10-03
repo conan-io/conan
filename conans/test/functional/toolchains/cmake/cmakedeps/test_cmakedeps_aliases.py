@@ -33,7 +33,7 @@ def test_global_alias():
         settings = "os", "compiler", "build_type", "arch"
 
         def package_info(self):
-            self.cpp_info.set_property("cmake_target_aliases", {"hello": "hello::hello"}, "CMakeDeps")
+            self.cpp_info.set_property("cmake_target_aliases", ["hello"], "CMakeDeps")
     """)
 
     cmakelists = textwrap.dedent("""
@@ -66,7 +66,7 @@ def test_component_alias():
 
         def package_info(self):
             self.cpp_info.components["buy"].set_property("cmake_target_aliases",
-                {"hola::adios": "hello::buy"}, "CMakeDeps")
+                ["hola::adios"], "CMakeDeps")
     """)
 
     cmakelists = textwrap.dedent("""
