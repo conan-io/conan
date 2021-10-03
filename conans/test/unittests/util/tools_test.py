@@ -16,10 +16,9 @@ from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import get_default_client_conf
 from conans.cli.output import ConanOutput
+from conans.client.conf.detect_vs import vswhere
 from conans.client.tools import chdir
 from conans.client.tools.files import replace_in_file
-from conans.client.tools.oss import OSInfo
-from conans.client.tools.win import vswhere
 from conans.errors import ConanException, AuthenticationException
 from conans.model.build_info import CppInfo
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput

@@ -2,8 +2,8 @@ import os
 import textwrap
 
 from conan.tools.env.environment import register_env_script
+from conans.client.conf.detect_vs import vs_installation_path
 from conans.client.tools import intel_compilervars_command
-from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
 from conans.util.files import save
 

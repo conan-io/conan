@@ -173,24 +173,6 @@ class ZypperTool(tools_system_pm.ZypperTool):
         super(ZypperTool, self).__init__(*args, **kwargs)
 
 
-# from conans.client.tools.win
-vs_installation_path = tools_win.vs_installation_path
-vswhere = tools_win.vswhere
-vs_comntools = tools_win.vs_comntools
-find_windows_10_sdk = tools_win.find_windows_10_sdk
-MSYS2 = tools_win.MSYS2
-MSYS = tools_win.MSYS
-CYGWIN = tools_win.CYGWIN
-WSL = tools_win.WSL
-SFU = tools_win.SFU
-msvs_toolset = tools_win.msvs_toolset
-
-
-def latest_vs_version_installed(*args, **kwargs):
-    return tools_win.latest_vs_version_installed(*args, **kwargs)
-
-
-
 # Ready to use objects.
 try:
     os_info = OSInfo()

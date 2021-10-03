@@ -18,5 +18,3 @@ from .scm import *
 from .settings import *
 # noinspection PyUnresolvedReferences
 from .system_pm import *
-# noinspection PyUnresolvedReferences
-from .win import *

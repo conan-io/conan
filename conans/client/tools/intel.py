@@ -3,7 +3,7 @@ import platform
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append, env_diff
-from conans.client.tools.win import is_win64, _system_registry_key, MSVS_YEAR
+from conans.client.tools.win import MSVS_YEAR
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 
@@ -18,6 +18,8 @@ INTEL_YEAR = {"19.1": "2020",
 
 
 def intel_installation_path(version, arch):
+    # FIXME: Broken intel path
+    return "broken/intel/path"
     installation_path = get_env("CONAN_INTEL_INSTALLATION_PATH")
     if installation_path:
         return installation_path

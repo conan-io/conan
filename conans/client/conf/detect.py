@@ -6,8 +6,8 @@ import textwrap
 
 from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
 from conans.cli.output import Color, ConanOutput
+from conans.client.conf.detect_vs import latest_visual_studio_version_installed
 from conans.client.tools import detected_architecture
-from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
