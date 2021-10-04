@@ -17,7 +17,10 @@ def test_cpp_info_editable():
         self.cpp.build.includedirs = ["my_include"]
         self.cpp.build.libdirs = ["my_libdir"]
         self.cpp.build.libs = ["hello"]
-        self.cpp.build.frameworkdirs = []  # Empty list is also explicit priority declaration
+
+        # TODO: check which is the desired behaviour here... an empty list will not overwrite the
+        # conanfile cpp_info, so this will not override the default value already set.
+        self.cpp.build.frameworkdirs = []
 
         self.cpp.source.cxxflags = ["my_cxx_flag"]
         self.cpp.source.includedirs = ["my_include_source"]
@@ -89,7 +92,7 @@ def test_cpp_info_editable():
     assert "**libs:['hello']**" in out
     assert "**cxxflags:['my_cxx_flag']**" in out
     assert "**cflags:['my_c_flag']**" in out
-    assert "**frameworkdirs:[]**" in client2.out
+    assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in client2.out
 
 
 def test_cpp_info_components_editable():
