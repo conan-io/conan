@@ -803,6 +803,9 @@ class ConanAPIV1(object):
             conanfile.folders.set_base_build(dir_path)
             conanfile.folders.set_base_source(dir_path)
             # FIXME: this is bad, but conanfile.folders.package=xxx is broken atm, cant be used
+            # The "conan package" will create "include", "lib" subfolders directly at the root folder
+            # level, which pollutes the source repo itself. It is not possible to change this via
+            # self.folders.package="package" in layout(), because that breaks packaging and create
             conanfile.folders.set_base_package(os.path.join(dir_path, "package"))
             conanfile.folders.set_base_install(install_folder)
         else:
