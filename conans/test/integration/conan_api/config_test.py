@@ -21,16 +21,6 @@ class ConfigTest(unittest.TestCase):
         with tools.environment_append({"CONAN_USER_HOME": user_home}):
             self.api = conan_api.ConanAPIV1()
 
-    def test_config_rm(self):
-        self.api.config_set("proxies.https", "http://10.10.1.10:1080")
-
-        app = ConanApp(self._cache_folder)
-        self.assertIn("proxies", app.config.sections())
-        self.api.config_rm('proxies')
-
-        app = ConanApp(self._cache_folder)
-        self.assertNotIn("proxies", app.config.sections())
-
     def test_config_home(self):
         conan_home = self.api.config_home()
         self.assertEqual(self.api.cache_folder, conan_home)

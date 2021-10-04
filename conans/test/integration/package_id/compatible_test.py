@@ -346,7 +346,6 @@ class CompatibleIDsTest(unittest.TestCase):
         c2 = GenConanfile().with_name("BB").with_version("1.0").with_require("AA/1.0")
         client = TestClient()
         # Recipe revision mode
-        # client.run("config set general.default_package_id_mode=recipe_revision_mode")
         save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         # Create binaries with recipe revision mode for both
         client.save({"conanfile.py": c1})
@@ -356,14 +355,12 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("create .")
 
         # Back to semver default
-        # client.run("config set general.default_package_id_mode=semver_direct_mode")
         save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
         client.run("install BB/1.0@", assert_error=True)
         self.assertIn("Missing prebuilt package for 'BB/1.0'", client.out)
 
         # What if client modifies the packages declaring a compatible_package with the recipe mode
         # Recipe revision mode
-        #client.run("config set general.default_package_id_mode=recipe_revision_mode")
         save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         tmp = """
 
@@ -386,7 +383,6 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn(f"Package '{package_id}' created", client.out)
 
         # Back to semver mode
-        # client.run("config set general.default_package_id_mode=semver_direct_mode")
         save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
         client.run("install BB/1.0@ --update")
         self.assertIn(f"Using compatible package '{package_id}'", client.out)

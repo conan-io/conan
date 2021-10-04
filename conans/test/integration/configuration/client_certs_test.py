@@ -64,9 +64,14 @@ class ClientCertsTest(unittest.TestCase):
         save(mykey_path, "Fake Key")
 
         client = TestClient(requester_class=MyHttpRequester)
-        client.run('config set general.client_cert_path="%s"' % mycert_path)
-        client.run('config set general.client_cert_key_path="%s"' % mykey_path)
-
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    client_cert_path={}
+                                    client_cert_key_path={}
+                                """.format(mycert_path, mykey_path))
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": conanfile})
         client.run("create . foo/1.0@")
         assert "KWARGS cert: ('{}', '{}')".format(mycert_path, mykey_path) in client.out

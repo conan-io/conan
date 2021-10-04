@@ -568,7 +568,14 @@ class MyPkg(ConanFile):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         client = TestClient(default_server_user=True)
         client.save(files)
-        client.run("config set general.non_interactive=True")
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    non_interactive=True
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         client.run("create . user/testing")
         client.run("user -c")
         client.run("upload Hello0/1.2.1@user/testing -r default", assert_error=True)
@@ -584,7 +591,13 @@ class MyPkg(ConanFile):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         client = TestClient(default_server_user=True)
         client.save(files)
-        client.run("config set general.non_interactive=True")
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    non_interactive=True
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("create . user/testing")
         client.run("user -c")
         client.run("user lasote")
@@ -600,7 +613,13 @@ class MyPkg(ConanFile):
         #  When user is authenticated, uploads should work even when login prompt has been disabled.
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("Hello0", "1.2.1")})
-        client.run("config set general.non_interactive=True")
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    non_interactive=True
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("create . user/testing")
         client.run("user -c")
         client.run("user admin -p password")

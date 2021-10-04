@@ -1,4 +1,5 @@
 import re
+import textwrap
 
 from conans.test.utils.tools import GenConanfile, TestClient
 
@@ -7,7 +8,13 @@ def test_basic_parallel_download():
     client = TestClient(default_server_user=True)
     threads = 1  # At the moment, not really parallel until output implements mutex
     counter = 4
-    client.run("config set general.parallel_download=%s" % threads)
+    conan_conf = textwrap.dedent("""
+                                [storage]
+                                path = ./data
+                                [general]
+                                parallel_download={}
+                            """.format(threads))
+    client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
     client.save({"conanfile.py": GenConanfile().with_option("myoption", '"ANY"')})
 
     package_ids = []

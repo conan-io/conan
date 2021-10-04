@@ -223,7 +223,14 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run('config set general.retry_wait=0')
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    retry_wait=0
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         client.run("upload Hello* --confirm")
         self.assertIn("Can't connect because of the evil mock", client.out)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
@@ -234,8 +241,15 @@ class UploadTest(unittest.TestCase):
                  "somefile.txt": ""}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run('config set general.retry=0')
-        client.run('config set general.retry_wait=1')
+
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    retry=0
+                                    retry_wait=1
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("upload Hello* --confirm -r default", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.out)
         self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
@@ -247,8 +261,14 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run('config set general.retry=10')
-        client.run('config set general.retry_wait=0')
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    retry=10
+                                    retry_wait=0
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("upload Hello* --confirm -r default", assert_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
         self.assertIn("ERROR: Hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
@@ -260,8 +280,14 @@ class UploadTest(unittest.TestCase):
         client.save(files)
         client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
-        client.run('config set general.retry=3')
-        client.run('config set general.retry_wait=0')
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    retry=3
+                                    retry_wait=0
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
