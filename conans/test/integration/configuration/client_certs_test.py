@@ -12,13 +12,13 @@ from conans.util.files import save
 
 conanfile = textwrap.dedent("""
     from conans import ConanFile
-    from conans import tools
+    from conan.tools.files import download
 
     class Pkg(ConanFile):
         settings = "os", "compiler"
 
         def source(self):
-            tools.download("http://foo.bar/file", "filename.txt")
+            download(self, "http://foo.bar/file", "filename.txt")
     """)
 
 
