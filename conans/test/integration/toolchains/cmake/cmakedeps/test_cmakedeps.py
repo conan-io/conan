@@ -94,7 +94,7 @@ def test_cpp_info_component_objects():
         class Pkg(ConanFile):
             settings = "os", "arch", "build_type"
             def package_info(self):
-                self.cpp_info.components["say"].objects = ["/path/to/mycomponent.o"]
+                self.cpp_info.components["say"].objects = ["mycomponent.o"]
             """)
 
     client.save({"conanfile.py": conan_hello})
@@ -106,3 +106,7 @@ def test_cpp_info_component_objects():
              $<$<CONFIG:Release>:${hello_say_LINK_LIBS_RELEASE}
              ${hello_say_LINKER_FLAGS_RELEASE}
              ${hello_say_OBJECTS_RELEASE}> APPEND)""" in content
+
+    with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
+        content = f.read()
+        assert 'set(hello_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content
