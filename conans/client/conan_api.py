@@ -5,9 +5,9 @@ from collections import OrderedDict
 from collections import namedtuple
 
 from conans import __version__ as client_version
+from conans.cli.api.conan_api import api_method
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.api.conan_api import api_method
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
@@ -685,32 +685,6 @@ class ConanAPIV1(object):
             info["error"] = True
             exc.info = info
             raise
-
-    # @api_method
-    # def search_packages(self, reference, query=None, remote_name=None):
-    #     search_recorder = SearchRecorder()
-    #     remotes = self.app.cache.registry.load_remotes()
-    #     search = Search(self.app.cache, self.app.remote_manager, remotes)
-    #
-    #     try:
-    #         ref = ConanFileReference.loads(reference)
-    #         references = search.search_packages(ref, remote_name, query=query)
-    #     except ConanException as exc:
-    #         search_recorder.error = True
-    #         exc.info = search_recorder.get_info()
-    #         raise
-    #
-    #     for remote_name, remote_ref in references.items():
-    #         search_recorder.add_recipe(remote_name, ref)
-    #         if remote_ref.ordered_packages:
-    #             for package_id, properties in remote_ref.ordered_packages.items():
-    #                 # Artifactory uses field 'requires', conan_center 'full_requires'
-    #                 requires = properties.get("requires", []) or properties.get("full_requires", [])
-    #                 search_recorder.add_package(remote_name, ref,
-    #                                             package_id, properties.get("options", []),
-    #                                             properties.get("settings", []),
-    #                                             requires)
-    #     return search_recorder.get_info()
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,

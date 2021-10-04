@@ -8,11 +8,11 @@ from difflib import get_close_matches
 from inspect import getmembers
 
 from conans import __version__ as client_version
+from conans.cli.api.conan_api import ConanAPIV2, ConanAPI
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 from conans.cli.output import ConanOutput
-from conans.client.api.conan_api import ConanAPI, ConanAPIV2
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf.config_installer import is_config_install_scheduled

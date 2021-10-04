@@ -6,9 +6,9 @@ import time
 from tqdm import tqdm
 
 from conans import __version__ as client_version
+from conans.cli.api.helpers.search import Search
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.api.helpers.search import Search
 from conans.client.cache.cache import ClientCache
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator

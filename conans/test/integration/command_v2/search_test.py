@@ -4,7 +4,7 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from conans.client.api.helpers.search import Search
+from conans.cli.api.helpers.search import Search
 from conans.errors import ConanConnectionError, ConanException
 from conans.test.utils.tools import TestClient, TestServer
 
