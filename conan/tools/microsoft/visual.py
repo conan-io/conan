@@ -1,11 +1,10 @@
 import os
 import textwrap
 
-from conan.tools.env.environment import register_environment_script
+from conan.tools.env.environment import create_env_script
 from conans.client.tools import intel_compilervars_command
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
-from conans.util.files import save
 
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
@@ -14,11 +13,11 @@ class VCVars:
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def generate(self, auto_activate=True):
-        _write_conanvcvars(self._conanfile, auto_activate=auto_activate)
+    def generate(self, group="build"):
+        _write_conanvcvars(self._conanfile, group=group)
 
 
-def _write_conanvcvars(conanfile, auto_activate=True):
+def _write_conanvcvars(conanfile, group):
     """
     write a conanvcvars.bat file with the good args from settings
     """
@@ -27,9 +26,10 @@ def _write_conanvcvars(conanfile, auto_activate=True):
         return
 
     compiler = conanfile.settings.get_safe("compiler")
-    cvars = None
+    vcvars = None
+    # FIXME: Does it make sense to have legacy 'intel' here? Perhaps we would have to remove it.
     if compiler == "intel":
-        cvars = intel_compilervars_command(conanfile)
+        vcvars = intel_compilervars_command(conanfile)
     elif compiler == "Visual Studio" or compiler == "msvc":
         vs_version = vs_ide_version(conanfile)
         vcvarsarch = vcvars_arch(conanfile)
@@ -49,18 +49,15 @@ def _write_conanvcvars(conanfile, auto_activate=True):
             minor = version_components[1]
             # The equivalent of compiler 19.26 is toolset 14.26
             vcvars_ver = "14.{}".format(minor)
-        cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
-                               winsdk_version=None, vcvars_ver=vcvars_ver)
-    if cvars:
+        vcvars = vcvars_command(vs_version, architecture=vcvarsarch,
+                                platform_type=None, winsdk_version=None,
+                                vcvars_ver=vcvars_ver)
+    if vcvars:
         content = textwrap.dedent("""\
             @echo off
             {}
-            """.format(cvars))
-        path = os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE)
-        save(path, content)
-
-        if auto_activate:
-            register_environment_script(conanfile, path)
+            """.format(vcvars))
+        create_env_script(conanfile, content, CONAN_VCVARS_FILE, group)
 
 
 def vs_ide_version(conanfile):
@@ -89,7 +86,7 @@ def msvc_runtime_flag(conanfile):
     runtime = settings.get_safe("compiler.runtime")
     if compiler == "Visual Studio":
         return runtime
-    if compiler == "msvc":
+    if compiler == "msvc" or compiler == "intel-cc":
         runtime_type = settings.get_safe("compiler.runtime_type")
         runtime = "MT" if runtime == "static" else "MD"
         if runtime_type == "Debug":

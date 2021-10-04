@@ -11,7 +11,7 @@ from conans.test.utils.tools import TestClient, TestServer
 generator = """
 from conans.model import Generator
 from conans.paths import BUILD_INFO
-from conans import ConanFile, CMake
+from conans import ConanFile
 
 class MyCustom_Generator(Generator):
     @property
@@ -40,7 +40,7 @@ MyCustom_Generator
 generator_multi = """
 from conans.model import Generator
 from conans.paths import BUILD_INFO
-from conans import ConanFile, CMake
+from conans import ConanFile
 
 class MyCustomMultiGenerator(Generator):
     @property
@@ -73,7 +73,6 @@ class CustomGeneratorTest(unittest.TestCase):
         test_server = TestServer()
         self.servers = {"default": test_server}
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_reuse(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
@@ -171,4 +170,3 @@ class MyCustomGeneratorWithTemplatePackage(ConanFile):
         client.run("install gen/0.1@user/stable -g=MyGenerator")
         generated = client.load("customfile.gen")
         self.assertEqual(generated, client.current_folder)
-

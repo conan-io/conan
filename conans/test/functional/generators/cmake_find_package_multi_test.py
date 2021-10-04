@@ -521,7 +521,6 @@ class TestNoNamespaceTarget:
         # Prepare project to consume the targets
         t.save({'CMakeLists.txt': cls.consumer, 'main.cpp': cls.main}, clean_first=True)
 
-    @pytest.mark.tool_compiler
     def test_non_multi_generator(self):
         t = self.t
         with t.chdir('not_multi'):

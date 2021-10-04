@@ -48,11 +48,14 @@ def client():
 
                 self.cpp_info.set_property("cmake_module_file_name", "mi_dependencia")
                 self.cpp_info.set_property("cmake_module_target_name", "mi_dependencia_target")
-                self.cpp_info.set_property("cmake_module_target_namespace", "mi_dependencia_namespace")
+                self.cpp_info.set_property("cmake_module_target_namespace",
+                                           "mi_dependencia_namespace")
 
                 self.cpp_info.components["crispin"].libs = ["mydep"]
-                self.cpp_info.components["crispin"].set_property("cmake_target_name", "MyCrispinTarget")
-                self.cpp_info.components["crispin"].set_property("cmake_module_target_name", "mi_crispin_target")
+                self.cpp_info.components["crispin"].set_property("cmake_target_name",
+                                                                 "MyCrispinTarget")
+                self.cpp_info.components["crispin"].set_property("cmake_module_target_name",
+                                                                 "mi_crispin_target")
         """)
 
     t.save({"conanfile.py": conanfile,

@@ -14,7 +14,7 @@ from conans.util.files import save
 class MockPatchset:
     apply_args = None
 
-    def apply(self, root, strip, fuzz):
+    def apply(self, strip=0, root=None, fuzz=False):
         self.apply_args = (root, strip, fuzz)
         return True
 
@@ -143,7 +143,6 @@ def test_apply_conandata_patches(mock_patch_ng):
                  'conandata.yml': conandata_yml})
     client.run('create .')
 
-
     assert mock_patch_ng.apply_args[0].endswith('source_subfolder')
     assert mock_patch_ng.apply_args[1:] == (0, False)
 
@@ -157,6 +156,36 @@ def test_apply_conandata_patches(mock_patch_ng):
     assert 'conanfile.py (mypkg/1.11.0): Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
 
+
+def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.files import apply_conandata_patches
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.11.0"
+
+            def layout(self):
+                self.folders.source = "source_subfolder"
+
+            def build(self):
+                apply_conandata_patches(self)
+        """)
+    conandata_yml = textwrap.dedent("""
+        patches:
+          "1.11.0":
+            - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
+              base_path: "relative_dir"
+    """)
+
+    client = TestClient()
+    client.save({'conanfile.py': conanfile,
+                 'conandata.yml': conandata_yml})
+    client.run('create .')
+
+    assert mock_patch_ng.apply_args[0].endswith(os.path.join('source_subfolder', "relative_dir"))
+    assert mock_patch_ng.apply_args[1:] == (0, False)
 
 
 def test_no_patch_file_entry():

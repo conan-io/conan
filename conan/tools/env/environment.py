@@ -194,7 +194,7 @@ class Environment:
     def remove(self, name, value):
         self._values[name].remove(value)
 
-    def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def save_bat(self, filename, generate_deactivate=True, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
@@ -228,7 +228,7 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_ps1(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def save_ps1(self, filename, generate_deactivate=True, pathsep=os.pathsep):
         # FIXME: This is broken and doesnt work
         deactivate = ""
         capture = textwrap.dedent("""\
@@ -242,7 +242,7 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_sh(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def save_sh(self, filename, generate_deactivate=True, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
@@ -273,8 +273,7 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_script(self, name, auto_activate=True):
-        # FIXME: using platform is not ideal but settings might be incomplete
+    def save_script(self, name, group="build"):
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
             self.save_bat(path)
@@ -282,8 +281,8 @@ class Environment:
             path = os.path.join(self._conanfile.generators_folder, "{}.sh".format(name))
             self.save_sh(path)
 
-        if auto_activate:
-            register_environment_script(self._conanfile, path)
+        if group:
+            register_env_script(self._conanfile, path, group)
 
     def compose_env(self, other):
         """
@@ -427,6 +426,23 @@ class ProfileEnvironment:
         return result
 
 
-def register_environment_script(conanfile, path):
-    if path not in conanfile.environment_scripts:
-        conanfile.environment_scripts.append(path)
+def create_env_script(conanfile, content, filename, group):
+    """
+    Create a file with any content which will be registered as a new script for the defined "group".
+    """
+    path = os.path.join(conanfile.generators_folder, filename)
+    save(path, content)
+
+    if group:
+        register_env_script(conanfile, path, group)
+
+
+def register_env_script(conanfile, env_script_path, group):
+    """
+    Add the "env_script_path" to the current list of registered scripts for defined "group"
+    These will be mapped to files:
+    - conan{group}.bat|sh = calls env_script_path1,... env_script_pathN
+    """
+    existing = conanfile.env_scripts.setdefault(group, [])
+    if env_script_path not in existing:
+        existing.append(env_script_path)

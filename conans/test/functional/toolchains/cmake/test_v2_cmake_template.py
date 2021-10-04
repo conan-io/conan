@@ -15,6 +15,10 @@ def test_cmake_lib_template():
     client.run("create . -s build_type=Debug")
     assert "hello/0.1: Hello World Debug!" in client.out
 
+    # Create + shared works
+    client.run("create . -o hello:shared=True")
+    assert "hello/0.1: Hello World Release!" in client.out
+
 
 def test_cmake_exe_template():
     client = TestClient(path_with_spaces=False)
