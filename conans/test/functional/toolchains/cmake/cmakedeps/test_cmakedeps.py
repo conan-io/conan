@@ -282,18 +282,14 @@ def test_buildirs_working():
 def test_cpp_info_link_objects():
     client = TestClient()
     obj_ext = "obj" if platform.system() == "Windows" else "o"
-    cpp_info = {"objects": [os.path.join("lib", "myobject.{}".format(obj_ext))], "libs": ["hello"]}
+    cpp_info = {"objects": [os.path.join("lib", "myobject.{}".format(obj_ext))]}
     object_cpp = gen_function_cpp(name="myobject")
     object_h = gen_function_h(name="myobject")
-    lib_cpp = gen_function_cpp(name="hello")
-    lib_h = gen_function_h(name="hello")
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(HelloLib)
+        project(MyObject)
         file(GLOB HEADERS *.h)
         add_library(myobject OBJECT myobject.cpp)
-        add_library(hello hello.cpp hello.h)
-        install(TARGETS hello DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
         if( WIN32 )
             set(OBJ_PATH "myobject.dir/Release")
         else()
@@ -310,22 +306,20 @@ def test_cpp_info_link_objects():
     test_package_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(example)
-        find_package(hello REQUIRED)
+        find_package(myobject REQUIRED)
         add_executable(example example.cpp)
-        target_link_libraries(example hello::hello)
+        target_link_libraries(example myobject::myobject)
     """)
 
     client.save({"CMakeLists.txt": cmakelists,
-                 "conanfile.py": GenConanfile("hello", "1.0").with_package_info(cpp_info=cpp_info,
-                                                                                env_info={})
-                                                             .with_exports_sources("*")
-                                                             .with_cmake_build()
-                                                             .with_package("cmake = CMake(self)",
-                                                                           "cmake.install()"),
+                 "conanfile.py": GenConanfile("myobject", "1.0").with_package_info(cpp_info=cpp_info,
+                                                                                   env_info={})
+                                                                .with_exports_sources("*")
+                                                                .with_cmake_build()
+                                                                .with_package("cmake = CMake(self)",
+                                                                              "cmake.install()"),
                  "myobject.cpp": object_cpp,
                  "myobject.h": object_h,
-                 "hello.cpp": lib_cpp,
-                 "hello.h": lib_h,
                  "test_package/conanfile.py": GenConanfile().with_cmake_build()
                                                             .with_import("import os")
                                                             .with_test('path = "{}".format(self.settings.build_type) '
