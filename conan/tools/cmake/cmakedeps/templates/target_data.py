@@ -87,6 +87,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
               set({{ pkg_name }}_{{ comp_name }}_RES_DIRS{{ config_suffix }} {{ cpp.res_paths }})
               set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS{{ config_suffix }} {{ cpp.defines }})
+              set({{ pkg_name }}_{{ comp_name }}_OBJECTS{{ config_suffix }} {{ cpp.objects_list }})
               set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS{{ config_suffix }} {{ cpp.compile_definitions }})
               set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_C{{ config_suffix }} "{{ cpp.cflags_list }}")
               set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }} "{{ cpp.cxxflags_list }}")
