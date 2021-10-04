@@ -50,12 +50,14 @@ class CMake(object):
     are passed to the command line, plus the ``--config Release`` for builds in multi-config
     """
 
-    def __init__(self, conanfile, parallel=True):
+    def __init__(self, conanfile, parallel=True, namespace=None):
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
+        self._namespace = namespace
 
-        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder)
+        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
+                                                     namespace=self._namespace)
         self._generator = toolchain_file_content.get("cmake_generator")
         self._toolchain_file = toolchain_file_content.get("cmake_toolchain_file")
 

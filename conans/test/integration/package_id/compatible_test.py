@@ -191,6 +191,7 @@ class CompatibleIDsTest(unittest.TestCase):
             [settings]
             compiler = intel
             compiler.version = 16
+            compiler.update = 311
             compiler.base = Visual Studio
             compiler.base.version = 8
             compiler.base.runtime = MD
@@ -201,10 +202,10 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("create . %s --profile visual_profile" % ref.full_str())
         package_id = re.search(r"Bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
         client.run("install %s -pr intel_profile" % ref.full_str())
-        missing_id = "b702bdd41c7d401aa0a2bd60de819f081ba983d5"
-        self.assertIn(f"Bye/0.1@us/ch: Main binary package '{missing_id}' missing. Using compatible package "
-                      f"'{package_id}'",
-                      client.out)
+        missing_id = "c1b60feb368929efd9e60fd47dbfa45969742332"
+        self.assertIn(f"Bye/0.1@us/ch: Main binary package '{missing_id}'"
+                      " missing. Using compatible package "
+                      f"'{package_id}'", client.out)
         self.assertIn(f"Bye/0.1@us/ch:{package_id} - Cache", client.out)
 
     def test_wrong_base_compatible(self):

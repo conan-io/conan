@@ -274,7 +274,6 @@ class Environment:
         save(filename, content)
 
     def save_script(self, name, group="build"):
-        # FIXME: using platform is not ideal but settings might be incomplete
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
             self.save_bat(path)
@@ -425,6 +424,17 @@ class ProfileEnvironment:
             else:
                 raise ConanException("Bad env definition: {}".format(line))
         return result
+
+
+def create_env_script(conanfile, content, filename, group):
+    """
+    Create a file with any content which will be registered as a new script for the defined "group".
+    """
+    path = os.path.join(conanfile.generators_folder, filename)
+    save(path, content)
+
+    if group:
+        register_env_script(conanfile, path, group)
 
 
 def register_env_script(conanfile, env_script_path, group):

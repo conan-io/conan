@@ -77,10 +77,9 @@ class TestTokenRefresh(unittest.TestCase):
     # MISSING MOCKS
 
     def setUp(self):
-
-
         requester = RequesterWithTokenMock()
-        config = namedtuple("ConfigMock", "download_cache")(None)
+        config = namedtuple("ConfigMock", "revisions_enabled download_cache retry retry_wait")\
+            (False, None, None, None)
         self.rest_client_factory = RestApiClientFactory(requester, config=config,
                                                         artifacts_properties=None)
         self.localdb = LocalDBMock()
