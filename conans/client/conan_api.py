@@ -402,11 +402,6 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def config_rm(self, item):
-        app = ConanApp(self.cache_folder)
-        app.config.rm_item(item)
-
-    @api_method
     def config_install_list(self):
         app = ConanApp(self.cache_folder)
         if not os.path.isfile(app.cache.config_install_file):
