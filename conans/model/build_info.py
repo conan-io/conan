@@ -3,9 +3,9 @@ import os
 from collections import OrderedDict
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
-                   "frameworkdirs"]
+                   "_frameworkdirs"]
 _FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
-                    "sharedlinkflags", "_exelinkflags"]
+                    "_sharedlinkflags", "_exelinkflags"]
 
 
 class DefaultOrderedDict(OrderedDict):
