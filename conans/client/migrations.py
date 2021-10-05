@@ -1,11 +1,14 @@
 import os
 import shutil
 
+import six
+
 from conans import DEFAULT_REVISION_V1
 from conans.client import migrations_settings
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import migrate_registry_file
 from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
+from conans.client.rest.cacert import cacert_default, cacert
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
 from conans.migrations import Migrator
@@ -118,8 +121,19 @@ def remove_buggy_cacert(cache, out):
     Needed migration because otherwise the cacert is kept in the cache even upgrading conan"""
     cacert_path = os.path.join(cache.cache_folder, CACERT_FILE)
     if os.path.exists(cacert_path):
-        out.info("Removing the 'cacert.pem' file...")
-        os.unlink(cacert_path)
+        current_cacert = load(cacert_path).encode('utf-8') if six.PY2 else load(cacert_path)
+        if current_cacert == cacert_default:
+            out.info("Removing the 'cacert.pem' file...")
+            os.unlink(cacert_path)
+        elif current_cacert != cacert:  # locally modified by user
+            new_path = cacert_path + ".new"
+            save(new_path, cacert)
+            out.warn("*" * 40)
+            out.warn("'cacert.pem' is locally modified, can't be updated")
+            out.warn("The new 'cacert.pem' has been stored in: %s" % new_path)
+            out.warn("*" * 40)
+        else:
+            out.info("Conan 'cacert.pem' is up to date...")
 
 
 def migrate_tgz_location(cache, out):
