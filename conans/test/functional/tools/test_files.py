@@ -23,7 +23,12 @@ class MockPatchset:
 def mock_patch_ng(monkeypatch):
     mock = MockPatchset()
 
+    def mock_fromstring(string):
+        mock.string = string
+        return mock
+
     monkeypatch.setattr(patch_ng, "fromfile", lambda _: mock)
+    monkeypatch.setattr(patch_ng, "fromstring", mock_fromstring)
     return mock
 
 
@@ -218,3 +223,32 @@ def test_no_patch_file_entry():
 
     assert "The 'conandata.yml' file needs a 'patch_file' entry for every patch to be applied" \
            in str(client.out)
+
+def test_patch_string_entry(mock_patch_ng):
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.files import apply_conandata_patches
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.11.0"
+
+            def build(self):
+                apply_conandata_patches(self)
+        """)
+    conandata_yml = textwrap.dedent("""
+        patches:
+          "1.11.0":
+            - patch_string: mock patch data
+              patch_type: string
+    """)
+
+    client = TestClient()
+    client.save({'conanfile.py': conanfile,
+                 'conandata.yml': conandata_yml})
+    client.run('create .')
+
+    assert os.path.exists(mock_patch_ng.apply_args[0])
+    assert mock_patch_ng.apply_args[1:] == (0, False)
+    assert 'mock patch data' == mock_patch_ng.string.decode('utf-8')
+    assert 'mypkg/1.11.0: Apply patch (string)' in str(client.out)
