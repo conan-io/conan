@@ -194,7 +194,7 @@ class ConanLib(ConanFile):
         users = {"server0": [("user", "password")],
                  "server1": [("user", "password")]}
 
-        client = TestClient(servers=servers, users=users)
+        client = TestClient(servers=servers, inputs=3*["user", "password"])
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "sources.cpp": "sources"})
         client.run("create . hello/0.1@")
@@ -209,12 +209,14 @@ class ConanLib(ConanFile):
         self.assertIn("Sources downloaded from 'server0'", client.out)
 
         # install from server1 that has the sources, upload to server1
-        # download the sources from server0 because it's first
+        # Will not download sources, revision already in server
         client.run("remove * -f")
         client.run("install hello/0.1@ -r server1")
         client.run("upload hello/0.1@ --all -r server1")
-        self.assertIn("Downloading conan_sources.tgz", client.out)
-        self.assertIn("Sources downloaded from 'server0'", client.out)
+        assert "hello/0.1#02da70a3eeda6a0f01a16b75607a2e73 already in server, skipping upload" in \
+               client.out
+        self.assertNotIn("Downloading conan_sources.tgz", client.out)
+        self.assertNotIn("Sources downloaded from 'server0'", client.out)
 
         # install from server0 and build
         # download sources from server0

@@ -258,7 +258,7 @@ class HelloConan(ConanFile):
         os.mkdir(os.path.join(tmp, ".conan"))
         save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            conan_api, _, _ = ConanAPIV1.factory()
+            conan_api = ConanAPIV1()
         conan_api.remote_list()
         from conans.tools import _global_requester
         self.assertEqual(_global_requester.proxies, {"http": "http://myproxy.com"})
@@ -514,14 +514,6 @@ class HelloConan(ConanFile):
     def test_get_gnu_triplet_on_windows_without_compiler(self):
         with self.assertRaises(ConanException):
             tools.get_gnu_triplet("Windows", "x86")
-
-    def test_detect_windows_subsystem(self):
-        # Don't raise test
-        result = OSInfo.detect_windows_subsystem()
-        if not OSInfo.bash_path() or platform.system() != "Windows":
-            self.assertEqual(None, result)
-        else:
-            self.assertEqual(str, type(result))
 
     @pytest.mark.slow
     @pytest.mark.local_bottle

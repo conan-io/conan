@@ -7,8 +7,7 @@ import pytest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.scm import Git, SVN
-from conans.client.tools.win import get_cased_path
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.model.scm import SCMData
 from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.test_files import temp_folder
@@ -132,7 +131,7 @@ class ConanLib(ConanFile):
         self.assertIn("lib/0.1@user/channel: SCM: Getting sources from url:", self.client.out)
 
     def test_auto_git(self):
-        curdir = get_cased_path(self.client.current_folder).replace("\\", "/")
+        curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self.client.init_git_repo()
@@ -375,7 +374,7 @@ class ConanLib(ConanFile):
     def test_install_checked_out(self):
         test_server = TestServer()
         self.servers = {"myremote": test_server}
-        self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=["admin", "password"])
 
         curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")
@@ -387,7 +386,7 @@ class ConanLib(ConanFile):
         self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
-        client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers)
         client2.run("install lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
@@ -806,7 +805,7 @@ class ConanLib(ConanFile):
     def test_install_checked_out(self):
         test_server = TestServer()
         self.servers = {"myremote": test_server}
-        self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=["admin", "password"])
 
         conanfile = base_svn.format(url=_quoted("auto"), revision="auto")
         project_url, _ = self.create_project(files={"conanfile.py": conanfile,
@@ -818,7 +817,7 @@ class ConanLib(ConanFile):
         self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
-        client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers)
         client2.run("install lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
@@ -1068,7 +1067,7 @@ class TestConan(ConanFile):
 """
         servers = {"upload_repo": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                              users={"lasote": "mypass"})}
-        client = TestClient(servers=servers, users={"upload_repo": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.save({"conanfile.py": conanfile + exports_sources, "include/file": "content"})
         client.run("create . danimtb/testing")
         client.run("upload test/1.0@danimtb/testing -r upload_repo")

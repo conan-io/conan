@@ -30,6 +30,8 @@ class GraphManager(object):
         name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
+            # The global.conf is necessary for download_cache definition
+            profile_host.conf.rebase_conf_definition(self._cache.new_config)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
                                                    name=name, version=version,

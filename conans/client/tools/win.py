@@ -19,27 +19,6 @@ from conans.util.files import mkdir_tmp, save
 from conans.util.runners import check_output_runner
 
 
-def _visual_compiler_cygwin(version):
-    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/"
-                      "CurrentVersion/ProgramFilesDir (x86)"):
-        is_64bits = True
-    else:
-        is_64bits = False
-
-    if is_64bits:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
-    else:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
-
-    if not os.path.isfile("/proc/registry/" + key_name.replace('\\', '/') + "/" + version):
-        return None
-
-    installed_version = Version(version).major(fill=False)
-    compiler = "Visual Studio"
-    ConanOutput().success("CYGWIN: Found %s %s" % (compiler, installed_version))
-    return compiler, installed_version
-
-
 def _system_registry_key(key, subkey, query):
     import winreg
     try:
@@ -65,9 +44,6 @@ def is_win64():
 
 def _visual_compiler(version):
     """"version have to be 8.0, or 9.0 or... anything .0"""
-    if platform.system().startswith("CYGWIN"):
-        return _visual_compiler_cygwin(version)
-
     if Version(version) >= "15":
         vs_path = os.getenv('vs%s0comntools' % version)
         path = vs_path or vs_installation_path(version)
@@ -88,7 +64,7 @@ def _visual_compiler(version):
     if _system_registry_key(winreg.HKEY_LOCAL_MACHINE, key_name, version):
         installed_version = Version(version).major(fill=False)
         compiler = "Visual Studio"
-        output.success("Found %s %s" % (compiler, installed_version))
+        ConanOutput().success("Found %s %s" % (compiler, installed_version))
         return compiler, installed_version
 
     return None
@@ -504,173 +480,8 @@ def vcvars_dict(conanfile=None, arch=None, compiler_version=None, force=False,
     return new_env
 
 
-@contextmanager
-def vcvars(*args, **kwargs):
-    if platform.system() == "Windows":
-        new_env = vcvars_dict(*args, **kwargs)
-        with environment_append(new_env):
-            yield
-    else:
-        yield
-
-
-def escape_windows_cmd(command):
-    """ To use in a regular windows cmd.exe
-        1. Adds escapes so the argument can be unpacked by CommandLineToArgvW()
-        2. Adds escapes for cmd.exe so the argument survives cmd.exe's substitutions.
-
-        Useful to escape commands to be executed in a windows bash (msys2, cygwin etc)
-    """
-    quoted_arg = subprocess.list2cmdline([command])
-    return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
-
-
-def get_cased_path(name):
-    if platform.system() != "Windows":
-        return name
-    if not os.path.isabs(name):
-        name = os.path.abspath(name)
-
-    result = []
-    current = name
-    while True:
-        parent, child = os.path.split(current)
-        if parent == current:
-            break
-
-        child_cased = child
-        if os.path.exists(parent):
-            children = os.listdir(parent)
-            for c in children:
-                if c.upper() == child.upper():
-                    child_cased = c
-                    break
-        result.append(child_cased)
-        current = parent
-    drive, _ = os.path.splitdrive(current)
-    result.append(drive)
-    return os.sep.join(reversed(result))
-
-
 MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
 WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
-
-
-def unix_path(path, path_flavor=None):
-    """"Used to translate windows paths to MSYS unix paths like
-    c/users/path/to/file. Not working in a regular console or MinGW!"""
-    if not path:
-        return None
-
-    if not OSInfo().is_windows:
-        return path
-
-    if os.path.exists(path):
-        path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
-
-    path_flavor = path_flavor or OSInfo.detect_windows_subsystem() or MSYS2
-    if path.startswith('\\\\?\\'):
-        path = path[4:]
-    path = path.replace(":/", ":\\")
-    append_prefix = re.match(r'[a-z]:\\', path, re.IGNORECASE)
-    pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
-    path = pattern.sub('/\\1/', path).replace('\\', '/')
-
-    if append_prefix:
-        if path_flavor in (MSYS, MSYS2):
-            return path.lower()
-        elif path_flavor == CYGWIN:
-            return '/cygdrive' + path.lower()
-        elif path_flavor == WSL:
-            return '/mnt' + path[0:2].lower() + path[2:]
-        elif path_flavor == SFU:
-            path = path.lower()
-            return '/dev/fs' + path[0] + path[1:].capitalize()
-    else:
-        return path if path_flavor == WSL else path.lower()
-    return None
-
-
-def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None,
-                        with_login=True):
-    """ Will run a unix command inside a bash terminal
-        It requires to have MSYS2, CYGWIN, or WSL
-    """
-    env = env or {}
-    if not OSInfo().is_windows:
-        raise ConanException("Command only for Windows operating system")
-    subsystem = subsystem or OSInfo.detect_windows_subsystem()
-
-    if not subsystem:
-        raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin "
-                             "or specify a build_require to apply it.")
-
-    if subsystem == MSYS2 and msys_mingw:
-        # This needs to be set so that msys2 bash profile will set up the environment correctly.
-        env_vars = {"MSYSTEM": ("MINGW32" if conanfile.settings.get_safe("arch") == "x86" else
-                                "MINGW64"),
-                    "MSYS2_PATH_TYPE": "inherit"}
-    else:
-        env_vars = None
-
-    with environment_append(env_vars):
-
-        hack_env = ""
-        # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
-        if subsystem != WSL:
-
-            def get_path_value(container, subsystem_name):
-                """Gets the path from the container dict and returns a
-                string with the path for the subsystem_name"""
-                _path_key = next((name for name in container.keys() if "path" == name.lower()), None)
-                if _path_key:
-                    _path_value = container.get(_path_key)
-                    if isinstance(_path_value, list):
-                        return ":".join([unix_path(path, path_flavor=subsystem_name)
-                                         for path in _path_value])
-                    else:
-                        return unix_path(_path_value, path_flavor=subsystem_name)
-
-            # First get the PATH from the conanfile.env
-            inherited_path = get_path_value(conanfile.env, subsystem)
-            # Then get the PATH from the real env
-            env_path = get_path_value(env, subsystem)
-
-            # Both together
-            full_env = ":".join(v for v in [env_path, inherited_path] if v)
-            # Put the build_requires and requires path at the first place inside the shell
-            hack_env = ' && PATH="%s:$PATH"' % full_env if full_env else ""
-
-        for var_name, value in env.items():
-            if var_name == "PATH":
-                continue
-            hack_env += ' && %s=%s' % (var_name, value)
-
-        # Needed to change to that dir inside the bash shell
-        if cwd and not os.path.isabs(cwd):
-            cwd = os.path.join(os.getcwd(), cwd)
-
-        curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
-        to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
-        bash_path = OSInfo.bash_path()
-        bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
-        login = "--login" if with_login else ""
-        if platform.system() == "Windows":
-            # cmd.exe shell
-            wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
-        else:
-            wincmd = '%s %s -c %s' % (bash_path, login, to_run)
-        conanfile.output.info('run_in_windows_bash: %s' % wincmd)
-
-        # If is there any other env var that we know it contains paths, convert it to unix_path
-        used_special_vars = [var for var in ["AR", "AS", "RANLIB", "LD", "STRIP", "CC", "CXX"]
-                             if var in conanfile.env.keys()]
-        normalized_env = {p: unix_path(conanfile.env[p], path_flavor=subsystem)
-                          for p in used_special_vars}
-
-        # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
-        with environment_append(normalized_env):
-            return conanfile._conan_runner(wincmd, subprocess=True)

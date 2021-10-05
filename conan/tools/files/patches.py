@@ -58,7 +58,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
     root = os.path.join(conanfile.source_folder, base_path) if base_path else conanfile.source_folder
-    if not patchset.apply(root, strip=strip, fuzz=fuzz):
+    if not patchset.apply(strip=strip, root=root, fuzz=fuzz):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 

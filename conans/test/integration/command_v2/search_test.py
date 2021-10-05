@@ -4,7 +4,7 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from conans.client.api.helpers.search import Search
+from conans.cli.api.helpers.search import Search
 from conans.errors import ConanConnectionError, ConanException
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -63,7 +63,7 @@ class TestRemotes:
     def _add_remote(self, remote_name):
         self.servers[remote_name] = TestServer(users={"user": "passwd"})
         self.users[remote_name] = [("user", "passwd")]
-        self.client = TestClient(servers=self.servers, users=self.users)
+        self.client = TestClient(servers=self.servers, inputs=["user", "passwd"])
 
     def _add_recipe(self, remote, reference):
         conanfile = textwrap.dedent("""

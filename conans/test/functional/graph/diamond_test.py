@@ -20,11 +20,11 @@ class DiamondTest(unittest.TestCase):
         self.servers = {"default": test_server}
 
     def test_diamond_cmake(self):
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=["lasote", "mypass"])
         self._run(language=1)
 
     def test_diamond_cmake_targets(self):
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, inputs=["lasote", "mypass"])
         self._run(cmake_targets=True)
 
     def _export(self, name, version=None, deps=None, cmake_targets=False):
@@ -104,7 +104,7 @@ class DiamondTest(unittest.TestCase):
         self.assertEqual(str(self.client.out).count("Uploading package"), 4)
 
         # Reuse in another client
-        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers, inputs=["lasote", "mypass"])
         client2.save(files3)
         client2.run("build .")
 

@@ -6,7 +6,7 @@ import textwrap
 
 from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
 from conans.cli.output import Color, ConanOutput
-from conans.client.tools import detected_os, detected_architecture
+from conans.client.tools import detected_architecture
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
@@ -124,7 +124,7 @@ def _get_default_compiler():
         return None
 
     vs = cc = sun_cc = None
-    if detected_os() == "Windows":
+    if platform.system() == "Windows":
         version = latest_visual_studio_version_installed()
         vs = ('Visual Studio', version) if version else None
 
@@ -138,7 +138,7 @@ def _get_default_compiler():
         if platform.system() == "SunOS":
             sun_cc = _sun_cc_compiler()
 
-    if detected_os() == "Windows":
+    if platform.system() == "Windows":
         return vs or cc or gcc or clang
     elif platform.system() == "Darwin":
         return clang or cc or gcc
@@ -277,7 +277,9 @@ def _detect_os_arch(result):
     from conans.client.conf import get_default_settings_yml
     from conans.model.settings import Settings
 
-    the_os = detected_os()
+    the_os = platform.system()
+    if the_os == "Darwin":
+        the_os = "Macos"
     result.append(("os", the_os))
 
     arch = detected_architecture()

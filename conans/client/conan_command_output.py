@@ -18,9 +18,8 @@ from conans.util.misc import make_tuple
 
 class CommandOutputer(object):
 
-    def __init__(self, cache):
+    def __init__(self):
         self._output = ConanOutput()
-        self._cache = cache
 
     def print_profile(self, profile, profile_text):
         Printer(self._output).print_profile(profile, profile_text)
@@ -72,8 +71,10 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self._cache.ref_layout(ref).recipe_manifest()
-                ret[ref] = manifest.time_str
+                # FIXME: Not access to the cache should be available here
+                # manifest = self._cache.ref_layout(ref).recipe_manifest()
+                # ret[ref] = manifest.time_str
+                ret[ref] = ""
         return ret
 
     def _handle_json_output(self, data, json_output, cwd):
@@ -95,7 +96,6 @@ class CommandOutputer(object):
             compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
         build_time_nodes = deps_graph.build_time_nodes()
-        remotes = self._cache.registry.load_remotes()
         ret = []
 
         for (ref, package_id), list_nodes in compact_nodes.items():
@@ -125,14 +125,22 @@ class CommandOutputer(object):
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
                 # ref already has the revision ID, not needed to get it again
-                ref_layout = self._cache.ref_layout(ref)
-                item_data["export_folder"] = ref_layout.export()
-                item_data["source_folder"] = ref_layout.source()
-                pref_build_id = build_id(conanfile) or package_id
-                pref_build = self._cache.get_latest_prev(PackageReference(ref, pref_build_id))
-                pref_package = self._cache.get_latest_prev(PackageReference(ref, package_id))
-                item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
-                item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
+                # FIXME: Not access to the cache should be available here, this information
+                #        should be provided by the conan_api
+
+                # ref_layout = self._cache.ref_layout(ref)
+                # item_data["export_folder"] = ref_layout.export()
+                # item_data["source_folder"] = ref_layout.source()
+                # pref_build_id = build_id(conanfile) or package_id
+                # pref_build = self._cache.get_latest_prev(PackageReference(ref, pref_build_id))
+                # pref_package = self._cache.get_latest_prev(PackageReference(ref, package_id))
+                # item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
+                # item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
+
+                item_data["export_folder"] = "unknown"
+                item_data["source_folder"] = "unknown"
+                item_data["build_folder"] = "unknown"
+                item_data["package_folder"] = "unknown"
 
             def _add_if_exists(attrib, as_list=False):
                 value = getattr(conanfile, attrib, None)
@@ -192,7 +200,7 @@ class CommandOutputer(object):
         Printer(self._output).print_info(data, only,  package_filter=package_filter,
                                          show_paths=show_paths)
 
-    def info_graph(self, graph_filename, deps_graph, cwd, template):
+    def info_graph(self, graph_filename, deps_graph, cwd, template, cache_folder):
         graph = Grapher(deps_graph)
         if not os.path.isabs(graph_filename):
             graph_filename = os.path.join(cwd, graph_filename)
@@ -200,10 +208,10 @@ class CommandOutputer(object):
         # FIXME: For backwards compatibility we should prefer here local files (and we are coupling
         #   logic here with the templates).
         assets = {}
-        vis_js = os.path.join(self._cache.cache_folder, "vis.min.js")
+        vis_js = os.path.join(cache_folder, "vis.min.js")
         if os.path.exists(vis_js):
             assets['vis_js'] = vis_js
-        vis_css = os.path.join(self._cache.cache_folder, "vis.min.css")
+        vis_css = os.path.join(cache_folder, "vis.min.css")
         if os.path.exists(vis_css):
             assets['vis_css'] = vis_css
 

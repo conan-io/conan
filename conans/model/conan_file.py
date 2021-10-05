@@ -4,7 +4,6 @@ import platform
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
 from conans.cli.output import ConanOutput, ScopedOutput
-from conans.client import tools
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
@@ -261,10 +260,7 @@ class ConanFile:
         def _run(cmd, _env):
             # FIXME: run in windows bash is not using output
             if platform.system() == "Windows":
-                if win_bash:
-                    return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
-                                                     msys_mingw=msys_mingw, with_login=with_login)
-                elif self.win_bash:  # New, Conan 2.0
+                if self.win_bash:  # New, Conan 2.0
                     from conan.tools.microsoft.subsystems import run_in_windows_bash
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
             if _env is None:

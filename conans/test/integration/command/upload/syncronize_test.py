@@ -14,8 +14,7 @@ from conans.util.files import load, save
 class SynchronizeTest(unittest.TestCase):
 
     def test_upload(self):
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
         save(client.cache.default_profile_path, "")
         ref = ConanFileReference.loads("hello/0.1@lasote/stable")
         files = {"conanfile.py": GenConanfile("hello", "0.1").with_exports("*"),

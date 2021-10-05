@@ -1,6 +1,4 @@
 # noinspection PyUnresolvedReferences
-from .android import *
-# noinspection PyUnresolvedReferences
 from .apple import *
 # noinspection PyUnresolvedReferences
 from .env import *

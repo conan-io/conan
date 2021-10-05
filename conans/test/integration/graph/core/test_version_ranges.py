@@ -392,7 +392,6 @@ def test_remote_version_ranges():
 
 @pytest.mark.skip(reason="TODO: Test that the server is only hit once for dep/*@user/channel")
 def test_remote_version_ranges_optimized():
-    server = TestServer()
     t = TestClient(default_server_user=True)
     save(t.cache.default_profile_path, "")
     save(t.cache.settings_path, "")
@@ -403,8 +402,7 @@ def test_different_user_channel_resolved_correctly():
     server2 = TestServer()
     servers = OrderedDict([("server1", server1), ("server2", server2)])
 
-    client = TestClient(servers=servers, users={"server1": [("conan", "password")],
-                                                "server2": [("conan", "password")]})
+    client = TestClient(servers=servers, inputs=2*["admin", "password"])
     save(client.cache.default_profile_path, "")
     save(client.cache.settings_path, "")
     client.save({"conanfile.py": GenConanfile()})

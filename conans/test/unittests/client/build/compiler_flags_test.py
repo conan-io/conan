@@ -1,15 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-import platform
 import unittest
 from parameterized.parameterized import parameterized
 
-import pytest
-
-from conans.client.build.compiler_flags import adjust_path, architecture_flag, build_type_define, \
-    build_type_flags, format_defines, format_include_paths, format_libraries, \
-    format_library_paths, libcxx_define, libcxx_flag, pic_flag, sysroot_flag
+from conans.client.build.compiler_flags import architecture_flag, \
+    build_type_flags, libcxx_define, libcxx_flag, pic_flag
 from conans.test.utils.mocks import MockSettings
 
 
@@ -172,73 +165,3 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "compiler.toolset": vs_toolset})
         self.assertEqual(' '.join(build_type_flags(settings)),
                          flags)
-
-    def test_build_type_define(self):
-        define = build_type_define(build_type='Release')
-        self.assertEqual(define, 'NDEBUG')
-
-        define = build_type_define(build_type='Debug')
-        self.assertEqual(define, '')
-
-        define = build_type_define(build_type='MinSizeRel')
-        self.assertEqual(define, 'NDEBUG')
-
-        define = build_type_define(build_type='RelWithDebInfo')
-        self.assertEqual(define, 'NDEBUG')
-
-    def test_adjust_path(self):
-        settings = MockSettings({"compiler": 'gcc'})
-        self.assertEqual('home/www', adjust_path('home\\www', MockSettings({})))
-        self.assertEqual('home/www', adjust_path('home\\www', settings))
-
-        self.assertEqual('"home/www root"', adjust_path('home\\www root', MockSettings({})))
-        self.assertEqual('"home/www root"', adjust_path('home\\www root', settings))
-
-    @pytest.mark.skipif(platform.system() != "Windows", reason="requires Windows")
-    def test_adjust_path_visual_studio(self):
-        #  NOTE : test cannot be run on *nix systems, as adjust_path uses
-        # tools.unix_path which is Windows-only
-        settings = MockSettings({"compiler": 'Visual Studio'})
-        self.assertEqual('home\\www', adjust_path('home/www', settings))
-        self.assertEqual('"home\\www root"',
-                         adjust_path('home/www root', settings))
-        self.assertEqual('home/www',
-                         adjust_path('home\\www', settings, win_bash=True))
-        self.assertEqual('home/www',
-                         adjust_path('home/www', settings, win_bash=True))
-        self.assertEqual('"home/www root"',
-                         adjust_path('home\\www root', settings, win_bash=True))
-        self.assertEqual('"home/www root"',
-                         adjust_path('home/www root', settings, win_bash=True))
-
-    def test_sysroot_flag(self):
-        sysroot = sysroot_flag(sysroot=None, settings=MockSettings({}))
-        self.assertEqual(sysroot, "")
-
-        sysroot = sysroot_flag(sysroot='sys/root',
-                               settings=MockSettings({"compiler": "Visual Studio"}))
-        self.assertEqual(sysroot, "")
-
-        sysroot = sysroot_flag(sysroot='sys/root', settings=MockSettings({}))
-        self.assertEqual(sysroot, "--sysroot=sys/root")
-
-    def test_format_defines(self):
-        self.assertEqual(['-DFOO', '-DBAR=1'], format_defines(['FOO', 'BAR=1']))
-
-    def test_format_include_paths(self):
-        self.assertEqual(['-Ipath1', '-I"with spaces"'],
-                         format_include_paths(['path1', 'with spaces'], MockSettings({})))
-
-    def test_format_library_paths(self):
-        self.assertEqual(['-Lpath1', '-L"with spaces"'],
-                         format_library_paths(['path1', 'with spaces'], MockSettings({})))
-        self.assertEqual(['-LIBPATH:path1', '-LIBPATH:"with spaces"'],
-                         format_library_paths(['path1', 'with spaces'],
-                                              MockSettings({"compiler": "Visual Studio"})))
-
-    def test_format_libraries(self):
-        self.assertEqual(['-llib1', '-llib2'],
-                         format_libraries(['lib1', 'lib2'], MockSettings({})))
-        self.assertEqual(['lib1.lib', 'lib2.lib'],
-                         format_libraries(['lib1', 'lib2'],
-                                          MockSettings({"compiler": "Visual Studio"})))

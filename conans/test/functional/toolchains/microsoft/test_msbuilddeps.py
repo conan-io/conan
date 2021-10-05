@@ -859,3 +859,124 @@ def test_private_transitive():
 
     pkg_data_props = client.load("conan_pkg_release_x64.props")
     assert "conan_dep.props" not in pkg_data_props
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+def test_build_requires():
+    # https://github.com/conan-io/conan/issues/9545
+    client = TestClient()
+    package = "self.copy('*', src=str(self.settings.arch), dst='bin')"
+    dep = GenConanfile().with_exports("*").with_settings("arch").with_package(package)
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.microsoft import MSBuild
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            build_requires = "dep/0.1"
+            generators = "MSBuildDeps", "MSBuildToolchain"
+            def build(self):
+                msbuild = MSBuild(self)
+                msbuild.build("hello.sln")
+            """)
+    hello_vcxproj = textwrap.dedent( r"""<?xml version="1.0" encoding="utf-8"?>
+        <Project DefaultTargets="Build" ToolsVersion="15.0"
+               xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+          <ItemGroup Label="ProjectConfigurations">
+            <ProjectConfiguration Include="Release|Win32">
+              <Configuration>Release</Configuration>
+              <Platform>Win32</Platform>
+            </ProjectConfiguration>
+            <ProjectConfiguration Include="Release|x64">
+              <Configuration>Release</Configuration>
+              <Platform>x64</Platform>
+            </ProjectConfiguration>
+          </ItemGroup>
+          <PropertyGroup Label="Globals">
+            <VCProjectVersion>15.0</VCProjectVersion>
+            <ProjectGuid>{6F392A05-B151-490C-9505-B2A49720C4D9}</ProjectGuid>
+            <Keyword>Win32Proj</Keyword>
+            <RootNamespace>MyProject</RootNamespace>
+          </PropertyGroup>
+          <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+          <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+            <ConfigurationType>Application</ConfigurationType>
+            <UseDebugLibraries>false</UseDebugLibraries>
+            <PlatformToolset>v141</PlatformToolset>
+            <WholeProgramOptimization>true</WholeProgramOptimization>
+            <CharacterSet>Unicode</CharacterSet>
+          </PropertyGroup>
+          <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+            <ConfigurationType>Application</ConfigurationType>
+            <UseDebugLibraries>false</UseDebugLibraries>
+            <PlatformToolset>v141</PlatformToolset>
+            <WholeProgramOptimization>true</WholeProgramOptimization>
+            <CharacterSet>Unicode</CharacterSet>
+          </PropertyGroup>
+
+          <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+          <ImportGroup Label="PropertySheets">
+            <Import Project="..\conandeps.props" />
+          </ImportGroup>
+
+          <PropertyGroup Label="UserMacros" />
+
+            <ItemGroup>
+            <CustomBuild Include="data.proto">
+              <FileType>Document</FileType>
+              <Outputs>data.proto.h</Outputs>
+              <Command>dep1tool</Command>
+            </CustomBuild>
+          </ItemGroup>
+          <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+          <ImportGroup Label="ExtensionTargets">
+          </ImportGroup>
+        </Project>""")
+
+    hello_sln = textwrap.dedent(r"""
+        Microsoft Visual Studio Solution File, Format Version 12.00
+        # Visual Studio 15
+        VisualStudioVersion = 15.0.28307.757
+        MinimumVisualStudioVersion = 10.0.40219.1
+        Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MyProject", "MyProject\MyProject.vcxproj", "{6F392A05-B151-490C-9505-B2A49720C4D9}"
+        EndProject
+        Global
+            GlobalSection(SolutionConfigurationPlatforms) = preSolution
+                Release|x64 = Release|x64
+                Release|x86 = Release|x86
+            EndGlobalSection
+            GlobalSection(ProjectConfigurationPlatforms) = postSolution
+                {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x64.ActiveCfg = Release|x64
+                {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x64.Build.0 = Release|x64
+                {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x86.ActiveCfg = Release|Win32
+                {6F392A05-B151-490C-9505-B2A49720C4D9}.Release|x86.Build.0 = Release|Win32
+            EndGlobalSection
+            GlobalSection(SolutionProperties) = preSolution
+                HideSolutionNode = FALSE
+            EndGlobalSection
+            GlobalSection(ExtensibilityGlobals) = postSolution
+                SolutionGuid = {DE6E462F-E299-4F9C-951A-F9404EB51521}
+            EndGlobalSection
+        EndGlobal
+        """)
+    client.save({"dep/conanfile.py": dep,
+                 "dep/x86/dep1tool.bat": "@echo Invoking 32bit dep_1 build tool",
+                 "dep/x86_64/dep1tool.bat": "@echo Invoking 64bit dep_1 build tool",
+                 "consumer/conanfile.py": consumer,
+                 "consumer/hello.sln": hello_sln,
+                 "consumer/MyProject/MyProject.vcxproj": hello_vcxproj,
+                 "consumer/MyProject/data.proto": "dataproto"})
+    client.run("create dep dep/0.1@ -s arch=x86")
+    client.run("create dep dep/0.1@ -s arch=x86_64")
+    with client.chdir("consumer"):
+        client.run('build . -s compiler="Visual Studio" -s compiler.version=15 '
+                   " -s arch=x86_64 -s build_type=Release")
+        assert "dep/0.1:6745936d8a913181e35fed8eb321e5aa6cf7500c - Cache" in client.out
+        deps_props = client.load("conandeps.props")
+        assert "conan_dep_build.props" in deps_props
+        assert "Invoking 64bit dep_1 build tool" in client.out
+
+        client.run('build . -s compiler="Visual Studio" -s compiler.version=15 '
+                   " -s:b arch=x86 -s build_type=Release")
+        assert "Invoking 32bit dep_1 build tool" in client.out
