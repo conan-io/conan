@@ -25,8 +25,7 @@ def test_modify_environment():
     # We can pass the env to the generate once we adjusted or injected anything
     be.generate(env)
 
-    bat = "conanautotoolstoolchain.{}".format("bat" if platform.system() == "Windows" else "sh")
-    with open(bat) as f:
+    with open("conanautotoolstoolchain.sh") as f:
         content = f.read()
         assert "foo" in content
 
