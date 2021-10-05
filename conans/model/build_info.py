@@ -303,12 +303,12 @@ class CppInfo(object):
                 else:
                     setattr(self, varname, other_values)
 
-        if self.sysroot is None and other.sysroot is not None:
-            self.sysroot = other.sysroot
+        if self._sysroot is None and other._sysroot is not None:
+            self._sysroot = other._sysroot
 
-        if other.requires:
-            current_values = self.components[None].get_init("requires", [])
-            merge_list(other.requires, current_values)
+        if other._requires:
+            current_values = self.components[None].get_init("_requires", [])
+            merge_list(other._requires, current_values)
 
         if other._generator_properties:
             current_values = self.components[None].get_init("_generator_properties", {})
@@ -327,9 +327,9 @@ class CppInfo(object):
                     else:
                         setattr(self.components[cname], varname, other_values)
 
-            if c.requires:
-                current_values = self.components[cname].get_init("requires", [])
-                merge_list(c.requires, current_values)
+            if c._requires:
+                current_values = self.components[cname].get_init("_requires", [])
+                merge_list(c._requires, current_values)
 
             if c._generator_properties:
                 current_values = self.components[cname].get_init("_generator_properties", {})
