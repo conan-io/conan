@@ -221,8 +221,8 @@ def test_no_patch_file_entry():
                  'conandata.yml': conandata_yml})
     client.run('create .', assert_error=True)
 
-    assert "The 'conandata.yml' file needs a 'patch_file' entry for every patch to be applied" \
-           in str(client.out)
+    assert "The 'conandata.yml' file needs a 'patch_file' or 'patch_string' entry for every patch" \
+           " to be applied" in str(client.out)
 
 def test_patch_string_entry(mock_patch_ng):
     conanfile = textwrap.dedent("""

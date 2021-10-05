@@ -111,5 +111,5 @@ def apply_conandata_patches(conanfile):
         elif "patch_string" in it:
             patch(conanfile, **it)
         else:
-            raise ConanException("The 'conandata.yml' file needs a 'patch_file' entry for every"
-                                 " patch to be applied")
+            raise ConanException("The 'conandata.yml' file needs a 'patch_file' or 'patch_string'"
+                                 " entry for every patch to be applied")
