@@ -37,7 +37,10 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                      manifest_interactive=manifest_interactive,
                      keep_build=keep_build,
                      recorder=recorder,
-                     require_overrides=require_overrides)
+                     require_overrides=require_overrides,
+                     conanfile_path=os.path.dirname(conanfile_abs_path),
+                     test=True  # To keep legacy test_package_layout
+                     )
         cmd_build(app, conanfile_abs_path, test_build_folder,
                   source_folder=base_folder, build_folder=test_build_folder,
                   package_folder=os.path.join(test_build_folder, "package"),

@@ -1,3 +1,7 @@
+import os
+import re
+
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 
 
@@ -7,6 +11,14 @@ def test_cmake_lib_template():
     # Local flow works
     client.run("install . -if=install")
     client.run("build . -if=install")
+    client.run("package . -if=install")
+    assert os.path.exists(os.path.join(client.current_folder, "package", "include", "hello.h"))
+
+    client.run("export-pkg . hello/0.1@ -if=install")
+    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+    pref = PackageReference(ConanFileReference.loads("hello/0.1"), package_id)
+    package_folder = client.cache.package_layout(pref.ref).package(pref)
+    assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 
     # Create works
     client.run("create .")

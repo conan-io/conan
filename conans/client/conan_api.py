@@ -453,7 +453,7 @@ class ConanAPIV1(object):
             export_pkg(self.app, recorder, new_ref, source_folder=source_folder,
                        build_folder=build_folder, package_folder=package_folder,
                        install_folder=install_folder, graph_info=graph_info, force=force,
-                       remotes=remotes)
+                       remotes=remotes, source_conanfile_path=conanfile_path)
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
@@ -617,7 +617,8 @@ class ConanAPIV1(object):
                          generators=generators,
                          no_imports=no_imports,
                          recorder=recorder,
-                         require_overrides=require_overrides)
+                         require_overrides=require_overrides,
+                         conanfile_path=os.path.dirname(conanfile_path))
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -796,10 +797,22 @@ class ConanAPIV1(object):
         else:
             package_folder = _make_abs_path(package_folder, cwd, default=build_folder)
 
-        conanfile.folders.set_base_build(build_folder)
-        conanfile.folders.set_base_source(source_folder)
-        conanfile.folders.set_base_package(package_folder)
-        conanfile.folders.set_base_install(install_folder)
+        if hasattr(conanfile, "layout"):
+            dir_path = os.path.dirname(conanfile_path)
+            conanfile.folders.set_base_generators(dir_path)
+            conanfile.folders.set_base_build(dir_path)
+            conanfile.folders.set_base_source(dir_path)
+            # FIXME: this is bad, but conanfile.folders.package=xxx is broken atm, cant be used
+            # The "conan package" will create "include", "lib" subfolders directly at the root folder
+            # level, which pollutes the source repo itself. It is not possible to change this via
+            # self.folders.package="package" in layout(), because that breaks packaging and create
+            conanfile.folders.set_base_package(os.path.join(dir_path, "package"))
+            conanfile.folders.set_base_install(install_folder)
+        else:
+            conanfile.folders.set_base_build(build_folder)
+            conanfile.folders.set_base_source(source_folder)
+            conanfile.folders.set_base_package(package_folder)
+            conanfile.folders.set_base_install(install_folder)
 
         # Use the complete package layout for the local method
         if conanfile.folders.package:
