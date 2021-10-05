@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-cacert = """
+cacert_default = """
 # Issuer: O=Equifax OU=Equifax Secure Certificate Authority
 # Subject: O=Equifax OU=Equifax Secure Certificate Authority
 # Label: "Equifax Secure CA"
@@ -5701,6 +5701,10 @@ j4rBYKEMrltDR5FL1ZoXX/nUh8HCjLfn4g8wGTeGrODcQgPmlKidrv0PJFGUzpII
 lBlGGSW4gNfL1IYoakRwJiNiqZ+Gb7+6kHDSVneFeO/qJakXzlByjAA6quPbYzSf
 +AZxAeKCINT+b72x
 -----END CERTIFICATE-----
+"""
+
+# Added block: https://github.com/conan-io/conan/pull/9696
+cacert_1_40_3 = """
 -----BEGIN CERTIFICATE-----
 MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw
 TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh
@@ -5733,3 +5737,5 @@ mRGunUHBcnWEvgJBQl9nJEiU0Zsnvgc/ubhPgXRR4Xq37Z0j4r7g1SgEEzwxA57d
 emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=
 -----END CERTIFICATE-----
 """
+
+cacert = cacert_default + cacert_1_40_3
