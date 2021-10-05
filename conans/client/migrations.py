@@ -1,6 +1,8 @@
 import os
 import shutil
 
+import six
+
 from conans import DEFAULT_REVISION_V1
 from conans.client import migrations_settings
 from conans.client.cache.cache import ClientCache
@@ -119,7 +121,7 @@ def remove_buggy_cacert(cache, out):
     Needed migration because otherwise the cacert is kept in the cache even upgrading conan"""
     cacert_path = os.path.join(cache.cache_folder, CACERT_FILE)
     if os.path.exists(cacert_path):
-        current_cacert = load(cacert_path)
+        current_cacert = load(cacert_path).encode('utf-8') if six.PY2 else load(cacert_path)
         if current_cacert == cacert_default:
             out.info("Removing the 'cacert.pem' file...")
             os.unlink(cacert_path)
