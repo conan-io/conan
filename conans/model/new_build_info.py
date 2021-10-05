@@ -7,7 +7,7 @@ from conans.model.build_info import DefaultOrderedDict
 _DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
                    "frameworkdirs"]
 _FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "cxxflags",
-                    "sharedlinkflags", "exelinkflags"]
+                    "sharedlinkflags", "exelinkflags", "objects"]
 
 
 class _NewComponent(object):
@@ -34,6 +34,7 @@ class _NewComponent(object):
         self.cxxflags = None  # C++ compilation flags
         self.sharedlinkflags = None  # linker flags
         self.exelinkflags = None  # linker flags
+        self.objects = None  # objects to link
 
         self.sysroot = None
         self.requires = None
