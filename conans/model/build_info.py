@@ -2,10 +2,10 @@ import copy
 import os
 from collections import OrderedDict
 
-_DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
+_DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "frameworkdirs"]
-_FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "cxxflags",
-                    "sharedlinkflags", "exelinkflags"]
+_FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
+                    "sharedlinkflags", "_exelinkflags"]
 
 
 class DefaultOrderedDict(OrderedDict):
@@ -34,26 +34,196 @@ class _Component(object):
         self._generator_properties = None
 
         # ###### DIRECTORIES
-        self.includedirs = []  # Ordered list of include paths
-        self.srcdirs = []  # Ordered list of source paths
-        self.libdirs = []  # Directories to find libraries
-        self.resdirs = []  # Directories to find resources, data, etc
-        self.bindirs = []  # Directories to find executables and shared libs
-        self.builddirs = []
-        self.frameworkdirs = []
+        self._includedirs = None  # Ordered list of include paths
+        self._srcdirs = None  # Ordered list of source paths
+        self._libdirs = None  # Directories to find libraries
+        self._resdirs = None  # Directories to find resources, data, etc
+        self._bindirs = None  # Directories to find executables and shared libs
+        self._builddirs = None
+        self._frameworkdirs = None
 
         # ##### FIELDS
-        self.system_libs = []  # Ordered list of system libraries
-        self.frameworks = []  # Macos .framework
-        self.libs = []  # The libs to link against
-        self.defines = []  # preprocessor definitions
-        self.cflags = []  # pure C flags
-        self.cxxflags = []  # C++ compilation flags
-        self.sharedlinkflags = []  # linker flags
-        self.exelinkflags = []  # linker flags
+        self._system_libs = None  # Ordered list of system libraries
+        self._frameworks = None  # Macos .framework
+        self._libs = None  # The libs to link against
+        self._defines = None  # preprocessor definitions
+        self._cflags = None  # pure C flags
+        self._cxxflags = None  # C++ compilation flags
+        self._sharedlinkflags = None  # linker flags
+        self._exelinkflags = None  # linker flags
 
-        self.sysroot = ""
-        self.requires = []
+        self._sysroot = None
+        self._requires = None
+
+    @property
+    def includedirs(self):
+        if self._includedirs is None:
+            self._includedirs = []
+        return self._includedirs
+
+    @includedirs.setter
+    def includedirs(self, value):
+        self._includedirs = value
+
+    @property
+    def srcdirs(self):
+        if self._srcdirs is None:
+            self._srcdirs = []
+        return self._srcdirs
+
+    @srcdirs.setter
+    def srcdirs(self, value):
+        self._srcdirs = value
+
+    @property
+    def libdirs(self):
+        if self._libdirs is None:
+            self._libdirs = []
+        return self._libdirs
+
+    @libdirs.setter
+    def libdirs(self, value):
+        self._libdirs = value
+
+    @property
+    def resdirs(self):
+        if self._resdirs is None:
+            self._resdirs = []
+        return self._resdirs
+
+    @resdirs.setter
+    def resdirs(self, value):
+        self._resdirs = value
+
+    @property
+    def bindirs(self):
+        if self._bindirs is None:
+            self._bindirs = []
+        return self._bindirs
+
+    @bindirs.setter
+    def bindirs(self, value):
+        self._bindirs = value
+
+    @property
+    def builddirs(self):
+        if self._builddirs is None:
+            self._builddirs = []
+        return self._builddirs
+
+    @builddirs.setter
+    def builddirs(self, value):
+        self._builddirs = value
+
+    @property
+    def frameworkdirs(self):
+        if self._frameworkdirs is None:
+            self._frameworkdirs = []
+        return self._frameworkdirs
+
+    @frameworkdirs.setter
+    def frameworkdirs(self, value):
+        self._frameworkdirs = value
+
+    @property
+    def system_libs(self):
+        if self._system_libs is None:
+            self._system_libs = []
+        return self._system_libs
+
+    @system_libs.setter
+    def system_libs(self, value):
+        self._system_libs = value
+
+    @property
+    def frameworks(self):
+        if self._frameworks is None:
+            self._frameworks = []
+        return self._frameworks
+
+    @frameworks.setter
+    def frameworks(self, value):
+        self._frameworks = value
+
+    @property
+    def libs(self):
+        if self._libs is None:
+            self._libs = []
+        return self._libs
+
+    @libs.setter
+    def libs(self, value):
+        self._libs = value
+
+    @property
+    def defines(self):
+        if self._defines is None:
+            self._defines = []
+        return self._defines
+
+    @defines.setter
+    def defines(self, value):
+        self._defines = value
+
+    @property
+    def cflags(self):
+        if self._cflags is None:
+            self._cflags = []
+        return self._cflags
+
+    @cflags.setter
+    def cflags(self, value):
+        self._cflags = value
+
+    @property
+    def cxxflags(self):
+        if self._cxxflags is None:
+            self._cxxflags = []
+        return self._cxxflags
+
+    @cxxflags.setter
+    def cxxflags(self, value):
+        self._cxxflags = value
+
+    @property
+    def sharedlinkflags(self):
+        if self._sharedlinkflags is None:
+            self._sharedlinkflags = []
+        return self._sharedlinkflags
+
+    @sharedlinkflags.setter
+    def sharedlinkflags(self, value):
+        self._sharedlinkflags = value
+
+    @property
+    def exelinkflags(self):
+        if self._exelinkflags is None:
+            self._exelinkflags = []
+        return self._exelinkflags
+
+    @exelinkflags.setter
+    def exelinkflags(self, value):
+        self._exelinkflags = value
+
+    @property
+    def sysroot(self):
+        if self._sysroot is None:
+            self._sysroot = ""
+        return self._sysroot
+
+    @sysroot.setter
+    def sysroot(self, value):
+        self._sysroot = value
+
+    @property
+    def requires(self):
+        if self._requires is None:
+            self._requires = []
+        return self._requires
+
+    @requires.setter
+    def requires(self, value):
+        self._requires = value
 
     @property
     def required_component_names(self):
@@ -126,14 +296,14 @@ class CppInfo(object):
 
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
             other_values = getattr(other, varname)
-            if other_values:
+            if other_values is not None:
                 if not overwrite:
                     current_values = self.components[None].get_init(varname, [])
                     merge_list(other_values, current_values)
                 else:
                     setattr(self, varname, other_values)
 
-        if self.sysroot is "" and other.sysroot:
+        if self.sysroot is None and other.sysroot is not None:
             self.sysroot = other.sysroot
 
         if other.requires:
@@ -150,7 +320,7 @@ class CppInfo(object):
                 continue
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 other_values = getattr(c, varname)
-                if other_values:
+                if other_values is not None:
                     if not overwrite:
                         current_values = self.components[cname].get_init(varname, [])
                         merge_list(other_values, current_values)
