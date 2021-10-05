@@ -2556,6 +2556,7 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
 """
 
 settings_1_40_3 = settings_1_40_2
+settings_1_40_4 = settings_1_40_3
 
 settings_1_41_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
