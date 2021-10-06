@@ -50,7 +50,7 @@ def test_virtualenv_deactivated(client, win_bash):
                     if win_bash is False else "win_bash = True")
     client.save({"conanfile.py": conanfile})
     with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
-        client.run("install .")
+        client.run("install . -s:b os=Windows -s:h os=Windows")
 
     if win_bash:
         # Assert there is no "bat" files generated because the environment can and will be run inside
