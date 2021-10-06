@@ -228,21 +228,21 @@ def test_no_fpic_when_not_an_option(conanfile_linux):
 
 
 def test_no_fpic_when_shared(conanfile_linux):
-    conanfile.options.shared = True
+    conanfile_linux.options.shared = True
     toolchain = CMakeToolchain(conanfile_linux)
     content = toolchain.content
     assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' not in content
 
 
 def test_fpic_disabled(conanfile_linux):
-    conanfile.options.fPIC = False
+    conanfile_linux.options.fPIC = False
     toolchain = CMakeToolchain(conanfile_linux)
     content = toolchain.content
     assert 'set(CMAKE_POSITION_INDEPENDENT_CODE OFF' in content
 
 
 def test_fpic_enabled(conanfile_linux):
-    conanfile.options.fPIC = True
+    conanfile_linux.options.fPIC = True
     toolchain = CMakeToolchain(conanfile_linux)
     content = toolchain.content
     assert 'set(CMAKE_POSITION_INDEPENDENT_CODE ON' in content
