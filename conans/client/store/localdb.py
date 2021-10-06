@@ -105,3 +105,13 @@ class LocalDB(object):
                 connection.commit()
             except Exception as e:
                 raise ConanException("Could not store credentials %s" % str(e))
+
+    def remove(self, remote_url):
+        with self._connect() as connection:
+            try:
+                statement = connection.cursor()
+                statement.execute('DELETE FROM %s where remote_url="%s"'
+                                  % (REMOTES_USER_TABLE, remote_url))
+                connection.commit()
+            except Exception as e:
+                raise ConanException("Could not remove credentials %s" % str(e))

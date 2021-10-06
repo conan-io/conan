@@ -713,7 +713,10 @@ class ConanAPIV1(object):
     @api_method
     def remote_remove(self, remote_name):
         app = ConanApp(self.cache_folder)
-        return app.cache.registry.remove(remote_name)
+        registry = app.cache.registry
+        remote = registry.load_remotes()[remote_name]
+        app.cache.localdb.remove(remote.url)
+        return registry.remove(remote_name)
 
     @api_method
     def remote_set_disabled_state(self, remote_name, state):

@@ -377,3 +377,16 @@ class ConanLib(ConanFile):
 
         # Now try to skip without specifying user
         client.run("user -r default -p BAD_PASS --skip-auth")
+
+
+def test_user_removed_remote_removed():
+    # Make sure that removing a remote clears the credentials
+    # https://github.com/conan-io/conan/issues/5562
+    c = TestClient(default_server_user=True)
+    server_url = c.servers["default"].fake_url
+    c.run("user -p password -r default admin")
+    login = c.cache.localdb.get_login(server_url)
+    assert login[0] == "admin"
+    c.run("remote remove default")
+    login = c.cache.localdb.get_login(server_url)
+    assert login == (None, None, None)
