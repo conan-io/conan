@@ -227,6 +227,7 @@ def test_no_fpic_when_not_an_option(conanfile_linux):
     assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' not in content
 
 
+@pytest.fixture
 def conanfile_linux_shared():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
@@ -264,6 +265,7 @@ def test_fpic_when_not_shared(conanfile_linux_shared):
     assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' in content
 
 
+@pytest.fixture
 def conanfile_linux_fpic():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
