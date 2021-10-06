@@ -153,7 +153,7 @@ class FPicBlock(Block):
             self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined "
                                         "for a shared library")
             return None
-        return {"fpic": fpic}
+        return {"fpic": "ON" if fpic else "OFF"}
 
 
 class GLibCXXBlock(Block):
