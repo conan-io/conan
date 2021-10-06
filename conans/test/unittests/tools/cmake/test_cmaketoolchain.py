@@ -311,13 +311,13 @@ def conanfile_linux_fpic():
 
 def test_fpic_disabled(conanfile_linux_fpic):
     conanfile_linux_fpic.options.fPIC = False
-    toolchain = CMakeToolchain(conanfile_linux)
+    toolchain = CMakeToolchain(conanfile_linux_fpic)
     content = toolchain.content
     assert 'set(CMAKE_POSITION_INDEPENDENT_CODE OFF' in content
 
 
 def test_fpic_enabled(conanfile_linux_fpic):
     conanfile_linux_fpic.options.fPIC = True
-    toolchain = CMakeToolchain(conanfile_linux)
+    toolchain = CMakeToolchain(conanfile_linux_fpic)
     content = toolchain.content
     assert 'set(CMAKE_POSITION_INDEPENDENT_CODE ON' in content
