@@ -134,7 +134,7 @@ class VSRuntimeBlock(Block):
 
 class FPicBlock(Block):
     template = textwrap.dedent("""
-        message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
+        message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE={{ fpic }} (options.fPIC)")
         set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }})
         """)
 
