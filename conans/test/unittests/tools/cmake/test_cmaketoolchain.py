@@ -246,6 +246,3 @@ def test_fpic_enabled(conanfile_linux):
     toolchain = CMakeToolchain(conanfile_linux)
     content = toolchain.content
     assert 'set(CMAKE_POSITION_INDEPENDENT_CODE ON' in content
-
-
-
