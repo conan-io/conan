@@ -1,6 +1,4 @@
 import os
-import platform
-import textwrap
 
 import mock
 import pytest
@@ -16,6 +14,7 @@ variables that are paths to run in a windows bash, we need to look at the consum
 not the dependency conanfile. This is testing that in the process of aggregating the paths,
 these are correct.
 """
+
 
 @pytest.fixture
 def client():

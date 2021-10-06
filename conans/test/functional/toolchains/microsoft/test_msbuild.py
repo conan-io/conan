@@ -1,15 +1,11 @@
 import os
 import platform
-import shutil
 import textwrap
 import unittest
 
 import pytest
 from parameterized import parameterized, parameterized_class
 
-
-from conans.client.tools import chdir
-from conans.util.files import mkdir
 from conan.tools.microsoft.visual import vcvars_command
 from conans.client.tools import vs_installation_path
 from conans.test.assets.sources import gen_function_cpp
@@ -155,7 +151,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
     Label="LocalAppDataPlatform" />
   </ImportGroup>
-   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'">
+   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
     Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
     Label="LocalAppDataPlatform" />
@@ -306,15 +302,18 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 </Project>
 """
 
+
 @pytest.mark.tool_visual_studio(version='15')
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2017():
     check_msvc_runtime_flag("15", "19.1")
 
+
 @pytest.mark.tool_visual_studio(version='17')
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2022():
     check_msvc_runtime_flag("17", "19.3")
+
 
 def check_msvc_runtime_flag(vs_version, msvc_version):
     client = TestClient()
@@ -341,10 +340,12 @@ def check_msvc_runtime_flag(vs_version, msvc_version):
                '-s compiler.cppstd=14'.format(msvc_version=msvc_version))
     assert "MSVC FLAG=MD!!" in client.out
 
+
 vs_versions = [{"vs_version": "15", "msvc_version": "19.1", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
     vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
+
 
 @parameterized_class(vs_versions)
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -362,6 +363,7 @@ class WinTest(unittest.TestCase):
 
             def layout(self):
                 self.folders.generators = "conan"
+                self.folders.build = "."
 
             def generate(self):
                 tc = MSBuildToolchain(self)
@@ -389,11 +391,14 @@ class WinTest(unittest.TestCase):
                 shared_option = self.dependencies["hello"].options.get_safe("shared")
                 if shared_option and self.settings.build_type == "Release":
                     configuration = "ReleaseShared"
+                    if self.settings.arch == "x86_64":
+                        dst = "x64/%s" % configuration
+                    else:
+                        dst = configuration
                 else:
                     configuration = self.settings.build_type
-                self.copy("*.dll", src="bin",
-                          dst="%s/%s" % (self.settings.arch, configuration),
-                          keep_path=False)
+                    dst = "%s/%s" % (self.settings.arch, configuration)
+                self.copy("*.dll", src="bin", dst=dst, keep_path=False)
 
             def build(self):
                 msbuild = MSBuild(self)
@@ -415,12 +420,7 @@ class WinTest(unittest.TestCase):
             command_str = "%s\\MyApp.exe" % configuration
         else:
             command_str = "x64\\%s\\MyApp.exe" % configuration
-        # To run the app without VS IDE, we need to copy the .exe to the DLLs folder
-        new_cmd = "conan\\%s\\%s\\MyApp.exe" % (arch, configuration)
-        with chdir(client.current_folder):
-            mkdir(os.path.dirname(new_cmd))
-            shutil.copy(command_str, new_cmd)
-        client.run_command(new_cmd)
+        client.run_command(command_str)
 
     @parameterized.expand([("Visual Studio", "15", "MT", "17"),
                            ("msvc", "19.1", "static", "17"),
@@ -589,9 +589,12 @@ class WinTest(unittest.TestCase):
                           {"DEFINITIONS_BOTH": "True",
                            "DEFINITIONS_CONFIG": build_type})
 
-            new_cmd = "conan\\%s\\%s\\MyApp.exe" % (arch, configuration)
+            if arch == "x86":
+                command_str = "%s\\MyApp.exe" % configuration
+            else:
+                command_str = "x64\\%s\\MyApp.exe" % configuration
             vcvars = vcvars_command(version=self.vs_version, architecture="amd64")
-            cmd = ('%s && dumpbin /dependents "%s"' % (vcvars, new_cmd))
+            cmd = ('%s && dumpbin /dependents "%s"' % (vcvars, command_str))
             client.run_command(cmd)
             if shared:
                 self.assertIn("hello.dll", client.out)

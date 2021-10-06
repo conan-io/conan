@@ -9,7 +9,7 @@ _generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-               "VCVars", "deploy"]
+               "VCVars", "deploy", "IntelCC"]
 
 
 def _get_generator_class(generator_name):
@@ -43,6 +43,9 @@ def _get_generator_class(generator_name):
     elif generator_name == "VCVars":
         from conan.tools.microsoft import VCVars
         return VCVars
+    elif generator_name == "IntelCC":
+        from conan.tools.intel import IntelCC
+        return IntelCC
     elif generator_name == "QbsToolchain" or generator_name == "QbsProfile":
         from conan.tools.qbs.qbsprofile import QbsProfile
         return QbsProfile
@@ -68,6 +71,7 @@ def _get_generator_class(generator_name):
 
 def write_generators(conanfile):
     new_gen_folder = conanfile.generators_folder
+    print("GENERATOR FOLDER!!!!!!!!!!!!", new_gen_folder)
     _receive_conf(conanfile)
 
     for generator_name in set(conanfile.generators):

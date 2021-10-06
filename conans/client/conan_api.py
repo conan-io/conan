@@ -286,7 +286,7 @@ class ConanAPIV1(object):
                        build_folder=build_folder, package_folder=package_folder,
                        profile_host=profile_host, profile_build=profile_build,
                        graph_lock=graph_lock, root_ref=root_ref, force=force,
-                       remotes=remotes)
+                       remotes=remotes, source_conanfile_path=conanfile_path)
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
@@ -392,7 +392,8 @@ class ConanAPIV1(object):
                          update=update,
                          generators=generators,
                          no_imports=no_imports,
-                         require_overrides=require_overrides)
+                         require_overrides=require_overrides,
+                         conanfile_path=os.path.dirname(conanfile_path))
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -530,7 +531,8 @@ class ConanAPIV1(object):
                                      build_modes=build,
                                      update=update,
                                      generators=generators,
-                                     no_imports=no_imports)
+                                     no_imports=no_imports,
+                                     conanfile_path=os.path.dirname(conanfile_path))
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -541,7 +543,6 @@ class ConanAPIV1(object):
             cmd_build(app, conanfile_path, conanfile, base_path=cwd,
                       source_folder=source_folder, build_folder=build_folder,
                       package_folder=package_folder, install_folder=install_folder)
-
         except ConanException as exc:
             raise
 
