@@ -1,8 +1,5 @@
 import unittest
 
-import pytest
-from mock import Mock
-
 from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
 from conans.test.utils.tools import TestClient
