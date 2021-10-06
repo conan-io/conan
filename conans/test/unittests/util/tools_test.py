@@ -18,7 +18,6 @@ from conans.client.conf import get_default_client_conf
 from conans.cli.output import ConanOutput
 from conans.client.tools import chdir
 from conans.client.tools.files import replace_in_file
-from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import vswhere
 from conans.errors import ConanException, AuthenticationException
 from conans.model.build_info import CppInfo
@@ -254,8 +253,7 @@ class HelloConan(ConanFile):
         # Not test the real commmand get_command if it's setting the module global vars
         tmp = temp_folder()
         conf = get_default_client_conf().replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
-        os.mkdir(os.path.join(tmp, ".conan"))
-        save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
+        save(os.path.join(tmp, CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
             conan_api = ConanAPIV1()
         conan_api.remote_list()
