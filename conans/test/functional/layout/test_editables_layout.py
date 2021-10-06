@@ -131,10 +131,10 @@ def test_cpp_info_components_editable():
         self.cpp_info.components["foo"].libs.append("lib_when_package2_foo")
 
         # when editable: This one will be discarded because declared in source
-        self.cpp_info.components["foo"].cxxflags = ["my_cxx_flag2_foo"]
+        self.cpp_info.components["foo"].cxxflags.append("my_cxx_flag2_foo")
 
         # when editable: This one WONT be discarded as has not been declared in the editables layout
-        self.cpp_info.components["foo"].cflags = ["my_c_flag_foo"]
+        self.cpp_info.components["foo"].cflags.append("my_c_flag_foo")
 
         # when editable: This one will be discarded because declared in build
         self.cpp_info.components["var"].includedirs = ["package_include_var"]
@@ -143,10 +143,10 @@ def test_cpp_info_components_editable():
         self.cpp_info.components["var"].libs.append("lib_when_package2_var")
 
         # when editable: This one will be discarded because declared in source
-        self.cpp_info.components["var"].cxxflags = ["my_cxx_flag2_var"]
+        self.cpp_info.components["var"].cxxflags.append("my_cxx_flag2_var")
 
         # when editable: This one WONT be discarded as has not been declared in the editables layout
-        self.cpp_info.components["var"].cflags = ["my_c_flag_var"]
+        self.cpp_info.components["var"].cflags.append("my_c_flag_var")
      """
 
     client.save({"conanfile.py": conan_hello})
