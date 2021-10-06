@@ -35,6 +35,13 @@ def test_cmake_toolchain(conanfile):
     assert 'set(CMAKE_BUILD_TYPE "Release"' in content
 
 
+def test_no_fpic_on_windows(conanfile):
+    conanfile.options.fPIC = True
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' not in content
+
+
 def test_remove(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks.remove("generic_system")
@@ -191,4 +198,54 @@ def test_toolset(conanfile_msvc):
     assert 'CMAKE_GENERATOR_TOOLSET "v143"' in toolchain.content
     assert 'Visual Studio 17 2022' in toolchain.generator
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+
+
+@pytest.fixture
+def conanfile_linux():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.initialize(Settings({"os": ["Linux"],
+                           "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86_64"]}), EnvValues())
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86_64"
+    c.settings.compiler = "gcc"
+    c.settings.compiler.version = "11"
+    c.settings.compiler.cppstd = "20"
+    c.settings.os = "Linux"
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    return c
+
+
+def test_no_fpic_when_not_an_option(conanfile_linux):
+    toolchain = CMakeToolchain(conanfile_linux)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' not in content
+
+
+def test_no_fpic_when_shared(conanfile_linux):
+    conanfile.options.shared = True
+    toolchain = CMakeToolchain(conanfile_linux)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' not in content
+
+
+def test_fpic_disabled(conanfile_linux):
+    conanfile.options.fPIC = False
+    toolchain = CMakeToolchain(conanfile_linux)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE OFF' in content
+
+
+def test_fpic_enabled(conanfile_linux):
+    conanfile.options.fPIC = True
+    toolchain = CMakeToolchain(conanfile_linux)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE ON' in content
+
+
 
