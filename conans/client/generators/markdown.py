@@ -66,6 +66,28 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     {% endfor %}
     {%- endif %}
     ```
+
+    {% set cmake_build_modules = cpp_info.build_modules.get('cmake', None) %}
+    {% set cmake_find_package_build_modules = cpp_info.build_modules.get('cmake_find_package', None) %}
+    {% if cmake_build_modules or cmake_find_package_build_modules %}
+    This generator will include some _build modules_:
+    {%- endif %}
+    {% if cmake_build_modules %}
+    {% for bm in cmake_build_modules -%}
+    * `{{ bm }}`
+      ```
+      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
+      ```
+    {%- endfor -%}
+    {%- endif %}
+    {% if cmake_find_package_build_modules %}
+    {% for bm in cmake_find_package_build_modules -%}
+    * `{{ bm }}`
+      ```
+      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
+      ```
+    {%- endfor -%}
+    {%- endif %}
 """)
 
 buildsystem_vs_tpl = textwrap.dedent("""
