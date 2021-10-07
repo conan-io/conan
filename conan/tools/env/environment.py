@@ -221,10 +221,13 @@ class Environment:
             echo Configuring environment variables
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
+        # .bat files do never use unix_paths (defined internally in .get_str())
+        win_bash = self._conanfile.win_bash
+        self._conanfile.win_bash = False
         for varname, varvalues in self._values.items():
             value = varvalues.get_str(self._conanfile, "%{name}%", pathsep)
             result.append('set {}={}'.format(varname, value))
-
+        self._conanfile.win_bash = win_bash
         content = "\n".join(result)
         save(filename, content)
 
@@ -279,8 +282,7 @@ class Environment:
             is_bat = ext == ".bat"
         else:  # Need to deduce it automatically
             if group == "build":
-                # FIXME: In Conan 2.0, replace this if/elif/else with just this:
-                # is_bat = str(self._conanfile.settings_build.get_safe("os")).startswith("Windows")
+                # FIXME: In Conan 2.0, remove the platform.system checks?
                 if self._conanfile.win_bash:
                     is_bat = False
                 else:
@@ -291,7 +293,12 @@ class Environment:
                         is_bat = platform.system() == "Windows"
             else:
                 if self._conanfile.settings.get_safe("os"):
-                    is_bat = str(self._conanfile.settings.get_safe("os")).startswith("Windows")
+                    is_bat = False
+                    is_windows = str(self._conanfile.settings.get_safe("os")).startswith("Windows")
+                    if is_windows:
+                        subsystem = self._conanfile.settings.get_safe("os.subsystem")
+                        if subsystem is None:
+                            is_bat = True
                 else:
                     is_bat = platform.system() == "Windows"
             filename = filename + (".bat" if is_bat else ".sh")
