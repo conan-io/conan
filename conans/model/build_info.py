@@ -5,7 +5,7 @@ from collections import OrderedDict
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs"]
 _FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
-                    "_sharedlinkflags", "_exelinkflags"]
+                    "_sharedlinkflags", "_exelinkflags", "_objects"]
 
 
 class DefaultOrderedDict(OrderedDict):
@@ -51,6 +51,7 @@ class _Component(object):
         self._cxxflags = None  # C++ compilation flags
         self._sharedlinkflags = None  # linker flags
         self._exelinkflags = None  # linker flags
+        self._objects = None  # linker flags
 
         self._sysroot = None
         self._requires = None
@@ -204,6 +205,16 @@ class _Component(object):
     @exelinkflags.setter
     def exelinkflags(self, value):
         self._exelinkflags = value
+
+    @property
+    def objects(self):
+        if self._objects is None:
+            self._objects = []
+        return self._objects
+
+    @objects.setter
+    def objects(self, value):
+        self._objects = value
 
     @property
     def sysroot(self):
