@@ -117,6 +117,7 @@ def test_cmake_deps_links_flags():
     cpp_info.sharedlinkflags = ["-NODEFAULTLIB", "-OTHERFLAG"]
     cpp_info.exelinkflags = ["-OPT:NOICF"]
     conanfile_dep = ConanFile(None)
+    cpp_info.objects = ["myobject.o"]
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("mypkg/1.0")
@@ -132,6 +133,7 @@ def test_cmake_deps_links_flags():
         data_cmake = files["mypkg-release-x86-data.cmake"]
         assert "set(mypkg_SHARED_LINK_FLAGS_RELEASE -NODEFAULTLIB;-OTHERFLAG)" in data_cmake
         assert "set(mypkg_EXE_LINK_FLAGS_RELEASE -OPT:NOICF)" in data_cmake
+        assert 'set(mypkg_OBJECTS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/myobject.o")' in data_cmake
 
 
 def test_component_name_same_package():

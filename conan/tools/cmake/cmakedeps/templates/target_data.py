@@ -66,6 +66,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_DEFINITIONS{{ config_suffix }} {{ global_cpp.defines }})
               set({{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }} {{ global_cpp.sharedlinkflags_list }})
               set({{ pkg_name }}_EXE_LINK_FLAGS{{ config_suffix }} {{ global_cpp.exelinkflags_list }})
+              set({{ pkg_name }}_OBJECTS{{ config_suffix }} {{ global_cpp.objects_list }})
               set({{ pkg_name }}_COMPILE_DEFINITIONS{{ config_suffix }} {{ global_cpp.compile_definitions }})
               set({{ pkg_name }}_COMPILE_OPTIONS_C{{ config_suffix }} {{ global_cpp.cflags_list }})
               set({{ pkg_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }} {{ global_cpp.cxxflags_list}})
@@ -86,6 +87,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
               set({{ pkg_name }}_{{ comp_name }}_RES_DIRS{{ config_suffix }} {{ cpp.res_paths }})
               set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS{{ config_suffix }} {{ cpp.defines }})
+              set({{ pkg_name }}_{{ comp_name }}_OBJECTS{{ config_suffix }} {{ cpp.objects_list }})
               set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS{{ config_suffix }} {{ cpp.compile_definitions }})
               set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_C{{ config_suffix }} "{{ cpp.cflags_list }}")
               set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }} "{{ cpp.cxxflags_list }}")
@@ -220,6 +222,7 @@ class DepsCppCmake(object):
         # frameworks should be declared with cppinfo.frameworks not "-framework Foundation"
         self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
+        self.objects_list = join_paths(cpp_info.objects)
 
         if require and not require.libs and not require.headers:
             self.defines = ""
@@ -228,6 +231,7 @@ class DepsCppCmake(object):
             self.cflags_list = ""
             self.sharedlinkflags_list = ""
             self.exelinkflags_list = ""
+            self.objects_list = ""
 
         build_modules = cpp_info.get_property("cmake_build_modules", "CMakeDeps") or []
         self.build_modules_paths = join_paths(build_modules)

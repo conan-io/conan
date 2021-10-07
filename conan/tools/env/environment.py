@@ -203,7 +203,7 @@ class Environment:
             for %%v in ({vars}) do (
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
-                    if "%%a" == "%%v" (
+                    if /I "%%a" == "%%v" (
                         echo set %%a=%%b>> "deactivate_{filename}"
                         set foundenvvar=1
                     )
@@ -274,7 +274,25 @@ class Environment:
         save(filename, content)
 
     def save_script(self, name, group="build"):
-        if platform.system() == "Windows" and not self._conanfile.win_bash:
+        if group == "build":
+            # FIXME: In Conan 2.0, replace this if/elif/else with just this:
+            # is_windows = str(self._conanfile.settings_build.get_safe("os")).startswith("Windows")
+
+            if hasattr(self._conanfile, "settings_build"):
+                is_windows = str(self._conanfile.settings_build.get_safe("os")).startswith("Windows")
+            elif platform.system() == "Windows" and not self._conanfile.win_bash:
+                is_windows = True
+            else:
+                is_windows = False
+        else:
+            if self._conanfile.settings.get_safe("os"):
+                is_windows = str(self._conanfile.settings.get_safe("os")).startswith("Windows")
+            elif platform.system() == "Windows" and not self._conanfile.win_bash:
+                is_windows = True
+            else:
+                is_windows = False
+
+        if is_windows:
             path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
             self.save_bat(path)
         else:

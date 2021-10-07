@@ -6,8 +6,7 @@ import pytest
 
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.tools import TestClient
-from conans.util.files import save
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 @pytest.fixture()
@@ -83,7 +82,7 @@ def client():
 
 def test_complete(client):
     conanfile = textwrap.dedent("""
-        import platform
+        import os
         from conans import ConanFile
 
         class Pkg(ConanFile):
@@ -94,35 +93,33 @@ def test_complete(client):
                 self.test_requires("mygtest/1.0")
 
             def build(self):
-                mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
-                self.run(mybuild_cmd, env="conanbuildenv")
-                mytest_cmd = "mygtest.bat" if platform.system() == "Windows" else "mygtest.sh"
-                self.run(mytest_cmd, env="conanrunenv")
+                self.run("mycmake.bat", env="conanbuildenv")
+                assert os.path.exists(os.path.join(self.generators_folder, "conanrunenv.bat"))
        """)
 
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
-    ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycmake.{}".format(ext),
-                                   cwd=client.current_folder)
-    client.run_command(cmd)
-    assert "MYCMAKE=Windows!!" in client.out
-    assert "MYOPENSSL=Windows!!" in client.out
+    if platform.system() == "Windows":
+        cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycmake.bat",
+                                       cwd=client.current_folder)
+        client.run_command(cmd)
+        assert "MYCMAKE=Windows!!" in client.out
+        assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command(ConanFileMock(), "conanrunenv",
-                                   "mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
-                                                                                  sep=os.sep),
-                                   cwd=client.current_folder)
-    client.run_command(cmd)
-    assert "MYGTEST=Linux!!" in client.out
-    assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
+    if platform.system() != "Windows":
+        cmd = environment_wrap_command(ConanFileMock(), "conanrunenv",
+                                       "mygtest.sh && .{}myrunner.sh".format(os.sep),
+                                       cwd=client.current_folder)
+        client.run_command(cmd)
+        assert "MYGTEST=Linux!!" in client.out
+        assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
 
-    client.run("build . -s:b os=Windows -s:h os=Linux ")
-    assert "MYCMAKE=Windows!!" in client.out
-    assert "MYOPENSSL=Windows!!" in client.out
-    assert "MYGTEST=Linux!!" in client.out
+    if platform.system() == "Windows":
+        client.run("build . -s:h os=Linux")
+        assert "MYCMAKE=Windows!!" in client.out
+        assert "MYOPENSSL=Windows!!" in client.out
 
 
 def test_profile_included_multiple():
@@ -393,3 +390,66 @@ def test_diamond_repeated():
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
     assert "MYVAR4: PkgDValue4!!!" in client.out
+
+
+def test_environment_scripts_generated_envvars():
+    consumer_pkg = textwrap.dedent(r"""
+        from conans import ConanFile
+        from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
+        class Pkg(ConanFile):
+            settings = "os"
+            requires = "require_pkg/1.0"
+            build_requires = "build_require_pkg/1.0"
+            generators = "VirtualRunEnv", "VirtualBuildEnv"
+        """)
+
+    client = TestClient()
+    conanfile = (GenConanfile().with_package_file("bin/myapp", "myexe")
+                               .with_package_file("lib/mylib", "mylibcontent")
+                               .with_settings("os"))
+    client.save({"build_require_pkg/conanfile.py": conanfile,
+                 "require_pkg/conanfile.py": conanfile,
+                 "consumer_pkg/conanfile.py": consumer_pkg})
+
+    client.run("export build_require_pkg build_require_pkg/1.0@")
+    client.run("export require_pkg require_pkg/1.0@")
+
+    client.run("install consumer_pkg --build")
+    if platform.system() == "Windows":
+        conanbuildenv = client.load("conanbuildenv.bat")
+        conanrunenv = client.load("conanrunenv.bat")
+        assert "LD_LIBRARY_PATH" not in conanbuildenv
+        assert "LD_LIBRARY_PATH" not in conanrunenv
+    else:
+        conanbuildenv = client.load("conanbuildenv.sh")
+        conanrunenv = client.load("conanrunenv.sh")
+        assert "LD_LIBRARY_PATH" in conanbuildenv
+        assert "LD_LIBRARY_PATH" in conanrunenv
+
+    # Build context LINUX - Host context LINUX
+    client.run("install consumer_pkg -s:b os=Linux -s:h os=Linux --build")
+    conanbuildenv = client.load("conanbuildenv.sh")
+    conanrunenv = client.load("conanrunenv.sh")
+    assert "LD_LIBRARY_PATH" in conanbuildenv
+    assert "LD_LIBRARY_PATH" in conanrunenv
+
+    # Build context WINDOWS - Host context WINDOWS
+    client.run("install consumer_pkg -s:b os=Windows -s:h os=Windows --build")
+    conanbuildenv = client.load("conanbuildenv.bat")
+    conanrunenv = client.load("conanrunenv.bat")
+    assert "LD_LIBRARY_PATH" not in conanbuildenv
+    assert "LD_LIBRARY_PATH" not in conanrunenv
+
+    # Build context LINUX - Host context WINDOWS
+    client.run("install consumer_pkg -s:b os=Linux -s:h os=Windows --build")
+    conanbuildenv = client.load("conanbuildenv.sh")
+    conanrunenv = client.load("conanrunenv.bat")
+    assert "LD_LIBRARY_PATH" in conanbuildenv
+    assert "LD_LIBRARY_PATH" not in conanrunenv
+
+    # Build context WINDOWS - Host context LINUX
+    client.run("install consumer_pkg -s:b os=Windows -s:h os=Linux --build")
+    conanbuildenv = client.load("conanbuildenv.bat")
+    conanrunenv = client.load("conanrunenv.sh")
+    assert "LD_LIBRARY_PATH" not in conanbuildenv
+    assert "LD_LIBRARY_PATH" in conanrunenv

@@ -3,7 +3,7 @@ import os
 from conan.tools.env import Environment
 
 
-def runenv_from_cpp_info(conanfile, cpp_info, package_folder):
+def runenv_from_cpp_info(conanfile, cpp_info, package_folder, os_name):
     """ return an Environment deducing the runtime information from a cpp_info
     """
     dyn_runenv = Environment(conanfile)
@@ -12,11 +12,12 @@ def runenv_from_cpp_info(conanfile, cpp_info, package_folder):
     if cpp_info.bindirs:  # cpp_info.exes is not defined yet
         dyn_runenv.prepend_path("PATH", [os.path.join(package_folder, p) for p in cpp_info.bindirs])
     # If it is a build_require this will be the build-os, otherwise it will be the host-os
-    if cpp_info.libdirs:
-        dyn_runenv.prepend_path("LD_LIBRARY_PATH", [os.path.join(package_folder, p) for p in cpp_info.libdirs])
-        dyn_runenv.prepend_path("DYLD_LIBRARY_PATH", [os.path.join(package_folder, p) for p in cpp_info.libdirs])
-    if cpp_info.frameworkdirs:
-        dyn_runenv.prepend_path("DYLD_FRAMEWORK_PATH", [os.path.join(package_folder, p) for p in cpp_info.frameworkdirs])
+    if os_name and not os_name.startswith("Windows"):
+        if cpp_info.libdirs:
+            dyn_runenv.prepend_path("LD_LIBRARY_PATH", [os.path.join(package_folder, p) for p in cpp_info.libdirs])
+            dyn_runenv.prepend_path("DYLD_LIBRARY_PATH", [os.path.join(package_folder, p) for p in cpp_info.libdirs])
+        if cpp_info.frameworkdirs:
+            dyn_runenv.prepend_path("DYLD_FRAMEWORK_PATH", [os.path.join(package_folder, p) for p in cpp_info.frameworkdirs])
     return dyn_runenv
 
 
@@ -58,7 +59,7 @@ class VirtualRunEnv:
         for _, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
                 runenv.compose_env(dep.runenv_info)
-            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep.cpp_info, dep.package_folder))
+            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep.cpp_info, dep.package_folder, self._conanfile.settings.get_safe("os")))
 
         return runenv
 
