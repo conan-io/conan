@@ -269,10 +269,6 @@ def _generate_aggregated_env(conanfile):
             sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
             save(os.path.join(conanfile.generators_folder, "conan{}.sh".format(group)), sh_content)
         if bats:
-            lines = "\r\n".join('call "{}"'.format(b) for b in bats)
-            bat_content = textwrap.dedent("""\
-                            @echo off
-                            {}
-                            """.format(lines))
+            lines = ["@echo off"] + ['call "{}"'.format(b) for b in bats]
+            bat_content = "\r\n".join(lines)
             save(os.path.join(conanfile.generators_folder, "conan{}.bat".format(group)), bat_content)
-

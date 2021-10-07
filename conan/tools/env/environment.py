@@ -273,30 +273,33 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_script(self, name, group="build"):
-        if group == "build":
-            # FIXME: In Conan 2.0, replace this if/elif/else with just this:
-            # is_windows = str(self._conanfile.settings_build.get_safe("os")).startswith("Windows")
-
-            if hasattr(self._conanfile, "settings_build"):
-                is_windows = str(self._conanfile.settings_build.get_safe("os")).startswith("Windows")
-            elif platform.system() == "Windows" and not self._conanfile.win_bash:
-                is_windows = True
+    def save_script(self, filename, group="build"):
+        name, ext = os.path.splitext(filename)
+        if ext:
+            is_bat = ext == ".bat"
+        else:  # Need to deduce it automatically
+            if group == "build":
+                # FIXME: In Conan 2.0, replace this if/elif/else with just this:
+                # is_bat = str(self._conanfile.settings_build.get_safe("os")).startswith("Windows")
+                if self._conanfile.win_bash:
+                    is_bat = False
+                else:
+                    if hasattr(self._conanfile, "settings_build"):
+                        the_os = str(self._conanfile.settings_build.get_safe("os"))
+                        is_bat = the_os.startswith("Windows")
+                    else:
+                        is_bat = platform.system() == "Windows"
             else:
-                is_windows = False
-        else:
-            if self._conanfile.settings.get_safe("os"):
-                is_windows = str(self._conanfile.settings.get_safe("os")).startswith("Windows")
-            elif platform.system() == "Windows" and not self._conanfile.win_bash:
-                is_windows = True
-            else:
-                is_windows = False
+                if self._conanfile.settings.get_safe("os"):
+                    is_bat = str(self._conanfile.settings.get_safe("os")).startswith("Windows")
+                else:
+                    is_bat = platform.system() == "Windows"
+            filename = filename + (".bat" if is_bat else ".sh")
 
-        if is_windows:
-            path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
+        path = os.path.join(self._conanfile.generators_folder, filename)
+        if is_bat:
             self.save_bat(path)
         else:
-            path = os.path.join(self._conanfile.generators_folder, "{}.sh".format(name))
             self.save_sh(path)
 
         if group:
