@@ -49,7 +49,5 @@ class MarkDownGeneratorTest(unittest.TestCase):
         client.run("install bar/0.1.0@user/testing -g markdown")
         content = client.load("bar.md")
 
-        print(content)
-
-        # self.assertIn("* `lib/cmake/bm.cmake`", content)
-        # self.assertIn("Content of build_module", content)
+        self.assertIn("* `lib/cmake/bm.cmake`", content)
+        self.assertIn("Content of build_module", content)
