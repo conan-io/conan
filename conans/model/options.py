@@ -83,6 +83,12 @@ class PackageOptionValues(object):
     def clear(self):
         self._dict.clear()
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        return self._dict == other._dict
+
     def __setattr__(self, attr, value):
         if attr[0] == "_":
             return super(PackageOptionValues, self).__setattr__(attr, value)
@@ -230,6 +236,19 @@ class OptionsValues(object):
             self._reqs_options[package].remove(name)
         else:
             self._package_values.remove(name)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not self._package_values == other._package_values:
+            return False
+        # It is possible that the entry in the dict is not defined
+        for key, pkg_values in self._reqs_options.items():
+            other_values = other[key]
+            if not pkg_values == other_values:
+                return False
+        return True
 
     def __repr__(self):
         return self.dumps()
@@ -612,7 +631,8 @@ class Options(object):
             # This code is necessary to process patterns like *:shared=True
             # To apply to the current consumer, which might not have name
             for pattern, pkg_options in sorted(user_values._reqs_options.items()):
-                if fnmatch.fnmatch(name or "", pattern):
+                # pattern = & means the consumer, irrespective of name
+                if fnmatch.fnmatch(name or "", pattern) or pattern == "&":
                     self._package_options.initialize_patterns(pkg_options)
             # Then, the normal assignment of values, which could override patterns
             self._package_options.values = user_values._package_values

@@ -81,12 +81,16 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             includedir_vars = varnames
             lines.extend(dir_lines)
 
+        pkg_config_custom_content = cpp_info.get_property("pkg_config_custom_content", self.name)
+        if pkg_config_custom_content:
+            lines.append(pkg_config_custom_content)
+
         lines.append("")
         lines.append("Name: %s" % name)
         description = cpp_info.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
         lines.append("Version: %s" % cpp_info.version)
-        libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
+        libdirs_flags = ['-L"${%s}"' % name for name in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
 
@@ -105,7 +109,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
                                                         rpaths,
                                                         frameworks,
                                                         framework_paths]))
-        include_dirs_flags = ["-I${%s}" % name for name in includedir_vars]
+        include_dirs_flags = ['-I"${%s}"' % name for name in includedir_vars]
 
         lines.append("Cflags: %s" % _concat_if_not_empty(
             [include_dirs_flags,

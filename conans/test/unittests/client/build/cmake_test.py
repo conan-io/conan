@@ -8,6 +8,7 @@ import unittest
 import mock
 import six
 from parameterized.parameterized import parameterized
+import pytest
 
 from conans.client import tools
 from conans.client.build.cmake import CMake
@@ -22,6 +23,7 @@ from conans.model.settings import Settings
 from conans.test.utils.mocks import MockSettings, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
+from conans.model.conf import ConfDefinition
 
 
 def _format_path_as_cmake(pathstr):
@@ -182,6 +184,15 @@ class CMakeTest(unittest.TestCase):
         self.assertNotIn("cmake --build %s" %
                          CMakeTest.scape(". --target test -- -j%i" %
                                          cpu_count(output=conanfile.output)), conanfile.command)
+
+    def test_conan_run_tests(self):
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.should_test = True
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        with tools.environment_append({"CONAN_RUN_TESTS": "0"}):
+            cmake.test()
+            self.assertIsNone(conanfile.command)
 
     def test_cmake_generator(self):
         conanfile = ConanFileMock()
@@ -893,7 +904,6 @@ build_type: [ Release]
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
         settings.arch = "x86"
-        settings.os = "Windows"
         if platform.system() == "Windows":
             cmake = CMake(conanfile)
             self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
@@ -904,6 +914,22 @@ build_type: [ Release]
             cmake = CMake(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_SYSROOT"], "/path/to/sysroot")
             self.assertEqual(cmake.definitions["CMAKE_SYSTEM_PROCESSOR"], "somevalue")
+
+    def test_sysroot_envvar(self):
+        settings = Settings.loads(get_default_settings_yml())
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        settings.os = "Linux"
+        settings.os_build = "Windows"
+        settings.compiler = "gcc"
+        settings.compiler.version = "5"
+        settings.arch_build = "x86_64"
+        settings.arch = "armv7"
+
+        # Now activate cross build and check sysroot and system processor
+        with(tools.environment_append({"CONAN_CMAKE_SYSROOT": "/path/to/var/sysroot"})):
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSROOT"], "/path/to/var/sysroot")
 
     def test_deprecated_behaviour(self):
         """"Remove when deprecate the old settings parameter to CMake and
@@ -1138,7 +1164,7 @@ build_type: [ Release]
                          '%s' % CMakeTest.scape('. --target test'),
                          conanfile.command)
 
-    @unittest.skipIf(platform.system() != "Windows", "Only for Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows")
     def test_clean_sh_path(self):
         os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + self.tempdir
         save(os.path.join(self.tempdir, "sh.exe"), "Fake sh")
@@ -1431,7 +1457,7 @@ build_type: [ Release]
                            ('NMake Makefiles', 'clang', 6.0),
                            ('NMake Makefiles JOM', 'clang', 6.0)
                            ])
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows vcvars")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows vcvars")
     def test_vcvars_applied(self, generator, compiler, version):
         conanfile = ConanFileMock()
         settings = Settings.loads(get_default_settings_yml())
@@ -1621,3 +1647,14 @@ build_type: [ Release]
         cmake = CMake(conanfile)
         self.assertEqual(cmake.definitions["CMAKE_SYSTEM_NAME"], system_name)
         self.assertEqual(cmake.definitions["CMAKE_SYSTEM_PROCESSOR"], system_processor)
+
+    def test_skip_test(self):
+        conf = ConfDefinition()
+        conf.loads("tools.build:skip_test=1")
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.conf = conf.get_conanfile_conf(None)
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake.test()
+        self.assertIsNone(conanfile.command)
+

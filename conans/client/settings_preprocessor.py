@@ -1,6 +1,6 @@
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.errors import ConanException
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.log import logger
 
 
@@ -23,8 +23,7 @@ def _check_cppstd(settings):
         raise ConanException("Do not use settings 'compiler.cppstd' together with 'cppstd'."
                              " Use only the former one.")
 
-    if cppstd:
-        conan_v2_behavior("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'")
+    conan_v2_error("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'", cppstd)
 
     if compiler not in ("gcc", "clang", "apple-clang", "Visual Studio"):
         return
@@ -49,17 +48,22 @@ def _check_cppstd(settings):
 
 def _fill_runtime(settings):
     try:
-        runtime = "MDd" if settings.get_safe("build_type") == "Debug" else "MD"
         if settings.compiler == "Visual Studio":
             if settings.get_safe("compiler.runtime") is None:
+                runtime = "MDd" if settings.get_safe("build_type") == "Debug" else "MD"
                 settings.compiler.runtime = runtime
                 msg = "Setting 'compiler.runtime' not declared, automatically adjusted to '%s'"
                 logger.info(msg % runtime)
         elif settings.compiler == "intel" and settings.get_safe("compiler.base") == "Visual Studio":
             if settings.get_safe("compiler.base.runtime") is None:
+                runtime = "MDd" if settings.get_safe("build_type") == "Debug" else "MD"
                 settings.compiler.base.runtime = runtime
                 msg = "Setting 'compiler.base.runtime' not declared, automatically adjusted to '%s'"
                 logger.info(msg % runtime)
+        elif settings.compiler == "msvc":
+            if settings.get_safe("compiler.runtime_type") is None:
+                runtime = "Debug" if settings.get_safe("build_type") == "Debug" else "Release"
+                settings.compiler.runtime_type = runtime
     except Exception:  # If the settings structure doesn't match these general
         # asumptions, like unexistant runtime
         pass

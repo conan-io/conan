@@ -1,9 +1,9 @@
 import os
 import platform
+import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client import tools
 from conans.client.generators.text import TXTGenerator
@@ -17,7 +17,6 @@ from conans.util.files import load
 
 class ConanEnvTest(unittest.TestCase):
 
-    @attr('slow')
     @pytest.mark.slow
     @pytest.mark.tool_cmake
     def test_shared_in_current_directory(self):
@@ -441,8 +440,8 @@ class HelloConan(ConanFile):
         if platform.system() == "Windows":
             self.assertIn('var2=value3;value2;%var2%', environment_contents)
         else:
-            self.assertIn('var2="value3":"value2"${var2+:$var2}', environment_contents)
-            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 ${CPPFLAGS+ $CPPFLAGS}"',
+            self.assertIn('var2="value3":"value2"${var2:+:$var2}', environment_contents)
+            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1${CPPFLAGS:+ $CPPFLAGS}"',
                           environment_contents)
         self.assertIn("Another value", environment_contents)
         if platform.system() == "Windows":
@@ -677,7 +676,7 @@ PATH=["path_from_A"]
 PATH=["path_from_B"]""", info)
         if platform.system() != "Windows":
             activate = client.load("environment.sh.env")
-            self.assertIn('PATH="path_from_A":"path_from_B"${PATH+:$PATH}', activate)
+            self.assertIn('PATH="path_from_A":"path_from_B"${PATH:+:$PATH}', activate)
         else:
             activate = client.load("environment.bat.env")
             self.assertIn('PATH=path_from_A;path_from_B;%PATH%', activate)
@@ -877,3 +876,32 @@ class Hello2Conan(ConanFile):
         self.output.info("VAR2=>%s*" % os.environ.get("VAR2"))
         self.output.info("VAR3=>%s*" % os.environ.get("VAR3"))
 '''
+
+
+def test_env_per_package_patterns():
+    # https://github.com/conan-io/conan/issues/8657
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        import os
+        class Pkg(ConanFile):
+            def build(self):
+                self.output.info("MYENV: {}!!!".format(os.getenv("MYVAR")))
+        """)
+    profile = textwrap.dedent("""
+        [env]
+        *myuser*:MYVAR=MyValue
+        other:MYVAR=OtherValue
+        */mychannel:MYVAR=MyChannelValue
+        *:MYVAR=MyAllValue
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("create . pkg/0.1@myuser/channel -pr=profile")
+    assert "pkg/0.1@myuser/channel: MYENV: MyValue!!!" in client.out
+    client.run("create . pkg/0.1@ -pr=profile")
+    assert "pkg/0.1: MYENV: MyAllValue!!!" in client.out
+    client.run("create . other/0.1@ -pr=profile")
+    assert "other/0.1: MYENV: OtherValue!!!" in client.out
+    client.run("create . pkg/0.1@user/mychannel -pr=profile")
+    assert "pkg/0.1@user/mychannel: MYENV: MyChannelValue!!!" in client.out

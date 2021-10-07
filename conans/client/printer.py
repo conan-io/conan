@@ -4,7 +4,7 @@ from collections import OrderedDict
 from conans.client.output import Color
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 
 
 class Printer(object):
@@ -24,8 +24,7 @@ class Printer(object):
     def print_inspect(self, inspect, raw=False):
         for k, v in inspect.items():
             if k == "default_options":
-                if not isinstance(v, dict):
-                    conan_v2_behavior("Declare 'default_options' as a dictionary")
+                conan_v2_error("Declare 'default_options' as a dictionary", not isinstance(v, dict))
 
                 if isinstance(v, str):
                     v = OptionsValues.loads(v)
@@ -75,6 +74,7 @@ class Printer(object):
             self._out.writeln(it["display_name"], Color.BRIGHT_CYAN)
             _print("id", name="ID")
             _print("build_id", name="BuildID")
+            _print("context", name="Context")
             if show_paths:
                 _print("export_folder")
                 _print("source_folder")
@@ -121,6 +121,13 @@ class Printer(object):
                     self._out.writeln("    Binary remote: None")
 
             _print("creation_date", show_field="date", name="Creation date")
+
+            _print("scm", show_field="scm", name="scm")
+
+            if show("python_requires") and "python_requires" in it:
+                self._out.writeln("    Python-requires:", Color.BRIGHT_GREEN)
+                for d in it["python_requires"]:
+                    self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
 
             if show("required") and "required_by" in it:
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
@@ -214,6 +221,7 @@ class Printer(object):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings.items(), separator="=")
         self._print_profile_section("options", profile.options.as_list(), separator="=")
+        self._print_profile_section("conf", profile.conf.as_list(), separator="=")
         self._print_profile_section("build_requires", [(key, ", ".join(str(val) for val in values))
                                                        for key, values in
                                                        profile.build_requires.items()])

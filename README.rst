@@ -14,12 +14,12 @@ Decentralized, open-source (MIT), C/C++ package manager.
 
 Conan is a package manager for C and C++ developers:
 
-- It is fully decentralized. Users can host their packages in their servers, privately. Integrates with Artifactory and Bintray.
+- It is fully decentralized. Users can host their packages on their servers, privately. Integrates with Artifactory and Bintray.
 - Portable. Works across all platforms, including Linux, OSX, Windows (with native and first-class support, WSL, MinGW),
   Solaris, FreeBSD, embedded and cross-compiling, docker, WSL
 - Manage binaries. It can create, upload and download binaries for any configuration and platform,
-  even cross-compiling, saving lots of time in development and continuous integration. The binary compatibility
-  can be configured and customized. Manage all your artifacts in the same way on all platforms.
+  even cross-compiling, saving lots of time in development and continuous integration. The binary compatibility can be configured
+  and customized. Manage all your artifacts in the same way on all platforms.
 - Integrates with any build system, including any proprietary and custom one. Provides tested support for major build systems
   (CMake, MSBuild, Makefiles, Meson, etc).
 - Extensible: Its python based recipes, together with extensions points allows for great power and flexibility.
@@ -58,13 +58,15 @@ You can run **Conan** client and server in Windows, MacOS, and Linux.
 
   .. code-block:: bash
 
-      $ git clone https://github.com/conan-io/conan.git
+      $ git clone https://github.com/conan-io/conan.git conan-io
+
+ NOTE: repository directory name matters, some directories are known to be problematic to run tests (e.g. `conan`). `conan-io` directory name was tested and guaranteed to be working.
 
 - **Install in editable mode**
 
   .. code-block:: bash
 
-      $ cd conan && sudo pip install -e .
+      $ cd conan-io && sudo pip install -e .
 
   If you are in Windows, using ``sudo`` is not required.
 
@@ -108,6 +110,9 @@ Contributing to the project
 
 Feedback and contribution are always welcome in this project.
 Please read our `contributing guide <https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md>`_.
+Also, if you plan to contribute, please add some testing for your changes. You can read the `Conan
+tests guidelines section <https://github.com/conan-io/conan/blob/develop/conans/test/README.md>`_ for
+some advise on how to write tests for Conan.
 
 Running the tests
 =================
@@ -226,7 +231,7 @@ variables could take the values:
     $ export ARTIFACTORY_DEFAULT_USER=admin
     $ export ARTIFACTORY_DEFAULT_PASSWORD=password
 
-``ARTIFACTORY_DEFAULT_URL`` is the base url for the Artifactory repo, not one for an specific
+``ARTIFACTORY_DEFAULT_URL`` is the base url for the Artifactory repo, not one for a specific
 repository. Running the tests with a real Artifactory instance will create repos on the fly so please
 use a separate server for testing purposes.
 
@@ -235,8 +240,8 @@ License
 
 `MIT LICENSE <./LICENSE.md>`__
 
-.. |Build Status Develop| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/develop
-   :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/develop
+.. |Build Status Develop| image:: https://ci.conan.io/buildStatus/icon?job=ConanTestSuite/develop
+   :target: https://ci.conan.io/job/ConanTestSuite/job/develop/
 
 .. |Develop climate| image:: https://api.codeclimate.com/v1/badges/081b53e570d5220b34e4/maintainability.svg
    :target: https://codeclimate.com/github/conan-io/conan/maintainability
@@ -244,5 +249,4 @@ License
 .. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
 
 
-.. _`pip docs`: https://pip.pypa.io/en/stable/installing/
-
+.. _`pip docs`: https://pip.pypa.io/en/stable/installation/

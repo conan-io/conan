@@ -5,9 +5,8 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
-from conans.test.functional.scm.workflows.common import TestWorkflow
+from conans.test.integration.scm.workflows.common import TestWorkflow
 from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.tools import TestClient
 
@@ -19,7 +18,6 @@ class ConanfileInSubfolder(TestWorkflow):
     path_from_conanfile_to_root = ".."
 
 
-@attr("svn")
 @pytest.mark.tool_svn
 class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
 
@@ -73,7 +71,6 @@ class SVNConanfileInSubfolderTest(ConanfileInSubfolder, SVNLocalRepoTestCase):
         self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), self.path_to_conanfile)
 
 
-@attr("git")
 @pytest.mark.tool_git
 class GitConanfileInSubfolderTest(ConanfileInSubfolder, unittest.TestCase):
 

@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
@@ -34,11 +36,21 @@ class PropagateSpecificComponents(unittest.TestCase):
                 self.cpp_info.requires = ["top::cmp1"]
     """)
 
+    app = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Recipe(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            name = "app"
+            requires = "middle/version"
+        """)
+
     def setUp(self):
         client = TestClient()
         client.save({
             'top.py': self.top,
-            'middle.py': self.middle
+            'middle.py': self.middle,
+            'app.py': self.app
         })
         client.run('create top.py top/version@')
         client.run('create middle.py middle/version@')
@@ -53,10 +65,21 @@ class PropagateSpecificComponents(unittest.TestCase):
         self.assertNotIn("top::cmp2", content)
         self.assertIn("top::cmp1", content)
 
+    def test_cmake_find_package_app(self):
+        t = TestClient(cache_folder=self.cache_folder)
+        t.save({'conanfile.py': self.app})
+        t.run("install . -g cmake_find_package -g cmake_find_package_multi")
+        find = t.load("Findmiddle.cmake")
+        self.assertIn('set(middle_LIBRARIES_TARGETS "${middle_LIBRARIES_TARGETS};top::cmp1")', find)
+        self.assertNotIn("top::top", find)
+        config = t.load("middleTarget-release.cmake")
+        self.assertIn('top::cmp1', config)
+        self.assertNotIn("top::top", config)
+
     def test_cmake_find_package_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.run('install middle/version@ -g cmake_find_package_multi')
-        content = t.load('middleConfig.cmake')
+        content = t.load('middle-config.cmake')
         self.assertIn("find_dependency(top REQUIRED NO_MODULE)", content)
         self.assertIn("find_package(top REQUIRED NO_MODULE)", content)
 

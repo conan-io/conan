@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 
 from conans.client.tools import remove_from_path, no_op
@@ -133,16 +132,12 @@ int main(){{
 """
 
 
-@attr("slow")
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeMultiTest(unittest.TestCase):
 
-    @attr("mingw")
-    @pytest.mark.tool_gcc
+    @pytest.mark.tool_mingw64
     def test_cmake_multi_find(self):
-        if platform.system() not in ["Windows", "Linux"]:
-            return
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake
 class HelloConan(ConanFile):
@@ -200,7 +195,8 @@ class HelloConan(ConanFile):
             client.run_command('cmake . -G "%s" -DCMAKE_BUILD_TYPE=MinSizeRel' % generator)
             self.assertIn("FIND HELLO MINSIZEREL!", client.out)
 
-    @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Exclude Linux")
+    @pytest.mark.skipif(platform.system() not in ["Windows", "Darwin"], reason="Exclude Linux")
+    @pytest.mark.tool_cmake(version="3.19")
     def test_cmake_multi(self):
         client = TestClient()
 

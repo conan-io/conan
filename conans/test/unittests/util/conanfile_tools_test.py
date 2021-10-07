@@ -1,15 +1,16 @@
 import os
+import stat
 import sys
 import unittest
 
+from mock import Mock
 
 from conans.client import tools
 from conans.client.output import ConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load, save
-from conans.client.tools.files import replace_in_file
+from conans.client.tools.files import replace_in_file, replace_path_in_file
 
 
 base_conanfile = '''
@@ -62,6 +63,24 @@ class Pkg(ConanFile):
         tmp_dir = temp_folder()
         text_file = os.path.join(tmp_dir, "text.txt")
         save(text_file, "ONE TWO THREE")
-        replace_in_file(text_file, "ONE TWO THREE", "FOUR FIVE SIX",
-                        output=TestBufferConanOutput())
+        replace_in_file(text_file, "ONE TWO THREE", "FOUR FIVE SIX", output=Mock())
         self.assertEqual(load(text_file), "FOUR FIVE SIX")
+
+    def test_replace_in_file_readonly(self):
+        tmp_dir = temp_folder()
+        text_file = os.path.join(tmp_dir, "text.txt")
+        save(text_file, "ONE TWO THREE")
+
+        os.chmod(text_file,
+                 os.stat(text_file).st_mode & ~(stat.S_IWRITE | stat.S_IWGRP | stat.S_IWOTH))
+        mode_before_replace = os.stat(text_file).st_mode
+
+        replace_in_file(text_file, "ONE TWO THREE", "FOUR FIVE SIX", output=Mock())
+        self.assertEqual(load(text_file), "FOUR FIVE SIX")
+
+        self.assertEqual(os.stat(text_file).st_mode, mode_before_replace)
+
+        replace_path_in_file(text_file, "FOUR FIVE SIX", "SEVEN EIGHT NINE", output=Mock())
+        self.assertEqual(load(text_file), "SEVEN EIGHT NINE")
+
+        self.assertEqual(os.stat(text_file).st_mode, mode_before_replace)

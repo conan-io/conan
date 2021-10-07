@@ -55,6 +55,7 @@ def get_generator(conanfile):
 
     if compiler == "Visual Studio" or compiler_base == "Visual Studio":
         version = compiler_base_version or compiler_version
+        major_version = version.split('.', 1)[0]
         _visuals = {'8': '8 2005',
                     '9': '9 2008',
                     '10': '10 2010',
@@ -62,7 +63,8 @@ def get_generator(conanfile):
                     '12': '12 2013',
                     '14': '14 2015',
                     '15': '15 2017',
-                    '16': '16 2019'}.get(version, "UnknownVersion %s" % version)
+                    '16': '16 2019',
+                    '17': '17 2022'}.get(major_version, "UnknownVersion %s" % version)
         base = "Visual Studio %s" % _visuals
         return base
 
@@ -97,7 +99,7 @@ def get_generator_platform(settings, generator):
 def is_multi_configuration(generator):
     if not generator:
         return False
-    return "Visual" in generator or "Xcode" in generator
+    return "Visual" in generator or "Xcode" in generator or "Multi-Config" in generator
 
 
 def is_toolset_supported(generator):
@@ -284,13 +286,15 @@ class CMakeDefinitionsBuilder(object):
 
             if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
                 sysroot_path = self._conanfile.deps_cpp_info.sysroot
-            else:
-                sysroot_path = os.getenv("CONAN_CMAKE_FIND_ROOT_PATH", None)
 
-            if sysroot_path:
-                # Needs to be set here, can't be managed in the cmake generator, CMake needs
-                # to know about the sysroot before any other thing
-                definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+                if sysroot_path:
+                    # Needs to be set here, can't be managed in the cmake generator, CMake needs
+                    # to know about the sysroot before any other thing
+                    definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+
+            cmake_sysroot = os.getenv("CONAN_CMAKE_SYSROOT")
+            if cmake_sysroot is not None:
+                definitions["CMAKE_SYSROOT"] = cmake_sysroot.replace("\\", "/")
 
             # Adjust Android stuff
             if str(os_) == "Android" and definitions["CMAKE_SYSTEM_NAME"] == "Android":
@@ -423,7 +427,8 @@ class CMakeDefinitionsBuilder(object):
         if "cmake_find_package" in self._conanfile.generators:
             definitions["CMAKE_MODULE_PATH"] = install_folder
 
-        if "cmake_find_package_multi" in self._conanfile.generators:
+        if ("cmake_find_package_multi" in self._conanfile.generators
+                or "CMakeDeps" in self._conanfile.generators):
             # The cmake_find_package_multi only works with targets and generates XXXConfig.cmake
             # that require the prefix path and the module path
             definitions["CMAKE_PREFIX_PATH"] = install_folder

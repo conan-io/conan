@@ -1,11 +1,14 @@
 import os
 import shutil
 
+import six
+
 from conans import DEFAULT_REVISION_V1
 from conans.client import migrations_settings
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import migrate_registry_file
 from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
+from conans.client.rest.cacert import cacert_default, cacert
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
 from conans.migrations import Migrator
@@ -13,7 +16,8 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
-from conans.paths import CONANFILE, EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.paths import CONANFILE, EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, \
+    CACERT_FILE
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
@@ -47,7 +51,7 @@ class ClientMigrator(Migrator):
         self.out.warn("Migration: Updating settings.yml")
         if hasattr(migrations_settings, var_name):
             version_default_contents = getattr(migrations_settings, var_name)
-            if version_default_contents != get_default_settings_yml():
+            if version_default_contents.splitlines() != get_default_settings_yml().splitlines():
                 current_settings = load(cache.settings_path)
                 if current_settings != version_default_contents:
                     save_new()
@@ -97,6 +101,9 @@ class ClientMigrator(Migrator):
         if old_version < Version("1.31.0"):
             migrate_tgz_location(cache, self.out)
 
+        if old_version < Version("1.40.3"):
+            remove_buggy_cacert(cache, self.out)
+
 
 def _get_refs(cache):
     folders = list_folder_subdirs(cache.store, 4)
@@ -107,6 +114,26 @@ def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
     return [PackageReference(layout.ref, s) for s in folders]
+
+
+def remove_buggy_cacert(cache, out):
+    """https://github.com/conan-io/conan/pull/9696
+    Needed migration because otherwise the cacert is kept in the cache even upgrading conan"""
+    cacert_path = os.path.join(cache.cache_folder, CACERT_FILE)
+    if os.path.exists(cacert_path):
+        current_cacert = load(cacert_path).encode('utf-8') if six.PY2 else load(cacert_path)
+        if current_cacert == cacert_default:
+            out.info("Removing the 'cacert.pem' file...")
+            os.unlink(cacert_path)
+        elif current_cacert != cacert:  # locally modified by user
+            new_path = cacert_path + ".new"
+            save(new_path, cacert)
+            out.warn("*" * 40)
+            out.warn("'cacert.pem' is locally modified, can't be updated")
+            out.warn("The new 'cacert.pem' has been stored in: %s" % new_path)
+            out.warn("*" * 40)
+        else:
+            out.info("Conan 'cacert.pem' is up to date...")
 
 
 def migrate_tgz_location(cache, out):

@@ -15,13 +15,13 @@ from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
-from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove
 from conans.util.locks import Lock
 
@@ -77,6 +77,7 @@ class ClientCache(object):
         # Caching
         self._no_lock = None
         self._config = None
+        self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
@@ -156,6 +157,22 @@ class ClientCache(object):
         return self._config
 
     @property
+    def new_config_path(self):
+        return os.path.join(self.cache_folder, "global.conf")
+
+    @property
+    def new_config(self):
+        """ this is the new global.conf to replace the old conan.conf that contains
+        configuration defined with the new syntax as in profiles, this config will be composed
+        to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
+        """
+        if self._new_config is None:
+            self._new_config = ConfDefinition()
+            if os.path.exists(self.new_config_path):
+                self._new_config.loads(load(self.new_config_path))
+        return self._new_config
+
+    @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
         encryption_key = os.getenv('CONAN_LOGIN_ENCRYPTION_KEY', None)
@@ -194,7 +211,7 @@ class ClientCache(object):
     @property
     def default_profile(self):
         self.initialize_default_profile()
-        default_profile, _ = read_profile(self.default_profile_path, get_cwd(), self.profiles_path)
+        default_profile, _ = read_profile(self.default_profile_path, os.getcwd(), self.profiles_path)
 
         # Mix profile settings with environment
         mixed_settings = _mix_settings_with_env(default_profile.settings)

@@ -5,6 +5,7 @@ from unittest import TestCase
 
 import six
 from six import StringIO
+import pytest
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.output import ConanOutput
@@ -80,7 +81,7 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_package.txz' file format", client.out)
 
-    @unittest.skipUnless(six.PY3, "only Py3")
+    @pytest.mark.skipif(not six.PY3, reason="only Py3")
     def test(self):
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "a_file.txt")
@@ -94,7 +95,7 @@ class Pkg(ConanFile):
         content = load(os.path.join(dest_folder, "a_file.txt"))
         self.assertEqual(content, "my content!")
 
-    @unittest.skipUnless(six.PY2, "only Py2")
+    @pytest.mark.skipif(not six.PY2, reason="only Py2")
     def test_error_python2(self):
         with six.assertRaisesRegex(self, ConanException, "XZ format not supported in Python 2"):
             dest_folder = temp_folder()

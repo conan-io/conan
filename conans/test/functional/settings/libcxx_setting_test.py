@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 
 class LibcxxSettingTest(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() == "Windows", "Not in Windows")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Not in Windows")
     @pytest.mark.tool_cmake
     def test_declared_stdlib_and_passed(self):
         file_content = textwrap.dedent('''

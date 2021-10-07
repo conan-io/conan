@@ -34,7 +34,6 @@ BUILD_INFO_QBS = 'conanbuildinfo.qbs'
 BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
 BUILD_INFO_PREMAKE = 'conanbuildinfo.premake.lua'
-BUILD_INFO_MAKE = 'conanbuildinfo.mak'
 BUILD_INFO_DEPLOY = 'deploy_manifest.txt'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"

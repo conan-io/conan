@@ -21,10 +21,10 @@ os=Windows
 
         new_profile.update_settings(OrderedDict([("compiler", "2"), ("compiler.version", "3")]))
         self.assertEqual(new_profile.settings,
-                          OrderedDict([("os", "Windows"), ("OTHER", "2"),
-                                       ("compiler", "2"), ("compiler.version", "3")]))
+                         OrderedDict([("os", "Windows"), ("OTHER", "2"),
+                                      ("compiler", "2"), ("compiler.version", "3")]))
 
-    def env_vars_test_inheritance(self):
+    def test_env_vars_inheritance(self):
         tmp_dir = temp_folder()
         p1 = '''[env]\nVAR=1'''
         p2 = '''include(p1)\n[env]\nVAR=2'''
@@ -109,3 +109,27 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
                          '[build_requires]\n'
                          '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())
+
+
+def test_update_build_requires():
+    # https://github.com/conan-io/conan/issues/8205#issuecomment-775032229
+    profile = Profile()
+    profile.build_requires["*"] = ["zlib/1.2.8"]
+
+    profile2 = Profile()
+    profile2.build_requires["*"] = ["zlib/1.2.8"]
+
+    profile.compose_profile(profile2)
+    assert profile.build_requires["*"] == ["zlib/1.2.8"]
+
+    profile3 = Profile()
+    profile3.build_requires["*"] = ["zlib/1.2.11"]
+
+    profile.compose_profile(profile3)
+    assert profile.build_requires["*"] == ["zlib/1.2.11"]
+
+    profile4 = Profile()
+    profile4.build_requires["*"] = ["cmake/2.7"]
+
+    profile.compose_profile(profile4)
+    assert profile.build_requires["*"] == ["zlib/1.2.11", "cmake/2.7"]

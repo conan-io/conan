@@ -16,6 +16,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
     merge_directories, clean_dirty
 from conans.util.log import logger
@@ -84,6 +85,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         channel = None
 
     ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+    conanfile.display_name = str(ref)
+    conanfile.output.scope = conanfile.display_name
 
     # If we receive lock information, python_requires could have been locked
     if graph_lock:
@@ -287,6 +290,7 @@ def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
         conandata_yml = {}
         if os.path.exists(conandata_path):
             conandata_yml = yaml.safe_load(load(conandata_path))
+            conandata_yml = conandata_yml or {}  # In case the conandata is a blank file
             if '.conan' in conandata_yml:
                 raise ConanException("Field '.conan' inside '{}' file is reserved to "
                                      "Conan usage.".format(DATA_YML))
@@ -297,6 +301,7 @@ def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
 
         save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
     else:
+        conan_v2_error("general.scm_to_conandata should be set to 1")
         _replace_scm_data_in_conanfile(package_layout.conanfile(), scm_data)
 
 

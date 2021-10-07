@@ -70,7 +70,7 @@ bat_deactivate = textwrap.dedent("""\
 
 ps1_activate = textwrap.dedent("""\
     {%- for it in modified_vars %}
-    $env:CONAN_OLD_{{it}}=$env:{{it}}
+    $env:CONAN_OLD_{{venv_name}}_{{it}}=$env:{{it}}
     {%- endfor %}
 
     foreach ($line in Get-Content "{{ environment_file }}") {
@@ -79,20 +79,20 @@ ps1_activate = textwrap.dedent("""\
         Set-Item env:\\$var -Value "$value_expanded"
     }
 
-    function global:_old_conan_prompt {""}
-    $function:_old_conan_prompt = $function:prompt
+    function global:_old_conan_{{venv_name}}_prompt {""}
+    $function:_old_conan_{{venv_name}}_prompt = $function:prompt
     function global:prompt {
-        write-host "({{venv_name}}) " -nonewline; & $function:_old_conan_prompt
+        write-host "({{venv_name}}) " -nonewline; & $function:_old_conan_{{venv_name}}_prompt
     }
 """)
 
 ps1_deactivate = textwrap.dedent("""\
-    $function:prompt = $function:_old_conan_prompt
-    remove-item function:_old_conan_prompt
+    $function:prompt = $function:_old_conan_{{venv_name}}_prompt
+    remove-item function:_old_conan_{{venv_name}}_prompt
 
     {% for it in modified_vars %}
-    $env:{{it}}=$env:CONAN_OLD_{{it}}
-    Remove-Item env:CONAN_OLD_{{it}}
+    $env:{{it}}=$env:CONAN_OLD_{{venv_name}}_{{it}}
+    Remove-Item env:CONAN_OLD_{{venv_name}}_{{it}}
     {%- endfor %}
     {%- for it in new_vars %}
     Remove-Item env:{{it}}
@@ -117,7 +117,7 @@ def _variable_placeholder(flavor, name, append_with_spaces):
     if flavor == PS1_FLAVOR:
         return "$env:%s" % name
     # flavor == sh
-    return "${%s+ $%s}" % (name, name) if append_with_spaces else "${%s+:$%s}" % (name,  name)
+    return "${%s:+ $%s}" % (name, name) if append_with_spaces else "${%s:+:$%s}" % (name,  name)
 
 
 def _format_values(flavor, variables, append_with_spaces):
@@ -143,7 +143,10 @@ def _format_values(flavor, variables, append_with_spaces):
             placeholder = _variable_placeholder(flavor, name, append_space)
             if append_space:
                 # Variables joined with spaces look like: CPPFLAGS="one two three"
-                value = " ".join(value+[placeholder])
+                if flavor == SH_FLAVOR:
+                    value = " ".join(value) + placeholder
+                else:
+                    value = " ".join(value + [placeholder])
                 value = "\"%s\"" % value if quote_elements else value
             else:
                 # Quoted variables joined with pathset may look like:
@@ -174,7 +177,8 @@ def _files(env_vars, vars_with_spaces, flavor, activate_tpl, deactivate_tpl, ven
     activate_content = activate_tpl.render(environment_file=env_filepath,
                                            modified_vars=modified_vars, new_vars=new_vars,
                                            venv_name=venv_name)
-    deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
+    deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars,
+                                               venv_name=venv_name)
 
     environment_lines = ["{}={}".format(name, value) for name, value, _ in ret]
     # This blank line is important, otherwise the script doens't process last line

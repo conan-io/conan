@@ -9,7 +9,9 @@ from six import StringIO
 from conans import ConanFile, Options
 from conans.client.output import ConanOutput
 from conans.client.userio import UserIO
+from conans.model.conf import ConfDefinition
 from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
+from conans.model.layout import Folders
 from conans.model.options import PackageOptions
 from conans.model.user_info import DepsUserInfo
 
@@ -123,6 +125,7 @@ class MockDepsCppInfo(defaultdict):
 class MockConanfile(ConanFile):
 
     def __init__(self, settings, options=None, runner=None):
+        self.folders = Folders()
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
         self.runner = runner
@@ -149,7 +152,6 @@ class ConanFileMock(ConanFile):
         options = options or ""
         self.command = None
         self.path = None
-        self.source_folder = self.build_folder = "."
         self.settings = None
         self.options = Options(PackageOptions.loads(options))
         if options_values:
@@ -159,7 +161,6 @@ class ConanFileMock(ConanFile):
         self.deps_cpp_info.sysroot = "/path/to/sysroot"
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
-        self.install_folder = "myinstallfolder"
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
         self.should_configure = True
@@ -172,8 +173,20 @@ class ConanFileMock(ConanFile):
         self.env_info = EnvInfo()
         self.deps_user_info = DepsUserInfo()
         self._conan_env_values = EnvValues()
+        self.folders = Folders()
+        self.folders.set_base_source(".")
+        self.folders.set_base_build(".")
+        self.folders.set_base_install("myinstallfolder")
+        self.folders.set_base_generators(".")
+        self._conan_user = None
+        self._conan_channel = None
+        self.env_scripts = {}
+        self.win_bash = None
+        self.conf = ConfDefinition().get_conanfile_conf(None)
 
-    def run(self, command):
+    def run(self, command, win_bash=False, subsystem=None, env=None):
+        assert win_bash is False
+        assert subsystem is None
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
@@ -210,10 +223,10 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
-# cli2.0
 class RedirectedTestOutput(StringIO):
     def __init__(self):
-        super(RedirectedTestOutput, self).__init__()
+        # Chage to super() for Py3
+        StringIO.__init__(self)
 
     def __repr__(self):
         return self.getvalue()

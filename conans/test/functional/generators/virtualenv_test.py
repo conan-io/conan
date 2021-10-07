@@ -1,7 +1,6 @@
 import os
 import platform
 import subprocess
-import textwrap
 import unittest
 from collections import OrderedDict
 
@@ -12,72 +11,9 @@ from parameterized.parameterized import parameterized_class
 from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.client.tools import OSInfo, files as tools_files
 from conans.client.tools.env import environment_append
-from conans.model.ref import ConanFileReference
-from conans.test.functional.graph.graph_manager_base import GraphManagerTest
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import GenConanfile
 from conans.util.files import decode_text, load, save_files, to_file_bytes
-
-
-class VirtualEnvGeneratorTestCase(GraphManagerTest):
-    """ Check that the declared variables in the ConanFile reach the generator """
-
-    base = textwrap.dedent("""
-        import os
-        from conans import ConanFile
-
-        class BaseConan(ConanFile):
-            name = "base"
-            version = "0.1"
-
-            def package_info(self):
-                self.env_info.PATH.extend([os.path.join("basedir", "bin"), "samebin"])
-                self.env_info.LD_LIBRARY_PATH.append(os.path.join("basedir", "lib"))
-                self.env_info.BASE_VAR = "baseValue"
-                self.env_info.SPECIAL_VAR = "baseValue"
-                self.env_info.BASE_LIST = ["baseValue1", "baseValue2"]
-                self.env_info.CPPFLAGS = ["-baseFlag1", "-baseFlag2"]
-                self.env_info.BCKW_SLASH = r"base\\value"
-    """)
-
-    dummy = textwrap.dedent("""
-        import os
-        from conans import ConanFile
-
-        class DummyConan(ConanFile):
-            name = "dummy"
-            version = "0.1"
-            requires = "base/0.1"
-
-            def package_info(self):
-                self.env_info.PATH = [os.path.join("dummydir", "bin"),"samebin"]
-                self.env_info.LD_LIBRARY_PATH.append(os.path.join("dummydir", "lib"))
-                self.env_info.SPECIAL_VAR = "dummyValue"
-                self.env_info.BASE_LIST = ["dummyValue1", "dummyValue2"]
-                self.env_info.CPPFLAGS = ["-flag1", "-flag2"]
-                self.env_info.BCKW_SLASH = r"dummy\\value"
-    """)
-
-    def test_conanfile(self):
-        base_ref = ConanFileReference.loads("base/0.1")
-        dummy_ref = ConanFileReference.loads("dummy/0.1")
-
-        self._cache_recipe(base_ref, self.base)
-        self._cache_recipe(dummy_ref, self.dummy)
-        deps_graph = self.build_graph(GenConanfile().with_requirement(dummy_ref))
-        generator = VirtualEnvGenerator(deps_graph.root.conanfile)
-
-        self.assertEqual(generator.env["BASE_LIST"],
-                         ['dummyValue1', 'dummyValue2', 'baseValue1', 'baseValue2'])
-        self.assertEqual(generator.env["BASE_VAR"], 'baseValue')
-        self.assertEqual(generator.env["BCKW_SLASH"], 'dummy\\value')
-        self.assertEqual(generator.env["CPPFLAGS"], ['-flag1', '-flag2', '-baseFlag1', '-baseFlag2'])
-        self.assertEqual(generator.env["LD_LIBRARY_PATH"],
-                         [os.path.join("dummydir", "lib"), os.path.join("basedir", "lib")])
-        self.assertEqual(generator.env["PATH"], [os.path.join("dummydir", "bin"),
-                                                 os.path.join("basedir", "bin"), 'samebin'])
-        self.assertEqual(generator.env["SPECIAL_VAR"], 'dummyValue')
 
 
 os_info = OSInfo()
@@ -221,26 +157,24 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
         _, environment = self._run_virtualenv(generator)
 
-        self.assertEqual(environment["CFLAGS"], "-O2 ")  # FIXME: Trailing blank
-        self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2 ")  # FIXME: Trailing blank
+        extra_blank = " " if platform.system() == "Windows" else ""  # FIXME: Extra blank under Windows
+        self.assertEqual(environment["CFLAGS"], "-O2" + extra_blank)
+        self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2" + extra_blank)
 
         with environment_append({"CFLAGS": "cflags", "CL": "cl"}):
             _, environment = self._run_virtualenv(generator)
-            extra_blank = " " if platform.system() != "Windows" else ""  # FIXME: Extra blank
-            self.assertEqual(environment["CFLAGS"], "-O2 {}cflags".format(extra_blank))
-            self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2 {}cl".format(extra_blank))
+            self.assertEqual(environment["CFLAGS"], "-O2 cflags")
+            self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2 cl")
 
     @pytest.mark.tool_conan
     def test_list_variable(self):
-        self.assertNotIn("WHATEVER", os.environ)
         self.assertIn("PATH", os.environ)
         existing_path = os.environ.get("PATH")
         # Avoid duplicates in the path
         existing_path = os.pathsep.join(OrderedDict.fromkeys(existing_path.split(os.pathsep)))
 
         generator = VirtualEnvGenerator(ConanFileMock())
-        generator.env = {"PATH": [os.path.join(self.test_folder, "bin"), r'other\path'],
-                         "WHATEVER": ["list", "other"]}
+        generator.env = {"PATH": [os.path.join(self.test_folder, "bin"), r'other\path']}
 
         _, environment = self._run_virtualenv(generator)
 
@@ -250,10 +184,37 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             self.ori_path,
             existing_path
         ]))
+
+    @pytest.mark.tool_conan
+    def test_empty_undefined_list_variable(self):
+        self.assertNotIn("WHATEVER", os.environ)
+
+        generator = VirtualEnvGenerator(ConanFileMock())
+        generator.env = {"WHATEVER": ["list", "other"]}
+
+        _, environment = self._run_virtualenv(generator)
+
         # FIXME: extra separator in Windows
         extra_separator = os.pathsep if platform.system() == "Windows" else ""
         self.assertEqual(environment["WHATEVER"],
                          "{}{}{}{}".format("list", os.pathsep, "other", extra_separator))
+
+    @pytest.mark.tool_conan
+    @pytest.mark.skipif(platform.system() == "Windows",
+                        reason="Windows doesn't make distinction between empty and undefined environment variables")
+    def test_empty_defined_list_variable(self):
+        self.assertNotIn("WHATEVER", os.environ)
+        try:
+            os.environ["WHATEVER"] = ""
+
+            generator = VirtualEnvGenerator(ConanFileMock())
+            generator.env = {"WHATEVER": ["list", "other"]}
+
+            _, environment = self._run_virtualenv(generator)
+
+            self.assertEqual(environment["WHATEVER"], "{}{}{}".format("list", os.pathsep, "other"))
+        finally:
+            del os.environ["WHATEVER"]
 
     @pytest.mark.tool_conan
     def test_find_program(self):

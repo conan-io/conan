@@ -7,8 +7,7 @@ from conans.client.recorder.action_recorder import ActionRecorder
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 
 PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
                                              "exports_folder", "exports_sources_folder"])
@@ -55,7 +54,12 @@ class PyRequires(object):
         try:
             return self._pyrequires[item]
         except KeyError:
-            raise ConanException("'%s' is not a python_require" % item)
+            # https://github.com/conan-io/conan/issues/8546
+            # Transitive pyrequires are accessed by inheritance derived classes
+            try:
+                return self._transitive[item]
+            except KeyError:
+                raise ConanException("'%s' is not a python_require" % item)
 
     def __setitem__(self, key, value):
         # single item assignment, direct
@@ -123,9 +127,13 @@ class PyRequireLoader(object):
             ref = locked
         else:
             requirement = Requirement(ref)
-            self._range_resolver.resolve(requirement, "py_require", update=self._update,
-                                         remotes=self._remotes)
-            ref = requirement.ref
+            alias = requirement.alias
+            if alias is not None:
+                ref = alias
+            else:
+                self._range_resolver.resolve(requirement, "py_require", update=self._update,
+                                             remotes=self._remotes)
+                ref = requirement.ref
         return ref
 
     def _load_pyreq_conanfile(self, loader, lock_python_requires, ref):
@@ -135,11 +143,15 @@ class PyRequireLoader(object):
         conanfile, module = loader.load_basic_module(path, lock_python_requires, user=new_ref.user,
                                                      channel=new_ref.channel)
         conanfile.name = new_ref.name
-        conanfile.version = str(new_ref.version) \
-            if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else new_ref.version
+        # FIXME Conan 2.0 version should be a string, not a Version object
+        conanfile.version = new_ref.version
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)
+            requirement = Requirement(ref)
+            alias = requirement.alias
+            if alias is not None:
+                ref = alias
             conanfile, module, new_ref, path = self._load_pyreq_conanfile(loader,
                                                                           lock_python_requires,
                                                                           ref)
@@ -203,7 +215,7 @@ class ConanPythonRequire(object):
         return python_require
 
     def __call__(self, reference):
-        conan_v2_behavior("Old syntax for python_requires is deprecated")
+        conan_v2_error("Old syntax for python_requires is deprecated")
         if not self.valid:
             raise ConanException("Invalid use of python_requires(%s)" % reference)
         try:

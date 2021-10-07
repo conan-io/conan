@@ -35,7 +35,7 @@ class DepsCppInfoTestCase(unittest.TestCase):
         self.assertIsInstance(info_for_package.rootpath, six.string_types)
         self.assertIsInstance(info_for_package.name, six.string_types)
         self.assertIsInstance(info_for_package.system_libs, list)
-        self.assertIsInstance(info_for_package.build_modules, list)
+        self.assertIsInstance(info_for_package.build_modules, dict)
         self.assertIsInstance(info_for_package.components, dict)
 
         # Documented as list for `deps_cpp_info["pkg"]`
@@ -45,7 +45,7 @@ class DepsCppInfoTestCase(unittest.TestCase):
         self.assertIsInstance(info_for_package.build_paths, list)
         self.assertIsInstance(info_for_package.res_paths, list)
         self.assertIsInstance(info_for_package.framework_paths, list)
-        self.assertIsInstance(info_for_package.build_modules_paths, list)
+        self.assertIsInstance(info_for_package.build_modules_paths, dict)
         self.assertIsInstance(info_for_package.get_name("generator"), six.string_types)
         self.assertIsInstance(info_for_package.version, six.string_types)
         self.assertIsInstance(info_for_package.components, dict)

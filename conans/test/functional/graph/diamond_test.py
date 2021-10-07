@@ -3,7 +3,6 @@ import platform
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client.generators.text import TXTGenerator
 from conans.paths import BUILD_INFO, BUILD_INFO_CMAKE, CONANFILE
@@ -12,9 +11,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 
-@attr("slow")
 @pytest.mark.slow
-@pytest.mark.tool_compiler
 class DiamondTest(unittest.TestCase):
 
     def setUp(self):

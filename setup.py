@@ -5,7 +5,6 @@ https://github.com/pypa/sampleproject
 """
 
 import os
-import platform
 import re
 # To use a consistent encoding
 from codecs import open

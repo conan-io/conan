@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+from mock import Mock
+
 from conans.client.generators import PremakeGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
@@ -10,7 +12,6 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class PremakeGeneratorTest(unittest.TestCase):
@@ -32,6 +33,7 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_cflags = {{"-mtune=native", "-fPIC"}}
     conan_sharedlinkflags = {{"-framework AudioFoundation", "-framework \\\"Some Spaced Framework\\\"", "-framework Cocoa"}}
     conan_exelinkflags = {{"-framework VideoToolbox", "-framework \\\"Other Spaced Framework\\\"", "-framework QuartzCore"}}
+    conan_frameworks = {{"AudioUnit.framework"}}
 
     conan_includedirs_MyPkg1 = {{"{include1}"}}
     conan_libdirs_MyPkg1 = {{"{lib1}"}}
@@ -43,6 +45,7 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_cflags_MyPkg1 = {{"-fPIC"}}
     conan_sharedlinkflags_MyPkg1 = {{"-framework Cocoa"}}
     conan_exelinkflags_MyPkg1 = {{"-framework QuartzCore"}}
+    conan_frameworks_MyPkg1 = {{"AudioUnit.framework"}}
     conan_rootpath_MyPkg1 = "{root1}"
 
     conan_includedirs_MyPkg2 = {{"{include2}"}}
@@ -55,6 +58,7 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_cflags_MyPkg2 = {{"-mtune=native"}}
     conan_sharedlinkflags_MyPkg2 = {{"-framework AudioFoundation", "-framework \\\"Some Spaced Framework\\\""}}
     conan_exelinkflags_MyPkg2 = {{"-framework VideoToolbox", "-framework \\\"Other Spaced Framework\\\""}}
+    conan_frameworks_MyPkg2 = {{}}
     conan_rootpath_MyPkg2 = "{root2}"
 
     function conan_basic_setup()
@@ -64,6 +68,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         libdirs{{conan_libdirs}}
         links{{conan_libs}}
         links{{conan_system_libs}}
+        links{{conan_frameworks}}
         defines{{conan_defines}}
         bindirs{{conan_bindirs}}
     end
@@ -79,7 +84,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         save(os.path.join(self.tmp_folder1, "bin1", "file.bin"), "")
         save(os.path.join(self.tmp_folder2, "bin2", "file.bin"), "")
 
-        self.conanfile = ConanFile(TestBufferConanOutput(), None)
+        self.conanfile = ConanFile(Mock(), None)
         self.conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, self.tmp_folder1)
@@ -94,6 +99,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.cxxflags = ['-fPIE']
         cpp_info.sharedlinkflags = ['-framework Cocoa']
         cpp_info.exelinkflags = ['-framework QuartzCore']
+        cpp_info.frameworks = ['AudioUnit']
         self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
         cpp_info = CppInfo(ref.name, self.tmp_folder2)

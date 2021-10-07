@@ -1,7 +1,97 @@
 import os
+import textwrap
 
+from conan.tools.env.environment import create_env_script
+from conans.client.tools import intel_compilervars_command
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
+
+CONAN_VCVARS_FILE = "conanvcvars.bat"
+
+
+class VCVars:
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
+
+    def generate(self, group="build"):
+        _write_conanvcvars(self._conanfile, group=group)
+
+
+def _write_conanvcvars(conanfile, group):
+    """
+    write a conanvcvars.bat file with the good args from settings
+    """
+    os_ = conanfile.settings.get_safe("os")
+    if os_ != "Windows":
+        return
+
+    compiler = conanfile.settings.get_safe("compiler")
+    vcvars = None
+    # FIXME: Does it make sense to have legacy 'intel' here? Perhaps we would have to remove it.
+    if compiler == "intel":
+        vcvars = intel_compilervars_command(conanfile)
+    elif compiler == "Visual Studio" or compiler == "msvc":
+        vs_version = vs_ide_version(conanfile)
+        vcvarsarch = vcvars_arch(conanfile)
+        vcvars_ver = None
+        if compiler == "Visual Studio":
+            toolset = conanfile.settings.get_safe("compiler.toolset")
+            if toolset is not None:
+                vcvars_ver = {"v140": "14.0",
+                              "v141": "14.1",
+                              "v142": "14.2",
+                              "v143": "14.3"}.get(toolset)
+        else:
+            # Code similar to CMakeToolchain toolset one
+            compiler_version = str(conanfile.settings.compiler.version)
+            version_components = compiler_version.split(".")
+            assert len(version_components) >= 2  # there is a 19.XX
+            minor = version_components[1]
+            # The equivalent of compiler 19.26 is toolset 14.26
+            vcvars_ver = "14.{}".format(minor)
+        vcvars = vcvars_command(vs_version, architecture=vcvarsarch,
+                                platform_type=None, winsdk_version=None,
+                                vcvars_ver=vcvars_ver)
+    if vcvars:
+        content = textwrap.dedent("""\
+            @echo off
+            {}
+            """.format(vcvars))
+        create_env_script(conanfile, content, CONAN_VCVARS_FILE, group)
+
+
+def vs_ide_version(conanfile):
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
+                        conanfile.settings.get_safe("compiler.version"))
+    if compiler == "msvc":
+        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
+        if toolset_override:
+            visual_version = toolset_override
+        else:
+            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
+            _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
+                        '19.1': '15',
+                        '19.2': '16',
+                        '19.3': '17'}
+            visual_version = _visuals[version]
+    else:
+        visual_version = compiler_version
+    return visual_version
+
+
+def msvc_runtime_flag(conanfile):
+    settings = conanfile.settings
+    compiler = settings.get_safe("compiler")
+    runtime = settings.get_safe("compiler.runtime")
+    if compiler == "Visual Studio":
+        return runtime
+    if compiler == "msvc" or compiler == "intel-cc":
+        runtime_type = settings.get_safe("compiler.runtime_type")
+        runtime = "MT" if runtime == "static" else "MD"
+        if runtime_type == "Debug":
+            runtime = "{}d".format(runtime)
+        return runtime
 
 
 def vcvars_command(version, architecture=None, platform_type=None, winsdk_version=None,
@@ -12,7 +102,7 @@ def vcvars_command(version, architecture=None, platform_type=None, winsdk_versio
     # TODO: This comes from conans/client/tools/win.py vcvars_command()
     cmd = []
     if start_dir_cd:
-        cmd.append('set "VSCMD_START_DIR=%%CD%%" &&')
+        cmd.append('set "VSCMD_START_DIR=%CD%" &&')
 
     # The "call" is useful in case it is called from another .bat script
     cmd.append('call "%s" ' % vcvars_path(version))

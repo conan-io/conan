@@ -21,6 +21,7 @@ BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_UNKNOWN = "Unknown"
+BINARY_INVALID = "Invalid"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -64,6 +65,7 @@ class Node(object):
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
+        conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
@@ -247,6 +249,7 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
         self.aliased = {}
+        self.new_aliased = {}
         self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     def add_node(self, node):

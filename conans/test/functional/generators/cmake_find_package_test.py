@@ -5,7 +5,6 @@ import unittest
 
 import pytest
 import six
-from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference, PackageReference
@@ -14,7 +13,82 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
-@attr('slow')
+@pytest.mark.tool_cmake
+class TestCMakeFindPackageGenerator:
+
+    @pytest.mark.parametrize("use_components", [False, True])
+    def test_build_modules_alias_target(self, use_components):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = ["target-alias.cmake"]
+                generators = "cmake"
+
+                def package(self):
+                    self.copy("target-alias.cmake", dst="share/cmake")
+
+                def package_info(self):
+                    module = os.path.join("share", "cmake", "target-alias.cmake")
+            %s
+            """)
+        if use_components:
+            info = textwrap.dedent("""\
+                self.cpp_info.name = "namespace"
+                self.cpp_info.filenames["cmake_find_package"] = "hello"
+                self.cpp_info.components["comp"].libs = ["hello"]
+                self.cpp_info.components["comp"].build_modules["cmake_find_package"].append(module)
+                """)
+        else:
+            info = textwrap.dedent("""\
+                self.cpp_info.libs = ["hello"]
+                self.cpp_info.build_modules["cmake_find_package"].append(module)
+                """)
+        target_alias = textwrap.dedent("""
+            add_library(otherhello INTERFACE IMPORTED)
+            target_link_libraries(otherhello INTERFACE {target_name})
+            """).format(target_name="namespace::comp" if use_components else "hello::hello")
+        conanfile = conanfile % "\n".join(["        %s" % line for line in info.splitlines()])
+        client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
+        client.run("create .")
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = ["CMakeLists.txt"]
+                generators = "cmake_find_package"
+                requires = "hello/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+        cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            cmake_minimum_required(VERSION 3.0)
+            project(test CXX)
+            find_package(hello)
+            get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
+            message("otherhello link libraries: ${tmp}")
+            """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create .")
+        if use_components:
+            assert "otherhello link libraries: namespace::comp" in client.out
+        else:
+            assert "otherhello link libraries: hello::hello" in client.out
+
+
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeFindPathGeneratorTest(unittest.TestCase):
@@ -29,7 +103,7 @@ class Test(ConanFile):
         self.cpp_info.libs.append("fake_lib")
         self.cpp_info.cflags.append("a_flag")
         self.cpp_info.cxxflags.append("a_cxx_flag")
-        self.cpp_info.sharedlinkflags.append("shared_link_flag")
+        self.cpp_info.sharedlinkflags.append("-shared_link_flag")
     """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -47,10 +121,11 @@ class Consumer(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-
     """
         cmakelists = """
-project(consumer)
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(consumer CXX)
 cmake_minimum_required(VERSION 3.1)
 find_package(Test)
 message("Libraries to Link: ${Test_LIBS}")
@@ -68,8 +143,8 @@ message("Compile options: ${tmp}")
         self.assertIn("Libraries to Link: fake_lib", client.out)
         self.assertIn("Version: 0.1", client.out)
         self.assertIn("Target libs: fake_lib;;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:shared_link_flag>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:shared_link_flag>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:-shared_link_flag>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:-shared_link_flag>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>", client.out)
         self.assertIn("Compile options: a_cxx_flag;a_flag", client.out)
 
@@ -126,12 +201,13 @@ message("Target libs: ${tmp}")
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
-
         """)
 
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.0)
-            project(app)
+            project(app CXX)
             find_package(PkgC)
         """)
 
@@ -222,7 +298,6 @@ include_directories(${Hello0_INCLUDE_DIRS})
 target_link_libraries(helloHello1 PUBLIC ${Hello0_LIBS})
 add_executable(say_hello main.cpp)
 target_link_libraries(say_hello helloHello1)
-
 """
         client.save(files, clean_first=True)
         client.run("create . user/channel -s build_type=Release")
@@ -287,8 +362,10 @@ target_link_libraries(say_hello helloHello2)
                     cmake.configure()
         """)
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.1)
-            project(consumer)
+            project(consumer CXX)
             find_package(Test)
             message("Package libs: ${Test_LIBS}")
             message("Package version: ${Test_VERSION}")
@@ -304,7 +381,7 @@ target_link_libraries(say_hello helloHello2)
         self.assertNotIn("-- Library sys1 not found in package, might be system one", client.out)
         self.assertIn("Target linked libs: lib1;sys1;;", client.out)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires Apple Frameworks")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple Frameworks")
     def test_cmake_find_package_frameworks(self):
         conanfile = """from conans import ConanFile, tools
 class Test(ConanFile):
@@ -330,10 +407,11 @@ class Consumer(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-
     """
         cmakelists = """
-project(consumer)
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(consumer CXX)
 cmake_minimum_required(VERSION 3.1)
 find_package(Test)
 message("Libraries to link: ${Test_LIBS}")
@@ -390,7 +468,7 @@ message("Target libs: ${tmp}")
             """)
         # This is a module that defines some functionality
         find_module = textwrap.dedent("""
-            function(conan_message MESSAGE_OUTPUT)
+            function(custom_message MESSAGE_OUTPUT)
                 message(${ARGV${0}})
             endfunction()
             """)
@@ -421,10 +499,12 @@ message("Target libs: ${tmp}")
                     cmake.build()
             """)
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.0)
-            project(test)
+            project(test CXX)
             find_package(test)
-            conan_message("Printing using a external module!")
+            custom_message("Printing using a external module!")
             """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")
@@ -449,6 +529,7 @@ message("Target libs: ${tmp}")
                         output=client.out)
         client.run("create .")
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_ABI_COMPILED 1)
             set(CMAKE_CXX_COMPILER_WORKS 1)
             project(consumer CXX)
             cmake_minimum_required(VERSION 3.1)
@@ -527,6 +608,7 @@ message("Target libs: ${tmp}")
         client.run("create .")
 
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_ABI_COMPILED 1)
             set(CMAKE_CXX_COMPILER_WORKS 1)
             project(consumer CXX)
             cmake_minimum_required(VERSION 3.1)
@@ -636,7 +718,9 @@ message("Target libs: ${tmp}")
         """)
 
         cmakelists = textwrap.dedent("""
-            project(consumer)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            project(consumer CXX)
             cmake_minimum_required(VERSION 3.1)
             find_package(requirement)
             get_target_property(tmp requirement::component INTERFACE_LINK_LIBRARIES)

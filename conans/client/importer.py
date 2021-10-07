@@ -10,7 +10,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.dates import timestamp_now
 from conans.util.env_reader import get_env
-from conans.util.files import load, md5sum
+from conans.util.files import load, md5sum, mkdir
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
@@ -70,19 +70,19 @@ def _make_files_writable(file_names):
         os.chmod(file_name, os.stat(file_name).st_mode | stat.S_IWRITE)
 
 
-def run_imports(conanfile, dest_folder):
+def run_imports(conanfile):
     if not hasattr(conanfile, "imports"):
         return []
-    file_importer = _FileImporter(conanfile, dest_folder)
+    mkdir(conanfile.imports_folder)
+    file_importer = _FileImporter(conanfile, conanfile.imports_folder)
     conanfile.copy = file_importer
-    conanfile.imports_folder = dest_folder
     with get_env_context_manager(conanfile):
-        with tools.chdir(dest_folder):
+        with tools.chdir(conanfile.imports_folder):
             conanfile.imports()
     copied_files = file_importer.copied_files
     _make_files_writable(copied_files)
     import_output = ScopedOutput("%s imports()" % conanfile.display_name, conanfile.output)
-    _report_save_manifest(copied_files, import_output, dest_folder, IMPORTS_MANIFESTS)
+    _report_save_manifest(copied_files, import_output, conanfile.imports_folder, IMPORTS_MANIFESTS)
     return copied_files
 
 
@@ -110,7 +110,7 @@ def run_deploy(conanfile, install_folder):
 
     conanfile.copy_deps = file_importer
     conanfile.copy = file_copier
-    conanfile.install_folder = install_folder
+    conanfile.folders.set_base_install(install_folder)
     with get_env_context_manager(conanfile):
         with tools.chdir(install_folder):
             conanfile.deploy()
@@ -168,6 +168,12 @@ class _FileImporter(object):
                 except AttributeError:
                     raise ConanException("Import from unknown package folder '@%s'"
                                          % symbolic_dir_name)
+
+                if cpp_info.components:
+                    for comp_name, comp in cpp_info.components.items():
+                        src_dir = getattr(comp, symbolic_dir_name)
+                        if isinstance(src_dirs, list):  # it can return a "config" CppInfo item!
+                            src_dirs += src_dir
 
             for src_dir in src_dirs:
                 files = file_copier(pattern, src=src_dir, links=True, ignore_case=ignore_case,
