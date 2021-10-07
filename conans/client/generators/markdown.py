@@ -7,7 +7,6 @@ from conans.model import Generator
 import datetime
 
 
-
 render_cpp_info = textwrap.dedent("""
     {% macro join_list_sources(items) -%}
     ``{{ "``, ``".join(items) }}``
@@ -35,43 +34,31 @@ render_cpp_info = textwrap.dedent("""
     {%- endmacro %}
 """)
 
-generator_cmake_tpl = textwrap.dedent("""
-    ### Generator ``cmake``
-
-    Add these lines to your *CMakeLists.txt*:
-
-    ```cmake
-    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-    conan_basic_setup(TARGETS)
-
-    target_link_libraries(<library_name> CONAN_PKG::{{ cpp_info.get_name("cmake") }})
-    ```
-
-    {% set build_modules = cpp_info.build_modules.get('cmake', None) %}
-    {% if build_modules %}
-    This generator will include some _build modules_:
-    {% for bm in build_modules -%}
-    * `{{ bm }}`
-      ```
-      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
-      ```
-    {%- endfor -%}
-    {%- endif %}
-""")
-
-generator_cmake_find_package_tpl = textwrap.dedent("""
-    ### Generator ``cmake_find_package``
+buildsystem_cmake_tpl = textwrap.dedent("""
     {% set cmake_find_package_name = cpp_info.get_name("cmake_find_package") %}
     {% set cmake_find_package_filename = cpp_info.get_filename("cmake_find_package") %}
-    Generates the file Find{{ cmake_find_package_filename }}.cmake
 
-    Add these lines to your *CMakeLists.txt*:
+    ### CMake
 
-    ```cmake
+    #### Generator [CMakeToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmaketoolchain.html)
+    `CMakeToolchain` is the toolchain generator for CMake. It will generate a toolchain
+    file that can be used in the command-line invocation of CMake with
+    `-DCMAKE_TOOLCHAIN_FILE=conantoolchain.cmake`. This generator translates the current
+    package configuration, settings, and options, into CMake toolchain syntax.
+
+    #### Generator [CMakeDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/cmake/cmakedeps.html)
+    The `CMakeDeps` helper will generate one `xxxx-config.cmake` file per dependency,
+    together with other necessary `.cmake` files like version, flags, and directory data
+    or configuration.
+
+    Add these lines to your `CMakeLists.txt`:
+
+    ```
     find_package({{ cmake_find_package_filename }})
 
     # Use the global target
     target_link_libraries(<library_name> {{ cmake_find_package_name }}::{{ cmake_find_package_name }})
+
     {% if cpp_info.components %}
     # Or link just one of its components
     {% for cmp_name, cmp_cpp_info in cpp_info.components.items() -%}
@@ -79,26 +66,62 @@ generator_cmake_find_package_tpl = textwrap.dedent("""
     {% endfor %}
     {%- endif %}
     ```
-
-    Remember to adjust your build system settings to match the binaries you are linking with. You can
-    use the [CMake build helper](https://docs.conan.io/en/latest/reference/build_helpers/cmake.html) and
-    the ``cmake`` generator from a *conanfile.py* or the new [toolchain paradigm](https://docs.conan.io/en/latest/creating_packages/toolchains.html).
-
-    {% set build_modules = cpp_info.build_modules.get('cmake_find_package', None) %}
-    {% if build_modules %}
-    This generator will include some _build modules_:
-    {% for bm in build_modules -%}
-    * `{{ bm }}`
-      ```
-      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
-      ```
-    {%- endfor -%}
-    {%- endif %}
 """)
 
-generator_pkg_config_tpl = textwrap.dedent("""
-    ### Generator ``pkg_config``
+buildsystem_vs_tpl = textwrap.dedent("""
+    ### Visual Studio
 
+    #### Generator [MSBuildToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuildtoolchain)
+    `MSBuildToolchain` is the toolchain generator for MSBuild. It will generate MSBuild
+    properties files that can be added to the Visual Studio solution projects. This generator
+    translates the current package configuration, settings, and options, into MSBuild
+    properties files syntax.
+
+    #### Generator [MSBuildDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuilddeps)
+    `MSBuildDeps` is the dependency information generator for Microsoft MSBuild build
+    system. It will generate multiple `xxxx.props` properties files, one per dependency of
+    a package, to be used by consumers using MSBuild or Visual Studio, just adding the
+    generated properties files to the solution and projects.
+""")
+
+buildsystem_autotools_tpl = textwrap.dedent("""
+    ### Autotools
+
+    #### Generator [AutotoolsToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/gnu/autotoolstoolchain.html)
+    `AutotoolsToolchain` is the toolchain generator for Autotools. It will generate
+    shell scripts containing environment variable definitions that the autotools build
+    system can understand.
+
+    `AutotoolsToolchain` will generate the `conanautotoolstoolchain.sh` or
+    `conanautotoolstoolchain.bat` files after a `conan install` command:
+
+    ```
+    $ conan install conanfile.py # default is Release
+    $ source conanautotoolstoolchain.sh
+    # or in Windows
+    $ conanautotoolstoolchain.bat
+    ```
+
+    If your autotools scripts expect to find dependencies using pkg_config, use the
+    `PkgConfigDeps` generator. Otherwise, use `AutotoolsDeps`.
+
+    #### Generator AutotoolsDeps
+    The AutotoolsDeps is the dependencies generator for Autotools. It will generate
+    shell scripts containing environment variable definitions that the autotools
+    build system can understand.
+
+    The AutotoolsDeps will generate after a conan install command the
+    conanautotoolsdeps.sh or conanautotoolsdeps.bat files:
+
+    ```
+    $ conan install conanfile.py # default is Release
+    $ source conanautotoolsdeps.sh
+    # or in Windows
+    $ conanautotoolsdeps.bat
+    ```
+
+
+    #### Generator PkgConfigDeps
     This package provides one *pkg-config* file ``{{ cpp_info.get_filename('pkg_config') }}.pc`` with
     all the information from the library
     {% if cpp_info.components -%}
@@ -121,37 +144,56 @@ generator_pkg_config_tpl = textwrap.dedent("""
     {%- endif %}
 """)
 
+buildsystem_other_tpl = textwrap.dedent("""
+    ### Other build systems
+    Conan includes generators for [several more build systems](https://docs.conan.io/en/latest/integrations/build_system.html),
+    and you can even write [custom integrations](https://docs.conan.io/en/latest/integrations/custom.html)
+    if needed.
+""")
+
 requirement_tpl = textwrap.dedent("""
     {% from 'render_cpp_info' import render_cpp_info %}
 
     # {{ cpp_info.name }}/{{ cpp_info.version }}
 
     ---
-    **Note.-** If this package belongs to ConanCenter, you can find more information [here](https://conan.io/center/{{ cpp_info.name }}/{{ cpp_info.version }}/).
 
-    ---
+    ## How to use this recipe
+
+    You can use this recipe with different build systems. For each build system, Conan
+    provides different generators that you must list in the generators property of the
+    `conanfile.py`. Alternatively, you can use the command line argument  `--generator/-g`
+    in the `conan install` command.
+
+    [Here](https://docs.conan.io/en/latest/integrations.html) you can read more about Conan
+    integration with several build systems, compilers, IDEs, etc.
+
 
     {% if requires or required_by %}
-    Graph of dependencies:
+    ## Dependencies
     {% if requires %}
     * ``{{ cpp_info.name }}`` requires:
         {% for dep_name, dep_cpp_info in requires -%}
-        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
+        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}){% if not loop.last %}, {% endif %}
         {%- endfor -%}
     {%- endif %}
     {%- if required_by %}
     * ``{{ cpp_info.name }}`` is required by:
         {%- for dep_name, dep_cpp_info in required_by %}
-        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
+        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}){% if not loop.last %}, {% endif %}
         {%- endfor %}
     {%- endif %}
     {% endif %}
 
-    Information published by ``{{ cpp_info.name }}`` to consumers:
+    ## Build Systems
 
-    {%- if cpp_info.includedirs %}
-    * Headers (see [below](#header-files))
-    {%- endif %}
+    {% include 'buildsystem_cmake' %}
+    {% include 'buildsystem_vs' %}
+    {% include 'buildsystem_autotools' %}
+    {% include 'buildsystem_other' %}
+
+    ## Information for consumers
+
     {% if cpp_info.components %}
     {% for cmp_name, cmp_cpp_info in cpp_info.components.items() %}
     * Component ``{{ cpp_info.name }}::{{ cmp_name }}``:
@@ -161,23 +203,6 @@ requirement_tpl = textwrap.dedent("""
     {{ render_cpp_info(cpp_info)|indent(width=0) }}
     {% endif %}
 
-
-    ## Generators
-
-    Read below how to use this package using different
-    [generators](https://docs.conan.io/en/latest/reference/generators.html). In order to use
-    these generators they have to be listed in the _conanfile.py_ file or using the command
-    line argument ``--generator/-g`` in the ``conan install`` command.
-
-    * [``cmake``](#Generator-cmake)
-    * [``cmake_find_package``](#Generator-cmake_find_package)
-    * [``pkg_config``](#Generator-pkg_config)
-
-    {% include 'generator_cmake' %}
-    {% include 'generator_cmake_find_package' %}
-    {% include 'generator_pkg_config_tpl' %}
-
-    ---
     ## Header files
 
     List of header files exposed by this package. Use them in your ``#include`` directives:
@@ -220,9 +245,10 @@ class MarkdownGenerator(Generator):
         dict_loader = DictLoader({
             'render_cpp_info': render_cpp_info,
             'package.md': requirement_tpl,
-            'generator_cmake': generator_cmake_tpl,
-            'generator_cmake_find_package': generator_cmake_find_package_tpl,
-            'generator_pkg_config_tpl': generator_pkg_config_tpl,
+            'buildsystem_cmake': buildsystem_cmake_tpl,
+            'buildsystem_vs': buildsystem_vs_tpl,
+            'buildsystem_autotools': buildsystem_autotools_tpl,
+            'buildsystem_other': buildsystem_other_tpl
         })
         env = Environment(loader=dict_loader)
         template = env.get_template('package.md')
