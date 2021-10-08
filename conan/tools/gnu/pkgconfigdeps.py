@@ -17,14 +17,14 @@
         Requires.private: gthread-2.0 >= 2.40
 """
 import os
+import textwrap
+
+import jinja2
+from jinja2 import Template
 
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.errors import ConanException
 from conans.util.files import save
-
-
-def _concat_if_not_empty(groups):
-    return " ".join([param for group in groups for param in group if param and param.strip()])
 
 
 def get_target_namespace(req):
@@ -116,86 +116,121 @@ class PkgConfigDeps(object):
                                                                    dep.ref.version)
         return ret
 
+    @property
+    def template_global_content(self):
+        return textwrap.dedent("""\
+        Name: {{dep_name}}
+        Description: {{description}}
+        Version: {{dep_version}}
+        {% if public_deps %}
+        Requires: {% for dep in public_deps %}
+                {{ dep }}
+            {%- if not loop.last %},{% endif %}
+            {% endfor %}
+        {% endif %}
+        """)
+
+    @property
+    def template_content(self):
+        return textwrap.dedent("""\
+        prefix={{prefix_path}}
+        {%- for name, path in libdirs.items() %}
+            {{ name + "=" + path }}
+        {% endfor %}
+        {%- for name, path in includedirs.items() %}
+            {{ name + "=" + path }}
+        {% endfor %}
+        {% if pkg_config_custom_content %}
+        # Custom PC content
+        {{pkg_config_custom_content}}
+        {% endif %}
+
+        Name: {{dep_name}}
+        Description: {{description}}
+        Version: {{dep_version}}
+        Libs: {{ libs }}
+        Cflags: {{ flags }}
+        {% if public_deps %}
+        Requires: {% for dep in public_deps %}
+                {{ dep }}
+            {%- if not loop.last %},{% endif %}
+            {% endfor %}
+        {% endif %}
+        """)
+
     def _pc_file_content(self, name, cpp_info, requires_gennames, package_folder, version):
-        prefix_path = package_folder.replace("\\", "/")
-        lines = ['prefix=%s' % prefix_path]
 
-        gnudeps_flags = GnuDepsFlags(self._conanfile, cpp_info)
+        def _concat_if_not_empty(groups):
+            return " ".join(
+                [param for group in groups for param in group if param and param.strip()])
 
-        libdir_vars = []
-        dir_lines, varnames = self._generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
-        if dir_lines:
-            libdir_vars = varnames
-            lines.extend(dir_lines)
+        def get_libs(libdirs):
+            libdirs_flags = ['-L"${%s}"' % libdir for libdir in libdirs]
+            lib_paths = ["${%s}" % libdir for libdir in libdirs]
+            libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
+            shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
 
-        includedir_vars = []
-        dir_lines, varnames = self._generate_dir_lines(prefix_path, "includedir",
-                                                       cpp_info.includedirs)
-        if dir_lines:
-            includedir_vars = varnames
-            lines.extend(dir_lines)
+            gnudeps_flags = GnuDepsFlags(self._conanfile, cpp_info)
+            return _concat_if_not_empty([libdirs_flags,
+                                         libnames_flags,
+                                         shared_flags,
+                                         gnudeps_flags._rpath_flags(lib_paths),
+                                         gnudeps_flags.frameworks,
+                                         gnudeps_flags.framework_paths])
 
-        pkg_config_custom_content = cpp_info.get_property("pkg_config_custom_content",
-                                                          "PkgConfigDeps")
-        if pkg_config_custom_content:
-            lines.append(pkg_config_custom_content)
+        def get_cflags(includedirs):
+            return _concat_if_not_empty(
+                [['-I"${%s}"' % name for name in includedirs],
+                 cpp_info.cxxflags,
+                 cpp_info.cflags,
+                 ["-D%s" % d for d in cpp_info.defines]])
 
-        lines.append("")
-        lines.append("Name: %s" % name)
-        description = self._conanfile.description or "Conan package: %s" % name
-        lines.append("Description: %s" % description)
-        lines.append("Version: %s" % version)
-        libdirs_flags = ['-L"${%s}"' % name for name in libdir_vars]
-        lib_paths = ["${%s}" % libdir for libdir in libdir_vars]
-        libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
-        shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
+        def get_formmatted_dirs(field, folders, prefix_path_):
+            ret = {}
+            for i, directory in enumerate(folders):
+                directory = os.path.normpath(directory).replace("\\", "/")
+                name = field if i == 0 else "%s%d" % (field, (i + 1))
+                prefix = ""
+                if not os.path.isabs(directory):
+                    prefix = "${prefix}/"
+                elif directory.startswith(prefix_path_):
+                    prefix = "${prefix}/"
+                    directory = os.path.relpath(directory, prefix_path_).replace("\\", "/")
+                ret[name] = "%s%s" % (prefix, directory)
+            return ret
 
-        lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
-                                                        libnames_flags,
-                                                        shared_flags,
-                                                        gnudeps_flags._rpath_flags(lib_paths),
-                                                        gnudeps_flags.frameworks,
-                                                        gnudeps_flags.framework_paths]))
-        include_dirs_flags = ['-I"${%s}"' % name for name in includedir_vars]
+        def context():
+            prefix_path = package_folder.replace("\\", "/")
+            libdirs = get_formmatted_dirs("libdir", cpp_info.libdirs, prefix_path)
+            includedirs = get_formmatted_dirs("includedir", cpp_info.includedirs, prefix_path)
 
-        lines.append("Cflags: %s" % _concat_if_not_empty(
-            [include_dirs_flags,
-             cpp_info.cxxflags,
-             cpp_info.cflags,
-             ["-D%s" % d for d in cpp_info.defines]]))
+            return {
+                "prefix_path": prefix_path,
+                "libdirs": libdirs,
+                "includedirs": includedirs,
+                "pkg_config_custom_content": cpp_info.get_property("pkg_config_custom_content",
+                                                                   "PkgConfigDeps"),
+                "name": name,
+                "description": self._conanfile.description or "Conan package: %s" % name,
+                "version": version,
+                "libs": get_libs(libdirs),
+                "cflags": get_cflags(includedirs),
+                "public_deps": requires_gennames
+            }
 
-        if requires_gennames:
-            public_deps = " ".join(requires_gennames)
-            lines.append("Requires: %s" % public_deps)
-        return "\n".join(lines) + "\n"
+        return Template(self.template_content, trim_blocks=True, lstrip_blocks=True,
+                        undefined=jinja2.StrictUndefined).render(context)
 
     def _global_pc_file_contents(self, name, dep, comp_gennames):
-        lines = ["Name: %s" % name]
-        description = self._conanfile.description or "Conan package: %s" % name
-        lines.append("Description: %s" % description)
-        lines.append("Version: %s" % dep.ref.version)
+        context = {
+            "name": name,
+            "description": self._conanfile.description or "Conan package: %s" % name,
+            "version": dep.ref.version,
+            "public_deps": comp_gennames
+        }
 
-        if comp_gennames:
-            public_deps = " ".join(comp_gennames)
-            lines.append("Requires: %s" % public_deps)
-        return "\n".join(lines) + "\n"
-
-    @staticmethod
-    def _generate_dir_lines(prefix_path, varname, dirs):
-        lines = []
-        varnames = []
-        for i, directory in enumerate(dirs):
-            directory = os.path.normpath(directory).replace("\\", "/")
-            name = varname if i == 0 else "%s%d" % (varname, (i + 1))
-            prefix = ""
-            if not os.path.isabs(directory):
-                prefix = "${prefix}/"
-            elif directory.startswith(prefix_path):
-                prefix = "${prefix}/"
-                directory = os.path.relpath(directory, prefix_path).replace("\\", "/")
-            lines.append("%s=%s%s" % (name, prefix, directory))
-            varnames.append(name)
-        return lines, varnames
+        return Template(self.template_global_content, trim_blocks=True, lstrip_blocks=True,
+                        undefined=jinja2.StrictUndefined).render(context)
 
     def generate(self):
         # Current directory is the generators_folder
