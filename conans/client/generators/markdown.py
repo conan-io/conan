@@ -196,13 +196,13 @@ requirement_tpl = textwrap.dedent("""
     {% if requires %}
     * ``{{ cpp_info.name }}`` requires:
         {% for dep_name, dep_cpp_info in requires -%}
-        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}){% if not loop.last %}, {% endif %}
+        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
         {%- endfor -%}
     {%- endif %}
     {%- if required_by %}
     * ``{{ cpp_info.name }}`` is required by:
         {%- for dep_name, dep_cpp_info in required_by %}
-        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}){% if not loop.last %}, {% endif %}
+        [{{ dep_name }}/{{ dep_cpp_info.version }}]({{ dep_name }}.md){% if not loop.last %}, {% endif %}
         {%- endfor %}
     {%- endif %}
     {% endif %}
