@@ -6,6 +6,7 @@ import time
 from tqdm import tqdm
 
 from conans import __version__ as client_version
+from conans.cli.api.helpers.remotes import RemotesAPI
 from conans.cli.api.helpers.search import Search
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
@@ -66,6 +67,9 @@ class ConanAPIV2(object):
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
         check_required_conan_version(self.cache_folder)
+
+        # Remotes management
+        self.remotes = RemotesAPI(self)
 
     @api_method
     def user_list(self, remote_name=None):

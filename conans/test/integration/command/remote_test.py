@@ -5,9 +5,8 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 
@@ -21,12 +20,14 @@ class RemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, inputs=3*["admin", "password"])
 
-    def test_list_raw(self):
-        self.client.run("remote list --raw")
-        output = re.sub(r"http://fake.+.com", "http://fake.com", str(self.client.out))
-        self.assertIn("remote0 http://fake.com True", output)
-        self.assertIn("remote1 http://fake.com True", output)
-        self.assertIn("remote2 http://fake.com True", output)
+    def test_list_json(self):
+        self.client.run("remote list --format json")
+        data = json.loads(str(self.client.out))
+
+        assert data[0]["name"] == "remote0"
+        assert data[1]["name"] == "remote1"
+        assert data[2]["name"] == "remote2"
+        # TODO: Check better
 
     def test_basic(self):
         self.client.run("remote list")
@@ -39,11 +40,11 @@ class RemoteTest(unittest.TestCase):
         lines = str(self.client.out).splitlines()
         self.assertIn("origin: https://myurl", lines[3])
 
-        self.client.run("remote update origin https://2myurl")
+        self.client.run("remote update origin --url https://2myurl")
         self.client.run("remote list")
         self.assertIn("origin: https://2myurl", self.client.out)
 
-        self.client.run("remote update remote0 https://remote0url")
+        self.client.run("remote update remote0 --url https://remote0url")
         self.client.run("remote list")
         output = str(self.client.out)
         self.assertIn("remote0: https://remote0url", output.splitlines()[0])
@@ -75,43 +76,6 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list")
         self.assertNotIn("remote0", self.client.out)
 
-    def test_add_force(self):
-        client = TestClient()
-        client.run("remote add r1 https://r1")
-        client.run("remote add r2 https://r2")
-        client.run("remote add r3 https://r3")
-        client.run("remote add r4 https://r4 -f")
-        client.run("remote list")
-        lines = str(client.out).splitlines()
-        self.assertIn("r1: https://r1", lines[0])
-        self.assertIn("r2: https://r2", lines[1])
-        self.assertIn("r3: https://r3", lines[2])
-        self.assertIn("r4: https://r4", lines[3])
-
-        client.run("remote add r2 https://newr2 -f")
-        client.run("remote list")
-        lines = str(client.out).splitlines()
-        self.assertIn("r1: https://r1", lines[0])
-        self.assertIn("r3: https://r3", lines[1])
-        self.assertIn("r4: https://r4", lines[2])
-        self.assertIn("r2: https://newr2", lines[3])
-
-        client.run("remote add newr1 https://r1 -f")
-        client.run("remote list")
-        lines = str(client.out).splitlines()
-        self.assertIn("r3: https://r3", lines[0])
-        self.assertIn("r4: https://r4", lines[1])
-        self.assertIn("r2: https://newr2", lines[2])
-        self.assertIn("newr1: https://r1", lines[3])
-
-        client.run("remote add newr1 https://newr1 -f -i")
-        client.run("remote list")
-        lines = str(client.out).splitlines()
-        self.assertIn("newr1: https://newr1", lines[0])
-        self.assertIn("r3: https://r3", lines[1])
-        self.assertIn("r4: https://r4", lines[2])
-        self.assertIn("r2: https://newr2", lines[3])
-
     def test_rename(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -131,18 +95,16 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("Remote 'r1' already exists", client.out)
 
     def test_insert(self):
-        self.client.run("remote add origin https://myurl --insert")
-        self.client.run("remote list")
-        first_line = str(self.client.out).splitlines()[0]
-        self.assertIn("origin: https://myurl", first_line)
+        self.client.run("remote add origin https://myurl --index", assert_error=True)
 
-        self.client.run("remote add origin2 https://myurl2 --insert=0")
+        self.client.run("remote add origin https://myurl --index=0")
+        self.client.run("remote add origin2 https://myurl2 --index=0")
         self.client.run("remote list")
         lines = str(self.client.out).splitlines()
         self.assertIn("origin2: https://myurl2", lines[0])
         self.assertIn("origin: https://myurl", lines[1])
 
-        self.client.run("remote add origin3 https://myurl3 --insert=1")
+        self.client.run("remote add origin3 https://myurl3 --index=1")
         self.client.run("remote list")
         lines = str(self.client.out).splitlines()
         self.assertIn("origin2: https://myurl2", lines[0])
@@ -155,14 +117,14 @@ class RemoteTest(unittest.TestCase):
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
 
-        client.run("remote update r2 https://r2new --insert")
+        client.run("remote update r2 https://r2new --index")
         client.run("remote list")
         lines = str(client.out).splitlines()
         self.assertIn("r2: https://r2new", lines[0])
         self.assertIn("r1: https://r1", lines[1])
         self.assertIn("r3: https://r3", lines[2])
 
-        client.run("remote update r2 https://r2new2 --insert 2")
+        client.run("remote update r2 https://r2new2 --index 2")
         client.run("remote list")
         lines = str(client.out).splitlines()
         self.assertIn("r1: https://r1", lines[0])
@@ -175,7 +137,7 @@ class RemoteTest(unittest.TestCase):
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
-        client.run("remote update r2 https://r2 --insert=0")
+        client.run("remote update r2 https://r2 --index=0")
         client.run("remote list")
         self.assertLess(str(client.out).find("r2"), str(client.out).find("r1"))
         self.assertLess(str(client.out).find("r1"), str(client.out).find("r3"))
@@ -267,11 +229,11 @@ class RemoteTest(unittest.TestCase):
         self.assertEqual(data["remotes"], [])
 
     def test_errors(self):
-        self.client.run("remote update origin url", assert_error=True)
+        self.client.run("remote update origin --url http://foo.com", assert_error=True)
         self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
-        self.assertIn("ERROR: No remote 'origin' defined in remotes", self.client.out)
+        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
     def test_duplicated_error(self):
         """ check remote name and URL are not duplicated
@@ -282,11 +244,13 @@ class RemoteTest(unittest.TestCase):
 
         self.client.run("remote list")
         url = str(self.client.out).split()[1]
-        self.client.run("remote add newname %s" % url, assert_error=True)
-        self.assertIn("Remote 'remote0' already exists with same URL", self.client.out)
+        self.client.run("remote add newname %s" % url)
+        # If you write the same URL, up to you
+        self.client.run("remote update remote1 --url %s" % url)
 
-        self.client.run("remote update remote1 %s" % url, assert_error=True)
-        self.assertIn("Remote 'remote0' already exists with same URL", self.client.out)
+        remote1 = self.client.api.remotes.get("remote1")
+        assert remote1.url == url
+
 
     def test_missing_subarguments(self):
         self.client.run("remote", assert_error=True)
@@ -299,7 +263,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list")
         self.assertIn("foobar.com", self.client.out)
 
-        self.client.run("remote update foobar pepe.org")
+        self.client.run("remote update foobar --url pepe.org")
         self.assertIn("WARN: The URL 'pepe.org' is invalid. It must contain scheme and hostname.",
                       self.client.out)
         self.client.run("remote list")
@@ -320,7 +284,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("pkg/1.1@lasote/stable: remote1", self.client.out)
         self.client.run("editable add . pkg/1.1@lasote/stable")
         # Check add --force, update and rename
-        self.client.run("remote add remote2 %s --force" % self.servers["remote1"].fake_url)
+        self.client.run("remote add remote2 %s" % self.servers["remote1"].fake_url)
         self.client.run("remote update remote2 %sfake" % self.servers["remote1"].fake_url)
         self.client.run("remote rename remote2 remote-fake")
         self.client.run("editable remove pkg/1.1@lasote/stable")

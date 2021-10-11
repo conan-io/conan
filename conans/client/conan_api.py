@@ -701,36 +701,6 @@ class ConanAPIV1(object):
                         parallel_upload=parallel_upload)
 
     @api_method
-    def remote_list(self):
-        app = ConanApp(self.cache_folder)
-        return list(app.cache.registry.load_remotes().all_values())
-
-    @api_method
-    def remote_add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
-        app = ConanApp(self.cache_folder)
-        return app.cache.registry.add(remote_name, url, verify_ssl, insert, force)
-
-    @api_method
-    def remote_remove(self, remote_name):
-        app = ConanApp(self.cache_folder)
-        return app.cache.registry.remove(remote_name)
-
-    @api_method
-    def remote_set_disabled_state(self, remote_name, state):
-        app = ConanApp(self.cache_folder)
-        return app.cache.registry.set_disabled_state(remote_name, state)
-
-    @api_method
-    def remote_update(self, remote_name, url, verify_ssl=True, insert=None):
-        app = ConanApp(self.cache_folder)
-        return app.cache.registry.update(remote_name, url, verify_ssl, insert)
-
-    @api_method
-    def remote_rename(self, remote_name, new_new_remote):
-        app = ConanApp(self.cache_folder)
-        return app.cache.registry.rename(remote_name, new_new_remote)
-
-    @api_method
     def remove_system_reqs(self, reference):
         try:
             app = ConanApp(self.cache_folder)

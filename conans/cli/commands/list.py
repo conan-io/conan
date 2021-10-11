@@ -132,9 +132,9 @@ def _add_remotes_and_cache_options(subparser):
 def _get_remotes(conan_api, args):
     remotes = []
     if args.all_remotes:
-        remotes = conan_api.get_active_remotes(None)
+        remotes = conan_api.remotes.list(only_active=True)
     elif args.remote:
-        remotes = conan_api.get_active_remotes(args.remote)
+        remotes = conan_api.remotes.list(filter=args.remote, only_active=True)
     return remotes
 
 

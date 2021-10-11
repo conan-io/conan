@@ -1046,6 +1046,7 @@ class Command(object):
             if args.clean:  # clean users
                 self._conan_api.users_clean()
             elif not args.name and args.password is None:  # list users
+                # FIXME: This should be a subcommand, this is black magic
                 info = self._conan_api.users_list(args.remote)
                 CommandOutputer().print_user_list(info)
             elif args.password is None:  # set user for remote (no password indicated)
@@ -1163,73 +1164,6 @@ class Command(object):
         finally:
             if args.json and info:
                 CommandOutputer().json_output(info, args.json, os.getcwd())
-
-    def remote(self, *args):
-        """
-        Manages the remote list and the package recipes associated with a remote.
-        """
-        parser = argparse.ArgumentParser(description=self.remote.__doc__,
-                                         prog="conan remote",
-                                         formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        # create the parser for the "a" command
-        parser_list = subparsers.add_parser('list', help='List current remotes')
-        parser_list.add_argument("-raw", "--raw", action='store_true', default=False,
-                                 help='Raw format. Valid for "remotes.txt" file for '
-                                 '"conan config install"')
-        parser_add = subparsers.add_parser('add', help='Add a remote')
-        parser_add.add_argument('remote', help='Name of the remote')
-        parser_add.add_argument('url', help='URL of the remote')
-        parser_add.add_argument('verify_ssl', nargs="?", default="True",
-                                help='Verify SSL certificated. Default True')
-        parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
-                                help="insert remote at specific index")
-        parser_add.add_argument("-f", "--force", default=False, action='store_true',
-                                help="Force addition, will update if existing")
-        parser_rm = subparsers.add_parser('remove', help='Remove a remote')
-        parser_rm.add_argument('remote', help='Name of the remote')
-        parser_upd = subparsers.add_parser('update', help='Update the remote url')
-        parser_upd.add_argument('remote', help='Name of the remote')
-
-        parser_upd.add_argument('url', help='URL')
-        parser_upd.add_argument('verify_ssl', nargs="?", default="True",
-                                help='Verify SSL certificated. Default True')
-        parser_upd.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
-                                help="Insert remote at specific index")
-        parser_rename = subparsers.add_parser('rename', help='Update the remote name')
-        parser_rename.add_argument('remote', help='The old remote name')
-        parser_rename.add_argument('new_remote', help='The new remote name')
-
-        parser_enable = subparsers.add_parser('enable', help='Enable a remote')
-        parser_enable.add_argument('remote', help='Name of the remote')
-        parser_disable = subparsers.add_parser('disable', help='Disable a remote')
-        parser_disable.add_argument('remote', help='Name of the remote')
-
-        args = parser.parse_args(*args)
-
-        verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
-
-        remote_name = args.remote if hasattr(args, 'remote') else None
-        new_remote = args.new_remote if hasattr(args, 'new_remote') else None
-        url = args.url if hasattr(args, 'url') else None
-
-        if args.subcommand == "list":
-            remotes = self._conan_api.remote_list()
-            CommandOutputer().remote_list(remotes, args.raw)
-        elif args.subcommand == "add":
-            return self._conan_api.remote_add(remote_name, url, verify_ssl, args.insert, args.force)
-        elif args.subcommand == "remove":
-            return self._conan_api.remote_remove(remote_name)
-        elif args.subcommand == "rename":
-            return self._conan_api.remote_rename(remote_name, new_remote)
-        elif args.subcommand == "update":
-            return self._conan_api.remote_update(remote_name, url, verify_ssl, args.insert)
-        elif args.subcommand == "enable":
-            return self._conan_api.remote_set_disabled_state(remote_name, False)
-        elif args.subcommand == "disable":
-            return self._conan_api.remote_set_disabled_state(remote_name, True)
 
     def profile(self, *args):
         """

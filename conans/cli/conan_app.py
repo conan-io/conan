@@ -57,7 +57,7 @@ class ConanApp(object):
                                           self.binaries_analyzer)
 
     def load_remotes(self, remote_name=None, update=False, check_updates=False):
-        remotes = self.cache.registry.load_remotes()
+        remotes = self.cache.remotes_registry.list()
         if remote_name:
             remotes.select(remote_name)
         self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)

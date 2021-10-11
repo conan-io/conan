@@ -173,7 +173,7 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, REMOTES)
 
     @property
-    def registry(self):
+    def remotes_registry(self) -> RemoteRegistry:
         return RemoteRegistry(self)
 
     def _no_locks(self):
