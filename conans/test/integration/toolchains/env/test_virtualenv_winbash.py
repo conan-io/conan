@@ -54,6 +54,7 @@ def test_virtualenv_deactivated(client, win_bash):
         # the bash
         assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
         build_contents = client.load("conanbuildenv.sh")
+        print(build_contents)
         assert "/cygdrive/c/path/to/ar" in build_contents
         assert "$PATH:/cygdrive/c/path/to/something" in build_contents
     else:
@@ -65,3 +66,109 @@ def test_virtualenv_deactivated(client, win_bash):
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
     run_contents = client.load("conanrunenv.bat")
     assert "c:/path/to/exe" in run_contents
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_nowinbash_virtual_msys(client):
+    # Make sure the "tools.microsoft.bash:subsystem=cygwin" is ignored if not win_bash
+    conanfile = str(GenConanfile().with_settings("os")
+                    .with_generator("VirtualBuildEnv").with_generator("VirtualRunEnv")
+                    .with_require("foo/1.0"))
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s:b os=Windows -s:h os=Windows")
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
+    build_contents = client.load("conanbuildenv.bat")
+    assert 'set AR=c:/path/to/ar' in build_contents
+    assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
+    run_contents = client.load("conanrunenv.bat")
+    assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
+
+    # BUILD subsystem=msys2 HOST subsystem=None
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -s:b os=Windows -s:b os.subsystem=msys2 -s:h os=Windows")
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
+    build_contents = client.load("conanbuildenv.sh")
+    assert 'export AR="c:/path/to/ar"' in build_contents
+    assert 'export PATH="$PATH;c:/path/to/something"' in build_contents
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
+    run_contents = client.load("conanrunenv.bat")
+    assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
+
+    # BUILD subsystem=None HOST subsystem=msys2
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -s:b os=Windows  -s:h os=Windows -s:h os.subsystem=msys2")
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
+    build_contents = client.load("conanbuildenv.bat")
+    print(build_contents)
+    assert 'set AR=c:/path/to/ar' in build_contents
+    assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
+    run_contents = client.load("conanrunenv.sh")
+    assert 'export RUNTIME_VAR="c:/path/to/exe"' in run_contents
+
+    # BUILD subsystem=msys2 HOST subsystem=msys2
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -s:b os=Windows -s:b os.subsystem=msys2 "
+               "-s:h os=Windows -s:h os.subsystem=msys2")
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
+    build_contents = client.load("conanbuildenv.sh")
+    assert 'export AR="c:/path/to/ar"' in build_contents
+    assert 'export PATH="$PATH;c:/path/to/something"' in build_contents
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
+    run_contents = client.load("conanrunenv.sh")
+    assert 'export RUNTIME_VAR="c:/path/to/exe"' in run_contents
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_nowinbash_virtual_cygwin(client):
+    # Make sure the "tools.microsoft.bash:subsystem=cygwin" is ignored if not win_bash
+    conanfile = str(GenConanfile().with_settings("os")
+                    .with_generator("VirtualBuildEnv").with_generator("VirtualRunEnv")
+                    .with_require("foo/1.0"))
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s:b os=Windows -s:h os=Windows")
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
+    build_contents = client.load("conanbuildenv.bat")
+    assert 'set AR=c:/path/to/ar' in build_contents
+    assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
+    run_contents = client.load("conanrunenv.bat")
+    assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
+
+    # BUILD subsystem=cygwin HOST subsystem=None
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -s:b os=Windows -s:b os.subsystem=cygwin -s:h os=Windows")
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
+    build_contents = client.load("conanbuildenv.sh")
+    assert 'export AR="c:/path/to/ar"' in build_contents
+    assert 'export PATH="$PATH;c:/path/to/something"' in build_contents
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
+    run_contents = client.load("conanrunenv.bat")
+    assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
+
+    # BUILD subsystem=None HOST subsystem=cygwin
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -s:b os=Windows  -s:h os=Windows -s:h os.subsystem=cygwin")
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
+    build_contents = client.load("conanbuildenv.bat")
+    print(build_contents)
+    assert 'set AR=c:/path/to/ar' in build_contents
+    assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
+    run_contents = client.load("conanrunenv.sh")
+    assert 'export RUNTIME_VAR="c:/path/to/exe"' in run_contents
+
+    # BUILD subsystem=cygwin HOST subsystem=cygwin
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("install . -s:b os=Windows -s:b os.subsystem=cygwin "
+               "-s:h os=Windows -s:h os.subsystem=cygwin")
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
+    build_contents = client.load("conanbuildenv.sh")
+    assert 'export AR="c:/path/to/ar"' in build_contents
+    assert 'export PATH="$PATH;c:/path/to/something"' in build_contents
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
+    run_contents = client.load("conanrunenv.sh")
+    assert 'export RUNTIME_VAR="c:/path/to/exe"' in run_contents

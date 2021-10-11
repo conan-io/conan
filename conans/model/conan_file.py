@@ -156,8 +156,8 @@ class ConanFile(object):
         self._conan_using_build_profile = False
         self._conan_requester = None
 
-        self.buildenv_info = Environment(self)
-        self.runenv_info = Environment(self)
+        self.buildenv_info = Environment(self, group="build")
+        self.runenv_info = Environment(self, group="run")
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
@@ -212,7 +212,7 @@ class ConanFile(object):
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str, group="build")
         return self._conan_buildenv
 
     def initialize(self, settings, env, buildenv=None):

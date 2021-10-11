@@ -33,7 +33,7 @@ class VirtualBuildEnv:
         of build_requires defining information for consumers
         """
         # FIXME: Cache value?
-        build_env = Environment(self._conanfile)
+        build_env = Environment(self._conanfile, group="build")
 
         # Top priority: profile
         profile_env = self._conanfile.buildenv

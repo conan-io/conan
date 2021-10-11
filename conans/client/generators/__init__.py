@@ -254,7 +254,7 @@ def write_toolchain(conanfile, path, output):
 
 
 def _generate_aggregated_env(conanfile):
-    from conan.tools.microsoft import unix_path
+    from conan.tools.microsoft.subsystems import subsystem_path
 
     for group, env_scripts in conanfile.env_scripts.items():
         bats = []
@@ -264,7 +264,7 @@ def _generate_aggregated_env(conanfile):
             if env_script.endswith(".bat"):
                 bats.append(path)
             elif env_script.endswith(".sh"):
-                shs.append(unix_path(conanfile, path))
+                shs.append(subsystem_path(conanfile, path, group))
         if shs:
             sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
             save(os.path.join(conanfile.generators_folder, "conan{}.sh".format(group)), sh_content)

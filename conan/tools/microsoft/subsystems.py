@@ -52,7 +52,7 @@ def run_in_windows_bash(conanfile, command, cwd=None, env=None):
     cwd = cwd or os.getcwd()
     if not os.path.isabs(cwd):
         cwd = os.path.join(os.getcwd(), cwd)
-    cwd_inside = unix_path(conanfile, cwd)
+    cwd_inside = subsystem_path(conanfile, cwd)
     wrapped_user_cmd = command
     if env_shell:
         # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
@@ -84,17 +84,42 @@ def escape_windows_cmd(command):
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
-def unix_path(conanfile, path):
-    """"Used to translate windows paths to MSYS unix paths like
-    c/users/path/to/file. Not working in a regular console or MinGW!"""
+def deduce_subsystem(conanfile, scope):
+    if scope == "build":
+        if hasattr(conanfile, "settings_build"):
+            the_os = conanfile.settings_build.get_safe("os")
+            subsystem = conanfile.settings_build.get_safe("os.subsystem")
+        else:
+            the_os = platform.system()
+            subsystem = None
+    else:
+        the_os = conanfile.settings.get_safe("os")
+        subsystem = conanfile.settings.get_safe("os.subsystem")
+        if subsystem is None:  # "run" scope do not follow win_bash
+            return None
 
-    if not platform.system() == "Windows" or not conanfile.win_bash:
+    if not str(the_os).startswith("Windows"):
+        return None
+
+    if subsystem is None:  # Not defined by settings, so native windows
+        if not conanfile.win_bash:
+            return None
+
+        subsystem = conanfile.conf["tools.microsoft.bash:subsystem"]
+        if not subsystem:
+            raise ConanException("The config 'tools.microsoft.bash:subsystem' is "
+                                 "needed to run commands in a Windows subsystem")
+    return subsystem
+
+
+def subsystem_path(subsystem, path):
+    """"Used to translate windows paths to MSYS unix paths like
+    c/users/path/to/file. Not working in a regular console or MinGW!
+    group: "build" means that the consumer wants to use this path at build time
+    """
+    if subsystem is None:
         return path
 
-    subsystem = conanfile.conf["tools.microsoft.bash:subsystem"]
-    if not subsystem:
-        raise ConanException("The config 'tools.microsoft.bash:subsystem' is "
-                             "needed to run commands in a Windows subsystem")
     if os.path.exists(path):
         # if the path doesn't exist (and abs) we cannot guess the casing
         path = get_cased_path(path)

@@ -49,7 +49,7 @@ class VirtualRunEnv:
         """ collects the runtime information from dependencies. For normal libraries should be
         very occasional
         """
-        runenv = Environment(self._conanfile)
+        runenv = Environment(self._conanfile, group="run")
         # FIXME: Missing profile info
         # FIXME: Cache value?
 
