@@ -55,8 +55,7 @@ class PyRequireLoader(object):
         self._range_resolver = range_resolver
         self._cached_py_requires = {}
 
-    def enable_remotes(self, check_updates=False, update=False, remotes=None):
-        self._check_updates = check_updates
+    def enable_remotes(self, update=False, remotes=None):
         self._update = update
         self._remotes = remotes
 
@@ -111,7 +110,7 @@ class PyRequireLoader(object):
         return ref
 
     def _load_pyreq_conanfile(self, loader, lock_python_requires, ref):
-        recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
+        recipe = self._proxy.get_recipe(ref, self._update,
                                         remotes=self._remotes)
         path, _, _, new_ref = recipe
         conanfile, module = loader.load_basic_module(path, lock_python_requires)

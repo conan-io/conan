@@ -39,7 +39,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     out.info(profile_build.dumps())
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host, profile_build,
-                                          graph_lock, root_ref, build_modes, False, update, remotes,
+                                          graph_lock, root_ref, build_modes, update, remotes,
                                           lockfile_node_id=lockfile_node_id,
                                           is_build_require=is_build_require,
                                           require_overrides=require_overrides)
