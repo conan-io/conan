@@ -240,6 +240,24 @@ Poco:deps_bundled=True""")
         self.assertEqual("None", self.sut.get_safe("path", True))
         self.assertEqual(True, self.sut.get_safe("unknown", True))
 
+    def test_get_safe_package_options(self):
+        boost_values = PackageOptionValues()
+        boost_values.add_option("static", True)
+        boost_values.add_option("optimized", 3)
+        boost_values.add_option("path", "NOTDEF")
+
+        self.assertEqual(True, boost_values.get_safe("static"))
+        self.assertEqual(3, boost_values.get_safe("optimized"))
+        self.assertEqual("NOTDEF", boost_values.get_safe("path"))
+        self.assertEqual(None, boost_values.get_safe("unknown"))
+        boost_values.static = False
+        boost_values.path = "None"
+        self.assertEqual(False, boost_values.get_safe("static"))
+        self.assertEqual("None", boost_values.get_safe("path"))
+        self.assertEqual(False, boost_values.get_safe("static", True))
+        self.assertEqual("None", boost_values.get_safe("path", True))
+        self.assertEqual(True, boost_values.get_safe("unknown", True))
+
 
 class OptionsValuesPropagationUpstreamNone(unittest.TestCase):
 

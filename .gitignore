@@ -87,6 +87,10 @@ conan.conf
 #VScode folder
 .vscode
 
+#Python env
+env/
+test/
+
 #Generated certificate file
 cacert.pem
 

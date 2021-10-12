@@ -156,6 +156,9 @@ class PackageOptionValues(object):
     def serialize(self):
         return self.items()
 
+    def get_safe(self, field, default=None):
+        return self._dict.get(field, default)
+
     @property
     def sha(self):
         result = []
