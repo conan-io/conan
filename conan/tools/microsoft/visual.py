@@ -1,7 +1,6 @@
 import os
 import textwrap
 
-from conan.tools.env.environment import create_env_script
 from conans.client.tools import intel_compilervars_command
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
@@ -57,6 +56,7 @@ def _write_conanvcvars(conanfile, group):
             @echo off
             {}
             """.format(vcvars))
+        from conan.tools.env.environment import create_env_script
         create_env_script(conanfile, content, CONAN_VCVARS_FILE, group)
 
 

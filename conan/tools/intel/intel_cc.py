@@ -21,7 +21,6 @@ import os
 import platform
 import textwrap
 
-from conan.tools.env.environment import create_env_script
 from conans.errors import ConanException
 
 
@@ -82,6 +81,7 @@ class IntelCC:
         else:
             filename = self.filename + '.sh'
             content = self.command
+        from conan.tools.env.environment import create_env_script
         create_env_script(self._conanfile, content, filename, group)
 
     @property
@@ -89,7 +89,7 @@ class IntelCC:
         """Get the Intel oneAPI installation root path"""
         installation_path = self._conanfile.conf["tools.intel:installation_path"]
         if not installation_path:
-            raise ConanException("To use Intel oneAPI, specify a [conf] entry " 
+            raise ConanException("To use Intel oneAPI, specify a [conf] entry "
                                  "'tools.intel:installation_path' containing the path to the "
                                  "installation folder.")
         self._out.info("Got Intel oneAPI installation folder: %s" % installation_path)

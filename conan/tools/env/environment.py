@@ -1,11 +1,10 @@
 import fnmatch
 import os
 import textwrap
-import platform
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conan.tools.microsoft.subsystems import deduce_subsystem
+from conan.tools.microsoft.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -220,17 +219,20 @@ class Environment:
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def vars(self, conanfile, scope="build"):
+        return EnvVars(conanfile, self, scope)
+
 
 class EnvVars:
     def __init__(self, conanfile, env, scope):
-        self._values = OrderedDict(env._values)  # {var_name: [] of values, including separators}
+        self._values = env._values  # {var_name: [] of values, including separators}
         self._conanfile = conanfile
         self._scope = scope
         self._subsystem = deduce_subsystem(conanfile, scope)
 
     @property
     def _pathsep(self):
-        return ":" if self._subsystem else os.pathsep
+        return ":" if self._subsystem != WINDOWS else ";"
 
     def __getitem__(self, name):
         return self._values[name].get_value(self._subsystem, self._pathsep)
@@ -292,7 +294,7 @@ class EnvVars:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_ps1(self, filename, generate_deactivate=True, pathsep=os.pathsep):
+    def save_ps1(self, filename, generate_deactivate=True,):
         # FIXME: This is broken and doesnt work
         deactivate = ""
         capture = textwrap.dedent("""\
@@ -300,7 +302,7 @@ class EnvVars:
                """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("$env:{name}", pathsep)
+            value = varvalues.get_str("$env:{name}", self._pathsep)
             result.append('$env:{}={}'.format(varname, value))
 
         content = "\n".join(result)
@@ -342,28 +344,7 @@ class EnvVars:
         if ext:
             is_bat = ext == ".bat"
         else:  # Need to deduce it automatically
-            subsystem = deduce_subsystem(self._conanfile, scope=self._scope)
-            if group.startswith("build"):
-                # FIXME: In Conan 2.0, remove the platform.system checks?
-                if self._conanfile.win_bash:
-                    is_bat = False
-                else:
-                    if hasattr(self._conanfile, "settings_build"):
-                        the_os = str(self._conanfile.settings_build.get_safe("os"))
-                        subsystem = self._conanfile.settings_build.get_safe("os.subsystem")
-                        is_bat = the_os.startswith("Windows") and subsystem is None
-                    else:
-                        is_bat = platform.system() == "Windows"
-            else:
-                if self._conanfile.settings.get_safe("os"):
-                    is_bat = False
-                    is_windows = str(self._conanfile.settings.get_safe("os")).startswith("Windows")
-                    if is_windows:
-                        subsystem = self._conanfile.settings.get_safe("os.subsystem")
-                        if subsystem is None:
-                            is_bat = True
-                else:
-                    is_bat = platform.system() == "Windows"
+            is_bat = self._subsystem == WINDOWS
             filename = filename + (".bat" if is_bat else ".sh")
 
         path = os.path.join(self._conanfile.generators_folder, filename)
@@ -372,8 +353,8 @@ class EnvVars:
         else:
             self.save_sh(path)
 
-        if group:
-            register_env_script(self._conanfile, path, group)
+        if self._scope:
+            register_env_script(self._conanfile, path, self._scope)
 
 
 class ProfileEnvironment:
@@ -388,12 +369,12 @@ class ProfileEnvironment:
 
     __nonzero__ = __bool__
 
-    def get_profile_env(self, ref, subsystem):
+    def get_profile_env(self, ref):
         """ computes package-specific Environment
         it is only called when conanfile.buildenv is called
         the last one found in the profile file has top priority
         """
-        result = Environment(subsystem)
+        result = Environment()
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
                 # Latest declared has priority, copy() necessary to not destroy data

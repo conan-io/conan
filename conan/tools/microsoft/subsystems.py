@@ -3,10 +3,9 @@ import platform
 import re
 import subprocess
 
-from conan.tools.env import Environment
-from conan.tools.env.environment import environment_wrap_command
 from conans.errors import ConanException
 
+WINDOWS = "windows"
 MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
@@ -15,6 +14,8 @@ SFU = 'sfu'  # Windows Services for UNIX
 
 
 def run_in_windows_bash(conanfile, command, cwd=None, env=None):
+    from conan.tools.env import Environment
+    from conan.tools.env.environment import environment_wrap_command
     """ Will run a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
     if env:
         # Passing env invalidates the conanfile.environment_scripts
@@ -35,12 +36,12 @@ def run_in_windows_bash(conanfile, command, cwd=None, env=None):
                              "needed to run commands in a Windows subsystem")
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
-        msys2_mode_env = Environment(conanfile)
+        msys2_mode_env = Environment()
         _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
-        msys2_mode_env.save_bat(path)
+        msys2_mode_env.vars(conanfile, "build").save_bat(path)
         env_win.append(path)
 
     # Needed to change to that dir inside the bash shell
@@ -85,25 +86,26 @@ def escape_windows_cmd(command):
 
 
 def deduce_subsystem(conanfile, scope):
-    if scope == "build":
+    if scope.startswith("build"):
         if hasattr(conanfile, "settings_build"):
             the_os = conanfile.settings_build.get_safe("os")
             subsystem = conanfile.settings_build.get_safe("os.subsystem")
         else:
-            the_os = platform.system()
+            the_os = platform.system()  # FIXME: Temporary fallback until 2.0
             subsystem = None
     else:
         the_os = conanfile.settings.get_safe("os")
         subsystem = conanfile.settings.get_safe("os.subsystem")
-        if subsystem is None:  # "run" scope do not follow win_bash
-            return None
 
     if not str(the_os).startswith("Windows"):
         return None
 
+    if subsystem is None and not scope.startswith("build"):  # "run" scope do not follow win_bash
+        return WINDOWS
+
     if subsystem is None:  # Not defined by settings, so native windows
         if not conanfile.win_bash:
-            return None
+            return WINDOWS
 
         subsystem = conanfile.conf["tools.microsoft.bash:subsystem"]
         if not subsystem:
@@ -117,7 +119,7 @@ def subsystem_path(subsystem, path):
     c/users/path/to/file. Not working in a regular console or MinGW!
     group: "build" means that the consumer wants to use this path at build time
     """
-    if subsystem is None:
+    if subsystem is None or subsystem == WINDOWS:
         return path
 
     if os.path.exists(path):

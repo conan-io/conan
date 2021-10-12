@@ -131,7 +131,7 @@ def test_profile_included_multiple():
         from conans import ConanFile
         class Pkg(ConanFile):
             def generate(self):
-                buildenv = self.buildenv
+                buildenv = self.buildenv.vars(self)
                 self.output.info("MYVAR1: {}!!!".format(buildenv.get("MYVAR1")))
                 self.output.info("MYVAR2: {}!!!".format(buildenv.get("MYVAR2")))
                 self.output.info("MYVAR3: {}!!!".format(buildenv.get("MYVAR3")))
@@ -173,7 +173,7 @@ def test_profile_buildenv():
         from conans import ConanFile
         class Pkg(ConanFile):
             def generate(self):
-                self.buildenv.save_script("pkgenv")
+                self.buildenv.vars(self).save_script("pkgenv")
                 if platform.system() != "Windows":
                     os.chmod("pkgenv.sh", 0o777)
 
@@ -258,9 +258,9 @@ def test_transitive_order():
             requires = "openssl/1.0"
             build_requires = "cmake/1.0", "gcc/1.0"
             def generate(self):
-                buildenv = VirtualBuildEnv(self).environment()
+                buildenv = VirtualBuildEnv(self).vars(self)
                 self.output.info("BUILDENV: {}!!!".format(buildenv.get("MYVAR")))
-                runenv = VirtualRunEnv(self).environment()
+                runenv = VirtualRunEnv(self).vars(self)
                 self.output.info("RUNENV: {}!!!".format(runenv.get("MYVAR")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
@@ -307,7 +307,7 @@ def test_buildenv_from_requires():
             requires = "poco/1.0"
             def generate(self):
                 env = VirtualBuildEnv(self)
-                buildenv = env.environment()
+                buildenv = env.vars(self)
                 self.output.info("BUILDENV POCO: {}!!!".format(buildenv.get("Poco_ROOT")))
                 self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.get("OpenSSL_ROOT")))
         """)
@@ -364,7 +364,7 @@ def test_diamond_repeated():
            requires = "pkgd/1.0"
            def generate(self):
                 env = VirtualRunEnv(self)
-                runenv = env.environment()
+                runenv = env.vars(group="run")
                 self.output.info("MYVAR1: {}!!!".format(runenv.get("MYVAR1")))
                 self.output.info("MYVAR2: {}!!!".format(runenv.get("MYVAR2")))
                 self.output.info("MYVAR3: {}!!!".format(runenv.get("MYVAR3")))

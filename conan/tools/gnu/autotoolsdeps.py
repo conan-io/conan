@@ -50,7 +50,7 @@ class AutotoolsDeps:
                 cxxflags.append(srf)
                 ldflags.append(srf)
 
-            env = Environment(self._conanfile)
+            env = Environment()
             env.append("CPPFLAGS", cpp_flags)
             env.append("LIBS", flags.libs)
             env.append("LDFLAGS", ldflags)
@@ -59,5 +59,8 @@ class AutotoolsDeps:
             self._environment = env
         return self._environment
 
+    def vars(self, group="build"):
+        return self.environment.vars(self._conanfile, scope=group)
+
     def generate(self,  group="build"):
-        self.environment.save_script("conanautotoolsdeps", group=group)
+        self.vars(group).save_script("conanautotoolsdeps")
