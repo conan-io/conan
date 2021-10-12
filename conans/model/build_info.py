@@ -122,6 +122,7 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
+        self.objects = []  # objects to link
         self.build_modules = BuildModulesDict()  # FIXME: This should be just a plain dict
         self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
@@ -409,6 +410,7 @@ class CppInfo(_CppInfo):
              self.cxxflags or
              self.sharedlinkflags or
              self.exelinkflags or
+             self.objects or
              self.get_build_modules() or
              self.requires):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
@@ -492,6 +494,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
+        self.objects = merge_lists(dep_cpp_info.objects, self.objects)
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
 
@@ -540,6 +543,7 @@ class DepCppInfo(object):
         self._cflags = None
         self._sharedlinkflags = None
         self._exelinkflags = None
+        self._objects = None
         self._requires = None
 
         self._include_paths = None
@@ -697,6 +701,10 @@ class DepCppInfo(object):
     @property
     def exelinkflags(self):
         return self._aggregated_list_values("exelinkflags")
+
+    @property
+    def objects(self):
+        return self._aggregated_list_values("objects")
 
     @property
     def requires(self):

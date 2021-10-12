@@ -20,7 +20,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
     # Only for building cross compilation tools, 'os_target/arch_target' is the system for
     # which the tools generate code
     os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
-    arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
+    arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
 
     # Rest of the settings are "host" settings:
     # - For native building/cross building: Where the library/program will run.
@@ -57,7 +57,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         Emscripten:
         Neutrino:
             version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
-    arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
+    arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
     compiler:
         sun-cc:
             version: ["5.10", "5.11", "5.12", "5.13", "5.14", "5.15"]
@@ -106,6 +106,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
         intel:
             version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
+            update: [None, ANY]
             base:
                 gcc:
                     <<: *gcc
@@ -115,6 +116,14 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                     <<: *visual_studio
                 apple-clang:
                     <<: *apple_clang
+        intel-cc:
+            version: ["2021.1", "2021.2", "2021.3"]
+            update: [None, ANY]
+            mode: ["icx", "classic", "dpcpp"]
+            libcxx: [None, libstdc++, libstdc++11, libc++]
+            cppstd: [None, 98, gnu98, 03, gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+            runtime: [None, static, dynamic]
+            runtime_type: [None, Debug, Release]
         qcc:
             version: ["4.4", "5.4", "8.3"]
             libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]

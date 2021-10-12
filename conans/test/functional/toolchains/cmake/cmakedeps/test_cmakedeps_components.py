@@ -210,6 +210,6 @@ def test_components_system_libs():
             "$<$<CONFIG:Release>:system_lib_component;"
             "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
             "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>") in t.out
+            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>") in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>

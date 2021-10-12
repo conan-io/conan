@@ -283,3 +283,51 @@ class SymbolicImportsTest(unittest.TestCase):
         self.assertEqual("hello world", self.consumer.load("bin/myfile.bin"))
         self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))
         self.assertEqual("bye moon", self.consumer.load("lib/myfile.a"))
+
+
+class SymbolicImportsComponentTest(unittest.TestCase):
+    """ Tests to cover the functionality of importing from @bindirs, @libdirs, etc
+        with components.
+    """
+    def setUp(self):
+        pkg = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports = "*"
+                def package(self):
+                    self.copy("*A.bin", "binA")  # USE DIFFERENT FOLDERS
+                    self.copy("*B.bin", "binB")
+                    self.copy("*A.lib", "libA")
+                    self.copy("*B.lib", "libB")
+                def package_info(self):
+                    self.cpp_info.components["A"].bindirs = ["binA"]
+                    self.cpp_info.components["A"].libdirs = ["libA"]
+                    self.cpp_info.components["B"].bindirs = ["binB"]
+                    self.cpp_info.components["B"].libdirs = ["libB"]
+            """)
+        self.client = TestClient()
+        self.client.save({"conanfile.py": pkg,
+                          "myfileA.bin": "hello world",
+                          "myfileB.bin": "hello moon",
+                          "myfileA.lib": "bye world",
+                          "myfileB.lib": "bye moon"})
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, load
+            class Pkg(ConanFile):
+                requires = "pkg/0.1"
+                def build(self):
+                    self.output.info("MSG: %s" % load("myfile.txt"))
+                def imports(self):
+                    self.copy("*", src="@bindirs", dst="bin")
+                    self.copy("*", src="@libdirs", dst="lib")
+            """)
+        self.consumer = TestClient(cache_folder=self.client.cache_folder)
+        self.consumer.save({"conanfile.py": consumer}, clean_first=True)
+
+    def test_imports_symbolic_names(self):
+        self.client.run("create . pkg/0.1@")
+        self.consumer.run("install .")
+        self.assertEqual("hello world", self.consumer.load("bin/myfileA.bin"))
+        self.assertEqual("hello moon", self.consumer.load("bin/myfileB.bin"))
+        self.assertEqual("bye world", self.consumer.load("lib/myfileA.lib"))
+        self.assertEqual("bye moon", self.consumer.load("lib/myfileB.lib"))

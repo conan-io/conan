@@ -85,6 +85,8 @@ class GraphManager(object):
             if graph_lock and not test:  # Only lock python requires if it is not test_package
                 node_id = graph_lock.get_consumer(graph_info.root)
                 lock_python_requires = graph_lock.python_requires(node_id)
+            # The global.conf is necessary for download_cache definition
+            profile_host.conf.rebase_conf_definition(self._cache.new_config)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
                                                    name=name, version=version,
