@@ -22,10 +22,12 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
     cwd = cwd or os.getcwd()
 
     for f in filenames:
+        scope = "build" if "build" in f else "run"
+        subsystem = deduce_subsystem(conanfile, scope)
         f = f if os.path.isabs(f) else os.path.join(cwd, f)
         if f.lower().endswith(".sh"):
             if os.path.isfile(f):
-                f = subsystem_path(conanfile, f)
+                f = subsystem_path(subsystem, f)
                 shs.append(f)
         elif f.lower().endswith(".bat"):
             if os.path.isfile(f):
@@ -36,7 +38,7 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
             if os.path.isfile(path_bat):
                 bats.append(path_bat)
             elif os.path.isfile(path_sh):
-                path_sh = subsystem_path(conanfile, path_sh)
+                path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
 
     if bats and shs:
