@@ -18,24 +18,24 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
         configs.add([node: "Linux", pyvers: ["PY36"]])
         if (moduleName=="conans/test/functional") {
             configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "Macos", pyvers: ["PY36"]])
+            configs.add([node: "macos_ansible", pyvers: ["PY36"]])
         }
     }
     else if (jobName == "ConanNightlyv2") {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-        configs.add([node: "Macos", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "macos_ansible", pyvers: ["PY36", "PY38"]])
     }
     else if (branchName =~ /(^release.*)|(^develop2)/) {
         if (moduleName=="conans/test/functional") {
             configs.add([node: "Linux", pyvers: ["PY36"]])
             configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "Macos", pyvers: ["PY36"]])
+            configs.add([node: "macos_ansible", pyvers: ["PY36"]])
         }
         else {
             configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
             configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-            configs.add([node: "Macos", pyvers: ["PY36", "PY38"]])
+            configs.add([node: "macos_ansible", pyvers: ["PY36", "PY38"]])
         }
     }
     return configs
@@ -97,7 +97,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                     }
                     finally {}
                 }
-                else if (nodeName=="Macos") {
+                else if (nodeName=="macos_ansible") {
                     def localDir = "/Users/jenkins"
                     withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.12", "PY38=3.8.6", "PY39=3.9.0",
                              "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
