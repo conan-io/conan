@@ -23,7 +23,6 @@ def client():
     client = TestClient()
     conanfile = str(GenConanfile())
     conanfile += """
-    win_bash = False
 
     def package_info(self):
         self.buildenv_info.define_path("AR", "c:/path/to/ar")
@@ -39,7 +38,7 @@ def client():
 @pytest.mark.parametrize("win_bash", [True, False, None])
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_virtualenv_deactivated(client, win_bash):
-    conanfile = str(GenConanfile()
+    conanfile = str(GenConanfile().with_settings("os")
                     .with_generator("VirtualBuildEnv").with_generator("VirtualRunEnv")
                     .with_require("foo/1.0"))
     conanfile += """
@@ -54,7 +53,6 @@ def test_virtualenv_deactivated(client, win_bash):
         # the bash
         assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
         build_contents = client.load("conanbuildenv.sh")
-        print(build_contents)
         assert "/cygdrive/c/path/to/ar" in build_contents
         assert "$PATH:/cygdrive/c/path/to/something" in build_contents
     else:
@@ -90,8 +88,8 @@ def test_nowinbash_virtual_msys(client):
     client.run("install . -s:b os=Windows -s:b os.subsystem=msys2 -s:h os=Windows")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
     build_contents = client.load("conanbuildenv.sh")
-    assert 'export AR="c:/path/to/ar"' in build_contents
-    assert 'export PATH="$PATH;c:/path/to/something"' in build_contents
+    assert 'export AR="/c/path/to/ar"' in build_contents
+    assert 'export PATH="$PATH:/c/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
     run_contents = client.load("conanrunenv.bat")
     assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
@@ -101,12 +99,11 @@ def test_nowinbash_virtual_msys(client):
     client.run("install . -s:b os=Windows  -s:h os=Windows -s:h os.subsystem=msys2")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
     build_contents = client.load("conanbuildenv.bat")
-    print(build_contents)
     assert 'set AR=c:/path/to/ar' in build_contents
     assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
-    assert 'export RUNTIME_VAR="c:/path/to/exe"' in run_contents
+    assert 'export RUNTIME_VAR="/c/path/to/exe"' in run_contents
 
     # BUILD subsystem=msys2 HOST subsystem=msys2
     client.save({"conanfile.py": conanfile}, clean_first=True)
@@ -114,11 +111,11 @@ def test_nowinbash_virtual_msys(client):
                "-s:h os=Windows -s:h os.subsystem=msys2")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
     build_contents = client.load("conanbuildenv.sh")
-    assert 'export AR="c:/path/to/ar"' in build_contents
-    assert 'export PATH="$PATH;c:/path/to/something"' in build_contents
+    assert 'export AR="/c/path/to/ar"' in build_contents
+    assert 'export PATH="$PATH:/c/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
-    assert 'export RUNTIME_VAR="c:/path/to/exe"' in run_contents
+    assert 'export RUNTIME_VAR="/c/path/to/exe"' in run_contents
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -143,8 +140,8 @@ def test_nowinbash_virtual_cygwin(client):
     client.run("install . -s:b os=Windows -s:b os.subsystem=cygwin -s:h os=Windows")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
     build_contents = client.load("conanbuildenv.sh")
-    assert 'export AR="c:/path/to/ar"' in build_contents
-    assert 'export PATH="$PATH;c:/path/to/something"' in build_contents
+    assert 'export AR="/cygdrive/c/path/to/ar"' in build_contents
+    assert 'export PATH="$PATH:/cygdrive/c/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
     run_contents = client.load("conanrunenv.bat")
     assert "set RUNTIME_VAR=c:/path/to/exe" in run_contents
@@ -154,12 +151,11 @@ def test_nowinbash_virtual_cygwin(client):
     client.run("install . -s:b os=Windows  -s:h os=Windows -s:h os.subsystem=cygwin")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
     build_contents = client.load("conanbuildenv.bat")
-    print(build_contents)
     assert 'set AR=c:/path/to/ar' in build_contents
     assert 'set PATH=%PATH%;c:/path/to/something' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
-    assert 'export RUNTIME_VAR="c:/path/to/exe"' in run_contents
+    assert 'export RUNTIME_VAR="/cygdrive/c/path/to/exe"' in run_contents
 
     # BUILD subsystem=cygwin HOST subsystem=cygwin
     client.save({"conanfile.py": conanfile}, clean_first=True)
@@ -167,8 +163,8 @@ def test_nowinbash_virtual_cygwin(client):
                "-s:h os=Windows -s:h os.subsystem=cygwin")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
     build_contents = client.load("conanbuildenv.sh")
-    assert 'export AR="c:/path/to/ar"' in build_contents
-    assert 'export PATH="$PATH;c:/path/to/something"' in build_contents
+    assert 'export AR="/cygdrive/c/path/to/ar"' in build_contents
+    assert 'export PATH="$PATH:/cygdrive/c/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
-    assert 'export RUNTIME_VAR="c:/path/to/exe"' in run_contents
+    assert 'export RUNTIME_VAR="/cygdrive/c/path/to/exe"' in run_contents

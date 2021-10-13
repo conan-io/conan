@@ -45,10 +45,10 @@ def test_autotools_bash_complete():
 
                 # Force autotools to use "cl" compiler
                 # FIXME: Should this be added to AutotoolsToolchain when visual?
-                env = Environment(self)
+                env = Environment()
                 env.define("CXX", "cl")
                 env.define("CC", "cl")
-                env.save_script("conan_compiler")
+                env.vars(self).save_script("conan_compiler")
 
             def build(self):
                 # These commands will run in bash activating first the vcvars and

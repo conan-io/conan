@@ -57,6 +57,7 @@ def test_virtualrunenv_not_applied(client):
     import platform
 
     class ConanFileToolsTest(ConanFile):
+        settings = "os"
         generators = "VirtualBuildEnv", "VirtualRunEnv"
         requires = "foo/1.0"
     """)
