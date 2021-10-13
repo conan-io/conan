@@ -2,7 +2,6 @@ import os
 import platform
 import subprocess
 import textwrap
-import mock
 
 import pytest
 
@@ -10,7 +9,7 @@ from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
 from conan.tools.microsoft.subsystems import WINDOWS
 from conans.client.tools import chdir, environment_append
-from conans.test.utils.mocks import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
@@ -244,7 +243,7 @@ def test_env_files():
         assert "MyVar5=MyValue5 With Space5=More Space5;:More!!" in out
         assert "MyVar6= MyValue6!!" in out  # The previous is non existing, append has space
         assert "MyPath1=/Some/Path1/!!" in out
-        assert "MyPath2=OldPath2;/Some/Path2/;/Other/Path2/!!" in out
+        assert os.pathsep.join(["MyPath2=OldPath2", "/Some/Path2/", "/Other/Path2/!!"]) in out
         assert "MyPath3=/Some/Path3/;OldPath3!!" in out
         assert "MyPath4=!!" in out
 
@@ -264,7 +263,6 @@ def test_env_files():
     with chdir(folder):
         if platform.system() == "Windows":
             env = env.vars(ConanFileMock())
-            env._subsystem = WINDOWS
             env.save_bat("test.bat")
 
             save("display.bat", display_bat)
@@ -374,6 +372,7 @@ def test_dict_access():
 
 def test_env_win_bash():
     conanfile = ConanFileMock()
+    conanfile.settings_build = MockSettings({"os": "Windows"})
     conanfile.win_bash = True
     conanfile.conf = {"tools.microsoft.bash:subsystem": "msys2"}
     folder = temp_folder()
@@ -386,6 +385,7 @@ def test_env_win_bash():
     env_vars.save_script("foo")
     content = open(os.path.join(folder, "foo.sh")).read()
     assert 'MyVar="MyValue"' in content
+    # Note the unit letter is lowercase
     assert 'MyPath="/c/path/to/something:/d/otherpath"' in content
 
 
