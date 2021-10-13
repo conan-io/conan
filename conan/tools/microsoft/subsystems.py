@@ -47,18 +47,18 @@ def run_in_windows_bash(conanfile, command, cwd=None, env=None):
     # Needed to change to that dir inside the bash shell
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
     if env_win:
-        wrapped_shell = environment_wrap_command(conanfile, env_win, shell_path,
+        wrapped_shell = environment_wrap_command(env_win, shell_path,
                                                  cwd=conanfile.generators_folder)
 
     cwd = cwd or os.getcwd()
     if not os.path.isabs(cwd):
         cwd = os.path.join(os.getcwd(), cwd)
-    cwd_inside = subsystem_path(conanfile, cwd)
+    cwd_inside = subsystem_path(subsystem, cwd)
     wrapped_user_cmd = command
     if env_shell:
         # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
         # first and there could be commands that we want to skip
-        wrapped_user_cmd = environment_wrap_command(conanfile, env_shell, command,
+        wrapped_user_cmd = environment_wrap_command(env_shell, command,
                                                     cwd=conanfile.generators_folder)
     inside_command = 'cd "{cwd_inside}" && ' \
                      '{wrapped_user_cmd}'.format(cwd_inside=cwd_inside,

@@ -103,7 +103,7 @@ def test_complete(client):
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
     if platform.system() == "Windows":
-        cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycmake.bat",
+        cmd = environment_wrap_command("conanbuildenv", "mycmake.bat",
                                        cwd=client.current_folder)
         client.run_command(cmd)
         assert "MYCMAKE=Windows!!" in client.out
@@ -111,8 +111,7 @@ def test_complete(client):
 
     # Run the RUN environment
     if platform.system() != "Windows":
-        cmd = environment_wrap_command(ConanFileMock(), "conanrunenv",
-                                       "mygtest.sh && .{}myrunner.sh".format(os.sep),
+        cmd = environment_wrap_command("conanrunenv", "mygtest.sh && .{}myrunner.sh".format(os.sep),
                                        cwd=client.current_folder)
         client.run_command(cmd)
         assert "MYGTEST=Linux!!" in client.out
@@ -205,7 +204,7 @@ def test_profile_buildenv():
     client.run("install . -pr=myprofile")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycompiler.{}".format(ext),
+    cmd = environment_wrap_command("conanbuildenv", "mycompiler.{}".format(ext),
                                    cwd=client.current_folder)
     client.run_command(cmd)
     assert "MYCOMPILER!!" in client.out

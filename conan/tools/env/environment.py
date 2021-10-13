@@ -13,7 +13,7 @@ class _EnvVarPlaceHolder:
     pass
 
 
-def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
+def environment_wrap_command(env_filenames, cmd, subsystem=None, cwd=None):
     from conan.tools.microsoft.subsystems import subsystem_path
     assert env_filenames
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
@@ -22,8 +22,6 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
     cwd = cwd or os.getcwd()
 
     for f in filenames:
-        scope = "build" if "build" in f else "run"
-        subsystem = deduce_subsystem(conanfile, scope)
         f = f if os.path.isabs(f) else os.path.join(cwd, f)
         if f.lower().endswith(".sh"):
             if os.path.isfile(f):

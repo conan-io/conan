@@ -407,7 +407,7 @@ class ConanFile(object):
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
             if _env is None:
                 _env = "conanbuild"
-            wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
+            wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:
