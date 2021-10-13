@@ -244,7 +244,7 @@ def test_env_files():
         assert "MyVar6= MyValue6!!" in out  # The previous is non existing, append has space
         assert "MyPath1=/Some/Path1/!!" in out
         assert os.pathsep.join(["MyPath2=OldPath2", "/Some/Path2/", "/Other/Path2/!!"]) in out
-        assert "MyPath3=/Some/Path3/;OldPath3!!" in out
+        assert os.pathsep.join(["MyPath3=/Some/Path3/", "OldPath3!!"]) in out
         assert "MyPath4=!!" in out
 
         # This should be output when deactivated
