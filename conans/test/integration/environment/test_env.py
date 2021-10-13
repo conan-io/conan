@@ -96,7 +96,7 @@ def test_complete(client):
 
             def build(self):
                 self.run("mycmake.bat", env="conanbuildenv")
-                assert os.path.exists(os.path.join(self.generators_folder, "conanrunenv.bat"))
+                assert os.path.exists(os.path.join(self.generators_folder, "conanrunenv.sh"))
        """)
 
     client.save({"conanfile.py": conanfile})
@@ -258,9 +258,9 @@ def test_transitive_order():
             requires = "openssl/1.0"
             build_requires = "cmake/1.0", "gcc/1.0"
             def generate(self):
-                buildenv = VirtualBuildEnv(self).vars(self)
+                buildenv = VirtualBuildEnv(self).vars()
                 self.output.info("BUILDENV: {}!!!".format(buildenv.get("MYVAR")))
-                runenv = VirtualRunEnv(self).vars(self)
+                runenv = VirtualRunEnv(self).vars()
                 self.output.info("RUNENV: {}!!!".format(runenv.get("MYVAR")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
@@ -306,8 +306,7 @@ def test_buildenv_from_requires():
         class Pkg(ConanFile):
             requires = "poco/1.0"
             def generate(self):
-                env = VirtualBuildEnv(self)
-                buildenv = env.vars(self)
+                buildenv = VirtualBuildEnv(self).vars()
                 self.output.info("BUILDENV POCO: {}!!!".format(buildenv.get("Poco_ROOT")))
                 self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.get("OpenSSL_ROOT")))
         """)

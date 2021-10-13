@@ -1,10 +1,7 @@
-import os
-import platform
 import textwrap
 
 import pytest
 
-from conans.client.tools.env import _environment_add
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.tools import save
@@ -36,8 +33,8 @@ def test_virtualenv_object_access(client):
         requires = "foo/1.0"
 
         def build(self):
-          build_env = VirtualBuildEnv(self).environment()
-          run_env = VirtualRunEnv(self).environment()
+          build_env = VirtualBuildEnv(self).vars()
+          run_env = VirtualRunEnv(self).vars()
           self.output.warn("Foo: *{}*".format(build_env["Foo"]))
           self.output.warn("runFoo: *{}*".format(run_env["runFoo"]))
           self.output.warn("Hello: *{}*".format(build_env["Hello"]))

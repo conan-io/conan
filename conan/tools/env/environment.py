@@ -225,7 +225,7 @@ class Environment:
 
 class EnvVars:
     def __init__(self, conanfile, env, scope):
-        self._values = env._values  # {var_name: [] of values, including separators}
+        self._values = env._values  # {var_name: _EnvValue}, just a reference to the Environment
         self._conanfile = conanfile
         self._scope = scope
         self._subsystem = deduce_subsystem(conanfile, scope)

@@ -74,7 +74,7 @@ class MesonToolchain(object):
         self._cppstd = cppstd_from_settings(self._conanfile.settings)
         self._shared = self._conanfile.options.get_safe("shared")
         self._fpic = self._conanfile.options.get_safe("fPIC")
-        self._build_env = VirtualBuildEnv(self._conanfile).environment()
+        self._build_env = VirtualBuildEnv(self._conanfile).vars()
 
         self.definitions = dict()
         self.preprocessor_definitions = dict()
