@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.client.cache.cache import PROFILES_FOLDER
 from conans.paths import CONANFILE
@@ -71,6 +73,7 @@ class MyConanfile(ConanFile):
         client.run("export . lasote/stable")
         client.run('install mylib/0.1@lasote/stable --build')
 
+    @pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
     def test_profile_applied_ok(self):
         br = '''
 import os

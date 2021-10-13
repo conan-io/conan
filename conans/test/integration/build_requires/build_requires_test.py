@@ -88,6 +88,7 @@ def client():
     return client
 
 
+@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 def test_conanfile_txt(client):
     # conanfile.txt -(br)-> cmake
     client.save({"conanfile.txt": "[build_requires]\nmycmake/1.0"}, clean_first=True)
@@ -104,6 +105,7 @@ def test_conanfile_txt(client):
     assert "MYOPENSSL=Windows!!" in client.out
 
 
+@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 def test_complete(client):
     conanfile = textwrap.dedent("""
         import platform
