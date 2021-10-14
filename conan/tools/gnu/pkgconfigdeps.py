@@ -49,89 +49,65 @@ class PkgConfigDeps(object):
         self._conanfile = conanfile
 
     @staticmethod
-    def _get_composed_require_name(pkg_name, comp_name):
+    def _get_composed_pkg_config_name(pkg_name, comp_name):
         return "%s-%s" % (pkg_name, comp_name)
 
-    def _get_require_comp_name(self, dep, req):
-        # FIXME: this str() is only needed for python2.7 (unicode values). Remove it for Conan 2.0
-        pkg_name = str(dep.ref.name)
-        pkg, comp_name = req.split("::") if "::" in req else (pkg_name, req)
-        # FIXME: it could allow defining requires to not direct dependencies
-        req = self._conanfile.dependencies.host[pkg]
-        cmp_name = get_component_alias(req, comp_name)
-        return self._get_composed_require_name(pkg, cmp_name)
+    def _get_requires_names(self, dep, cpp_info):
+        for req in cpp_info.requires:
+            # FIXME: this str() is only needed for python2.7 (unicode values).
+            #        Remove it for Conan 2.0
+            pkg_name = str(dep.ref.name)
+            pkg, comp_name = req.split("::") if "::" in req else (pkg_name, req)
+            # FIXME: it could allow defining requires to not direct dependencies
+            req = self._conanfile.dependencies.host[pkg]
+            cmp_name = get_component_alias(req, comp_name)
+            yield self._get_composed_pkg_config_name(pkg, cmp_name)
 
-    def _get_components(self, dep):
-        ret = []
-        for comp_name, comp in dep.cpp_info.get_sorted_components().items():
+    def get_components_pc_files(self, dep):
+        pc_content = {}
+        pkg_genname = get_target_namespace(dep)
+
+        comp_gennames = []
+        for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
             comp_genname = get_component_alias(dep, comp_name)
-            comp_requires_gennames = []
-            for require in comp.requires:
-                comp_requires_gennames.append(self._get_require_comp_name(dep, require))
-            ret.append((comp_genname, comp, comp_requires_gennames))
-        return ret
+            comp_gennames.append(comp_genname)
+            comp_requires_gennames = self._get_requires_names(dep, comp_cpp_info)
 
-    def _get_public_require_deps(self, dep):
-        public_comp_deps = []
+            pkg_comp_genname = self._get_composed_pkg_config_name(pkg_genname, comp_genname)
+            pc_content.update(CompletePCFile.content(
+                self._conanfile, dep, comp_requires_gennames,
+                name=pkg_comp_genname, cpp_info=comp_cpp_info))
 
-        for require in dep.cpp_info.requires:
-            if "::" in require:  # Points to a component of a different package
-                pkg, cmp_name = require.split("::")
-                req = dep.dependencies.direct_host[pkg]
-                public_comp_deps.append(
-                    self._get_composed_require_name(pkg, get_component_alias(req, cmp_name))
-                )
-            else:  # Points to a component of same package
-                public_comp_deps.append(get_component_alias(dep, require))
-        return public_comp_deps
+        # Adding the pkg *.pc file (including its components as requires if any)
+        if pkg_genname not in comp_gennames:
+            pkg_requires = (self._get_composed_pkg_config_name(pkg_genname, i)
+                            for i in comp_gennames)
+            description = self._conanfile.description
+            pc_content.update(SimplePCFile.content(dep, pkg_requires, description=description))
+
+        return pc_content
 
     @property
     def content(self):
-        ret = {}
         host_req = self._conanfile.dependencies.host
         for require, dep in host_req.items():
-            pkg_genname = get_target_namespace(dep)
-
             if dep.cpp_info.has_components:
-                components = self._get_components(dep)
-                # Adding one *.pc file per component, e.g., pkg-comp1.pc
-                for comp_genname, comp_cpp_info, comp_requires_gennames in components:
-                    pkg_comp_genname = self._get_composed_require_name(pkg_genname, comp_genname)
-                    ret["%s.pc" % pkg_comp_genname] = self._pc_file_content(
-                        pkg_comp_genname, comp_cpp_info,
-                        comp_requires_gennames,
-                        dep.package_folder, dep.ref.version)
-                # Adding the pkg *.pc file (including its components as requires if any)
-                comp_gennames = [comp_genname for comp_genname, _, _ in components]
-                if pkg_genname not in comp_gennames:
-                    pkg_requires = (self._get_composed_require_name(pkg_genname, i)
-                                    for i in comp_gennames)
-                    ret["%s.pc" % pkg_genname] = self._global_pc_file_contents(pkg_genname,
-                                                                               dep,
-                                                                               pkg_requires)
+                return self.get_components_pc_files(dep)
             else:
-                ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep.cpp_info,
-                                                                   self._get_public_require_deps(dep),
-                                                                   dep.package_folder,
-                                                                   dep.ref.version)
-        return ret
+                requires = self._get_requires_names(dep, dep.cpp_info)
+                return CompletePCFile.content(self._conanfile, dep, requires)
 
-    @property
-    def template_global_content(self):
-        return textwrap.dedent("""\
-        Name: {{dep_name}}
-        Description: {{description}}
-        Version: {{dep_version}}
-        {% if public_deps %}
-        Requires: {% for dep in public_deps %}
-                {{ dep }}
-            {%- if not loop.last %},{% endif %}
-            {% endfor %}
-        {% endif %}
-        """)
+    def generate(self):
+        # Current directory is the generators_folder
+        generator_files = self.content
+        for generator_file, content in generator_files.items():
+            save(generator_file, content)
 
-    @property
-    def template_content(self):
+
+class CompletePCFile(object):
+
+    @staticmethod
+    def template():
         return textwrap.dedent("""\
         prefix={{prefix_path}}
         {%- for name, path in libdirs.items() %}
@@ -158,7 +134,8 @@ class PkgConfigDeps(object):
         {% endif %}
         """)
 
-    def _pc_file_content(self, name, cpp_info, requires_gennames, package_folder, version):
+    @staticmethod
+    def content(conanfile, dep, requires, name=None, cpp_info=None):
 
         def _concat_if_not_empty(groups):
             return " ".join(
@@ -170,7 +147,7 @@ class PkgConfigDeps(object):
             libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
             shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
 
-            gnudeps_flags = GnuDepsFlags(self._conanfile, cpp_info)
+            gnudeps_flags = GnuDepsFlags(conanfile, cpp_info)
             return _concat_if_not_empty([libdirs_flags,
                                          libnames_flags,
                                          shared_flags,
@@ -211,29 +188,46 @@ class PkgConfigDeps(object):
                 "pkg_config_custom_content": cpp_info.get_property("pkg_config_custom_content",
                                                                    "PkgConfigDeps"),
                 "name": name,
-                "description": self._conanfile.description or "Conan package: %s" % name,
+                "description": conanfile.description or "Conan package: %s" % name,
                 "version": version,
                 "libs": get_libs(libdirs),
                 "cflags": get_cflags(includedirs),
-                "public_deps": requires_gennames
+                "public_deps": requires
             }
 
-        return Template(self.template_content, trim_blocks=True, lstrip_blocks=True,
-                        undefined=jinja2.StrictUndefined).render(context)
+        name = name or get_target_namespace(dep)
+        package_folder = dep.package_folder
+        version = dep.ref.version
+        cpp_info = cpp_info or dep.cpp_info
 
-    def _global_pc_file_contents(self, name, dep, comp_gennames):
+        return {name + ".pc": Template(CompletePCFile.template, trim_blocks=True, lstrip_blocks=True,
+                                       undefined=jinja2.StrictUndefined).render(context)}
+
+
+class SimplePCFile(object):
+
+    @staticmethod
+    def template():
+        return textwrap.dedent("""\
+        Name: {{dep_name}}
+        Description: {{description}}
+        Version: {{dep_version}}
+        {% if public_deps %}
+        Requires: {% for dep in public_deps %}
+                {{ dep }}
+            {%- if not loop.last %},{% endif %}
+            {% endfor %}
+        {% endif %}
+        """)
+
+    @staticmethod
+    def content(dep, requires, description=None):
+        name = get_target_namespace(dep)
         context = {
             "name": name,
-            "description": self._conanfile.description or "Conan package: %s" % name,
+            "description": description or "Conan package: %s" % name,
             "version": dep.ref.version,
-            "public_deps": comp_gennames
+            "public_deps": requires
         }
-
-        return Template(self.template_global_content, trim_blocks=True, lstrip_blocks=True,
-                        undefined=jinja2.StrictUndefined).render(context)
-
-    def generate(self):
-        # Current directory is the generators_folder
-        generator_files = self.content
-        for generator_file, content in generator_files.items():
-            save(generator_file, content)
+        return {name + ".pc": Template(SimplePCFile.template, trim_blocks=True, lstrip_blocks=True,
+                                       undefined=jinja2.StrictUndefined).render(context)}
