@@ -13,7 +13,5 @@ def get_file_name(conanfile, find_module_mode=False):
         if ret:
             return ret
     ret = conanfile.cpp_info.get_property("cmake_file_name", "CMakeDeps")
-    if not ret:
-        ret = conanfile.cpp_info.get_filename("cmake_find_package_multi", default_name=False)
     return ret or conanfile.ref.name
 
