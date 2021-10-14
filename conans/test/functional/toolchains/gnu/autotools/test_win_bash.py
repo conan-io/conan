@@ -11,6 +11,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool_msys2
 def test_autotools_bash_complete():

@@ -285,12 +285,14 @@ def test_windows_case_insensitive():
     env.define("MYVAR", "MyValueB")
     env.define("MyVar1", "MyValue1A")
     env.append("MYVAR1", "MyValue1B")
+    env.define("MyVar2", "MyNewValue2")
     folder = temp_folder()
 
     display_bat = textwrap.dedent("""\
         @echo off
         echo MyVar=%MyVar%!!
         echo MyVar1=%MyVar1%!!
+        echo MyVar2=%MyVar2%!!
         """)
 
     with chdir(folder):
@@ -298,13 +300,15 @@ def test_windows_case_insensitive():
         save("display.bat", display_bat)
         cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  shell=True).communicate()
+                                  shell=True, env={"MYVAR2": "OldValue2"}).communicate()
 
     out = out.decode()
     assert "MyVar=MyValueB!!" in out
     assert "MyVar=!!" in out
     assert "MyVar1=MyValue1A MyValue1B!!" in out
     assert "MyVar1=!!" in out
+    assert "MyVar2=MyNewValue2!!" in out
+    assert "MyVar2=OldValue2!!" in out
 
 
 def test_dict_access():
