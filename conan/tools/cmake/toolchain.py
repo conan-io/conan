@@ -617,7 +617,7 @@ class GenericSystemBlock(Block):
         compiler = self._conanfile.settings.get_safe("compiler")
         # TODO: Check if really necessary now that conanvcvars is used
         if (generator is not None and "Ninja" in generator
-                and ("Visual" in compiler or compiler == "msvc")):
+                and (compiler is not None and "Visual" in compiler or compiler == "msvc")):
             compiler = "cl"
         else:
             compiler = None  # compiler defined by default
