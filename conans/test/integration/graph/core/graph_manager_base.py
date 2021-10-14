@@ -51,7 +51,7 @@ class GraphManagerTest(unittest.TestCase):
         proxy = ConanProxy(app)
 
         pyreq_loader = PyRequireLoader(proxy, self.resolver)
-        pyreq_loader.enable_remotes(remotes=Remotes())
+        pyreq_loader.enable_remotes(remotes=[])
         self.loader = ConanFileLoader(None, pyreq_loader=pyreq_loader)
 
         binaries = GraphBinariesAnalyzer(cache, self.remote_manager)
