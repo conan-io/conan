@@ -110,27 +110,24 @@ class CompletePCFile(object):
     def template():
         return textwrap.dedent("""\
         prefix={{prefix_path}}
-        {%- for name, path in libdirs.items() %}
-            {{ name + "=" + path }}
+        {% for name, path in libdirs.items() %}
+        {{ name + "=" + path }}
         {% endfor %}
-        {%- for name, path in includedirs.items() %}
-            {{ name + "=" + path }}
+        {% for name, path in includedirs.items() %}
+        {{ name + "=" + path }}
         {% endfor %}
         {% if pkg_config_custom_content %}
         # Custom PC content
         {{pkg_config_custom_content}}
         {% endif %}
 
-        Name: {{dep_name}}
+        Name: {{name}}
         Description: {{description}}
-        Version: {{dep_version}}
+        Version: {{version}}
         Libs: {{ libs }}
-        Cflags: {{ flags }}
-        {% if public_deps %}
-        Requires: {% for dep in public_deps %}
-                {{ dep }}
-            {%- if not loop.last %},{% endif %}
-            {% endfor %}
+        Cflags: {{ cflags }}
+        {% if requires|length %}
+        Requires: {% for dep in requires %}{{ dep }}{%- if not loop.last %},{% endif %}{% endfor %}
         {% endif %}
         """)
 
@@ -144,7 +141,7 @@ class CompletePCFile(object):
         def get_libs(libdirs):
             libdirs_flags = ['-L"${%s}"' % libdir for libdir in libdirs]
             lib_paths = ["${%s}" % libdir for libdir in libdirs]
-            libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
+            libnames_flags = ["-l%s " % n for n in (cpp_info.libs + cpp_info.system_libs)]
             shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
 
             gnudeps_flags = GnuDepsFlags(conanfile, cpp_info)
@@ -157,7 +154,7 @@ class CompletePCFile(object):
 
         def get_cflags(includedirs):
             return _concat_if_not_empty(
-                [['-I"${%s}"' % name for name in includedirs],
+                [['-I"${%s}"' % n for n in includedirs],
                  cpp_info.cxxflags,
                  cpp_info.cflags,
                  ["-D%s" % d for d in cpp_info.defines]])
@@ -166,41 +163,39 @@ class CompletePCFile(object):
             ret = {}
             for i, directory in enumerate(folders):
                 directory = os.path.normpath(directory).replace("\\", "/")
-                name = field if i == 0 else "%s%d" % (field, (i + 1))
+                n = field if i == 0 else "%s%d" % (field, (i + 1))
                 prefix = ""
                 if not os.path.isabs(directory):
                     prefix = "${prefix}/"
                 elif directory.startswith(prefix_path_):
                     prefix = "${prefix}/"
                     directory = os.path.relpath(directory, prefix_path_).replace("\\", "/")
-                ret[name] = "%s%s" % (prefix, directory)
+                ret[n] = "%s%s" % (prefix, directory)
             return ret
-
-        def context():
-            prefix_path = package_folder.replace("\\", "/")
-            libdirs = get_formmatted_dirs("libdir", cpp_info.libdirs, prefix_path)
-            includedirs = get_formmatted_dirs("includedir", cpp_info.includedirs, prefix_path)
-
-            return {
-                "prefix_path": prefix_path,
-                "libdirs": libdirs,
-                "includedirs": includedirs,
-                "pkg_config_custom_content": cpp_info.get_property("pkg_config_custom_content",
-                                                                   "PkgConfigDeps"),
-                "name": name,
-                "description": conanfile.description or "Conan package: %s" % name,
-                "version": version,
-                "libs": get_libs(libdirs),
-                "cflags": get_cflags(includedirs),
-                "public_deps": requires
-            }
 
         name = name or get_target_namespace(dep)
         package_folder = dep.package_folder
         version = dep.ref.version
         cpp_info = cpp_info or dep.cpp_info
 
-        return {name + ".pc": Template(CompletePCFile.template, trim_blocks=True, lstrip_blocks=True,
+        prefix_path = package_folder.replace("\\", "/")
+        libdirs = get_formmatted_dirs("libdir", cpp_info.libdirs, prefix_path)
+        includedirs = get_formmatted_dirs("includedir", cpp_info.includedirs, prefix_path)
+
+        context = {
+            "prefix_path": prefix_path,
+            "libdirs": libdirs,
+            "includedirs": includedirs,
+            "pkg_config_custom_content": cpp_info.get_property("pkg_config_custom_content", "PkgConfigDeps"),
+            "name": name,
+            "description": conanfile.description or "Conan package: %s" % name,
+            "version": version,
+            "libs": get_libs(libdirs),
+            "cflags": get_cflags(includedirs),
+            "requires": list(requires)
+        }
+
+        return {name + ".pc": Template(CompletePCFile.template(), trim_blocks=True, lstrip_blocks=True,
                                        undefined=jinja2.StrictUndefined).render(context)}
 
 
@@ -209,14 +204,11 @@ class SimplePCFile(object):
     @staticmethod
     def template():
         return textwrap.dedent("""\
-        Name: {{dep_name}}
+        Name: {{name}}
         Description: {{description}}
-        Version: {{dep_version}}
-        {% if public_deps %}
-        Requires: {% for dep in public_deps %}
-                {{ dep }}
-            {%- if not loop.last %},{% endif %}
-            {% endfor %}
+        Version: {{version}}
+        {% if requires|length %}
+        Requires: {% for dep in requires %}{{ dep }}{%- if not loop.last %},{% endif %}{% endfor %}
         {% endif %}
         """)
 
@@ -227,7 +219,7 @@ class SimplePCFile(object):
             "name": name,
             "description": description or "Conan package: %s" % name,
             "version": dep.ref.version,
-            "public_deps": requires
+            "requires": list(requires)
         }
-        return {name + ".pc": Template(SimplePCFile.template, trim_blocks=True, lstrip_blocks=True,
+        return {name + ".pc": Template(SimplePCFile.template(), trim_blocks=True, lstrip_blocks=True,
                                        undefined=jinja2.StrictUndefined).render(context)}

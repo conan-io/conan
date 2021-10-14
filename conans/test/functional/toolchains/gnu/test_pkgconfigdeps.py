@@ -53,6 +53,7 @@ def test_pkg_config_dirs():
         Version: 0.1
         Libs: -L"${libdir}" -L"${libdir2}"%s
         Cflags: -I"${includedir}\"""" % expected_rpaths)
+    breakpoint()
     assert "\n".join(pc_content.splitlines()[1:]) == expected_content
 
     def assert_is_abs(path):
