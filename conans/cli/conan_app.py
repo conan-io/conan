@@ -47,7 +47,7 @@ class ConanApp(object):
                                   self.config.generate_run_log_file,
                                   self.config.log_run_to_output)
 
-        self.proxy = ConanProxy(self.cache, self.remote_manager)
+        self.proxy = ConanProxy(self)
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
 
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
@@ -56,9 +56,17 @@ class ConanApp(object):
         self.graph_manager = GraphManager(self.cache, self.loader, self.proxy, self.range_resolver,
                                           self.binaries_analyzer)
 
-    def load_remotes(self, remote_name=None, update=False, check_updates=False):
+        self.selected_remotes = []
+        self.update = False
+
+    def load_remotes(self, remote_name=None, update=False):
         remotes = self.cache.remotes_registry.list()
+
         if remote_name:
-            remotes.select(remote_name)
-        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
+            self.selected_remotes.append(self.cache.remotes_registry.read(remote_name))
+        else:
+            for r in remotes:
+                self.selected_remotes.append(r)
+        self.update = update
+        self.pyreq_loader.enable_remotes(update=update, remotes=self.selected_remotes)
         return remotes

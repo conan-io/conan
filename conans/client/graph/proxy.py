@@ -10,12 +10,13 @@ from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
-    def __init__(self, cache, remote_manager):
+    def __init__(self, conan_app):
         # collaborators
-        self._cache = cache
-        self._remote_manager = remote_manager
+        self._cache = conan_app.cache
+        self._remote_manager = conan_app.remote_manager
+        self._conan_app = conan_app
 
-    def get_recipe(self, ref, check_updates, update, remotes):
+    def get_recipe(self, ref, update, remotes):
 
         # TODO: cache2.0 check editables
         # if isinstance(layout, PackageEditableLayout):
@@ -27,7 +28,7 @@ class ConanProxy(object):
 
         # TODO: cache2.0 Check with new locks
         # with layout.conanfile_write_lock(self._out):
-        result = self._get_recipe(ref, check_updates, update, remotes)
+        result = self._get_recipe(ref, update, remotes)
         conanfile_path, status, remote, new_ref = result
 
         if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
@@ -35,10 +36,8 @@ class ConanProxy(object):
 
         return conanfile_path, status, remote, new_ref
 
-    def _get_recipe(self, reference, check_updates, update, remotes):
+    def _get_recipe(self, reference, update, remotes):
         scoped_output = ScopedOutput(str(reference), ConanOutput())
-
-        check_updates = check_updates or update
 
         conanfile_path = self._cache.editable_path(reference)
         if conanfile_path is not None:
@@ -52,7 +51,7 @@ class ConanProxy(object):
             # we will only check all servers for latest revision if we did a --update
             remote, new_ref = self._download_recipe(reference, scoped_output, remotes,
                                                     remotes.selected,
-                                                    check_all_servers=check_updates)
+                                                    check_all_servers=update)
             recipe_layout = self._cache.ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
@@ -63,7 +62,7 @@ class ConanProxy(object):
         conanfile_path = recipe_layout.conanfile()
         selected_remote = remotes.selected
 
-        if check_updates:
+        if update:
 
             remote, latest_rrev, remote_time = self._get_rrev_from_remotes(reference,
                                                                            remotes.values(),

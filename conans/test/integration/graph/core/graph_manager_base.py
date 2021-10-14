@@ -5,9 +5,7 @@ from collections import namedtuple, Counter
 
 from mock import Mock
 
-from conans.cli.output import ConanOutput
 from conans.client.cache.cache import ClientCache
-from conans.client.cache.remote_registry import Remotes
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -47,7 +45,10 @@ class GraphManagerTest(unittest.TestCase):
         self.remote_manager = MockRemoteManager()
         cache = self.cache
         self.resolver = RangeResolver(self.cache, self.remote_manager)
-        proxy = ConanProxy(cache, self.remote_manager)
+        app = Mock()
+        app.cache = cache
+        app.remote_manager = self.remote_manager
+        proxy = ConanProxy(app)
 
         pyreq_loader = PyRequireLoader(proxy, self.resolver)
         pyreq_loader.enable_remotes(remotes=Remotes())
@@ -144,14 +145,14 @@ class GraphManagerTest(unittest.TestCase):
             profile_host.build_requires = profile_build_requires
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
-        update = check_updates = False
-        remotes = Remotes()
+        update = False
+        remotes = []
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         app = self._get_app()
 
         deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
-                                                  None, ref, build_mode, check_updates, update,
+                                                  None, ref, build_mode, update,
                                                   remotes)
         if install:
             deps_graph.report_graph_error()

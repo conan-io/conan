@@ -52,11 +52,6 @@ class _Remotes(object):
 
     def __init__(self):
         self._remotes = []
-        self.selected = []
-
-    def select(self, remote_name):
-        remote = self.get_by_name(remote_name)
-        self.selected.append(remote)
 
     def __bool__(self):
         return bool(self._remotes)
@@ -87,6 +82,7 @@ class _Remotes(object):
         self._remotes.pop(index)
 
     def add(self, new_remote: Remote, index=None):
+        assert isinstance(new_remote, Remote)
         current = self.get_by_name(new_remote.name)
         if current:
             raise ConanException("Remote '%s' already exists in remotes (use update to modify)"
@@ -97,6 +93,7 @@ class _Remotes(object):
             self._remotes.append(new_remote)
 
     def update(self, remote: Remote):
+        assert isinstance(remote, Remote)
         current = self.get_by_name(remote.name)
         if not current:
             raise ConanException("The remote '{}' doesn't exist".format(remote.name))
@@ -106,6 +103,7 @@ class _Remotes(object):
         self._remotes.insert(index, remote)
 
     def move(self, remote: Remote, new_index: int):
+        assert isinstance(remote, Remote)
         self.remove(remote)
         self._remotes.insert(new_index, remote)
 

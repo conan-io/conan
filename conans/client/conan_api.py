@@ -142,7 +142,7 @@ class ConanAPIV1(object):
                     if not app.cache.exists_rrev(ref):
                         ref, _ = app.remote_manager.get_recipe(ref, remote)
 
-            result = app.proxy.get_recipe(ref, False, False, remotes)
+            result = app.proxy.get_recipe(ref, False, remotes)
             conanfile_path, _, _, ref = result
             conanfile = app.loader.load_basic(conanfile_path)
             conanfile.name = ref.name
@@ -480,8 +480,7 @@ class ConanAPIV1(object):
                             profile_build, name=name, version=version,
                             user=user, channel=channel, lockfile=lockfile)
 
-        # FIXME: Using update as check_update?
-        remotes = app.load_remotes(remote_name=remote_name, check_updates=update)
+        remotes = app.load_remotes(remote_name=remote_name, update=update)
         deps_graph = app.graph_manager.load_graph(reference, None, profile_host,
                                                        profile_build, graph_lock,
                                                        root_ref, build,
@@ -963,8 +962,7 @@ class ConanAPIV1(object):
                                                  profile_host=phost, profile_build=pbuild,
                                                  graph_lock=graph_lock,
                                                  root_ref=root_ref,
-                                                 build_mode=None,
-                                                 check_updates=False, update=None,
+                                                 build_mode=None, update=None,
                                                  remotes=remotes,
                                                  lockfile_node_id=root_id)
             print_graph(graph)
@@ -1058,8 +1056,7 @@ class ConanAPIV1(object):
         if pbuild:
             pbuild.process_settings(app.cache)
 
-        # FIXME: Using update as check_update?
-        remotes = app.load_remotes(remote_name=remote_name, check_updates=update)
+        remotes = app.load_remotes(remote_name=remote_name, update=update)
         deps_graph = app.graph_manager.load_graph(ref_or_path, None, phost,
                                                        pbuild, graph_lock, root_ref, build, update,
                                                        update, remotes)

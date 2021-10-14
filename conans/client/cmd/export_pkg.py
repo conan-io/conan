@@ -22,7 +22,7 @@ def export_pkg(app, ref, source_folder, build_folder, package_folder,
     # passing here the create_reference=ref argument is useful so the recipe is in "develop",
     # because the "package()" method is in develop=True already
     deps_graph = graph_manager.load_graph(ref, ref, profile_host, profile_build, graph_lock,
-                                          root_ref, build_mode=[ref.name], check_updates=False,
+                                          root_ref, build_mode=[ref.name],
                                           update=False, remotes=remotes,
                                           apply_build_requires=False)
     deps_graph.report_graph_error()
