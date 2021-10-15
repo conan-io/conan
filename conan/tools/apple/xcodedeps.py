@@ -35,14 +35,14 @@ class XcodeDeps(object):
         // Include {{name}} vars
         #include "{{vars_filename}}"
 
-        // Compiler options for {{dep_name}}
+        // Compiler options for {{name}}
         HEADER_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_INCLUDE_DIRECTORIES)
         GCC_PREPROCESSOR_DEFINITIONS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_PREPROCESSOR_DEFINITIONS)
         OTHER_CFLAGS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_C_COMPILER_FLAGS)
         OTHER_CPLUSPLUSFLAGS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_CXX_COMPILER_FLAGS)
         FRAMEWORK_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_FRAMEWORKS_DIRECTORIES)
 
-        // Link options for {{dep_name}}
+        // Link options for {{name}}
         LIBRARY_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_LIBRARY_DIRECTORIES)
         OTHER_LDFLAGS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_LINKER_FLAGS) $(CONAN_{{name}}_LIBRARIES) $(CONAN_{{name}}_SYSTEM_LIBS) $(CONAN_{{name}}_FRAMEWORKS)
         """)
@@ -125,6 +125,7 @@ class XcodeDeps(object):
         content_multi = template.render(name=dep_name, vars_filename=vars_xconfig_name, deps=deps,
                                         architecture=self.architecture,
                                         configuration=self.configuration, sdk=sdk_condition)
+        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
     def _dep_xconfig_file(self, name, name_general, dep_xconfig_filename):
