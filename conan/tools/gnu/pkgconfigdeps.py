@@ -58,7 +58,7 @@ class PkgConfigDeps(object):
     def _get_requires_names(self, dep, cpp_info):
         """
         Get all the pkg-config valid names from the requires ones given a dependency and
-        a NewCppInfo object.
+        a CppInfo object.
 
         Note: CppInfo could be coming from one Component object instead of the dependency
         """
@@ -120,10 +120,10 @@ class _CompletePCFile(object):
     def template():
         return textwrap.dedent("""\
         prefix={{prefix_path}}
-        {% for name, path in libdirs.items() %}
+        {% for name, path in libdirs %}
         {{ name + "=" + path }}
         {% endfor %}
-        {% for name, path in includedirs.items() %}
+        {% for name, path in includedirs %}
         {{ name + "=" + path }}
         {% endfor %}
         {% if pkg_config_custom_content %}
@@ -148,9 +148,9 @@ class _CompletePCFile(object):
             return " ".join(
                 [param for group in groups for param in group if param and param.strip()])
 
-        def get_libs(libdirs):
-            libdirs_flags = ['-L"${%s}"' % libdir for libdir in libdirs]
-            lib_paths = ["${%s}" % libdir for libdir in libdirs]
+        def get_libs(libdirs_):
+            libdirs_flags = ['-L"${%s}"' % libdir for libdir, _ in libdirs_]
+            lib_paths = ["${%s}" % libdir for libdir, _ in libdirs_]
             libnames_flags = ["-l%s " % n for n in (cpp_info.libs + cpp_info.system_libs)]
             shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
 
@@ -162,15 +162,15 @@ class _CompletePCFile(object):
                                          gnudeps_flags.frameworks,
                                          gnudeps_flags.framework_paths])
 
-        def get_cflags(includedirs):
+        def get_cflags(includedirs_):
             return _concat_if_not_empty(
-                [['-I"${%s}"' % n for n in includedirs],
+                [['-I"${%s}"' % n for n, _ in includedirs_],
                  cpp_info.cxxflags,
                  cpp_info.cflags,
                  ["-D%s" % d for d in cpp_info.defines]])
 
         def get_formmatted_dirs(field, folders, prefix_path_):
-            ret = {}
+            ret = []
             for i, directory in enumerate(folders):
                 directory = os.path.normpath(directory).replace("\\", "/")
                 n = field if i == 0 else "%s%d" % (field, (i + 1))
@@ -180,7 +180,7 @@ class _CompletePCFile(object):
                 elif directory.startswith(prefix_path_):
                     prefix = "${prefix}/"
                     directory = os.path.relpath(directory, prefix_path_).replace("\\", "/")
-                ret[n] = "%s%s" % (prefix, directory)
+                ret.append((n, "%s%s" % (prefix, directory)))
             return ret
 
         dep_name = name or get_target_namespace(dep)
