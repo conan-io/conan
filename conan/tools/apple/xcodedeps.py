@@ -29,11 +29,11 @@ class XcodeDeps(object):
     _conf_xconfig = textwrap.dedent("""\
         {% for dep in deps %}
         // Includes for {{dep}} dependency
-        # include "conan_{{dep}}.xcconfig"
+        #include "conan_{{dep}}.xcconfig"
         {% endfor %}
 
         // Include {{name}} vars
-        # include "{{vars_filename}}"
+        #include "{{vars_filename}}"
 
         // Compiler options for {{dep_name}}
         HEADER_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}] = $(inherited) $(CONAN_{{name}}_INCLUDE_DIRECTORIES)
@@ -79,7 +79,7 @@ class XcodeDeps(object):
         name = "".join("_{}".format(v) for _, v in props)
         return name.lower()
 
-    def _vars_xconfig_file(self, dep, name, cpp_info, deps, build=False):
+    def _vars_xconfig_file(self, dep, name, cpp_info):
         """
         content for conan_vars_poco_x86_release.xcconfig, containing the variables
         """
@@ -93,8 +93,8 @@ class XcodeDeps(object):
             'res_dirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.resdirs),
             'include_dirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.includedirs),
             'lib_dirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.libdirs),
-            'libs': " ".join([lib for lib in cpp_info.libs]),
-            'system_libs': " ".join([sys_dep for sys_dep in cpp_info.system_libs]),
+            'libs': " ".join("-l{}".format(lib) for lib in cpp_info.libs),
+            'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in cpp_info.system_libs),
             'frameworksdirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.frameworkdirs),
             'frameworks': " ".join(cpp_info.frameworks),
             'definitions': " ".join(cpp_info.defines),
@@ -107,7 +107,7 @@ class XcodeDeps(object):
                                       lstrip_blocks=True).render(**fields)
         return formatted_template
 
-    def _conf_xconfig_file(self, dep_name, vars_xconfig_name, deps, build=False):
+    def _conf_xconfig_file(self, dep_name, vars_xconfig_name, deps):
         """
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
@@ -132,7 +132,7 @@ class XcodeDeps(object):
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
-    def _all_xconfig_file(self, name_general, deps):
+    def _all_xconfig_file(self, deps):
         """ this is a .xcconfig file including all declared dependencies
         """
         content_multi = self._all_xconfig
@@ -152,49 +152,28 @@ class XcodeDeps(object):
         conf_name = self._config_filename()
 
         host_req = list(self._conanfile.dependencies.host.values())
-        test_req = list(self._conanfile.dependencies.test.values())
 
-        for dep in host_req + test_req:
+        for dep in host_req:
             dep_name = dep.ref.name
             dep_name = dep_name.replace(".", "_")
             cpp_info = dep.new_cpp_info.copy()
             cpp_info.aggregate_components()
             public_deps = [d.ref.name.replace(".", "_")
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
+
             # One file per configuration, with just the variables
             vars_xconfig_name = "conan_{}_vars{}.xcconfig".format(dep_name, conf_name)
-            result[vars_xconfig_name] = self._vars_xconfig_file(dep, dep_name, cpp_info, public_deps)
+            result[vars_xconfig_name] = self._vars_xconfig_file(dep, dep_name, cpp_info)
             props_name = "conan_{}{}.xcconfig".format(dep_name, conf_name)
             result[props_name] = self._conf_xconfig_file(dep_name, vars_xconfig_name, public_deps)
 
-            # The entry point for each package, it will have conditionals to the others
+            # The entry point for each package
             file_dep_name = "conan_{}.xcconfig".format(dep_name)
             dep_content = self._dep_xconfig_file(dep_name, file_dep_name, props_name)
             result[file_dep_name] = dep_content
 
-        build_req = list(self._conanfile.dependencies.build.values())
-        for dep in build_req:
-            dep_name = dep.ref.name
-            dep_name = dep_name.replace(".", "_") + "_build"
-            cpp_info = dep.new_cpp_info.copy()
-            cpp_info.aggregate_components()
-            public_deps = [d.ref.name.replace(".", "_")
-                           for r, d in dep.dependencies.direct_host.items() if r.visible]
-            # One file per configuration, with just the variables
-            vars_xconfig_name = "conan_{}_vars{}.xcconfig".format(dep_name, conf_name)
-            result[vars_xconfig_name] = self._vars_xconfig_file(dep, dep_name, cpp_info, public_deps,
-                                                                build=True)
-            props_name = "conan_{}{}.xcconfig".format(dep_name, conf_name)
-            result[props_name] = self._conf_xconfig_file(dep_name, vars_xconfig_name, public_deps,
-                                                         build=True)
-
-            # The entry point for each package, it will have conditionals to the others
-            file_dep_name = "conan_{}.xcconfig".format(dep_name)
-            dep_content = self._dep_xconfig_file(dep_name, file_dep_name, props_name)
-            result[file_dep_name] = dep_content
-
-        # Include all direct build_requires for host context. This might change
-        direct_deps = self._conanfile.dependencies.filter({"direct": True})
-        result[general_name] = self._all_xconfig_file(general_name, direct_deps)
+        # Include all direct build_requires for host context.
+        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False})
+        result[general_name] = self._all_xconfig_file(direct_deps)
 
         return result
