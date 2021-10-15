@@ -47,8 +47,8 @@ class PkgConfigDeps(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         # Public attributes
-        self.simple_pc = SimplePCFile
-        self.complete_pc = CompletePCFile
+        self.simple_pc = _SimplePCFile
+        self.complete_pc = _CompletePCFile
 
     @staticmethod
     def _get_composed_pkg_config_name(pkg_name, comp_name):
@@ -114,7 +114,7 @@ class PkgConfigDeps(object):
             save(generator_file, content)
 
 
-class CompletePCFile(object):
+class _CompletePCFile(object):
 
     @staticmethod
     def template():
@@ -204,12 +204,12 @@ class CompletePCFile(object):
             "cflags": get_cflags(includedirs),
             "requires": requires
         }
-        template = Template(CompletePCFile.template(), trim_blocks=True, lstrip_blocks=True,
+        template = Template(_CompletePCFile.template(), trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         return {dep_name + ".pc": template.render(context)}
 
 
-class SimplePCFile(object):
+class _SimplePCFile(object):
 
     @staticmethod
     def template():
@@ -231,6 +231,6 @@ class SimplePCFile(object):
             "version": dep.ref.version,
             "requires": requires
         }
-        template = Template(SimplePCFile.template(), trim_blocks=True, lstrip_blocks=True,
+        template = Template(_SimplePCFile.template(), trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         return {dep_name + ".pc": template.render(context)}
