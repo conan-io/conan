@@ -130,6 +130,35 @@ class TestPackageTest(unittest.TestCase):
                                                     "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
 
+    def test_check_version(self):
+        client = TestClient()
+        client.save({CONANFILE: GenConanfile()})
+        client.run("create . dep/1.1@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                requires = "dep/1.1"
+                def build(self):
+                    ref = self.dependencies["dep"].ref
+                    self.output.info("BUILD Dep VERSION %s" % ref.version)
+            """)
+        test_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def build(self):
+                    ref = self.dependencies["hello"].ref
+                    self.output.info("BUILD HELLO VERSION %s" % ref.version)
+                def test(self):
+                    ref = self.dependencies["hello"].ref
+                    self.output.info("TEST HELLO VERSION %s" % ref.version)
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "test_package/conanfile.py": test_conanfile})
+        client.run("create . hello/0.1@")
+        self.assertIn("hello/0.1: BUILD Dep VERSION 1.1", client.out)
+        self.assertIn("hello/0.1 (test package): BUILD HELLO VERSION 0.1", client.out)
+        self.assertIn("hello/0.1 (test package): TEST HELLO VERSION 0.1", client.out)
+
 
 class ConanTestTest(unittest.TestCase):
 

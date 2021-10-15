@@ -3,21 +3,36 @@ import os
 from conan.tools.env import Environment
 
 
-def runenv_from_cpp_info(conanfile, cpp_info, package_folder, os_name):
+def runenv_from_cpp_info(conanfile, dep, os_name):
+
     """ return an Environment deducing the runtime information from a cpp_info
     """
+    cpp_info = dep.cpp_info
+    cpp_info = cpp_info.copy()
+    cpp_info.aggregate_components()
+    pkg_folder = dep.package_folder
     dyn_runenv = Environment(conanfile)
     if cpp_info is None:  # This happens when the dependency is a private one = BINARY_SKIP
         return dyn_runenv
+
+    def _handle_paths(paths):
+        result = []
+        for p in paths:
+            abs_path = os.path.join(pkg_folder, p)
+            if os.path.exists(abs_path):
+                result.append(abs_path)
+        return result
+
     if cpp_info.bindirs:  # cpp_info.exes is not defined yet
-        dyn_runenv.prepend_path("PATH", [os.path.join(package_folder, p) for p in cpp_info.bindirs])
+        dyn_runenv.prepend_path("PATH", _handle_paths(cpp_info.bindirs))
     # If it is a build_require this will be the build-os, otherwise it will be the host-os
     if os_name and not os_name.startswith("Windows"):
         if cpp_info.libdirs:
-            dyn_runenv.prepend_path("LD_LIBRARY_PATH", [os.path.join(package_folder, p) for p in cpp_info.libdirs])
-            dyn_runenv.prepend_path("DYLD_LIBRARY_PATH", [os.path.join(package_folder, p) for p in cpp_info.libdirs])
+            libdirs = _handle_paths(cpp_info.libdirs)
+            dyn_runenv.prepend_path("LD_LIBRARY_PATH", libdirs)
+            dyn_runenv.prepend_path("DYLD_LIBRARY_PATH", libdirs)
         if cpp_info.frameworkdirs:
-            dyn_runenv.prepend_path("DYLD_FRAMEWORK_PATH", [os.path.join(package_folder, p) for p in cpp_info.frameworkdirs])
+            dyn_runenv.prepend_path("DYLD_FRAMEWORK_PATH", _handle_paths(cpp_info.frameworkdirs))
     return dyn_runenv
 
 
@@ -59,8 +74,8 @@ class VirtualRunEnv:
         for _, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
                 runenv.compose_env(dep.runenv_info)
-            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep.cpp_info, dep.package_folder, self._conanfile.settings.get_safe("os")))
-
+            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep,
+                                                    self._conanfile.settings.get_safe("os")))
         return runenv
 
     def generate(self, group="run"):

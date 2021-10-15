@@ -133,8 +133,10 @@ class VSRuntimeBlock(Block):
 
 class FPicBlock(Block):
     template = textwrap.dedent("""
-        message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
-        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+        {% if fpic %}
+        message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE={{ fpic }} (options.fPIC)")
+        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }})
+        {% endif %}
         """)
 
     def context(self):
@@ -150,7 +152,7 @@ class FPicBlock(Block):
             self._conanfile.output.warning("Toolchain: Ignoring fPIC option defined "
                                            "for a shared library")
             return None
-        return {"fpic": fpic}
+        return {"fpic": "ON" if fpic else "OFF"}
 
 
 class GLibCXXBlock(Block):
@@ -616,7 +618,7 @@ class GenericSystemBlock(Block):
         compiler = self._conanfile.settings.get_safe("compiler")
         # TODO: Check if really necessary now that conanvcvars is used
         if (generator is not None and "Ninja" in generator
-                and ("Visual" in compiler or compiler == "msvc")):
+                and (compiler is not None and "Visual" in compiler or compiler == "msvc")):
             compiler = "cl"
         else:
             compiler = None  # compiler defined by default

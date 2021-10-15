@@ -23,6 +23,7 @@ def conanfile():
     c.settings.compiler = "gcc"
     c.settings.compiler.libcxx = "libstdc++"
     c.settings_build = c.settings
+    c.settings.os = "Windows"
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()
@@ -200,3 +201,141 @@ def test_toolset(conanfile_msvc):
     assert 'Visual Studio 17 2022' in toolchain.generator
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
 
+
+@pytest.fixture
+def conanfile_linux():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.initialize(Settings({"os": ["Linux"],
+                           "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86_64"]}))
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86_64"
+    c.settings.compiler = "gcc"
+    c.settings.compiler.version = "11"
+    c.settings.compiler.cppstd = "20"
+    c.settings.os = "Linux"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    return c
+
+
+def test_no_fpic_when_not_an_option(conanfile_linux):
+    toolchain = CMakeToolchain(conanfile_linux)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' not in content
+
+
+@pytest.fixture
+def conanfile_linux_shared():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.options = {
+        "fPIC": [True, False],
+        "shared": [True, False],
+    }
+    c.default_options = {"fPIC": False, "shared": True, }
+    c.initialize(Settings({"os": ["Linux"],
+                           "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86_64"]}))
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86_64"
+    c.settings.compiler = "gcc"
+    c.settings.compiler.version = "11"
+    c.settings.compiler.cppstd = "20"
+    c.settings.os = "Linux"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    return c
+
+
+def test_no_fpic_when_shared(conanfile_linux_shared):
+    toolchain = CMakeToolchain(conanfile_linux_shared)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' not in content
+
+
+def test_fpic_when_not_shared(conanfile_linux_shared):
+    conanfile_linux_shared.options.shared = False
+    toolchain = CMakeToolchain(conanfile_linux_shared)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' in content
+
+
+@pytest.fixture
+def conanfile_windows_fpic():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.options = {"fPIC": [True, False], }
+    c.default_options = {"fPIC": True, }
+    c.initialize(Settings({"os": ["Windows"],
+                           "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86"]}))
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86"
+    c.settings.compiler = "gcc"
+    c.settings.compiler.libcxx = "libstdc++"
+    c.settings.os = "Windows"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    return c
+
+
+def test_no_fpic_on_windows(conanfile_windows_fpic):
+    toolchain = CMakeToolchain(conanfile_windows_fpic)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' not in content
+
+
+@pytest.fixture
+def conanfile_linux_fpic():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.options = {"fPIC": [True, False], }
+    c.default_options = {"fPIC": False, }
+    c.initialize(Settings({"os": ["Linux"],
+                           "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86_64"]}))
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86_64"
+    c.settings.compiler = "gcc"
+    c.settings.compiler.version = "11"
+    c.settings.compiler.cppstd = "20"
+    c.settings.os = "Linux"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    return c
+
+
+def test_fpic_disabled(conanfile_linux_fpic):
+    conanfile_linux_fpic.options.fPIC = False
+    toolchain = CMakeToolchain(conanfile_linux_fpic)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE OFF' in content
+
+
+def test_fpic_enabled(conanfile_linux_fpic):
+    conanfile_linux_fpic.options.fPIC = True
+    toolchain = CMakeToolchain(conanfile_linux_fpic)
+    content = toolchain.content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE ON' in content

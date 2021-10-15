@@ -1,5 +1,4 @@
 import mock
-import pytest
 from mock import Mock
 
 from conan.tools.cmake import CMakeDeps
@@ -11,10 +10,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 
 
-@pytest.mark.xfail(reason="ConanFile.dependencies has changed")
-@pytest.mark.parametrize("using_properties", [True, False])
-def test_cpp_info_name_cmakedeps(using_properties):
-    conanfile = ConanFile(None)
+def test_cpp_info_name_cmakedeps():
+    conanfile = ConanFile(Mock(), None)
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -26,12 +23,8 @@ def test_cpp_info_name_cmakedeps(using_properties):
     conanfile.settings.arch = "x86"
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
-    if using_properties:
-        cpp_info.set_property("cmake_target_name", "MySuperPkg1")
-        cpp_info.set_property("cmake_file_name", "ComplexFileName1")
-    else:
-        cpp_info.names["cmake_find_package_multi"] = "MySuperPkg1"
-        cpp_info.filenames["cmake_find_package_multi"] = "ComplexFileName1"
+    cpp_info.set_property("cmake_target_name", "MySuperPkg1")
+    cpp_info.set_property("cmake_file_name", "ComplexFileName1")
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
@@ -52,10 +45,8 @@ def test_cpp_info_name_cmakedeps(using_properties):
                in files["ComplexFileName1-release-x86-data.cmake"]
 
 
-@pytest.mark.xfail(reason="ConanFile.dependencies has changed")
-@pytest.mark.parametrize("using_properties", [True, False])
-def test_cpp_info_name_cmakedeps_components(using_properties):
-    conanfile = ConanFile(None)
+def test_cpp_info_name_cmakedeps_components():
+    conanfile = ConanFile(Mock(), None)
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -67,14 +58,9 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
     conanfile.settings.arch = "x64"
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
-    if using_properties:
-        cpp_info.set_property("cmake_target_name", "GlobakPkgName1")
-        cpp_info.components["mycomp"].set_property("cmake_target_name", "MySuperPkg1")
-        cpp_info.set_property("cmake_file_name", "ComplexFileName1")
-    else:
-        cpp_info.names["cmake_find_package_multi"] = "GlobakPkgName1"
-        cpp_info.components["mycomp"].names["cmake_find_package_multi"] = "MySuperPkg1"
-        cpp_info.filenames["cmake_find_package_multi"] = "ComplexFileName1"
+    cpp_info.set_property("cmake_target_name", "GlobakPkgName1")
+    cpp_info.components["mycomp"].set_property("cmake_target_name", "MySuperPkg1")
+    cpp_info.set_property("cmake_file_name", "ComplexFileName1")
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
@@ -98,7 +84,6 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
                in files["ComplexFileName1-debug-x64-data.cmake"]
 
 
-@pytest.mark.xfail(reason="ConanFile.dependencies has changed")
 def test_cmake_deps_links_flags():
     # https://github.com/conan-io/conan/issues/8703
     conanfile = ConanFile(None)

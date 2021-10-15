@@ -48,7 +48,7 @@ class ClientCache(object):
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
+        self._store_folder = os.path.join(self.cache_folder, "p")
 
         mkdir(self._store_folder)
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')

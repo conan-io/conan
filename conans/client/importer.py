@@ -157,13 +157,14 @@ class _FileImporter(object):
         for dep in self._conanfile.dependencies.host.values():
             if root_package:
                 if fnmatch.fnmatch(dep.ref.name, root_package):
-                    pkgs.append((dep.ref.name, dep.cpp_info, dep.package_folder))
+                    pkgs.append((dep.ref.name, dep.package_folder, dep.cpp_info))
             else:
-                pkgs.append((dep.ref.name, dep.cpp_info, dep.package_folder))
+                pkgs.append((dep.ref.name, dep.package_folder, dep.cpp_info))
 
         symbolic_dir_name = src[1:] if src.startswith("@") else None
         src_dirs = [src]  # hardcoded src="bin" origin
-        for pkg_name, cpp_info, package_folder in pkgs:
+        # FIXME: access of cpp_info.rootpath, use package_folder better if possible.
+        for pkg_name, package_folder, cpp_info in pkgs:
             final_dst_path = os.path.join(real_dst_folder, pkg_name) if folder else real_dst_folder
             file_copier = FileCopier([package_folder], final_dst_path)
             if symbolic_dir_name:  # Syntax for package folder symbolic names instead of hardcoded

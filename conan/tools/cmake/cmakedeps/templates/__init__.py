@@ -109,7 +109,7 @@ class CMakeDepsFileTemplate(object):
                                  "package requirement".format(name=req.ref.name, cname=comp_name))
         if self.find_module_mode:
             ret = req.cpp_info.components[comp_name].get_property("cmake_module_target_name",
-                                                                      "CMakeDeps")
+                                                                  "CMakeDeps")
             if ret:
                 return ret
         ret = req.cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
