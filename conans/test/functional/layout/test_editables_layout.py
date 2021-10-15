@@ -17,7 +17,9 @@ def test_cpp_info_editable():
         self.cpp.build.includedirs = ["my_include"]
         self.cpp.build.libdirs = ["my_libdir"]
         self.cpp.build.libs = ["hello"]
-        self.cpp.build.frameworkdirs = []  # Empty list is also explicit priority declaration
+
+        # This should overwrite the cpp_info and remove the default values
+        self.cpp.build.frameworkdirs = []
 
         self.cpp.source.cxxflags = ["my_cxx_flag"]
         self.cpp.source.includedirs = ["my_include_source"]
@@ -214,4 +216,3 @@ def test_cpp_info_components_editable():
     assert "**VAR libs:['hello_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
-

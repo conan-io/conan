@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANFILE

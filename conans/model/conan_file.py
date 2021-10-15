@@ -8,7 +8,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Patterns, Infos
-from conans.model.new_build_info import from_old_cppinfo
+from conans.model.build_info import CppInfo
 from conans.model.options import Options
 from conans.model.requires import Requirements
 from conans.paths import RUN_LOG_NAME
@@ -76,10 +76,8 @@ class ConanFile:
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None))
 
-        self.cpp_info = None  # Will be initialized at processing time
         # user declared variables
         self.user_info = None
-        self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
 
         if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
@@ -101,13 +99,6 @@ class ConanFile:
         self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
         self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         self.patterns.build.bin = ["*.exe", "*.dll"]
-
-        self.cpp.package.includedirs = ["include"]
-        self.cpp.package.libdirs = ["lib"]
-        self.cpp.package.bindirs = ["bin"]
-        self.cpp.package.resdirs = ["res"]
-        self.cpp.package.builddirs = [""]
-        self.cpp.package.frameworkdirs = ["Frameworks"]
 
     @property
     def output(self):
@@ -158,10 +149,12 @@ class ConanFile:
         self.settings = settings
 
     @property
-    def new_cpp_info(self):
-        if not self._conan_new_cpp_info:
-            self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
-        return self._conan_new_cpp_info
+    def cpp_info(self):
+        return self.cpp.package
+
+    @cpp_info.setter
+    def cpp_info(self, value):
+        self.cpp.package = value
 
     @property
     def source_folder(self):

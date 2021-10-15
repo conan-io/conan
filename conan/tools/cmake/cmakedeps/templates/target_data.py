@@ -199,7 +199,6 @@ class DepsCppCmake(object):
         self.res_paths = join_paths(cpp_info.resdirs)
         self.bin_paths = join_paths(cpp_info.bindirs)
         self.build_paths = join_paths(cpp_info.builddirs)
-        self.src_paths = join_paths(cpp_info.srcdirs)
         self.framework_paths = join_paths(cpp_info.frameworkdirs)
         self.libs = join_flags(" ", cpp_info.libs)
         self.system_libs = join_flags(" ", cpp_info.system_libs)
