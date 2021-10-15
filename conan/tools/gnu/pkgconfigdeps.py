@@ -75,7 +75,7 @@ class PkgConfigDeps(object):
 
     def get_components_pc_files(self, dep):
         """Get all the *.pc files for the dependency and each of its components"""
-        pc_content = {}
+        pc_files = {}
         pkg_name = get_target_namespace(dep)
         comp_names = []
         # Loop through all the dependency components
@@ -85,27 +85,27 @@ class PkgConfigDeps(object):
             comp_requires_names = self._get_requires_names(dep, comp_cpp_info)
             pkg_comp_name = self._get_composed_pkg_config_name(pkg_name, comp_name)
             # Save the *.pc file for this component
-            pc_content.update(self.complete_pc.content(
+            pc_files.update(self.complete_pc.content(
                 self._conanfile, dep, comp_requires_names,
                 name=pkg_comp_name, cpp_info=comp_cpp_info))
         # Adding the dependency *.pc file (including its components as requires if any)
         if pkg_name not in comp_names:
             pkg_requires = [self._get_composed_pkg_config_name(pkg_name, i) for i in comp_names]
-            pc_content.update(self.simple_pc.content(dep, pkg_requires, name=pkg_name,
-                                                     description=self._conanfile.description))
-        return pc_content
+            pc_files.update(self.simple_pc.content(dep, pkg_requires, name=pkg_name,
+                                                   description=self._conanfile.description))
+        return pc_files
 
     @property
     def content(self):
-        ret = {}
+        pc_files = {}
         host_req = self._conanfile.dependencies.host
         for require, dep in host_req.items():
             if dep.cpp_info.has_components:
-                ret.update(self.get_components_pc_files(dep))
+                pc_files.update(self.get_components_pc_files(dep))
             else:
                 requires = self._get_requires_names(dep, dep.cpp_info)
-                ret.update(self.complete_pc.content(self._conanfile, dep, requires))
-        return ret
+                pc_files.update(self.complete_pc.content(self._conanfile, dep, requires))
+        return pc_files
 
     def generate(self):
         # Current directory is the generators_folder
