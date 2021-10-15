@@ -140,7 +140,8 @@ class XcodeDeps(object):
         return content_multi
 
     def _all_xconfig_file(self, deps):
-        """ this is a .xcconfig file including all declared dependencies
+        """
+        this is a .xcconfig file including all declared dependencies
         """
         content_multi = self._all_xconfig
 
