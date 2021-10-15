@@ -65,15 +65,15 @@ class BazelDeps(object):
 
         """)
 
-        dependency.new_cpp_info.aggregate_components()
+        dependency.cpp_info.aggregate_components()
 
-        if not dependency.new_cpp_info.libs and not dependency.new_cpp_info.includedirs:
+        if not dependency.cpp_info.libs and not dependency.cpp_info.includedirs:
             return None
 
         headers = []
         includes = []
 
-        for path in dependency.new_cpp_info.includedirs:
+        for path in dependency.cpp_info.includedirs:
             headers.append('"{}/**"'.format(path))
             includes.append('"{}"'.format(path))
 
@@ -81,18 +81,18 @@ class BazelDeps(object):
         includes = ', '.join(includes)
 
         defines = ('"{}"'.format(define.replace('"', "'"))
-                   for define in dependency.new_cpp_info.defines)
+                   for define in dependency.cpp_info.defines)
         defines = ', '.join(defines)
 
         linkopts = []
-        for linkopt in dependency.new_cpp_info.system_libs:
+        for linkopt in dependency.cpp_info.system_libs:
             linkopts.append('"-l{}"'.format(linkopt))
         linkopts = ', '.join(linkopts)
 
         context = {
             "name": dependency.ref.name,
-            "libs": dependency.new_cpp_info.libs,
-            "libdir": dependency.new_cpp_info.libdirs[0],
+            "libs": dependency.cpp_info.libs,
+            "libdir": dependency.cpp_info.libdirs[0],
             "headers": headers,
             "includes": includes,
             "defines": defines,
