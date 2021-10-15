@@ -4,7 +4,6 @@ from conan.tools.env import Environment
 
 
 def runenv_from_cpp_info(conanfile, dep, os_name):
-
     """ return an Environment deducing the runtime information from a cpp_info
     """
     cpp_info = dep.cpp_info
@@ -76,6 +75,7 @@ class VirtualRunEnv:
                 runenv.compose_env(dep.runenv_info)
             runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep,
                                                     self._conanfile.settings.get_safe("os")))
+
         return runenv
 
     def generate(self, group="run"):
