@@ -32,11 +32,28 @@ render_cpp_info = textwrap.dedent("""
     * CXX_FLAGS: {{ join_list_sources(cpp_info.cxxflags) }}
     {%- endif %}
     {%- endmacro %}
+
+    {%- macro get_cmake_package_name(cpp_info) %}
+        {%- set package_name = cpp_info.get_property("cmake_target_name", "CMakeDeps") %}
+        {%- if not package_name -%}
+            {%- set package_name = cpp_info.get_name("cmake_find_package") %}
+        {%- endif -%}
+        {{ package_name }}
+    {%- endmacro %}
+
+    {%- macro get_cmake_package_filename(cpp_info) %}
+        {%- set package_filename = cpp_info.get_property("cmake_file_name", "CMakeDeps") %}
+        {%- if not package_filename -%}
+            {%- set package_filename = cpp_info.get_filename("cmake_find_package") %}
+        {%- endif -%}
+        {{ package_filename }}
+    {%- endmacro %}
 """)
 
 buildsystem_cmake_tpl = textwrap.dedent("""
-    {% set cmake_find_package_name = cpp_info.get_name("cmake_find_package") %}
-    {% set cmake_find_package_filename = cpp_info.get_filename("cmake_find_package") %}
+    {%- from 'render_cpp_info' import get_cmake_package_name, get_cmake_package_filename -%}
+    {%- set cmake_find_package_name = get_cmake_package_name(cpp_info) -%}
+    {%- set cmake_find_package_filename = get_cmake_package_filename(cpp_info) -%}
 
     ### CMake
 
