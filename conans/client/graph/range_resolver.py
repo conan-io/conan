@@ -89,9 +89,10 @@ def range_satisfies(version_range, version):
 
 class RangeResolver(object):
 
-    def __init__(self, cache, remote_manager):
-        self._cache = cache
-        self._remote_manager = remote_manager
+    def __init__(self, conan_app):
+        self._cache = conan_app.cache
+        self._remote_manager = conan_app.remote_manager
+        self._conan_app = conan_app
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self._result = []
@@ -112,7 +113,7 @@ class RangeResolver(object):
     def clear_output(self):
         self._result = []
 
-    def resolve(self, require, base_conanref, update, remotes):
+    def resolve(self, require, base_conanref):
         version_range = require.version_range
         if version_range is None:
             return require.ref
@@ -124,10 +125,8 @@ class RangeResolver(object):
         remote_name = None
         remote_resolved_ref = None
         resolved_ref = self._resolve_local(search_ref, version_range)
-        if not resolved_ref or update:
-            remote_resolved_ref, remote_name = self._resolve_remote(search_ref, version_range,
-                                                                    remotes,
-                                                                    check_all_remotes=update)
+        if not resolved_ref or self._conan_app.update:
+            remote_resolved_ref, remote_name = self._resolve_remote(search_ref, version_range)
             resolved_ref = self._resolve_version(version_range, [resolved_ref, remote_resolved_ref])
 
         origin = f"remote '{remote_name}'" if resolved_ref == remote_resolved_ref and remote_name \
@@ -153,16 +152,18 @@ class RangeResolver(object):
         if local_found:
             return self._resolve_version(version_range, local_found)
 
-    def _search_and_resolve_remotes(self, search_ref, version_range, remotes, check_all_remotes):
+    def _search_and_resolve_remotes(self, search_ref, version_range):
         results = []
-        for remote in remotes.values():
-            if not remotes.selected or remote == remotes.selected:
+        remotes = self._conan_app.active_remotes
+        selected_remote = self._conan_app.selected_remote
+        for remote in remotes:
+            if not selected_remote or remote == selected_remote:
                 remote_results = self._search_remote_recipes(remote, search_ref)
                 remote_results = [ref for ref in remote_results
                                   if ref.user == search_ref.user
                                   and ref.channel == search_ref.channel]
                 resolved_version = self._resolve_version(version_range, remote_results)
-                if resolved_version and not check_all_remotes:
+                if resolved_version and not self._conan_app.update:
                     return resolved_version, remote.name
                 elif resolved_version:
                     results.append({"remote": remote.name,
@@ -176,10 +177,9 @@ class RangeResolver(object):
         else:
             return None, None
 
-    def _resolve_remote(self, search_ref, version_range, remotes, check_all_remotes):
+    def _resolve_remote(self, search_ref, version_range):
         # Searching for just the name is much faster in remotes like Artifactory
-        resolved_ref, remote_name = self._search_and_resolve_remotes(search_ref, version_range,
-                                                                     remotes, check_all_remotes)
+        resolved_ref, remote_name = self._search_and_resolve_remotes(search_ref, version_range)
         if resolved_ref:
             self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
         else:

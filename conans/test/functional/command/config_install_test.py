@@ -168,7 +168,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(str(config.args), args)
         settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
-        cache_remotes = self.client.cache.registry.load_remotes()
+        cache_remotes = self.client.cache.remotes_registry.load_remotes()
         self.assertEqual(list(cache_remotes.values()), [
             Remote("myrepo1", "https://myrepourl.net", False, False),
             Remote("my-repo-2", "https://myrepo2.com", True, False),

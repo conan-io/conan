@@ -145,7 +145,7 @@ class RemoteRegistry(object):
             remotes = _Remotes()
             remote = Remote(CONAN_CENTER_REMOTE_NAME, "https://center.conan.io", True, False)
             remotes.add(remote)
-            self._save_remotes(remotes)
+            self.save_remotes(remotes)
 
     def reset_remotes(self):
         if os.path.exists(self._filename):
@@ -177,6 +177,10 @@ class RemoteRegistry(object):
     def list(self):
         return self._load_remotes().items()
 
+    @property
+    def default(self):
+        return self.list()[0]
+
     def read(self, remote_name):
         remotes = self._load_remotes()
         ret = remotes.get_by_name(remote_name)
@@ -188,28 +192,28 @@ class RemoteRegistry(object):
         self._validate_url(remote.url)
         remotes = self._load_remotes()
         remotes.add(remote)
-        self._save_remotes(remotes)
+        self.save_remotes(remotes)
 
     def remove(self, remote):
         remotes = self._load_remotes()
         remotes.remove(remote)
-        self._save_remotes(remotes)
+        self.save_remotes(remotes)
 
     def update(self, remote):
         self._validate_url(remote.url)
         remotes = self._load_remotes()
         remotes.update(remote)
-        self._save_remotes(remotes)
+        self.save_remotes(remotes)
 
     def move(self, remote, index):
         remotes = self._load_remotes()
         remotes.move(remote, new_index=index)
-        self._save_remotes(remotes)
+        self.save_remotes(remotes)
 
     def rename(self, remote, new_name):
         remotes = self._load_remotes()
         remotes.rename(remote, new_name)
-        self._save_remotes(remotes)
+        self.save_remotes(remotes)
 
-    def _save_remotes(self, remotes):
+    def save_remotes(self, remotes):
         save(self._filename, self._dumps_json(remotes))

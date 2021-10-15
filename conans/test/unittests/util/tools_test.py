@@ -233,35 +233,6 @@ class HelloConan(ConanFile):
             client.run("install .")
             client.run("build .")
 
-    def test_global_tools_overrided(self):
-        client = TestClient()
-
-        conanfile = """
-from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def build(self):
-        assert(tools._global_requester != None)
-        """
-        client.save({"conanfile.py": conanfile})
-
-        client.run("install .")
-        client.run("build .")
-
-        # Not test the real commmand get_command if it's setting the module global vars
-        tmp = temp_folder()
-        conf = get_default_client_conf().replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
-        os.mkdir(os.path.join(tmp, ".conan"))
-        save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
-        with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            conan_api = ConanAPIV1()
-        conan_api.remote_list()
-        from conans.tools import _global_requester
-        self.assertEqual(_global_requester.proxies, {"http": "http://myproxy.com"})
-
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):
             with tools.environment_append({"A": "1", "B": "2"}):

@@ -5,43 +5,43 @@ from conans.errors import NotFoundException, RecipeNotFoundException, PackageNot
 from multiprocessing.pool import ThreadPool
 
 
-def download(app, ref, package_ids, remote, recipe, remotes):
+def download(app, ref, package_ids, recipe):
     remote_manager, cache, loader = app.remote_manager, app.cache, app.loader
     hook_manager = app.hook_manager
     assert(isinstance(ref, ConanFileReference))
     scoped_output = ScopedOutput(str(ref), ConanOutput())
 
-    hook_manager.execute("pre_download", reference=ref, remote=remote)
+    hook_manager.execute("pre_download", reference=ref, remote=app.selected_remote)
 
     try:
         if not ref.revision:
-            ref, _ = remote_manager.get_recipe(ref, remote)
+            ref, _ = remote_manager.get_recipe(ref, app.selected_remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref)
     else:
         if not cache.exists_rrev(ref):
-            ref = remote_manager.get_recipe(ref, remote)
+            ref = remote_manager.get_recipe(ref, app.selected_remote)
 
     layout = cache.ref_layout(ref)
     conan_file_path = layout.conanfile()
     conanfile = loader.load_basic(conan_file_path, display=ref)
 
     # Download the sources too, don't be lazy
-    retrieve_exports_sources(remote_manager, layout, conanfile, ref, remotes)
+    retrieve_exports_sources(remote_manager, layout, conanfile, ref, app.active_remotes)
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
             scoped_output.info("Getting the complete package list from '%s'..." % ref.full_str())
-            packages_props = remote_manager.search_packages(remote, ref, None)
+            packages_props = remote_manager.search_packages(app.selected_remote, ref, None)
             package_ids = list(packages_props.keys())
             if not package_ids:
                 scoped_output.warning("No remote binary packages found in remote")
 
         parallel = cache.config.parallel_download
         _download_binaries(conanfile, ref, package_ids, cache, remote_manager,
-                           remote, scoped_output, parallel)
+                           app.selected_remote, scoped_output, parallel)
     hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,
-                         remote=remote)
+                         remote=app.selected_remote)
 
 
 def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote, scoped_output,

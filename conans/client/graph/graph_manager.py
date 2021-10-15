@@ -45,8 +45,7 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
-                   root_ref, build_mode, update,
-                   remotes, apply_build_requires=True, lockfile_node_id=None,
+                   root_ref, build_mode, apply_build_requires=True, lockfile_node_id=None,
                    is_build_require=False, require_overrides=None):
         """ main entry point to compute a full dependency graph
         """
@@ -58,8 +57,7 @@ class GraphManager(object):
                                          require_overrides)
         profile_host_build_requires = profile_host.build_requires
         builder = DepsGraphBuilder(self._proxy, self._loader, self._resolver)
-        deps_graph = builder.load_graph(root_node, update, remotes, profile_host,
-                                        profile_build, graph_lock)
+        deps_graph = builder.load_graph(root_node, profile_host, profile_build, graph_lock)
         version_ranges_output = self._resolver.output
         if version_ranges_output:
             self._output.success("Version ranges solved")
@@ -70,7 +68,7 @@ class GraphManager(object):
 
         # TODO: Move binary_analyzer elsewhere
         if not deps_graph.error:
-            self._binary_analyzer.evaluate_graph(deps_graph, build_mode, update, remotes)
+            self._binary_analyzer.evaluate_graph(deps_graph, build_mode)
 
         return deps_graph
 

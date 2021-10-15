@@ -12,6 +12,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
+from conans.errors import ConanException
 from conans.tools import set_global_instances
 from conans.util.log import configure_logger
 
@@ -48,25 +49,38 @@ class ConanApp(object):
                                   self.config.log_run_to_output)
 
         self.proxy = ConanProxy(self)
-        self.range_resolver = RangeResolver(self.cache, self.remote_manager)
+        self.range_resolver = RangeResolver(self)
 
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.runner, self.pyreq_loader, self.requester)
-        self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.remote_manager)
+        self.binaries_analyzer = GraphBinariesAnalyzer(self)
         self.graph_manager = GraphManager(self.cache, self.loader, self.proxy, self.range_resolver,
                                           self.binaries_analyzer)
 
+        # Remotes
         self.selected_remotes = []
+        self.active_remotes = []
+        self.all_remotes = []
         self.update = False
 
+    @property
+    def selected_remote(self):
+        # FIXME: To ease the migration
+        return self.selected_remotes[0] if len(self.selected_remotes) == 1 else None
+
     def load_remotes(self, remote_name=None, update=False):
+        # FIXME: Receive multiple remotes for the commands supporting it
         remotes = self.cache.remotes_registry.list()
 
         if remote_name:
             self.selected_remotes.append(self.cache.remotes_registry.read(remote_name))
-        else:
-            for r in remotes:
-                self.selected_remotes.append(r)
+
+        self.active_remotes = [r for r in remotes if not r.disabled]
+        self.all_remotes = remotes
         self.update = update
-        self.pyreq_loader.enable_remotes(update=update, remotes=self.selected_remotes)
-        return remotes
+
+    def get_active_remote_by_name(self, remote_name):
+        ret = list(filter(lambda x: x.name == remote_name, self.active_remotes))
+        if not ret:
+            raise ConanException("There is no active remote named '{}'".format(remote_name))
+        return ret[0]

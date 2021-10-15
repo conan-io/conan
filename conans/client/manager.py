@@ -13,7 +13,7 @@ from conans.model.ref import ConanFileReference
 
 
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
-                 graph_lock, root_ref, remotes=None, build_modes=None, update=False, generators=None,
+                 graph_lock, root_ref, build_modes=None, generators=None,
                  no_imports=False, create_reference=None, lockfile_node_id=None,
                  is_build_require=False, require_overrides=None,
                  conanfile_path=None, test=None):
@@ -39,7 +39,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     out.info(profile_build.dumps())
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host, profile_build,
-                                          graph_lock, root_ref, build_modes, update, remotes,
+                                          graph_lock, root_ref, build_modes, app.active_remotes,
                                           lockfile_node_id=lockfile_node_id,
                                           is_build_require=is_build_require,
                                           require_overrides=require_overrides)
@@ -58,8 +58,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     installer = BinaryInstaller(app)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
     build_modes = BuildMode(build_modes)
-    installer.install(deps_graph, remotes, build_modes, update, profile_host, profile_build,
-                      graph_lock)
+    installer.install(deps_graph, build_modes, profile_host, profile_build, graph_lock)
 
     graph_lock.complete_matching_prevs()
 

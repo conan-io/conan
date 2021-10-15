@@ -40,7 +40,7 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
 
     try:
         sources_remote = None
-        for r in remotes.values():
+        for r in remotes:
             sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, r)
             if sources_remote:
                 break

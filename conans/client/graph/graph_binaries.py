@@ -12,9 +12,10 @@ from conans.model.ref import PackageReference
 
 class GraphBinariesAnalyzer(object):
 
-    def __init__(self, cache, remote_manager):
-        self._cache = cache
-        self._remote_manager = remote_manager
+    def __init__(self, conan_app):
+        self._app = conan_app
+        self._cache = conan_app.cache
+        self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
 
@@ -51,8 +52,8 @@ class GraphBinariesAnalyzer(object):
     # otherwise if we did not pin a remote:
     # - if not --update: get the first package found
     # - if --update: get the latest remote searching in all of them
-    def _get_package_from_remotes(self, node, pref, remotes, update):
-        remote = remotes.selected
+    def _get_package_from_remotes(self, node, pref):
+        remote = self._app.selected_remote
         if remote:
             try:
                 prev, prev_time = self._remote_manager.get_latest_package_revision_with_time(pref,
@@ -64,16 +65,16 @@ class GraphBinariesAnalyzer(object):
                 raise
 
         results = []
-        for r in remotes.values():
+        for r in self._app.active_remotes:
             try:
                 latest_prev, latest_time = self._remote_manager.get_latest_package_revision(pref, r)
                 results.append({'prev': latest_prev, 'time': latest_time, 'remote': r})
-                if len(results) > 0 and not update:
+                if len(results) > 0 and not self._app.update:
                     break
             except NotFoundException:
                 pass
 
-        if not remotes and update:
+        if not self._app.active_remotes and self._app.update:
             node.conanfile.output.warning("Can't update, there are no remotes configured or enabled")
 
         if len(results) > 0:
@@ -100,7 +101,7 @@ class GraphBinariesAnalyzer(object):
             return True
         self._evaluated[pref] = [node]
 
-    def _evaluate_node(self, node, build_mode, update, remotes):
+    def _evaluate_node(self, node, build_mode):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
         assert node.package_id != PACKAGE_ID_UNKNOWN, "Node.package_id shouldn't be Unknown"
@@ -110,7 +111,7 @@ class GraphBinariesAnalyzer(object):
         locked = node.graph_lock_node
         if locked and locked.package_id and locked.package_id != PACKAGE_ID_UNKNOWN:
             pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
-            self._process_node(node, pref, build_mode, update, remotes)
+            self._process_node(node, pref, build_mode)
             if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                 node.binary = BINARY_BUILD
             if node.binary == BINARY_BUILD:
@@ -133,7 +134,7 @@ class GraphBinariesAnalyzer(object):
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             assert node.binary is None, "Node.binary should be None if not locked"
             pref = PackageReference(node.ref, node.package_id)
-            self._process_node(node, pref, build_mode, update, remotes)
+            self._process_node(node, pref, build_mode)
             if node.binary in (BINARY_MISSING, BINARY_INVALID):
                 if node.conanfile.compatible_packages:
                     compatible_build_mode = BuildMode(None)
@@ -146,7 +147,7 @@ class GraphBinariesAnalyzer(object):
                         pref = PackageReference(node.ref, package_id)
                         node.binary = None  # Invalidate it
                         # NO Build mode
-                        self._process_node(node, pref, compatible_build_mode, update, remotes)
+                        self._process_node(node, pref, compatible_build_mode)
                         assert node.binary is not None
                         if node.binary not in (BINARY_MISSING, ):
                             node.conanfile.output.info("Main binary package '%s' missing. Using "
@@ -173,7 +174,7 @@ class GraphBinariesAnalyzer(object):
             node._package_id = PACKAGE_ID_INVALID  # Fixme: Hack
             node.binary = BINARY_INVALID
 
-    def _process_node(self, node, pref, build_mode, update, remotes):
+    def _process_node(self, node, pref, build_mode):
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node, pref):
             return
@@ -200,7 +201,7 @@ class GraphBinariesAnalyzer(object):
 
         if not cache_latest_prev:
             try:
-                remote, remote_prev, prev_time = self._get_package_from_remotes(node, pref, remotes, update)
+                remote, remote_prev, prev_time = self._get_package_from_remotes(node, pref)
             except NotFoundException:
                 node.binary = BINARY_MISSING
                 node.prev = None
@@ -212,10 +213,9 @@ class GraphBinariesAnalyzer(object):
         else:
             package_layout = self._cache.pkg_layout(cache_latest_prev)
             self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
-            if update:
+            if self._app.update:
                 try:
-                    remote, remote_prev, prev_time = self._get_package_from_remotes(node, pref,
-                                                                                    remotes, update)
+                    remote, remote_prev, prev_time = self._get_package_from_remotes(node, pref)
                 except NotFoundException:
                     output.warning("Can't update, no package in remote")
                 except NoRemoteAvailable:
@@ -251,7 +251,7 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(str(conanfile), "layout"):
                 conanfile.layout()
 
-    def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
+    def evaluate_graph(self, deps_graph, build_mode, nodes_subset=None, root=None):
         build_mode = BuildMode(build_mode)
         assert isinstance(build_mode, BuildMode)
 
@@ -267,7 +267,7 @@ class GraphBinariesAnalyzer(object):
                 # annotate pattern, so unused patterns in --build are not displayed as errors
                 build_mode.forced(node.conanfile, node.ref)
                 continue
-            self._evaluate_node(node, build_mode, update, remotes)
+            self._evaluate_node(node, build_mode)
 
         self._skip_binaries(deps_graph)
 
@@ -288,7 +288,7 @@ class GraphBinariesAnalyzer(object):
             if node not in required_nodes:
                 node.binary = BINARY_SKIP
 
-    def reevaluate_node(self, node, remotes, build_mode, update):
+    def reevaluate_node(self, node, build_mode):
         """ reevaluate the node is necessary when there is some PACKAGE_ID_UNKNOWN due to
         package_revision_mode
         """
@@ -302,7 +302,7 @@ class GraphBinariesAnalyzer(object):
             return
         assert node.package_id != PACKAGE_ID_UNKNOWN
         node.binary = None  # Necessary to invalidate so it is properly evaluated
-        self._evaluate_node(node, build_mode, update, remotes)
+        self._evaluate_node(node, build_mode)
         output.info("Binary for updated ID from: %s" % node.binary)
         if node.binary == BINARY_BUILD:
             output.info("Binary for the updated ID has to be built")

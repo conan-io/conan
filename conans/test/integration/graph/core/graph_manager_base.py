@@ -145,6 +145,8 @@ class GraphManagerTest(unittest.TestCase):
             profile_host.build_requires = profile_build_requires
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
+        # FIXME: This was hardcoding the remotes for the graph_manager and the binary_installer
+        #        Why? Can it be solved without hacking?
         update = False
         remotes = []
         build_mode = []  # Means build all
@@ -152,13 +154,12 @@ class GraphManagerTest(unittest.TestCase):
         app = self._get_app()
 
         deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
-                                                  None, ref, build_mode, update,
-                                                  remotes)
+                                                  None, ref, build_mode)
         if install:
             deps_graph.report_graph_error()
             binary_installer = BinaryInstaller(app)
             build_mode = BuildMode(build_mode)
-            binary_installer.install(deps_graph, None, build_mode, update, profile_host=profile_host,
+            binary_installer.install(deps_graph, build_mode, profile_host=profile_host,
                                      profile_build=profile_build, graph_lock=None)
         return deps_graph
 

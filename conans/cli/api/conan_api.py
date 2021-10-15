@@ -108,30 +108,24 @@ class ConanAPIV2(object):
     @api_method
     def get_active_remotes(self, remote_names):
         app = ConanApp(self.cache_folder)
-        remotes = app.cache.registry.load_remotes()
-        all_remotes = remotes.all_values()
+        app.load_remotes()
 
-        if not all_remotes:
+        if not app.all_remotes:
             raise ConanException("The remotes registry is empty. "
                                  "Please add at least one valid remote.")
         # If no remote is specified, search in all of them
         if not remote_names:
             # Exclude disabled remotes
-            all_remotes = [remote for remote in all_remotes if not remote.disabled]
-            return all_remotes
+            return app.active_remotes
 
-        active_remotes = []
-        for remote_name in remote_names:
-            remote = remotes[remote_name]
-            active_remotes.append(remote)
-
+        active_remotes = list(filter(lambda x: x.name in remote_names, app.active_remotes))
         return active_remotes
 
     @api_method
     def search_local_recipes(self, query):
         app = ConanApp(self.cache_folder)
-        remotes = app.cache.registry.load_remotes()
-        search = Search(app.cache, app.remote_manager, remotes)
+        app.load_remotes()
+        search = Search(app)
         references = search.search_local_recipes(query)
         results = []
         for reference in references:
@@ -145,8 +139,8 @@ class ConanAPIV2(object):
     @api_method
     def search_remote_recipes(self, query, remote):
         app = ConanApp(self.cache_folder)
-        remotes = app.cache.registry.load_remotes()
-        search = Search(app.cache, app.remote_manager, remotes)
+        app.load_remotes(remote_name=remote.name)
+        search = Search(app)
         results = []
         remote_references = search.search_remote_recipes(query, remote.name)
         for remote_name, references in remote_references.items():
