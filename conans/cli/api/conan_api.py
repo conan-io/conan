@@ -106,7 +106,7 @@ class ConanAPIV2(object):
         return {}
 
     @api_method
-    def get_active_remotes(self, remote_names):
+    def get_enabled_remotes(self, remote_names):
         app = ConanApp(self.cache_folder)
         app.load_remotes()
 
@@ -116,10 +116,10 @@ class ConanAPIV2(object):
         # If no remote is specified, search in all of them
         if not remote_names:
             # Exclude disabled remotes
-            return app.active_remotes
+            return app.enabled_remotes
 
-        active_remotes = list(filter(lambda x: x.name in remote_names, app.active_remotes))
-        return active_remotes
+        enabled_remotes = list(filter(lambda x: x.name in remote_names, app.enabled_remotes))
+        return enabled_remotes
 
     @api_method
     def search_local_recipes(self, query):

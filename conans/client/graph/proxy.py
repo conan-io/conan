@@ -104,7 +104,7 @@ class ConanProxy(object):
         scoped_output = ScopedOutput(str(reference), ConanOutput())
 
         results = []
-        for remote in self._conan_app.active_remotes:
+        for remote in self._conan_app.enabled_remotes:
             scoped_output.info(f"Checking remote: {remote.name}")
             try:
                 rrev, rrev_time = self._remote_manager.get_latest_recipe_revision_with_time(reference,
@@ -151,7 +151,7 @@ class ConanProxy(object):
                 raise exc
 
         scoped_output.info("Not found in local cache, looking in remotes...")
-        remotes = self._conan_app.active_remotes
+        remotes = self._conan_app.enabled_remotes
         if not remotes:
             raise ConanException("No remote defined")
 

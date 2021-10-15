@@ -488,7 +488,7 @@ class CmdUpload(object):
                 self._progress_output.info("{} already in server, skipping upload".format(repr(ref)))
                 return
 
-        remotes = self._app.active_remotes
+        remotes = self._app.enabled_remotes
         prep = self._preparator.prepare_recipe(ref, conanfile, remote, remotes, policy, force)
 
         if policy == UPLOAD_POLICY_SKIP:

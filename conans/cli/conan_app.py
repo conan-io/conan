@@ -59,14 +59,20 @@ class ConanApp(object):
 
         # Remotes
         self.selected_remotes = []
-        self.active_remotes = []
+        self.enabled_remotes = []
         self.all_remotes = []
         self.update = False
 
     @property
     def selected_remote(self):
         # FIXME: To ease the migration
-        return self.selected_remotes[0] if len(self.selected_remotes) == 1 else None
+        if len(self.selected_remotes) == 0:
+            return None
+        if len(self.selected_remotes) == 1:
+            return self.selected_remotes[0]
+        else:
+            assert False, "It makes no sense to obtain the selected remote when there are several " \
+                          "selected remotes"
 
     def load_remotes(self, remote_name=None, update=False):
         # FIXME: Receive multiple remotes for the commands supporting it
@@ -75,12 +81,12 @@ class ConanApp(object):
         if remote_name:
             self.selected_remotes.append(self.cache.remotes_registry.read(remote_name))
 
-        self.active_remotes = [r for r in remotes if not r.disabled]
+        self.enabled_remotes = [r for r in remotes if not r.disabled]
         self.all_remotes = remotes
         self.update = update
 
-    def get_active_remote_by_name(self, remote_name):
-        ret = list(filter(lambda x: x.name == remote_name, self.active_remotes))
+    def get_enabled_remote_by_name(self, remote_name):
+        ret = list(filter(lambda x: x.name == remote_name, self.enabled_remotes))
         if not ret:
             raise ConanException("There is no active remote named '{}'".format(remote_name))
         return ret[0]

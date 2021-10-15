@@ -65,7 +65,7 @@ class GraphBinariesAnalyzer(object):
                 raise
 
         results = []
-        for r in self._app.active_remotes:
+        for r in self._app.enabled_remotes:
             try:
                 latest_prev, latest_time = self._remote_manager.get_latest_package_revision(pref, r)
                 results.append({'prev': latest_prev, 'time': latest_time, 'remote': r})
@@ -74,7 +74,7 @@ class GraphBinariesAnalyzer(object):
             except NotFoundException:
                 pass
 
-        if not self._app.active_remotes and self._app.update:
+        if not self._app.enabled_remotes and self._app.update:
             node.conanfile.output.warning("Can't update, there are no remotes configured or enabled")
 
         if len(results) > 0:

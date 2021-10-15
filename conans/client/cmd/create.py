@@ -34,8 +34,6 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, build_mo
     assert profile_host is not None
     assert profile_build is not None
 
-    remotes = app.active_remotes
-    update = app.update
     test_conanfile_path = _get_test_conanfile_path(test_folder, conanfile_path)
 
     if test_conanfile_path:

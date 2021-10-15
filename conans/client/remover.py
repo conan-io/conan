@@ -176,7 +176,7 @@ class ConanRemover(object):
         @param packages_query: Only if src is a reference. Query settings and options
         """
 
-        if self._app and (build_ids is not None or src):
+        if self._app.selected_remote and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
         is_reference = check_valid_ref(pattern)

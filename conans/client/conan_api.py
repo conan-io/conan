@@ -283,7 +283,6 @@ class ConanAPIV1(object):
                        build_folder=build_folder, package_folder=package_folder,
                        profile_host=profile_host, profile_build=profile_build,
                        graph_lock=graph_lock, root_ref=root_ref, force=force,
-                       remotes=app.active_remotes,
                        source_conanfile_path=conanfile_path)
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -666,7 +665,7 @@ class ConanAPIV1(object):
     def users_list(self, remote_name=None):
         app = ConanApp(self.cache_folder)
         info = {"error": False, "remotes": []}
-        remotes = [self.get_remote_by_name(remote_name)] if remote_name else app.active_remotes
+        remotes = [self.get_remote_by_name(remote_name)] if remote_name else app.enabled_remotes
         try:
             info["remotes"] = users_list(app.cache.localdb, remotes)
             return info

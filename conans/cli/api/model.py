@@ -17,5 +17,5 @@ class Remote:
                self.disabled == other.disabled
 
     def __str__(self):
-        return "{}: {} [SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
-                                                      not self.disabled)
+        return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
+                                                             not self.disabled)

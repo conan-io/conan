@@ -104,7 +104,7 @@ class _PackageBuilder(object):
         conanfile_path = recipe_layout.conanfile()
         source_folder = recipe_layout.source()
 
-        remotes = self._app.active_remotes
+        remotes = self._app.enabled_remotes
         retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, pref.ref, remotes)
 
         conanfile.folders.set_base_source(source_folder)

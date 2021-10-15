@@ -15,7 +15,7 @@ class Search(object):
 
     def search_remote_recipes(self, pattern, remote_name):
         references = OrderedDict()
-        remote = self._app.get_active_remote_by_name(remote_name)
+        remote = self._app.get_enabled_remote_by_name(remote_name)
         refs = self._remote_manager.search_recipes(remote, pattern)
         references[remote.name] = sorted(refs)
         return references

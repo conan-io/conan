@@ -44,17 +44,16 @@ class GraphManagerTest(unittest.TestCase):
     def _get_app(self):
         self.remote_manager = MockRemoteManager()
         cache = self.cache
-        self.resolver = RangeResolver(self.cache, self.remote_manager)
         app = Mock()
         app.cache = cache
         app.remote_manager = self.remote_manager
+        self.resolver = RangeResolver(app)
         proxy = ConanProxy(app)
 
         pyreq_loader = PyRequireLoader(proxy, self.resolver)
-        pyreq_loader.enable_remotes(remotes=[])
         self.loader = ConanFileLoader(None, pyreq_loader=pyreq_loader)
 
-        binaries = GraphBinariesAnalyzer(cache, self.remote_manager)
+        binaries = GraphBinariesAnalyzer(app)
         self.manager = GraphManager(cache, self.loader, proxy, self.resolver, binaries)
         hook_manager = Mock()
         app_type = namedtuple("ConanApp", "cache remote_manager hook_manager graph_manager"

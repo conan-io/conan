@@ -154,7 +154,7 @@ class RangeResolver(object):
 
     def _search_and_resolve_remotes(self, search_ref, version_range):
         results = []
-        remotes = self._conan_app.active_remotes
+        remotes = self._conan_app.enabled_remotes
         selected_remote = self._conan_app.selected_remote
         for remote in remotes:
             if not selected_remote or remote == selected_remote:
