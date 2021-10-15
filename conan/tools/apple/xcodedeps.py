@@ -10,20 +10,20 @@ from conans.util.files import load, save
 
 class XcodeDeps(object):
     _vars_xconfig = textwrap.dedent("""\
-        // Definition of Conan variables for {{dep_name}}
-        CONAN_{{name}}_ROOT_FOLDER = "{{root_folder}}"
-        CONAN_{{name}}_BINARY_DIRECTORIES = "{{bin_dirs}}"
-        CONAN_{{name}}_C_COMPILER_FLAGS = "{{c_compiler_flags}}"
-        CONAN_{{name}}_CXX_COMPILER_FLAGS = "{{cxx_compiler_flags}}"
-        CONAN_{{name}}_LINKER_FLAGS = "{{linker_flags}}"
-        CONAN_{{name}}_PREPROCESSOR_DEFINITIONS = "{{definitions}}"
-        CONAN_{{name}}_INCLUDE_DIRECTORIES = "{{include_dirs}}"
-        CONAN_{{name}}_RESOURCE_DIRECTORIES = "{{res_dirs}}"
-        CONAN_{{name}}_LIBRARY_DIRECTORIES = "{{lib_dirs}}"
-        CONAN_{{name}}_LIBRARIES = "{{libs}}"
-        CONAN_{{name}}_SYSTEM_LIBS = "{{system_libs}}"
-        CONAN_{{name}}_FRAMEWORKS_DIRECTORIES = "{{frameworkdirs}}"
-        CONAN_{{name}}_FRAMEWORKS = "{{frameworks}}"
+        // Definition of Conan variables for {{name}}
+        CONAN_{{name}}_ROOT_FOLDER = {{root_folder}}
+        CONAN_{{name}}_BINARY_DIRECTORIES = {{bin_dirs}}
+        CONAN_{{name}}_C_COMPILER_FLAGS = {{c_compiler_flags}}
+        CONAN_{{name}}_CXX_COMPILER_FLAGS = {{cxx_compiler_flags}}
+        CONAN_{{name}}_LINKER_FLAGS = {{linker_flags}}
+        CONAN_{{name}}_PREPROCESSOR_DEFINITIONS = {{definitions}}
+        CONAN_{{name}}_INCLUDE_DIRECTORIES = {{include_dirs}}
+        CONAN_{{name}}_RESOURCE_DIRECTORIES = {{res_dirs}}
+        CONAN_{{name}}_LIBRARY_DIRECTORIES = {{lib_dirs}}
+        CONAN_{{name}}_LIBRARIES = {{libs}}
+        CONAN_{{name}}_SYSTEM_LIBS = {{system_libs}}
+        CONAN_{{name}}_FRAMEWORKS_DIRECTORIES = {{frameworkdirs}}
+        CONAN_{{name}}_FRAMEWORKS = {{frameworks}}
         """)
 
     _conf_xconfig = textwrap.dedent("""\
@@ -32,19 +32,19 @@ class XcodeDeps(object):
         # include "conan_{{dep}}.xcconfig"
         {% endfor %}
 
-        // Include {{dep_name}} vars
+        // Include {{name}} vars
         # include "{{vars_filename}}"
 
         // Compiler options for {{dep_name}}
-        HEADER_SEARCH_PATHS = $(inherited) $(CONAN_{{name}}_INCLUDE_DIRECTORIES)
-        GCC_PREPROCESSOR_DEFINITIONS = $(inherited) $(CONAN_{{name}}_PREPROCESSOR_DEFINITIONS)
-        OTHER_CFLAGS = $(inherited) $(CONAN_{{name}}_C_COMPILER_FLAGS)
-        OTHER_CPLUSPLUSFLAGS = $(inherited) $(CONAN_{{name}}_CXX_COMPILER_FLAGS)
-        FRAMEWORK_SEARCH_PATHS = $(inherited) $(CONAN_{{name}}_FRAMEWORKS_DIRECTORIES)
+        HEADER_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}] = $(inherited) $(CONAN_{{name}}_INCLUDE_DIRECTORIES)
+        GCC_PREPROCESSOR_DEFINITIONS[config={{configuration}}][arch={{architecture}}] = $(inherited) $(CONAN_{{name}}_PREPROCESSOR_DEFINITIONS)
+        OTHER_CFLAGS[config={{configuration}}][arch={{architecture}}] = $(inherited) $(CONAN_{{name}}_C_COMPILER_FLAGS)
+        OTHER_CPLUSPLUSFLAGS[config={{configuration}}][arch={{architecture}}] = $(inherited) $(CONAN_{{name}}_CXX_COMPILER_FLAGS)
+        FRAMEWORK_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}] = $(inherited) $(CONAN_{{name}}_FRAMEWORKS_DIRECTORIES)
 
         // Link options for {{dep_name}}
-        LIBRARY_SEARCH_PATHS = $(inherited) $(CONAN_{{name}}_LIBRARY_DIRECTORIES)
-        OTHER_LDFLAGS = $(inherited) $(CONAN_{{name}}_LINKER_FLAGS) $(CONAN_{{name}}_LIBRARIES) $(CONAN_{{name}}_SYSTEM_LIBS) $(CONAN_{{name}}_FRAMEWORKS)
+        LIBRARY_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}] = $(inherited) $(CONAN_{{name}}_LIBRARY_DIRECTORIES)
+        OTHER_LDFLAGS[config={{configuration}}][arch={{architecture}}] = $(inherited) $(CONAN_{{name}}_LINKER_FLAGS) $(CONAN_{{name}}_LIBRARIES) $(CONAN_{{name}}_SYSTEM_LIBS) $(CONAN_{{name}}_FRAMEWORKS)
         """)
 
     _dep_xconfig = textwrap.dedent("""\
@@ -95,7 +95,7 @@ class XcodeDeps(object):
             'lib_dirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.libdirs),
             'libs': " ".join([lib for lib in cpp_info.libs]),
             'system_libs': " ".join([sys_dep for sys_dep in cpp_info.system_libs]),
-            'frameworksdirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.frameworksdirs),
+            'frameworksdirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.frameworkdirs),
             'frameworks': " ".join(cpp_info.frameworks),
             'definitions': " ".join(cpp_info.defines),
             'c_compiler_flags': " ".join(cpp_info.cflags),
@@ -113,9 +113,9 @@ class XcodeDeps(object):
         """
         # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
         template = Template(self._conf_xconfig, trim_blocks=True, lstrip_blocks=True)
-        content_multi = template.render(host_context=not build,
-                                        name=dep_name,
-                                        vars_filename=vars_xconfig_name, deps=deps)
+        content_multi = template.render(name=dep_name, vars_filename=vars_xconfig_name, deps=deps,
+                                        architecture=self.architecture,
+                                        configuration=self.configuration)
         return content_multi
 
     def _dep_xconfig_file(self, name, name_general, dep_xconfig_filename):
@@ -135,23 +135,13 @@ class XcodeDeps(object):
     def _all_xconfig_file(self, name_general, deps):
         """ this is a .xcconfig file including all declared dependencies
         """
-        # Current directory is the generators_folder
-        multi_path = name_general
-        if os.path.isfile(multi_path):
-            content_multi = load(multi_path)
-        else:
-            content_multi = self._all_xconfig
+        content_multi = self._all_xconfig
 
         for req, dep in deps.items():
             dep_name = dep.ref.name.replace(".", "_")
             if req.build:
                 dep_name += "_build"
-            conf_xconfig_name = "conan_{}.xconfig".format(dep_name)
-            if conf_xconfig_name in content_multi:
-                # already imported
-                break
-            else:
-                content_multi = content_multi + '\n#include "conan_{}.xcconfig"\n'.format(dep_name)
+            content_multi = content_multi + '\n#include "conan_{}.xcconfig"\n'.format(dep_name)
         # To remove all extra blank lines
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
