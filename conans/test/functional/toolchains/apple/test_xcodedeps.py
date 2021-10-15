@@ -15,3 +15,5 @@ def test_basic():
     client.save({"conanfile.txt": "[requires]\nhello/0.1\ngoodbye/0.1\n"}, clean_first=True)
     client.run("install . -g XCodeDeps --build=missing -s build_type=Release")
     client.run("install . -g XCodeDeps --build=missing -s build_type=Debug")
+    client.run("install . -g XCodeDeps --build=missing -s build_type=Release -s os.sdk=macosx")
+    client.run("install . -g XCodeDeps --build=missing -s build_type=Debug -s os.sdk=macosx")
