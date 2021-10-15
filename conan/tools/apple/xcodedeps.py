@@ -48,12 +48,12 @@ class XcodeDeps(object):
         """)
 
     _dep_xconfig = textwrap.dedent("""\
-        // Conan XCodeDeps generated file for {{name}}
+        // Conan XcodeDeps generated file for {{name}}
         // Includes all configurations for each dependency
         """)
 
     _all_xconfig = textwrap.dedent("""\
-        // Conan XCodeDeps generated file
+        // Conan XcodeDeps generated file
         // Includes all direct dependencies
         """)
 
@@ -69,9 +69,9 @@ class XcodeDeps(object):
 
     def generate(self):
         if self.configuration is None:
-            raise ConanException("XCodeDeps.configuration is None, it should have a value")
+            raise ConanException("XcodeDeps.configuration is None, it should have a value")
         if self.architecture is None:
-            raise ConanException("XCodeDeps.architecture is None, it should have a value")
+            raise ConanException("XcodeDeps.architecture is None, it should have a value")
         generator_files = self._content()
         for generator_file, content in generator_files.items():
             save(generator_file, content)

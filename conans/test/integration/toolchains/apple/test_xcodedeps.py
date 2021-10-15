@@ -86,7 +86,7 @@ def test_generator_files():
         for build_type in ["Release", "Debug"]:
 
             sdk_setting = "-s os.sdk={}".format(sdk) if sdk else ""
-            client.run("install . -g XCodeDeps --build=missing -s build_type={} -s arch=x86_64 {}".
+            client.run("install . -g XcodeDeps --build=missing -s build_type={} -s arch=x86_64 {}".
                        format(build_type, sdk_setting))
 
             for config_file in expected_files(client.current_folder, build_type, "x86_64", sdk):
