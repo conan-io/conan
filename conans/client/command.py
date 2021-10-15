@@ -482,16 +482,12 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
-        get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
         home_subparser = subparsers.add_parser('home', help='Retrieve the Conan home directory')
         install_subparser = subparsers.add_parser('install', help='Install a full configuration '
                                                                   'from a local or remote zip file')
-        rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
-        set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
         init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
-        list_subparser = subparsers.add_parser('list', help='List Conan configuration properties')
+        subparsers.add_parser('list', help='List Conan configuration properties')
 
-        get_subparser.add_argument("item", nargs="?", help="Item to print")
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
                                     help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
@@ -514,27 +510,12 @@ class Command(object):
         install_subparser.add_argument("-r", "--remove", type=int,
                                        help='Remove configuration origin by index in list (index '
                                             'provided by --list argument)')
-        rm_subparser.add_argument("item", help="Item to remove")
-        set_subparser.add_argument("item", help="'item=value' to set")
         init_subparser.add_argument('-f', '--force', default=False, action='store_true',
                                     help='Overwrite existing Conan configuration files')
 
         args = parser.parse_args(*args)
 
-        if args.subcommand == "set":
-            try:
-                key, value = args.item.split("=", 1)
-            except ValueError:
-                if "hooks." in args.item:
-                    key, value = args.item.split("=", 1)[0], None
-                else:
-                    raise ConanException("Please specify 'key=value'")
-            return self._conan_api.config_set(key, value)
-        elif args.subcommand == "get":
-            return self._conan_api.config_get(args.item)
-        elif args.subcommand == "rm":
-            return self._conan_api.config_rm(args.item)
-        elif args.subcommand == "home":
+        if args.subcommand == "home":
             conan_home = self._conan_api.config_home()
             self._out.info(conan_home)
             if args.json:

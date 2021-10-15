@@ -72,7 +72,13 @@ class BrokenDownloadTest(unittest.TestCase):
 
         client = TestClient(servers=servers, inputs=["admin", "password"],
                             requester_class=DownloadFilesBrokenRequesterTimesOne)
-        client.run('config set general.retry_wait=1')
+        conan_conf = textwrap.dedent("""
+                            [storage]
+                            path = ./data
+                            [general]
+                            retry_wait=1
+                        """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("install lib/1.0@lasote/stable")
         self.assertEqual(1, str(client.out).count("Waiting 1 seconds to retry..."))
 
@@ -80,7 +86,13 @@ class BrokenDownloadTest(unittest.TestCase):
             return DownloadFilesBrokenRequester(10, *args, **kwargs)
         client = TestClient(servers=servers, inputs=["admin", "password"],
                             requester_class=DownloadFilesBrokenRequesterTimesTen)
-        client.run('config set general.retry=11')
-        client.run('config set general.retry_wait=0')
+        conan_conf = textwrap.dedent("""
+                            [storage]
+                            path = ./data
+                            [general]
+                            retry=11
+                            retry_wait=0
+                        """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("install lib/1.0@lasote/stable")
         self.assertEqual(10, str(client.out).count("Waiting 0 seconds to retry..."))

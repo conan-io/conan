@@ -12,13 +12,13 @@ from conans.util.files import save
 
 conanfile = textwrap.dedent("""
     from conans import ConanFile
-    from conans import tools
+    from conan.tools.files import download
 
     class Pkg(ConanFile):
         settings = "os", "compiler"
 
         def source(self):
-            tools.download("http://foo.bar/file", "filename.txt")
+            download(self, "http://foo.bar/file", "filename.txt")
     """)
 
 
@@ -43,15 +43,15 @@ class ClientCertsTest(unittest.TestCase):
         client = TestClient(requester_class=MyHttpRequester)
         client.save({"conanfile.py": conanfile})
         client.run("create . foo/1.0@")
-        assert "KWARGS auth: None" in client.out
 
+        assert "KWARGS auth: None" in client.out
         config = client.cache.config
         tools.save(config.client_cert_path, "Fake cert")
         tools.save(config.client_cert_key_path, "Fake key")
 
         client.run("create . foo/1.0@")
         assert "KWARGS cert: ('{}', '{}')".format(config.client_cert_path,
-                                                  config.client_cert_key_path) in client.out
+                                                  config.client_cert_key_path).replace("\\", '\\\\') in client.out
 
         # assert that the cacert file is created
         self.assertTrue(os.path.exists(config.cacert_path))
@@ -64,12 +64,17 @@ class ClientCertsTest(unittest.TestCase):
         save(mykey_path, "Fake Key")
 
         client = TestClient(requester_class=MyHttpRequester)
-        client.run('config set general.client_cert_path="%s"' % mycert_path)
-        client.run('config set general.client_cert_key_path="%s"' % mykey_path)
-
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    client_cert_path={}
+                                    client_cert_key_path={}
+                                """.format(mycert_path, mykey_path))
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": conanfile})
         client.run("create . foo/1.0@")
-        assert "KWARGS cert: ('{}', '{}')".format(mycert_path, mykey_path) in client.out
+        assert "KWARGS cert: ('{}', '{}')".format(mycert_path, mykey_path).replace("\\", '\\\\') in client.out
 
         # assert that the cacert file is created
         self.assertTrue(os.path.exists(client.cache.config.cacert_path))

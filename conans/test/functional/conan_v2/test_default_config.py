@@ -13,7 +13,6 @@ class DefaultConfigTestCase(ConanV2ModeTestCase):
         t = self.get_client()
         self.fail("Define default package_id_mode for Conan v2")
         # self.assertEqual(t.cache.config.default_package_id_mode, "??")
-        # t.run('config get general.default_package_id_mode')
         # self.assertEqual(str(t.out).strip(), "semver_direct_mode")
 
     @pytest.mark.skipif(platform.system() != "Linux", reason="OLD ABI is only detected for Linux/gcc")

@@ -10,10 +10,11 @@ def join_arguments(args):
 
 class Autotools(object):
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
 
-        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder)
+        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
+                                                     namespace=namespace)
         self._configure_args = toolchain_file_content.get("configure_args")
         self._make_args = toolchain_file_content.get("make_args")
 

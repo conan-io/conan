@@ -6,9 +6,9 @@ import time
 from tqdm import tqdm
 
 from conans import __version__ as client_version
+from conans.cli.api.helpers.search import Search
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.api.helpers.search import Search
 from conans.client.cache.cache import ClientCache
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator
@@ -60,7 +60,7 @@ class ConanAPIV2(object):
     def __init__(self, cache_folder=None):
 
         self.out = ConanOutput()
-        self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
+        self.cache_folder = cache_folder or get_conan_user_home()
 
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version))

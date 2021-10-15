@@ -7,8 +7,6 @@ from .files import *
 # noinspection PyUnresolvedReferences
 from .intel import *
 # noinspection PyUnresolvedReferences
-from .net import *
-# noinspection PyUnresolvedReferences
 from .oss import *
 # noinspection PyUnresolvedReferences
 from .pkg_config import *

@@ -25,8 +25,8 @@ from webtest.app import TestApp
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import load, REVISIONS
+from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.cli import Cli, CLI_V1_COMMANDS
-from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command

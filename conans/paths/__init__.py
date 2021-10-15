@@ -10,13 +10,17 @@ else:
 
 
 def get_conan_user_home():
-    user_home = os.getenv("CONAN_USER_HOME", "~")
-    tmp = conan_expand_user(user_home)
-    if not os.path.isabs(tmp):
+    user_home = os.getenv("CONAN_USER_HOME")
+    if user_home is None:
+        # the default, in the user home
+        user_home = os.path.join(conan_expand_user("~"), ".conan")
+    else:  # Do an expansion, just in case the user is using ~/something/here
+        user_home = conan_expand_user(user_home)
+    if not os.path.isabs(user_home):
         raise Exception("Invalid CONAN_USER_HOME value '%s', "
                         "please specify an absolute or path starting with ~/ "
-                        "(relative to user home)" % tmp)
-    return os.path.abspath(tmp)
+                        "(relative to user home)" % user_home)
+    return user_home
 
 
 # Files

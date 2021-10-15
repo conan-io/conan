@@ -9,7 +9,8 @@ from conans.model.ref import PackageReference
 
 
 def export_pkg(app, ref, source_folder, build_folder, package_folder,
-               profile_host, profile_build, graph_lock, root_ref, force, remotes):
+               profile_host, profile_build, graph_lock, root_ref, force, remotes,
+               source_conanfile_path):
     cache, hook_manager = app.cache, app.hook_manager
     graph_manager = app.graph_manager
     conan_file_path = cache.ref_layout(ref).conanfile()
@@ -45,13 +46,21 @@ def export_pkg(app, ref, source_folder, build_folder, package_folder,
 
     dest_package_folder = pkg_layout.package()
     conanfile.develop = True
-
-    conanfile.folders.set_base_build(build_folder)
-    conanfile.folders.set_base_source(source_folder)
-    conanfile.folders.set_base_package(dest_package_folder)
+    if hasattr(conanfile, "layout"):
+        conanfile_folder = os.path.dirname(source_conanfile_path)
+        conanfile.folders.set_base_build(conanfile_folder)
+        conanfile.folders.set_base_source(conanfile_folder)
+        conanfile.folders.set_base_package(dest_package_folder)
+        conanfile.folders.set_base_install(conanfile_folder)
+        conanfile.folders.set_base_generators(conanfile_folder)
+    else:
+        conanfile.folders.set_base_build(build_folder)
+        conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_package(dest_package_folder)
 
     with pkg_layout.set_dirty_context_manager():
         if package_folder:
+            # FIXME: To be removed in 2.0
             prev = packager.export_pkg(conanfile, package_id, package_folder, hook_manager,
                                        conan_file_path, ref)
         else:

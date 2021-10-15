@@ -138,7 +138,7 @@ def test_scm_with_source_layout():
 
 
 @pytest.mark.parametrize("no_copy_source", ["False", "True"])
-def test_zip_download_with_subfolder(no_copy_source):
+def test_zip_download_with_subfolder_new_tools(no_copy_source):
     """If we have a zip with the sources in a subfolder, specifying it in the self.folders.source
     will unzip in the base and will work both locally (conan build) or in the cache
     (exporting the sources)"""
@@ -154,7 +154,7 @@ def test_zip_download_with_subfolder(no_copy_source):
 
     conan_file = GenConanfile() \
         .with_import("import os") \
-        .with_import("from conans import tools") \
+        .with_import("from conan.tools.files import get") \
         .with_import("from conan.tools.cmake import CMake") \
         .with_name("app").with_version("1.0") \
         .with_settings("os", "arch", "build_type", "compiler") \
@@ -164,7 +164,7 @@ def test_zip_download_with_subfolder(no_copy_source):
     conan_file = str(conan_file)
     conan_file += """
     def source(self):
-        tools.get("http://fake_url/my_sources.zip")
+        get(self, "http://fake_url/my_sources.zip")
 
     def layout(self):
         self.folders.source = "subfolder"
@@ -181,7 +181,7 @@ def test_zip_download_with_subfolder(no_copy_source):
     client = TestClient()
     client.save({"conanfile.py": conan_file})
 
-    with mock.patch("conans.client.tools.net.download") as mock_download:
+    with mock.patch("conan.tools.files.files.download") as mock_download:
         def download_zip(*args, **kwargs):
             copy(zippath, os.getcwd())
         mock_download.side_effect = download_zip

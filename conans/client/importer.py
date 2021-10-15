@@ -157,16 +157,16 @@ class _FileImporter(object):
         for dep in self._conanfile.dependencies.host.values():
             if root_package:
                 if fnmatch.fnmatch(dep.ref.name, root_package):
-                    pkgs.append((dep.ref.name, dep.cpp_info))
+                    pkgs.append((dep.ref.name, dep.package_folder, dep.cpp_info))
             else:
-                pkgs.append((dep.ref.name, dep.cpp_info))
+                pkgs.append((dep.ref.name, dep.package_folder, dep.cpp_info))
 
         symbolic_dir_name = src[1:] if src.startswith("@") else None
         src_dirs = [src]  # hardcoded src="bin" origin
         # FIXME: access of cpp_info.rootpath, use package_folder better if possible.
-        for pkg_name, cpp_info in pkgs:
+        for pkg_name, package_folder, cpp_info in pkgs:
             final_dst_path = os.path.join(real_dst_folder, pkg_name) if folder else real_dst_folder
-            file_copier = FileCopier([cpp_info.rootpath], final_dst_path)
+            file_copier = FileCopier([package_folder], final_dst_path)
             if symbolic_dir_name:  # Syntax for package folder symbolic names instead of hardcoded
                 try:
                     src_dirs = getattr(cpp_info, symbolic_dir_name)
@@ -175,6 +175,12 @@ class _FileImporter(object):
                 except AttributeError:
                     raise ConanException("Import from unknown package folder '@%s'"
                                          % symbolic_dir_name)
+
+                if cpp_info.components:
+                    for comp_name, comp in cpp_info.components.items():
+                        src_dir = getattr(comp, symbolic_dir_name)
+                        if isinstance(src_dirs, list):  # it can return a "config" CppInfo item!
+                            src_dirs += src_dir
 
             for src_dir in src_dirs:
                 files = file_copier(pattern, src=src_dir, links=True, ignore_case=ignore_case,

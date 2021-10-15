@@ -36,13 +36,13 @@ class ProxiesConfTest(unittest.TestCase):
         save(client.cache.conan_conf_path, conf)
         conanfile = textwrap.dedent("""
               from conans import ConanFile
-              from conans import tools
+              from conan.tools.files import download
 
               class Pkg(ConanFile):
                   settings = "os", "compiler"
 
                   def source(self):
-                      tools.download("MyUrl", "filename.txt")
+                      download(self, "MyUrl", "filename.txt")
         """)
         client.save({"conanfile.py": conanfile})
         client.run("create . foo/1.0@")
@@ -74,13 +74,13 @@ http=http://conan.url
         for url in ("**otherexcluded_one***", "MyUrl", "MyExcludedUrl***", "**MyExcludedUrl***"):
             conanfile = textwrap.dedent("""
                       from conans import ConanFile
-                      from conans import tools
+                      from conan.tools.files import download
 
                       class Pkg(ConanFile):
                           settings = "os", "compiler"
 
                           def source(self):
-                              tools.download("{}", "filename.txt")
+                              download(self, "{}", "filename.txt")
                       """).format(url)
             client.save({"conanfile.py": conanfile})
             client.run("create . foo/1.0@")
@@ -93,13 +93,13 @@ http=http://conan.url
 
         conanfile = textwrap.dedent("""
                 from conans import ConanFile
-                from conans import tools
+                from conan.tools.files import download
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler"
 
                     def source(self):
-                        tools.download("http://foo.bar/file", "filename.txt")
+                        download(self, "http://foo.bar/file", "filename.txt")
                 """)
 
         class MyHttpRequester(TestRequester):
@@ -129,13 +129,13 @@ http=http://conan.url
     def test_environ_removed(self):
         conanfile = textwrap.dedent("""
                 from conans import ConanFile
-                from conans import tools
+                from conan.tools.files import download
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler"
 
                     def source(self):
-                        tools.download("http://MyExcludedUrl/file", "filename.txt")
+                        download(self, "http://MyExcludedUrl/file", "filename.txt")
                 """)
 
         class MyHttpRequester(TestRequester):

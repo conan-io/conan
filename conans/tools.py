@@ -14,7 +14,7 @@ import requests
 
 from conans.cli.output import ConanOutput
 # Tools from conans.client.tools
-from conans.client.tools import files as tools_files, net as tools_net, oss as tools_oss, \
+from conans.client.tools import files as tools_files, oss as tools_oss, \
     system_pm as tools_system_pm, win as tools_win
 from conans.client.tools.env import *  # pylint: disable=unused-import
 from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
@@ -60,18 +60,6 @@ def save(path, content, append=False):
         save_append(path=path, content=content)
     else:
         files_save(path=path, content=content, only_if_modified=False)
-
-
-# From conans.client.tools.net
-ftp_download = tools_net.ftp_download
-
-
-def download(*args, **kwargs):
-    return tools_net.download(requester=_global_requester, *args, **kwargs)
-
-
-def get(*args, **kwargs):
-    return tools_net.get(requester=_global_requester, *args, **kwargs)
 
 
 # from conans.client.tools.files

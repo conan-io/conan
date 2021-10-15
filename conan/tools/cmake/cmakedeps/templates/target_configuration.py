@@ -110,7 +110,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
-                                                   ${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
+                                                   ${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}
+                                                   ${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}> APPEND)
         set_property(TARGET {{target_namespace}}::{{global_target_name}}
                      PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
@@ -128,7 +129,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
         set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config_suffix)}}
-                     {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', config_suffix)}}> APPEND)
+                     {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', config_suffix)}}
+                     {{tvalue(pkg_name, comp_name, 'OBJECTS', config_suffix)}}> APPEND)
         set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config_suffix)}}> APPEND)
         set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
@@ -146,7 +148,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
     def get_required_components_names(self):
         """Returns a list of component_name"""
         ret = []
-        sorted_comps = self.conanfile.new_cpp_info.get_sorted_components()
+        sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         for comp_name, comp in sorted_comps.items():
             ret.append(self.get_component_alias(self.conanfile, comp_name))
         ret.reverse()
@@ -162,8 +164,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         # Declared cppinfo.requires or .components[].requires
         visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True})
         visible_host_direct = visible_host.filter({"direct": True})
-        if self.conanfile.new_cpp_info.required_components:
-            for dep_name, component_name in self.conanfile.new_cpp_info.required_components:
+        if self.conanfile.cpp_info.required_components:
+            for dep_name, component_name in self.conanfile.cpp_info.required_components:
                 if not dep_name:
                     # Internal dep (no another component)
                     req = self.conanfile

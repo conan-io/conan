@@ -5,7 +5,6 @@ import unittest
 
 import pytest
 
-from conans.model.build_info import DEFAULT_LIB
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer

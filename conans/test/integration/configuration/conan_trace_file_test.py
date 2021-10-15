@@ -38,10 +38,15 @@ class ConanTraceTest(unittest.TestCase):
 
         def _install_a_package(print_commands_to_output, generate_run_log_file):
             client = TestClient(servers=self.servers)
-            client.run("config set log.print_run_commands={}".format(print_commands_to_output))
-            client.run("config set log.run_to_file={}".format(generate_run_log_file))
-            client.run("config set log.run_to_output=True")
-
+            conan_conf = textwrap.dedent("""
+                                        [storage]
+                                        path = ./data
+                                        [log]
+                                        print_run_commands={}
+                                        run_to_file={}
+                                        run_to_output=True
+                                    """.format(print_commands_to_output, generate_run_log_file))
+            client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": base})
             client.run("create . lasote/stable")

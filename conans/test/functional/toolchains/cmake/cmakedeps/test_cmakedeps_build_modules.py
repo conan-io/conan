@@ -105,7 +105,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                     # (the other one should be found by CMAKE_MODULE_PATH in builddirs)
                     builddir = os.path.join("share", "cmake")
                     module = os.path.join(builddir, "my-module.cmake")
-                    self.cpp_info.build_modules.append(module)
+                    self.cpp_info.set_property("cmake_build_modules", [module])
                     self.cpp_info.builddirs = [builddir]
         """)
         # This is a module that has other find_package() calls

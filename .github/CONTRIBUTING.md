@@ -81,6 +81,13 @@ Please keep in mind these points:
   - Backwards compatibility and not breaking users' packages is very important and it won't be done unless there are very good reasons.
 - You should not get bothered if you feel unattended, Conan is an Open Source project, not a commercial product. Try to explain what you
   really need and we will try to help you.
+- The Conan maintainers won't tolerate harassment or abuse. 
+  
+If a user is not following the code of conduct:
+
+   - We will contact the user to remind the rules.
+   - If the misconduct continues, they will be banned from the repository for one week.
+   - After that, any other code of conduct transgression will carry the permanent ban from all the conan-io organization repositories.
 
 Code style
 ----------

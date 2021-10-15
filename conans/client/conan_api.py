@@ -5,9 +5,9 @@ from collections import OrderedDict
 from collections import namedtuple
 
 from conans import __version__ as client_version
+from conans.cli.api.conan_api import api_method
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.api.conan_api import api_method
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
@@ -97,7 +97,7 @@ def _get_conanfile_path(path, cwd, py):
 class ConanAPIV1(object):
 
     def __init__(self, cache_folder=None):
-        self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
+        self.cache_folder = cache_folder or get_conan_user_home()
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
@@ -286,7 +286,7 @@ class ConanAPIV1(object):
                        build_folder=build_folder, package_folder=package_folder,
                        profile_host=profile_host, profile_build=profile_build,
                        graph_lock=graph_lock, root_ref=root_ref, force=force,
-                       remotes=remotes)
+                       remotes=remotes, source_conanfile_path=conanfile_path)
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
@@ -392,7 +392,8 @@ class ConanAPIV1(object):
                          update=update,
                          generators=generators,
                          no_imports=no_imports,
-                         require_overrides=require_overrides)
+                         require_overrides=require_overrides,
+                         conanfile_path=os.path.dirname(conanfile_path))
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -400,26 +401,6 @@ class ConanAPIV1(object):
                 graph_lock_file.save(lockfile_out)
         except ConanException as exc:
             raise
-
-    @api_method
-    def config_get(self, item):
-        app = ConanApp(self.cache_folder)
-        if item == "storage.path":
-            result = app.config.storage_path
-        else:
-            result = app.config.get_item(item)
-        ConanOutput().info(result)
-        return result
-
-    @api_method
-    def config_set(self, item, value):
-        app = ConanApp(self.cache_folder)
-        app.config.set_item(item, value)
-
-    @api_method
-    def config_rm(self, item):
-        app = ConanApp(self.cache_folder)
-        app.config.rm_item(item)
 
     @api_method
     def config_install_list(self):
@@ -550,7 +531,8 @@ class ConanAPIV1(object):
                                      build_modes=build,
                                      update=update,
                                      generators=generators,
-                                     no_imports=no_imports)
+                                     no_imports=no_imports,
+                                     conanfile_path=os.path.dirname(conanfile_path))
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -561,7 +543,6 @@ class ConanAPIV1(object):
             cmd_build(app, conanfile_path, conanfile, base_path=cwd,
                       source_folder=source_folder, build_folder=build_folder,
                       package_folder=package_folder, install_folder=install_folder)
-
         except ConanException as exc:
             raise
 
@@ -705,32 +686,6 @@ class ConanAPIV1(object):
             info["error"] = True
             exc.info = info
             raise
-
-    # @api_method
-    # def search_packages(self, reference, query=None, remote_name=None):
-    #     search_recorder = SearchRecorder()
-    #     remotes = self.app.cache.registry.load_remotes()
-    #     search = Search(self.app.cache, self.app.remote_manager, remotes)
-    #
-    #     try:
-    #         ref = ConanFileReference.loads(reference)
-    #         references = search.search_packages(ref, remote_name, query=query)
-    #     except ConanException as exc:
-    #         search_recorder.error = True
-    #         exc.info = search_recorder.get_info()
-    #         raise
-    #
-    #     for remote_name, remote_ref in references.items():
-    #         search_recorder.add_recipe(remote_name, ref)
-    #         if remote_ref.ordered_packages:
-    #             for package_id, properties in remote_ref.ordered_packages.items():
-    #                 # Artifactory uses field 'requires', conan_center 'full_requires'
-    #                 requires = properties.get("requires", []) or properties.get("full_requires", [])
-    #                 search_recorder.add_package(remote_name, ref,
-    #                                             package_id, properties.get("options", []),
-    #                                             properties.get("settings", []),
-    #                                             requires)
-    #     return search_recorder.get_info()
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,

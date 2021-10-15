@@ -18,11 +18,10 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
-from conans.model.build_info import CppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.new_build_info import NewCppInfo, fill_old_cppinfo
+from conans.model.build_info import CppInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
@@ -522,10 +521,6 @@ class BinaryInstaller(object):
         return pref
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
-        conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
-        conanfile.cpp_info.version = conanfile.version
-        conanfile.cpp_info.description = conanfile.description
-
         conanfile.folders.set_base_package(package_folder)
         conanfile.folders.set_base_source(None)
         conanfile.folders.set_base_build(None)
@@ -533,24 +528,10 @@ class BinaryInstaller(object):
 
         conanfile.user_info = UserInfo()
 
-        # Once the node is build, execute package info, so it has access to the
-        # package folder and artifacts
-
         with tools.chdir(package_folder):
             with conanfile_exception_formatter(str(conanfile), "package_info"):
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                            reference=ref)
-                if hasattr(conanfile, "layout"):
-                    # Old cpp info without defaults (the defaults are in the new one)
-                    conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
-                                                 default_values=CppInfoDefaultValues())
-                    if not is_editable:
-                        package_cppinfo = conanfile.cpp.package.copy()
-                        package_cppinfo.set_relative_base_folder(conanfile.folders.package)
-                        # Copy the infos.package into the old cppinfo
-                        fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
-                    else:
-                        conanfile.cpp_info.filter_empty = False
 
                 conanfile.package_info()
 
@@ -569,12 +550,12 @@ class BinaryInstaller(object):
                     source_cppinfo = conanfile.cpp.source.copy()
                     source_cppinfo.set_relative_base_folder(conanfile.folders.source)
 
-                    full_editable_cppinfo = NewCppInfo()
+                    full_editable_cppinfo = CppInfo()
                     full_editable_cppinfo.merge(source_cppinfo)
                     full_editable_cppinfo.merge(build_cppinfo)
-                    # Paste the editable cpp_info but prioritizing it, only if a
-                    # variable is not declared at build/source, the package will keep the value
-                    fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
+                    # In editables if we defined anything in the cpp infos we want to discard
+                    # the one defined in the conanfile cpp_info
+                    conanfile.cpp_info.merge(full_editable_cppinfo, overwrite=True)
 
                 self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                            reference=ref)
