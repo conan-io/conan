@@ -266,6 +266,7 @@ def from_old_cppinfo(old):
             # The build modules properties are applied to the root cppinfo, not per component
             # because it is something global that makes no sense to be set at a component
             _copy_build_modules_to_property(c, ret)
+
     return ret
 
 

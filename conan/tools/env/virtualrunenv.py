@@ -7,6 +7,7 @@ def runenv_from_cpp_info(conanfile, dep, os_name):
     """ return an Environment deducing the runtime information from a cpp_info
     """
     cpp_info = dep.cpp_info
+    cpp_info = cpp_info.copy()
     cpp_info.aggregate_components()
     pkg_folder = dep.package_folder
     dyn_runenv = Environment(conanfile)
