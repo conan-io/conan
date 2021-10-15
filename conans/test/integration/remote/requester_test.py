@@ -8,11 +8,12 @@ from conans.util.files import save
 
 
 conanfile = """
-from conans import ConanFile, tools
+from conans import ConanFile
+from conan.tools.files import download
 
 class HelloConan(ConanFile):
     def source(self):
-        tools.download("http://foo", "bar.txt")
+        download(self, "http://foo", "bar.txt")
 """
 
 
