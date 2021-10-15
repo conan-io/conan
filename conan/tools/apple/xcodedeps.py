@@ -27,10 +27,10 @@ class XcodeDeps(object):
         """)
 
     _conf_xconfig = textwrap.dedent("""\
-        {% for dep in deps %}
+        {%- for dep in deps -%}
         // Includes for {{dep}} dependency
         #include "conan_{{dep}}.xcconfig"
-        {% endfor %}
+        {% endfor -%}
 
         // Include {{name}} vars
         #include "{{vars_filename}}"
@@ -108,8 +108,7 @@ class XcodeDeps(object):
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
             'exe_flags': " ".join(cpp_info.exelinkflags),
         }
-        formatted_template = Template(self._vars_xconfig, trim_blocks=True,
-                                      lstrip_blocks=True).render(**fields)
+        formatted_template = Template(self._vars_xconfig).render(**fields)
         return formatted_template
 
     def _conf_xconfig_file(self, dep_name, vars_xconfig_name, deps):
@@ -121,11 +120,10 @@ class XcodeDeps(object):
         #  for example XCode 13 is now using sdk=macosx11.3
         #  related to: https://github.com/conan-io/conan/issues/9608
         sdk_condition = "*" if not self.sdk else "{}*".format(self.sdk)
-        template = Template(self._conf_xconfig, trim_blocks=True, lstrip_blocks=True)
+        template = Template(self._conf_xconfig)
         content_multi = template.render(name=dep_name, vars_filename=vars_xconfig_name, deps=deps,
                                         architecture=self.architecture,
                                         configuration=self.configuration, sdk=sdk_condition)
-        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
     def _dep_xconfig_file(self, name, name_general, dep_xconfig_filename):
@@ -139,7 +137,6 @@ class XcodeDeps(object):
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi + '\n#include "{}"\n'.format(dep_xconfig_filename)
-        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
     def _all_xconfig_file(self, deps):
@@ -152,8 +149,6 @@ class XcodeDeps(object):
             if req.build:
                 dep_name += "_build"
             content_multi = content_multi + '\n#include "conan_{}.xcconfig"\n'.format(dep_name)
-        # To remove all extra blank lines
-        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
     def _content(self):
@@ -161,9 +156,7 @@ class XcodeDeps(object):
         general_name = "conandeps.xcconfig"
         conf_name = self._config_filename()
 
-        host_req = list(self._conanfile.dependencies.host.values())
-
-        for dep in host_req:
+        for dep in self._conanfile.dependencies.host.values():
             dep_name = dep.ref.name
             dep_name = dep_name.replace(".", "_")
             cpp_info = dep.new_cpp_info.copy()

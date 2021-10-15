@@ -74,7 +74,7 @@ _expected_conf_xconfig = [
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-def test_basic():
+def test_generator_files():
     client = TestClient()
     client.run("new hello/0.1 -m=cmake_lib")
     client.run("export .")
