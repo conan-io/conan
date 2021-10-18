@@ -12,6 +12,7 @@ from conans import load
 from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt
+from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
@@ -135,7 +136,9 @@ def _process_download(config, cache, requester):
         output.info("Trying to download  %s" % _hide_password(config.uri))
         zippath = os.path.join(tmp_folder, os.path.basename(config.uri))
         try:
-            tools.download(config.uri, zippath, verify=config.verify_ssl, requester=requester)
+            downloader = FileDownloader(requester=requester, verify=config.verify_ssl,
+                                        config_retry=None, config_retry_wait=None)
+            downloader.download(url=config.uri, file_path=zippath)
             _process_zip_file(config, zippath, cache, tmp_folder, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))

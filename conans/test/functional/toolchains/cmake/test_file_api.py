@@ -8,6 +8,7 @@ from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="NewCppInfo: xfail until it adds default folders for the components")
 @pytest.mark.tool_cmake
 def test_file_api():
     """

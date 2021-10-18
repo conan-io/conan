@@ -65,8 +65,12 @@ class Node(object):
         self.error = None
 
     def __lt__(self, other):
+        """
+
+        @type other: Node
+        """
         # TODO: Remove this order, shouldn't be necessary
-        return str(self.ref) < str(other.ref)
+        return (self.ref, self._package_id) < (other.ref, other._package_id)
 
     def propagate_closing_loop(self, require, prev_node):
         self.propagate_downstream(require, prev_node)
@@ -220,26 +224,26 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def ordered_iterate(self, nodes_subset=None):
-        ordered = self.by_levels(nodes_subset)
+    def ordered_iterate(self):
+        ordered = self.by_levels()
         for level in ordered:
             for node in level:
                 yield node
 
-    def by_levels(self, nodes_subset=None):
-        return self._order_levels(True, nodes_subset)
+    def by_levels(self):
+        return self._order_levels(True)
 
     def inverse_levels(self):
         return self._order_levels(False)
 
-    def _order_levels(self, direct, nodes_subset=None):
+    def _order_levels(self, direct):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
         return [[node1, node34], [node3], [node23, node8],...]
         """
         result = []
-        opened = nodes_subset if nodes_subset is not None else set(self.nodes)
+        opened = set(self.nodes)
         while opened:
             current_level = []
             for o in opened:

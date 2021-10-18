@@ -33,6 +33,8 @@ DEFAULT_CONFIGURATION = {
     "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
     "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
     "tools.ninja:jobs": "Argument for the --jobs parameter when running Ninja generator",
+    "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
+    "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI"
 }
 
 

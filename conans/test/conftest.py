@@ -103,7 +103,13 @@ tools_locations = {
         "default": "system",
         "system": {"path": {'Windows': 'C:/bazel/bin',
                             "Darwin": '/Users/jenkins/bin'}},
-    }
+    },
+    # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
+    # "intel_oneapi": {
+    #     "default": "2021.3",
+    #     "exe": "dpcpp",
+    #     "2021.3": {"path": {"Linux": "/opt/intel/oneapi/compiler/2021.3.0/linux/bin"}}
+    # }
 }
 
 

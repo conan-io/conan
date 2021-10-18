@@ -7,8 +7,7 @@ import pytest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.scm import Git, SVN
-from conans.client.tools.win import get_cased_path
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.model.scm import SCMData
 from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.test_files import temp_folder
@@ -132,7 +131,7 @@ class ConanLib(ConanFile):
         self.assertIn("lib/0.1@user/channel: SCM: Getting sources from url:", self.client.out)
 
     def test_auto_git(self):
-        curdir = get_cased_path(self.client.current_folder).replace("\\", "/")
+        curdir = self.client.current_folder.replace("\\", "/")
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self.client.init_git_repo()

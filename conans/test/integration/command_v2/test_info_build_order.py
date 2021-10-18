@@ -13,7 +13,7 @@ def test_info_build_order():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep dep/0.1@")
     c.run("export pkg pkg/0.1@")
-    c.run("info consumer --build-order=bo.json --build=missing")
+    c.run("graph build-order consumer --json=bo.json --build=missing")
     bo_json = json.loads(c.load("bo.json"))
 
     result = [
@@ -59,7 +59,7 @@ def test_info_build_order_build_require():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep dep/0.1@")
     c.run("export pkg pkg/0.1@")
-    c.run("info  consumer --build-order=bo.json --build=missing")
+    c.run("graph build-order  consumer --json=bo.json --build=missing")
     bo_json = json.loads(c.load("bo.json"))
     result = [
         [
@@ -97,7 +97,6 @@ def test_info_build_order_build_require():
     assert bo_json == result
 
 
-@pytest.mark.xfail(reason="Order not fully defined working on it")
 def test_info_build_order_options():
     c = TestClient()
     c.save({"tool/conanfile.py": GenConanfile().with_option("myopt", [1, 2, 3]),
@@ -110,7 +109,8 @@ def test_info_build_order_options():
     c.run("export dep1 dep1/0.1@")
     c.run("export dep2 dep2/0.1@")
 
-    c.run("info  consumer --build-order=bo.json --build=missing")
+    c.run("graph build-order  consumer --json=bo.json --build=missing")
+
     bo_json = json.loads(c.load("bo.json"))
 
     result = [
@@ -198,12 +198,9 @@ def test_info_build_order_multi_product():
     c.run("export dep dep/0.1@")
     c.run("export pkg pkg/0.1@")
     c.run("export pkg pkg/0.2@")
-    c.run("info consumer1 --build-order=bo1.json --build=missing")
-    print(c.load("bo1.json"))
-    c.run("info consumer2 --build-order=bo2.json --build=missing")
-    c.run("build_order --file=bo1.json --file=bo2.json --build-order=bo3.json")
-
-    print(c.load("bo3.json"))
+    c.run("graph build-order consumer1 --json=bo1.json --build=missing")
+    c.run("graph build-order consumer2 --json=bo2.json --build=missing")
+    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --json=bo3.json")
 
     bo_json = json.loads(c.load("bo3.json"))
 

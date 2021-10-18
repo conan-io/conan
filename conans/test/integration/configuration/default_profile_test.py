@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.client.cache.cache import PROFILES_FOLDER
 from conans.paths import CONANFILE
@@ -50,7 +52,15 @@ class MyConanfile(ConanFile):
         save(default_profile_path, "[buildenv]\nValue1=A")
         client = TestClient()
         save(client.cache.new_config_path, "core:default_profile={}".format(default_profile_path))
-        client.run("config set general.default_profile='%s'" % default_profile_path)
+
+        conan_conf = textwrap.dedent("""
+                [storage]
+                path = ./data
+                [general]
+                default_profile={}
+        """.format(default_profile_path))
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         client.save({CONANFILE: br})
         client.run("export . lasote/stable")
         client.run('install mylib/0.1@lasote/stable --build')
@@ -63,6 +73,7 @@ class MyConanfile(ConanFile):
         client.run("export . lasote/stable")
         client.run('install mylib/0.1@lasote/stable --build')
 
+    @pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
     def test_profile_applied_ok(self):
         br = '''
 import os

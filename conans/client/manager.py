@@ -15,7 +15,8 @@ from conans.model.ref import ConanFileReference
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, remotes=None, build_modes=None, update=False, generators=None,
                  no_imports=False, create_reference=None, lockfile_node_id=None,
-                 is_build_require=False, require_overrides=None):
+                 is_build_require=False, require_overrides=None,
+                 conanfile_path=None, test=None):
 
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
@@ -61,9 +62,14 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
 
     graph_lock.complete_matching_prevs()
 
-    conanfile.folders.set_base_install(install_folder)
-    conanfile.folders.set_base_imports(install_folder)
-    conanfile.folders.set_base_generators(base_folder)
+    if hasattr(conanfile, "layout") and not test:
+        conanfile.folders.set_base_install(conanfile_path)
+        conanfile.folders.set_base_imports(conanfile_path)
+        conanfile.folders.set_base_generators(conanfile_path)
+    else:
+        conanfile.folders.set_base_install(install_folder)
+        conanfile.folders.set_base_imports(install_folder)
+        conanfile.folders.set_base_generators(base_folder)
 
     if install_folder:
         # Write generators

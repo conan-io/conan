@@ -89,7 +89,7 @@ sources:
 
     @pytest.mark.slow
     @pytest.mark.local_bottle
-    def test_conan_data_as_source(self):
+    def test_conan_data_as_source_newtools(self):
         tgz_path = tgz_with_contents({"foo.txt": "foo"})
         if sys.version_info.major == 3 and sys.version_info.minor >= 9:
             # Python 3.9 changed the tar algorithm. Conan tgz will have different checksums
@@ -117,22 +117,23 @@ sources:
 
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, tools
+                from conans import ConanFile
+                from conan.tools.files import get
 
-            class Lib(ConanFile):
-                def source(self):
-                    data = self.conan_data["sources"]["all"]
-                    tools.get(**data)
-                    self.output.info("OK!")
-            """)
+                class Lib(ConanFile):
+                    def source(self):
+                        data = self.conan_data["sources"]["all"]
+                        get(self, **data)
+                        self.output.info("OK!")
+                """)
         conandata = textwrap.dedent("""
-            sources:
-              all:
-                url: "http://localhost:{}/myfile.tar.gz"
-                md5: "{}"
-                sha1: "{}"
-                sha256: "{}"
-            """)
+                sources:
+                  all:
+                    url: "http://localhost:{}/myfile.tar.gz"
+                    md5: "{}"
+                    sha1: "{}"
+                    sha256: "{}"
+                """)
         client.save({"conanfile.py": conanfile,
                      "conandata.yml": conandata.format(thread.port, md5_value, sha1_value,
                                                        sha256_value)})
@@ -140,7 +141,9 @@ sources:
         client.run("create . {}".format(ref))
         self.assertIn("OK!", client.out)
 
-        source_folder = client.get_latest_ref_layout(ref).source()
+        latest_rrev = client.cache.get_latest_rrev(ref)
+        ref_layout = client.cache.ref_layout(latest_rrev)
+        source_folder = ref_layout.source()
         downloaded_file = os.path.join(source_folder, "foo.txt")
         self.assertEqual("foo", load(downloaded_file))
 

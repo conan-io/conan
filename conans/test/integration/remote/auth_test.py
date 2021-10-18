@@ -7,7 +7,7 @@ from conans.client import tools
 from conans.errors import AuthenticationException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestRequester
 from conans.test.utils.tools import TestServer
 from conans.util.files import save
 
@@ -127,10 +127,7 @@ class AuthenticationTest(unittest.TestCase):
 
     def test_unauthorized_during_capabilities(self):
 
-        class RequesterMock(object):
-
-            def __init__(self, *args, **kwargs):
-                pass
+        class RequesterMock(TestRequester):
 
             @staticmethod
             def get(url, **kwargs):

@@ -54,7 +54,8 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
                          graph_lock=graph_lock,
                          root_ref=root_ref,
                          build_modes=build_modes,
-                         update=update)
+                         update=update,
+                         conanfile_path=os.path.dirname(test_conanfile_path))
             out.info("Executing test_package %s" % repr(ref))
             try:
                 graph_lock.relax()
