@@ -65,7 +65,7 @@ class ConanApp(object):
 
     @property
     def selected_remote(self):
-        # FIXME: To ease the migration
+        # FIXME: To ease the migration to N selected remotes
         if len(self.selected_remotes) == 0:
             return None
         if len(self.selected_remotes) == 1:
@@ -86,9 +86,3 @@ class ConanApp(object):
                     if tmp.disabled:
                         raise ConanException("Remote '{}' is disabled".format(tmp.name))
                     self.selected_remotes.append(tmp)
-
-    def get_enabled_remote_by_name(self, remote_name):
-        ret = list(filter(lambda x: x.name == remote_name, self.enabled_remotes))
-        if not ret:
-            raise ConanException("There is no active remote named '{}'".format(remote_name))
-        return ret[0]

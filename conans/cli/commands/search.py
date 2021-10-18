@@ -23,7 +23,7 @@ def search(conan_api: ConanAPIV2, parser, *args, **kwargs):
     args = parser.parse_args(*args)
 
     results = []
-    remotes = get_remote_selection(conan_api, args)
+    remotes = get_remote_selection(conan_api, args.remote)
     for remote in remotes:
         error = None
         try:

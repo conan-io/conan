@@ -167,7 +167,7 @@ def list_recipes(conan_api, parser, subparser, *args):
             }]
 
     if use_remotes:
-        remotes = get_remote_selection(conan_api, args)
+        remotes = get_remote_selection(conan_api, args.remote)
         for remote in remotes:
             error = None
             try:
@@ -230,7 +230,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
             "results": result
         })
     if args.remote:
-        remotes = get_remote_selection(conan_api, args)
+        remotes = get_remote_selection(conan_api, args.remote)
         for remote in remotes:
             error = None
             try:
@@ -291,7 +291,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             "results": result
         })
     if args.remote:
-        remotes = get_remote_selection(conan_api, args)
+        remotes = get_remote_selection(conan_api, args.remote)
         for remote in remotes:
             error = None
             try:
@@ -348,7 +348,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
         results.append(result)
 
     if args.remote:
-        remotes = get_remote_selection(conan_api, args)
+        remotes = get_remote_selection(conan_api, args.remote)
         for remote in remotes:
             error = None
             try:
