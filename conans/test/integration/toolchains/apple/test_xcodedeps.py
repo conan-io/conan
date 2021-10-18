@@ -36,7 +36,8 @@ def check_contents(client, deps, configuration, architecture, sdk=None):
                                                       get_name(configuration, architecture, sdk))
         conan_vars = client.load(vars_name)
         for var in _expected_vars_xconfig:
-            assert var.format(name=dep_name) in conan_vars
+            line = var.format(name=dep_name, configuration=configuration)
+            assert line in conan_vars
 
         conan_conf = client.load(conf_name)
         sdk_condition = "*" if not sdk else "{}*".format(sdk)
@@ -46,30 +47,30 @@ def check_contents(client, deps, configuration, architecture, sdk=None):
 
 
 _expected_vars_xconfig = [
-    "CONAN_{name}_ROOT_FOLDER",
-    "CONAN_{name}_BINARY_DIRECTORIES = $(CONAN_{name}_ROOT_FOLDER)/bin",
-    "CONAN_{name}_C_COMPILER_FLAGS =",
-    "CONAN_{name}_CXX_COMPILER_FLAGS =",
-    "CONAN_{name}_LINKER_FLAGS =",
-    "CONAN_{name}_PREPROCESSOR_DEFINITIONS =",
-    "CONAN_{name}_INCLUDE_DIRECTORIES = $(CONAN_{name}_ROOT_FOLDER)/include",
-    "CONAN_{name}_RESOURCE_DIRECTORIES = $(CONAN_{name}_ROOT_FOLDER)/res",
-    "CONAN_{name}_LIBRARY_DIRECTORIES = $(CONAN_{name}_ROOT_FOLDER)/lib",
-    "CONAN_{name}_LIBRARIES = -l{name}",
-    "CONAN_{name}_SYSTEM_LIBS =",
-    "CONAN_{name}_FRAMEWORKS_DIRECTORIES =",
-    "CONAN_{name}_FRAMEWORKS ="
+    "CONAN_{name}_ROOT_FOLDER_{configuration}",
+    "CONAN_{name}_BINARY_DIRECTORIES_{configuration} = $(CONAN_{name}_ROOT_FOLDER_{configuration})/bin",
+    "CONAN_{name}_C_COMPILER_FLAGS_{configuration} =",
+    "CONAN_{name}_CXX_COMPILER_FLAGS_{configuration} =",
+    "CONAN_{name}_LINKER_FLAGS_{configuration} =",
+    "CONAN_{name}_PREPROCESSOR_DEFINITIONS_{configuration} =",
+    "CONAN_{name}_INCLUDE_DIRECTORIES_{configuration} = $(CONAN_{name}_ROOT_FOLDER_{configuration})/include",
+    "CONAN_{name}_RESOURCE_DIRECTORIES_{configuration} = $(CONAN_{name}_ROOT_FOLDER_{configuration})/res",
+    "CONAN_{name}_LIBRARY_DIRECTORIES_{configuration} = $(CONAN_{name}_ROOT_FOLDER_{configuration})/lib",
+    "CONAN_{name}_LIBRARIES_{configuration} = -l{name}",
+    "CONAN_{name}_SYSTEM_LIBS_{configuration} =",
+    "CONAN_{name}_FRAMEWORKS_DIRECTORIES_{configuration} =",
+    "CONAN_{name}_FRAMEWORKS_{configuration} ="
 ]
 
 _expected_conf_xconfig = [
     "#include \"{vars_name}\"",
-    "HEADER_SEARCH_PATHS[config={configuration}][arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_INCLUDE_DIRECTORIES)",
-    "GCC_PREPROCESSOR_DEFINITIONS[config={configuration}][arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_PREPROCESSOR_DEFINITIONS)",
-    "OTHER_CFLAGS[config={configuration}][arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_C_COMPILER_FLAGS)",
-    "OTHER_CPLUSPLUSFLAGS[config={configuration}][arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_CXX_COMPILER_FLAGS)",
-    "FRAMEWORK_SEARCH_PATHS[config={configuration}][arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_FRAMEWORKS_DIRECTORIES)",
-    "LIBRARY_SEARCH_PATHS[config={configuration}][arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_LIBRARY_DIRECTORIES)",
-    "OTHER_LDFLAGS[config={configuration}][arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_LINKER_FLAGS) $(CONAN_{name}_LIBRARIES) $(CONAN_{name}_SYSTEM_LIBS) $(CONAN_{name}_FRAMEWORKS)"
+    "HEADER_SEARCH_PATHS[arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_INCLUDE_DIRECTORIES_$(CONFIGURATION))",
+    "GCC_PREPROCESSOR_DEFINITIONS[arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_PREPROCESSOR_DEFINITIONS_$(CONFIGURATION))",
+    "OTHER_CFLAGS[arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_C_COMPILER_FLAGS_$(CONFIGURATION))",
+    "OTHER_CPLUSPLUSFLAGS[arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_CXX_COMPILER_FLAGS_$(CONFIGURATION))",
+    "FRAMEWORK_SEARCH_PATHS[arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_FRAMEWORKS_DIRECTORIES_$(CONFIGURATION))",
+    "LIBRARY_SEARCH_PATHS[arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_LIBRARY_DIRECTORIES_$(CONFIGURATION))",
+    "OTHER_LDFLAGS[arch=x86_64][sdk={sdk}] = $(inherited) $(CONAN_{name}_LINKER_FLAGS_$(CONFIGURATION)) $(CONAN_{name}_LIBRARIES_$(CONFIGURATION)) $(CONAN_{name}_SYSTEM_LIBS_$(CONFIGURATION)) $(CONAN_{name}_FRAMEWORKS_$(CONFIGURATION))"
 ]
 
 
