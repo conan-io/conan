@@ -14,8 +14,7 @@ from conans.util.files import load, save
 class SynchronizeTest(unittest.TestCase):
 
     def test_upload(self):
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
         save(client.cache.default_profile_path, "")
         ref = ConanFileReference.loads("hello/0.1@lasote/stable")
         files = {"conanfile.py": GenConanfile("hello", "0.1").with_exports("*"),
@@ -27,7 +26,7 @@ class SynchronizeTest(unittest.TestCase):
         client.run("export . lasote/stable")
         ref_with_rev = client.cache.get_latest_rrev(ref)
         # Upload conan file
-        client.run("upload %s" % str(ref))
+        client.run("upload %s -r default" % str(ref))
 
         server_conan_path = remote_paths.export(ref_with_rev)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
@@ -40,7 +39,7 @@ class SynchronizeTest(unittest.TestCase):
         os.remove(os.path.join(client.current_folder, "to_be_deleted.txt"))
         client.run("export . lasote/stable")
         ref_with_rev = client.cache.get_latest_rrev(ref)
-        client.run("upload %s" % str(ref))
+        client.run("upload %s -r default" % str(ref))
         server_conan_path = remote_paths.export(ref_with_rev)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
@@ -55,7 +54,7 @@ class SynchronizeTest(unittest.TestCase):
         client.save(files)
         client.run("export . lasote/stable")
         ref_with_rev = client.cache.get_latest_rrev(ref)
-        client.run("upload %s" % str(ref))
+        client.run("upload %s -r default" % str(ref))
 
         server_conan_path = remote_paths.export(ref_with_rev)
 
@@ -76,7 +75,7 @@ class SynchronizeTest(unittest.TestCase):
         ref_with_rev = client.cache.get_latest_rrev(ref)
         pkg_ids = client.cache.get_package_ids(ref_with_rev)
         pref = client.cache.get_latest_prev(pkg_ids[0])
-        client.run("upload %s -p %s" % (str(ref), str(pkg_ids[0].id)))
+        client.run("upload %s -p %s -r default" % (str(ref), str(pkg_ids[0].id)))
 
         # Check that package exists on server
         package_server_path = remote_paths.package(pref)

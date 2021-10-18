@@ -9,12 +9,14 @@ from conans.util.files import set_dirty, clean_dirty, is_dirty, rmdir
 
 
 # To be able to change them later to something shorter
-SRC_FOLDER = "source"
-BUILD_FOLDER = "build"
-PACKAGES_FOLDER = "package"
-EXPORT_SRC_FOLDER = "export_source"
-SYSTEM_REQS_FOLDER = "system_reqs"
-SCM_SRC_FOLDER = "scm_source"
+SRC_FOLDER = "s"
+BUILD_FOLDER = "b"
+PACKAGES_FOLDER = "p"
+EXPORT_FOLDER = "e"
+EXPORT_SRC_FOLDER = "es"
+DOWNLOAD_EXPORT_FOLDER = "d"
+SYSTEM_REQS_FOLDER = "se"
+SCM_SRC_FOLDER = "sc"
 SYSTEM_REQS = "system_reqs.txt"
 
 
@@ -50,13 +52,13 @@ class RecipeLayout(LayoutBase):
         yield
 
     def export(self):
-        return os.path.join(self.base_folder, 'export')
+        return os.path.join(self.base_folder, EXPORT_FOLDER)
 
     def export_sources(self):
-        return os.path.join(self.base_folder, 'export_sources')
+        return os.path.join(self.base_folder, EXPORT_SRC_FOLDER)
 
     def download_export(self):
-        return os.path.join(self.base_folder, "dl")
+        return os.path.join(self.base_folder, DOWNLOAD_EXPORT_FOLDER)
 
     def source(self):
         return os.path.join(self.base_folder, SRC_FOLDER)

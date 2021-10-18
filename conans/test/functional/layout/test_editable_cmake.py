@@ -22,9 +22,7 @@ def editable_cmake(generator):
            path=os.path.join(c.current_folder, "pkg"))
 
     def build_dep():
-        c.run("install .")
         c.run("build .")
-        c.run("install . -s build_type=Debug")
         c.run("build . -s build_type=Debug")
 
     with c.chdir("dep"):
@@ -104,19 +102,18 @@ def editable_cmake_exe(generator):
 
     def run_pkg(msg):
         # FIXME: This only works with ``--install-folder``, layout() will break this
-        cmd_release = environment_wrap_command(ConanFileMock(), "install_release/conanrunenv",
+        cmd_release = environment_wrap_command(ConanFileMock(), "conanrunenv-release-x86_64",
                                                "dep_app", cwd=c.current_folder)
         c.run_command(cmd_release)
         assert "{}: Release!".format(msg) in c.out
-        cmd_release = environment_wrap_command(ConanFileMock(), "install_debug/conanrunenv",
+        cmd_release = environment_wrap_command(ConanFileMock(), "conanrunenv-debug-x86_64",
                                                "dep_app", cwd=c.current_folder)
         c.run_command(cmd_release)
         assert "{}: Debug!".format(msg) in c.out
 
     with c.chdir("pkg"):
-        c.run("install dep/0.1@ -o dep:shared=True -if=install_release -g VirtualRunEnv")
-        c.run("install dep/0.1@ -o dep:shared=True -if=install_debug -s build_type=Debug "
-              "-g VirtualRunEnv")
+        c.run("install dep/0.1@ -o dep:shared=True -g VirtualRunEnv")
+        c.run("install dep/0.1@ -o dep:shared=True -s build_type=Debug -g VirtualRunEnv")
         run_pkg("dep")
 
     # Do a source change in the editable!

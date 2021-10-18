@@ -3,6 +3,7 @@ import tempfile
 import textwrap
 import os
 
+import pytest
 
 import conan.tools.qbs.qbsprofile as qbs
 
@@ -465,6 +466,7 @@ class QbsGenericTest(unittest.TestCase):
                             qbs._settings_dir(conanfile)))
         self.assertEqual(config, expected_config)
 
+    @pytest.mark.xfail(reason="Qbs is broken in Windows, using legacy vcvars integration")
     def test_toolchain_content_msvc(self):
         expected_content = textwrap.dedent('''\
             import qbs

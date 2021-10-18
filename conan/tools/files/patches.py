@@ -12,22 +12,23 @@ except ImportError:
 
 
 class PatchLogHandler(logging.Handler):
-    def __init__(self, conanfile, patch_file):
+    def __init__(self, scoped_output, patch_file):
         logging.Handler.__init__(self, logging.DEBUG)
-        self._output = conanfile.output
+        self._scoped_output = scoped_output
         self.patchname = patch_file or "patch_ng"
 
     def emit(self, record):
         logstr = self.format(record)
         if record.levelno == logging.WARN:
-            self._output.warn("%s: %s" % (self.patchname, logstr))
+            self._scoped_output.warning("%s: %s" % (self.patchname, logstr))
         else:
-            self._output.info("%s: %s" % (self.patchname, logstr))
+            self._scoped_output.info("%s: %s" % (self.patchname, logstr))
 
 
-def patch(conanfile, patch_file=None, patch_string=None, strip=0, fuzz=False, **kwargs):
+def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0, fuzz=False, **kwargs):
     """ Applies a diff from file (patch_file)  or string (patch_string)
         in base_path directory or current dir if None
+    :param base_path: Base path where the patch should be applied.
     :param patch_file: Patch file that should be applied.
     :param patch_string: Patch string that should be applied.
     :param strip: Number of folders to be stripped from the path.
@@ -46,7 +47,7 @@ def patch(conanfile, patch_file=None, patch_string=None, strip=0, fuzz=False, **
 
     patchlog = logging.getLogger("patch_ng")
     patchlog.handlers = []
-    patchlog.addHandler(PatchLogHandler(conanfile, patch_file))
+    patchlog.addHandler(PatchLogHandler(conanfile.output, patch_file))
 
     if patch_file:
         patchset = patch_ng.fromfile(patch_file)
@@ -56,7 +57,8 @@ def patch(conanfile, patch_file=None, patch_string=None, strip=0, fuzz=False, **
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
-    if not patchset.apply(root=conanfile.source_folder, strip=strip, fuzz=fuzz):
+    root = os.path.join(conanfile.source_folder, base_path) if base_path else conanfile.source_folder
+    if not patchset.apply(strip=strip, root=root, fuzz=fuzz):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
@@ -71,6 +73,7 @@ def apply_conandata_patches(conanfile):
     ```
     patches:
     - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
+      base_path: "source_subfolder"
     - patch_file: "patches/0002-implicit-copy-constructor.patch"
       patch_type: backport
       patch_source: https://github.com/google/flatbuffers/pull/5650

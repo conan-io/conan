@@ -51,7 +51,7 @@ def test_autotools():
     client.run("install .")
     client.run("build .")
     client.run_command("./main")
-    cxx11_abi = 0 if platform.system() == "Linux" else None
+    cxx11_abi = 1 if platform.system() == "Linux" else None
     check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, cxx11_abi=cxx11_abi)
     assert "hello/0.1: Hello World Release!" in client.out
 

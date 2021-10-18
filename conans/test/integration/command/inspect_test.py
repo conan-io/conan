@@ -3,8 +3,6 @@ import os
 import textwrap
 import unittest
 
-import pytest
-
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
@@ -14,7 +12,7 @@ class ConanInspectTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("name")})
         client.run("export . name/version@user/channel")
-        client.run("upload name/version@user/channel --all")
+        client.run("upload name/version@user/channel --all -r default")
         client.run("remove * -f")
 
         # If the recipe exists, it doesn't show extra output
@@ -30,21 +28,21 @@ class ConanInspectTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
         client.run("export . user/channel")
-        client.run("upload pkg/0.1@user/channel")
+        client.run("upload pkg/0.1@user/channel -r default")
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "arch")})
         client.run("export . user/channel")
 
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: ('os', 'arch')", client.out)
         client.run("inspect pkg/0.1@user/channel -r=default -a settings")
-        self.assertIn("settings: os", client.out)
+        self.assertIn("settings: ['os']", client.out)
         client.run("inspect pkg/0.1@user/channel -a settings")
         # we got in cache the revision from the remote but still the latest
         # revision in cache is the last we created
         self.assertIn("settings: ('os', 'arch')", client.out)
         client.run("remove * -f")
         client.run("inspect pkg/0.1@user/channel -a settings")
-        self.assertIn("settings: os", client.out)
+        self.assertIn("settings: ['os']", client.out)
 
     def test_inspect_not_in_remote(self):
         client = TestClient(default_server_user=True)
@@ -52,17 +50,17 @@ class ConanInspectTest(unittest.TestCase):
         client.run("export . user/channel")
 
         client.run("inspect pkg/0.1@user/channel -a settings")
-        self.assertIn("settings: os", client.out)
+        self.assertIn("settings: ['os']", client.out)
 
         client.run("inspect pkg/0.1@user/channel -a settings -r default", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'pkg/0.1@user/channel'", client.out)
 
         client.run("inspect pkg/0.1@user/channel -a settings")
-        self.assertIn("settings: os", client.out)
+        self.assertIn("settings: ['os']", client.out)
 
     def test_name_version(self):
         server = TestServer()
-        client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers={"default": server}, inputs=["admin", "password"])
         client.save({"conanfile.py": GenConanfile().with_name("MyPkg").with_version("1.2.3")})
         client.run("inspect . -a=name")
         self.assertIn("name: MyPkg", client.out)
@@ -82,7 +80,7 @@ class ConanInspectTest(unittest.TestCase):
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=version")
         self.assertIn("version: 1.2.3", client.out)
 
-        client.run("upload MyPkg* --confirm")
+        client.run("upload MyPkg* --confirm -r default")
         client.run('remove "*" -f')
         client.run("inspect MyPkg/1.2.3@lasote/testing -a=name -r=default")
         self.assertIn("name: MyPkg", client.out)
@@ -135,40 +133,6 @@ class Pkg(ConanFile):
 
         client.run("inspect . -a=unexisting_attr")
         self.assertIn("unexisting_attr:", client.out)
-
-    def test_options(self):
-        client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    options = {"option1": [True, False], "option2": [1, 2, 3], "option3": "ANY",
-               "option4": [1, 2]}
-    default_options = "option1=False", "option2=2", "option3=randomANY"
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("inspect . -a=options -a=default_options")
-        self.assertEqual(client.out, """options:
-    option1: [True, False]
-    option2: [1, 2, 3]
-    option3: ANY
-    option4: [1, 2]
-default_options:
-    option1: False
-    option2: 2
-    option3: randomANY
-""")
-
-        client.run("inspect . -a=version -a=name -a=options -a=default_options --json=file.json")
-        contents = client.load("file.json")
-        json_contents = json.loads(contents)
-        self.assertEqual(json_contents["version"], None)
-        self.assertEqual(json_contents["name"], None)
-        self.assertEqual(json_contents["options"], {'option4': [1, 2],
-                                                    'option2': [1, 2, 3],
-                                                    'option3': 'ANY',
-                                                    'option1': [True, False]})
-        self.assertEqual(json_contents["default_options"], ['option1=False',
-                                                            'option2=2',
-                                                            'option3=randomANY'])
 
     def test_inspect_all(self):
         client = TestClient()
@@ -234,7 +198,7 @@ license: MIT
 author: John Doe
 description: Yet Another Test
 topics: ('foo', 'bar', 'qux')
-generators: cmake
+generators: ['cmake']
 exports: None
 exports_sources: None
 short_paths: False
@@ -250,125 +214,6 @@ default_options:
 deprecated: suggestion
 """, client.out)
 
-    def test_default_options_list(self):
-        client = TestClient()
-        conanfile = textwrap.dedent(r"""
-            from conans import ConanFile
-            class OpenSSLConan(ConanFile):
-                name = "OpenSSL"
-                version = "1.0.2o"
-                settings = "os", "compiler", "arch", "build_type"
-                url = "http://github.com/lasote/conan-openssl"
-                license = "The current OpenSSL licence is an 'Apache style' license"
-                description = "OpenSSL is an open source project that provides a robust, "\
-                              "commercial-grade"
-                options = {"shared": [True, False],
-                           "no_asm": [True, False],
-                           "386": [True, False]}
-                default_options = "=False\n".join(options.keys()) + '=False'
-            """)
-        client.save({"conanfile.py": conanfile})
-        client.run("inspect .")
-        self.assertEqual(textwrap.dedent("""\
-            name: OpenSSL
-            version: 1.0.2o
-            url: http://github.com/lasote/conan-openssl
-            homepage: None
-            license: The current OpenSSL licence is an 'Apache style' license
-            author: None
-            description: OpenSSL is an open source project that provides a robust, commercial-grade
-            topics: None
-            generators: []
-            exports: None
-            exports_sources: None
-            short_paths: False
-            build_policy: None
-            revision_mode: hash
-            settings: ('os', 'compiler', 'arch', 'build_type')
-            options:
-                386: [True, False]
-                no_asm: [True, False]
-                shared: [True, False]
-            default_options:
-                386: False
-                no_asm: False
-                shared: False
-            deprecated: None
-            """), client.out)
-
-    def test_mixed_options_instances(self):
-        client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    name = "MyPkg"
-    version = "1.2.3"
-    author = "John Doe"
-    url = "https://john.doe.com"
-    homepage = "https://john.company.site"
-    license = "MIT"
-    description = "Yet Another Test"
-    generators = "cmake"
-    topics = ("foo", "bar", "qux")
-    settings = "os", "arch", "build_type", "compiler"
-    options = {"foo": [True, False], "bar": [True, False]}
-    default_options = "foo=True", "bar=True"
-    _private = "Nothing"
-    def build(self):
-        pass
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("inspect .")
-        self.assertEqual("""name: MyPkg
-version: 1.2.3
-url: https://john.doe.com
-homepage: https://john.company.site
-license: MIT
-author: John Doe
-description: Yet Another Test
-topics: ('foo', 'bar', 'qux')
-generators: cmake
-exports: None
-exports_sources: None
-short_paths: False
-build_policy: None
-revision_mode: hash
-settings: ('os', 'arch', 'build_type', 'compiler')
-options:
-    bar: [True, False]
-    foo: [True, False]
-default_options:
-    bar: True
-    foo: True
-deprecated: None
-""", client.out)
-
-        client.save({"conanfile.py": conanfile.replace("\"foo=True\", \"bar=True\"",
-                                                       "[\"foo=True\", \"bar=True\"]")})
-        client.run("inspect .")
-        self.assertEqual("""name: MyPkg
-version: 1.2.3
-url: https://john.doe.com
-homepage: https://john.company.site
-license: MIT
-author: John Doe
-description: Yet Another Test
-topics: ('foo', 'bar', 'qux')
-generators: cmake
-exports: None
-exports_sources: None
-short_paths: False
-build_policy: None
-revision_mode: hash
-settings: ('os', 'arch', 'build_type', 'compiler')
-options:
-    bar: [True, False]
-    foo: [True, False]
-default_options:
-    bar: True
-    foo: True
-deprecated: None
-""", client.out)
-
 
 class InspectRawTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
@@ -381,7 +226,7 @@ class InspectRawTest(unittest.TestCase):
             url = "https://john.doe.com"
             settings = "os", "arch", "build_type", "compiler"
             options = {"foo": [True, False], "bar": [True, False]}
-            default_options = "foo=True", "bar=True"
+            default_options = {"foo": "True", "bar": "True"}
 
             _private = "Nothing"
 
@@ -436,7 +281,7 @@ class InspectRawTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
         client.run("inspect . --raw=default_options")
-        self.assertEqual("bar=True\nfoo=True", client.out)
+        self.assertEqual("{'foo': 'True', 'bar': 'True'}", client.out)
 
     def test_default_options_dict(self):
         client = TestClient()
@@ -448,7 +293,7 @@ class InspectRawTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("inspect . --raw=default_options")
-        self.assertEqual("dict=True\nlist=False", client.out)
+        self.assertEqual("{'dict': True, 'list': False}", client.out)
 
     def test_initial_inspect_without_registry(self):
         client = TestClient()

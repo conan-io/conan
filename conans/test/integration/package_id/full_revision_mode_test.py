@@ -16,7 +16,6 @@ class FullRevisionModeTest(unittest.TestCase):
         libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
 
         clienta = TestClient()
-        # clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
         save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfilea = dedent("""
             from conans import ConanFile
@@ -52,7 +51,6 @@ class FullRevisionModeTest(unittest.TestCase):
         # Now change only the package revision of liba
         clienta.run("create . liba/0.1@user/testing")
         clientc.run("install . user/testing")
-        # clientc.run("config set general.default_package_id_mode=package_revision_mode")
         save(clientc.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientc.run("install . user/testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
@@ -158,7 +156,6 @@ class FullRevisionModeTest(unittest.TestCase):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream
         client = TestClient()
-        # client.run("config set general.default_package_id_mode=package_revision_mode")
         save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . liba/0.1@user/testing")
@@ -183,7 +180,6 @@ class FullRevisionModeTest(unittest.TestCase):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream
         client = TestClient(default_server_user=True)
-        # client.run("config set general.default_package_id_mode=package_revision_mode")
         save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . liba/0.1@user/testing")
@@ -198,7 +194,7 @@ class FullRevisionModeTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
         client.run("create . libc/0.1@user/testing")
-        client.run("upload * --all -c")
+        client.run("upload * --all -c -r default")
         client.run("remove * -f")
 
         client.save({"conanfile.py": GenConanfile().with_require('libc/0.1@user/testing')})
@@ -219,7 +215,6 @@ class PackageRevisionModeTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
-        # self.client.run("config set general.default_package_id_mode=package_revision_mode")
         save(self.client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
 
     def _generate_graph(self, dependencies):

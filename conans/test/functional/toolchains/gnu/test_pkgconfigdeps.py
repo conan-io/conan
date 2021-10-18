@@ -11,7 +11,6 @@ from conans.util.files import load
 
 
 # Without compiler, def rpath_flags(settings, os_build, lib_paths): doesn't append the -Wl...etc
-@pytest.mark.tool_compiler
 def test_pkg_config_dirs():
     # https://github.com/conan-io/conan/issues/2756
     conanfile = textwrap.dedent("""
@@ -285,8 +284,12 @@ def test_pkg_with_component_requires():
         """)
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
+    pc_content = client2.load("pkg.pc")
+    assert "Requires: pkg-mycomponent" in pc_content
     pc_content = client2.load("pkg-mycomponent.pc")
     assert "Requires: other" in pc_content
+    pc_content = client2.load("pkg-myothercomp.pc")
+    assert "Requires: pkg-mycomponent" in pc_content
 
 
 def test_pkg_getting_public_requires():
@@ -328,8 +331,10 @@ def test_pkg_getting_public_requires():
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
     pc_content = client2.load("pkg.pc")
-    assert "Requires: cmp1" in pc_content
+    assert "Requires: other-cmp1" in pc_content
+    pc_content = client2.load("other.pc")
+    assert "Requires: other-cmp1 other-cmp2 other-cmp3" in pc_content
     assert client2.load("other-cmp1.pc")
     assert client2.load("other-cmp2.pc")
     pc_content = client2.load("other-cmp3.pc")
-    assert "Requires: cmp1" in pc_content
+    assert "Requires: other-cmp1" in pc_content

@@ -15,7 +15,6 @@ from conans import ConanFile
 
 class AConan(ConanFile):
     requires = "Hello/0.1@lasote/testing"
-    generators = "cmake"
 
     def build(self):
         self.output.info("INCLUDE PATH: %s" %
@@ -41,50 +40,6 @@ class AConan(ConanFile):
 
 
 class ConanBuildTest(unittest.TestCase):
-
-    def test_partial_build(self):
-        client = TestClient()
-        conanfile = """from conans import ConanFile
-
-class Conan(ConanFile):
-    def build(self):
-        self.output.info("CONFIGURE=%s!" % self.should_configure)
-        self.output.info("BUILD=%s!" % self.should_build)
-        self.output.info("INSTALL=%s!" % self.should_install)
-        self.output.info("TEST=%s!" % self.should_test)
-"""
-        client.save({CONANFILE: conanfile})
-        client.run("build .")
-        self.assertIn("CONFIGURE=True!", client.out)
-        self.assertIn("BUILD=True!", client.out)
-        self.assertIn("INSTALL=True!", client.out)
-        self.assertIn("TEST=True!", client.out)
-        client.run("build . --should_configure")
-        self.assertIn("CONFIGURE=True!", client.out)
-        self.assertIn("BUILD=False!", client.out)
-        self.assertIn("INSTALL=False!", client.out)
-        self.assertIn("TEST=False!", client.out)
-        client.run("build . --should_build")
-        self.assertIn("CONFIGURE=False!", client.out)
-        self.assertIn("BUILD=True!", client.out)
-        self.assertIn("INSTALL=False!", client.out)
-        self.assertIn("TEST=False!", client.out)
-        client.run("build . --should_install")
-        self.assertIn("CONFIGURE=False!", client.out)
-        self.assertIn("BUILD=False!", client.out)
-        self.assertIn("INSTALL=True!", client.out)
-        self.assertIn("TEST=False!", client.out)
-        client.run("build . --should_test")
-        self.assertIn("CONFIGURE=False!", client.out)
-        self.assertIn("BUILD=False!", client.out)
-        self.assertIn("INSTALL=False!", client.out)
-        self.assertIn("TEST=True!", client.out)
-
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("CONFIGURE=True!", client.out)
-        self.assertIn("BUILD=True!", client.out)
-        self.assertIn("INSTALL=True!", client.out)
-        self.assertIn("TEST=True!", client.out)
 
     @pytest.mark.xfail(reason="deps_cpp_info access removed")
     def test_build(self):
@@ -113,12 +68,11 @@ import os
 from conans import ConanFile
 
 class AConan(ConanFile):
-    generators = "cmake"
 
     def build(self):
-        self.output.warn("Build folder=>%s" % self.build_folder)
-        self.output.warn("Src folder=>%s" % self.source_folder)
-        self.output.warn("Package folder=>%s" % self.package_folder)
+        self.output.warning("Build folder=>%s" % self.build_folder)
+        self.output.warning("Src folder=>%s" % self.source_folder)
+        self.output.warning("Package folder=>%s" % self.package_folder)
         assert(os.path.exists(self.build_folder))
         assert(os.path.exists(self.source_folder))
         # package_folder will be created manually or by the CMake helper when local invocation
@@ -217,49 +171,6 @@ class AConan(ConanFile):
         self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
         self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
 
-    @pytest.mark.tool_cmake
-    def test_build_cmake_install(self):
-        client = TestClient()
-        conanfile = """
-from conans import ConanFile, CMake
-
-class AConan(ConanFile):
-    settings = "os", "compiler", "build_type", "arch"
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-        cmake.install()
-"""
-        cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
-project(Chat NONE)
-cmake_minimum_required(VERSION 2.8.12)
-
-        install(FILES header.h DESTINATION include)
-"""
-        client.save({CONANFILE: conanfile,
-                     "CMakeLists.txt": cmake,
-                     "header.h": "my header h!!"})
-        client.run("build .")  # Won't fail, by default the package_folder is build_folder/package
-        header = client.load("package/include/header.h")
-        self.assertEqual(header, "my header h!!")
-
-        client.save({CONANFILE: conanfile,
-                     "CMakeLists.txt": cmake,
-                     "header.h": "my header3 h!!"}, clean_first=True)
-        client.run("install .")
-        client.run("build -pf=mypkg ./conanfile.py")
-        header = client.load("mypkg/include/header.h")
-        self.assertEqual(header, "my header3 h!!")
-
-        client.save({CONANFILE: conanfile,
-                     "CMakeLists.txt": cmake,
-                     "header.h": "my header2 h!!"}, clean_first=True)
-        with client.chdir("build"):
-            client.run("install ..")
-        client.run("build . -pf=mypkg -bf=build")
-        header = client.load("mypkg/include/header.h")
-        self.assertEqual(header, "my header2 h!!")
-
     @pytest.mark.xfail(reason="deps_cpp_info access removed")
     def test_build_with_deps_env_info(self):
         client = TestClient()
@@ -296,7 +207,7 @@ class AConan(ConanFile):
     def test_build_single_full_reference(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile, CMake
+from conans import ConanFile
 
 class FooConan(ConanFile):
     name = "foo"
@@ -309,7 +220,7 @@ class FooConan(ConanFile):
     def test_build_multiple_full_reference(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile, CMake
+from conans import ConanFile
 
 class FooConan(ConanFile):
     name = "foo"

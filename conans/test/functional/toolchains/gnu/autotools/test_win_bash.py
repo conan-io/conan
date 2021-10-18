@@ -11,6 +11,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool_msys2
 def test_autotools_bash_complete():
@@ -70,8 +71,8 @@ def test_autotools_bash_complete():
     client.run_command("main.exe")
     check_exe_run(client.out, "main", "msvc", None, "Release", "x86_64", None)
 
-    bat_contents = client.load("conanenv.bat")
-    sh_contents = client.load("conanenv.sh")
+    bat_contents = client.load("conanbuild.bat")
+    sh_contents = client.load("conanbuild.sh")
 
     assert "conanvcvars.bat" in bat_contents
     assert "conan_compiler.sh" in sh_contents and "conanautotoolstoolchain.sh" in sh_contents

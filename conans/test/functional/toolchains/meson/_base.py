@@ -9,38 +9,11 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.tool_meson
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
+@pytest.mark.skipif(platform.system() not in ("Darwin", "Windows", "Linux"),
+                    reason="Not tested for not mainstream boring operating systems")
 class TestMesonBase(unittest.TestCase):
     def setUp(self):
         self.t = TestClient()
-
-    @property
-    def _settings(self):
-        # FIXME: This is hardcoded for CI
-        settings_macosx = {"compiler": "apple-clang",
-                           "compiler.libcxx": "libc++",
-                           "compiler.version": "12.0",
-                           "arch": "x86_64",
-                           "build_type": "Release"}
-
-        settings_windows = {"compiler": "Visual Studio",
-                            "compiler.version": "15",
-                            "compiler.runtime": "MD",
-                            "arch": "x86_64",
-                            "build_type": "Release"}
-
-        settings_linux = {"compiler": "gcc",
-                          "compiler.version": "9",
-                          "compiler.libcxx": "libstdc++",
-                          "arch": "x86_64",
-                          "build_type": "Release"}
-
-        return {"Darwin": settings_macosx,
-                "Windows": settings_windows,
-                "Linux": settings_linux}.get(platform.system())
-
-    @property
-    def _settings_str(self):
-        return " ".join('-s %s="%s"' % (k, v) for k, v in self._settings.items() if v)
 
     def _check_binary(self):
         # FIXME: This is hardcoded for CI

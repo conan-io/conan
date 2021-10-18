@@ -69,7 +69,7 @@ class ForbiddenCommandsTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
                               "TODO: cache2.0 fix with editables")
     def test_upload(self):
-        self.t.run('upload --force {}'.format(self.ref), assert_error=True)
+        self.t.run('upload --force {} -r default'.format(self.ref), assert_error=True)
         self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
 
     @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."

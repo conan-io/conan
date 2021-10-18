@@ -1,5 +1,6 @@
 import os
 import stat
+import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient
@@ -13,7 +14,13 @@ class DeployImportFilePermissionTest(unittest.TestCase):
     def _client(self, ro_file, ro_cache):
         client = TestClient()
         if ro_cache:
-            client.run("config set general.read_only_cache=True")
+            conan_conf = textwrap.dedent("""
+                                        [storage]
+                                        path = ./data
+                                        [general]
+                                        read_only_cache=True
+                                    """)
+            client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         with client.chdir('recipe'):
             conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):

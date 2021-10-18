@@ -228,6 +228,7 @@ class GraphLock(object):
         else:
             locked_refs = self.requires
         version_range = require.version_range
+
         if version_range:
             matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
                        r.channel == ref.channel]

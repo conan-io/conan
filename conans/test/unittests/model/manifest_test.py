@@ -28,7 +28,8 @@ class ManifestTest(unittest.TestCase):
         self.assertEqual(readed_manifest, manifest)
         # Not included the pycs or pyo
         self.assertEqual(set(manifest.file_sums.keys()),
-                          set(["one.ext", "path/to/two.txt", "two.txt"]))
+                         {'folder/damn.pyc', 'folder/damn.pyo', 'one.ext', 'path/to/two.txt',
+                          'pythonfile.pyc', 'two.txt'})
 
         for filepath, md5readed in manifest.file_sums.items():
             content = files[filepath]
@@ -44,4 +45,4 @@ class ManifestTest(unittest.TestCase):
         read_manifest = FileTreeManifest.loads(load(os.path.join(tmp_dir, "man.txt")))
         # Not included the pycs or pyo
         self.assertEqual(set(read_manifest.file_sums.keys()),
-                          set(["conanfile.py"]))
+                         {"conanfile.py", "conanfile.pyc", "conanfile.pyo"})

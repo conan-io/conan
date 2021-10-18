@@ -76,7 +76,7 @@ class ExporterTest(unittest.TestCase):
 
         shutil.copytree(reg_folder, build_folder)
 
-        loader = ConanFileLoader(None, Mock())
+        loader = ConanFileLoader(None)
         conanfile = loader.load_consumer(conanfile_path, create_profile())
 
         conanfile.folders.set_base_build(build_folder)

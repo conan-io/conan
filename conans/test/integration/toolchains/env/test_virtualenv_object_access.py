@@ -34,15 +34,15 @@ def test_virtualenv_object_access(client):
         def build(self):
           build_env = VirtualBuildEnv(self).environment()
           run_env = VirtualRunEnv(self).environment()
-          self.output.warn("Foo: *{}*".format(build_env["Foo"]))
-          self.output.warn("runFoo: *{}*".format(run_env["runFoo"]))
-          self.output.warn("Hello: *{}*".format(build_env["Hello"]))
+          self.output.warning("Foo: *{}*".format(build_env["Foo"]))
+          self.output.warning("runFoo: *{}*".format(run_env["runFoo"]))
+          self.output.warning("Hello: *{}*".format(build_env["Hello"]))
 
           with build_env.apply():
             with run_env.apply():
-              self.output.warn("Applied Foo: *{}*".format(os.getenv("Foo", "")))
-              self.output.warn("Applied Hello: *{}*".format(os.getenv("Hello", "")))
-              self.output.warn("Applied runFoo: *{}*".format(os.getenv("runFoo", "")))
+              self.output.warning("Applied Foo: *{}*".format(os.getenv("Foo", "")))
+              self.output.warning("Applied Hello: *{}*".format(os.getenv("Hello", "")))
+              self.output.warning("Applied runFoo: *{}*".format(os.getenv("runFoo", "")))
     """)
 
     profile = textwrap.dedent("""

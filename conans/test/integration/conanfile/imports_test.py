@@ -3,7 +3,7 @@ import re
 import textwrap
 import unittest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 conanfile = """from conans import ConanFile

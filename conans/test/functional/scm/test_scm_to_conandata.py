@@ -156,7 +156,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
 
 
 class ParseSCMFromConanDataTestCase(unittest.TestCase):
-    loader = ConanFileLoader(runner=None, output=Mock())
+    loader = ConanFileLoader(runner=None)
 
     def test_parse_data(self):
         conanfile = textwrap.dedent("""
@@ -222,7 +222,7 @@ def test_auto_can_be_automated():
         t.run("export . pkg/1.0@")
     _check(t)
 
-    t.run("upload * -c")
+    t.run("upload * -c -r default")
     t.run("remove * -f")
     t.run("install pkg/1.0@ --build", assert_error=True)
     assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out

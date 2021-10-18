@@ -1,6 +1,5 @@
 import textwrap
 
-import pytest
 from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphError

@@ -1,10 +1,13 @@
 import os
+import platform
 import re
+import textwrap
 
 import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.utils.tools import TestClient
 
 
@@ -16,7 +19,7 @@ def test_local_static_generators_folder():
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type"))
     conan_file += """
-    generators = "cmake", "CMakeToolchain"
+    generators = "CMakeToolchain"
     def layout(self):
         self.folders.build = "build-{}".format(self.settings.build_type)
         self.folders.generators = "{}/generators".format(self.folders.build)
@@ -25,16 +28,12 @@ def test_local_static_generators_folder():
     client.run("install . -if=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    cmake_generator_path = os.path.join(old_install_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
-    assert os.path.exists(cmake_generator_path)
     assert not os.path.exists(cmake_toolchain_generator_path)
 
     build_folder = os.path.join(client.current_folder, "build-Release")
     generators_folder = os.path.join(build_folder, "generators")
-    cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(generators_folder, "conan_toolchain.cmake")
-    assert not os.path.exists(cmake_generator_path)
     assert os.path.exists(cmake_toolchain_generator_path)
 
 
@@ -55,19 +54,15 @@ def test_local_dynamic_generators_folder():
         self.folders.generators = "{}/generators".format(self.folders.build)
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install -g cmake")
+    client.run("install . -if=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    cmake_generator_path = os.path.join(old_install_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
-    assert os.path.exists(cmake_generator_path)
     assert not os.path.exists(cmake_toolchain_generator_path)
 
     build_folder = os.path.join(client.current_folder, "build-Release")
     generators_folder = os.path.join(build_folder, "generators")
-    cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(generators_folder, "conan_toolchain.cmake")
-    assert not os.path.exists(cmake_generator_path)
     assert os.path.exists(cmake_toolchain_generator_path)
 
 
@@ -84,13 +79,11 @@ def test_no_layout_generators_folder():
         tc.generate()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install -g cmake")
+    client.run("install . -if=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    cmake_generator_path = os.path.join(old_install_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
 
-    assert os.path.exists(cmake_generator_path)
     # In the install_folder
     assert os.path.exists(cmake_toolchain_generator_path)
 
@@ -109,7 +102,7 @@ def test_local_build():
         self.folders.generators = "my_generators"
         self.folders.build = "my_build"
     def build(self):
-        self.output.warn("Generators folder: {}".format(self.folders.generators_folder))
+        self.output.warning("Generators folder: {}".format(self.folders.generators_folder))
         tools.save("build_file.dll", "bar")
 """
     client.save({"conanfile.py": conan_file})
@@ -135,7 +128,8 @@ def test_local_build_change_base():
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=common")
     client.run("build . -if=common -bf=common")
-    dll = os.path.join(client.current_folder, "common", "my_build", "build_file.dll")
+    # -bf is ignored here, the layout defines it
+    dll = os.path.join(client.current_folder, "my_build", "build_file.dll")
     assert os.path.exists(dll)
 
 
@@ -194,9 +188,9 @@ def test_export_pkg():
         tools.save("library.lib", "bar")
         tools.save("generated.h", "bar")
     def package(self):
-        self.output.warn("Source folder: {}".format(self.source_folder))
-        self.output.warn("Build folder: {}".format(self.build_folder))
-        self.output.warn("Package folder: {}".format(self.package_folder))
+        self.output.warning("Source folder: {}".format(self.source_folder))
+        self.output.warning("Build folder: {}".format(self.build_folder))
+        self.output.warning("Package folder: {}".format(self.package_folder))
         self.copy("*.h")
         self.copy("*.lib")
     """
@@ -239,9 +233,9 @@ def test_export_pkg_local():
         tools.save("library.lib", "bar")
         tools.save("generated.h", "bar")
     def package(self):
-        self.output.warn("Source folder: {}".format(self.source_folder))
-        self.output.warn("Build folder: {}".format(self.build_folder))
-        self.output.warn("Package folder: {}".format(self.package_folder))
+        self.output.warning("Source folder: {}".format(self.source_folder))
+        self.output.warning("Build folder: {}".format(self.build_folder))
+        self.output.warning("Package folder: {}".format(self.package_folder))
         self.copy("*.h")
         self.copy("*.lib")
     """
@@ -304,7 +298,7 @@ def test_imports():
     def layout(self):
         self.folders.imports = "my_imports"
     def imports(self):
-        self.output.warn("Imports folder: {}".format(self.imports_folder))
+        self.output.warning("Imports folder: {}".format(self.imports_folder))
         self.copy("*.dll")
     """
 
@@ -326,3 +320,59 @@ def test_imports():
     bfolder = client.get_latest_pkg_layout(pref).build()
     imports_folder = os.path.join(bfolder, "my_imports")
     assert "WARN: Imports folder: {}".format(imports_folder) in client.out
+
+
+def test_start_dir_failure():
+    c = TestClient()
+    c.save(pkg_cmake("dep", "0.1"))
+    c.run("install .")
+    build = "build" if platform.system() == "Windows" else "cmake-build-release"
+    expected_path = os.path.join(c.current_folder, build, "conan", "conan_toolchain.cmake")
+    assert os.path.exists(expected_path)
+    os.unlink(expected_path)
+    with c.chdir("build"):
+        c.run("install ..")
+    assert os.path.exists(expected_path)
+
+
+def test_importdir_failure():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.files import save
+        class Cosumer(ConanFile):
+            requires = "dep/0.1"
+            settings = "build_type"
+            def layout(self):
+                self.folders.imports = "Import" + str(self.settings.build_type)
+                self.folders.build = "build"
+            def build(self):
+                self.output.info("saving file")
+                save(self, "mybuild.txt", "mybuild")
+            def imports(self):
+                self.copy("myfile.txt")
+        """)
+    c.save({"dep/conanfile.py": GenConanfile().with_package_file("myfile.txt", "mycontent"),
+            "consumer/conanfile.py": conanfile})
+    c.run("create dep dep/0.1@")
+    with c.chdir("consumer"):
+        c.run("install . -s build_type=Release")
+        expected_path_release = os.path.join(c.current_folder, "ImportRelease", "myfile.txt")
+        assert os.path.exists(expected_path_release)
+        c.run("build .")
+        expected_build_file = os.path.join(c.current_folder, "build", "mybuild.txt")
+        assert os.path.exists(expected_build_file)
+        c.run("install . -s build_type=Debug")
+        expected_path_debug = os.path.join(c.current_folder, "ImportDebug", "myfile.txt")
+        assert os.path.exists(expected_path_debug)
+
+        os.unlink(expected_path_release)
+        os.unlink(expected_path_debug)
+        os.unlink(expected_build_file)
+        with c.chdir("build"):
+            c.run("install .. -s build_type=Release")
+            assert os.path.exists(expected_path_release)
+            c.run("build ..")
+            assert os.path.exists(expected_build_file)
+            c.run("install .. -s build_type=Debug")
+            assert os.path.exists(expected_path_debug)
