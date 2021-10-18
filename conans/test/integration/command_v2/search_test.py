@@ -4,7 +4,7 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from conans.cli.api.helpers.search import Search
+from conans.cli.api.subapi.search import Search
 from conans.errors import ConanConnectionError, ConanException
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -44,12 +44,9 @@ class TestSearch:
 
     def test_search_disabled_remote(self, remotes):
         self.client.run("remote disable remote1")
-        self.client.run("search whatever -r remote1")
-        expected_output = textwrap.dedent("""\
-        remote1:
-          ERROR: Remote 'remote1' is disabled
-        """)
-        assert expected_output == self.client.out
+        self.client.run("search whatever -r remote1", assert_error=True)
+        expected_output = "ERROR: The remote 'remote1' is not enabled or it doesn't exist"
+        assert expected_output in self.client.out
 
 
 class TestRemotes:
@@ -211,13 +208,12 @@ class TestRemotes:
         remote1_recipe1 = "test_recipe/1.0.0@user/channel"
         remote1_recipe2 = "test_recipe/1.1.0@user/channel"
 
-        expected_output = "No remote 'wrong_remote' defined in remotes"
-
         self._add_remote(remote1)
         self._add_recipe(remote1, remote1_recipe1)
         self._add_recipe(remote1, remote1_recipe2)
 
         self.client.run("search -r wrong_remote test_recipe", assert_error=True)
+        expected_output = "The remote 'wrong_remote' is not enabled or it doesn't exist"
         assert expected_output in self.client.out
 
     def test_search_wildcard(self):

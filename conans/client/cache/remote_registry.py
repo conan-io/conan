@@ -100,6 +100,7 @@ class _Remotes(object):
 
         index = self._remotes.index(current)
         self._remotes.remove(current)
+        print(remote)
         self._remotes.insert(index, remote)
 
     def move(self, remote: Remote, new_index: int):

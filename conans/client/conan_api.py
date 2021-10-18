@@ -130,15 +130,16 @@ class ConanAPIV1(object):
             conanfile_path = _get_conanfile_path(path, os.getcwd(), py=True)
             conanfile = app.loader.load_named(conanfile_path, None, None, None, None)
         else:
-            if remote_name:
+            if app.selected_remote:
                 try:
                     if not ref.revision:
-                        ref, _ = app.remote_manager.get_latest_recipe_revision(ref)
+                        ref, _ = app.remote_manager.get_latest_recipe_revision(ref,
+                                                                               app.selected_remote)
                 except NotFoundException:
                     raise RecipeNotFoundException(ref)
                 else:
                     if not app.cache.exists_rrev(ref):
-                        ref, _ = app.remote_manager.get_recipe(ref)
+                        ref, _ = app.remote_manager.get_recipe(ref, app.selected_remote)
 
             result = app.proxy.get_recipe(ref)
             conanfile_path, _, _, ref = result
@@ -356,6 +357,7 @@ class ConanAPIV1(object):
                 lockfile=None, lockfile_out=None, profile_build=None, conf=None,
                 require_overrides=None):
         app = ConanApp(self.cache_folder)
+        app.load_remotes(remote_name=remote_name, update=update)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
 

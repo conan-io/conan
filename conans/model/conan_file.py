@@ -246,7 +246,7 @@ class ConanFile:
 
     def build(self):
         """ build your project calling the desired build tools as done in the command line.
-        E.g. self.run("cmake --build .") Or use the provided build helpers. E.g. cmake.build()
+        E.g. self.run("cmake --build .") Or use the provided build subapi. E.g. cmake.build()
         """
         self.output.warning("This conanfile has no build step")
 

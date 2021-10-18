@@ -1,60 +1,21 @@
-import functools
 import os
-import sys
+import os
 import time
 
 from tqdm import tqdm
 
 from conans import __version__ as client_version
-from conans.cli.api.helpers.remotes import RemotesAPI
-from conans.cli.api.helpers.search import Search
+from conans.cli.api.subapi import api_method
+from conans.cli.api.subapi.remotes import RemotesAPI
+from conans.cli.api.subapi.search import SearchAPI
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.cache.cache import ClientCache
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator
-from conans.client.tools.env import environment_append
-from conans.client.userio import init_colorama
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_packages
-from conans.util.tracer import log_command
-
-
-def api_method(f):
-    """Useful decorator to manage Conan API methods"""
-
-    @functools.wraps(f)
-    def wrapper(api, *args, **kwargs):
-        quiet = kwargs.pop("quiet", False)
-        try:  # getcwd can fail if Conan runs on an non-existing folder
-            old_curdir = os.getcwd()
-        except EnvironmentError:
-            old_curdir = None
-
-        if quiet:
-            old_stdout = sys.stdout
-            old_stderr = sys.stderr
-            devnull = open(os.devnull, 'w')
-            sys.stdout = devnull
-            sys.stderr = devnull
-
-        init_colorama(sys.stderr)
-
-        try:
-            log_command(f.__name__, kwargs)
-            # FIXME: Not pretty to instance here a ClientCache
-            config = ClientCache(api.cache_folder).config
-            with environment_append(config.env_vars):
-                return f(api, *args, **kwargs)
-        finally:
-            if old_curdir:
-                os.chdir(old_curdir)
-            if quiet:
-                sys.stdout = old_stdout
-                sys.stderr = old_stderr
-    return wrapper
 
 
 class ConanAPIV2(object):
@@ -70,6 +31,9 @@ class ConanAPIV2(object):
 
         # Remotes management
         self.remotes = RemotesAPI(self)
+
+        # Search
+        self.search = SearchAPI(self)
 
     @api_method
     def user_list(self, remote_name=None):
@@ -93,64 +57,19 @@ class ConanAPIV2(object):
             info = {"{}".format(remote_name): {"user": "someuser1"}}
         return info
 
-    @api_method
-    def user_add(self, remote_name, user_name, user_password, force_add=False):
-        return {}
-
-    @api_method
-    def user_remove(self, remote_name):
-        return {}
-
-    @api_method
-    def user_update(self, user_name, user_pasword):
-        return {}
-
-    @api_method
-    def get_enabled_remotes(self, remote_names):
-        app = ConanApp(self.cache_folder)
-        app.load_remotes()
-
-        if not app.all_remotes:
-            raise ConanException("The remotes registry is empty. "
-                                 "Please add at least one valid remote.")
+    def filter_remotes_with_selected(self):
+        enabled = list(filter(lambda x: not x.disabled, conan_api.remotes.list()))
+        if not enabled:
+            raise ConanException("The remotes registry is empty or all disabled.")
         # If no remote is specified, search in all of them
-        if not remote_names:
-            # Exclude disabled remotes
-            return app.enabled_remotes
+        if args.remote:
+            enabled_remotes = {r.name: r for r in enabled}
+            for r in args.remote:
+                if r not in enabled_remotes:
+                    raise ConanException(
+                        "The remote '{}' is not enabled or it doesn't exist ".format(r))
+            enabled = list(filter(lambda x: x.name in args.remote, enabled))
 
-        enabled_remotes = list(filter(lambda x: x.name in remote_names, app.enabled_remotes))
-        return enabled_remotes
-
-    @api_method
-    def search_local_recipes(self, query):
-        app = ConanApp(self.cache_folder)
-        app.load_remotes()
-        search = Search(app)
-        references = search.search_local_recipes(query)
-        results = []
-        for reference in references:
-            result = {
-                "name": reference.name,
-                "id": repr(reference)
-            }
-            results.append(result)
-        return results
-
-    @api_method
-    def search_remote_recipes(self, query, remote):
-        app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote.name)
-        search = Search(app)
-        results = []
-        remote_references = search.search_remote_recipes(query, remote.name)
-        for remote_name, references in remote_references.items():
-            for reference in references:
-                result = {
-                    "name": reference.name,
-                    "id": repr(reference)
-                }
-                results.append(result)
-        return results
 
     def _get_revisions(self, ref, getter_name, remote=None):
         """

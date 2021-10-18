@@ -91,7 +91,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("r3: https://r3", lines[2])
 
         # Rename to an existing one
-        client.run("remote rename r2 r1", assert_error=True)
+        client.run("remote rename mynewr2 r1", assert_error=True)
         self.assertIn("Remote 'r1' already exists", client.out)
 
     def test_insert(self):
@@ -117,14 +117,16 @@ class RemoteTest(unittest.TestCase):
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
 
-        client.run("remote update r2 https://r2new --index")
+        client.run("remote update r2 --url https://r2new")
+        client.run("remote move r2 0")
         client.run("remote list")
         lines = str(client.out).splitlines()
         self.assertIn("r2: https://r2new", lines[0])
         self.assertIn("r1: https://r1", lines[1])
         self.assertIn("r3: https://r3", lines[2])
 
-        client.run("remote update r2 https://r2new2 --index 2")
+        client.run("remote update r2 --url https://r2new2")
+        client.run("remote move r2 2")
         client.run("remote list")
         lines = str(client.out).splitlines()
         self.assertIn("r1: https://r1", lines[0])
@@ -137,17 +139,18 @@ class RemoteTest(unittest.TestCase):
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
-        client.run("remote update r2 https://r2 --index=0")
+        client.run("remote update r2 --url https://r2")
+        client.run("remote move r2 0")
         client.run("remote list")
         self.assertLess(str(client.out).find("r2"), str(client.out).find("r1"))
         self.assertLess(str(client.out).find("r1"), str(client.out).find("r3"))
 
     def test_verify_ssl(self):
         client = TestClient()
-        client.run("remote add my-remote http://someurl TRUE")
-        client.run("remote add my-remote2 http://someurl2 yes")
-        client.run("remote add my-remote3 http://someurl3 FALse")
-        client.run("remote add my-remote4 http://someurl4 No")
+        client.run("remote add my-remote http://someurl --secure")
+        client.run("remote add my-remote2 http://someurl2 --insecure")
+        client.run("remote add my-remote3 http://someurl3")
+
         registry = load(client.cache.remotes_path)
         data = json.loads(registry)
         self.assertEqual(data["remotes"][0]["name"], "my-remote")
@@ -156,15 +159,11 @@ class RemoteTest(unittest.TestCase):
 
         self.assertEqual(data["remotes"][1]["name"], "my-remote2")
         self.assertEqual(data["remotes"][1]["url"], "http://someurl2")
-        self.assertEqual(data["remotes"][1]["verify_ssl"], True)
+        self.assertEqual(data["remotes"][1]["verify_ssl"], False)
 
         self.assertEqual(data["remotes"][2]["name"], "my-remote3")
         self.assertEqual(data["remotes"][2]["url"], "http://someurl3")
-        self.assertEqual(data["remotes"][2]["verify_ssl"], False)
-
-        self.assertEqual(data["remotes"][3]["name"], "my-remote4")
-        self.assertEqual(data["remotes"][3]["url"], "http://someurl4")
-        self.assertEqual(data["remotes"][3]["verify_ssl"], False)
+        self.assertEqual(data["remotes"][2]["verify_ssl"], True)
 
     def test_remote_disable(self):
         client = TestClient()
@@ -223,8 +222,7 @@ class RemoteTest(unittest.TestCase):
         client = TestClient()
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
 
-        self.assertIn("ERROR: Unrecognized boolean value 'some_invalid_option=foo'",
-                      client.out)
+        self.assertIn("unrecognized arguments: some_invalid_option=foo", client.out)
         data = json.loads(load(client.cache.remotes_path))
         self.assertEqual(data["remotes"], [])
 
@@ -268,42 +266,3 @@ class RemoteTest(unittest.TestCase):
                       self.client.out)
         self.client.run("remote list")
         self.assertIn("pepe.org", self.client.out)
-
-    @pytest.mark.xfail(reason="cache2.0 editables not yet implemented")
-    def test_metadata_editable_packages(self):
-        """
-        Check that 'conan remote' commands work with editable packages
-        """
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . pkg/1.1@lasote/stable")
-        self.client.run("upload pkg/1.1@lasote/stable --all -c --remote remote1")
-        self.client.run("remove -f pkg/1.1@lasote/stable")
-        self.client.run("install pkg/1.1@lasote/stable")
-        self.assertIn("pkg/1.1@lasote/stable: Package installed", self.client.out)
-        self.client.run("remote list_ref")
-        self.assertIn("pkg/1.1@lasote/stable: remote1", self.client.out)
-        self.client.run("editable add . pkg/1.1@lasote/stable")
-        # Check add --force, update and rename
-        self.client.run("remote add remote2 %s" % self.servers["remote1"].fake_url)
-        self.client.run("remote update remote2 %sfake" % self.servers["remote1"].fake_url)
-        self.client.run("remote rename remote2 remote-fake")
-        self.client.run("editable remove pkg/1.1@lasote/stable")
-        # Check associated remote has changed name
-        self.client.run("remote list_ref")
-        self.assertIn("pkg/1.1@lasote/stable: remote-fake", self.client.out)
-        # Check remove
-        self.client.run("editable add . pkg/1.1@lasote/stable")
-        self.client.run("remote remove remote-fake")
-        self.client.run("remote list")
-        self.assertIn("remote0: %s" % self.servers["remote0"].fake_url, self.client.out)
-        self.assertNotIn("remote-fake", self.client.out)
-        # Check clean
-        self.client.run("editable remove pkg/1.1@lasote/stable")
-        self.client.run("remove -f pkg/1.1@lasote/stable")
-        self.client.run("remote add remote1 %s" % self.servers["remote1"].fake_url)
-        self.client.run("install pkg/1.1@lasote/stable")
-        self.client.run("editable add . pkg/1.1@lasote/stable")
-        self.client.run("remote clean")
-        self.client.run("remote list")
-        self.assertNotIn("remote1", self.client.out)
-        self.assertNotIn("remote0", self.client.out)

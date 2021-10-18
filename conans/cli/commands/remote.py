@@ -10,12 +10,12 @@ from conans.errors import ConanException
 @conan_command()
 def remote(conan_api, parser, *args, **kwargs):
     """
-    Manages the remote list and the package recipes associated with a remote.
+    Manages the remote list and the users authenticated on them.
     """
 
 
 def output_remote_list_json(remotes):
-    info = [{"name": r.name, "url": r.url, "ssl": r.verify_ssl, "enabled": not r.disabled}
+    info = [{"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl, "enabled": not r.disabled}
             for r in remotes]
     myjson = json.dumps(info, indent=4)
     cli_out_write(myjson)
@@ -42,16 +42,19 @@ def remote_add(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("name", help="Name of the remote to add")
     subparser.add_argument("url", help="Url of the remote")
-    subparser.add_argument("--no-ssl", dest="no_ssl", action="store_true", default=False)
+    subparser.add_argument("--secure", dest="secure", action='store_true',
+                           help="Don't allow insecure server connections when using SSL")
+    subparser.add_argument("--insecure", dest="secure", action='store_false',
+                           help="Allow insecure server connections when using SSL")
     subparser.add_argument("--index", action=OnceArgument, type=int,
-                           help="Insert remote at specific position in the remote list")
+                           help="Insert the remote at a specific position in the remote list")
+    subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
     index = _check_index_argument(args.index)
-    verify_ssl = not args.no_ssl
-    remote = Remote(args.name, args.url, verify_ssl, disabled=False)
-    conan_api.remotes.add(remote)
+    r = Remote(args.name, args.url, args.secure, disabled=False)
+    conan_api.remotes.add(r)
     if index is not None:
-        conan_api.remotes.move(remote, index)
+        conan_api.remotes.move(r, index)
 
 
 def _check_index_argument(index):
@@ -66,7 +69,7 @@ def _check_index_argument(index):
 @conan_subcommand()
 def remote_remove(conan_api, parser, subparser, *args):
     """
-    Remove conan remotes
+    Remove a remote
     """
     subparser.add_argument("remote", help="Name of the remote to remove. "
                                           "Accepts 'fnmatch' style wildcards.")  # to discuss
@@ -78,68 +81,78 @@ def remote_remove(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def remote_update(conan_api, parser, subparser, *args):
     """
-    Update remote info
+    Update the remote
     """
     subparser.add_argument("remote", help="Name of the remote to update")
-    subparser.add_argument("--name", action=OnceArgument,
-                           help="New name for the remote")
-    subparser.add_argument("--url", action=OnceArgument,
-                           help="New url for the remote")
-    subparser.add_argument("--no-ssl", dest="no_ssl", action=OnceArgument, type=bool,
-                           choices=[True, False])
+    subparser.add_argument("--url", action=OnceArgument, help="New url for the remote")
+    subparser.add_argument("--secure", dest="secure", action='store_true',
+                           help="Don't allow insecure server connections when using SSL")
+    subparser.add_argument("--insecure", dest="secure", action='store_false',
+                           help="Allow insecure server connections when using SSL")
+    subparser.add_argument("--index", action=OnceArgument, type=int,
+                           help="Insert the remote at a specific position in the remote list")
+    subparser.set_defaults(secure=None)
     args = parser.parse_args(*args)
-    if not (args.name or args.url or args.no_ssl):
-        subparser.error("Please add at least one remote field to update: "
-                        "name, url, disable-ssl")
-    remote = conan_api.remotes.get(args.remote)
-    if args.name:
-        conan_api.remotes.rename(remote, args.name)
-    if args.url:
-        remote.url = args.url
-    if args.no_ssl:
-        remote.verify_ssl = not args.no_ssl
+    if not (args.url is not None or args.secure is not None):
+        subparser.error("Please add at least one argument to update")
+    r = conan_api.remotes.get(args.remote)
+    if args.url is not None:
+        r.url = args.url
+    if args.secure is not None:
+        r.verify_ssl = args.secure
+    conan_api.remotes.update(r)
 
-    conan_api.remotes.update(remote)
+
+@conan_subcommand()
+def remote_rename(conan_api, parser, subparser, *args):
+    """
+    Rename a remote
+    """
+    subparser.add_argument("remote", help="Current name of the remote")
+    subparser.add_argument("new_name", help="New name for the remote")
+    args = parser.parse_args(*args)
+    r = conan_api.remotes.get(args.remote)
+    conan_api.remotes.rename(r, args.new_name)
 
 
 @conan_subcommand()
 def remote_move(conan_api, parser, subparser, *args):
     """
-    Update remote info
+    Move the position of the remote in the remotes list (first in the list: first called)
     """
     subparser.add_argument("remote", help="Name of the remote to update")
     subparser.add_argument("index", action=OnceArgument, type=int,
                            help="Insert remote at specific index")
     args = parser.parse_args(*args)
-    remote = conan_api.remotes.get(args.remote)
+    r = conan_api.remotes.get(args.remote)
     index = _check_index_argument(args.index)
-    conan_api.remotes.move(remote, index)
+    conan_api.remotes.move(r, index)
 
 
 @conan_subcommand()
 def remote_enable(conan_api, parser, subparser, *args):
     """
-    Update remote info
+    Enable all the remotes matching a pattern
     """
     subparser.add_argument("remote", help="Pattern of the remote/s to enable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(filter=args.remote)
-    for remote in remotes:
-        remote.disabled = False
-        conan_api.remotes.update(remote)
+    for r in remotes:
+        r.disabled = False
+        conan_api.remotes.update(r)
 
 
 @conan_subcommand()
 def remote_disable(conan_api, parser, subparser, *args):
     """
-    Update remote info
+    Disable all the remotes matching a pattern
     """
     subparser.add_argument("remote", help="Pattern of the remote/s to disable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(filter=args.remote)
-    for remote in remotes:
-        remote.disabled = True
-        conan_api.remotes.update(remote)
+    for r in remotes:
+        r.disabled = True
+        conan_api.remotes.update(r)
 
