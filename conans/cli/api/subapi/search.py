@@ -3,6 +3,7 @@ from collections import OrderedDict
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.errors import NotFoundException, PackageNotFoundException, ConanException
+from conans.search.search import search_recipes
 
 
 class SearchAPI:
@@ -14,7 +15,7 @@ class SearchAPI:
     def search_local_recipes(self, query):
         app = ConanApp(self.conan_api.cache_folder)
         app.load_remotes()
-        references = app.proxy.search_recipes(query)
+        references = search_recipes(app.cache, query)
         results = []
         for reference in references:
             result = {
@@ -22,7 +23,11 @@ class SearchAPI:
                 "id": repr(reference)
             }
             results.append(result)
-        return results
+        return [{
+            "remote": None,
+            "error": None,
+            "results": results
+        }]
 
     @api_method
     def search_remote_recipes(self, query, remotes):
