@@ -39,17 +39,13 @@ def test_xcodedeps_check_configurations():
     # we are using cmake here just to generate a Xcode project
     client.run_command("cmake . -G Xcode")
 
-    client.run("install . -s build_type=Debug --build=missing -g XcodeDeps")
-    client.run("install . -s build_type=Release --build=missing -g XcodeDeps")
+    for config in ["Release", "Debug"]:
+        client.run("install . -s build_type={} -s arch=x86_64 -s os.sdk=macosx --build=missing "
+                   "-g XcodeDeps".format(config))
 
-    client.run_command(
-        "xcodebuild -project cmakeapp.xcodeproj -xcconfig conandeps.xcconfig -configuration Debug")
-    client.run_command("./Debug/app")
-    assert "App Debug!" in client.out
-    assert "hello/0.1: Hello World Debug!" in client.out
-
-    client.run_command(
-        "xcodebuild -project cmakeapp.xcodeproj -xcconfig conandeps.xcconfig -configuration Release")
-    client.run_command("./Release/app")
-    assert "App Release!" in client.out
-    assert "hello/0.1: Hello World Release!" in client.out
+    for config in ["Release", "Debug"]:
+        client.run_command("xcodebuild -project cmakeapp.xcodeproj -xcconfig conandeps.xcconfig "
+                           "-configuration {} -arch x86_64 -sdk=macosx".format(config))
+        client.run_command("./{}/app".format(config))
+        assert "App {}!".format(config) in client.out
+        assert "hello/0.1: Hello World {}!".format(config).format(config) in client.out
