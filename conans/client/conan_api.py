@@ -97,7 +97,7 @@ def _get_conanfile_path(path, cwd, py):
 class ConanAPIV1(object):
 
     def __init__(self, cache_folder=None):
-        self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
+        self.cache_folder = cache_folder or get_conan_user_home()
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()

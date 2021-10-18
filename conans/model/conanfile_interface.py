@@ -58,10 +58,6 @@ class ConanFileInterface:
         return self._conanfile.user_info
 
     @property
-    def new_cpp_info(self):
-        return self._conanfile.new_cpp_info
-
-    @property
     def settings(self):
         return self._conanfile.settings
 

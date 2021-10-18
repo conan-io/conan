@@ -304,19 +304,19 @@ def test_auto_package_default_folders_with_components():
     conan_file += """
     def layout(self):
         for el in [self.cpp.source, self.cpp.build]:
-            assert el.components["foo"].includedirs is None
-            assert el.components["foo"].libdirs is None
-            assert el.components["foo"].bindirs is None
-            assert el.components["foo"].frameworkdirs is None
-            assert el.components["foo"].srcdirs is None
-            assert el.components["foo"].resdirs is None
+            assert el.components["foo"].includedirs==[]
+            assert el.components["foo"].libdirs==[]
+            assert el.components["foo"].bindirs==[]
+            assert el.components["foo"].frameworkdirs==[]
+            assert el.components["foo"].srcdirs==[]
+            assert el.components["foo"].resdirs==[]
 
-        assert self.cpp.package.components["foo"].includedirs is None
-        assert self.cpp.package.components["foo"].libdirs is None
-        assert self.cpp.package.components["foo"].bindirs is None
-        assert self.cpp.package.components["foo"].frameworkdirs is None
-        assert self.cpp.package.components["foo"].srcdirs is None
-        assert self.cpp.package.components["foo"].resdirs is None
+        assert self.cpp.package.components["foo"].includedirs==[]
+        assert self.cpp.package.components["foo"].libdirs==[]
+        assert self.cpp.package.components["foo"].bindirs==[]
+        assert self.cpp.package.components["foo"].frameworkdirs==[]
+        assert self.cpp.package.components["foo"].srcdirs==[]
+        assert self.cpp.package.components["foo"].resdirs==[]
 
     def package(self):
         LayoutPackager(self).package()

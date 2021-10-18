@@ -431,33 +431,6 @@ class ConanClientConfigParser(ConfigParser, object):
         return default_package_id_mode
 
     @property
-    def storage_path(self):
-        # Try with CONAN_STORAGE_PATH
-        result = get_env('CONAN_STORAGE_PATH', None)
-        if not result:
-            # Try with conan.conf "path"
-            try:
-                # TODO: Fix this mess for Conan 2.0
-                env_conan_user_home = os.getenv("CONAN_USER_HOME")
-                current_dir = os.path.dirname(self.filename)
-                # if env var is declared, any specified path will be relative to CONAN_USER_HOME
-                # even with the ~/
-                result = dict(self._get_conf("storage"))["path"]
-                if result.startswith("."):
-                    result = os.path.abspath(os.path.join(current_dir, result))
-                elif result[:2] == "~/":
-                    if env_conan_user_home:
-                        result = os.path.join(env_conan_user_home, result[2:])
-            except (KeyError, ConanException):  # If storage not defined, to return None
-                pass
-
-        if result:
-            result = conan_expand_user(result)
-            if not os.path.isabs(result):
-                raise ConanException("Conan storage path has to be an absolute path")
-        return result
-
-    @property
     def proxies(self):
         try:  # optional field, might not exist
             proxies = self._get_conf("proxies")

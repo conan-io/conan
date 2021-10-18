@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANFILE
@@ -130,43 +132,32 @@ class TestPackageTest(unittest.TestCase):
 
     def test_check_version(self):
         client = TestClient()
-        dep = textwrap.dedent("""
-            from conans import ConanFile
-            class Dep(ConanFile):
-                def package_info(self):
-                    self.cpp_info.name = "MyDep"
-            """)
-        client.save({CONANFILE: dep})
+        client.save({CONANFILE: GenConanfile()})
         client.run("create . dep/1.1@")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
                 requires = "dep/1.1"
                 def build(self):
-                    info = self.dependencies["dep"].cpp_info
-                    self.output.info("BUILD Dep %s VERSION %s" %
-                        (info.get_name("txt"), info.version))
-                def package_info(self):
-                    self.cpp_info.names["txt"] = "MyHello"
+                    ref = self.dependencies["dep"].ref
+                    self.output.info("BUILD Dep VERSION %s" % ref.version)
             """)
         test_conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
                 def build(self):
-                    info = self.dependencies["hello"].cpp_info
-                    self.output.info("BUILD HELLO %s VERSION %s" %
-                        (info.get_name("txt"), info.version))
+                    ref = self.dependencies["hello"].ref
+                    self.output.info("BUILD HELLO VERSION %s" % ref.version)
                 def test(self):
-                    info = self.dependencies["hello"].cpp_info
-                    self.output.info("TEST HELLO %s VERSION %s" %
-                        (info.get_name("txt"), info.version))
+                    ref = self.dependencies["hello"].ref
+                    self.output.info("TEST HELLO VERSION %s" % ref.version)
             """)
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . hello/0.1@")
-        self.assertIn("hello/0.1: BUILD Dep MyDep VERSION 1.1", client.out)
-        self.assertIn("hello/0.1 (test package): BUILD HELLO MyHello VERSION 0.1", client.out)
-        self.assertIn("hello/0.1 (test package): TEST HELLO MyHello VERSION 0.1", client.out)
+        self.assertIn("hello/0.1: BUILD Dep VERSION 1.1", client.out)
+        self.assertIn("hello/0.1 (test package): BUILD HELLO VERSION 0.1", client.out)
+        self.assertIn("hello/0.1 (test package): TEST HELLO VERSION 0.1", client.out)
 
 
 class ConanTestTest(unittest.TestCase):
