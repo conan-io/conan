@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool_cmake(version="3.19")
-def test_xcodedeps_check_configurations():
+def test_xcodedeps_build_configurations():
     client = TestClient()
 
     client.run("new hello/0.1 -m=cmake_lib")
