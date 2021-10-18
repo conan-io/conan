@@ -14,7 +14,7 @@ class SearchAPI:
     def search_local_recipes(self, query):
         app = ConanApp(self.conan_api.cache_folder)
         app.load_remotes()
-        references = app.remote_manager.search_recipes(query)
+        references = app.proxy.search_recipes(query)
         results = []
         for reference in references:
             result = {
@@ -25,9 +25,11 @@ class SearchAPI:
         return results
 
     @api_method
-    def search_remote_recipes(self, query, remotes=None):
+    def search_remote_recipes(self, query, remotes):
         app = ConanApp(self.conan_api.cache_folder)
-        app.load_remotes(remote_name=remote.name)
+        if not remotes:
+            raise ConanException("Specify the 'remotes' argument")
+        app.load_remotes(remotes)
         # CUANDO FUNCIONE ESTO SEGUIR CON EL USER QUE LO QUIERO METER AL REMOTE:
         # conan remote user-list
         # conan remote login remote [--user] [--password] --skip-auth

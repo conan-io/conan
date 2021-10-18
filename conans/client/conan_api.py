@@ -123,7 +123,7 @@ class ConanAPIV1(object):
     @api_method
     def inspect(self, path, attributes, remote_name=None):
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name)
+        app.load_remotes(remotes_names=[remote_name])
         try:
             ref = ConanFileReference.loads(path)
         except ConanException:
@@ -169,7 +169,7 @@ class ConanAPIV1(object):
              remote_name=None, update=False, build_modes=None, cwd=None, test_build_folder=None,
              lockfile=None, profile_build=None, conf=None):
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name, update=update)
+        app.load_remotes(remotes_names=[remote_name], update=update)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
 
@@ -200,7 +200,7 @@ class ConanAPIV1(object):
                                     False  - disabling tests
         """
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name, update=update)
+        app.load_remotes(remotes_names=[remote_name], update=update)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         cwd = cwd or os.getcwd()
@@ -305,7 +305,7 @@ class ConanAPIV1(object):
                     if "#" in package_id:
                         raise ConanException("It is needed to specify the recipe revision if you "
                                              "specify a package revision")
-            app.load_remotes(remote_name=remote_name)
+            app.load_remotes(remotes_names=[remote_name])
 
             download(app, ref, packages, recipe)
         else:
@@ -319,7 +319,7 @@ class ConanAPIV1(object):
                           lockfile_node_id=None, is_build_require=False, conf=None,
                           require_overrides=None):
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name, update=update)
+        app.load_remotes(remotes_names=[remote_name], update=update)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
 
@@ -357,7 +357,7 @@ class ConanAPIV1(object):
                 lockfile=None, lockfile_out=None, profile_build=None, conf=None,
                 require_overrides=None):
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name, update=update)
+        app.load_remotes(remotes_names=[remote_name], update=update)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
 
@@ -470,7 +470,7 @@ class ConanAPIV1(object):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name, update=update)
+        app.load_remotes(remotes_names=[remote_name], update=update)
         reference, profile_host, profile_build, graph_lock, root_ref = \
             self._info_args(app, reference_or_path, profile_host,
                             profile_build, name=name, version=version,
@@ -491,7 +491,7 @@ class ConanAPIV1(object):
               lockfile=None, lockfile_out=None, profile_build=None, conf=None):
 
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name, update=update)
+        app.load_remotes(remotes_names=[remote_name], update=update)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
 
@@ -566,7 +566,7 @@ class ConanAPIV1(object):
         :return: None
         """
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=None, update=False)
+        app.load_remotes(update=False)
         cwd = cwd or os.getcwd()
         dest = _make_abs_path(dest, cwd)
 
@@ -626,7 +626,7 @@ class ConanAPIV1(object):
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote_name=None):
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name)
+        app.load_remotes(remotes_names=[remote_name])
         remover = ConanRemover(app)
         remover.remove(pattern, src, builds, packages, force=force,
                        packages_query=query)
@@ -683,7 +683,7 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name)
+        app.load_remotes(remotes_names=[remote_name])
         uploader = CmdUpload(app)
         uploader.upload(pattern, package, all_packages, confirm,
                         retry, retry_wait, integrity_check, policy, query=query,
@@ -827,7 +827,7 @@ class ConanAPIV1(object):
     @api_method
     def get_package_revisions(self, reference, remote_name=None):
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name)
+        app.load_remotes(remotes_names=[remote_name])
         pref = PackageReference.loads(reference, validate=True)
         if not pref.ref.revision:
             raise ConanException("Specify a recipe reference with revision")
@@ -942,7 +942,7 @@ class ConanAPIV1(object):
         install_folder = _make_abs_path(install_folder, cwd)
 
         mkdir(install_folder)
-        app.load_remotes(remote_name=remote_name)
+        app.load_remotes(remotes_names=[remote_name])
 
         root_id = graph_lock.root_node_id()
         reference = graph_lock.nodes[root_id].ref
@@ -1000,7 +1000,7 @@ class ConanAPIV1(object):
                     profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
                     base=None, lockfile=None):
         app = ConanApp(self.cache_folder)
-        app.load_remotes(remote_name=remote_name, update=update)
+        app.load_remotes(remotes_names=[remote_name], update=update)
         # profile_host is mandatory
         profile_host = profile_host or ProfileData(None, None, None, None, None)
         profile_build = profile_build or ProfileData(None, None, None, None, None)

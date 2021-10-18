@@ -74,12 +74,13 @@ class ConanApp(object):
             assert False, "It makes no sense to obtain the selected remote when there are several " \
                           "selected remotes"
 
-    def load_remotes(self, remote_name=None, update=False):
-        # FIXME: Receive multiple remotes for the commands supporting it
+    def load_remotes(self, remotes_names=None, update=False):
         remotes = self.cache.remotes_registry.list()
+        remotes_names = remotes_names or []
 
-        if remote_name:
-            self.selected_remotes.append(self.cache.remotes_registry.read(remote_name))
+        if remotes_names:
+            self.selected_remotes.append([self.cache.remotes_registry.read(r)
+                                          for r in remotes_names])
 
         self.enabled_remotes = [r for r in remotes if not r.disabled]
         self.all_remotes = remotes

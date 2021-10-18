@@ -21,4 +21,7 @@ def search(conan_api: ConanAPIV2, parser, *args, **kwargs):
                         help="Remote to search. Accepts wildcards. To search in all remotes use *")
     args = parser.parse_args(*args)
 
-    
+    if args.remote:
+        return conan_api.search.search_remote_recipes(args.query, args.remote)
+    else:
+        return conan_api.search.search_local_recipes(args.query)
