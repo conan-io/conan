@@ -98,8 +98,6 @@ class XcodeDeps(object):
         fields = {
             'name': name,
             'configuration': self.configuration,
-            'architecture': self.architecture,
-            'sdk': self.sdk_condition,
             'root_folder': dep.package_folder,
             'bin_dirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.bindirs),
             'res_dirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.resdirs),
@@ -128,8 +126,7 @@ class XcodeDeps(object):
         #  related to: https://github.com/conan-io/conan/issues/9608
         template = Template(self._conf_xconfig)
         content_multi = template.render(name=dep_name, vars_filename=vars_xconfig_name, deps=deps,
-                                        architecture=self.architecture,
-                                        configuration=self.configuration, sdk=self.sdk_condition)
+                                        architecture=self.architecture, sdk=self.sdk_condition)
         return content_multi
 
     def _dep_xconfig_file(self, name, name_general, dep_xconfig_filename):
