@@ -329,64 +329,78 @@ def test_single_config_decentralized(client_setup):
     assert "app1/0.1: DEP FILE pkgb: ByeB World!!" in client.out
 
 
-@pytest.mark.xfail(reason="lockfiles wip")
-def test_multi_config_bundle(client_setup):
+def test_multi_config_decentralized(client_setup):
     client = client_setup
-    client.run("lock create --reference=pkgd/0.1@ --lockfile-out=pkgd.lock "
-               "-s os=Windows ")
-    pkgd_lockfile = client.load("pkgd.lock")
-    print(pkgd_lockfile)
+    # capture the initial lockfile of our product
+    client.run("lock create --reference=app1/0.1@ --lockfile-out=app1.lock -s os=Windows")
+    client.run("lock create --reference=app1/0.1@ --lockfile=app1.lock --lockfile-out=app1.lock "
+               "-s os=Linux")
 
     # Do an unrelated change in A, should not be used, this is not the change we are testing
     client.save({"pkga/myfile.txt": "ByeA World!!"})
-    client.run("create pkga pkga/0.2@ -s os=Windows")
+    client.run("create pkga pkgawin/0.2@ -s os=Windows")
+    client.run("create pkga pkganix/0.2@ -s os=Linux")
 
     # Do a change in B, this is the change that we want to test
     client.save({"pkgb/myfile.txt": "ByeB World!!"})
 
     # Test that pkgb/0.2 works
     client.run("create pkgb pkgb/0.2@ -s os=Windows "
-               "--lockfile=pkgd.lock --lockfile-out=b_win.lock")
-    assert "SELF OS: Windows!!" in client.out
-    assert "pkgb/0.2: DEP FILE pkga: HelloA" in client.out
-    b_win = client.load("b_win.lock")
-    print(b_win)
+               "--lockfile=app1.lock --lockfile-out=app1_win.lock")
+    assert "pkgb/0.2: DEP FILE pkgawin: HelloA" in client.out
     client.run("create pkgb pkgb/0.2@ -s os=Linux "
-               "--lockfile=pkgd.lock --lockfile-out=b_linux.lock")
-    assert "SELF OS: Linux!!" in client.out
-    assert "pkgb/0.2: DEP FILE pkga: HelloA" in client.out
-    b_linux = client.load("b_linux.lock")
-    print(b_linux)
+               "--lockfile=app1.lock --lockfile-out=app1_nix.lock")
+    assert "pkgb/0.2: DEP FILE pkganix: HelloA" in client.out
 
-    # To bundle, lockfiles should be complete?
-    client.run("lock bundle create b_win.lock b_linux.lock")
-    print(client.load("lock.bundle"))
-    return
-
-    # Now lets build the application, to see everything ok
-    client.run("lock build-order b_win.lock --lockfile-out=pkgd2_win.lock --build=missing "
-               "--json=build_order.json")
-    print(client.out)
-    assert "pkgb/0.2" in client.out
-    assert "pkgb/0.1" not in client.out
-
-    pkgd2_lockfile = client.load("pkgd2_win.lock")
-    print(pkgd2_lockfile)
-    assert "pkgb/0.2" in pkgd2_lockfile
-    assert "pkgb/0.1" not in pkgd2_lockfile
+    # Now lets build the application, to see everything ok, for all the configs
+    client.run("graph build-order --reference=app1/0.1@ --lockfile=app1_win.lock "
+               "--build=missing --json=build_order_win.json -s os=Windows")
+    build_order_win = client.load("build_order_win.json")
+    print(build_order_win)
+    client.run("graph build-order --reference=app1/0.1@ --lockfile=app1_nix.lock "
+               "--build=missing --json=build_order_nix.json -s os=Linux")
+    build_order_nix = client.load("build_order_nix.json")
+    print(build_order_nix)
+    client.run("graph build-order-merge --file=build_order_win.json --file=build_order_nix.json"
+               " --json=build_order.json")
 
     json_file = client.load("build_order.json")
-    print("JSON: ", json_file)
+    print(json_file)
     to_build = json.loads(json_file)
-    lock_fileaux = pkgd2_lockfile
+    level0 = to_build[0]
+    assert len(level0) == 1
+    pkgawin = level0[0]
+    assert pkgawin["ref"] == "pkgawin/0.1#db3fc7dcc844836cbb7e2b9671a14160"
+    assert pkgawin["packages"][0]["binary"] == "Cache"
+    level1 = to_build[1]
+    assert len(level1) == 1
+    pkgb = level1[0]
+    assert pkgb["ref"] == "pkgb/0.2#eade06a4172434ca9011e4e762b64697"
+    assert pkgb["packages"][0]["binary"] == "Cache"
 
-    for ref, _, _ in to_build:
-        print("******************** building: ", ref, "***************************")
-        client_aux = TestClient(cache_folder=client.cache_folder)
-        client_aux.save({"temp.lock": lock_fileaux})
-        client_aux.run("install %s --build=%s --lockfile=temp.lock " % (ref, ref))
-        print(client_aux.out)
-        assert "SELF OS: Windows!!" in client_aux.out
-        assert "pkgb/0.2" in client_aux.out
-        assert "pkgb/0.1" not in client_aux.out
-        assert "DEP FILE pkga: HelloA" in client_aux.out
+    for level in to_build:
+        for elem in level:
+            ref = elem["ref"]
+            if "@" not in ref:
+                ref = ref.replace("#", "@#")
+            for package in elem["packages"]:
+                binary = package["binary"]
+                pref = package["pref"]
+                pref = re.sub("#.*:", ":", pref)
+                if binary != "Build":
+                    continue
+                # TODO: The options are completely missing
+                client.run("install %s --build=%s --lockfile=app1_b_changed.lock  -s os=Windows"
+                           % (ref, ref))
+                assert "{} - Build".format(pref) in client.out
+
+                assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in client.out
+                assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in client.out
+                assert "pkgb/0.2" in client.out
+                assert "pkgb/0.1" not in client.out
+                assert "DEP FILE pkgawin: HelloA" in client.out
+                assert "DEP FILE pkgb: ByeB World!!" in client.out
+
+    # Just to make sure that the for-loops have been executed
+    assert "app1/0.1: DEP FILE pkgb: ByeB World!!" in client.out
+

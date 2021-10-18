@@ -76,6 +76,13 @@ class _InstallRecipeReference:
 
     def merge(self, other):
         assert self.ref == other.ref
+        for d in other.depends:
+            if d not in self.depends:
+                self.depends.append(d)
+        for p in other.packages:
+            existing = self._package_ids.get(p.pref.id)
+            if existing is None:
+                self.packages.append(p)
 
     def update_unknown(self, package):
         package_id = package.pref.id
@@ -118,7 +125,9 @@ class _InstallRecipeReference:
         for d in data["depends"]:
             result.depends.append(ConanFileReference.loads(d))
         for p in data["packages"]:
-            result.packages.append(_InstallPackageReference.deserialize(p))
+            install_node = _InstallPackageReference.deserialize(p)
+            result.packages.append(install_node)
+            result._package_ids[install_node.pref.id] = install_node
         return result
 
 
@@ -134,7 +143,6 @@ class InstallGraph:
 
     def merge(self, other):
         """
-
         @type other: InstallGraph
         """
         for ref, install_node in other._nodes.items():

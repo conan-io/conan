@@ -1,6 +1,5 @@
 import json
-
-import pytest
+import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -189,7 +188,7 @@ def test_info_build_order_options():
     assert bo_json == result
 
 
-def test_info_build_order_multi_product():
+def test_info_build_order_merge_multi_product():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
             "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
@@ -242,6 +241,85 @@ def test_info_build_order_multi_product():
                 "packages": [
                     {
                         "pref": "pkg/0.2#447b56f0334b7e2a28aa86e218c8b3bd:486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "context": "host",
+                        "binary": "Build",
+                        "options": []
+                    }
+                ]
+            }
+        ]
+    ]
+
+    assert bo_json == result
+
+
+def test_info_build_order_merge_conditionals():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            def requirements(self):
+                if self.settings.os == "Windows":
+                    self.requires("depwin/[>0.0 <1.0]")
+                else:
+                    self.requires("depnix/[>0.0 <1.0]")
+        """)
+    c.save({"dep/conanfile.py": GenConanfile(),
+            "pkg/conanfile.py": conanfile,
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("export dep depwin/0.1@")
+    c.run("export dep depnix/0.1@")
+    c.run("export pkg pkg/0.1@")
+    c.run("graph build-order consumer --json=bo_win.json --build=missing -s os=Windows")
+    c.run("graph build-order consumer --json=bo_nix.json --build=missing -s os=Linux")
+    c.run("graph build-order-merge --file=bo_win.json --file=bo_nix.json --json=bo3.json")
+
+    bo_json = json.loads(c.load("bo3.json"))
+
+    result = [
+        [
+            {
+                "ref": "depwin/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "depends": [],
+                "packages": [
+                    {
+                        "pref": "depwin/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "context": "host",
+                        "binary": "Build",
+                        "options": []
+                    }
+                ]
+            },
+            {
+                "ref": "depnix/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "depends": [],
+                "packages": [
+                    {
+                        "pref": "depnix/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "context": "host",
+                        "binary": "Build",
+                        "options": []
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "ref": "pkg/0.1#df708aff3c643ce78d6ea456cab80671",
+                "depends": [
+                    "depwin/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                    "depnix/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                ],
+                "packages": [
+                    {
+                        "pref": "pkg/0.1#df708aff3c643ce78d6ea456cab80671:fe0818ee6bf52c8906f551e114ea476081219a57",
+                        "context": "host",
+                        "binary": "Build",
+                        "options": []
+                    },
+                    {
+                        "pref": "pkg/0.1#df708aff3c643ce78d6ea456cab80671:089e881a859748afac9c03e5badf9163f62a6cf9",
                         "context": "host",
                         "binary": "Build",
                         "options": []
