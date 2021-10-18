@@ -1,3 +1,5 @@
+import json
+import os
 import textwrap
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
@@ -5,6 +7,7 @@ from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SK
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import ConanFileReference
+from conans.util.files import load
 
 
 class _InstallPackageReference:
@@ -21,7 +24,7 @@ class _InstallPackageReference:
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
         self.options = []  # to be able to fire a build, the options will be necessary
-        self.origin = []  # The build_order.json
+        self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
 
     @staticmethod
     def create(node):
@@ -48,17 +51,18 @@ class _InstallPackageReference:
                 "prev": self.prev,
                 "context": self.context,
                 "binary": self.binary,
-                "options": self.options}
+                "options": self.options,
+                "filenames": self.filenames}
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, filename):
         result = _InstallPackageReference()
         result.package_id = data["package_id"]
         result.prev = data["prev"]
         result.binary = data["binary"]
         result.context = data["context"]
         result.options = data["options"]
-        result.files = [filename]
+        result.filenames = data["filenames"] or [filename]
         return result
 
 
@@ -91,8 +95,10 @@ class _InstallRecipeReference:
             if existing is None:
                 self.packages.append(p)
             else:
-                # TODO: Need to update if build, append to origin_files
-                pass
+                assert existing.binary == p.binary
+                for f in p.filenames:
+                    if f not in existing.filenames:
+                        existing.filenames.append(f)
 
     def update_unknown(self, package):
         package_id = package.package_id
@@ -129,13 +135,13 @@ class _InstallRecipeReference:
                 }
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, filename):
         result = _InstallRecipeReference()
         result.ref = ConanFileReference.loads(data["ref"])
         for d in data["depends"]:
             result.depends.append(ConanFileReference.loads(d))
         for p in data["packages"]:
-            install_node = _InstallPackageReference.deserialize(p)
+            install_node = _InstallPackageReference.deserialize(p, filename)
             result.packages.append(install_node)
             result._package_ids[install_node.package_id] = install_node
         return result
@@ -151,6 +157,14 @@ class InstallGraph:
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
 
+    @staticmethod
+    def load(filename):
+        data = json.loads(load(filename))
+        filename = os.path.basename(filename)
+        filename = os.path.splitext(filename)[0]
+        install_graph = InstallGraph.deserialize(data, filename)
+        return install_graph
+
     def merge(self, other):
         """
         @type other: InstallGraph
@@ -163,11 +177,11 @@ class InstallGraph:
                 existing.merge(install_node)
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, filename):
         result = InstallGraph()
         for level in data:
             for item in level:
-                elem = _InstallRecipeReference.deserialize(item)
+                elem = _InstallRecipeReference.deserialize(item, filename)
                 result._nodes[elem.ref] = elem
         return result
 

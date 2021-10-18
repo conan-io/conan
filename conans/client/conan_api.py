@@ -30,7 +30,6 @@ from conans.client.userio import UserInput
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NotFoundException)
 from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
-from conans.model.lock_bundle import LockBundle
 from conans.model.manifest import discarded_file
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
@@ -928,34 +927,6 @@ class ConanAPIV1(object):
     def editable_list(self):
         app = ConanApp(self.cache_folder)
         return {str(k): v for k, v in app.cache.editable_packages.edited_refs.items()}
-
-    @api_method
-    def lock_bundle_create(self, lockfiles, lockfile_out, cwd=None):
-        cwd = cwd or os.getcwd()
-        result = LockBundle.create(lockfiles, cwd)
-        lockfile_out = _make_abs_path(lockfile_out, cwd)
-        save(lockfile_out, result.dumps())
-
-    @api_method
-    def lock_bundle_build_order(self, lockfile, cwd=None):
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd)
-        lock_bundle = LockBundle()
-        lock_bundle.loads(load(lockfile))
-        build_order = lock_bundle.build_order()
-        return build_order
-
-    @api_method
-    def lock_bundle_update(self, lock_bundle_path, cwd=None):
-        cwd = cwd or os.getcwd()
-        lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
-        LockBundle.update_bundle(lock_bundle_path)
-
-    @api_method
-    def lock_bundle_clean_modified(self, lock_bundle_path, cwd=None):
-        cwd = cwd or os.getcwd()
-        lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
-        LockBundle.clean_modified(lock_bundle_path)
 
     @api_method
     def lock_merge(self, lockfiles, lockfile_out):

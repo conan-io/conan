@@ -592,7 +592,7 @@ class Command(object):
             result = InstallGraph()
             for f in args.file:
                 f = _make_abs_path(f)
-                install_graph = InstallGraph.deserialize(json.loads(load(f)))
+                install_graph = InstallGraph.load(f)
                 result.merge(install_graph)
 
             install_order_serialized = result.install_build_order()
@@ -1510,49 +1510,11 @@ class Command(object):
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
-        bundle = subparsers.add_parser('bundle', help='Manages lockfile bundles')
-        bundle_subparsers = bundle.add_subparsers(dest='bundlecommand', help='sub-command help')
-        bundle_create_cmd = bundle_subparsers.add_parser('create', help='Create lockfile bundle')
-        bundle_create_cmd.add_argument("lockfiles", nargs="+",
-                                       help="Path to lockfiles")
-        bundle_create_cmd.add_argument("--bundle-out", action=OnceArgument, default="lock.bundle",
-                                       help="Filename of the created bundle")
-
-        build_order_bundle_cmd = bundle_subparsers.add_parser('build-order',
-                                                              help='Returns build-order')
-        build_order_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
-        build_order_bundle_cmd.add_argument("--json", action=OnceArgument,
-                                            help="generate output file in json format")
-
-        update_help = ("Update both the bundle information as well as every individual lockfile, "
-                       "from the information that was modified in the individual lockfile. At the "
-                       "end, all lockfiles will have the same package revision for the binary of "
-                       "same package_id")
-        update_bundle_cmd = bundle_subparsers.add_parser('update', help=update_help)
-        update_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
-
-        clean_modified_bundle_cmd = bundle_subparsers.add_parser('clean-modified',
-                                                                 help='Clean modified flag')
-        clean_modified_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
-
         args = parser.parse_args(*args)
         self._warn_python_version()
 
         if args.subcommand == "merge":
             self._conan_api.lock_merge(args.lockfile, args.lockfile_out)
-        elif args.subcommand == "bundle":
-            if args.bundlecommand == "create":
-                self._conan_api.lock_bundle_create(args.lockfiles, args.bundle_out)
-            elif args.bundlecommand == "update":
-                self._conan_api.lock_bundle_update(args.bundle)
-            elif args.bundlecommand == "clean-modified":
-                self._conan_api.lock_bundle_clean_modified(args.bundle)
-            elif args.bundlecommand == "build-order":
-                build_order = self._conan_api.lock_bundle_build_order(args.bundle)
-                self._out.info(build_order)
-                if args.json:
-                    json_file = _make_abs_path(args.json)
-                    save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build,

@@ -24,6 +24,7 @@ def test_info_build_order():
                     {
                         "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         'prev': None,
+                        'filenames': [],
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -41,6 +42,7 @@ def test_info_build_order():
                     {
                         "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
                         'prev': None,
+                        'filenames': [],
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -71,6 +73,7 @@ def test_info_build_order_build_require():
                     {
                         "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         'prev': None,
+                        'filenames': [],
                         "context": "build",
                         "binary": "Build",
                         "options": []
@@ -88,6 +91,7 @@ def test_info_build_order_build_require():
                     {
                         "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         'prev': None,
+                        'filenames': [],
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -125,6 +129,7 @@ def test_info_build_order_options():
                     {
                         "package_id": "3da64a6c9584c99ed46ddf3a929787da9075a475",
                         'prev': None,
+                        'filenames': [],
                         "context": "build",
                         "binary": "Build",
                         "options": [
@@ -137,6 +142,7 @@ def test_info_build_order_options():
                     {
                         "package_id": "656515670a0b81a38777e89d7984090eadc9919d",
                         'prev': None,
+                        'filenames': [],
                         "context": "build",
                         "binary": "Build",
                         "options": [
@@ -159,6 +165,7 @@ def test_info_build_order_options():
                     {
                         "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         'prev': None,
+                        'filenames': [],
                         "context": "host",
                         "binary": "Build",
                         "options": [
@@ -179,6 +186,7 @@ def test_info_build_order_options():
                     {
                         "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         'prev': None,
+                        'filenames': [],
                         "context": "host",
                         "binary": "Build",
                         "options": [
@@ -220,6 +228,7 @@ def test_info_build_order_merge_multi_product():
                     {
                         "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         'prev': None,
+                        'filenames': ["bo1", "bo2"],
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -237,6 +246,7 @@ def test_info_build_order_merge_multi_product():
                     {
                         "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
                         'prev': None,
+                        'filenames': ["bo1"],
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -252,6 +262,7 @@ def test_info_build_order_merge_multi_product():
                     {
                         "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
                         'prev': None,
+                        'filenames': ["bo2"],
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -297,6 +308,7 @@ def test_info_build_order_merge_conditionals():
                     {
                         "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         'prev': None,
+                        'filenames': ["bo_win"],
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -310,6 +322,7 @@ def test_info_build_order_merge_conditionals():
                     {
                         "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                         'prev': None,
+                        'filenames': ["bo_nix"],
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -328,6 +341,7 @@ def test_info_build_order_merge_conditionals():
                     {
                         "package_id": "fe0818ee6bf52c8906f551e114ea476081219a57",
                         'prev': None,
+                        'filenames': ["bo_win"],
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -335,6 +349,7 @@ def test_info_build_order_merge_conditionals():
                     {
                         "package_id": "089e881a859748afac9c03e5badf9163f62a6cf9",
                         'prev': None,
+                        'filenames': ["bo_nix"],
                         "context": "host",
                         "binary": "Build",
                         "options": []
