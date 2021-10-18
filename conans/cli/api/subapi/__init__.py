@@ -31,7 +31,11 @@ def api_method(f):
         try:
             log_command(f.__name__, kwargs)
             # FIXME: Not pretty to instance here a ClientCache
-            config = ClientCache(subapi.conan_api.cache_folder).config
+            # FIXME: Remove this when everything is a subapi
+            if hasattr(subapi, "conan_api"):
+                config = ClientCache(subapi.conan_api.cache_folder).config
+            else:
+                config = ClientCache(subapi.cache_folder).config
             with environment_append(config.env_vars):
                 return f(subapi, *args, **kwargs)
         finally:

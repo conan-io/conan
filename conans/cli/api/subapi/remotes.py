@@ -19,13 +19,14 @@ class RemotesAPI:
             filtered_remotes = []
             for remote in remotes:
                 if fnmatch.fnmatch(remote.name, filter):
-                    if not only_active or only_active and not remote.disabled:
-                        filtered_remotes.append(remote)
+                    filtered_remotes.append(remote)
 
             if not filtered_remotes and "*" not in filter:
                 raise ConanException("Remote '%s' not found in remotes" % filter)
 
             return filtered_remotes
+        if only_active:
+            remotes = [r for r in remotes if not r.disabled]
         return remotes
 
     @api_method

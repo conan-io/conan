@@ -18,7 +18,7 @@ class UserTest(unittest.TestCase):
 
         with self.assertRaises(Exception):
             client.run("user -r wrong_remote")
-        self.assertIn("ERROR: No remote 'wrong_remote' defined", client.out)
+        self.assertIn("ERROR: Remote 'wrong_remote' not found in remotes", client.out)
 
     def test_command_user_list(self):
         """ Test list of user is reported for all remotes or queried remote
@@ -31,7 +31,7 @@ class UserTest(unittest.TestCase):
         # Test with wrong remote right error is reported
         with self.assertRaises(Exception):
             client.run("user -r Test_Wrong_Remote")
-        self.assertIn("ERROR: No remote 'Test_Wrong_Remote' defined", client.out)
+        self.assertIn("ERROR: Remote 'Test_Wrong_Remote' not found in remotes", client.out)
 
         # Test user list for requested remote reported
         client.run("user -r test_remote_1")

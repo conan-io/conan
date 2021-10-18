@@ -47,6 +47,7 @@ class GraphManagerTest(unittest.TestCase):
         app = Mock()
         app.cache = cache
         app.remote_manager = self.remote_manager
+        app.enabled_remotes = []
         self.resolver = RangeResolver(app)
         proxy = ConanProxy(app)
 
@@ -57,8 +58,8 @@ class GraphManagerTest(unittest.TestCase):
         self.manager = GraphManager(cache, self.loader, proxy, self.resolver, binaries)
         hook_manager = Mock()
         app_type = namedtuple("ConanApp", "cache remote_manager hook_manager graph_manager"
-                              " binaries_analyzer")
-        app = app_type(self.cache, self.remote_manager, hook_manager, self.manager, binaries)
+                              " binaries_analyzer enabled_remotes")
+        app = app_type(self.cache, self.remote_manager, hook_manager, self.manager, binaries, [])
         return app
 
     def recipe_cache(self, reference, requires=None, option_shared=None):

@@ -11,6 +11,8 @@ class Remote:
         return self._name
 
     def __eq__(self, other):
+        if other is None:
+            return False
         return self.name == other.name and \
                self.url == other.url and \
                self.verify_ssl == other.verify_ssl and \
