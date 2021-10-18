@@ -1,4 +1,5 @@
 import json
+import re
 import textwrap
 
 import pytest
@@ -32,7 +33,13 @@ conanfile = textwrap.dedent("""
 @pytest.fixture()
 def client_setup():
     client = TestClient()
-    client.run("config set general.default_package_id_mode=full_package_mode")
+    conan_conf = textwrap.dedent("""
+        [storage]
+        path = ./data
+        [general]
+        default_package_id_mode=full_package_mode'
+        """.format())
+    client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
     pkb_requirements = """
     def requirements(self):
         if self.settings.os == "Windows":
@@ -279,25 +286,47 @@ def test_single_config_decentralized(client_setup):
     assert "pkgb/0.2: DEP FILE pkgawin: HelloA" in client.out
 
     # Now lets build the application, to see everything ok
-    client.run("info app1/0.1@ --lockfile=app1_b_changed.lock --dry-build=missing "
-               "--build-order=build_order.json -s os=Windows")
+    client.run("graph build-order --reference=app1/0.1@ --lockfile=app1_b_changed.lock "
+               "--build=missing --json=build_order.json -s os=Windows")
     json_file = client.load("build_order.json")
-    assert "app1/0.1" in json_file
-    assert "pkgc/0.1" in json_file
-    assert "pkga" not in json_file
-    assert "pkgb" not in json_file
+
     to_build = json.loads(json_file)
+    level0 = to_build[0]
+    assert len(level0) == 1
+    pkgawin = level0[0]
+    assert pkgawin["ref"] == "pkgawin/0.1#db3fc7dcc844836cbb7e2b9671a14160"
+    assert pkgawin["packages"][0]["binary"] == "Cache"
+    level1 = to_build[1]
+    assert len(level1) == 1
+    pkgb = level1[0]
+    assert pkgb["ref"] == "pkgb/0.2#eade06a4172434ca9011e4e762b64697"
+    assert pkgb["packages"][0]["binary"] == "Cache"
 
-    for ref, _, _, _ in to_build:
-        client.run("install %s --build=%s --lockfile=app1_b_changed.lock  -s os=Windows"
-                   % (ref, ref))
+    for level in to_build:
+        for elem in level:
+            ref = elem["ref"]
+            if "@" not in ref:
+                ref = ref.replace("#", "@#")
+            for package in elem["packages"]:
+                binary = package["binary"]
+                pref = package["pref"]
+                pref = re.sub("#.*:", ":", pref)
+                if binary != "Build":
+                    continue
+                # TODO: The options are completely missing
+                client.run("install %s --build=%s --lockfile=app1_b_changed.lock  -s os=Windows"
+                           % (ref, ref))
+                assert "{} - Build".format(pref) in client.out
 
-        assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in client.out
-        assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in client.out
-        assert "pkgb/0.2" in client.out
-        assert "pkgb/0.1" not in client.out
-        assert "DEP FILE pkgawin: HelloA" in client.out
-        assert "DEP FILE pkgb: ByeB World!!"
+                assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in client.out
+                assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in client.out
+                assert "pkgb/0.2" in client.out
+                assert "pkgb/0.1" not in client.out
+                assert "DEP FILE pkgawin: HelloA" in client.out
+                assert "DEP FILE pkgb: ByeB World!!" in client.out
+
+    # Just to make sure that the for-loops have been executed
+    assert "app1/0.1: DEP FILE pkgb: ByeB World!!" in client.out
 
 
 @pytest.mark.xfail(reason="lockfiles wip")

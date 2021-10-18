@@ -969,7 +969,7 @@ class ConanAPIV1(object):
         graph_lock_file = GraphLockFile(result)
         lockfile_out = _make_abs_path(lockfile_out)
         graph_lock_file.save(lockfile_out)
-        self.app.out.info("Generated lockfile: %s" % lockfile_out)
+        ConanOutput().info("Generated lockfile: %s" % lockfile_out)
 
     @api_method
     def lock_create(self, path, lockfile_out,
@@ -1002,19 +1002,18 @@ class ConanAPIV1(object):
             graph_lock_file = GraphLockFile.load(lockfile)
             graph_lock = graph_lock_file.graph_lock
 
-
         phost = profile_from_args(profile_host.profiles, profile_host.settings,
                                   profile_host.options, profile_host.env, profile_host.conf,
-                                  cwd, self.app.cache)
+                                  cwd, app.cache)
 
         # Only work on the profile_build if something is provided
         pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                    profile_build.options, profile_build.env, profile_build.conf,
-                                   cwd, self.app.cache, build_profile=True)
+                                   cwd, app.cache, build_profile=True)
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
-        phost.process_settings(self.app.cache)
-        pbuild.process_settings(self.app.cache)
+        phost.process_settings(app.cache)
+        pbuild.process_settings(app.cache)
 
         # FIXME: Using update as check_update?
         remotes = app.load_remotes(remote_name=remote_name, check_updates=update)
@@ -1054,7 +1053,6 @@ def get_graph_info(profile_host, profile_build, cwd, cache,
         graph_lock_file = GraphLockFile.load(lockfile)
         graph_lock = graph_lock_file.graph_lock
         ConanOutput().info("Using lockfile: '{}'".format(lockfile))
-        return profile_host, profile_build, graph_lock, root_ref
 
     phost = profile_from_args(profile_host.profiles, profile_host.settings,
                               profile_host.options, profile_host.env, profile_host.conf,
