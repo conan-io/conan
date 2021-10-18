@@ -20,7 +20,7 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
@@ -346,7 +346,8 @@ class BinaryInstaller(object):
             assert len(package.nodes) == 1, "PACKAGE_ID_UNKNOWN are not the same"
             node = package.nodes[0]
             self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
-            package.pref = node.pref  # Just in case it was recomputed
+            package.package_id = node.pref.id  # Just in case it was recomputed
+            package.prev = node.pref.revision
             package.binary = node.binary
             not_processed = install_reference.update_unknown(package)
             if not_processed:
@@ -356,11 +357,12 @@ class BinaryInstaller(object):
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     self._download_pkg(package)
 
-        if package.pref.revision is None:
+        pref = PackageReference(install_reference.ref, package.package_id, package.prev)
+        if pref.revision is None:
             assert package.binary == BINARY_BUILD
-            package_layout = self._cache.create_temp_pkg_layout(package.pref)
+            package_layout = self._cache.create_temp_pkg_layout(pref)
         else:
-            package_layout = self._cache.get_or_create_pkg_layout(package.pref)
+            package_layout = self._cache.get_or_create_pkg_layout(pref)
 
         if not_processed:
             _handle_system_requirements(package, package_layout)
@@ -368,7 +370,10 @@ class BinaryInstaller(object):
             if package.binary == BINARY_BUILD:
                 self._handle_node_build(package, remotes, package_layout)
                 # Just in case it was recomputed
-                package.pref = package.nodes[0].pref
+                package.package_id = package.nodes[0].pref.id  # Just in case it was recomputed
+                package.prev = package.nodes[0].pref.revision
+                package.binary = package.nodes[0].binary
+                pref = PackageReference(install_reference.ref, package.package_id, package.prev)
             elif package.binary == BINARY_CACHE:
                 node = package.nodes[0]
                 pref = node.pref
@@ -379,7 +384,6 @@ class BinaryInstaller(object):
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()
-        pref = package.pref
         assert os.path.isdir(pkg_folder), \
             "Package '%s' folder must exist: %s" % (str(pref), pkg_folder)
         for n in package.nodes:

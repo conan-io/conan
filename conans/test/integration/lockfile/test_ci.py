@@ -1,5 +1,4 @@
 import json
-import re
 import textwrap
 
 import pytest
@@ -305,18 +304,18 @@ def test_single_config_decentralized(client_setup):
     for level in to_build:
         for elem in level:
             ref = elem["ref"]
+            ref_without_rev = ref.split("#")[0]
             if "@" not in ref:
                 ref = ref.replace("#", "@#")
             for package in elem["packages"]:
                 binary = package["binary"]
-                pref = package["pref"]
-                pref = re.sub("#.*:", ":", pref)
+                package_id = package["package_id"]
                 if binary != "Build":
                     continue
                 # TODO: The options are completely missing
                 client.run("install %s --build=%s --lockfile=app1_b_changed.lock  -s os=Windows"
                            % (ref, ref))
-                assert "{} - Build".format(pref) in client.out
+                assert "{}:{} - Build".format(ref_without_rev, package_id) in client.out
 
                 assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in client.out
                 assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in client.out
@@ -368,9 +367,12 @@ def test_multi_config_decentralized(client_setup):
     print(json_file)
     to_build = json.loads(json_file)
     level0 = to_build[0]
-    assert len(level0) == 1
+    assert len(level0) == 2
     pkgawin = level0[0]
     assert pkgawin["ref"] == "pkgawin/0.1#db3fc7dcc844836cbb7e2b9671a14160"
+    assert pkgawin["packages"][0]["binary"] == "Cache"
+    pkgawin = level0[1]
+    assert pkgawin["ref"] == "pkganix/0.1#db3fc7dcc844836cbb7e2b9671a14160"
     assert pkgawin["packages"][0]["binary"] == "Cache"
     level1 = to_build[1]
     assert len(level1) == 1
@@ -381,18 +383,19 @@ def test_multi_config_decentralized(client_setup):
     for level in to_build:
         for elem in level:
             ref = elem["ref"]
+            ref_without_rev = ref.split("#")[0]
             if "@" not in ref:
                 ref = ref.replace("#", "@#")
             for package in elem["packages"]:
                 binary = package["binary"]
-                pref = package["pref"]
-                pref = re.sub("#.*:", ":", pref)
+                package_id = package["package_id"]
                 if binary != "Build":
                     continue
                 # TODO: The options are completely missing
-                client.run("install %s --build=%s --lockfile=app1_b_changed.lock  -s os=Windows"
-                           % (ref, ref))
-                assert "{} - Build".format(pref) in client.out
+                lockfile = package["lockfile"]
+                client.run("install %s --build=%s --lockfile=%s -s os=Windows"
+                           % (ref, ref, lockfile))
+                assert "{}:{} - Build".format(ref_without_rev, package_id) in client.out
 
                 assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in client.out
                 assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in client.out
@@ -403,4 +406,3 @@ def test_multi_config_decentralized(client_setup):
 
     # Just to make sure that the for-loops have been executed
     assert "app1/0.1: DEP FILE pkgb: ByeB World!!" in client.out
-

@@ -22,7 +22,8 @@ def test_info_build_order():
                 "depends": [],
                 "packages": [
                     {
-                        "pref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -38,7 +39,8 @@ def test_info_build_order():
                 ],
                 "packages": [
                     {
-                        "pref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd:486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -67,7 +69,8 @@ def test_info_build_order_build_require():
                 "depends": [],
                 "packages": [
                     {
-                        "pref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        'prev': None,
                         "context": "build",
                         "binary": "Build",
                         "options": []
@@ -83,7 +86,8 @@ def test_info_build_order_build_require():
                 ],
                 "packages": [
                     {
-                        "pref": "pkg/0.1#1364f701b47130c7e38f04c5e5fab985:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -119,7 +123,8 @@ def test_info_build_order_options():
                 "depends": [],
                 "packages": [
                     {
-                        "pref": "tool/0.1#b6299fc637530d547c7eaa047d1da91d:3da64a6c9584c99ed46ddf3a929787da9075a475",
+                        "package_id": "3da64a6c9584c99ed46ddf3a929787da9075a475",
+                        'prev': None,
                         "context": "build",
                         "binary": "Build",
                         "options": [
@@ -130,7 +135,8 @@ def test_info_build_order_options():
                         ]
                     },
                     {
-                        "pref": "tool/0.1#b6299fc637530d547c7eaa047d1da91d:656515670a0b81a38777e89d7984090eadc9919d",
+                        "package_id": "656515670a0b81a38777e89d7984090eadc9919d",
+                        'prev': None,
                         "context": "build",
                         "binary": "Build",
                         "options": [
@@ -151,7 +157,8 @@ def test_info_build_order_options():
                 ],
                 "packages": [
                     {
-                        "pref": "dep1/0.1#36716458443ac8c76bf2e905323b331c:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": [
@@ -170,7 +177,8 @@ def test_info_build_order_options():
                 ],
                 "packages": [
                     {
-                        "pref": "dep2/0.1#d7154a7eee8e107438768c1542ca1b70:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": [
@@ -210,7 +218,8 @@ def test_info_build_order_merge_multi_product():
                 "depends": [],
                 "packages": [
                     {
-                        "pref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -226,7 +235,8 @@ def test_info_build_order_merge_multi_product():
                 ],
                 "packages": [
                     {
-                        "pref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd:486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -240,7 +250,8 @@ def test_info_build_order_merge_multi_product():
                 ],
                 "packages": [
                     {
-                        "pref": "pkg/0.2#447b56f0334b7e2a28aa86e218c8b3bd:486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -284,7 +295,8 @@ def test_info_build_order_merge_conditionals():
                 "depends": [],
                 "packages": [
                     {
-                        "pref": "depwin/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -296,7 +308,8 @@ def test_info_build_order_merge_conditionals():
                 "depends": [],
                 "packages": [
                     {
-                        "pref": "depnix/0.1#f3367e0e7d170aa12abccb175fee5f97:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
@@ -313,13 +326,15 @@ def test_info_build_order_merge_conditionals():
                 ],
                 "packages": [
                     {
-                        "pref": "pkg/0.1#df708aff3c643ce78d6ea456cab80671:fe0818ee6bf52c8906f551e114ea476081219a57",
+                        "package_id": "fe0818ee6bf52c8906f551e114ea476081219a57",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
                     },
                     {
-                        "pref": "pkg/0.1#df708aff3c643ce78d6ea456cab80671:089e881a859748afac9c03e5badf9163f62a6cf9",
+                        "package_id": "089e881a859748afac9c03e5badf9163f62a6cf9",
+                        'prev': None,
                         "context": "host",
                         "binary": "Build",
                         "options": []
