@@ -679,7 +679,6 @@ class Command(object):
                                 user=args.user,
                                 channel=args.channel)
         deps_graph, _ = data
-
         only = args.only
         if args.only == ["None"]:
             only = []

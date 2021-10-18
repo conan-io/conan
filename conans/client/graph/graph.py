@@ -70,7 +70,7 @@ class Node(object):
         @type other: Node
         """
         # TODO: Remove this order, shouldn't be necessary
-        return (self.ref, self._package_id) < (other.ref, other._package_id)
+        return (str(self.ref), self._package_id) < (str(other.ref), other._package_id)
 
     def propagate_closing_loop(self, require, prev_node):
         self.propagate_downstream(require, prev_node)
