@@ -5,7 +5,6 @@ import unittest
 import pytest
 
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo, DepCppInfo
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 

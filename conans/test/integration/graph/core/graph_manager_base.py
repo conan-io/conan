@@ -157,8 +157,8 @@ class GraphManagerTest(unittest.TestCase):
             deps_graph.report_graph_error()
             binary_installer = BinaryInstaller(app)
             build_mode = BuildMode(build_mode)
-            binary_installer.install(deps_graph, build_mode, profile_host=profile_host,
-                                     profile_build=profile_build, graph_lock=None)
+            binary_installer.install(deps_graph, None, build_mode)
+
         return deps_graph
 
     def _check_node(self, node, ref, deps=None, dependents=None, settings=None, options=None):

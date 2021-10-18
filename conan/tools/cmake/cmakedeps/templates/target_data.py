@@ -106,7 +106,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return ret
 
     def get_global_cpp_cmake(self):
-        global_cppinfo = self.conanfile.new_cpp_info.copy()
+        global_cppinfo = self.conanfile.cpp_info.copy()
         global_cppinfo.aggregate_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         return DepsCppCmake(global_cppinfo, pfolder_var_name, self.require)
@@ -114,7 +114,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
         ret = []
-        sorted_comps = self.conanfile.new_cpp_info.get_sorted_components()
+        sorted_comps = self.conanfile.cpp_info.get_sorted_components()
 
         direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
                                                                   "direct": True})
@@ -144,8 +144,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = []
         direct_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
                                                           "direct": True})
-        if self.conanfile.new_cpp_info.required_components:
-            for dep_name, _ in self.conanfile.new_cpp_info.required_components:
+        if self.conanfile.cpp_info.required_components:
+            for dep_name, _ in self.conanfile.cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
                     req = direct_host[dep_name]
                     ret.append(get_file_name(req, self.find_module_mode))
@@ -199,7 +199,6 @@ class DepsCppCmake(object):
         self.res_paths = join_paths(cpp_info.resdirs)
         self.bin_paths = join_paths(cpp_info.bindirs)
         self.build_paths = join_paths(cpp_info.builddirs)
-        self.src_paths = join_paths(cpp_info.srcdirs)
         self.framework_paths = join_paths(cpp_info.frameworkdirs)
         self.libs = join_flags(" ", cpp_info.libs)
         self.system_libs = join_flags(" ", cpp_info.system_libs)
