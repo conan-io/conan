@@ -1,9 +1,9 @@
 import json
 
-from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
-from conans.cli.commands import get_remote_selection
-from conans.cli.output import cli_out_write
+from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS, \
+    get_remote_selection
 from conans.cli.output import Color
+from conans.cli.output import cli_out_write
 from conans.errors import ConanException, InvalidNameException, PackageNotFoundException, \
     NotFoundException
 from conans.model.ref import PackageReference, ConanFileReference
@@ -124,9 +124,7 @@ list_package_ids_formatters = {
 def _add_remotes_and_cache_options(subparser):
     remotes_group = subparser.add_mutually_exclusive_group()
     remotes_group.add_argument("-r", "--remote", default=None, action=Extender,
-                               help="Remote name")
-    remotes_group.add_argument("-a", "--all-remotes", action='store_true',
-                               help="Search in all the remotes")
+                               help="Remote names. Accepts wildcards")
     subparser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
 
@@ -142,7 +140,7 @@ def list_recipes(conan_api, parser, subparser, *args):
     _add_remotes_and_cache_options(subparser)
     args = parser.parse_args(*args)
 
-    use_remotes = any([args.remote, args.all_remotes])
+    use_remotes = args.remote
     results = []
 
     # If neither remote nor cache are defined, show results only from cache
@@ -161,7 +159,7 @@ def list_recipes(conan_api, parser, subparser, *args):
                     "name": reference.name,
                     "id": repr(reference)
                 }
-                results.append(tmp)
+                refs_docs.append(tmp)
             results = [{
                 "remote": None,
                 "error": None,
@@ -216,10 +214,9 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
     if ref.revision:
         raise ConanException(f"Cannot list the revisions of a specific recipe revision")
 
-    use_remotes = any([args.remote, args.all_remotes])
     results = []
     # If neither remote nor cache are defined, show results only from cache
-    if args.cache or not use_remotes:
+    if args.cache or not args.remote:
         error = None
         try:
             result = conan_api.get_recipe_revisions(ref)
@@ -232,7 +229,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
             "error": error,
             "results": result
         })
-    if use_remotes:
+    if args.remote:
         remotes = get_remote_selection(conan_api, args)
         for remote in remotes:
             error = None
@@ -278,10 +275,9 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     if pref.revision:
         raise ConanException(f"Cannot list the revisions of a specific package revision")
 
-    use_remotes = any([args.remote, args.all_remotes])
     results = []
     # If neither remote nor cache are defined, show results only from cache
-    if args.cache or not use_remotes:
+    if args.cache or not args.remote:
         error = None
         try:
             result = conan_api.get_package_revisions(pref)
@@ -294,7 +290,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             "error": error,
             "results": result
         })
-    if use_remotes:
+    if args.remote:
         remotes = get_remote_selection(conan_api, args)
         for remote in remotes:
             error = None
@@ -338,10 +334,9 @@ def list_package_ids(conan_api, parser, subparser, *args):
         raise ConanException(f"{args.reference} is not a valid recipe reference, provide a reference"
                              f" in the form name/version[@user/channel][#RECIPE_REVISION]")
 
-    use_remotes = any([args.remote, args.all_remotes])
     results = []
     # If neither remote nor cache are defined, show results only from cache
-    if args.cache or not use_remotes:
+    if args.cache or not args.remote:
         error = None
         try:
             result = conan_api.get_package_ids(ref)
@@ -352,7 +347,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
         result["error"] = error
         results.append(result)
 
-    if use_remotes:
+    if args.remote:
         remotes = get_remote_selection(conan_api, args)
         for remote in remotes:
             error = None

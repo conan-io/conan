@@ -65,20 +65,14 @@ class TestParams(TestListPackageRevisionsBase):
         self.client.run("list package-revisions -c", assert_error=True)
         assert "error: the following arguments are required: package_reference" in self.client.out
 
-        self.client.run("list package-revisions --all-remotes", assert_error=True)
+        self.client.run('list package-revisions -r="*"', assert_error=True)
         assert "error: the following arguments are required: package_reference" in self.client.out
 
         self.client.run("list package-revisions --remote remote1 --cache", assert_error=True)
         assert "error: the following arguments are required: package_reference" in self.client.out
 
-    def test_remote_and_all_remotes_are_mutually_exclusive(self):
-        self._add_remote("remote1")
-
-        self.client.run("list package-revisions --all-remotes --remote remote1 package/1.0", assert_error=True)
-        assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
-
     def test_wildcard_not_accepted(self):
-        self.client.run("list package-revisions -a -c test_*", assert_error=True)
+        self.client.run('list package-revisions -r="*" -c test_*', assert_error=True)
         expected_output = "ERROR: test_* is not a valid package reference, provide a " \
                           "reference in the form name/version[@user/channel]#RECIPE_REVISION:PACKAGE_ID"
         assert expected_output in self.client.out
@@ -111,13 +105,13 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         """)
 
         pref = self._get_fake_package_refence('whatever/0.1')
-        self.client.run(f"list package-revisions -c -a {pref}")
+        self.client.run(f'list package-revisions -c -r="*" {pref}')
         assert expected_output == self.client.out
 
     def test_fail_if_no_configured_remotes(self):
         pref = self._get_fake_package_refence('whatever/0.1')
-        self.client.run(f"list package-revisions -a {pref}", assert_error=True)
-        assert "ERROR: The remotes registry is empty" in self.client.out
+        self.client.run(f'list package-revisions -r="*" {pref}', assert_error=True)
+        assert "ERROR: Remotes for pattern '*' can't be found or are disabled" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
@@ -126,14 +120,8 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         # He have to put both remotes instead of using "-a" because of the
         # disbaled remote won't appear
         pref = self._get_fake_package_refence('whatever/0.1')
-        self.client.run(f"list package-revisions {pref} -r remote1 -r remote2")
-        expected_output = textwrap.dedent("""\
-        remote1:
-          ERROR: Remote 'remote1' is disabled
-        remote2:
-          There are no matching package references
-        """)
-        assert expected_output == self.client.out
+        self.client.run(f"list package-revisions {pref} -r remote1 -r remote2", assert_error=True)
+        assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
@@ -146,7 +134,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         pref = self._get_fake_package_refence('whatever/0.1')
         with patch.object(RemoteManager, "get_package_revisions",
                           new=Mock(side_effect=exc)):
-            self.client.run(f"list package-revisions {pref} -a -c")
+            self.client.run(f'list package-revisions {pref} -r="*" -c')
         expected_output = textwrap.dedent(f"""\
         Local Cache:
           There are no matching package references
@@ -186,7 +174,7 @@ class TestRemotes(TestListPackageRevisionsBase):
         self._upload_recipe(remote2, "test_recipe/2.1.0@user/channel")
 
         pref = self._get_lastest_package_ref("test_recipe/1.0.0@user/channel")
-        self.client.run(f"list package-revisions -a -c {repr(pref)}")
+        self.client.run(f'list package-revisions -r="*" -c {repr(pref)}')
         output = str(self.client.out)
         expected_output = textwrap.dedent(f"""\
         Local Cache:
@@ -203,7 +191,7 @@ class TestRemotes(TestListPackageRevisionsBase):
         remote1_recipe1 = "test_recipe/1.0.0@user/channel"
         remote1_recipe2 = "test_recipe/1.1.0@user/channel"
 
-        expected_output = "No remote 'wrong_remote' defined in remotes"
+        expected_output = "ERROR: Remote 'wrong_remote' not found in remotes"
 
         self._add_remote(remote1)
         self._upload_recipe(remote1, remote1_recipe1)

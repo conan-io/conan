@@ -79,8 +79,13 @@ class ConanApp(object):
         self.enabled_remotes = [r for r in self.all_remotes if not r.disabled]
         self.update = update
         self.selected_remotes = []
-        if remotes and remotes != [None]:
-            self.selected_remotes = [r for r in remotes if not r.disabled]
+        if remotes:
+            for r in remotes:
+                if r.name is not None:  # FIXME: Remove this when we pass always remote objects
+                    tmp = self.cache.remotes_registry.read(r.name)
+                    if tmp.disabled:
+                        raise ConanException("Remote '{}' is disabled".format(tmp.name))
+                    self.selected_remotes.append(tmp)
 
     def get_enabled_remote_by_name(self, remote_name):
         ret = list(filter(lambda x: x.name == remote_name, self.enabled_remotes))

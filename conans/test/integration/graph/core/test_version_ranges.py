@@ -182,7 +182,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        app.enabled_remotes = [Remote("foo")]
+        app.enabled_remotes = [Remote("foo", None)]
         libb = app.dependencies[0].dst
         libc = app.dependencies[1].dst
         liba = libb.dependencies[0].dst

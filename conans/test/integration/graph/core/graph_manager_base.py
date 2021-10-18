@@ -48,6 +48,7 @@ class GraphManagerTest(unittest.TestCase):
         app.cache = cache
         app.remote_manager = self.remote_manager
         app.enabled_remotes = []
+        app.selected_remote = None
         self.resolver = RangeResolver(app)
         proxy = ConanProxy(app)
 
@@ -145,13 +146,10 @@ class GraphManagerTest(unittest.TestCase):
             profile_host.build_requires = profile_build_requires
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
-        # FIXME: This was hardcoding the remotes for the graph_manager and the binary_installer
-        #        Why? Can it be solved without hacking?
-        update = False
-        remotes = []
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         app = self._get_app()
+
 
         deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
                                                   None, ref, build_mode)

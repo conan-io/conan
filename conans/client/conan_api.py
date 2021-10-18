@@ -665,7 +665,8 @@ class ConanAPIV1(object):
         app = ConanApp(self.cache_folder)
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)])
-        return user_set(app.cache.localdb, user, app.selected_remote)
+        # FIXME: The remote should be explicit always
+        return user_set(app.cache.localdb, user, app.selected_remote or app.enabled_remotes[0])
 
     @api_method
     def users_clean(self):

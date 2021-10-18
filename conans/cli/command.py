@@ -3,7 +3,6 @@ import textwrap
 
 from conans.errors import ConanException
 
-
 COMMAND_GROUPS = {
     'consumer': 'Consumer commands',
     'misc': 'Miscellaneous commands'
@@ -174,3 +173,14 @@ def conan_subcommand(formatters=None):
         return cmd
 
     return decorator
+
+
+def get_remote_selection(conan_api, args):
+    remotes = []
+    for pattern in args.remote:
+        tmp = conan_api.remotes.list(filter=pattern, only_active=True)
+        if not tmp:
+            raise ConanException("Remotes for pattern '{}' can't be found or are "
+                                 "disabled".format(pattern))
+        remotes.extend(tmp)
+    return remotes

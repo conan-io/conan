@@ -99,7 +99,6 @@ class ConanTraceTest(unittest.TestCase):
             doc = json.loads(trace)
             self.assertIn("_action", doc)  # Valid jsons
 
-        print(without_rest_api)
         self.assertEqual(json.loads(without_rest_api[0])["_action"], "COMMAND")
         self.assertEqual(json.loads(without_rest_api[0])["name"], "authenticate")
         self.assertEqual(json.loads(without_rest_api[2])["_action"], "COMMAND")
