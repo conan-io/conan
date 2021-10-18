@@ -11,19 +11,19 @@ from conans.util.files import load, save
 class XcodeDeps(object):
     _vars_xconfig = textwrap.dedent("""\
         // Definition of Conan variables for {{name}}
-        CONAN_{{name}}_ROOT_FOLDER = {{root_folder}}
-        CONAN_{{name}}_BINARY_DIRECTORIES = {{bin_dirs}}
-        CONAN_{{name}}_C_COMPILER_FLAGS = {{c_compiler_flags}}
-        CONAN_{{name}}_CXX_COMPILER_FLAGS = {{cxx_compiler_flags}}
-        CONAN_{{name}}_LINKER_FLAGS = {{linker_flags}}
-        CONAN_{{name}}_PREPROCESSOR_DEFINITIONS = {{definitions}}
-        CONAN_{{name}}_INCLUDE_DIRECTORIES = {{include_dirs}}
-        CONAN_{{name}}_RESOURCE_DIRECTORIES = {{res_dirs}}
-        CONAN_{{name}}_LIBRARY_DIRECTORIES = {{lib_dirs}}
-        CONAN_{{name}}_LIBRARIES = {{libs}}
-        CONAN_{{name}}_SYSTEM_LIBS = {{system_libs}}
-        CONAN_{{name}}_FRAMEWORKS_DIRECTORIES = {{frameworkdirs}}
-        CONAN_{{name}}_FRAMEWORKS = {{frameworks}}
+        CONAN_{{name}}_ROOT_FOLDER_{{configuration}} = "{{root_folder}}"
+        CONAN_{{name}}_BINARY_DIRECTORIES_{{configuration}} = {{bin_dirs}}
+        CONAN_{{name}}_C_COMPILER_FLAGS_{{configuration}} = {{c_compiler_flags}}
+        CONAN_{{name}}_CXX_COMPILER_FLAGS_{{configuration}} = {{cxx_compiler_flags}}
+        CONAN_{{name}}_LINKER_FLAGS_{{configuration}} = {{linker_flags}}
+        CONAN_{{name}}_PREPROCESSOR_DEFINITIONS_{{configuration}} = {{definitions}}
+        CONAN_{{name}}_INCLUDE_DIRECTORIES_{{configuration}} = {{include_dirs}}
+        CONAN_{{name}}_RESOURCE_DIRECTORIES_{{configuration}} = {{res_dirs}}
+        CONAN_{{name}}_LIBRARY_DIRECTORIES_{{configuration}} = {{lib_dirs}}
+        CONAN_{{name}}_LIBRARIES_{{configuration}} = {{libs}}
+        CONAN_{{name}}_SYSTEM_LIBS_{{configuration}} = {{system_libs}}
+        CONAN_{{name}}_FRAMEWORKS_DIRECTORIES_{{configuration}} = {{frameworkdirs}}
+        CONAN_{{name}}_FRAMEWORKS_{{configuration}} = {{frameworks}}
         """)
 
     _conf_xconfig = textwrap.dedent("""\
@@ -36,15 +36,15 @@ class XcodeDeps(object):
         #include "{{vars_filename}}"
 
         // Compiler options for {{name}}
-        HEADER_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_INCLUDE_DIRECTORIES)
-        GCC_PREPROCESSOR_DEFINITIONS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_PREPROCESSOR_DEFINITIONS)
-        OTHER_CFLAGS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_C_COMPILER_FLAGS)
-        OTHER_CPLUSPLUSFLAGS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_CXX_COMPILER_FLAGS)
-        FRAMEWORK_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_FRAMEWORKS_DIRECTORIES)
+        HEADER_SEARCH_PATHS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_INCLUDE_DIRECTORIES_$(CONFIGURATION))
+        GCC_PREPROCESSOR_DEFINITIONS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_PREPROCESSOR_DEFINITIONS_$(CONFIGURATION))
+        OTHER_CFLAGS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_C_COMPILER_FLAGS_$(CONFIGURATION))
+        OTHER_CPLUSPLUSFLAGS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_CXX_COMPILER_FLAGS_$(CONFIGURATION))
+        FRAMEWORK_SEARCH_PATHS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_FRAMEWORKS_DIRECTORIES_$(CONFIGURATION))
 
         // Link options for {{name}}
-        LIBRARY_SEARCH_PATHS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_LIBRARY_DIRECTORIES)
-        OTHER_LDFLAGS[config={{configuration}}][arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_LINKER_FLAGS) $(CONAN_{{name}}_LIBRARIES) $(CONAN_{{name}}_SYSTEM_LIBS) $(CONAN_{{name}}_FRAMEWORKS)
+        LIBRARY_SEARCH_PATHS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_LIBRARY_DIRECTORIES_$(CONFIGURATION))
+        OTHER_LDFLAGS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_LINKER_FLAGS_$(CONFIGURATION)) $(CONAN_{{name}}_LIBRARIES_$(CONFIGURATION)) $(CONAN_{{name}}_SYSTEM_LIBS_$(CONFIGURATION)) $(CONAN_{{name}}_FRAMEWORKS_$(CONFIGURATION))
         """)
 
     _dep_xconfig = textwrap.dedent("""\
@@ -66,6 +66,10 @@ class XcodeDeps(object):
         self.os_version = conanfile.settings.get_safe("os.version")
         self.sdk = conanfile.settings.get_safe("os.sdk")
         check_using_build_profile(self._conanfile)
+
+    @property
+    def sdk_condition(self):
+        return "*" if not self.sdk else "{}*".format(self.sdk)
 
     def generate(self):
         if self.configuration is None:
@@ -90,9 +94,12 @@ class XcodeDeps(object):
         """
         # returns a .xcconfig file with the variables definition for one package for one configuration
 
-        pkg_placeholder = "$(CONAN_{}_ROOT_FOLDER)/".format(name)
+        pkg_placeholder = "$(CONAN_{}_ROOT_FOLDER_{})/".format(name, self.configuration)
         fields = {
             'name': name,
+            'configuration': self.configuration,
+            'architecture': self.architecture,
+            'sdk': self.sdk_condition,
             'root_folder': dep.package_folder,
             'bin_dirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.bindirs),
             'res_dirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.resdirs),
@@ -119,11 +126,10 @@ class XcodeDeps(object):
         #  want to model also the sdk version decoupled of the compiler version
         #  for example XCode 13 is now using sdk=macosx11.3
         #  related to: https://github.com/conan-io/conan/issues/9608
-        sdk_condition = "*" if not self.sdk else "{}*".format(self.sdk)
         template = Template(self._conf_xconfig)
         content_multi = template.render(name=dep_name, vars_filename=vars_xconfig_name, deps=deps,
                                         architecture=self.architecture,
-                                        configuration=self.configuration, sdk=sdk_condition)
+                                        configuration=self.configuration, sdk=self.sdk_condition)
         return content_multi
 
     def _dep_xconfig_file(self, name, name_general, dep_xconfig_filename):

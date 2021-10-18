@@ -42,12 +42,14 @@ def test_xcodedeps_check_configurations():
     client.run("install . -s build_type=Debug --build=missing -g XcodeDeps")
     client.run("install . -s build_type=Release --build=missing -g XcodeDeps")
 
-    client.run_command("xcodebuild -project cmakeapp.xcodeproj -xcconfig conandeps.xcconfig -configuration Debug")
+    client.run_command(
+        "xcodebuild -project cmakeapp.xcodeproj -xcconfig conandeps.xcconfig -configuration Debug")
     client.run_command("./Debug/app")
     assert "App Debug!" in client.out
     assert "hello/0.1: Hello World Debug!" in client.out
 
-    client.run_command("xcodebuild -project cmakeapp.xcodeproj -xcconfig conandeps.xcconfig -configuration Release")
+    client.run_command(
+        "xcodebuild -project cmakeapp.xcodeproj -xcconfig conandeps.xcconfig -configuration Release")
     client.run_command("./Release/app")
     assert "App Release!" in client.out
     assert "hello/0.1: Hello World Release!" in client.out
