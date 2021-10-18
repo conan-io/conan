@@ -40,12 +40,11 @@ def test_xcodedeps_build_configurations():
     client.run_command("cmake . -G Xcode -T buildsystem=1")
 
     for config in ["Release", "Debug"]:
-        client.run("install . -s build_type={} -s arch=x86_64 -s os.sdk=macosx --build=missing "
-                   "-g XcodeDeps".format(config))
+        client.run("install . -s build_type={} -s arch=x86_64 --build=missing -g XcodeDeps".format(config))
 
     for config in ["Release", "Debug"]:
         client.run_command("xcodebuild -project cmakeapp.xcodeproj -xcconfig conandeps.xcconfig "
-                           "-configuration {} -arch x86_64 -sdk=macosx".format(config))
+                           "-configuration {} -arch x86_64".format(config))
         client.run_command("./{}/app".format(config))
         assert "App {}!".format(config) in client.out
         assert "hello/0.1: Hello World {}!".format(config).format(config) in client.out
