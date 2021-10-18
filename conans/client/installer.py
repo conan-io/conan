@@ -291,6 +291,7 @@ class BinaryInstaller(object):
 
     def install(self, deps_graph, remotes, build_mode, update):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
+
         self._out.info("\nInstalling (downloading, building) binaries...")
 
         # order by levels and separate the root node (ref=None) from the rest

@@ -1483,42 +1483,10 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
-        # create the parser for the "a" command
-        update_help = ("Complete missing information in the first lockfile with information "
-                       "defined in the second lockfile. Both lockfiles must represent the same "
-                       "graph, and have the same topology with the same identifiers, i.e. the "
-                       "second lockfile must be an evolution based on the first one")
-        update_cmd = subparsers.add_parser('update', help=update_help)
-        update_cmd.add_argument('old_lockfile', help='Path to lockfile to be updated')
-        update_cmd.add_argument('new_lockfile', help='Path to lockfile containing the new '
-                                'information that is going to be updated into the first lockfile')
-
         merge_cmd = subparsers.add_parser('merge', help="merge 2 or more lockfiles")
         merge_cmd.add_argument('--lockfile', action="append", help='Path to lockfile to be merged')
         merge_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                                help="Filename of the created lockfile")
-        build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
-        build_order_cmd.add_argument('lockfile', help='lockfile file')
-        build_order_cmd.add_argument("--json", action=OnceArgument,
-                                     help="generate output file in json format")
-        build_order_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
-                                     help="Filename of the created lockfile")
-        _add_common_install_arguments(build_order_cmd, build_help="Packages to build from source",
-                                      lockfile=False)
-
-        clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
-        clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
-
-        install_cmd = subparsers.add_parser('install', help='Install a lockfile')
-        install_cmd.add_argument('lockfile', help='Path to the lockfile')
-        install_cmd.add_argument("--recipes", action="store_true",
-                                 help="Install only recipes, not binaries")
-        install_cmd.add_argument("-g", "--generator", nargs=1, action=Extender,
-                                 help='Generators to use')
-        install_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
-                                 help="Filename of the created lockfile")
-        _add_common_install_arguments(install_cmd, build_help="Packages to build from source",
-                                      lockfile=False)
 
         create_cmd = subparsers.add_parser('create',
                                            help='Create a lockfile from a conanfile or a reference')

@@ -266,4 +266,6 @@ class GraphLock(object):
         # Filter existing matching
         ref = ConanLockReference.loads(repr(ref))
         if ref not in self.requires:
+            # It is inserted in the first position, because that will result in prioritization
+            # That includes testing previous versions in a version range
             self.requires.insert(0, ref)
