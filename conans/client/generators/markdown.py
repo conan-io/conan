@@ -66,9 +66,9 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     # Use the global target
     target_link_libraries(<library_name> {{ cmake_variables.target_namespace }}::{{ cmake_variables.global_target_name }})
 
-    {% if requirement.new_cpp_info.components is iterable and requirement.new_cpp_info.components %}
+    {% if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
     # Or link just one of its components
-    {% for component_name, component in requirement.new_cpp_info.components.items() %}
+    {% for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
     target_link_libraries(<library_name> {{ cmake_variables.target_namespace }}::{{ cmake_variables.component_alias[component_name] }})
     {%- endif %}
@@ -76,7 +76,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     {%- endif %}
     ```
 
-    {% set cmake_build_modules = requirement.new_cpp_info.get_property('cmake_build_modules') %}
+    {% set cmake_build_modules = requirement.cpp_info.get_property('cmake_build_modules') %}
     {% if cmake_build_modules %}
     This generator will include some _build modules_:
     {% for bm in cmake_build_modules -%}
@@ -144,9 +144,9 @@ buildsystem_autotools_tpl = textwrap.dedent("""
     #### Generator PkgConfigDeps
     This package provides one *pkg-config* file ``{{ pkgconfig_variables.pkg_name }}.pc`` with
     all the information from the library
-    {% if requirement.new_cpp_info.components is iterable and requirement.new_cpp_info.components %}
+    {% if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
     and another file for each of its components:
-    {% for component_name, component in requirement.new_cpp_info.components.items() %}
+    {% for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
     ``{{ pkgconfig_variables.component_alias[component_name] }}.pc``{% if not loop.last %},{% endif %}
     {%- endif %}
@@ -208,15 +208,15 @@ requirement_tpl = textwrap.dedent("""
 
     ## Information for consumers
 
-    {%- if requirement.new_cpp_info.components is iterable and requirement.new_cpp_info.components %}
-    {%- for component_name, component in requirement.new_cpp_info.components.items() %}
+    {%- if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
+    {%- for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
     * Component ``{{ requirement.ref.name }}::{{ cmake_variables.component_alias[component_name] }}``:
     {{- render_cpp_info(component)|indent(width=2) }}
     {%- endif %}
     {%- endfor %}
     {%- else %}
-    {{ render_cpp_info(requirement.new_cpp_info)|indent(width=0) }}
+    {{ render_cpp_info(requirement.cpp_info)|indent(width=0) }}
     {%- endif %}
 
 
@@ -241,7 +241,7 @@ class MarkdownGenerator(Generator):
     def _list_headers(self, requirement):
         headers = []
 
-        for include_dir in requirement.new_cpp_info.includedirs:
+        for include_dir in requirement.cpp_info.includedirs:
             for root, _, files in os.walk(os.path.join(requirement.package_folder, include_dir)):
                 for f in files:
                     yield os.path.relpath(os.path.join(root, f), os.path.join(requirement.package_folder, include_dir))
@@ -292,7 +292,7 @@ class MarkdownGenerator(Generator):
             cmake_component_alias = {
                 component_name: cmake_get_component_alias(requirement, component_name)
                 for component_name, _
-                in requirement.new_cpp_info.components.items()
+                in requirement.cpp_info.components.items()
                 if component_name
             }
             cmake_variables = {
@@ -305,7 +305,7 @@ class MarkdownGenerator(Generator):
             pkgconfig_component_alias = {
                 component_name: pkgconfig_get_component_alias(requirement, component_name)
                 for component_name, _
-                in requirement.new_cpp_info.components.items()
+                in requirement.cpp_info.components.items()
                 if component_name
             }
             pkgconfig_variables = {

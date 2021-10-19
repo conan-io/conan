@@ -10,12 +10,12 @@ class MarkDownGeneratorTest(unittest.TestCase):
     def test_cmake_find_filename(self):
         conanfile = textwrap.dedent("""
                     from conans import ConanFile
+
                     class HelloConan(ConanFile):
                         def package_info(self):
-                            self.cpp_info.filenames['cmake_find_package'] = 'FooBar'
-                            self.cpp_info.names['cmake_find_package'] = 'foobar'
-                            self.cpp_info.names['cmake_find_package_multi'] = 'foobar_multi'
-                            self.cpp_info.names['pkg_config'] = 'foobar_cfg'
+                            self.cpp_info.set_property("cmake_file_name", "FooBar")
+                            self.cpp_info.set_property("cmake_target_name", "foobar")
+                            self.cpp_info.set_property("pkg_config_name", "foobar_cfg")
                     """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -24,6 +24,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
         content = client.load("bar.md")
 
         self.assertIn("find_package(FooBar)", content)
+        self.assertIn("target_link_libraries(<library_name> foobar::foobar)", content)
 
     def test_with_build_modules(self):
         conanfile = textwrap.dedent("""
