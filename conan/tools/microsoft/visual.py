@@ -44,7 +44,7 @@ class VCVars:
             minor = version_components[1]
             # The equivalent of compiler 19.26 is toolset 14.26
             vcvars_ver = "14.{}".format(minor)
-        vs_install_path = conanfile.conf["tools.microsoft.msbuild:install_path"]
+        vs_install_path = conanfile.conf["tools.microsoft.msbuild:installation_path"]
         vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
                                 winsdk_version=None, vcvars_ver=vcvars_ver,
                                 vs_install_path=vs_install_path)
