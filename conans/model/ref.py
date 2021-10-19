@@ -146,6 +146,91 @@ class ConanName(object):
                                        "%s" % ConanName._max_chars)
 
 
+class RecipeReference:
+    """ an exact (no version-range, no alias) reference of a recipe.
+    Should be enough to locate a recipe in the cache or in a server
+    Validation will be external to this class, at specific points (export, api, etc)
+    """
+
+    def __init__(self, name=None, version=None, user=None, channel=None, revision=None,
+                 timestamp=None):
+        self.name = name
+        self.version = version  # TODO: Decide if this is a string or Version object NOW: string
+        self.user = user
+        self.channel = channel
+        self.revision = revision
+        self.timestamp = timestamp  # TODO: Which format? int timestamp?
+
+    def __repr__(self):
+        """ long repr like pkg/0.1@user/channel#rrev%timestamp """
+        result = self.__str__()
+        if self.revision is not None:
+            result += "#{}".format(self.revision)
+        if self.timestamp is not None:
+            result += "%{}".format(self.timestamp)
+        return result
+
+    def __str__(self):
+        """ shorter representation, excluding the revision and timestamp """
+        if self.name is None:
+            return ""
+        result = "/".join([self.name, self.version])
+        if self.user:
+            result += "@{}".format(self.user)
+        if self.channel:
+            assert self.user
+            result += "/{}".format(self.channel)
+        return result
+
+    def __lt__(self, ref):
+        # The timestamp goes before the revision for ordering revisions chronologically
+        return (self.name, self.version, self.user, self.channel, self.timestamp, self.revision) \
+               < (ref.name, ref.version, ref.user, ref.channel, ref.timestamp, ref.revision)
+
+    def __eq__(self, other):
+        # TODO: In case of equality, should it use the revision and timestamp?
+        raise Exception("WHO IS COMPARING RECIPE REFERENCES?")
+        # return self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        raise Exception("WHO IS COMPARING RECIPE REFERENCES?")
+        # return not self.__eq__(other)
+
+    def __hash__(self):
+        raise Exception("WHO IS COMPARING RECIPE REFERENCES?")
+        # return hash((self.name, self.version, self.user, self.channel, self.revision))
+
+    @staticmethod
+    def loads(text):  # TODO: change this default to validate only on end points
+        try:
+            # revision
+            tokens = text.split("%", 1)
+            text = tokens[0]
+            timestamp = int(tokens[1]) if len(tokens) == 2 else None
+
+            # revision
+            tokens = text.split("#", 1)
+            ref = tokens[0]
+            revision = tokens[1] if len(tokens) == 2 else None
+
+            # name, version
+            tokens = ref.split("@", 1)
+            name, version = tokens[0].split("/", 1)
+            assert name and version
+            # user and channel
+            if len(tokens) == 2:
+                tokens = tokens[1].split("/", 1)
+                user = tokens[0]
+                channel = tokens[1] if len(tokens) == 2 else None
+            else:
+                user = channel = None
+            return RecipeReference(name, version, user, channel, revision, timestamp)
+        except Exception:
+            raise ConanException(
+                f"{text} is not a valid recipe reference, provide a reference"
+                f" in the form name/version[@user/channel]")
+
+
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel revision")):
     """ Full reference of a package recipes, e.g.:
     opencv/2.4.10@lasote/testing

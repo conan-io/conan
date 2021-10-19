@@ -1,5 +1,5 @@
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference, RecipeReference
 
 
 class ConanReference:
@@ -22,6 +22,15 @@ class ConanReference:
             self._rrev = ref.ref.revision
             self._pkgid = ref.id
             self._prev = ref.revision
+        elif isinstance(args[0], RecipeReference):
+            ref = args[0]
+            self._name = ref.name
+            self._version = ref.version
+            self._user = ref.user
+            self._channel = ref.channel
+            self._rrev = ref.revision
+            self._pkgid = None
+            self._prev = None
         elif len(args) == 7 and all(isinstance(arg, str) or arg is None for arg in args):
             self._name = args[0]
             self._version = args[1]

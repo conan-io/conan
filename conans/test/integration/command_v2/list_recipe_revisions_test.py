@@ -33,8 +33,7 @@ class TestListRecipeRevisionsBase:
 class TestParams(TestListRecipeRevisionsBase):
     @pytest.mark.parametrize("ref", [
         "whatever",
-        "whatever/",
-        "whatever/1"
+        "whatever/"
     ])
     def test_fail_if_reference_is_not_correct(self, ref):
         self.client.run(f"list recipe-revisions {ref}", assert_error=True)

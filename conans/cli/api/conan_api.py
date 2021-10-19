@@ -225,7 +225,8 @@ class ConanAPIV2(object):
         """
         # Method name to get remotely/locally the revisions
         getter_name = 'get_recipe_revisions'
-        return self._get_revisions(reference, getter_name, remote=remote)
+        results = self._get_revisions(reference, getter_name, remote=remote)
+        return results
 
     @api_method
     def get_package_ids(self, reference, remote=None):
