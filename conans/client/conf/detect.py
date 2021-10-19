@@ -62,8 +62,6 @@ def _clang_compiler(compiler_exe="clang"):
             compiler = "apple-clang"
         elif "clang version" in out:
             compiler = "clang"
-        print("clang --version output:")
-        print(out)
         installed_version = re.search(r"([0-9]+\.[0-9])", out).group()
         if installed_version:
             ConanOutput().success("Found %s %s" % (compiler, installed_version))
