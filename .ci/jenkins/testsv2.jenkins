@@ -127,7 +127,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
+def testModules = ["conans/test/functional"]
 
 try {
     cancelPrevious()
