@@ -157,7 +157,7 @@ class GraphManagerTest(unittest.TestCase):
             deps_graph.report_graph_error()
             binary_installer = BinaryInstaller(app)
             build_mode = BuildMode(build_mode)
-            binary_installer.install(deps_graph, None, build_mode)
+            binary_installer.install(deps_graph, build_mode)
 
         return deps_graph
 
