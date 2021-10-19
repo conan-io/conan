@@ -8,8 +8,7 @@ from conans.util.log import logger
 
 
 def cmd_build(app, conanfile_path, conan_file, base_path, source_folder, build_folder,
-              package_folder, install_folder, test=False, should_configure=True, should_build=True,
-              should_install=True, should_test=True):
+              package_folder, install_folder, test=False):
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
@@ -23,20 +22,22 @@ def cmd_build(app, conanfile_path, conan_file, base_path, source_folder, build_f
         except ConanException:
             pass
 
-    conan_file.should_configure = should_configure
-    conan_file.should_build = should_build
-    conan_file.should_install = should_install
-    conan_file.should_test = should_test
-
     try:
         # FIXME: Conan 2.0 all these build_folder, source_folder will disappear
         #  Only base_path and conanfile_path will remain
-        conan_file.folders.set_base_build(build_folder)
-        conan_file.folders.set_base_source(source_folder)
-        conan_file.folders.set_base_package(package_folder)
-        conan_file.folders.set_base_generators(base_path)
-
-        conan_file.folders.set_base_install(install_folder)
+        if hasattr(conan_file, "layout") and not test:
+            conanfile_folder = os.path.dirname(conanfile_path)
+            conan_file.folders.set_base_build(conanfile_folder)
+            conan_file.folders.set_base_source(conanfile_folder)
+            conan_file.folders.set_base_package(conanfile_folder)
+            conan_file.folders.set_base_generators(conanfile_folder)
+            conan_file.folders.set_base_install(conanfile_folder)
+        else:
+            conan_file.folders.set_base_build(build_folder)
+            conan_file.folders.set_base_source(source_folder)
+            conan_file.folders.set_base_package(package_folder)
+            conan_file.folders.set_base_generators(base_path)
+            conan_file.folders.set_base_install(install_folder)
 
         mkdir(conan_file.build_folder)
         os.chdir(conan_file.build_folder)

@@ -19,8 +19,7 @@ class ExportPkgTest(unittest.TestCase):
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": None},
-                            requester_class=None,
-                            users={"default": [("lasote", "mypass")]})
+                            requester_class=None, inputs=["admin", "password"])
 
         client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("install .")
@@ -29,8 +28,7 @@ class ExportPkgTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Build-requires are expanded now, so this is expected to fail atm")
     def test_dont_touch_server_build_require(self):
         client = TestClient(servers={"default": None},
-                            requester_class=None,
-                            users={"default": [("lasote", "mypass")]})
+                            requester_class=None, inputs=["admin", "password"])
         profile = dedent("""
             [build_requires]
             some/other@pkg/notexists
@@ -353,6 +351,7 @@ class TestConan(ConanFile):
         cmakeinfo = client.load("Hello1-release-data.cmake")
         self.assertIn("set(Hello1_LIBS_RELEASE mycoollib)", cmakeinfo)
 
+    @pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
     def test_export_pkg_json(self):
 
         def _check_json_output_no_folder():
@@ -530,3 +529,17 @@ def test_build_policy_never():
     client.run("install pkg/1.0@ --build")
     assert "pkg/1.0:{} - Cache".format(NO_SETTINGS_PACKAGE_ID) in client.out
     assert "pkg/1.0: Calling build()" not in client.out
+
+
+def test_build_policy_never_missing():
+    # https://github.com/conan-io/conan/issues/9798
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_class_attribute('build_policy = "never"'),
+                 "consumer.txt": "[requires]\npkg/1.0"})
+    client.run("export . pkg/1.0@")
+
+    client.run("install pkg/1.0@ --build", assert_error=True)
+    assert "ERROR: Missing binary: pkg/1.0" in client.out
+
+    client.run("install pkg/1.0@ --build=missing", assert_error=True)
+    assert "ERROR: Missing binary: pkg/1.0" in client.out

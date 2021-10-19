@@ -13,13 +13,13 @@ def test_shared_cmake_toolchain():
     client.run("create . -o chat:shared=True -o hello:shared=True")
     client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
     client.run("create . -o chat:shared=True -o hello:shared=True")
-    client.run("upload * --all -c")
+    client.run("upload * --all -c -r default")
     client.run("remove * -f")
 
-    client = TestClient(servers=client.servers, users=client.users)
+    client = TestClient(servers=client.servers)
     client.run("install app/0.1@ -o chat:shared=True -o hello:shared=True -g VirtualRunEnv")
     conanfile = ConanFileMock()
-    command = environment_wrap_command(conanfile, "conanrunenv", "app", cwd=client.current_folder)
+    command = environment_wrap_command(conanfile, "conanrun", "app", cwd=client.current_folder)
 
     client.run_command(command)
     assert "main: Release!" in client.out

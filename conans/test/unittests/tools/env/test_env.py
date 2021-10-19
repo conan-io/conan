@@ -257,7 +257,7 @@ def test_env_files():
 
     with chdir(folder):
         if platform.system() == "Windows":
-            env.save_bat("test.bat", pathsep=":", generate_deactivate=True)
+            env.save_bat("test.bat", pathsep=":")
 
             save("display.bat", display_bat)
             cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
@@ -270,7 +270,7 @@ def test_env_files():
             # stdout, stderr = decode_text(stdout), decode_text(stderr)
             # check(cmd)
         else:
-            env.save_sh("test.sh", pathsep=":", generate_deactivate=True)
+            env.save_sh("test.sh", pathsep=":")
             save("display.sh", display_sh)
             os.chmod("display.sh", 0o777)
             cmd = '. ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
@@ -285,26 +285,30 @@ def test_windows_case_insensitive():
     env.define("MYVAR", "MyValueB")
     env.define("MyVar1", "MyValue1A")
     env.append("MYVAR1", "MyValue1B")
+    env.define("MyVar2", "MyNewValue2")
     folder = temp_folder()
 
     display_bat = textwrap.dedent("""\
         @echo off
         echo MyVar=%MyVar%!!
         echo MyVar1=%MyVar1%!!
+        echo MyVar2=%MyVar2%!!
         """)
 
     with chdir(folder):
-        env.save_bat("test.bat", generate_deactivate=True)
+        env.save_bat("test.bat")
         save("display.bat", display_bat)
         cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  shell=True).communicate()
+                                  shell=True, env={"MYVAR2": "OldValue2"}).communicate()
 
     out = out.decode()
     assert "MyVar=MyValueB!!" in out
     assert "MyVar=!!" in out
     assert "MyVar1=MyValue1A MyValue1B!!" in out
     assert "MyVar1=!!" in out
+    assert "MyVar2=MyNewValue2!!" in out
+    assert "MyVar2=OldValue2!!" in out
 
 
 def test_dict_access():

@@ -1,7 +1,7 @@
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.model.new_build_info import NewCppInfo
+from conans.model.build_info import CppInfo
 
 
 class AutotoolsDeps:
@@ -11,9 +11,9 @@ class AutotoolsDeps:
         check_using_build_profile(self._conanfile)
 
     def _get_cpp_info(self):
-        ret = NewCppInfo()
+        ret = CppInfo()
         for dep in self._conanfile.dependencies.host.values():
-            dep_cppinfo = dep.new_cpp_info.copy()
+            dep_cppinfo = dep.cpp_info.copy()
             dep_cppinfo.set_relative_base_folder(dep.package_folder)
             # In case we have components, aggregate them, we do not support isolated
             # "targets" with autotools
@@ -59,5 +59,5 @@ class AutotoolsDeps:
             self._environment = env
         return self._environment
 
-    def generate(self,  auto_activate=True):
-        self.environment.save_script("conanautotoolsdeps", auto_activate=auto_activate)
+    def generate(self,  group="build"):
+        self.environment.save_script("conanautotoolsdeps", group=group)

@@ -1,8 +1,10 @@
 import unittest
 
-from conans.model.build_info import DepsCppInfo, CppInfo, DepCppInfo
+import pytest
 
 
+
+@pytest.mark.xfail(reason="DepsCppInfo removed")
 class DepsCppInfoTestCase(unittest.TestCase):
 
     def test_types(self):

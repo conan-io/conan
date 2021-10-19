@@ -1,14 +1,19 @@
+
+import os
+
+from conans.cli.output import ConanOutput
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import Node, CONTEXT_HOST
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
+from conans.client.profile_loader import profile_from_args
 from conans.model.ref import ConanFileReference
 
 
 class GraphManager(object):
-    def __init__(self, output, cache, remote_manager, loader, proxy, resolver, binary_analyzer):
+    def __init__(self, cache, loader, proxy, resolver, binary_analyzer):
         self._proxy = proxy
-        self._output = output
+        self._output = ConanOutput()
         self._resolver = resolver
         self._cache = cache
         self._loader = loader
@@ -18,12 +23,15 @@ class GraphManager(object):
         """loads a conanfile for local flow: source
         """
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
-        profile_host = self._cache.default_profile
+        # FIXME: Make "conan source" build the whole graph. Do it in another PR
+        profile_host = profile_from_args(None, None, None, None, None, os.getcwd(), self._cache)
         profile_host.process_settings(self._cache)
 
         name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
+            # The global.conf is necessary for download_cache definition
+            profile_host.conf.rebase_conf_definition(self._cache.new_config)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
                                                    name=name, version=version,
@@ -38,7 +46,7 @@ class GraphManager(object):
 
     def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
                    root_ref, build_mode, check_updates, update,
-                   remotes, recorder, apply_build_requires=True, lockfile_node_id=None,
+                   remotes, apply_build_requires=True, lockfile_node_id=None,
                    is_build_require=False, require_overrides=None):
         """ main entry point to compute a full dependency graph
         """

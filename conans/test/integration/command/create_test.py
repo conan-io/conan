@@ -265,7 +265,13 @@ class MyPkg(ConanFile):
         self.assertFalse(os.path.exists(default_build_dir))
 
         # # Test if using a temporary test folder can be enabled via the config file.
-        client.run('config set general.temp_test_folder=True')
+        conan_conf = textwrap.dedent("""
+                                    [storage]
+                                    path = ./data
+                                    [general]
+                                    temp_test_folder=True
+                                """)
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("create . lasote/stable")
         self.assertFalse(os.path.exists(default_build_dir))
 
@@ -323,7 +329,7 @@ class MyPkg(ConanFile):
                 version = "0.1"
 
                 def package_info(self):
-                    self.output.warn("Hello, I'm HelloBar")
+                    self.output.warning("Hello, I'm HelloBar")
             ''')
 
         client.save({"conanfile.py": conanfile})
@@ -356,6 +362,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("/_", conaninfo)
         self.assertIn("[requires]\n    Hello/0.1\n", conaninfo)
 
+    @pytest.mark.xfail(reason="--json output has been disabled")
     def test_compoents_json_output(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""

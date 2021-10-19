@@ -1,6 +1,4 @@
 import os
-import platform
-import textwrap
 
 import mock
 import pytest
@@ -16,6 +14,7 @@ variables that are paths to run in a windows bash, we need to look at the consum
 not the dependency conanfile. This is testing that in the process of aggregating the paths,
 these are correct.
 """
+
 
 @pytest.fixture
 def client():
@@ -35,6 +34,7 @@ def client():
     return client
 
 
+@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 @pytest.mark.parametrize("win_bash", [True, False, None])
 def test_virtualenv_deactivated(client, win_bash):
     conanfile = str(GenConanfile()

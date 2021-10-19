@@ -482,11 +482,6 @@ class Options(object):
         result._deps_package_values = {k: v.copy() for k, v in self._deps_package_values.items()}
         return result
 
-    def freeze(self):
-        self._package_options.freeze()
-        for v in self._deps_package_values.values():
-            v.freeze()
-
     @property
     def deps_package_values(self):
         return self._deps_package_values

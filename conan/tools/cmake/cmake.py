@@ -12,13 +12,6 @@ from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 
 
-def _validate_recipe(conanfile):
-    forbidden_generators = ["cmake", "cmake_multi"]
-    if any(it in conanfile.generators for it in forbidden_generators):
-        raise ConanException("Usage of toolchain is only supported with 'cmake_find_package'"
-                             " or 'cmake_find_package_multi' generators")
-
-
 def _cmake_cmd_line_args(conanfile, generator, parallel):
     args = []
     if not generator:
@@ -57,24 +50,20 @@ class CMake(object):
     are passed to the command line, plus the ``--config Release`` for builds in multi-config
     """
 
-    def __init__(self, conanfile, parallel=True):
-        _validate_recipe(conanfile)
-
+    def __init__(self, conanfile, parallel=True, namespace=None):
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
+        self._namespace = namespace
 
-        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder)
+        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
+                                                     namespace=self._namespace)
         self._generator = toolchain_file_content.get("cmake_generator")
         self._toolchain_file = toolchain_file_content.get("cmake_toolchain_file")
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
     def configure(self, build_script_folder=None):
-        # TODO: environment?
-        if not self._conanfile.should_configure:
-            return
-
         cmakelist_folder = self._conanfile.source_folder
         if build_script_folder:
             cmakelist_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
@@ -132,19 +121,26 @@ class CMake(object):
         self._conanfile.run(command)
 
     def build(self, build_type=None, target=None):
-        if not self._conanfile.should_build:
-            return
         self._build(build_type, target)
 
     def install(self, build_type=None):
-        if not self._conanfile.should_install:
-            return
         mkdir(self._conanfile, self._conanfile.package_folder)
-        self._build(build_type=build_type, target="install")
+
+        bt = build_type or self._conanfile.settings.get_safe("build_type")
+        if not bt:
+            raise ConanException("build_type setting should be defined.")
+        is_multi = is_multi_configuration(self._generator)
+        build_config = "--config {}".format(bt) if bt and is_multi else ""
+
+        pkg_folder = args_to_string([self._conanfile.package_folder.replace("\\", "/")])
+        build_folder = args_to_string([self._conanfile.build_folder])
+        arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
+        arg_list = " ".join(filter(None, arg_list))
+        command = "%s %s" % (self._cmake_program, arg_list)
+        self._conanfile.output.info("CMake command: %s" % command)
+        self._conanfile.run(command)
 
     def test(self, build_type=None, target=None, output_on_failure=False):
-        if not self._conanfile.should_test:
-            return
         if self._conanfile.conf["tools.build:skip_test"]:
             return
         if not target:

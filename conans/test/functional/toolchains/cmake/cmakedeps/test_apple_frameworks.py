@@ -4,7 +4,6 @@ import textwrap
 import pytest
 
 from conans.client.tools.apple import XCRun, to_apple_arch
-from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -28,12 +27,13 @@ def client():
 
 
 app_conanfile = textwrap.dedent("""
-    from conans import ConanFile, CMake
+    from conans import ConanFile
+    from conan.tools.cmake import CMake
 
     class App(ConanFile):
         requires = "foolib/1.0"
         generators = "CMakeDeps", "CMakeToolchain"
-        settings = "build_type",  # cmake_multi doesn't work without build_type
+        settings = "build_type", "os", "arch"
 
         def build(self):
             cmake = CMake(self)
@@ -54,13 +54,11 @@ def test_apple_framework_xcode(client):
 
     client.save({'conanfile.py': app_conanfile,
                  'CMakeLists.txt': app_cmakelists})
-    with environment_append({"CONAN_CMAKE_GENERATOR": "Xcode"}):
-        client.run("install . -s build_type=Release")
-        client.run("install . -s build_type=Debug")
-        client.run("build .")
-        assert "/System/Library/Frameworks/Foundation.framework;" in client.out
-        assert "/System/Library/Frameworks/CoreServices.framework;" in client.out
-        assert "/System/Library/Frameworks/CoreFoundation.framework" in client.out
+
+    client.run("build . -c tools.cmake.cmaketoolchain:generator=Xcode")
+    assert "/System/Library/Frameworks/Foundation.framework;" in client.out
+    assert "/System/Library/Frameworks/CoreServices.framework;" in client.out
+    assert "/System/Library/Frameworks/CoreFoundation.framework" in client.out
 
 
 conanfile = textwrap.dedent("""
@@ -227,7 +225,7 @@ def test_apple_own_framework_cross_build(settings):
                 cmake.generate()
 
             def build(self):
-                self.output.warn("Building test package at: {}".format(self.build_folder))
+                self.output.warning("Building test package at: {}".format(self.build_folder))
                 cmake = CMake(self)
                 cmake.configure()
                 cmake.build()
@@ -343,10 +341,11 @@ def test_apple_own_framework_cmake_find_package_multi():
     """)
 
     test_conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
         class TestPkg(ConanFile):
             generators = "CMakeDeps", "CMakeToolchain"
-            settings = "build_type",
+            settings = "build_type", "os", "arch"
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -370,7 +369,8 @@ def test_apple_own_framework_cmake_find_package_multi():
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
-from conans import ConanFile, CMake, tools
+from conans import ConanFile, tools
+from conan.tools.cmake import CMake
 
 
 class HelloConan(ConanFile):

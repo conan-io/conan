@@ -2,6 +2,7 @@ import json
 import os
 from collections import OrderedDict
 
+from conans.cli.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.grapher import Grapher
@@ -17,9 +18,8 @@ from conans.util.misc import make_tuple
 
 class CommandOutputer(object):
 
-    def __init__(self, output, cache):
-        self._output = output
-        self._cache = cache
+    def __init__(self):
+        self._output = ConanOutput()
 
     def print_profile(self, profile, profile_text):
         Printer(self._output).print_profile(profile, profile_text)
@@ -71,28 +71,23 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self._cache.ref_layout(ref).recipe_manifest()
-                ret[ref] = manifest.time_str
+                # FIXME: Not access to the cache should be available here
+                # manifest = self._cache.ref_layout(ref).recipe_manifest()
+                # ret[ref] = manifest.time_str
+                ret[ref] = ""
         return ret
-
-    def nodes_to_build(self, nodes_to_build):
-        self._output.info(", ".join(str(n) for n in nodes_to_build))
 
     def _handle_json_output(self, data, json_output, cwd):
         json_str = json.dumps(data)
 
         if json_output is True:
-            self._output.write(json_str)
+            self._output.info(json_str)
         else:
             if not os.path.isabs(json_output):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json.dumps(data))
-            self._output.writeln("")
+            self._output.info("")
             self._output.info("JSON file created at '%s'" % json_output)
-
-    def json_nodes_to_build(self, nodes_to_build, json_output, cwd):
-        data = [str(n) for n in nodes_to_build]
-        self._handle_json_output(data, json_output, cwd)
 
     def _grab_info_data(self, deps_graph, grab_paths):
         """ Convert 'deps_graph' into consumible information for json and cli """
@@ -101,7 +96,6 @@ class CommandOutputer(object):
             compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
         build_time_nodes = deps_graph.build_time_nodes()
-        remotes = self._cache.registry.load_remotes()
         ret = []
 
         for (ref, package_id), list_nodes in compact_nodes.items():
@@ -131,22 +125,22 @@ class CommandOutputer(object):
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
                 # ref already has the revision ID, not needed to get it again
-                ref_layout = self._cache.ref_layout(ref)
-                item_data["export_folder"] = ref_layout.export()
-                item_data["source_folder"] = ref_layout.source()
-                pref_build_id = build_id(conanfile) or package_id
-                pref_build = self._cache.get_latest_prev(PackageReference(ref, pref_build_id))
-                pref_package = self._cache.get_latest_prev(PackageReference(ref, package_id))
-                item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
-                item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
+                # FIXME: Not access to the cache should be available here, this information
+                #        should be provided by the conan_api
 
-            try:
-                reg_remote = self._cache.get_remote(ref)
-                reg_remote = remotes.get(reg_remote)
-                if reg_remote:
-                    item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
-            except Exception:
-                pass
+                # ref_layout = self._cache.ref_layout(ref)
+                # item_data["export_folder"] = ref_layout.export()
+                # item_data["source_folder"] = ref_layout.source()
+                # pref_build_id = build_id(conanfile) or package_id
+                # pref_build = self._cache.get_latest_prev(PackageReference(ref, pref_build_id))
+                # pref_package = self._cache.get_latest_prev(PackageReference(ref, package_id))
+                # item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
+                # item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
+
+                item_data["export_folder"] = "unknown"
+                item_data["source_folder"] = "unknown"
+                item_data["build_folder"] = "unknown"
+                item_data["package_folder"] = "unknown"
 
             def _add_if_exists(attrib, as_list=False):
                 value = getattr(conanfile, attrib, None)
@@ -206,7 +200,7 @@ class CommandOutputer(object):
         Printer(self._output).print_info(data, only,  package_filter=package_filter,
                                          show_paths=show_paths)
 
-    def info_graph(self, graph_filename, deps_graph, cwd, template):
+    def info_graph(self, graph_filename, deps_graph, cwd, template, cache_folder):
         graph = Grapher(deps_graph)
         if not os.path.isabs(graph_filename):
             graph_filename = os.path.join(cwd, graph_filename)
@@ -214,10 +208,10 @@ class CommandOutputer(object):
         # FIXME: For backwards compatibility we should prefer here local files (and we are coupling
         #   logic here with the templates).
         assets = {}
-        vis_js = os.path.join(self._cache.cache_folder, "vis.min.js")
+        vis_js = os.path.join(cache_folder, "vis.min.js")
         if os.path.exists(vis_js):
             assets['vis_js'] = vis_js
-        vis_css = os.path.join(self._cache.cache_folder, "vis.min.css")
+        vis_css = os.path.join(cache_folder, "vis.min.css")
         if os.path.exists(vis_css):
             assets['vis_css'] = vis_css
 
@@ -249,18 +243,18 @@ class CommandOutputer(object):
         lines = ["%s (%s)" % (r["revision"],
                               iso8601_to_str(r["time"]) if r["time"] else "No time")
                  for r in revisions]
-        self._output.writeln("\n".join(lines))
+        self._output.info("\n".join(lines))
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:
             self._output.info("Listing directory '%s':" % path)
-            self._output.writeln("\n".join([" %s" % i for i in list_files]))
+            self._output.info("\n".join([" %s" % i for i in list_files]))
         else:
-            self._output.writeln("\n".join(list_files))
+            self._output.info("\n".join(list_files))
 
     def print_file_contents(self, contents, file_name, raw):
         if raw or not self._output.is_terminal:
-            self._output.writeln(contents)
+            self._output.info(contents)
             return
 
         from pygments import highlight
@@ -274,7 +268,7 @@ class CommandOutputer(object):
         else:
             lexer = TextLexer()
 
-        self._output.write(highlight(contents, lexer, TerminalFormatter()))
+        self._output.info(highlight(contents, lexer, TerminalFormatter()))
 
     def print_user_list(self, info):
         for remote in info["remotes"]:

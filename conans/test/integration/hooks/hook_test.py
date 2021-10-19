@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 import pytest
@@ -179,11 +180,17 @@ class HookTest(unittest.TestCase):
                               " folders of new cache")
     def test_complete_hook(self):
         server = TestServer([], users={"danimtb": "pass"})
-        client = TestClient(servers={"default": server}, users={"default": [("danimtb", "pass")]})
+        client = TestClient(servers={"default": server}, inputs=["danimtb", "pass"])
         hook_path = os.path.join(client.cache.hooks_path, "complete_hook", "complete_hook.py")
         client.save({hook_path: complete_hook, "conanfile.py": conanfile_basic})
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
-        client.run("config set hooks.complete_hook/complete_hook.py")
+        conan_conf = textwrap.dedent("""
+                [storage]
+                path = ./data
+                [hooks]
+                complete_hook/complete_hook.py'
+        """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("source .")
         self._check_source(conanfile_path, client.out)
@@ -420,7 +427,14 @@ class HookTest(unittest.TestCase):
                      custom_path: custom_module,
                      hook_path: my_hook,
                      "conanfile.py": conanfile_basic})
-        client.run("config set hooks.my_hook/my_hook.py")
+        conan_conf = textwrap.dedent("""
+                [storage]
+                path = ./data
+                [hooks]
+                my_hook/my_hook.py
+        """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         client.run("export . danimtb/testing")
         self.assertIn("[HOOK - my_hook/my_hook.py] pre_export(): my_printer(): CUSTOM MODULE",
                       client.out)

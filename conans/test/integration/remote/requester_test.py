@@ -1,17 +1,30 @@
 import unittest
 
+from requests import Response
+
 from conans.client import tools
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestRequester
 from conans.util.files import save
 
 
-class MyRequester(object):
+conanfile = """
+from conans import ConanFile
+from conan.tools.files import download
 
-    def __init__(*args, **kwargs):
-        pass
+class HelloConan(ConanFile):
+    def source(self):
+        download(self, "http://foo", "bar.txt")
+"""
+
+
+class MyRequester(TestRequester):
 
     def get(self, _, **kwargs):
-        return kwargs.get("timeout", "NOT SPECIFIED")
+        print("TIMEOUT: {}".format(kwargs.get("timeout", "NOT SPECIFIED")))
+        resp = Response()
+        resp.status_code = 200
+        resp._content = b''
+        return resp
 
 
 class RequesterTest(unittest.TestCase):
@@ -25,11 +38,11 @@ request_timeout=2
 """
         save(client.cache.conan_conf_path, conf)
 
-        self.assertEqual(client.requester.get("MyUrl"), 2.0)
-
         with tools.environment_append({"CONAN_REQUEST_TIMEOUT": "4.3"}):
             client = TestClient(requester_class=MyRequester)
-            self.assertEqual(client.requester.get("MyUrl"), 4.3)
+            client.save({"conanfile.py": conanfile})
+            client.run("create . foo/1.0@")
+            assert "TIMEOUT: 4.3" in client.out
 
     def test_requester_timeout_errors(self):
         client = TestClient(requester_class=MyRequester)
@@ -49,4 +62,6 @@ request_timeout=any_string
 [general]
 """
         save(client.cache.conan_conf_path, conf)
-        self.assertEqual(client.requester.get("MyUrl"), "NOT SPECIFIED")
+        client.save({"conanfile.py": conanfile})
+        client.run("create . foo/1.0@")
+        assert "TIMEOUT: NOT SPECIFIED" in client.out

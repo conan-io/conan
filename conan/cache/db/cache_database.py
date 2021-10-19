@@ -1,4 +1,5 @@
 import sqlite3
+import time
 from io import StringIO
 
 from conan.cache.conan_reference import ConanReference
@@ -22,8 +23,8 @@ class CacheDatabase:
         self._references.dump(output)
 
     def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_remote=None, new_timestamp=None, new_build_id=None):
-        self._references.update(old_ref, new_ref, new_path, new_remote, new_timestamp, new_build_id)
+                         new_path=None, new_timestamp=None, new_build_id=None):
+        self._references.update(old_ref, new_ref, new_path, new_timestamp, new_build_id)
 
     def delete_ref_by_path(self, path):
         self._references.delete_by_path(path)
@@ -37,10 +38,10 @@ class CacheDatabase:
         return ref_data
 
     def create_tmp_reference(self, path, ref: ConanReference):
-        self._references.save(path, ref, reset_timestamp=True)
+        self._references.save(path, ref, timestamp=0)
 
     def create_reference(self, path, ref: ConanReference):
-        self._references.save(path, ref)
+        self._references.save(path, ref, timestamp=time.time())
 
     def list_references(self, only_latest_rrev):
         for it in self._references.all_references(only_latest_rrev):
@@ -54,18 +55,6 @@ class CacheDatabase:
         for it in self._references.get_package_ids(ref):
             yield it
 
-    def get_build_id(self, ref: ConanReference):
-        return self._references.get_build_id(ref)
-
     def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
         for it in self._references.get_recipe_revisions(ref, only_latest_rrev):
             yield it
-
-    def get_remote(self, ref: ConanReference):
-        return self._references.get_remote(ref)
-
-    def set_remote(self, ref: ConanReference, remote):
-        return self._references.set_remote(ref, remote)
-
-    def get_timestamp(self, ref: ConanReference):
-        return self._references.get_timestamp(ref)

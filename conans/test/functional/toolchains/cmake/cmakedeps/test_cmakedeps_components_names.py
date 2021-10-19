@@ -45,9 +45,17 @@ def setup_client_with_greetings():
                 self.copy("*.a", dst="lib", keep_path=False)
 
             def package_info(self):
+                def set_comp_default_dirs():
+                    self.cpp_info.components["hello"].includedirs = ["include"]
+                    self.cpp_info.components["hello"].libdirs = ["lib"]
+                    self.cpp_info.components["bye"].includedirs = ["include"]
+                    self.cpp_info.components["bye"].libdirs = ["lib"]
+
                 if self.options.components == "standard":
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
+                    set_comp_default_dirs()
+
                 elif self.options.components == "custom":
                     self.cpp_info.set_property("cmake_file_name", "MYG")
                     self.cpp_info.set_property("cmake_target_name", "MyGreetings")
@@ -57,6 +65,8 @@ def setup_client_with_greetings():
 
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
+
+                    set_comp_default_dirs()
                 else:
                     self.cpp_info.libs = ["hello", "bye"]
 
@@ -224,8 +234,12 @@ def test_standard_names(setup_client_with_greetings):
     package_info = textwrap.dedent("""
         self.cpp_info.components["sayhello"].requires = ["greetings::hello"]
         self.cpp_info.components["sayhello"].libs = ["sayhello"]
+        self.cpp_info.components["sayhello"].includedirs = ["include"]
+        self.cpp_info.components["sayhello"].libdirs = ["lib"]
         self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::bye"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
+        self.cpp_info.components["sayhellobye"].includedirs = ["include"]
+        self.cpp_info.components["sayhellobye"].libdirs = ["lib"]
         """)
     cmake_find = textwrap.dedent("""
         find_package(greetings COMPONENTS hello bye)
@@ -286,6 +300,12 @@ def test_custom_names(setup_client_with_greetings):
 
         self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::bye"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
+
+        self.cpp_info.components["sayhello"].libdirs = ["lib"]
+        self.cpp_info.components["sayhello"].includedirs = ["include"]
+        self.cpp_info.components["sayhellobye"].libdirs = ["lib"]
+        self.cpp_info.components["sayhellobye"].includedirs = ["include"]
+
         """)
 
     cmake_find = textwrap.dedent("""
@@ -326,6 +346,11 @@ def test_different_namespace(setup_client_with_greetings):
 
         self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::bye"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
+
+        self.cpp_info.components["sayhello"].libdirs = ["lib"]
+        self.cpp_info.components["sayhello"].includedirs = ["include"]
+        self.cpp_info.components["sayhellobye"].libdirs = ["lib"]
+        self.cpp_info.components["sayhellobye"].includedirs = ["include"]
         """)
 
     cmake_find = textwrap.dedent("""
@@ -350,7 +375,6 @@ def test_different_namespace(setup_client_with_greetings):
     create_chat(client, "custom", package_info, cmake_find, test_cmake_find)
 
 
-
 def test_no_components(setup_client_with_greetings):
     client = setup_client_with_greetings
 
@@ -359,6 +383,11 @@ def test_no_components(setup_client_with_greetings):
         self.cpp_info.components["sayhello"].libs = ["sayhello"]
         self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::greetings"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
+
+        self.cpp_info.components["sayhello"].libdirs = ["lib"]
+        self.cpp_info.components["sayhello"].includedirs = ["include"]
+        self.cpp_info.components["sayhellobye"].libdirs = ["lib"]
+        self.cpp_info.components["sayhellobye"].includedirs = ["include"]
         """)
 
     cmake_find = textwrap.dedent("""
@@ -411,6 +440,8 @@ def test_same_names():
             def package_info(self):
                 self.cpp_info.components["global"].name = "hello"
                 self.cpp_info.components["global"].libs = ["hello"]
+                self.cpp_info.components["global"].includedirs = ["include"]
+                self.cpp_info.components["global"].libdirs = ["lib"]
         """)
     hello_h = gen_function_h(name="hello")
     hello_cpp = gen_function_cpp(name="hello", includes=["hello"])
@@ -474,6 +505,8 @@ class TestComponentsCMakeGenerators:
             class GreetingsConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.components["hello"].libs = ["hello"]
+                    self.cpp_info.components["hello"].libdirs = ["lib"]
+                    self.cpp_info.components["hello"].includedirs = ["include"]
         """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -485,6 +518,8 @@ class TestComponentsCMakeGenerators:
                 requires = "greetings/0.0.1"
                 def package_info(self):
                     self.cpp_info.components["helloworld"].requires = ["greetings::non-existent"]
+                    self.cpp_info.components["helloworld"].libdirs = ["lib"]
+                    self.cpp_info.components["helloworld"].includedirs = ["include"]
         """)
         client.save({"conanfile.py": conanfile})
         client.run("create . world/0.0.1@")
@@ -529,6 +564,8 @@ class TestComponentsCMakeGenerators:
                 class GreetingsConan(ConanFile):
                     def package_info(self):
                         self.cpp_info.components["hello"].libs = ["hello"]
+                        self.cpp_info.components["hello"].libdirs = ["lib"]
+                        self.cpp_info.components["hello"].includedirs = ["include"]
             """)
             client = TestClient()
             client.save({"conanfile.py": conanfile})

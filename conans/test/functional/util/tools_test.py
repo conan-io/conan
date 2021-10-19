@@ -11,7 +11,6 @@ from conans.client import tools
 from conans.client.tools.files import which
 from conans.client.tools.win import vswhere
 from conans.errors import ConanException
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import save
@@ -19,7 +18,6 @@ from conans.util.runners import check_output_runner
 
 
 class FunctionalToolsTest(unittest.TestCase):
-    output = TestBufferConanOutput()
 
     @pytest.mark.tool_file  # Needs the "file" command, not by default in linux
     @pytest.mark.skipif(which("file") is None,
@@ -73,7 +71,6 @@ class FunctionalToolsTest(unittest.TestCase):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
 @pytest.mark.tool_visual_studio
 class VisualStudioToolsTest(unittest.TestCase):
-    output = TestBufferConanOutput()
 
     def test_vswhere_path(self):
         """

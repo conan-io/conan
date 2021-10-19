@@ -1,19 +1,20 @@
+import json
 import os
-import unittest
 import platform
 import subprocess
-import json
+import unittest
 
 import pytest
 
+from conans.cli.output import ConanOutput
 from conans.client import tools
-from conans.test.utils.profiles import create_profile
 from conans.client.conf.detect import detect_defaults_settings
-from conans.test.utils.tools import TestClient
+from conans.paths import DEFAULT_PROFILE_NAME
+from conans.test.utils.mocks import RedirectedTestOutput
+from conans.test.utils.profiles import create_profile
+from conans.test.utils.tools import TestClient, redirect_output
 from conans.util.files import load
 from conans.util.runners import check_output_runner
-from conans.paths import DEFAULT_PROFILE_NAME
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class ProfileTest(unittest.TestCase):
@@ -34,7 +35,8 @@ class ProfileTest(unittest.TestCase):
         client.run("install . -pr=mylocalprofile")
 
     def test_empty(self):
-        client = TestClient(cache_autopopulate=False)
+        client = TestClient()
+        os.remove(client.cache.default_profile_path)
         client.run("profile list")
         self.assertIn("No profiles defined", client.out)
 
@@ -150,7 +152,6 @@ class ProfileTest(unittest.TestCase):
         # Now try the remove
 
         client.run("profile remove settings.os ./MyProfile")
-        client.run("profile remove settings.os_build ./MyProfile")
         self.assertNotIn("os=", load(pr_path))
 
         client.run("profile remove settings.compiler.version ./MyProfile")
@@ -262,15 +263,14 @@ class ProfileTest(unittest.TestCase):
 
 
 class DetectCompilersTest(unittest.TestCase):
-    @pytest.mark.tool_compiler
     def test_detect_default_compilers(self):
         platform_default_compilers = {
             "Linux": "gcc",
             "Darwin": "apple-clang",
             "Windows": "Visual Studio"
         }
-        output = TestBufferConanOutput()
-        result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
+
+        result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         platform_compiler = platform_default_compilers.get(platform.system(), None)
@@ -291,12 +291,12 @@ class DetectCompilersTest(unittest.TestCase):
             # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
             raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore!")
 
-        output = TestBufferConanOutput()
-        with tools.environment_append({"CC": "gcc"}):
-            result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
+        output = RedirectedTestOutput()  # Initialize each command
+        with redirect_output(output):
+            with tools.environment_append({"CC": "gcc"}):
+                result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         # No compiler should be detected
         self.assertIsNone(result.get("compiler", None))
         self.assertIn("gcc detected as a frontend using apple-clang", output)
-        self.assertIsNotNone(output.error)

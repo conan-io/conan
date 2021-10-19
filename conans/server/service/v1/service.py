@@ -42,16 +42,6 @@ class ConanService(CommonService):
         urls = self._server_store.get_upload_conanfile_urls(latest_ref, filesizes, self._auth_user)
         return urls
 
-    # Package methods
-    def get_package_snapshot(self, pref):
-        """Gets a list with filepaths and the urls and md5:
-            [filename: {'url': url, 'md5': md5}]
-        """
-        self._authorizer.check_read_package(self._auth_user, pref)
-        pref = self._get_latest_pref(pref)
-        snap = self._server_store.get_package_snapshot(pref)
-        return snap
-
     def get_package_download_urls(self, pref, files_subset=None):
         """Gets a list with filepaths and the urls and md5:
             [filename: {'url': url, 'md5': md5}]

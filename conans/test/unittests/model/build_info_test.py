@@ -2,12 +2,13 @@ import os
 import unittest
 from collections import defaultdict, namedtuple
 
-from conans.model.build_info import DepsCppInfo
+import pytest
+
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
-from conans.model.build_info import BuildModulesDict, CppInfo, DepCppInfo, dict_to_abs_paths
 
 
+@pytest.mark.xfail(reason="DepsCppInfo removed")
 class BuildInfoTest(unittest.TestCase):
     def test_BuildModulesDict(self):
         build_modules = BuildModulesDict({"cmake": ["whatever.cmake"]})
@@ -111,5 +112,4 @@ class BuildInfoTest(unittest.TestCase):
         self.assertEqual({}, info.configs)
         self.assertEqual([], info.cxxflags)
         self.assertEqual([], info.exelinkflags)
-        self.assertEqual([], info.public_deps)
         self.assertEqual([], info.sharedlinkflags)

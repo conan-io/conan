@@ -1,10 +1,13 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="DepsCppInfo removed")
 class DepsCppInfoTest(unittest.TestCase):
 
     def test(self):

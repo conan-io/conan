@@ -28,7 +28,6 @@ class BasicTest(unittest.TestCase):
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
 
-    @pytest.mark.tool_compiler
     def test_declarative(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -109,29 +108,6 @@ class BasicTest(unittest.TestCase):
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path),  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
-    def test_old_toolchain(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                toolchain = "cmake"
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .", assert_error=True)
-        self.assertIn("The 'toolchain' attribute or method has been deprecated", client.out)
-
-    def test_old_toolchain_method(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                def toolchain(self):
-                    pass
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .", assert_error=True)
-        self.assertIn("The 'toolchain' attribute or method has been deprecated", client.out)
-
     @pytest.mark.tool_visual_studio
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
     def test_toolchain_windows(self):
@@ -158,33 +134,3 @@ class BasicTest(unittest.TestCase):
         conan_toolchain_props = client.load("conantoolchain.props")
         self.assertIn("<ConanPackageName>Pkg</ConanPackageName>", conan_toolchain_props)
         self.assertIn("<ConanPackageVersion>0.1</ConanPackageVersion>", conan_toolchain_props)
-
-    @pytest.mark.tool_compiler
-    def test_conflict_user_generator(self):
-        client = TestClient()
-        generator = textwrap.dedent("""
-            from conans import ConanFile
-            from conans.model import Generator
-            class CMakeToolchain(Generator):
-                @property
-                def filename(self):
-                    return "mygenerator.gen"
-                @property
-                def content(self):
-                    return "HelloWorld"
-                """)
-
-        save(os.path.join(client.cache.generators_path, "mygenerator.py"), generator)
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class Pkg(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                generators = "CMakeToolchain"
-            """)
-
-        client.save({"conanfile.py": conanfile})
-        client.run("install .")
-        self.assertIn("Your custom generator name 'CMakeToolchain' is colliding", client.out)
-        gen = client.load("mygenerator.gen")
-        self.assertEqual("HelloWorld", gen)

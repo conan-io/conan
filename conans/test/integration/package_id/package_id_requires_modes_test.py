@@ -1,14 +1,10 @@
-import os
 import textwrap
 import unittest
 
 import pytest
 
-from conans.model.info import ConanInfo
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANINFO
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import load
 
 
 # TODO: Fix tests with local methods
@@ -16,27 +12,6 @@ class PackageIDTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
-
-    def test_cross_build_settings(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                settings = "os", "arch", "compiler", "os_build", "arch_build"
-                def configure(self):
-                    if self.settings.compiler.toolset:
-                        self.output.info("compiler.toolset={}".format(self.settings.compiler.toolset))
-                    self.output.info("os_build={}".format(self.settings.os_build))
-                    self.output.info("arch_build={}".format(self.settings.arch_build))
-            """)
-        client.save({"conanfile.py": conanfile})
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
-                   '-s compiler.version=15 -s compiler.runtime=MD '
-                   '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
-        conaninfo = client.out
-        self.assertNotIn("compiler.toolset=None", conaninfo)
-        self.assertNotIn("os_build=None", conaninfo)
-        self.assertNotIn("arch_build=None", conaninfo)
 
     def _export(self, name, version, package_id_text=None, requires=None,
                 channel=None, default_option_value='"off"', settings=None):
@@ -290,85 +265,6 @@ class PackageIDTest(unittest.TestCase):
                         assert_error=True)
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
-    def test_build_settings(self):
-
-        def install_and_get_info(package_id_text):
-            self.client.run("remove * -f")
-            self._export("Hello", "1.2.0", package_id_text=package_id_text,
-                         channel="user/testing",
-                         settings=["os", "os_build", "arch", "arch_build"])
-            self.client.run('install Hello/1.2.0@user/testing '
-                            ' -s os="Windows" '
-                            ' -s os_build="Linux"'
-                            ' -s arch="x86_64"'
-                            ' -s arch_build="x86"'
-                            ' --build missing')
-
-            hello_ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
-
-            latest_rrev = self.client.cache.get_latest_rrev(hello_ref)
-            pkg_ids = self.client.cache.get_package_ids(latest_rrev)
-            latest_prev = self.client.cache.get_latest_prev(pkg_ids[0])
-            layout = self.client.cache.pkg_layout(latest_prev)
-            return ConanInfo.loads(load(os.path.join(layout.package(), CONANINFO)))
-
-        info = install_and_get_info(None)  # Default
-
-        self.assertEqual(str(info.settings.os_build), "None")
-        self.assertEqual(str(info.settings.arch_build), "None")
-
-        # Package has to be present with only os and arch settings
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s os="Windows" '
-                        ' -s arch="x86_64"')
-
-        # Even with wrong build settings
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s os="Windows" '
-                        ' -s arch="x86_64"'
-                        ' -s os_build="Macos"'
-                        ' -s arch_build="x86_64"')
-
-        # take into account build
-        info = install_and_get_info("self.info.include_build_settings()")
-        self.assertEqual(str(info.settings.os_build), "Linux")
-        self.assertEqual(str(info.settings.arch_build), "x86")
-
-        # Now the build settings matter
-        err = self.client.run('install Hello/1.2.0@user/testing '
-                              ' -s os="Windows" '
-                              ' -s arch="x86_64"'
-                              ' -s os_build="Macos"'
-                              ' -s arch_build="x86_64"', assert_error=True)
-        self.assertTrue(err)
-        self.assertIn("Can't find", self.client.out)
-
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s os="Windows" '
-                        ' -s arch="x86_64"'
-                        ' -s os_build="Linux"'
-                        ' -s arch_build="x86"')
-
-        # Now only settings for build
-        self.client.run("remove * -f")
-        self._export("Hello", "1.2.0",
-                     channel="user/testing",
-                     settings=["os_build", "arch_build"])
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s os_build="Linux"'
-                        ' -s arch_build="x86"'
-                        ' --build missing')
-        ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
-
-        latest_rrev = self.client.cache.get_latest_rrev(ref)
-        pkg_ids = self.client.cache.get_package_ids(latest_rrev)
-        latest_prev = self.client.cache.get_latest_prev(pkg_ids[0])
-        layout = self.client.cache.pkg_layout(latest_prev)
-        pkg_folder = layout.package()
-        info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
-        self.assertEqual(str(info.settings.os_build), "Linux")
-        self.assertEqual(str(info.settings.arch_build), "x86")
-
     def test_std_non_matching_with_compiler_cppstd(self):
         self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
                      channel="user/testing",
@@ -407,7 +303,13 @@ class PackageIDTest(unittest.TestCase):
         """
 
         channel = "user/testing"
-        self.client.run("config set general.default_package_id_mode=patch_mode")
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=patch_mode'
+                """.format())
+        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
         self._export("liba", "0.1.0", channel=channel, package_id_text=None, requires=None)
         self.client.run("create . liba/0.1.0@user/testing")
         self._export("libb", "0.1.0", channel=channel, package_id_text=None,
@@ -440,7 +342,13 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_transitive_multi_mode_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
-        client.run("config set general.default_package_id_mode=full_package_mode")
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=full_package_mode'
+                """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
@@ -460,10 +368,14 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_transitive_multi_mode2_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
-        client.run("config set general.default_package_id_mode=package_revision_mode")
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=package_revision_mode'
+                """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         # This is mandatory, otherwise it doesn't work
-
-
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
 
@@ -490,9 +402,13 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_transitive_multi_mode_build_requires(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
-        client.run("config set general.default_package_id_mode=package_revision_mode")
-
-
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=package_revision_mode'
+                """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
         client.run("create . tool/1.0@user/testing")
@@ -523,8 +439,13 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_package_revision_mode_editable(self):
         # Package revision mode crash when using editables
         client = TestClient()
-        client.run("config set general.default_package_id_mode=package_revision_mode")
-
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=package_revision_mode'
+                """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("editable add . dep1/1.0@user/testing")
@@ -585,7 +506,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         t.run("create package1.py pkg1/1.0@")
         t.run("create package2.py pkg2/1.0@")
         t.run("create package3.py pkg3/1.0@")
-        t.run("upload * --all -c")
+        t.run("upload * --all -c -r default")
         t.run("remove * -f")
 
         # If we build pkg1, we need a new packageID for pkg2

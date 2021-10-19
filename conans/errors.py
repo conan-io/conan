@@ -30,14 +30,27 @@ def conanfile_exception_formatter(conanfile_name, func_name):
     :param reference: Reference of the conanfile
     :return:
     """
+
+    def _raise_conanfile_exc(exc):
+        msg = _format_conanfile_exception(conanfile_name, func_name, exc)
+        raise ConanExceptionInUserConanfileMethod(msg)
+
     try:
         yield
     except ConanInvalidConfiguration as exc:
         msg = "{}: Invalid configuration: {}".format(conanfile_name, exc)  # TODO: Move from here?
         raise ConanInvalidConfiguration(msg)
+    except AttributeError as exc:
+        list_methods = [m for m in dir(list) if not m.startswith('__')]
+        if "NoneType" in str(exc) and func_name in ['layout', 'package_info'] and \
+            any(method in str(exc) for method in list_methods):
+            raise ConanException("{}: {}. No default values are set for components. You are probably "
+                                 "trying to manipulate a component attribute in the '{}' method "
+                                 "without defining it previously".format(conanfile_name, exc, func_name))
+        else:
+            _raise_conanfile_exc(exc)
     except Exception as exc:
-        msg = _format_conanfile_exception(conanfile_name, func_name, exc)
-        raise ConanExceptionInUserConanfileMethod(msg)
+        _raise_conanfile_exc(exc)
 
 
 def _format_conanfile_exception(scope, method, exception):
