@@ -14,7 +14,7 @@ String getTempFolder(String nodeName) {
 List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
     // TODO: handle revision cases
     def configs = []
-    configs.add([node: "macos_ansible", pyvers: ["PY36", "PY38"]])
+    configs.add([node: "macos_ansible", pyvers: ["PY38"]])
     return configs
 }
 
@@ -22,7 +22,7 @@ String getDockerImage(String moduleName) {
     if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
         return "conanio/ci-unittests"
     }
-    else if (moduleName=="conans/test/functional"){
+    else if (moduleName=="conans/test/functional/toolchains/cmake/cmakedeps/test_apple_frameworks.py"){
         return "conanio/ci-functional"
     }
     return ""
@@ -127,7 +127,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-def testModules = ["conans/test/functional"]
+def testModules = ["conans/test/functional/toolchains/cmake/cmakedeps/test_apple_frameworks.py"]
 
 try {
     cancelPrevious()
