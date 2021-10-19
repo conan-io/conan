@@ -237,16 +237,11 @@ requirement_tpl = textwrap.dedent("""
 
 
 class MarkdownGenerator(Generator):
-
     def _list_headers(self, requirement):
-        headers = []
-
         for include_dir in requirement.cpp_info.includedirs:
             for root, _, files in os.walk(os.path.join(requirement.package_folder, include_dir)):
                 for f in files:
                     yield os.path.relpath(os.path.join(root, f), os.path.join(requirement.package_folder, include_dir))
-
-        return headers
 
     def _list_requires(self, requirement):
         return [(dep.ref.name, dep) for dep in requirement.dependencies.host.values()]
