@@ -7,16 +7,16 @@ from mock import Mock
 
 from conan.tools.gnu import AutotoolsDeps
 from conans import ConanFile
-from conans.model.build_info import CppInfo
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
+from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import MockSettings
 from conans.test.utils.test_files import temp_folder
 
 
 def get_cpp_info(name):
-    cppinfo = CppInfo("{}/1.0".format(name), "/tmp/root")
+    cppinfo = CppInfo()
     cppinfo.includedirs = []
     cppinfo.includedirs.append("path/includes/{}".format(name))
     cppinfo.includedirs.append("other\\include\\path\\{}".format(name))
