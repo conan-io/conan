@@ -691,3 +691,48 @@ class TestComponentsCMakeGenerators:
         assert 'middle: Release!' in client.out
         assert 'expected/1.0: Hello World Release!' in client.out
         assert 'variant/1.0: Hello World Release!' in client.out
+
+
+def test_cmake_find_package_new_properties(setup_client_with_greetings):
+    # test new properties support for cmake_find_package, necessary for migration in cci
+    # cmake_target_name --> cmake_module_target_name
+    # cmake_file_name --> cmake_module_file_name
+    # https://github.com/conan-io/conan/issues/9825
+
+    client = setup_client_with_greetings
+
+    package_info = textwrap.dedent("""
+        self.cpp_info.set_property("cmake_module_target_name", "MyChat")
+        self.cpp_info.set_property("cmake_module_file_name", "MyChat")
+
+        self.cpp_info.components["sayhello"].set_property("cmake_module_target_name", "MySay")
+
+        self.cpp_info.components["sayhello"].requires = ["greetings::hello"]
+        self.cpp_info.components["sayhello"].libs = ["sayhello"]
+
+        self.cpp_info.components["sayhellobye"].set_property("cmake_module_target_name", "MySayBye")
+
+        self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::bye"]
+        self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
+        """)
+
+    cmake_find = textwrap.dedent("""
+        find_package(MYG COMPONENTS MyHello MyBye)
+
+        add_library(sayhello sayhello.cpp)
+        target_link_libraries(sayhello MyGreetings::MyHello)
+
+        add_library(sayhellobye sayhellobye.cpp)
+        target_link_libraries(sayhellobye sayhello MyGreetings::MyBye)
+        """)
+
+    test_cmake_find = textwrap.dedent("""
+        find_package(MyChat)
+
+        add_executable(example example.cpp)
+        target_link_libraries(example MyChat::MySayBye)
+
+        add_executable(example2 example.cpp)
+        target_link_libraries(example2 MyChat::MyChat)
+        """)
+    create_chat(client, "cmake_find_package", "custom", package_info, cmake_find, test_cmake_find)
