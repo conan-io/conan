@@ -11,15 +11,9 @@ from conans.model.ref import ConanFileReference
 class OptionsTest(unittest.TestCase):
 
     def setUp(self):
-        package_options = PackageOptions.loads("""{static: [True, False],
-        optimized: [2, 3, 4],
-        path: ANY}""")
-        values = PackageOptionValues()
-        values.add_option("static", True)
-        values.add_option("optimized", 3)
-        values.add_option("path", "NOTDEF")
-        package_options.values = values
-        self.sut = Options(package_options)
+        options = {"static": [True, False], "optimized": [2, 3, 4], "path": "ANY"}
+        values = {"static": True, "optimized": 3, "path": "NOTDEF"}
+        self.sut = Options.create_options(options, values)
 
     def test_int(self):
         self.assertEqual(3, int(self.sut.optimized))
@@ -243,11 +237,7 @@ Poco:deps_bundled=True""")
 class OptionsValuesPropagationUpstreamNone(unittest.TestCase):
 
     def test_propagate_in_options(self):
-        package_options = PackageOptions.loads("""{opt: [None, "a", "b"],}""")
-        values = PackageOptionValues()
-        values.add_option("opt", "a")
-        package_options.values = values
-        sut = Options(package_options)
+        sut = Options.create_options({"opt": [None, "a", "b"]}, {"opt": "a"})
 
         other_options = PackageOptionValues()
         other_options.add_option("opt", None)
@@ -260,10 +250,7 @@ class OptionsValuesPropagationUpstreamNone(unittest.TestCase):
                                                 ])
 
     def test_propagate_in_pacakge_options(self):
-        package_options = PackageOptions.loads("""{opt: [None, "a", "b"],}""")
-        values = PackageOptionValues()
-        package_options.values = values
-
+        package_options = Options.create_options({"opt": [None, "a", "b"]}, None)
         package_options.propagate_upstream({'opt': None}, None, None, [])
         self.assertEqual(package_options.values.items(), [('opt', 'None'), ])
 
