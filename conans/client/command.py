@@ -8,19 +8,20 @@ from difflib import get_close_matches
 
 from conans.assets import templates
 from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION
-from conans.cli.output import Color, ConanOutput
 from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import ConanAPIV1, _make_abs_path, ProfileData
 from conans.client.conan_command_output import CommandOutputer
+from conans.client.graph.install_graph import InstallGraph
+from conans.cli.output import Color, ConanOutput
 from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.printer import Printer
-from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import exception_message_safe
+from conans.util.files import exception_message_safe, load
 from conans.util.files import save
 from conans.util.log import logger
 
@@ -540,6 +541,71 @@ class Command(object):
             self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
             for key, value in DEFAULT_CONFIGURATION.items():
                 self._out.info("{}: {}".format(key, value))
+
+    def graph(self, *args):
+        """
+        Graph related commands: build-order
+        """
+        parser = argparse.ArgumentParser(description=self.graph.__doc__,
+                                         prog="conan graph",
+                                         formatter_class=SmartFormatter)
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
+
+        parser_build_order = subparsers.add_parser('build-order', help='Compute the build-order')
+        parser_build_order.add_argument("path", nargs="?", help="Path to a conanfile")
+        parser_build_order.add_argument("--reference", action=OnceArgument,
+                                        help='Provide a package reference instead of a conanfile')
+        parser_build_order.add_argument("--json", action=OnceArgument,
+                                        help='Save the build-order, in json file')
+        _add_common_install_arguments(parser_build_order, build_help="Build policy")
+
+        parser_build_order_merge = subparsers.add_parser('build-order-merge',
+                                                         help='Merge several build-order')
+        parser_build_order_merge.add_argument("--file", nargs="?", action=Extender,
+                                              help="Files to be merged")
+        parser_build_order_merge.add_argument("--json", action=OnceArgument,
+                                              help='Save the build-order, in json file')
+        args = parser.parse_args(*args)
+
+        if args.subcommand == "build-order":
+            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
+            path_or_reference = args.path if args.path is not None else args.reference
+            if path_or_reference is None:
+                raise ConanException("Please define either the path to a conanfile or a reference")
+            # TODO: Change API
+            data = self._conan_api.info(path_or_reference,
+                                        remote_name=args.remote,
+                                        settings=args.settings_host,
+                                        options=args.options_host,
+                                        env=args.env_host,
+                                        profile_names=args.profile_host,
+                                        conf=args.conf_host,
+                                        profile_build=profile_build,
+                                        update=args.update,
+                                        build=args.build,
+                                        lockfile=args.lockfile)
+            deps_graph, _ = data
+            install_graph = InstallGraph(deps_graph)
+            install_order_serialized = install_graph.install_build_order()
+            json_result = json.dumps(install_order_serialized, indent=4)
+            self._out.writeln(json_result)
+            if args.json:
+                save(_make_abs_path(args.json), json_result)
+        elif args.subcommand == "build-order-merge":
+            result = InstallGraph()
+            for f in args.file:
+                f = _make_abs_path(f)
+                install_graph = InstallGraph.deserialize(json.loads(load(f)))
+                result.merge(install_graph)
+
+            install_order_serialized = result.install_build_order()
+            json_result = json.dumps(install_order_serialized, indent=4)
+            self._out.writeln(json_result)
+            if args.json:
+                save(_make_abs_path(args.json), json_result)
 
     def info(self, *args):
         """
