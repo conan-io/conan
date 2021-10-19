@@ -14,11 +14,16 @@ def test_xcodedeps_build_configurations():
     client.run("new hello/0.1 -m=cmake_lib")
     client.run("export .")
 
+    client.run("new bye/0.1 -m=cmake_lib")
+    client.run("export .")
+
     main = textwrap.dedent("""
     #include <iostream>
     #include "hello.h"
+    #include "bye.h"
     int main(int argc, char *argv[]) {
         hello();
+        bye();
         #ifdef NDEBUG
         std::cout << "App Release!" << std::endl;
         #else
@@ -34,7 +39,7 @@ def test_xcodedeps_build_configurations():
     """)
 
     client.save({"app.cpp": main, "CMakeLists.txt": cmakelists,
-                 "conanfile.txt": "[requires]\nhello/0.1\n"}, clean_first=True)
+                 "conanfile.txt": "[requires]\nhello/0.1\nbye/0.1\n"}, clean_first=True)
 
     # we are using cmake here just to generate a Xcode project
     client.run_command("cmake . -G Xcode -T buildsystem=1")
