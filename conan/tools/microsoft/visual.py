@@ -2,7 +2,6 @@ import os
 import textwrap
 
 from conan.tools.env.environment import create_env_script
-from conans.client.tools import intel_compilervars_command
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
 
@@ -14,23 +13,18 @@ class VCVars:
         self._conanfile = conanfile
 
     def generate(self, group="build"):
-        _write_conanvcvars(self._conanfile, group=group)
+        """
+        write a conanvcvars.bat file with the good args from settings
+        """
+        conanfile = self._conanfile
+        os_ = conanfile.settings.get_safe("os")
+        if os_ != "Windows":
+            return
 
+        compiler = conanfile.settings.get_safe("compiler")
+        if compiler != "Visual Studio" and compiler != "msvc":
+            return
 
-def _write_conanvcvars(conanfile, group):
-    """
-    write a conanvcvars.bat file with the good args from settings
-    """
-    os_ = conanfile.settings.get_safe("os")
-    if os_ != "Windows":
-        return
-
-    compiler = conanfile.settings.get_safe("compiler")
-    vcvars = None
-    # FIXME: Does it make sense to have legacy 'intel' here? Perhaps we would have to remove it.
-    if compiler == "intel":
-        vcvars = intel_compilervars_command(conanfile)
-    elif compiler == "Visual Studio" or compiler == "msvc":
         vs_version = vs_ide_version(conanfile)
         vcvarsarch = vcvars_arch(conanfile)
         vcvars_ver = None
@@ -42,6 +36,7 @@ def _write_conanvcvars(conanfile, group):
                               "v142": "14.2",
                               "v143": "14.3"}.get(toolset)
         else:
+            assert compiler == "msvc"
             # Code similar to CMakeToolchain toolset one
             compiler_version = str(conanfile.settings.compiler.version)
             version_components = compiler_version.split(".")
@@ -49,10 +44,11 @@ def _write_conanvcvars(conanfile, group):
             minor = version_components[1]
             # The equivalent of compiler 19.26 is toolset 14.26
             vcvars_ver = "14.{}".format(minor)
-        vcvars = vcvars_command(vs_version, architecture=vcvarsarch,
-                                platform_type=None, winsdk_version=None,
-                                vcvars_ver=vcvars_ver)
-    if vcvars:
+        vs_install_path = conanfile.conf["tools.microsoft.msbuild:install_path"]
+        vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
+                                winsdk_version=None, vcvars_ver=vcvars_ver,
+                                vs_install_path=vs_install_path)
+
         content = textwrap.dedent("""\
             @echo off
             {}
@@ -95,7 +91,7 @@ def msvc_runtime_flag(conanfile):
 
 
 def vcvars_command(version, architecture=None, platform_type=None, winsdk_version=None,
-                   vcvars_ver=None, start_dir_cd=True):
+                   vcvars_ver=None, start_dir_cd=True, vs_install_path=None):
     """ conan-agnostic construction of vcvars command
     https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line
     """
@@ -105,7 +101,7 @@ def vcvars_command(version, architecture=None, platform_type=None, winsdk_versio
         cmd.append('set "VSCMD_START_DIR=%CD%" &&')
 
     # The "call" is useful in case it is called from another .bat script
-    cmd.append('call "%s" ' % vcvars_path(version))
+    cmd.append('call "%s" ' % _vcvars_path(version, vs_install_path))
     if architecture:
         cmd.append(architecture)
     if platform_type:
@@ -117,9 +113,9 @@ def vcvars_command(version, architecture=None, platform_type=None, winsdk_versio
     return " ".join(cmd)
 
 
-def vcvars_path(version):
+def _vcvars_path(version, vs_install_path):
     # TODO: This comes from conans/client/tools/win.py vcvars_command()
-    vs_path = vs_installation_path(version)
+    vs_path = vs_install_path or vs_installation_path(version)
     if not vs_path or not os.path.isdir(vs_path):
         raise ConanException("VS non-existing installation: Visual Studio %s" % version)
 
