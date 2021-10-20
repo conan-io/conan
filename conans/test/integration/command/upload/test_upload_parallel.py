@@ -21,7 +21,7 @@ def test_upload_parallel_error():
 
     client = TestClient(requester_class=FailOnReferencesUploader, default_server_user=True)
     client.save({"conanfile.py": GenConanfile()})
-    client.run('remote login default user -p password')
+    client.run('remote login default admin -p password')
     for index in range(4):
         client.run('create . lib{}/1.0@user/channel'.format(index))
     client.run('upload lib* --parallel -c --all -r default --retry-wait=0', assert_error=True)

@@ -18,7 +18,7 @@ class TestListRecipeRevisionsBase:
     def _add_remote(self, remote_name):
         self.client.servers[remote_name] = TestServer(users={"username": "passwd"}, write_permissions=[("*/*@*/*", "*")])
         self.client.update_servers()
-        self.client.run("user username -p passwd -r {}".format(remote_name))
+        self.client.run("remote login {} username -p passwd".format(remote_name))
 
     def _create_recipe(self, reference):
         self.client.save({'conanfile.py': GenConanfile()})

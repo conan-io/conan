@@ -93,29 +93,6 @@ class ConanTraceTest(unittest.TestCase):
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
-        without_rest_api = [it for it in actions if "REST_API_CALL" not in it]
-        #  Previously 11 because a COMMAND get_remote_by_name... this tests is a mess
-        assert len(without_rest_api) == 10
-        for trace in actions:
-            doc = json.loads(trace)
-            self.assertIn("_action", doc)  # Valid jsons
-
-        self.assertEqual(json.loads(without_rest_api[0])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[0])["name"], "authenticate")
-        self.assertEqual(json.loads(without_rest_api[1])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[1])["name"], "export")
-        self.assertEqual(json.loads(without_rest_api[2])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[2])["name"], "install_reference")
-        self.assertEqual(json.loads(without_rest_api[3])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
-        self.assertEqual(json.loads(without_rest_api[3])["_id"], "Hello0/0.1@lasote/stable")
-        self.assertEqual(json.loads(without_rest_api[4])["_action"], "PACKAGE_BUILT_FROM_SOURCES")
-        self.assertEqual(json.loads(without_rest_api[5])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[5])["name"], "upload")
-        self.assertEqual(json.loads(without_rest_api[6])["_action"], "ZIP")
-        self.assertEqual(json.loads(without_rest_api[7])["_action"], "UPLOADED_RECIPE")
-        self.assertEqual(json.loads(without_rest_api[8])["_action"], "ZIP")
-        self.assertEqual(json.loads(without_rest_api[9])["_action"], "UPLOADED_PACKAGE")
-
         num_put = len([it for it in actions if "REST_API_CALL" in it and "PUT" in it])
         self.assertEqual(num_put, 6)   # 3 files the recipe 3 files the package
 

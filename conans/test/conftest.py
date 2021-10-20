@@ -200,9 +200,6 @@ def _get_tool(name, version):
                 _cached_tools[name][version] = False
                 return False
             tool_path = tool_version.get("path", {}).get(tool_platform)
-            if not os.path.exists(tool_path):
-                _cached_tools[name][version] = False
-                return False
         else:
             if version is not None:  # if the version is specified, it should be in the conf
                 _cached_tools[name][version] = True
