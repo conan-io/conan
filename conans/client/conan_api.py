@@ -474,17 +474,18 @@ class ConanAPIV1(object):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         app = ConanApp(self.cache_folder)
+        # FIXME: Fix the argument "update" to name it check_updates
         # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)], update=update)
+        # The info never update
+        app.load_remotes([Remote(remote_name, None)], update=False, check_updates=update)
         reference, profile_host, profile_build, graph_lock, root_ref = \
             self._info_args(app, reference_or_path, profile_host,
                             profile_build, name=name, version=version,
                             user=user, channel=channel, lockfile=lockfile)
 
         deps_graph = app.graph_manager.load_graph(reference, None, profile_host,
-                                                       profile_build, graph_lock,
-                                                       root_ref, build,
-                                                       update, False)
+                                                  profile_build, graph_lock,
+                                                  root_ref, build, False)
         return deps_graph, deps_graph.root.conanfile
 
     @api_method

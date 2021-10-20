@@ -4,7 +4,7 @@ from conans.cli.output import ConanOutput
 from conans.cli.output import ScopedOutput
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
-                                       RECIPE_INCACHE_DATE_UPDATED)
+                                       RECIPE_INCACHE_DATE_UPDATED, RECIPE_UPDATEABLE)
 from conans.errors import ConanException, NotFoundException
 from conans.util.tracer import log_recipe_got_from_local_cache
 
@@ -60,7 +60,7 @@ class ConanProxy(object):
         conanfile_path = recipe_layout.conanfile()
         selected_remote = self._conan_app.selected_remote
 
-        if self._conan_app.update:
+        if self._conan_app.check_updates or self._conan_app.update:
 
             remote, latest_rrev, remote_time = self._get_rrev_from_remotes(reference)
             if latest_rrev:
@@ -74,12 +74,15 @@ class ConanProxy(object):
                 if latest_rrev.revision != ref.revision:
                     if cache_time < remote_time:
                         # the remote one is newer
-                        scoped_output.info("Retrieving from remote '%s'..." % remote.name)
-                        remote, new_ref = self._download_recipe(latest_rrev, scoped_output)
-                        new_recipe_layout = self._cache.ref_layout(new_ref)
-                        new_conanfile_path = new_recipe_layout.conanfile()
-                        status = RECIPE_UPDATED
-                        return new_conanfile_path, status, remote, new_ref
+                        if self._conan_app.update:
+                            scoped_output.info("Retrieving from remote '%s'..." % remote.name)
+                            remote, new_ref = self._download_recipe(latest_rrev, scoped_output)
+                            new_recipe_layout = self._cache.ref_layout(new_ref)
+                            new_conanfile_path = new_recipe_layout.conanfile()
+                            status = RECIPE_UPDATED
+                            return new_conanfile_path, status, remote, new_ref
+                        else:
+                            status = RECIPE_UPDATEABLE
                     else:
                         status = RECIPE_NEWER
                 else:
@@ -115,7 +118,7 @@ class ConanProxy(object):
                 results.append({'remote': remote,
                                 'reference': rrev,
                                 'time': rrev_time})
-            if len(results) > 0 and not self._conan_app.update:
+            if len(results) > 0 and not self._conan_app.update and not self._conan_app.check_updates:
                 break
 
         if len(results) == 0:

@@ -54,14 +54,14 @@ class ConanApp(object):
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.runner, self.pyreq_loader, self.requester)
         self.binaries_analyzer = GraphBinariesAnalyzer(self)
-        self.graph_manager = GraphManager(self.cache, self.loader, self.proxy, self.range_resolver,
-                                          self.binaries_analyzer)
+        self.graph_manager = GraphManager(self)
 
         # Remotes
         self.selected_remotes = []
         self.enabled_remotes = []
         self.all_remotes = []
         self.update = False
+        self.check_updates = False
 
     @property
     def selected_remote(self):
@@ -74,10 +74,11 @@ class ConanApp(object):
             assert False, "It makes no sense to obtain the selected remote when there are several " \
                           "selected remotes"
 
-    def load_remotes(self, remotes=None, update=False):
+    def load_remotes(self, remotes=None, update=False, check_updates=False):
         self.all_remotes = self.cache.remotes_registry.list()
         self.enabled_remotes = [r for r in self.all_remotes if not r.disabled]
         self.update = update
+        self.check_updates = check_updates
         self.selected_remotes = []
         if remotes:
             for r in remotes:
