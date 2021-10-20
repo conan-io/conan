@@ -42,6 +42,33 @@ app_conanfile = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_cmake_ci():
+    client = TestClient()
+    app = textwrap.dedent("""
+        #include <iostream>
+        int main(int argc, char *argv[]) {
+            #ifdef NDEBUG
+            std::cout << "App Release!" << std::endl;
+            #else
+            std::cout << "App Debug!" << std::endl;
+            #endif
+        }
+        """)
+    cmakelist = textwrap.dedent("""
+        cmake_minimum_required (VERSION 3.1)
+        project (cmakeapp)
+        add_executable (app app.cpp)
+    """)
+    client.save({"app.cpp": app, "CMakeLists.txt": cmakelist})
+    client.run_command("/Users/jenkins/cmake/cmake-3.19.7/bin/cmake . -G Xcode")
+
+    client.save({"app.cpp": app, "CMakeLists.txt": cmakelist}, clean_first=True)
+    client.run_command("/Users/jenkins/cmake/cmake-3.19.7/bin/cmake . -G Xcode")
+
+
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.tool_cmake(version="3.19")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
