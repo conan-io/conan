@@ -84,12 +84,6 @@ tools_locations = {
         "exe": "mingw32-make",
         "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
     },
-    'mingw32_g_plusplus': {
-        "platform": "Windows",
-        "default": "system",
-        "exe": "g++",
-        "system": {"path": {'Windows': "C:/msys64/mingw32/bin"}},
-    },
     'mingw64': {
         "platform": "Windows",
         "default": "system",
