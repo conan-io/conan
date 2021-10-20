@@ -266,6 +266,29 @@ nonexistingpattern*: SomeTool/1.2@user/channel
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.out)
         self.assertNotIn("Project: Hello world from python tool!", client.out)
 
+    def test_build_requires_options_different(self):
+        client = TestClient()
+
+        conanfile_openssl_1_1_1 = GenConanfile("openssl", "1.1.1")
+        conanfile_openssl_3_0_0 = GenConanfile("openssl", "3.0.0")\
+            .with_option("no_fips", [True, False])\
+            .with_default_option("no_fips", True)
+        conanfile_cmake = GenConanfile("cmake", "0.1")\
+            .with_requires("openssl/1.1.1")
+        conanfile_consumer = GenConanfile("consumer", "0.1")\
+            .with_build_requires("cmake/0.1")\
+            .with_requires("openssl/3.0.0")
+
+        client.save({"conanfile_openssl_1_1_1.py": conanfile_openssl_1_1_1,
+                     "conanfile_openssl_3_0_0.py": conanfile_openssl_3_0_0,
+                     "conanfile_cmake.py": conanfile_cmake,
+                     "conanfile.py": conanfile_consumer})
+
+        client.run("create conanfile_openssl_1_1_1.py --profile:build=default --profile:host=default")
+        client.run("create conanfile_openssl_3_0_0.py --profile:build=default --profile:host=default")
+        client.run("create conanfile_cmake.py --profile:build=default --profile:host=default")
+        client.run("install conanfile.py --profile:build=default --profile:host=default")
+
     def test_build_requires_options(self):
         client = TestClient()
         client.save({CONANFILE: GenConanfile("MyTool", "0.1")})
