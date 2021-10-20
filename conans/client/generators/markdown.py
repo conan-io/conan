@@ -64,13 +64,13 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     find_package({{ cmake_variables.file_name }})
 
     # Use the global target
-    target_link_libraries(<library_name> {{ cmake_variables.target_namespace }}::{{ cmake_variables.global_target_name }})
+    target_link_libraries(<target_name> {{ cmake_variables.target_namespace }}::{{ cmake_variables.global_target_name }})
 
     {% if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
     # Or link just one of its components
     {% for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
-    target_link_libraries(<library_name> {{ cmake_variables.target_namespace }}::{{ cmake_variables.component_alias[component_name] }})
+    target_link_libraries(<target_name> {{ cmake_variables.target_namespace }}::{{ cmake_variables.component_alias[component_name] }})
     {%- endif %}
     {%- endfor %}
     {%- endif %}
@@ -92,16 +92,18 @@ buildsystem_vs_tpl = textwrap.dedent("""
     ### Visual Studio
 
     #### Generator [MSBuildToolchain](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuildtoolchain)
-    `MSBuildToolchain` is the toolchain generator for MSBuild. It will generate MSBuild
-    properties files that can be added to the Visual Studio solution projects. This generator
-    translates the current package configuration, settings, and options, into MSBuild
-    properties files syntax.
+    `MSBuildToolchain` is the toolchain generator for MSBuild. It translates the current
+    package configuration, settings, and options, into a MSBuild properties file that
+    you should add to your Visual Sudio solution projects:
+
+    `conantoolchain.props`
 
     #### Generator [MSBuildDeps](https://docs.conan.io/en/latest/reference/conanfile/tools/microsoft.html#msbuilddeps)
     `MSBuildDeps` is the dependency information generator for Microsoft MSBuild build
-    system. It will generate multiple `xxxx.props` properties files, one per dependency of
-    a package, to be used by consumers using MSBuild or Visual Studio, just adding the
-    generated properties files to the solution and projects.
+    system. It generate a property file with the dependencies of a package ready to be
+    used by consumers using MSBuild or Visual Studio.
+    
+    Just add the `conandeps.props` file to your solution and projects.
 """)
 
 buildsystem_autotools_tpl = textwrap.dedent("""
@@ -172,9 +174,10 @@ requirement_tpl = textwrap.dedent("""
     ## How to use this recipe
 
     You can use this recipe with different build systems. For each build system, Conan
-    provides different generators that you must list in the generators property of the
-    `conanfile.py`. Alternatively, you can use the command line argument  `--generator/-g`
-    in the `conan install` command.
+    provides different generators that you must list in the `[generators]`section on the
+    `conanfile.txt` file, or in the `generators` property of the `conanfile.py`.
+    Alternatively, you can use the command line argument  `--generator/-g` in the
+    `conan install` command.
 
     [Here](https://docs.conan.io/en/latest/integrations.html) you can read more about Conan
     integration with several build systems, compilers, IDEs, etc.
@@ -206,7 +209,7 @@ requirement_tpl = textwrap.dedent("""
 
 
 
-    ## Information for consumers
+    ## Declared components
 
     {%- if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
     {%- for component_name, component in requirement.cpp_info.components.items() %}
