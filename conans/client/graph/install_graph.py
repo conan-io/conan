@@ -232,7 +232,7 @@ def raise_missing(missing, out):
     dependencies = [str(dep.dst) for dep in node.dependencies]
 
     settings_text = ", ".join(conanfile.info.full_settings.dumps().splitlines())
-    options_text = ", ".join(conanfile.info.full_options.dumps().splitlines())
+    options_text = ", ".join(conanfile.info.options.dumps().splitlines())
     dependencies_text = ', '.join(dependencies)
     requires_text = ", ".join(conanfile.info.requires.dumps().splitlines())
 

@@ -4,7 +4,7 @@ from conans.model.pkg_type import PackageType
 from conans.model.requires import BuildRequirements, TestRequirements
 
 
-def run_configure_method(conanfile, down_options, down_ref, ref):
+def run_configure_method(conanfile, down_options, profile_options, ref):
     """ Run all the config-related functions for the given conanfile object """
 
     # Avoid extra time manipulating the sys.path for python
@@ -12,10 +12,13 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
         with conanfile_exception_formatter(str(conanfile), "config_options"):
             conanfile.config_options()
 
-        #conanfile.options.propagate_upstream(down_options, down_ref, ref)
+        # Assign only the current package options values, but none of the dependencies
+        conanfile.options.begin_downstream(down_options, profile_options, ref)
 
         with conanfile_exception_formatter(str(conanfile), "configure"):
             conanfile.configure()
+
+        conanfile.up_options = conanfile.options.end_upstream(down_options, ref)
 
         PackageType.compute_package_type(conanfile)
 

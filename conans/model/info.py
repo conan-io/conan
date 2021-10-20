@@ -420,7 +420,6 @@ class ConanInfo(object):
         result.invalid = None
         result.full_settings = settings
         result.settings = settings.copy()
-        result.full_options = options.get_info_options()
         result.options = options.get_info_options(clear_deps=True)
         result.requires = reqs_info
         result.build_requires = build_requires_info
@@ -433,7 +432,7 @@ class ConanInfo(object):
     @staticmethod
     def loads(text):
         # This is used for search functionality, search prints info from this file
-        parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
+        parser = ConfigParser(text, ["settings", "full_settings", "options",
                                      "requires", "full_requires", "env"],
                               raise_unexpected_field=False)
         result = ConanInfo()
@@ -441,7 +440,6 @@ class ConanInfo(object):
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
         result.options = Options.loads(parser.options)
-        result.full_options = Options.loads(parser.full_options)
         result.full_requires = _PackageReferenceList.loads(parser.full_requires)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
         # FIXME: remove this uglyness
@@ -467,8 +465,6 @@ class ConanInfo(object):
         result.append(indent(self.full_settings.dumps()))
         result.append("\n[full_requires]")
         result.append(indent(self.full_requires.dumps()))
-        result.append("\n[full_options]")
-        result.append(indent(self.full_options.dumps()))
         result.append("\n[env]\n")
 
         return '\n'.join(result) + "\n"
@@ -476,7 +472,6 @@ class ConanInfo(object):
     def clone(self):
         q = self.copy()
         q.full_settings = self.full_settings.copy()
-        q.full_options = self.full_options.get_info_options()
         q.full_requires = _PackageReferenceList.loads(self.full_requires.dumps())
         return q
 

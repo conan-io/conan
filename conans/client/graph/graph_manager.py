@@ -7,6 +7,7 @@ from conans.client.graph.graph import Node, CONTEXT_HOST
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.profile_loader import profile_from_args
+from conans.model.options import Options
 from conans.model.ref import ConanFileReference
 
 
@@ -38,7 +39,8 @@ class GraphManager(object):
                                                    user=user, channel=channel,
                                                    lock_python_requires=lock_python_requires)
 
-            run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
+            run_configure_method(conanfile, down_options=Options(),
+                                 profile_options=profile_host.options,  ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
 

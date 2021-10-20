@@ -92,9 +92,6 @@ class ConanGetTest(unittest.TestCase):
             [full_requires]
 
 
-            [full_options]
-
-
             """), self.client.out)
 
         # List package dir
