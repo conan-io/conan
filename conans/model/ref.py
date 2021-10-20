@@ -203,7 +203,7 @@ class RecipeReference:
     @staticmethod
     def loads(text):  # TODO: change this default to validate only on end points
         try:
-            # revision
+            # timestamp
             tokens = text.split("%", 1)
             text = tokens[0]
             timestamp = int(tokens[1]) if len(tokens) == 2 else None
