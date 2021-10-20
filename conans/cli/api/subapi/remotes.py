@@ -13,7 +13,7 @@ class RemotesAPI:
         self.conan_api = conan_api
 
     @api_method
-    def list(self, filter=None, only_active=False) -> list[Remote]:
+    def list(self, filter=None, only_active=False):
         app = ConanApp(self.conan_api.cache_folder)
         remotes = app.cache.remotes_registry.list()
         if filter:
