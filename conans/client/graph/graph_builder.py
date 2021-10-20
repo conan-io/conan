@@ -273,7 +273,8 @@ class DepsGraphBuilder(object):
         if locked_id is not None:
             new_node.id = locked_id
 
-        down_options = node.conanfile.options.deps_package_values
+        # FIXME
+        down_options = None # node.conanfile.options.deps_package_values
         self._prepare_node(new_node, profile_host, profile_build, graph_lock,
                            node.ref, down_options)
 

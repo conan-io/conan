@@ -8,7 +8,7 @@ from conans.client.graph.range_resolver import satisfying
 from conans.client.profile_loader import ProfileValueParser
 from conans.errors import ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 
@@ -224,7 +224,7 @@ class GraphLockNode(object):
             python_requires = [ConanFileReference.loads(py_req, validate=False)
                                for py_req in python_requires]
         options = data.get("options")
-        options = OptionsValues.loads(options) if options else None
+        options = Options.loads(options) if options else None
         modified = data.get("modified")
         context = data.get("context")
         requires = data.get("requires", [])
@@ -304,7 +304,7 @@ class GraphLock(object):
             # Make sure to inherit the modified flag in case it is a partial lock
             modified = graph_node.graph_lock_node.modified if graph_node.graph_lock_node else None
             lock_node = GraphLockNode(ref, package_id, prev, python_reqs,
-                                      graph_node.conanfile.options.values, requires, build_requires,
+                                      graph_node.conanfile.options, requires, build_requires,
                                       graph_node.path, graph_node.context,
                                       modified=modified)
 

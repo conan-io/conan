@@ -10,7 +10,7 @@ from parameterized import parameterized
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader, _parse_conanfile
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
@@ -152,14 +152,14 @@ OpenCV2:other_option=Cosa
         save(file_path, file_content)
         loader = ConanFileLoader(None, None)
         ret = loader.load_conanfile_txt(file_path, create_profile())
-        options1 = OptionsValues.loads("""OpenCV:use_python=True
+        options1 = Options.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
 OpenCV2:use_python2=1
 OpenCV2:other_option=Cosa""")
 
         self.assertEqual(len(ret.requires.values()), 3)
         self.assertEqual(ret.generators, ["one", "two"])
-        self.assertEqual(ret.options.values.dumps(), options1.dumps())
+        self.assertEqual(ret.options.dumps(), options1.dumps())
 
         ret.copy = Mock()
         ret.imports()

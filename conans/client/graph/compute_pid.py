@@ -52,7 +52,7 @@ def compute_package_id(node, new_config):
     build_requires_info = RequirementsInfo(build_data)
 
     conanfile.info = ConanInfo.create(conanfile.settings.values,
-                                      conanfile.options.values,
+                                      conanfile.options,
                                       reqs_info,
                                       build_requires_info,
                                       python_requires=python_requires,
@@ -82,6 +82,8 @@ def compute_package_id(node, new_config):
                 conanfile.info.invalid = BINARY_ERROR, str(e)
 
     try:
+        # TODO: What if something is not defined, but still the binary exists and the option is for
+        # consumers only?
         conanfile.settings.validate()  # All has to be ok!
         conanfile.options.validate()
     except ConanException as e:

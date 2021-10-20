@@ -14,7 +14,7 @@ from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration, \
     conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import DATA_YML
@@ -289,11 +289,10 @@ class ConanFileLoader(object):
         conanfile.generators = parser.generators
 
         try:
-            options = OptionsValues.loads(parser.options)
+            conanfile.options = Options.loads(parser.options)
         except Exception:
             raise ConanException("Error while parsing [options] in conanfile\n"
                                  "Options should be specified as 'pkg:option=value'")
-        conanfile.options.values = options
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)

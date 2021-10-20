@@ -7,6 +7,7 @@ from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain import Block, GenericSystemBlock
 from conans import ConanFile
 from conans.model.conf import Conf
+from conans.model.options import Options
 from conans.model.settings import Settings
 
 
@@ -187,6 +188,7 @@ def conanfile_msvc():
     c.settings.compiler.version = "19.3"
     c.settings.compiler.cppstd = "20"
     c.settings.os = "Windows"
+    c.options = Options()
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()

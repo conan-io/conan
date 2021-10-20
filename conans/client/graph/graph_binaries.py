@@ -124,7 +124,7 @@ class GraphBinariesAnalyzer(object):
                     if comp_package_id == locked.package_id:
                         node._package_id = locked.package_id  # FIXME: Ugly definition of private
                         node.conanfile.settings.values = compatible_package.settings
-                        node.conanfile.options.values = compatible_package.options
+                        node.conanfile.options = compatible_package.options
                         break
                 else:
                     raise ConanException("'%s' package-id '%s' doesn't match the locked one '%s'"
@@ -157,7 +157,7 @@ class GraphBinariesAnalyzer(object):
                             node._package_id = package_id
                             # So they are available in package_info() method
                             node.conanfile.settings.values = compatible_package.settings
-                            node.conanfile.options.values = compatible_package.options
+                            node.conanfile.options = compatible_package.options
                             break
                     if node.binary == BINARY_MISSING and node.package_id == PACKAGE_ID_INVALID:
                         node.binary = BINARY_INVALID

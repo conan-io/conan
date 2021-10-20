@@ -3,8 +3,7 @@ import unittest
 import pytest
 
 from conans.errors import ConanException
-from conans.model.options import Options, OptionsValues, PackageOptionValues, PackageOptions, \
-    option_undefined_msg
+from conans.model.options import Options, option_undefined_msg
 from conans.model.ref import ConanFileReference
 
 

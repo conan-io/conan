@@ -5,7 +5,7 @@ from conans.client.graph.graph import BINARY_INVALID
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.values import Values
 from conans.paths import CONANINFO
@@ -407,7 +407,7 @@ class ConanInfo(object):
         result = ConanInfo()
         result.invalid = self.invalid
         result.settings = self.settings.copy()
-        result.options = self.options.copy()
+        result.options = self.options.get_info_options()
         result.requires = self.requires.copy()
         result.build_requires = self.build_requires.copy()
         result.python_requires = self.python_requires.copy()
@@ -420,9 +420,8 @@ class ConanInfo(object):
         result.invalid = None
         result.full_settings = settings
         result.settings = settings.copy()
-        result.full_options = options
-        result.options = options.copy()
-        result.options.clear_indirect()
+        result.full_options = options.get_info_options()
+        result.options = options.get_info_options(clear_deps=True)
         result.requires = reqs_info
         result.build_requires = build_requires_info
         result.full_requires = _PackageReferenceList()
@@ -441,8 +440,8 @@ class ConanInfo(object):
         result.invalid = None
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
-        result.options = OptionsValues.loads(parser.options)
-        result.full_options = OptionsValues.loads(parser.full_options)
+        result.options = Options.loads(parser.options)
+        result.full_options = Options.loads(parser.full_options)
         result.full_requires = _PackageReferenceList.loads(parser.full_requires)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
         # FIXME: remove this uglyness

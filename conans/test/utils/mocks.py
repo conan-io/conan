@@ -5,7 +5,7 @@ from io import StringIO
 from conans import ConanFile
 from conans.model.conf import ConfDefinition
 from conans.model.layout import Folders
-from conans.model.options import PackageOptions, Options
+from conans.model.options import Options
 from conans.util.log import logger
 
 
@@ -98,7 +98,7 @@ class ConanFileMock(ConanFile):
         self.path = None
         self.settings = None
         self.settings_build = MockSettings({})
-        self.options = Options(PackageOptions(None))
+        self.options = Options()
         self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)

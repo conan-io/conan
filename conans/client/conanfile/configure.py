@@ -12,7 +12,7 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
         with conanfile_exception_formatter(str(conanfile), "config_options"):
             conanfile.config_options()
 
-        conanfile.options.propagate_upstream(down_options, down_ref, ref)
+        #conanfile.options.propagate_upstream(down_options, down_ref, ref)
 
         with conanfile_exception_formatter(str(conanfile), "configure"):
             conanfile.configure()

@@ -44,7 +44,6 @@ class ConanFile:
     settings = None
     options = None
     default_options = None
-    default_build_options = None
 
     provides = None
     deprecated = None
@@ -100,18 +99,6 @@ class ConanFile:
         self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         self.patterns.build.bin = ["*.exe", "*.dll"]
 
-    def initialize(self, settings, buildenv=None):
-        # If we move this to constructor, the python_require inheritance in init fails
-        # and "conan inspect" also breaks
-        self.options = Options.create_options(self.options, self.default_options)
-        self._conan_buildenv = buildenv
-        try:
-            settings.constraint(self.settings or [])
-        except Exception as e:
-            raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
-                self.display_name, str(e)))
-        self.settings = settings
-
     @property
     def output(self):
         # an output stream (writeln, info, warn error)
@@ -147,6 +134,18 @@ class ConanFile:
             ref_str = "{}/{}".format(self.name, self.version)
             self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
         return self._conan_buildenv
+
+    def initialize(self, settings, buildenv=None):
+        # If we move this to constructor, the python_require inheritance in init fails
+        # and "conan inspect" also breaks
+        self.options = Options(self.options, self.default_options)
+        self._conan_buildenv = buildenv
+        try:
+            settings.constraint(self.settings or [])
+        except Exception as e:
+            raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
+                self.display_name, str(e)))
+        self.settings = settings
 
     @property
     def cpp_info(self):

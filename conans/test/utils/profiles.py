@@ -1,7 +1,7 @@
 import os
 
 from conan.tools.env import Environment
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.util.files import save
 
@@ -18,7 +18,7 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
         profile.package_settings = package_settings
 
     if options:
-        profile.options = OptionsValues(options)
+        profile.options = Options(options)
 
     if conf:
         _conf = "\n".join(conf) if isinstance(conf, list) else conf
