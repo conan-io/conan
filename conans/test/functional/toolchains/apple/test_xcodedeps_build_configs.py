@@ -42,7 +42,7 @@ def test_xcodedeps_build_configurations():
                  "conanfile.txt": "[requires]\nhello/0.1\nbye/0.1\n"}, clean_first=True)
 
     # we are using cmake here just to generate a Xcode project
-    client.run_command("cmake . -G Xcode")
+    client.run_command("cmake . -G Xcode -T buildsystem=1")
 
     for config in ["Release", "Debug"]:
         client.run("install . -s build_type={} -s arch=x86_64 --build=missing -g XcodeDeps".format(config))
