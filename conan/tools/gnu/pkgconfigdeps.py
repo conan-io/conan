@@ -26,7 +26,7 @@ from conans.errors import ConanException
 from conans.util.files import save
 
 
-def get_target_namespace(req):
+def get_package_namespace(req):
     ret = req.cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
     return ret or req.ref.name
 
@@ -35,7 +35,7 @@ def get_component_alias(req, comp_name):
     if comp_name not in req.cpp_info.components:
         # foo::foo might be referencing the root cppinfo
         if req.ref.name == comp_name:
-            return get_target_namespace(req)
+            return get_package_namespace(req)
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                              "package requirement".format(name=req.ref.name, cname=comp_name))
     ret = req.cpp_info.components[comp_name].get_property("pkg_config_name", "PkgConfigDeps")
@@ -71,55 +71,59 @@ class PkgConfigDeps(object):
             ret.append(self._get_composed_pkg_config_name(pkg_name, comp_alias_name))
         return ret
 
-    def get_components_pc_files(self, dep):
-        """Get all the *.pc files for the dependency and each of its components"""
+    def get_components_content(self, dep):
+        """Get all the *.pc files content for the dependency and each of its components"""
         pc_files = {}
-        pkg_name = get_target_namespace(dep)
+        pkg_name = get_package_namespace(dep)
         comp_names = []
-        pc_gen = _PCGenerator(self._conanfile, dep)
-        # Loop through all the dependency components
+        pc_gen = _PCFilesTemplate(self._conanfile, dep)
+        # Loop through all the package's components
         for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
             comp_name = get_component_alias(dep, comp_name)
             comp_names.append(comp_name)
             comp_requires_names = self._get_requires_names(dep, comp_cpp_info)
+            # Get the *.pc file content for each component
             pkg_comp_name = self._get_composed_pkg_config_name(pkg_name, comp_name)
-            # Save the *.pc file for this component
-            pc_files.update(pc_gen.complete_pc_content(comp_requires_names, name=pkg_comp_name,
-                                                       cpp_info=comp_cpp_info))
-        # Adding the dependency *.pc file (including its components as requires if any)
+            pc_files.update(pc_gen.get_long_pc_file_content(comp_requires_names, name=pkg_comp_name,
+                                                            cpp_info=comp_cpp_info))
+        # After looping through all the package's components, we have to check if the package
+        # was between these components, if not, we'll have to create a *.pc file with a short content
+        # for this one
         if pkg_name not in comp_names:
             pkg_requires = [self._get_composed_pkg_config_name(pkg_name, i) for i in comp_names]
-            pc_files.update(pc_gen.simple_pc_content(pkg_requires))
+            pc_files.update(pc_gen.get_short_pc_file_content(pkg_requires))
         return pc_files
 
     @property
     def content(self):
+        """Get all the *.pc files content"""
         pc_files = {}
         host_req = self._conanfile.dependencies.host
         for require, dep in host_req.items():
             if dep.cpp_info.has_components:
-                pc_files.update(self.get_components_pc_files(dep))
-            else:
-                pc_gen = _PCGenerator(self._conanfile, dep)
+                pc_files.update(self.get_components_content(dep))
+            else:  # Content for package without components
+                pc_gen = _PCFilesTemplate(self._conanfile, dep)
                 requires = self._get_requires_names(dep)
-                pc_files.update(pc_gen.complete_pc_content(requires))
+                pc_files.update(pc_gen.get_long_pc_file_content(requires))
         return pc_files
 
     def generate(self):
+        """Save all the *.pc files"""
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
 
-class _PCGenerator(object):
+class _PCFilesTemplate(object):
 
     def __init__(self, conanfile, dep):
         self._conanfile = conanfile
         self._dep = dep
-        self._name = get_target_namespace(dep)
+        self._name = get_package_namespace(dep)
 
-    complete_pc_template = textwrap.dedent("""\
+    long_content_template = textwrap.dedent("""\
     prefix={{prefix_path}}
     {% for name, path in libdirs %}
     {{ name + "=" + path }}
@@ -142,7 +146,7 @@ class _PCGenerator(object):
     {% endif %}
     """)
 
-    simple_pc_template = textwrap.dedent("""\
+    short_content_template = textwrap.dedent("""\
     Name: {{name}}
     Description: {{description}}
     Version: {{version}}
@@ -151,7 +155,7 @@ class _PCGenerator(object):
     {% endif %}
     """)
 
-    def complete_pc_content(self, requires, name=None, cpp_info=None):
+    def get_long_pc_file_content(self, requires, name=None, cpp_info=None):
 
         def _concat_if_not_empty(groups):
             return " ".join(
@@ -178,7 +182,7 @@ class _PCGenerator(object):
                  cpp_info.cflags,
                  ["-D%s" % d for d in cpp_info.defines]])
 
-        def get_formmatted_dirs(field, folders, prefix_path_):
+        def get_formatted_dirs(field, folders, prefix_path_):
             ret = []
             for i, directory in enumerate(folders):
                 directory = os.path.normpath(directory).replace("\\", "/")
@@ -198,8 +202,8 @@ class _PCGenerator(object):
         cpp_info = cpp_info or self._dep.cpp_info
 
         prefix_path = package_folder.replace("\\", "/")
-        libdirs = get_formmatted_dirs("libdir", cpp_info.libdirs, prefix_path)
-        includedirs = get_formmatted_dirs("includedir", cpp_info.includedirs, prefix_path)
+        libdirs = get_formatted_dirs("libdir", cpp_info.libdirs, prefix_path)
+        includedirs = get_formatted_dirs("includedir", cpp_info.includedirs, prefix_path)
 
         context = {
             "prefix_path": prefix_path,
@@ -213,11 +217,11 @@ class _PCGenerator(object):
             "cflags": get_cflags(includedirs),
             "requires": requires
         }
-        template = Template(self.complete_pc_template, trim_blocks=True, lstrip_blocks=True,
+        template = Template(self.long_content_template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         return {dep_name + ".pc": template.render(context)}
 
-    def simple_pc_content(self, requires, name=None):
+    def get_short_pc_file_content(self, requires, name=None):
         dep_name = name or self._name
         context = {
             "name": dep_name,
@@ -225,6 +229,6 @@ class _PCGenerator(object):
             "version": self._dep.ref.version,
             "requires": requires
         }
-        template = Template(self.simple_pc_template, trim_blocks=True, lstrip_blocks=True,
+        template = Template(self.short_content_template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         return {dep_name + ".pc": template.render(context)}
