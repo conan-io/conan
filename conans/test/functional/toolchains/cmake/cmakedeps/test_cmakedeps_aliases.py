@@ -86,3 +86,37 @@ def test_component_alias():
     client.run("create .")
 
     assert "hola::adios link libraries: hello::buy" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_custom_name():
+    conanfile = textwrap.dedent("""
+    from conans import ConanFile
+
+    class Hello(ConanFile):
+        name = "hello"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+
+        def package_info(self):
+            self.cpp_info.set_property("cmake_target_namespace", "ola")
+            self.cpp_info.set_property("cmake_target_name", "comprar")
+            self.cpp_info.set_property("cmake_target_aliases", ["hello"])
+    """)
+
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 2.8)
+
+    find_package(hello REQUIRED)
+    get_target_property(link_libraries hello INTERFACE_LINK_LIBRARIES)
+    message("hello link libraries: ${link_libraries}")
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run("create .")
+
+    assert "hello link libraries: ola::comprar" in client.out
