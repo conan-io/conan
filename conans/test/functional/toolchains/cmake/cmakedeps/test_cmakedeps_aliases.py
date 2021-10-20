@@ -33,6 +33,7 @@ def test_global_alias():
         settings = "os", "compiler", "build_type", "arch"
 
         def package_info(self):
+            # the default global target is "hello::hello"
             self.cpp_info.set_property("cmake_target_aliases", ["hello"])
     """)
 
