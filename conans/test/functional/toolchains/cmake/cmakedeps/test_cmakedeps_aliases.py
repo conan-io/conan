@@ -66,7 +66,7 @@ def test_component_alias():
 
         def package_info(self):
             self.cpp_info.components["buy"].set_property("cmake_target_aliases",
-                ["hola::adios"], "CMakeDeps")
+                ["hola::adios"])
     """)
 
     cmakelists = textwrap.dedent("""
