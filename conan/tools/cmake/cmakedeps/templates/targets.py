@@ -25,7 +25,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         target_pattern = "" if not self.find_module_mode else "module-"
         target_pattern += "{}-Target-*.cmake".format(self.file_name)
 
-        cmake_target_aliases = self.conanfile.new_cpp_info.\
+        cmake_target_aliases = self.conanfile.cpp_info.\
             get_property("cmake_target_aliases", "CMakeDeps") or dict()
 
         if isinstance(cmake_target_aliases, (list, tuple)):
@@ -33,9 +33,9 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             cmake_target_aliases = {alias: target for alias in cmake_target_aliases}
 
         cmake_component_target_aliases = dict()
-        for comp_name in self.conanfile.new_cpp_info.components:
+        for comp_name in self.conanfile.cpp_info.components:
             aliases = \
-                self.conanfile.new_cpp_info.components[comp_name].\
+                self.conanfile.cpp_info.components[comp_name].\
                 get_property("cmake_target_aliases", "CMakeDeps") or dict()
             if isinstance(aliases, (list, tuple)):
                 target = "%s::%s" % (self.target_namespace,
