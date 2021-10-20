@@ -476,7 +476,7 @@ class ConanInfo(object):
     def clone(self):
         q = self.copy()
         q.full_settings = self.full_settings.copy()
-        q.full_options = self.full_options.copy()
+        q.full_options = self.full_options.get_info_options()
         q.full_requires = _PackageReferenceList.loads(self.full_requires.dumps())
         return q
 
@@ -525,7 +525,7 @@ class ConanInfo(object):
             result.append(self.conf.sha)
         result.append("")  # Append endline so file ends with LF
         text = '\n'.join(result)
-        #print("HASING ", text)
+        # print("HASING ", text)
         package_id = sha1(text.encode())
         return package_id
 
@@ -534,7 +534,7 @@ class ConanInfo(object):
         This info will be shown in search results.
         """
         conan_info_json = {"settings": dict(self.settings.serialize()),
-                           "options": dict(self.options.serialize()["options"]),
+                           "options": dict(self.options.serialize()),
                            "full_requires": self.full_requires.serialize()
                            }
         return conan_info_json

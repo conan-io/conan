@@ -188,7 +188,6 @@ def conanfile_msvc():
     c.settings.compiler.version = "19.3"
     c.settings.compiler.cppstd = "20"
     c.settings.os = "Windows"
-    c.options = Options()
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()

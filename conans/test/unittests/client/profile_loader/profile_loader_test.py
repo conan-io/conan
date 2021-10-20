@@ -143,7 +143,8 @@ def test_profiles_includes():
     profile, variables = read_profile("./profile4.txt", tmp, None)
 
     assert profile.settings == {"os": "1"}
-    assert profile.options.as_list() == [('zlib:aoption', '1'), ('zlib:otheroption', '12')]
+    assert profile.options["zlib"].aoption == 1
+    assert profile.options["zlib"].otheroption == 12
     assert profile.build_requires == {"*": [ConanFileReference.loads("one/1.5@lasote/stable"),
                                             ConanFileReference.loads("two/1.2@lasote/stable")]}
 

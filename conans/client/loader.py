@@ -289,7 +289,8 @@ class ConanFileLoader(object):
         conanfile.generators = parser.generators
 
         try:
-            conanfile.options = Options.loads(parser.options)
+            values = Options.loads(parser.options)
+            conanfile.options.update_options(values)
         except Exception:
             raise ConanException("Error while parsing [options] in conanfile\n"
                                  "Options should be specified as 'pkg:option=value'")

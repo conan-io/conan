@@ -23,7 +23,11 @@ class _PackageOption:
     def __init__(self, name, value, possible_values=None):
         self._name = name
         self._value = value  # Value None = not defined
-        self._possible_values = possible_values  # Always defined in recipes
+        # possible_values only possible origin is recipes
+        if possible_values is None or possible_values == "ANY":
+            self._possible_values = None
+        else:
+            self._possible_values = [str(v) if v is not None else None for v in possible_values]
 
     def get_info_options(self):
         return _PackageOption(self._name, self._value)
@@ -167,7 +171,7 @@ class _PackageOptions:
 
     def update_options(self, other):
         """
-        @type other: PackageOptions
+        @type other: _PackageOptions
         """
         for k, v in other._data.items():
             self._data.setdefault(k, _PackageOption(str(k), None)).value = v
@@ -222,6 +226,9 @@ class Options:
                 result.append("%s:%s=%s" % (pkg, key, value))
         return "\n".join(result)
 
+    def serialize(self):
+        return {k: str(v) for k, v in self._package_options.items()}
+
     def get_info_options(self, clear_deps=False):
         # To generate the cpp_info.options copy, that can destroy, change and remove things
         result = Options()
@@ -237,13 +244,13 @@ class Options:
         """
         self._package_options.update_options(other._package_options)
         for pkg, pkg_option in other._deps_package_options.items():
-            self._deps_package_options.setdefault(pkg, _PackageOptions()).update(pkg_option)
+            self._deps_package_options.setdefault(pkg, _PackageOptions()).update_options(pkg_option)
 
     def __contains__(self, option):
         return option in self._package_options
 
     def __getitem__(self, item):
-        return self._deps_package_values.setdefault(item, _PackageOptions())
+        return self._deps_package_options.setdefault(item, _PackageOptions())
 
     def __getattr__(self, attr):
         return getattr(self._package_options, attr)
@@ -302,6 +309,10 @@ class Options:
         self._deps_package_options = {k: v for k, v in self._deps_package_options.items()
                                       if k in existing_names}
 
+    @property
     def sha(self):
-
-
+        result = ["[options]"]
+        d = self.dumps()
+        if d:
+            result.append(d)
+        return '\n'.join(result)

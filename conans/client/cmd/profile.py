@@ -66,7 +66,7 @@ def cmd_profile_update(profile_name, key, value, cache_profiles_path):
         profile.settings[rest_key] = value
     elif first_key == "options":
         tmp = Options(options_values={rest_key, value})
-        profile.options.update(tmp)
+        profile.options.update_options(tmp)
     elif first_key == "buildenv":
         raise ConanException("Edit the profile manually to change the buildenv")
     elif first_key == "conf":

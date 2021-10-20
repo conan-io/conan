@@ -115,7 +115,7 @@ class ProfileValueParser(object):
         for pattern, refs in build_requires.items():
             base_profile.build_requires.setdefault(pattern, []).extend(refs)
         if options is not None:
-            base_profile.options.update(options)
+            base_profile.options.update_options(options)
 
         if conf is not None:
             base_profile.conf.update_conf_definition(conf)
@@ -319,7 +319,6 @@ def _profile_parse_args(settings, options, envs, conf):
     settings, package_settings = _get_simple_and_package_tuples(settings)
 
     result = Profile()
-    print(type(options), options)
     result.options = Options.loads("\n".join(options or []))
     result.settings = OrderedDict(settings)
     if conf:
