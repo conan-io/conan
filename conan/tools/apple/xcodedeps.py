@@ -27,30 +27,40 @@ class XcodeDeps(object):
         """)
 
     _conf_xconfig = textwrap.dedent("""\
-        {%- for dep in deps -%}
-        // Includes for {{dep}} dependency
-        #include "conan_{{dep}}.xcconfig"
-        {% endfor -%}
-
         // Include {{name}} vars
         #include "{{vars_filename}}"
 
         // Compiler options for {{name}}
-        HEADER_SEARCH_PATHS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_INCLUDE_DIRECTORIES_$(CONFIGURATION))
-        GCC_PREPROCESSOR_DEFINITIONS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_PREPROCESSOR_DEFINITIONS_$(CONFIGURATION))
-        OTHER_CFLAGS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_C_COMPILER_FLAGS_$(CONFIGURATION))
-        OTHER_CPLUSPLUSFLAGS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_CXX_COMPILER_FLAGS_$(CONFIGURATION))
-        FRAMEWORK_SEARCH_PATHS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_FRAMEWORKS_DIRECTORIES_$(CONFIGURATION))
+        HEADER_SEARCH_PATHS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_INCLUDE_DIRECTORIES_{{configuration}})
+        GCC_PREPROCESSOR_DEFINITIONS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_PREPROCESSOR_DEFINITIONS_{{configuration}})
+        OTHER_CFLAGS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_C_COMPILER_FLAGS_{{configuration}})
+        OTHER_CPLUSPLUSFLAGS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_CXX_COMPILER_FLAGS_{{configuration}})
+        FRAMEWORK_SEARCH_PATHS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_FRAMEWORKS_DIRECTORIES_{{configuration}})
 
         // Link options for {{name}}
-        LIBRARY_SEARCH_PATHS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_LIBRARY_DIRECTORIES_$(CONFIGURATION))
-        OTHER_LDFLAGS[arch={{architecture}}][sdk={{sdk}}] = $(inherited) $(CONAN_{{name}}_LINKER_FLAGS_$(CONFIGURATION)) $(CONAN_{{name}}_LIBRARIES_$(CONFIGURATION)) $(CONAN_{{name}}_SYSTEM_LIBS_$(CONFIGURATION)) $(CONAN_{{name}}_FRAMEWORKS_$(CONFIGURATION))
+        LIBRARY_SEARCH_PATHS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_LIBRARY_DIRECTORIES_{{configuration}})
+        OTHER_LDFLAGS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_LINKER_FLAGS_{{configuration}}) $(CONAN_{{name}}_LIBRARIES_{{configuration}}) $(CONAN_{{name}}_SYSTEM_LIBS_{{configuration}}) $(CONAN_{{name}}_FRAMEWORKS_{{configuration}})
         """)
 
     _dep_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file for {{name}}
         // Includes all configurations for each dependency
-        """)
+        {% for dep in deps -%}
+        // Includes for {{dep}} dependency
+        #include "conan_{{dep}}.xcconfig"
+        {%- endfor %}
+        #include "{{dep_xconfig_filename}}"
+
+        HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{{name}}_$(CONFIGURATION))
+        GCC_PREPROCESSOR_DEFINITIONS = $(inherited) $(GCC_PREPROCESSOR_DEFINITIONS_{{name}}_$(CONFIGURATION))
+        OTHER_CFLAGS = $(inherited) $(OTHER_CFLAGS_{{name}}_$(CONFIGURATION))
+        OTHER_CPLUSPLUSFLAGS = $(inherited) $(OTHER_CPLUSPLUSFLAGS_{{name}}_$(CONFIGURATION))
+        FRAMEWORK_SEARCH_PATHS = $(inherited) $(FRAMEWORK_SEARCH_PATHS_{{name}}_$(CONFIGURATION))
+
+        // Link options for {{name}}
+        LIBRARY_SEARCH_PATHS = $(inherited) $(LIBRARY_SEARCH_PATHS_{{name}}_$(CONFIGURATION))
+        OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{{name}}_$(CONFIGURATION))
+         """)
 
     _all_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file
@@ -116,7 +126,7 @@ class XcodeDeps(object):
         formatted_template = Template(self._vars_xconfig).render(**fields)
         return formatted_template
 
-    def _conf_xconfig_file(self, dep_name, vars_xconfig_name, deps):
+    def _conf_xconfig_file(self, dep_name, vars_xconfig_name):
         """
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
@@ -125,21 +135,27 @@ class XcodeDeps(object):
         #  for example XCode 13 is now using sdk=macosx11.3
         #  related to: https://github.com/conan-io/conan/issues/9608
         template = Template(self._conf_xconfig)
-        content_multi = template.render(name=dep_name, vars_filename=vars_xconfig_name, deps=deps,
-                                        architecture=self.architecture, sdk=self.sdk_condition)
+        content_multi = template.render(name=dep_name, vars_filename=vars_xconfig_name,
+                                        architecture=self.architecture, sdk=self.sdk_condition,
+                                        configuration=self.configuration)
         return content_multi
 
-    def _dep_xconfig_file(self, name, name_general, dep_xconfig_filename):
+    def _dep_xconfig_file(self, name, name_general, dep_xconfig_filename, deps):
         # Current directory is the generators_folder
         multi_path = name_general
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:
             content_multi = self._dep_xconfig
-            content_multi = Template(content_multi).render({"name": name})
+            content_multi = Template(content_multi).render({"name": name,
+                                                            "dep_xconfig_filename": dep_xconfig_filename,
+                                                            "deps": deps})
 
         if dep_xconfig_filename not in content_multi:
-            content_multi = content_multi + '\n#include "{}"\n'.format(dep_xconfig_filename)
+            content_multi = content_multi.replace('.xcconfig"',
+                                                  '.xcconfig"\n#include "{}"'.format(dep_xconfig_filename),
+                                                  1)
+
         return content_multi
 
     def _all_xconfig_file(self, deps):
@@ -150,8 +166,6 @@ class XcodeDeps(object):
 
         for req, dep in deps.items():
             dep_name = dep.ref.name.replace(".", "_")
-            if req.build:
-                dep_name += "_build"
             content_multi = content_multi + '\n#include "conan_{}.xcconfig"\n'.format(dep_name)
         return content_multi
 
@@ -172,11 +186,11 @@ class XcodeDeps(object):
             vars_xconfig_name = "conan_{}_vars{}.xcconfig".format(dep_name, conf_name)
             result[vars_xconfig_name] = self._vars_xconfig_file(dep, dep_name, cpp_info)
             props_name = "conan_{}{}.xcconfig".format(dep_name, conf_name)
-            result[props_name] = self._conf_xconfig_file(dep_name, vars_xconfig_name, public_deps)
+            result[props_name] = self._conf_xconfig_file(dep_name, vars_xconfig_name)
 
             # The entry point for each package
             file_dep_name = "conan_{}.xcconfig".format(dep_name)
-            dep_content = self._dep_xconfig_file(dep_name, file_dep_name, props_name)
+            dep_content = self._dep_xconfig_file(dep_name, file_dep_name, props_name, public_deps)
             result[file_dep_name] = dep_content
 
         # Include all direct build_requires for host context.
