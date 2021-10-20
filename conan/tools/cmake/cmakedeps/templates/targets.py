@@ -81,6 +81,8 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         if(NOT TARGET {{alias}})
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
+        else()
+            message(WARNING "target '{{alias}}' already exists, alias for target '{{target}}' won't be created!")
         endif()
 
         {%- endfor %}
@@ -92,6 +94,8 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         if(NOT TARGET {{alias}})
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
+        else()
+            message(WARNING "target '{{alias}}' already exists, alias for target '{{target}}' won't be created!")
         endif()
 
             {%- endfor %}
