@@ -33,7 +33,7 @@ def test_global_alias():
         settings = "os", "compiler", "build_type", "arch"
 
         def package_info(self):
-            self.cpp_info.set_property("cmake_target_aliases", ["hello"], "CMakeDeps")
+            self.cpp_info.set_property("cmake_target_aliases", ["hello"])
     """)
 
     cmakelists = textwrap.dedent("""
