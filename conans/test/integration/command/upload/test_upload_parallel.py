@@ -21,7 +21,7 @@ def test_upload_parallel_error():
 
     client = TestClient(requester_class=FailOnReferencesUploader, default_server_user=True)
     client.save({"conanfile.py": GenConanfile()})
-    client.run('user -p password -r default admin')
+    client.run('remote login default user -p password')
     for index in range(4):
         client.run('create . lib{}/1.0@user/channel'.format(index))
     client.run('upload lib* --parallel -c --all -r default --retry-wait=0', assert_error=True)
@@ -38,7 +38,7 @@ def test_upload_parallel_success():
     assert "lib0/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
     client.run('create . lib1/1.0@user/channel')
     assert "lib1/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
-    client.run('user -p password -r default admin')
+    client.run('remote login default admin -p password')
     client.run('upload lib* --parallel -c --all -r default')
     assert "Uploading lib0/1.0@user/channel to remote 'default'" in client.out
     assert "Uploading lib1/1.0@user/channel to remote 'default'" in client.out
@@ -59,7 +59,7 @@ def test_upload_parallel_fail_on_interaction():
         assert "lib{}/1.0@user/channel: Package '{}' created".format(
             index,
             NO_SETTINGS_PACKAGE_ID) in client.out
-    client.run('user -c')
+    client.run('remote logout default')
     client.run('upload lib* --parallel -c --all -r default', assert_error=True)
     assert "ERROR: lib0/1.0@user/channel: Upload recipe to 'default' failed: " \
            "Conan interactive mode disabled. [Remote: default]" in client.out
@@ -77,7 +77,7 @@ def test_beat_character_long_upload():
     client.save({"conanfile.py": slow_conanfile,
                  "hello.cpp": ""})
     client.run("create . pkg/0.1@user/stable")
-    client.run("user admin --password=password")
+    client.run("remote login default admin --password=password")
     with patch("conans.util.progress_bar.TIMEOUT_BEAT_SECONDS", -1):
         with patch("conans.util.progress_bar.TIMEOUT_BEAT_CHARACTER", "%&$"):
             client.run("upload pkg/0.1@user/stable --all -r default")

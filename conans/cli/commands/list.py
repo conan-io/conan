@@ -2,6 +2,7 @@ import json
 
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS, \
     get_remote_selection
+from conans.cli.commands import json_formatter
 from conans.cli.output import Color
 from conans.cli.output import cli_out_write
 from conans.errors import ConanException, InvalidNameException, PackageNotFoundException, \
@@ -95,13 +96,6 @@ def list_package_ids_cli_formatter(results):
                         cli_out_write(f"{prop_name}:", fg=field_color, indentation=4)
                         for name, val in values.items():
                             cli_out_write(f"{name}={val}", fg=value_color, indentation=6)
-
-
-# FIXME: it's a general formatter, perhaps we should look for another module
-def json_formatter(info):
-    myjson = json.dumps(info, indent=4)
-    cli_out_write(myjson)
-
 
 list_recipes_formatters = {
     "cli": list_recipes_cli_formatter,
@@ -219,7 +213,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
     if args.cache or not args.remote:
         error = None
         try:
-            result = conan_api.get_recipe_revisions(ref)
+            result = conan_api.list.get_recipe_revisions(ref)
         except Exception as e:
             error = str(e)
             result = []
@@ -234,7 +228,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         for remote in remotes:
             error = None
             try:
-                result = conan_api.get_recipe_revisions(ref, remote=remote)
+                result = conan_api.list.get_recipe_revisions(ref, remote=remote)
             except (NotFoundException, PackageNotFoundException):
                 # This exception must be caught manually due to a server inconsistency:
                 # Artifactory API returns an empty result if the recipe doesn't exist, but
@@ -280,7 +274,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     if args.cache or not args.remote:
         error = None
         try:
-            result = conan_api.get_package_revisions(pref)
+            result = conan_api.list.get_package_revisions(pref)
         except Exception as e:
             error = str(e)
             result = []
@@ -295,7 +289,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         for remote in remotes:
             error = None
             try:
-                result = conan_api.get_package_revisions(pref, remote=remote)
+                result = conan_api.list.get_package_revisions(pref, remote=remote)
             except (NotFoundException, PackageNotFoundException):
                 # This exception must be caught manually due to a server inconsistency:
                 # Artifactory API returns an empty result if the recipe doesn't exist, but
@@ -339,7 +333,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
     if args.cache or not args.remote:
         error = None
         try:
-            result = conan_api.get_package_ids(ref)
+            result = conan_api.list.get_package_ids(ref)
         except Exception as e:
             error = str(e)
             result = {}
@@ -352,7 +346,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
         for remote in remotes:
             error = None
             try:
-                result = conan_api.get_package_ids(ref, remote=remote)
+                result = conan_api.list.get_package_ids(ref, remote=remote)
             except (NotFoundException, PackageNotFoundException):
                 # This exception must be caught manually due to a server inconsistency:
                 # Artifactory API returns an empty result if the recipe doesn't exist, but

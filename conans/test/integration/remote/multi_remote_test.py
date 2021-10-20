@@ -177,7 +177,7 @@ class MultiRemoteTest(unittest.TestCase):
         client = TestClient(servers=servers)
         client.save({"conanfile.py": GenConanfile("MyLib", "0.1")})
         client.run("create . lasote/testing")
-        client.run("user admin -p password -r s1")
+        client.run("remote login s1 admin -p password")
         client.run("upload MyLib* -r s1 -c")
 
         servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd.com"  # Do not exist

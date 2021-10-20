@@ -5,8 +5,8 @@ from collections import OrderedDict
 from collections import namedtuple
 
 from conans import __version__ as client_version
-from conans.cli.api.conan_api import api_method
 from conans.cli.api.model import Remote
+from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.cmd.build import cmd_build
@@ -18,7 +18,6 @@ from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_ke
                                        cmd_profile_list, cmd_profile_update)
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
-from conans.client.cmd.user import user_set, users_clean, users_list, token_present
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_imports, undo_imports
@@ -27,7 +26,6 @@ from conans.client.migrations import ClientMigrator
 from conans.client.profile_loader import profile_from_args, read_profile
 from conans.client.remover import ConanRemover
 from conans.client.source import config_source_local
-from conans.client.userio import UserInput
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NotFoundException)
 from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
@@ -636,57 +634,6 @@ class ConanAPIV1(object):
         remover = ConanRemover(app)
         remover.remove(pattern, src, builds, packages, force=force,
                        packages_query=query)
-
-    @api_method
-    def authenticate(self, name, password, remote_name, skip_auth=False):
-        # FIXME: 2.0 rename "name" to "user".
-        # FIXME: 2.0 probably we should return also if we have been authenticated or not (skipped)
-        # FIXME: 2.0 remove the skip_auth argument, that behavior will be done by:
-        #      "conan user USERNAME -r remote" that will use the local credentials (
-        #      and verify that are valid)
-        #      against the server. Currently it only "associate" the USERNAME with the remote
-        #      without checking anything else
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-
-        if skip_auth and token_present(app.cache.localdb, app.selected_remote, name):
-            return app.selected_remote.name, name, name
-        if not password:
-            ui = UserInput(app.cache.config.non_interactive)
-            name, password = ui.request_login(remote_name=remote_name, username=name)
-
-        remote_name, prev_user, user = app.remote_manager.authenticate(app.selected_remote, name,
-                                                                       password)
-        return remote_name, prev_user, user
-
-    @api_method
-    def user_set(self, user, remote_name=None):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-        # FIXME: The remote should be explicit always
-        return user_set(app.cache.localdb, user, app.selected_remote or app.enabled_remotes[0])
-
-    @api_method
-    def users_clean(self):
-        app = ConanApp(self.cache_folder)
-        users_clean(app.cache.localdb)
-
-    @api_method
-    def users_list(self, remote_name=None):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-        info = {"error": False, "remotes": []}
-        remotes = [self.get_remote_by_name(remote_name)] if remote_name else app.enabled_remotes
-        try:
-            info["remotes"] = users_list(app.cache.localdb, remotes)
-            return info
-        except ConanException as exc:
-            info["error"] = True
-            exc.info = info
-            raise
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,

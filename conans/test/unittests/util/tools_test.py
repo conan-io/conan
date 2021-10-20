@@ -8,10 +8,10 @@ import pytest
 from mock.mock import mock_open, patch
 from parameterized import parameterized
 
+from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
-from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import get_default_client_conf
 from conans.client.tools.files import replace_in_file
 from conans.client.tools.win import vswhere
@@ -251,8 +251,8 @@ class HelloConan(ConanFile):
         conf = get_default_client_conf().replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
         save(os.path.join(tmp, CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            conan_api = ConanAPIV1()
-        conan_api.remote_list()
+            conan_api = ConanAPIV2()
+        conan_api.remotes.list()
         from conans.tools import _global_requester
         self.assertEqual(_global_requester.proxies, {"http": "http://myproxy.com"})
 

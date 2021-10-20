@@ -1,17 +1,15 @@
 import json
+from collections import OrderedDict
 
 from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.api.model import Remote
 from conans.cli.command import conan_command, conan_subcommand, OnceArgument
+from conans.cli.commands import json_formatter
+from conans.cli.commands.list import remote_color, error_color, recipe_color, \
+    reference_color
 from conans.cli.output import cli_out_write
+from conans.client.userio import UserInput
 from conans.errors import ConanException
-
-
-@conan_command()
-def remote(conan_api, parser, *args, **kwargs):
-    """
-    Manages the remote list and the users authenticated on them.
-    """
 
 
 def output_remote_list_json(remotes):
@@ -25,6 +23,34 @@ def output_remote_list_cli(remote):
     for remote in remote:
         output_str = str(remote)
         cli_out_write(output_str)
+
+
+def output_remote_user_list_cli(results):
+    for remote_name, result in results.items():
+        cli_out_write(f"{remote_name}:", fg=remote_color)
+        if result["user_name"] is None:
+            cli_out_write("No user", fg=error_color, indentation=2)
+        else:
+            cli_out_write("Username: ", fg=recipe_color, indentation=2, endline="")
+            cli_out_write(result["user_name"], fg=reference_color)
+            cli_out_write("authenticated: ", fg=recipe_color, indentation=2, endline="")
+            cli_out_write(result["authenticated"], fg=reference_color)
+
+
+def output_set_user_cli(results):
+    for remote_name, result in results.items():
+        from_user = "'{}'".format(result["previous_info"]["user_name"])
+        from_user += " (anonymous)" \
+            if not result["previous_info"]["authenticated"] else " (authenticated)"
+        to_user = "'{}'".format(result["info"]["user_name"])
+        to_user += " (anonymous)" \
+            if not result["info"]["authenticated"] else " (authenticated)"
+        message = "Changed user of remote '{}' from {} to {}".format(remote_name, from_user, to_user)
+        cli_out_write(message)
+
+
+def output_remotes_json(results):
+    return json_formatter(list(results.values()))
 
 
 @conan_subcommand(formatters={"cli": output_remote_list_cli, "json": output_remote_list_json})
@@ -156,3 +182,97 @@ def remote_disable(conan_api, parser, subparser, *args):
         r.disabled = True
         conan_api.remotes.update(r)
 
+
+# ### User related commands
+
+@conan_subcommand(formatters={"cli": output_remote_user_list_cli, "json": output_remotes_json})
+def remote_list_users(conan_api, parser, subparser, *args):
+    """List the users logged into the remotes"""
+    remotes = conan_api.remotes.list()
+    ret = OrderedDict()
+    if not remotes:
+        raise ConanException("No remotes defined")
+    for remote in remotes:
+        ret[remote.name] = conan_api.remotes.user_info(remote)
+    return ret
+
+
+@conan_subcommand(formatters={"cli": output_set_user_cli, "json": output_remotes_json})
+def remote_login(conan_api, parser, subparser, *args):
+    """Login into the specified remotes"""
+    subparser.add_argument("remote", help="Pattern or name of the remote to login into. "
+                                          "The pattern uses 'fnmatch' style wildcards.")
+    subparser.add_argument("username", help='Username')
+    subparser.add_argument("-p", "--password", nargs='?', const="", type=str, action=OnceArgument,
+                           help='User password. Use double quotes if password with spacing, '
+                                'and escape quotes if existing. If empty, the password is '
+                                'requested interactively (not exposed)')
+
+    args = parser.parse_args(*args)
+    remotes = conan_api.remotes.list(filter=args.remote)
+    if not remotes:
+        raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
+
+    password = args.password
+    if not password:
+        # FIXME: It is not nice to instance here a ConanApp, a command should only use the api
+        from conans.cli.conan_app import ConanApp
+        app = ConanApp(conan_api.cache_folder)
+        ui = UserInput(app.cache.config.non_interactive)
+        _, password = ui.request_login(remote_name=args.remote, username=args.username)
+
+    ret = OrderedDict()
+    for r in remotes:
+        previous_info = conan_api.remotes.user_info(r)
+        conan_api.remotes.login(r, args.username, password)
+        info = conan_api.remotes.user_info(r)
+        ret[r.name] = {"previous_info": previous_info, "info": info}
+    return ret
+
+
+@conan_subcommand(formatters={"cli": output_set_user_cli, "json": output_remotes_json})
+def remote_set_user(conan_api, parser, subparser, *args):
+    """Associates a username with a remote without performing the authentication"""
+    subparser.add_argument("remote", help="Pattern or name of the remote. "
+                                          "The pattern uses 'fnmatch' style wildcards.")
+    subparser.add_argument("username", help='Username')
+
+    args = parser.parse_args(*args)
+    remotes = conan_api.remotes.list(filter=args.remote)
+    if not remotes:
+        raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
+
+    ret = OrderedDict()
+    for r in remotes:
+        previous_info = conan_api.remotes.user_info(r)
+        if previous_info["user_name"] != args.username:
+            conan_api.remotes.logout(r)
+            conan_api.remotes.user_set(r, args.username)
+        ret[r.name] = {"previous_info": previous_info, "info": conan_api.remotes.user_info(r)}
+    return ret
+
+
+@conan_subcommand(formatters={"cli": output_set_user_cli, "json": output_remotes_json})
+def remote_logout(conan_api, parser, subparser, *args):
+    """Clear the existing credentials for the specified remotes"""
+    subparser.add_argument("remote", help="Pattern or name of the remote to logout. "
+                                          "The pattern uses 'fnmatch' style wildcards.")
+    args = parser.parse_args(*args)
+    remotes = conan_api.remotes.list(filter=args.remote)
+    if not remotes:
+        raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
+
+    ret = OrderedDict()
+    for r in remotes:
+        previous_info = conan_api.remotes.user_info(r)
+        conan_api.remotes.logout(r)
+        info = conan_api.remotes.user_info(r)
+        ret[r.name] = {"previous_info": previous_info, "info": info}
+    return ret
+
+
+@conan_command()
+def remote(conan_api, parser, *args, **kwargs):
+    """
+    Manages the remote list and the users authenticated on them.
+    """

@@ -20,7 +20,7 @@ class TestListPackageIdsBase:
         self.client.servers[remote_name] = TestServer(users={"username": "passwd"},
                                                       write_permissions=[("*/*@*/*", "*")])
         self.client.update_servers()
-        self.client.run("user username -p passwd -r {}".format(remote_name))
+        self.client.run("remote login {} username -p passwd".format(remote_name))
 
     def _upload_recipe(self, remote, reference):
         self.client.save({'conanfile.py': GenConanfile()})
