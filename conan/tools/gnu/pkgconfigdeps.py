@@ -26,16 +26,16 @@ from conans.errors import ConanException
 from conans.util.files import save
 
 
-def get_package_namespace(req):
+def get_package_name(req):
     ret = req.cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
     return ret or req.ref.name
 
 
-def get_component_alias(req, comp_name):
+def get_component_name(req, comp_name):
     if comp_name not in req.cpp_info.components:
         # foo::foo might be referencing the root cppinfo
         if req.ref.name == comp_name:
-            return get_package_namespace(req)
+            return get_package_name(req)
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                              "package requirement".format(name=req.ref.name, cname=comp_name))
     ret = req.cpp_info.components[comp_name].get_property("pkg_config_name", "PkgConfigDeps")
@@ -48,11 +48,11 @@ class PkgConfigDeps(object):
         self._conanfile = conanfile
 
     @staticmethod
-    def _get_composed_pkg_config_name(pkg_name, comp_name):
+    def _get_pc_name(pkg_name, comp_name):
         """Build a composed name for all the components and its package root name"""
         return "%s-%s" % (pkg_name, comp_name)
 
-    def _get_requires_names(self, dep, cpp_info=None):
+    def _get_requires_names(self, name, cpp_info):
         """
         Get all the pkg-config valid names from the requires ones given a dependency and
         a CppInfo object.
@@ -60,38 +60,38 @@ class PkgConfigDeps(object):
         Note: CppInfo could be coming from one Component object instead of the dependency
         """
         ret = []
-        cpp_info = cpp_info or dep.cpp_info
         for req in cpp_info.requires:
-            # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
-            #        Remove it for Conan 2.0
-            pkg_name, comp_name = req.split("::") if "::" in req else (str(dep.ref.name), req)
+            pkg_name, comp_name = req.split("::") if "::" in req else (name, req)
             # FIXME: it could allow defining requires to not direct dependencies
             req_conanfile = self._conanfile.dependencies.host[pkg_name]
-            comp_alias_name = get_component_alias(req_conanfile, comp_name)
-            ret.append(self._get_composed_pkg_config_name(pkg_name, comp_alias_name))
+            comp_alias_name = get_component_name(req_conanfile, comp_name)
+            ret.append(self._get_pc_name(pkg_name, comp_alias_name))
         return ret
 
-    def get_components_content(self, dep):
+    def get_components_files_and_content(self, dep):
         """Get all the *.pc files content for the dependency and each of its components"""
         pc_files = {}
-        pkg_name = get_package_namespace(dep)
+        pkg_name = get_package_name(dep)
         comp_names = []
         pc_gen = _PCFilesTemplate(self._conanfile, dep)
         # Loop through all the package's components
         for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
-            comp_name = get_component_alias(dep, comp_name)
+            comp_name = get_component_name(dep, comp_name)
             comp_names.append(comp_name)
-            comp_requires_names = self._get_requires_names(dep, comp_cpp_info)
+            # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
+            #        Remove it for Conan 2.0
+            comp_requires_names = self._get_requires_names(str(dep.ref.name), comp_cpp_info)
             # Get the *.pc file content for each component
-            pkg_comp_name = self._get_composed_pkg_config_name(pkg_name, comp_name)
-            pc_files.update(pc_gen.get_long_pc_file_content(comp_requires_names, name=pkg_comp_name,
-                                                            cpp_info=comp_cpp_info))
+            pkg_comp_name = self._get_pc_name(pkg_name, comp_name)
+            pc_files.update(pc_gen.get_pc_filename_and_content(comp_requires_names,
+                                                               name=pkg_comp_name,
+                                                               cpp_info=comp_cpp_info))
         # After looping through all the package's components, we have to check if the package
         # was between these components, if not, we'll have to create a *.pc file with a short content
         # for this one
         if pkg_name not in comp_names:
-            pkg_requires = [self._get_composed_pkg_config_name(pkg_name, i) for i in comp_names]
-            pc_files.update(pc_gen.get_short_pc_file_content(pkg_requires))
+            pkg_requires = [self._get_pc_name(pkg_name, i) for i in comp_names]
+            pc_files.update(pc_gen.get_wrapper_pc_filename_and_content(pkg_requires))
         return pc_files
 
     @property
@@ -101,11 +101,13 @@ class PkgConfigDeps(object):
         host_req = self._conanfile.dependencies.host
         for require, dep in host_req.items():
             if dep.cpp_info.has_components:
-                pc_files.update(self.get_components_content(dep))
+                pc_files.update(self.get_components_files_and_content(dep))
             else:  # Content for package without components
                 pc_gen = _PCFilesTemplate(self._conanfile, dep)
-                requires = self._get_requires_names(dep)
-                pc_files.update(pc_gen.get_long_pc_file_content(requires))
+                # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
+                #        Remove it for Conan 2.0
+                requires = self._get_requires_names(str(dep.ref.name), dep.cpp_info)
+                pc_files.update(pc_gen.get_pc_filename_and_content(requires))
         return pc_files
 
     def generate(self):
@@ -121,9 +123,9 @@ class _PCFilesTemplate(object):
     def __init__(self, conanfile, dep):
         self._conanfile = conanfile
         self._dep = dep
-        self._name = get_package_namespace(dep)
+        self._name = get_package_name(dep)
 
-    long_content_template = textwrap.dedent("""\
+    pc_file_template = textwrap.dedent("""\
     prefix={{prefix_path}}
     {% for name, path in libdirs %}
     {{ name + "=" + path }}
@@ -146,7 +148,7 @@ class _PCFilesTemplate(object):
     {% endif %}
     """)
 
-    short_content_template = textwrap.dedent("""\
+    wrapper_pc_file_template = textwrap.dedent("""\
     Name: {{name}}
     Description: {{description}}
     Version: {{version}}
@@ -155,7 +157,7 @@ class _PCFilesTemplate(object):
     {% endif %}
     """)
 
-    def get_long_pc_file_content(self, requires, name=None, cpp_info=None):
+    def get_pc_filename_and_content(self, requires, name=None, cpp_info=None):
 
         def _concat_if_not_empty(groups):
             return " ".join(
@@ -217,11 +219,11 @@ class _PCFilesTemplate(object):
             "cflags": get_cflags(includedirs),
             "requires": requires
         }
-        template = Template(self.long_content_template, trim_blocks=True, lstrip_blocks=True,
+        template = Template(self.pc_file_template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         return {dep_name + ".pc": template.render(context)}
 
-    def get_short_pc_file_content(self, requires, name=None):
+    def get_wrapper_pc_filename_and_content(self, requires, name=None):
         dep_name = name or self._name
         context = {
             "name": dep_name,
@@ -229,6 +231,6 @@ class _PCFilesTemplate(object):
             "version": self._dep.ref.version,
             "requires": requires
         }
-        template = Template(self.short_content_template, trim_blocks=True, lstrip_blocks=True,
+        template = Template(self.wrapper_pc_file_template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         return {dep_name + ".pc": template.render(context)}
