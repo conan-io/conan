@@ -465,6 +465,8 @@ class ConanInfo(object):
         result.append(indent(self.full_settings.dumps()))
         result.append("\n[full_requires]")
         result.append(indent(self.full_requires.dumps()))
+        result.append("\n[full_options]")
+        result.append(indent(self.options.dumps()))  # Keep it as close as possible to not break IDs
         result.append("\n[env]\n")
 
         return '\n'.join(result) + "\n"
