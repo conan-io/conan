@@ -145,7 +145,7 @@ class _EnvValue:
 
 
 class Environment:
-    def __init__(self, ):
+    def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
         self._values = OrderedDict()  # {var_name: [] of values, including separators}
 
