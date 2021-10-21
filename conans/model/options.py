@@ -211,10 +211,12 @@ class Options:
     def dumps(self):
         result = []
         for key, value in self._package_options.items():
-            result.append("%s=%s" % (key, value))
-        for pkg, pkg_option in self._deps_package_options.items():
+            if value is not None:
+                result.append("%s=%s" % (key, value))
+        for pkg, pkg_option in sorted(self._deps_package_options.items()):
             for key, value in pkg_option.items():
-                result.append("%s:%s=%s" % (pkg, key, value))
+                if value is not None:
+                    result.append("%s:%s=%s" % (pkg, key, value))
         return "\n".join(result)
 
     def clear(self):
