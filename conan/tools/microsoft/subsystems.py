@@ -117,7 +117,6 @@ def deduce_subsystem(conanfile, scope):
 def subsystem_path(subsystem, path):
     """"Used to translate windows paths to MSYS unix paths like
     c/users/path/to/file. Not working in a regular console or MinGW!
-    group: "build" means that the consumer wants to use this path at build time
     """
     if subsystem is None or subsystem == WINDOWS:
         return path
