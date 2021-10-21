@@ -13,12 +13,12 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
             conanfile.config_options()
 
         # Assign only the current package options values, but none of the dependencies
-        conanfile.options.begin_downstream(down_options, profile_options, ref)
+        conanfile.options.apply_downstream(down_options, profile_options, ref)
 
         with conanfile_exception_formatter(str(conanfile), "configure"):
             conanfile.configure()
 
-        conanfile.up_options = conanfile.options.end_upstream(down_options, ref)
+        conanfile.up_options = conanfile.options.get_upstream_options(down_options, ref)
 
         PackageType.compute_package_type(conanfile)
 

@@ -28,7 +28,7 @@ class _InstallPackageReference:
         result.binary = node.binary
         result.context = node.context
         # FIXME: The aggregation of the upstream options is not correct here
-        result.options = node.conanfile.options
+        result.options = node.conanfile.up_options.items()
         result.nodes.append(node)
         return result
 

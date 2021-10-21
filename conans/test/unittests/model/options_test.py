@@ -4,6 +4,7 @@ import pytest
 
 from conans.errors import ConanException
 from conans.model.options import Options
+from conans.model.ref import ConanFileReference
 
 
 class TestOptions:
@@ -98,6 +99,29 @@ class TestOptionsLoad:
         assert sut["zlib"].option != "whatever"  # Non validating
         assert sut["*"].common == "value"
         assert sut["*"].common != "whatever"  # Non validating
+
+
+class TestOptionsPropagate:
+    def test_basic(self):
+        options = {"static": [True, False]}
+        values = {"static": True}
+        sut = Options(options, values)
+        assert sut.static
+
+        ref = ConanFileReference.loads("boost/1.0")
+        # if ref!=None option MUST be preceded by boost:
+        down_options = Options(options_values={"zlib:other": 1, "boost:static": False},
+                               constrained=False)
+        sut.apply_downstream(down_options, Options(), ref)
+        assert not sut.static
+
+        # Should be freezed now
+        with pytest.raises(ConanException) as e:
+            sut.static = True
+        assert "Incorrect attempt to modify options 'static'" in str(e.value)
+
+        up = sut.get_upstream_options(down_options, ref)
+        assert up.dumps() == "zlib:other=1"
 
 '''
     def test_undefined_value(self):

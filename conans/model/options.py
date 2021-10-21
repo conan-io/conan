@@ -86,6 +86,12 @@ class _PackageOptions:
                       for option, possible_values in definition.items()}
         self._freeze = False
 
+    def clear(self):
+        # for header_only() clearing
+        if self._freeze:
+            raise ConanException(f"Incorrect attempt to modify options.clear()")
+        self._data.clear()
+
     def freeze(self):
         self._freeze = True
 
@@ -197,6 +203,11 @@ class Options:
             values[name] = value
         return Options(options_values=values, constrained=False)
 
+    def scope(self, name):
+        package_options = self._deps_package_options.setdefault(name, _PackageOptions())
+        package_options.update_options(self._package_options)
+        self._package_options = _PackageOptions()
+
     def dumps(self):
         result = []
         for key, value in self._package_options.items():
@@ -205,6 +216,11 @@ class Options:
             for key, value in pkg_option.items():
                 result.append("%s:%s=%s" % (pkg, key, value))
         return "\n".join(result)
+
+    def clear(self):
+        # for header_only() clearing
+        self._package_options.clear()
+        self._deps_package_options.clear()
 
     def serialize(self):
         return {k: str(v) for k, v in self._package_options.items()}
@@ -246,7 +262,7 @@ class Options:
         except ConanException:
             pass
 
-    def begin_downstream(self, down_options, profile_options, own_ref):
+    def apply_downstream(self, down_options, profile_options, own_ref):
         assert isinstance(down_options, Options), type(down_options)
         assert isinstance(profile_options, Options), type(down_options)
 
@@ -261,7 +277,7 @@ class Options:
                         self._package_options.update_options(options, is_pattern=True)
         self._package_options.freeze()
 
-    def end_upstream(self, down_options, own_ref):
+    def get_upstream_options(self, down_options, own_ref):
         assert isinstance(down_options, Options)
 
         # write the down
