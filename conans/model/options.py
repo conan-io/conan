@@ -267,7 +267,7 @@ class Options:
         assert isinstance(profile_options, Options), type(down_options)
 
         for defined_options in down_options, profile_options:
-            if own_ref is None:
+            if own_ref is None or own_ref.name is None:
                 self._package_options.update_options(defined_options._package_options)
             else:
                 for pattern, options in defined_options._deps_package_options.items():
