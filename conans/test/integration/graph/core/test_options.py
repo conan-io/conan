@@ -105,5 +105,4 @@ class TestBuildRequireOptions(GraphManagerTest):
                                 (zlib_shared, True, True, False, True)])
         _check_transitive(lib, [(protobuf_host, True, True, False, None),
                                 (zlib_shared, True, True, False, True),
-                                (protobuf_build, False, False, True, True),
-                                (zlib_static, False, False, True, False)])
+                                (protobuf_build, False, False, True, True)])
