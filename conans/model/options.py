@@ -54,7 +54,9 @@ class _PackageOption:
     def __eq__(self, other):
         # To promote the other to string, and always compare as strings
         # if self.options.myoption == 1 => will convert 1 to "1"
-        other = str(other) if other is not None else None
+        if other is None:
+            return self._value is None
+        other = str(other)
         self._check_valid_value(other)
         return other == self.__str__()
 
@@ -178,6 +180,8 @@ class Options:
             self._deps_package_options = {}  # {name("Boost": PackageOptions}
             if options_values:
                 for k, v in options_values.items():
+                    if v is None:
+                        continue  # defining a None value means same as not giving value
                     k = str(k).strip()
                     v = str(v).strip()
                     tokens = k.split(":", 1)
@@ -273,6 +277,9 @@ class Options:
         for defined_options in down_options, profile_options:
             if own_ref is None or own_ref.name is None:
                 self._package_options.update_options(defined_options._package_options)
+                for pattern, options in defined_options._deps_package_options.items():
+                    if pattern == "*":
+                        self._package_options.update_options(options, is_pattern=True)
             else:
                 for pattern, options in defined_options._deps_package_options.items():
                     if pattern == own_ref.name:  # exact match

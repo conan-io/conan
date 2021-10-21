@@ -123,6 +123,53 @@ class TestOptionsPropagate:
         up = sut.get_upstream_options(down_options, ref)
         assert up.dumps() == "zlib:other=1"
 
+
+class TestOptionsNone:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        options = {"static": [None, 1, 2], "other": "ANY", "more": ["None", 1]}
+        self.sut = Options(options)
+
+    def test_booleans(self):
+        assert self.sut.static == None
+        assert not self.sut.static
+        assert self.sut.static != 1
+        assert self.sut.static != 2
+        with pytest.raises(ConanException) as e:
+            self.sut.static == 3
+        assert "'3' is not a valid 'options.static' value" in str(e.value)
+
+        with pytest.raises(ConanException) as e:
+            self.sut.static == "None"
+        assert "'None' is not a valid 'options.static' value" in str(e.value)
+
+        assert self.sut.other == None
+        assert self.sut.other != "whatever"  # dont raise, ANY
+        self.sut.other = None
+        assert self.sut.other == None
+
+        assert not self.sut.more
+        assert self.sut.more == None
+        assert self.sut.more != 1
+        with pytest.raises(ConanException) as e:
+            self.sut.more == 2
+        assert "'2' is not a valid 'options.more' value" in str(e.value)
+        with pytest.raises(ConanException) as e:
+            self.sut.more = None
+        assert "'None' is not a valid 'options.more' value" in str(e.value)
+        self.sut.more = "None"
+        assert not self.sut.more  # This is still evaluated to false, like OFF, 0, FALSE, etc
+        assert self.sut.more == "None"
+        assert self.sut.more != None
+
+    def test_assign(self):
+        self.sut.static = 1
+        assert self.sut.static == 1
+
+    def test_dumps(self):
+        text = self.sut.dumps()
+        assert text == ""
+
 '''
     def test_undefined_value(self):
         """ Not assigning a value to options will raise an error at validate() step
