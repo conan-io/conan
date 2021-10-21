@@ -2,11 +2,9 @@ import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient
-from conans.client.tools.files import load
 
 
 class MarkDownGeneratorTest(unittest.TestCase):
-
     def test_cmake_find_filename(self):
         conanfile = textwrap.dedent("""
                     from conans import ConanFile
@@ -24,7 +22,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
         content = client.load("bar.md")
 
         self.assertIn("find_package(FooBar)", content)
-        self.assertIn("target_link_libraries(<library_name> foobar::foobar)", content)
+        self.assertIn("target_link_libraries(<target_name> foobar::foobar)", content)
 
     def test_with_build_modules(self):
         conanfile = textwrap.dedent("""
@@ -37,10 +35,9 @@ class MarkDownGeneratorTest(unittest.TestCase):
                             self.copy('bm.cmake', dst='lib/cmake')
 
                         def package_info(self):
-                            self.cpp_info.filenames['cmake_find_package'] = 'FooBar'
-                            self.cpp_info.names['cmake_find_package'] = 'foobar'
-                            self.cpp_info.names['cmake_find_package_multi'] = 'foobar_multi'
-                            self.cpp_info.names['pkg_config'] = 'foobar_cfg'
+                            self.cpp_info.set_property("cmake_file_name", "FooBar")
+                            self.cpp_info.set_property("cmake_target_name", "foobar")
+                            self.cpp_info.set_property("pkg_config_name", "foobar_cfg")
                             self.cpp_info.build_modules['cmake_find_package'] = ['lib/cmake/bm.cmake']
                     """)
         client = TestClient()
@@ -52,3 +49,42 @@ class MarkDownGeneratorTest(unittest.TestCase):
 
         self.assertIn("* `lib/cmake/bm.cmake`", content)
         self.assertIn("Content of build_module", content)
+
+    def test_with_components(self):
+        conanfile = textwrap.dedent("""
+                    import os
+                    from conans import ConanFile
+
+                    class HelloConan(ConanFile):
+                        def package_info(self):
+                            self.cpp_info.set_property("cmake_target_name", "foobar")
+                            self.cpp_info.components["component1"].set_property("cmake_target_name", "component_name")
+                    """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . bar/0.1.0@user/testing")
+        client.run("install bar/0.1.0@user/testing -g markdown")
+        content = client.load("bar.md")
+
+        self.assertIn("target_link_libraries(<target_name> foobar::component_name)", content)
+        self.assertIn("* Component ``foobar::component_name``", content)
+
+    def test_with_components_and_target_namespace(self):
+        conanfile = textwrap.dedent("""
+                    import os
+                    from conans import ConanFile
+
+                    class HelloConan(ConanFile):
+                        def package_info(self):
+                            self.cpp_info.set_property("cmake_target_name", "name")
+                            self.cpp_info.set_property("cmake_target_namespace", "namespace")
+                            self.cpp_info.components["component1"].set_property("cmake_target_name", "component_name")
+                    """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . bar/0.1.0@user/testing")
+        client.run("install bar/0.1.0@user/testing -g markdown")
+        content = client.load("bar.md")
+
+        self.assertIn("target_link_libraries(<target_name> namespace::component_name)", content)
+        self.assertIn("* Component ``namespace::component_name``", content)

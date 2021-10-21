@@ -102,7 +102,7 @@ buildsystem_vs_tpl = textwrap.dedent("""
     `MSBuildDeps` is the dependency information generator for Microsoft MSBuild build
     system. It generate a property file with the dependencies of a package ready to be
     used by consumers using MSBuild or Visual Studio.
-    
+
     Just add the `conandeps.props` file to your solution and projects.
 """)
 
@@ -214,7 +214,8 @@ requirement_tpl = textwrap.dedent("""
     {%- if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
     {%- for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
-    * Component ``{{ requirement.ref.name }}::{{ cmake_variables.component_alias[component_name] }}``:
+    * Component ``{{ cmake_variables.target_namespace }}::{{ cmake_variables.component_alias[component_name] }}``:
+
     {{- render_cpp_info(component)|indent(width=2) }}
     {%- endif %}
     {%- endfor %}
