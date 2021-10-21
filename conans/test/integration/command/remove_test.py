@@ -456,7 +456,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("info foobar/0.1@user/testing")
         self.assertIn("Binary: Cache", self.client.out)
         self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
-        self.assertIn("Package revision: bbfc29e4eef005a7cae50bd96da33691", self.client.out)
+        self.assertIn("Package revision: cf924fbb5ed463b8bb960cf3a4ad4f3a", self.client.out)
 
         self.client.run("remove -f foobar/0.1@user/testing#{} -p {}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
@@ -475,7 +475,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("info foobar/0.1@user/testing")
         self.assertIn("Binary: Cache", self.client.out)
         self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
-        self.assertIn("Package revision: bbfc29e4eef005a7cae50bd96da33691", self.client.out)
+        self.assertIn("Package revision: cf924fbb5ed463b8bb960cf3a4ad4f3a", self.client.out)
 
         self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
