@@ -12,6 +12,7 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         with conanfile_exception_formatter(str(conanfile), "config_options"):
             conanfile.config_options()
 
+        print("APPLYING DOWNSTREAM ", conanfile, profile_options)
         # Assign only the current package options values, but none of the dependencies
         conanfile.options.apply_downstream(down_options, profile_options, ref)
 

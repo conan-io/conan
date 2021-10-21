@@ -96,6 +96,8 @@ class TestBuildRequireOptions(GraphManagerTest):
         self._check_node(protobuf_build, "protobuf/0.1#123", deps=[zlib_static], dependents=[lib])
         self._check_node(zlib_shared, "zlib/0.1#123", deps=[], dependents=[protobuf_host])
         self._check_node(zlib_static, "zlib/0.1#123", deps=[], dependents=[protobuf_build])
+        assert not zlib_static.conanfile.options.shared
+        assert zlib_shared.conanfile.options.shared
 
         # node, include, link, build, run
         _check_transitive(app, [(lib, True, True, False, None),

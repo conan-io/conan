@@ -24,6 +24,8 @@ class DepsGraphBuilder(object):
                    graph_lock=None):
         assert profile_host is not None
         assert profile_build is not None
+        assert isinstance(profile_host.options, Options)
+        assert isinstance(profile_build.options, Options)
         # print("Loading graph")
         check_updates = check_updates or update
         initial = graph_lock.initial_counter if graph_lock else None
@@ -63,12 +65,12 @@ class DepsGraphBuilder(object):
         #    node -(require)-> previous (creates a diamond with a previously existing node)
 
         # TODO: allow bootstrapping, use references instead of names
-        # print("  Expanding require ", node, "->", require)
+        print("  Expanding require ", node, "->", require)
         previous = node.check_downstream_exists(require)
         prev_node = None
         if previous is not None:
             prev_require, prev_node, base_previous = previous
-            # print("  Existing previous requirements from ", base_previous, "=>", prev_require)
+            print("  Existing previous requirements from ", base_previous, "=>", prev_require)
 
             if prev_require is None:
                 raise GraphError.loop(node, require, prev_node)
@@ -89,7 +91,7 @@ class DepsGraphBuilder(object):
                                              populate_settings_target)
             return new_node
         else:
-            # print("Closing a loop from ", node, "=>", prev_node)
+            print("Closing a loop from ", node, "=>", prev_node)
             require.process_package_type(prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
@@ -148,6 +150,7 @@ class DepsGraphBuilder(object):
         conanfile, ref = node.conanfile, node.ref
 
         pro_options = profile_host.options if node.context == CONTEXT_HOST else profile_build.options
+        assert isinstance(pro_options, Options), type(pro_options)
         run_configure_method(conanfile, down_options, pro_options, ref)
 
         # Apply build_requires from profile, overrriding the declared ones
@@ -236,6 +239,9 @@ class DepsGraphBuilder(object):
         else:
             profile = profile_host if node.context == CONTEXT_HOST else profile_build
             context = node.context
+
+        print(f"Creating node for {require.ref}(from {node}): {context} with profile",
+              profile.settings, profile.options)
 
         try:
             # TODO: If it is locked not resolve range

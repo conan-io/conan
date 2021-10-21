@@ -193,6 +193,9 @@ class Options:
         except Exception as e:
             raise ConanException("Error while initializing options. %s" % str(e))
 
+    def __repr__(self):
+        return self.dumps()
+
     @staticmethod
     def loads(text):
         """ parses a multiline text in the form, no validation here
@@ -272,7 +275,7 @@ class Options:
 
     def apply_downstream(self, down_options, profile_options, own_ref):
         assert isinstance(down_options, Options), type(down_options)
-        assert isinstance(profile_options, Options), type(down_options)
+        assert isinstance(profile_options, Options), type(profile_options)
 
         for defined_options in down_options, profile_options:
             if own_ref is None or own_ref.name is None:

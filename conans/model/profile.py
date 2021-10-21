@@ -29,6 +29,9 @@ class Profile(object):
         self._package_settings_values = None
         self.dev_reference = None  # Reference of the package being develop
 
+    def __repr__(self):
+        return self.dumps()
+
     @property
     def user_options(self):
         return self.options

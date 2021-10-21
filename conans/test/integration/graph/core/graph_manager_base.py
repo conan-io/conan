@@ -17,6 +17,7 @@ from conans.client.graph.range_resolver import RangeResolver
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
 from conans.model.manifest import FileTreeManifest
+from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
@@ -144,7 +145,7 @@ class GraphManagerTest(unittest.TestCase):
         if profile_build_requires:
             profile_host.build_requires = profile_build_requires
         if options_build:
-            profile_build.options = options_build
+            profile_build.options = Options(options_values=options_build, constrained=False)
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
         update = check_updates = False
