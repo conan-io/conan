@@ -121,8 +121,10 @@ class _PackageOptions:
 
     def __getattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        self._ensure_exists(field)
-        return self._data[field]
+        try:
+            return self._data[field]
+        except KeyError:
+            raise ConanException(option_not_exist_msg(field, list(self._data.keys())))
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
