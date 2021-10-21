@@ -298,7 +298,6 @@ def create_xcode_project(client, project_name, source):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake(version="3.19")
 def test_xcodedeps_build_configurations():
     client = TestClient(path_with_spaces=False)
 
