@@ -96,8 +96,8 @@ class PkgConfigTest(unittest.TestCase):
                     tools.replace_prefix_in_pc_file("libB.pc", lib_b_path)
 
                     with tools.environment_append({"PKG_CONFIG_PATH": os.getcwd()}):
-                        # FIXME: windows is not able to catch the output, "$()" does not exist in cmd
-                        self.run("pkg-config libB --libs --cflags >> output.txt")
+                        # Windows is not able to catch the output, "$()" does not exist in cmd
+                        self.run("pkg-config libB --libs --cflags > output.txt")
                         with open("output.txt") as f:
                             self.run('g++ main.cpp %s -o main' % f.readline().strip())
             """)
@@ -124,8 +124,8 @@ class PkgConfigTest(unittest.TestCase):
                             'PKG_CONFIG_PATH': "%s" % self.deps_cpp_info["libB"].rootpath}
 
                     with tools.environment_append(vars):
-                        # FIXME: windows is not able to catch the output, "$()" does not exist in cmd
-                        self.run("pkg-config %s libB --libs --cflags >> output.txt" % args)
+                        # Windows is not able to catch the output, "$()" does not exist in cmd
+                        self.run("pkg-config %s libB --libs --cflags > output.txt" % args)
                         with open("output.txt") as f:
                             self.run('g++ main.cpp %s -o main' % f.readline().strip())
 
