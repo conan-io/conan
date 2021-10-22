@@ -83,12 +83,10 @@ def test_conditional_os(requires):
 
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Windows"
                " -s:b os=Windows")
-    print(client.load("conan.lock"))
     assert "win/0.1 from local cache - Cache" in client.out
     assert "pkg/0.1 from local cache - Cache" in client.out
     client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Linux -s:b os=Linux")
-    print(client.load("conan.lock"))
     assert "nix/0.1 from local cache - Cache" in client.out
     assert "pkg/0.1 from local cache - Cache" in client.out
 
@@ -97,7 +95,6 @@ def test_conditional_os(requires):
     client.run("create dep nix/0.2@")
     client.run("create pkg pkg/0.1@ -s os=Windows")
     client.run("create pkg pkg/0.1@ -s os=Linux")
-
 
     client.run("install consumer --lockfile=conan.lock -s os=Windows -s:b os=Windows")
     assert "win/0.1 from local cache - Cache" in client.out
@@ -108,7 +105,6 @@ def test_conditional_os(requires):
     assert "nix/0.1" not in client.out
 
     client.run("install consumer --lockfile=conan.lock -s os=Linux -s:b os=Linux")
-    print(client.out)
     assert "nix/0.1 from local cache - Cache" in client.out
     assert "nix/0.2" not in client.out
     client.run("install consumer -s os=Linux -s:b os=Linux")
@@ -188,10 +184,20 @@ def test_conditional_incompatible_range(requires):
                " -s:b os=Windows")
     assert "dep/0.1 from local cache - Cache" in client.out
     assert "dep/1.1" not in client.out
+    # The previous lock was locking dep/0.1. This new lock will not use dep/0.1 as it is outside
+    # of its range, can't lock to it and will depend on dep/1.1. Both dep/0.1 for Windows and
+    # dep/1.1 for Linux now coexist in the lock
     client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Linux -s:b os=Linux")
     assert "dep/1.1 from local cache - Cache" in client.out
     assert "dep/0.1" not in client.out
+    lock = client.load("conan.lock")
+    assert "dep/0.1" in lock
+    assert "dep/1.1" in lock
+
+    # These will not be used, lock will avoid them
+    client.run("create dep dep/0.2@")
+    client.run("create dep dep/1.2@")
 
     client.run("install consumer --lockfile=conan.lock --lockfile-out=win.lock -s os=Windows"
                " -s:b os=Windows")
@@ -235,8 +241,8 @@ def test_conditional_compatible_range(requires):
                "--lockfile-out=conan.lock -s os=Windows -s:b os=Windows")
     assert "dep/0.1 from local cache - Cache" in client.out
     assert "dep/0.2" not in client.out
-    print(client.load("conan.lock"))
 
+    # These will not be used, lock will avoid them
     client.run("create dep dep/0.1.1@")
     client.run("create dep dep/0.3@")
 

@@ -66,7 +66,10 @@ def test_transitive_matching():
     client.run("create pkgb pkgb/0.1@")
     client.run("lock create app/conanfile.py --lockfile-out=conan.lock")
 
-    client.run("export dep dep/0.2@")
+    # TODO: create a new revision for dep/0.2, make sure it is not used
+    # FIXME: Conan locks still do not support revisions
+    # client.save({"dep/conanfile.py": new_conanfile})
+    # client.run("export dep dep/0.2@")
 
     client.run("install app/conanfile.py --lockfile=conan.lock")
     assert "pkga/0.1: toola: toola/0.1!!" in client.out
@@ -74,6 +77,7 @@ def test_transitive_matching():
     assert "pkga/0.1: dep: dep/0.1!!" in client.out
     assert "pkgb/0.1: dep: dep/0.2!!" in client.out
 
+    # TODO: This should use the changes of the new revision
     client.run("install app/conanfile.py")
     assert "pkga/0.1: toola: toola/0.1!!" in client.out
     assert "pkgb/0.1: toolb: toolb/0.1!!" in client.out
