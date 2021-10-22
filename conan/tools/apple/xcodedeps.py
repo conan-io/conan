@@ -79,7 +79,7 @@ class XcodeDeps(object):
 
     @property
     def sdk_condition(self):
-        return "*" if not self.sdk else "{}*".format(self.sdk)
+        return "*" if not self.sdk else "{}".format(self.sdk)
 
     def generate(self):
         if self.configuration is None:
