@@ -29,7 +29,7 @@ from conans.client.source import config_source_local
 from conans.client.userio import UserInput
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NotFoundException)
-from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
+from conans.model.graph_lock import LOCKFILE, Lockfile
 from conans.model.manifest import discarded_file
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
@@ -232,8 +232,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
         except ConanException as exc:
             raise
 
@@ -288,8 +287,7 @@ class ConanAPIV1(object):
                        remotes=remotes, source_conanfile_path=conanfile_path)
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
         except ConanException as exc:
             raise
 
@@ -347,8 +345,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
         except ConanException as exc:
             raise
 
@@ -400,8 +397,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
         except ConanException as exc:
             raise
 
@@ -539,8 +535,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
 
             conanfile = deps_info.root.conanfile
             cmd_build(app, conanfile_path, conanfile, base_path=cwd,
@@ -621,20 +616,19 @@ class ConanAPIV1(object):
 
         app = ConanApp(self.cache_folder)
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        graph_lock, graph_lock_file = None, None
+        graph_lock = None
         if lockfile:
             lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock_file = GraphLockFile.load(lockfile)
-            graph_lock = graph_lock_file.graph_lock
+            graph_lock = Lockfile.load(lockfile)
             ConanOutput().info("Using lockfile: '{}'".format(lockfile))
 
         app.load_remotes()
         cmd_export(app, conanfile_path, name, version, user, channel,
                    graph_lock=graph_lock, ignore_dirty=ignore_dirty)
 
-        if lockfile_out and graph_lock_file:
+        if lockfile_out and graph_lock:
             lockfile_out = _make_abs_path(lockfile_out, cwd)
-            graph_lock_file.save(lockfile_out)
+            graph_lock.save(lockfile_out)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
@@ -935,16 +929,14 @@ class ConanAPIV1(object):
 
     @api_method
     def lock_merge(self, lockfiles, lockfile_out):
-        result = GraphLock(None)
+        result = Lockfile()
         for lockfile in lockfiles:
             lockfile = _make_abs_path(lockfile)
-            graph_lock_file = GraphLockFile.load(lockfile)
-            graph_lock = graph_lock_file.graph_lock
+            graph_lock = Lockfile.load(lockfile)
             result.merge(graph_lock)
 
-        graph_lock_file = GraphLockFile(result)
         lockfile_out = _make_abs_path(lockfile_out)
-        graph_lock_file.save(lockfile_out)
+        result.save(lockfile_out)
         ConanOutput().info("Generated lockfile: %s" % lockfile_out)
 
     @api_method
@@ -975,8 +967,7 @@ class ConanAPIV1(object):
         graph_lock = None
         if lockfile:
             lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock_file = GraphLockFile.load(lockfile)
-            graph_lock = graph_lock_file.graph_lock
+            graph_lock= Lockfile.load(lockfile)
 
         phost = profile_from_args(profile_host.profiles, profile_host.settings,
                                   profile_host.options, profile_host.env, profile_host.conf,
@@ -1003,14 +994,12 @@ class ConanAPIV1(object):
 
         # The computed graph-lock by the graph expansion
         if lockfile is None or clean:
-            graph_lock = GraphLock(deps_graph)
+            graph_lock = Lockfile(deps_graph)
         else:
             graph_lock.update_lock(deps_graph)
 
-        graph_lock_file = GraphLockFile(graph_lock)
-
         lockfile_out = _make_abs_path(lockfile_out or "conan.lock")
-        graph_lock_file.save(lockfile_out)
+        graph_lock.save(lockfile_out)
         ConanOutput().info("Generated lockfile: %s" % lockfile_out)
 
     def get_template_path(self, template_name, user_overrides=False):
@@ -1026,8 +1015,7 @@ def get_graph_info(profile_host, profile_build, cwd, cache,
     graph_lock = None
     if lockfile:
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
-        graph_lock_file = GraphLockFile.load(lockfile)
-        graph_lock = graph_lock_file.graph_lock
+        graph_lock = Lockfile.load(lockfile)
         ConanOutput().info("Using lockfile: '{}'".format(lockfile))
 
     phost = profile_from_args(profile_host.profiles, profile_host.settings,

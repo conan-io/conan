@@ -12,52 +12,6 @@ LOCKFILE = "conan.lock"
 LOCKFILE_VERSION = "0.5"
 
 
-class GraphLockFile(object):
-
-    def __init__(self, graph_lock):
-        self._graph_lock = graph_lock
-
-    @property
-    def graph_lock(self):
-        return self._graph_lock
-
-    @staticmethod
-    def load(path):
-        if not path:
-            raise IOError("Invalid path")
-        if not os.path.isfile(path):
-            raise ConanException("Missing lockfile in: %s" % path)
-        content = load(path)
-        try:
-            return GraphLockFile._loads(content)
-        except Exception as e:
-            raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
-
-    def save(self, path):
-        serialized_graph_str = self._dumps()
-        save(path, serialized_graph_str)
-
-    @staticmethod
-    def _loads(text):
-        graph_json = json.loads(text)
-        version = graph_json.get("version")
-        if version:
-            if version != LOCKFILE_VERSION:
-                raise ConanException("This lockfile was created with an incompatible "
-                                     "version. Please regenerate the lockfile")
-            # Do something with it, migrate, raise...
-
-        graph_lock = GraphLock.deserialize(graph_json["graph_lock"])
-        graph_lock_file = GraphLockFile(graph_lock)
-        return graph_lock_file
-
-    def _dumps(self):
-        serial_lock = self._graph_lock.serialize()
-        result = {"graph_lock": serial_lock,
-                  "version": LOCKFILE_VERSION}
-        return json.dumps(result, indent=True)
-
-
 class ConanLockReference:
     def __init__(self, name, version, user=None, channel=None, rrev=None,
                  package_id=None, prev=None):
@@ -136,9 +90,9 @@ class ConanLockReference:
         return ConanFileReference(self.name, self.version, self.user, self.channel, self.rrev)
 
 
-class GraphLock(object):
+class Lockfile(object):
 
-    def __init__(self, deps_graph):
+    def __init__(self, deps_graph=None):
         self.requires = []
         self.python_requires = []
         self.build_requires = []
@@ -172,6 +126,21 @@ class GraphLock(object):
         self.build_requires = list(reversed(sorted(build_requires)))
         self.alias = deps_graph.aliased
 
+    @staticmethod
+    def load(path):
+        if not path:
+            raise IOError("Invalid path")
+        if not os.path.isfile(path):
+            raise ConanException("Missing lockfile in: %s" % path)
+        content = load(path)
+        try:
+            return Lockfile.deserialize(json.loads(content))
+        except Exception as e:
+            raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
+
+    def save(self, path):
+        save(path, json.dumps(self.serialize(), indent=True))
+
     def update_lock(self, deps_graph):
         """ add new things at the beginning, to give more priority
         """
@@ -201,7 +170,11 @@ class GraphLock(object):
     def deserialize(data):
         """ constructs a GraphLock from a json like dict
         """
-        graph_lock = GraphLock(deps_graph=None)
+        graph_lock = Lockfile(deps_graph=None)
+        version = data.get("version")
+        if version and version != LOCKFILE_VERSION:
+            raise ConanException("This lockfile was created with an incompatible "
+                                 "version. Please regenerate the lockfile")
         for r in data["requires"]:
             graph_lock.requires.append(ConanLockReference.loads(r))
         for r in data["python_requires"]:
@@ -214,7 +187,8 @@ class GraphLock(object):
         """ returns the object serialized as a dict of plain python types
         that can be converted to json
         """
-        return {"requires": [repr(r) for r in self.requires],
+        return {"version": LOCKFILE_VERSION,
+                "requires": [repr(r) for r in self.requires],
                 "python_requires": [repr(r) for r in self.python_requires],
                 "build_requires": [repr(r) for r in self.build_requires]}
 

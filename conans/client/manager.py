@@ -1,5 +1,3 @@
-import os
-
 from conans.cli.output import ConanOutput
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
@@ -8,7 +6,6 @@ from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.model.conan_file import ConanFile
-from conans.model.graph_lock import GraphLockFile, GraphLock
 from conans.model.ref import ConanFileReference
 
 
@@ -47,8 +44,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
 
     if graph_lock:
         graph_lock.update_lock(deps_graph)
-    else:
-        graph_lock = GraphLock(deps_graph)
 
     root_node = deps_graph.root
     conanfile = root_node.conanfile
