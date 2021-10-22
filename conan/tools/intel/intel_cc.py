@@ -70,7 +70,7 @@ class IntelCC:
         else:  # DPC++ compiler
             return "Intel(R) oneAPI DPC++ Compiler"
 
-    def generate(self, group="build"):
+    def generate(self, scope="build"):
         """Generate the Conan Intel file to be loaded in build environment by default"""
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\
@@ -82,7 +82,7 @@ class IntelCC:
             filename = self.filename + '.sh'
             content = self.command
         from conan.tools.env.environment import create_env_script
-        create_env_script(self._conanfile, content, filename, group)
+        create_env_script(self._conanfile, content, filename, scope)
 
     @property
     def installation_path(self):

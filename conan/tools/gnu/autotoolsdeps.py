@@ -59,8 +59,8 @@ class AutotoolsDeps:
             self._environment = env
         return self._environment
 
-    def vars(self, group="build"):
-        return self.environment.vars(self._conanfile, scope=group)
+    def vars(self, scope="build"):
+        return self.environment.vars(self._conanfile, scope=scope)
 
-    def generate(self,  group="build"):
-        self.vars(group).save_script("conanautotoolsdeps")
+    def generate(self,  scope="build"):
+        self.vars(scope).save_script("conanautotoolsdeps")

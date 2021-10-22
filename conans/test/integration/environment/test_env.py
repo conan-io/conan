@@ -362,7 +362,7 @@ def test_diamond_repeated():
            requires = "pkgd/1.0"
            def generate(self):
                 env = VirtualRunEnv(self)
-                runenv = env.vars(group="run")
+                runenv = env.vars(scope="run")
                 self.output.info("MYVAR1: {}!!!".format(runenv.get("MYVAR1")))
                 self.output.info("MYVAR2: {}!!!".format(runenv.get("MYVAR2")))
                 self.output.info("MYVAR3: {}!!!".format(runenv.get("MYVAR3")))

@@ -142,9 +142,9 @@ class AutotoolsToolchain:
     def vars(self):
         return self.environment().vars(self._conanfile, scope="build")
 
-    def generate(self, env=None, group="build"):
+    def generate(self, env=None, scope="build"):
         env = env or self.environment()
-        env = env.vars(self._conanfile, scope=group)
+        env = env.vars(self._conanfile, scope=scope)
         env.save_script("conanautotoolstoolchain")
         self.generate_args()
 

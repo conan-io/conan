@@ -12,11 +12,11 @@ class VCVars:
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def generate(self, group="build"):
-        _write_conanvcvars(self._conanfile, group=group)
+    def generate(self, scope="build"):
+        _write_conanvcvars(self._conanfile, scope=scope)
 
 
-def _write_conanvcvars(conanfile, group):
+def _write_conanvcvars(conanfile, scope):
     """
     write a conanvcvars.bat file with the good args from settings
     """
@@ -57,7 +57,7 @@ def _write_conanvcvars(conanfile, group):
             {}
             """.format(vcvars))
         from conan.tools.env.environment import create_env_script
-        create_env_script(conanfile, content, CONAN_VCVARS_FILE, group)
+        create_env_script(conanfile, content, CONAN_VCVARS_FILE, scope)
 
 
 def vs_ide_version(conanfile):

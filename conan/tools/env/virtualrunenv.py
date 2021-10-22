@@ -79,10 +79,10 @@ class VirtualRunEnv:
 
         return runenv
 
-    def vars(self, group="build"):
-        return self.environment().vars(self._conanfile, scope=group)
+    def vars(self, scope="build"):
+        return self.environment().vars(self._conanfile, scope=scope)
 
-    def generate(self, group="run"):
+    def generate(self, scope="run"):
         run_env = self.environment()
         if run_env:
-            run_env.vars(self._conanfile, scope=group).save_script(self._filename)
+            run_env.vars(self._conanfile, scope=scope).save_script(self._filename)

@@ -64,10 +64,10 @@ class VirtualBuildEnv:
 
         return build_env
 
-    def vars(self, group="build"):
-        return self.environment().vars(self._conanfile, scope=group)
+    def vars(self, scope="build"):
+        return self.environment().vars(self._conanfile, scope=scope)
 
-    def generate(self, group="build"):
+    def generate(self, scope="build"):
         build_env = self.environment()
         if build_env:  # Only if there is something defined
-            build_env.vars(self._conanfile, scope=group).save_script(self._filename)
+            build_env.vars(self._conanfile, scope=scope).save_script(self._filename)

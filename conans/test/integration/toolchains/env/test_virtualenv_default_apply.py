@@ -88,8 +88,8 @@ def test_virtualrunenv_explicit_declare(client, explicit_declare):
         def generate(self):
             VirtualRunEnv(self).generate({})
 
-    """).format({True: "group='build'",
-                 False: "group='run'",
+    """).format({True: "scope='build'",
+                 False: "scope='run'",
                  None: ""}.get(explicit_declare))
 
     client.save({"conanfile.py": conanfile})
