@@ -8,7 +8,6 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Patterns, Infos
-from conans.model.build_info import CppInfo
 from conans.model.options import Options
 from conans.model.requires import Requirements
 from conans.paths import RUN_LOG_NAME
@@ -202,14 +201,6 @@ class ConanFile:
     @imports_folder.setter
     def imports_folder(self, folder):
         self.folders.set_base_imports(folder)
-
-    @property
-    def build_policy_missing(self):
-        return self.build_policy == "missing"
-
-    @property
-    def build_policy_always(self):
-        return self.build_policy == "always"
 
     def source(self):
         pass

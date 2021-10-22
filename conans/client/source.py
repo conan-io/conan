@@ -99,7 +99,7 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
         conanfile.output.warning("Trying to remove corrupted source folder")
         remove_source()
         clean_dirty(conanfile.folders.base_source)
-    elif conanfile.build_policy_always:
+    elif conanfile.build_policy == "always":
         conanfile.output.warning("Detected build_policy 'always', trying to remove source folder")
         remove_source()
 

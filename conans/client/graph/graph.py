@@ -55,7 +55,6 @@ class Node(object):
         self.binary_remote = None
         self.context = context
 
-        self.id = None  # Unique ID (incremental integer assigned by Graph) of a node in the graph
         self.graph_lock_node = None  # the locking information can be None
 
         # real graph model
@@ -198,12 +197,10 @@ class Edge(object):
 
 
 class DepsGraph(object):
-    def __init__(self, initial_node_id=None):
+    def __init__(self):
         self.nodes = []
         self.aliased = {}
         self.error = False
-        self.new_aliased = {}
-        self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     def __repr__(self):
         return "\n".join((repr(n) for n in self.nodes))
@@ -213,9 +210,6 @@ class DepsGraph(object):
         return self.nodes[0] if self.nodes else None
 
     def add_node(self, node):
-        if node.id is None:
-            self._node_counter += 1
-            node.id = str(self._node_counter)
         self.nodes.append(node)
 
     def add_edge(self, src, dst, require):
