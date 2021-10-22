@@ -332,6 +332,8 @@ class ConanAPIV1(object):
                                                                                app.cache,
                                                                                lockfile=lockfile)
 
+            if graph_lock is not None:
+                graph_lock.strict = True
             install_folder = _make_abs_path(install_folder, cwd)
 
             mkdir(install_folder)
@@ -376,6 +378,9 @@ class ConanAPIV1(object):
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
+            # Make lockfile strict for consuming and install
+            if graph_lock is not None:
+                graph_lock.strict = True
             remotes = app.load_remotes(remote_name=remote_name, update=update)
             deps_install(app=app,
                          ref_or_path=conanfile_path,

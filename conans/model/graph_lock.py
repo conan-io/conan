@@ -144,6 +144,7 @@ class GraphLock(object):
         self.python_requires = []
         self.build_requires = []
         self.alias = {}
+        self.strict = False
 
         if deps_graph is None:
             return
@@ -236,6 +237,9 @@ class GraphLock(object):
                 if range_satisfies(version_range, m.version):
                     require.ref = m.get_ref()
                     break
+            else:
+                if self.strict:
+                    raise ConanException(f"Requirement '{ref}' not in lockfile")
         else:
             alias = require.alias
             if alias:
@@ -255,6 +259,9 @@ class GraphLock(object):
                 if range_satisfies(version_range, m.version):
                     require.ref = m.get_ref()
                     break
+            else:
+                if self.strict:
+                    raise ConanException(f"Requirement '{ref}' not in lockfile")
         else:
             # find exact
             pass

@@ -55,6 +55,28 @@ def test_conanfile_txt_deps_ranges_transitive(requires):
 
 
 @pytest.mark.parametrize("requires", ["requires", "build_requires"])
+def test_conanfile_txt_strict(requires):
+    """
+    conanfile.txt locking it dependencies (with version ranges)
+    """
+    client = TestClient()
+    client.save({"pkg/conanfile.py": GenConanfile(),
+                 "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
+    client.run("create pkg pkg/0.1@user/testing")
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
+    assert "pkg/0.1@user/testing from local cache - Cache" in client.out
+
+    client.run("create pkg pkg/0.2@user/testing")
+    client.run("create pkg pkg/1.2@user/testing")
+
+    # Not strict mode works
+    client.save({"consumer/conanfile.txt": f"[{requires}]\npkg/[>1.0]@user/testing"})
+
+    client.run("install consumer/conanfile.txt --lockfile=conan.lock", assert_error=True)
+    assert "Requirement 'pkg/[>1.0]@user/testing' not in lockfile" in client.out
+
+
+@pytest.mark.parametrize("requires", ["requires", "build_requires"])
 def test_conditional_os(requires):
     """
     conanfile.txt can lock conditional dependencies (conditional on OS for example),
