@@ -646,6 +646,7 @@ class TestComponentsCMakeGenerators:
             import os
             from conans import ConanFile
             from conan.tools.cmake import CMake
+            from conan.tools.layout import cmake_layout
 
             class Conan(ConanFile):
                 name = "consumer"
@@ -655,11 +656,15 @@ class TestComponentsCMakeGenerators:
                 exports_sources = "src/*"
                 requires = "middle/1.0"
 
+                def layout(self):
+                    cmake_layout(self)
+
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure(build_script_folder="src")
                     cmake.build()
-                    self.run(".%smain" % os.sep)
+                    cmd = os.path.join(self.cpp.build.bindirs[0], "main")
+                    self.run(cmd, env="conanrun")
             """.format("CMakeDeps"))
         cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
