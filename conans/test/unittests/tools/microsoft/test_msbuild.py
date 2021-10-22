@@ -120,7 +120,7 @@ def test_resource_compile():
     conanfile.conf = ConfDefinition()
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings_build = settings
-    conanfile.initialize(settings, EnvValues())
+    conanfile.initialize(settings)
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
     conanfile.settings.compiler.version = "19.3"
