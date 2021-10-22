@@ -139,7 +139,6 @@ class ConanLockReference:
 class GraphLock(object):
 
     def __init__(self, deps_graph):
-        self.root = None
         self.requires = []
         self.python_requires = []
         self.build_requires = []
@@ -161,7 +160,6 @@ class GraphLock(object):
                 continue
             assert graph_node.conanfile is not None
 
-            self.root = self.root or graph_node.ref.name
             if graph_node.context == CONTEXT_BUILD:
                 build_requires.add(ConanLockReference.loads(repr(graph_node.ref)))
             else:
@@ -204,7 +202,6 @@ class GraphLock(object):
         """ constructs a GraphLock from a json like dict
         """
         graph_lock = GraphLock(deps_graph=None)
-        graph_lock.root = data["root"]
         for r in data["requires"]:
             graph_lock.requires.append(ConanLockReference.loads(r))
         for r in data["python_requires"]:
@@ -217,8 +214,7 @@ class GraphLock(object):
         """ returns the object serialized as a dict of plain python types
         that can be converted to json
         """
-        return {"root": self.root,
-                "requires": [repr(r) for r in self.requires],
+        return {"requires": [repr(r) for r in self.requires],
                 "python_requires": [repr(r) for r in self.python_requires],
                 "build_requires": [repr(r) for r in self.build_requires]}
 
