@@ -135,7 +135,10 @@ class _PCFilesTemplate(object):
     {{  shared_flag + " " }}
     {%- endfor -%}
     {%- for _ in libdirs -%}
-    {{ gnudeps_flags._rpath_flags(["${libdir%s}" % loop.index])[0] + " " }}
+    {%- set flag = gnudeps_flags._rpath_flags(["${libdir%s}" % loop.index]) -%}
+    {%- if flag|length -%}
+    {{ flag[0] + " " }}
+    {%- endif -%}
     {%- endfor -%}
     {%- for framework in (gnudeps_flags.frameworks + gnudeps_flags.framework_paths) -%}
     {{ framework + " " }}
