@@ -3,8 +3,8 @@ import platform
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-
 
 _expected_dep_xconfig = [
     "HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{name}_$(CONFIGURATION))",
@@ -43,6 +43,7 @@ _expected_conf_xconfig = [
     "OTHER_LDFLAGS_{name}_{configuration}[arch=x86_64][sdk={sdk}] = $(CONAN_{name}_LINKER_FLAGS_{configuration}) $(CONAN_{name}_LIBRARIES_{configuration}) $(CONAN_{name}_SYSTEM_LIBS_{configuration}) $(CONAN_{name}_FRAMEWORKS_{configuration})"
 ]
 
+
 def get_name(configuration, architecture, sdk):
     props = [("configuration", configuration),
              ("architecture", architecture),
@@ -55,8 +56,10 @@ def expected_files(current_folder, configuration, architecture, sdk=None):
     files = []
     name = get_name(configuration, architecture, sdk)
     deps = ["hello", "goodbye"]
-    files.extend([os.path.join(current_folder, "conan_{}{}.xcconfig".format(dep, name)) for dep in deps])
-    files.extend([os.path.join(current_folder, "conan_{}_vars{}.xcconfig".format(dep, name)) for dep in deps])
+    files.extend(
+        [os.path.join(current_folder, "conan_{}{}.xcconfig".format(dep, name)) for dep in deps])
+    files.extend(
+        [os.path.join(current_folder, "conan_{}_vars{}.xcconfig".format(dep, name)) for dep in deps])
     files.append(os.path.join(current_folder, "conandeps.xcconfig"))
     return files
 
@@ -80,25 +83,28 @@ def check_contents(client, deps, configuration, architecture, sdk=None):
             assert line in conan_vars
 
         conan_conf = client.load(conf_name)
-        sdk_condition = "*" if not sdk else "{}*".format(sdk)
+        sdk_condition = "*" if not sdk else "{}".format(sdk)
         for var in _expected_conf_xconfig:
             assert var.format(vars_name=vars_name, name=dep_name, sdk=sdk_condition,
                               configuration=configuration) in conan_conf
 
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_generator_files():
     client = TestClient()
-    client.run("new hello/0.1 -m=cmake_lib")
-    client.run("export .")
-    client.run("new goodbye/0.1 -m=cmake_lib")
-    client.run("export .")
+    client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
+                                           .with_package_info(cpp_info={"libs": ["hello"]}, env_info={})})
+    client.run("export hello.py hello/0.1@")
+    client.save({"goodbye.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
+                                             .with_package_info(cpp_info={"libs": ["goodbye"]}, env_info={})})
+    client.run("export goodbye.py goodbye/0.1@")
     client.save({"conanfile.txt": "[requires]\nhello/0.1\ngoodbye/0.1\n"}, clean_first=True)
 
     for sdk in [None, "macosx"]:
         for build_type in ["Release", "Debug"]:
 
             sdk_setting = "-s os.sdk={}".format(sdk) if sdk else ""
-            client.run("install . -g XcodeDeps --build=missing -s build_type={} -s arch=x86_64 {}".
+            client.run("install . -g XcodeDeps -s build_type={} -s arch=x86_64 {} --build missing".
                        format(build_type, sdk_setting))
 
             for config_file in expected_files(client.current_folder, build_type, "x86_64", sdk):
