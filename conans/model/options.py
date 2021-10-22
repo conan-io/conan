@@ -274,6 +274,8 @@ class Options:
             pass
 
     def apply_downstream(self, down_options, profile_options, own_ref):
+        """ Only modifies the current package_options, not the dependencies ones
+        """
         assert isinstance(down_options, Options), type(down_options)
         assert isinstance(profile_options, Options), type(profile_options)
 
@@ -293,17 +295,21 @@ class Options:
 
     def get_upstream_options(self, down_options, own_ref):
         assert isinstance(down_options, Options)
-
-        # write the down
+        # self_options are the minimal necessary for a build-order
+        self_options = Options()
         for pattern, options in down_options._deps_package_options.items():
-            if pattern == own_ref.name:  # exact match
+            self_options._deps_package_options.setdefault(pattern, _PackageOptions()).update_options(options)
+
+        # compute now the necessary to propagate all down - self + self deps
+        upstream = Options()
+        for pattern, options in down_options._deps_package_options.items():
+            if pattern == own_ref.name:
                 continue
             self._deps_package_options.setdefault(pattern, _PackageOptions()).update_options(options)
 
-        upstream = Options()
         upstream._deps_package_options = self._deps_package_options.copy()
         self._deps_package_options.clear()
-        return upstream
+        return self_options, upstream
 
     def validate(self):
         return self._package_options.validate()

@@ -124,10 +124,7 @@ def test_info_build_order_options():
                         "context": "build",
                         "binary": "Build",
                         "options": [
-                            [
-                                "myopt",
-                                "1"
-                            ]
+                                "tool:myopt=1"
                         ]
                     },
                     {
@@ -135,10 +132,7 @@ def test_info_build_order_options():
                         "context": "build",
                         "binary": "Build",
                         "options": [
-                            [
-                                "myopt",
-                                "2"
-                            ]
+                                "tool:myopt=2"
                         ]
                     }
                 ]
@@ -156,10 +150,6 @@ def test_info_build_order_options():
                         "context": "host",
                         "binary": "Build",
                         "options": [
-                            [
-                                "tool:myopt",
-                                "1"
-                            ]
                         ]
                     }
                 ]
@@ -175,10 +165,6 @@ def test_info_build_order_options():
                         "context": "host",
                         "binary": "Build",
                         "options": [
-                            [
-                                "tool:myopt",
-                                "2"
-                            ]
                         ]
                     }
                 ]

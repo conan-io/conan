@@ -18,7 +18,9 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         with conanfile_exception_formatter(str(conanfile), "configure"):
             conanfile.configure()
 
-        conanfile.up_options = conanfile.options.get_upstream_options(down_options, ref)
+        self_options, up_options = conanfile.options.get_upstream_options(down_options, ref)
+        conanfile.self_options = self_options
+        conanfile.up_options = up_options
 
         PackageType.compute_package_type(conanfile)
 

@@ -200,7 +200,6 @@ class ConanAPIV1(object):
                                     string - test_folder path
                                     False  - disabling tests
         """
-
         app = ConanApp(self.cache_folder)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
@@ -208,6 +207,7 @@ class ConanAPIV1(object):
 
         try:
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+
             remotes = app.load_remotes(remote_name=remote_name, update=update)
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
             profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
