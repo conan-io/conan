@@ -1,5 +1,3 @@
-import os
-
 from conans.cli.output import ConanOutput
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
@@ -8,13 +6,12 @@ from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.model.conan_file import ConanFile
-from conans.model.graph_lock import GraphLockFile, GraphLock
 from conans.model.ref import ConanFileReference
 
 
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, remotes=None, build_modes=None, update=False, generators=None,
-                 no_imports=False, create_reference=None, lockfile_node_id=None,
+                 no_imports=False, create_reference=None,
                  is_build_require=False, require_overrides=None,
                  conanfile_path=None, test=None):
 
@@ -40,13 +37,14 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host, profile_build,
                                           graph_lock, root_ref, build_modes, False, update, remotes,
-                                          lockfile_node_id=lockfile_node_id,
                                           is_build_require=is_build_require,
                                           require_overrides=require_overrides)
 
     deps_graph.report_graph_error()
 
-    graph_lock = graph_lock or GraphLock(deps_graph)  # After the graph is loaded it is defined
+    if graph_lock:
+        graph_lock.update_lock(deps_graph)
+
     root_node = deps_graph.root
     conanfile = root_node.conanfile
     if root_node.recipe == RECIPE_VIRTUAL:
@@ -59,8 +57,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
     build_modes = BuildMode(build_modes)
     installer.install(deps_graph, remotes, build_modes, update)
-
-    graph_lock.complete_matching_prevs()
 
     if hasattr(conanfile, "layout") and not test:
         conanfile.folders.set_base_install(conanfile_path)
@@ -79,9 +75,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         conanfile.generators = tmp
         write_generators(conanfile)
 
-        if not isinstance(ref_or_path, ConanFileReference):
-            graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-            graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:
             run_imports(conanfile)
         if type(conanfile).system_requirements != ConanFile.system_requirements:

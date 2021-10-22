@@ -58,7 +58,6 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
                          conanfile_path=os.path.dirname(test_conanfile_path))
             out.info("Executing test_package %s" % repr(ref))
             try:
-                graph_lock.relax()
                 # FIXME: It needs to clear the cache, otherwise it fails
                 app.binaries_analyzer._evaluated = {}
                 # FIXME: Forcing now not building test dependencies, binaries should be there

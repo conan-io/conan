@@ -29,14 +29,13 @@ class GraphManager(object):
 
         name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):
-            lock_python_requires = None
             # The global.conf is necessary for download_cache definition
             profile_host.conf.rebase_conf_definition(self._cache.new_config)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
                                                    name=name, version=version,
                                                    user=user, channel=channel,
-                                                   lock_python_requires=lock_python_requires)
+                                                   graph_lock=None)
 
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
@@ -46,15 +45,14 @@ class GraphManager(object):
 
     def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
                    root_ref, build_mode, check_updates, update,
-                   remotes, apply_build_requires=True, lockfile_node_id=None,
-                   is_build_require=False, require_overrides=None):
+                   remotes, is_build_require=False, require_overrides=None):
         """ main entry point to compute a full dependency graph
         """
         assert profile_host is not None
         assert profile_build is not None
 
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
-                                         root_ref, lockfile_node_id, is_build_require,
+                                         root_ref, is_build_require,
                                          require_overrides)
         profile_host_build_requires = profile_host.build_requires
         builder = DepsGraphBuilder(self._proxy, self._loader, self._resolver)
@@ -75,7 +73,7 @@ class GraphManager(object):
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
-                        lockfile_node_id, is_build_require, require_overrides):
+                        is_build_require, require_overrides):
         """ creates the first, root node of the graph, loading or creating a conanfile
         and initializing it (settings, options) as necessary. Also locking with lockfile
         information
@@ -84,8 +82,8 @@ class GraphManager(object):
 
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
-            return self._load_root_direct_reference(reference, graph_lock, profile_host,
-                                                    lockfile_node_id, is_build_require,
+            return self._load_root_direct_reference(reference, profile_host,
+                                                    is_build_require,
                                                     require_overrides)
 
         path = reference  # The reference must be pointing to a user space conanfile
@@ -108,26 +106,12 @@ class GraphManager(object):
               the lockfile, or to initialize
         """
         if path.endswith(".py"):
-            lock_python_requires = None
-            if graph_lock:
-                if ref.name is None:
-                    # If the graph_info information is not there, better get what we can from
-                    # the conanfile
-                    # Using load_named() to run set_name() set_version() and get them
-                    # so it can be found by name in the lockfile
-                    conanfile = self._loader.load_named(path, None, None, None, None)
-                    ref = ConanFileReference(ref.name or conanfile.name,
-                                             ref.version or conanfile.version,
-                                             ref.user, ref.channel, validate=False)
-                node_id = graph_lock.get_consumer(ref)
-                lock_python_requires = graph_lock.python_requires(node_id)
-
             conanfile = self._loader.load_consumer(path, profile,
                                                    name=ref.name,
                                                    version=ref.version,
                                                    user=ref.user,
                                                    channel=ref.channel,
-                                                   lock_python_requires=lock_python_requires,
+                                                   graph_lock=graph_lock,
                                                    require_overrides=require_overrides)
 
             ref = ConanFileReference(conanfile.name, conanfile.version,
@@ -138,13 +122,9 @@ class GraphManager(object):
             root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                              path=path)
 
-        if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_consumer(root_node.ref)
-            root_node.id = node_id
-
         return root_node
 
-    def _load_root_direct_reference(self, reference, graph_lock, profile, lockfile_node_id,
+    def _load_root_direct_reference(self, reference, profile,
                                     is_build_require, require_overrides):
         """ When a full reference is provided:
         install|info|graph <ref> or export-pkg .
@@ -154,9 +134,6 @@ class GraphManager(object):
                                               is_build_require=is_build_require,
                                               require_overrides=require_overrides)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
-        # Build_requires cannot be found as early as this, because there is no require yet
-        if graph_lock and not is_build_require:  # Find the Node ID in the lock of current root
-            graph_lock.find_require_and_lock(reference, conanfile, lockfile_node_id)
         return root_node
 
     def _load_root_test_package(self, path, create_reference, graph_lock, profile,
@@ -191,6 +168,4 @@ class GraphManager(object):
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
-        if graph_lock:
-            graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
