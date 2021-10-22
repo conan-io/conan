@@ -240,6 +240,55 @@ def test_same_results_specific_generators(setup_client):
     assert new_approach_contents == old_approach_contents
 
 
+def test_cmake_find_package_new_properties():
+    # test new properties support for cmake_find_package, necessary for migration in cci
+    # cmake_target_name --> cmake_module_target_name
+    # cmake_file_name --> cmake_module_file_name
+    # https://github.com/conan-io/conan/issues/9825
+
+    client = TestClient()
+
+    greetings = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            settings = "build_type"
+            name = "greetings"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_module_target_name", "MyChat")
+                self.cpp_info.set_property("cmake_module_file_name", "MyChat")
+                self.cpp_info.components["sayhello"].set_property("cmake_module_target_name", "MySay")
+                self.cpp_info.components["sayhellobye"].set_property("cmake_module_target_name", "MySayBye")
+        """)
+    client.save({"greetings.py": greetings})
+    client.run("create greetings.py greetings/1.0@")
+    client.run("install greetings/1.0@ -g cmake_find_package")
+    find_package_contents = client.load("FindMyChat.cmake")
+    assert "add_library(MyChat::MyChat" in find_package_contents
+    assert "set(MyChat_COMPONENTS MyChat::MySay MyChat::MySayBye)" in find_package_contents
+
+    # check the generated files are the same with cmake_target_name and cmake_file_name
+    greetings = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            settings = "build_type"
+            name = "greetings"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "MyChat")
+                self.cpp_info.set_property("cmake_file_name", "MyChat")
+                self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MySay")
+                self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MySayBye")
+        """)
+    client.save({"greetings.py": greetings})
+    client.run("create greetings.py greetings/1.0@")
+    client.run("install greetings/1.0@ -g cmake_find_package")
+    find_package_contents_old = client.load("FindMyChat.cmake")
+    assert find_package_contents_old == find_package_contents
+
+
 def test_pkg_config_names(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
