@@ -86,12 +86,9 @@ class PkgConfigDeps(object):
             pc_files.update(pc_gen.get_pc_filename_and_content(comp_requires_names,
                                                                name=pkg_comp_name,
                                                                cpp_info=comp_cpp_info))
-        # After looping through all the package's components, we have to check if the package
-        # was between these components, if not, we'll have to create a *.pc file with a short content
-        # for this one
-        if pkg_name not in comp_names:
-            pkg_requires = [self._get_pc_name(pkg_name, i) for i in comp_names]
-            pc_files.update(pc_gen.get_wrapper_pc_filename_and_content(pkg_requires))
+        # Let's create a *.pc file for the main package
+        pkg_requires = [self._get_pc_name(pkg_name, i) for i in comp_names]
+        pc_files.update(pc_gen.get_wrapper_pc_filename_and_content(pkg_requires))
         return pc_files
 
     @property
