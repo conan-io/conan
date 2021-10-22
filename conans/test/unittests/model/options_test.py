@@ -120,8 +120,9 @@ class TestOptionsPropagate:
             sut.static = True
         assert "Incorrect attempt to modify options 'static'" in str(e.value)
 
-        up = sut.get_upstream_options(down_options, ref)
-        assert up.dumps() == "zlib:other=1"
+        self_options, up_options = sut.get_upstream_options(down_options, ref)
+        assert up_options.dumps() == "zlib:other=1"
+        assert self_options.dumps() == "boost:static=False\nzlib:other=1"
 
 
 class TestOptionsNone:
