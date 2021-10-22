@@ -298,6 +298,8 @@ def create_xcode_project(client, project_name, source):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.xfail(reason="The xcconfig syntax needs at leats Xcode 13 because of "
+                          "support for macros in overriding parameters with condition sets")
 @pytest.mark.tool_cmake()
 def test_xcodedeps_build_configurations():
     client = TestClient(path_with_spaces=False)
@@ -329,11 +331,11 @@ def test_xcodedeps_build_configurations():
 
     for config in ["Release", "Debug"]:
         client.run(
-            "install . -s build_type={} -s arch=x86_64 --build=missing -g XcodeDeps".format(config))
+            "install . -s build_type={} -s arch=x86_64 -s os.sdk=macosx --build=missing -g XcodeDeps".format(config))
 
     for config in ["Release", "Debug"]:
         client.run_command("xcodebuild -project {}.xcodeproj -xcconfig conandeps.xcconfig "
-                           "-configuration {} -arch x86_64".format(project_name, config))
+                           "-configuration {} -sdk macosx -arch x86_64".format(project_name, config))
         client.run_command("./build/{}/{}".format(config, project_name))
         assert "App {}!".format(config) in client.out
         assert "hello/0.1: Hello World {}!".format(config).format(config) in client.out
