@@ -21,7 +21,7 @@ def test_vcvars_generator(scope):
 
             def generate(self):
                 VCVars(self).generate({})
-    """.format('scope="{}"'.format(scope) if group else ""))
+    """.format('scope="{}"'.format(scope) if scope else ""))
 
     client.save({"conanfile.py": conanfile})
     client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=19.1 '
