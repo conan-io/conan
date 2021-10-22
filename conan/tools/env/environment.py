@@ -445,23 +445,23 @@ class ProfileEnvironment:
         return result
 
 
-def create_env_script(conanfile, content, filename, group):
+def create_env_script(conanfile, content, filename, scope):
     """
     Create a file with any content which will be registered as a new script for the defined "group".
     """
     path = os.path.join(conanfile.generators_folder, filename)
     save(path, content)
 
-    if group:
-        register_env_script(conanfile, path, group)
+    if scope:
+        register_env_script(conanfile, path, scope)
 
 
-def register_env_script(conanfile, env_script_path, group):
+def register_env_script(conanfile, env_script_path, scope):
     """
     Add the "env_script_path" to the current list of registered scripts for defined "group"
     These will be mapped to files:
     - conan{group}.bat|sh = calls env_script_path1,... env_script_pathN
     """
-    existing = conanfile.env_scripts.setdefault(group, [])
+    existing = conanfile.env_scripts.setdefault(scope, [])
     if env_script_path not in existing:
         existing.append(env_script_path)
