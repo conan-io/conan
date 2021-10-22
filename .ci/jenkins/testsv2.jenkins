@@ -14,7 +14,30 @@ String getTempFolder(String nodeName) {
 List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
     // TODO: handle revision cases
     def configs = []
-    configs.add([node: "macos_ansible", pyvers: ["PY38"]])
+    if (branchName =~ /(^PR-.*)/) {
+        configs.add([node: "Linux", pyvers: ["PY36"]])
+        if (moduleName=="conans/test/functional") {
+            configs.add([node: "Windows", pyvers: ["PY36"]])
+            configs.add([node: "macos_ansible", pyvers: ["PY36"]])
+        }
+    }
+    else if (jobName == "ConanNightlyv2") {
+        configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "macos_ansible", pyvers: ["PY36", "PY38"]])
+    }
+    else if (branchName =~ /(^release.*)|(^develop2)/) {
+        if (moduleName=="conans/test/functional") {
+            configs.add([node: "Linux", pyvers: ["PY36"]])
+            configs.add([node: "Windows", pyvers: ["PY36"]])
+            configs.add([node: "macos_ansible", pyvers: ["PY36"]])
+        }
+        else {
+            configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
+            configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
+            configs.add([node: "macos_ansible", pyvers: ["PY36", "PY38"]])
+        }
+    }
     return configs
 }
 
@@ -22,7 +45,7 @@ String getDockerImage(String moduleName) {
     if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
         return "conanio/ci-unittests"
     }
-    else if (moduleName=="conans/test/functional/toolchains/cmake/cmakedeps/test_apple_frameworks.py"){
+    else if (moduleName=="conans/test/functional"){
         return "conanio/ci-functional"
     }
     return ""
@@ -76,7 +99,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 }
                 else if (nodeName=="macos_ansible") {
                     def localDir = "/Users/jenkins"
-                    withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.13", "PY38=3.8.6", "PY39=3.9.0",
+                    withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.12", "PY38=3.8.6", "PY39=3.9.0",
                              "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
                         try {
                                 sh(script: "mkdir -p ${workDir}")
@@ -127,7 +150,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-def testModules = ["conans/test/functional/toolchains/cmake/cmakedeps/test_apple_frameworks.py"]
+def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
 
 try {
     cancelPrevious()
