@@ -126,76 +126,84 @@ class _PCFilesTemplate(object):
         self._name = get_package_name(dep)
 
     pc_file_template = textwrap.dedent("""\
-    prefix={{prefix_path}}
-    {% for name, path in libdirs %}
-    {{ name + "=" + path }}
+
+    {%- macro get_libs(libdirs, cpp_info, gnudeps_flags) -%}
+    {%- for _ in libdirs -%}
+    {{ '-L"${libdir%s}"' % loop.index + " " }}
+    {%- endfor -%}
+    {%- for sys_lib in (cpp_info.libs + cpp_info.system_libs) -%}
+    {{ "-l%s" % sys_lib + " " }}
+    {%- endfor -%}
+    {%- for shared_flag in (cpp_info.sharedlinkflags + cpp_info.exelinkflags) -%}
+    {{  shared_flag + " " }}
+    {%- endfor -%}
+    {%- for _ in libdirs -%}
+    {{ gnudeps_flags._rpath_flags(["${libdir%s}" % loop.index])[0] + " " }}
+    {%- endfor -%}
+    {%- for framework in (gnudeps_flags.frameworks + gnudeps_flags.framework_paths) -%}
+    {{ framework + " " }}
+    {%- endfor -%}
+    {%- endmacro -%}
+
+    {%- macro get_cflags(includedirs, cpp_info) -%}
+    {%- for _ in includedirs -%}
+    {{ '-I"${includedir%s}"' % loop.index + " " }}
+    {%- endfor -%}
+    {%- for cxxflags in cpp_info.cxxflags -%}
+    {{ cxxflags + " " }}
+    {%- endfor -%}
+    {%- for cflags in cpp_info.cflags-%}
+    {{ cflags + " " }}
+    {%- endfor -%}
+    {%- for define in cpp_info.defines-%}
+    {{  "-D%s" % define + " " }}
+    {%- endfor -%}
+    {%- endmacro -%}
+
+    prefix={{ prefix_path }}
+    {% for path in libdirs %}
+    {{ "libdir{}={}".format(loop.index, path) }}
     {% endfor %}
-    {% for name, path in includedirs %}
-    {{ name + "=" + path }}
+    {% for path in includedirs %}
+    {{ "includedir%d=%s" % (loop.index, path) }}
     {% endfor %}
     {% if pkg_config_custom_content %}
     # Custom PC content
-    {{pkg_config_custom_content}}
+    {{ pkg_config_custom_content }}
     {% endif %}
 
-    Name: {{name}}
-    Description: {{description}}
-    Version: {{version}}
-    Libs: {{ libs }}
-    Cflags: {{ cflags }}
+    Name: {{ name }}
+    Description: {{ description }}
+    Version: {{ version }}
+    Libs: {{ get_libs(libdirs, cpp_info, gnudeps_flags) }}
+    Cflags: {{ get_cflags(includedirs, cpp_info) }}
     {% if requires|length %}
-    Requires: {% for dep in requires %}{{ dep }}{%- if not loop.last %} {% endif %}{% endfor %}
+    Requires: {{ requires|join(' ') }}
     {% endif %}
     """)
 
     wrapper_pc_file_template = textwrap.dedent("""\
-    Name: {{name}}
-    Description: {{description}}
-    Version: {{version}}
+    Name: {{ name }}
+    Description: {{ description }}
+    Version: {{ version }}
     {% if requires|length %}
-    Requires: {% for dep in requires %}{{ dep }}{%- if not loop.last %} {% endif %}{% endfor %}
+    Requires: {{ requires|join(' ') }}
     {% endif %}
     """)
 
     def get_pc_filename_and_content(self, requires, name=None, cpp_info=None):
 
-        def _concat_if_not_empty(groups):
-            return " ".join(
-                [param for group in groups for param in group if param and param.strip()])
-
-        def get_libs(libdirs_):
-            libdirs_flags = ['-L"${%s}"' % libdir for libdir, _ in libdirs_]
-            lib_paths = ["${%s}" % libdir for libdir, _ in libdirs_]
-            libnames_flags = ["-l%s " % n for n in (cpp_info.libs + cpp_info.system_libs)]
-            shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
-
-            gnudeps_flags = GnuDepsFlags(self._conanfile, cpp_info)
-            return _concat_if_not_empty([libdirs_flags,
-                                         libnames_flags,
-                                         shared_flags,
-                                         gnudeps_flags._rpath_flags(lib_paths),
-                                         gnudeps_flags.frameworks,
-                                         gnudeps_flags.framework_paths])
-
-        def get_cflags(includedirs_):
-            return _concat_if_not_empty(
-                [['-I"${%s}"' % n for n, _ in includedirs_],
-                 cpp_info.cxxflags,
-                 cpp_info.cflags,
-                 ["-D%s" % d for d in cpp_info.defines]])
-
-        def get_formatted_dirs(field, folders, prefix_path_):
+        def get_formatted_dirs(folders, prefix_path_):
             ret = []
             for i, directory in enumerate(folders):
                 directory = os.path.normpath(directory).replace("\\", "/")
-                n = field if i == 0 else "%s%d" % (field, (i + 1))
                 prefix = ""
                 if not os.path.isabs(directory):
                     prefix = "${prefix}/"
                 elif directory.startswith(prefix_path_):
                     prefix = "${prefix}/"
                     directory = os.path.relpath(directory, prefix_path_).replace("\\", "/")
-                ret.append((n, "%s%s" % (prefix, directory)))
+                ret.append("%s%s" % (prefix, directory))
             return ret
 
         dep_name = name or self._name
@@ -204,8 +212,8 @@ class _PCFilesTemplate(object):
         cpp_info = cpp_info or self._dep.cpp_info
 
         prefix_path = package_folder.replace("\\", "/")
-        libdirs = get_formatted_dirs("libdir", cpp_info.libdirs, prefix_path)
-        includedirs = get_formatted_dirs("includedir", cpp_info.includedirs, prefix_path)
+        libdirs = get_formatted_dirs(cpp_info.libdirs, prefix_path)
+        includedirs = get_formatted_dirs(cpp_info.includedirs, prefix_path)
 
         context = {
             "prefix_path": prefix_path,
@@ -215,9 +223,9 @@ class _PCFilesTemplate(object):
             "name": dep_name,
             "description": self._conanfile.description or "Conan package: %s" % dep_name,
             "version": version,
-            "libs": get_libs(libdirs),
-            "cflags": get_cflags(includedirs),
-            "requires": requires
+            "requires": requires,
+            "cpp_info": cpp_info,
+            "gnudeps_flags": GnuDepsFlags(self._conanfile, cpp_info)
         }
         template = Template(self.pc_file_template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
