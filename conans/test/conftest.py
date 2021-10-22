@@ -39,11 +39,15 @@ tools_locations = {
                       "15": {},
                       "16": {"disabled": True},
                       "17": {"disabled": True}},
-    'pkg_config': {"exe": "pkg-config",
-                   "default": "system",
-                   # pacman -S pkg-config inside msys2-mingw64
-                   "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
-                   },
+    'pkg_config': {
+        "exe": "pkg-config",
+        "default": "0.28",
+        "0.28": {
+            "path": {
+                # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
+                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin"
+            }
+        }},
     'autotools': {"exe": "autoconf"},
     'cmake': {
         "default": "3.15",
