@@ -161,6 +161,10 @@ class RecipeReference:
         self.revision = revision
         self.timestamp = timestamp  # TODO: Which format? int timestamp?
 
+    @staticmethod
+    def from_conanref(ref, timestamp=None):
+        return RecipeReference(ref.name, ref.version, ref.user, ref.channel, ref.revision, timestamp)
+
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
         result = self.__str__()

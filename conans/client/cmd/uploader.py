@@ -13,7 +13,7 @@ from conans.util.progress_bar import left_justify_message
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files
-from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
+from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref, RecipeReference
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_recipes
@@ -494,7 +494,8 @@ class CmdUpload(object):
 
         files_to_upload, deleted, cache_files, conanfile_path, t1, layout = prep
         if files_to_upload or deleted:
-            self._remote_manager.upload_recipe(ref, files_to_upload, deleted, remote, retry,
+            upload_ref = RecipeReference.from_conanref(ref)
+            self._remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote, retry,
                                                retry_wait)
             msg = "\rUploaded conan recipe '%s' to '%s': %s" % (str(ref), remote.name, remote.url)
             self._progress_output.info(left_justify_message(msg))
