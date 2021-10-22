@@ -556,7 +556,6 @@ class TestComponentsCMakeGenerators:
         assert "Component 'mypkg::zlib' not found in 'mypkg' package requirement" in client.out
 
     @pytest.mark.slow
-    @pytest.mark.xfail(reason="This test is failing in Py27, waiting for CMakeDeps improvements")
     def test_same_name_global_target_collision(self):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
@@ -616,7 +615,8 @@ class TestComponentsCMakeGenerators:
         middle_cpp = gen_function_cpp(name="middle", includes=["middle", "expected", "variant"],
                                       calls=["expected", "variant"])
         middle_conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
 
             class Conan(ConanFile):
                 name = "middle"
