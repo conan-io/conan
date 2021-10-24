@@ -452,8 +452,6 @@ class BinaryInstaller(object):
         builder = _PackageBuilder(self._cache, node.conanfile.output,
                                   self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, remotes, pkg_layout)
-        if node.graph_lock_node:
-            node.graph_lock_node.prev = pref.revision
         return pref
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):

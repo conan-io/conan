@@ -24,11 +24,10 @@ class GraphBinariesAnalyzer(object):
         with_deps_to_build = False
         # For cascade mode, we need to check also the "modified" status of the lockfile if exists
         # modified nodes have already been built, so they shouldn't be built again
-        if build_mode.cascade and not (node.graph_lock_node and node.graph_lock_node.modified):
+        if build_mode.cascade:
             for dep in node.dependencies:
                 dep_node = dep.dst
-                if (dep_node.binary == BINARY_BUILD or
-                    (dep_node.graph_lock_node and dep_node.graph_lock_node.modified)):
+                if dep_node.binary == BINARY_BUILD:
                     with_deps_to_build = True
                     break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
@@ -106,30 +105,7 @@ class GraphBinariesAnalyzer(object):
         assert node.package_id != PACKAGE_ID_UNKNOWN, "Node.package_id shouldn't be Unknown"
         assert node.prev is None, "Node.prev should be None"
 
-        # If it has lock
-        locked = node.graph_lock_node
-        if locked and locked.package_id and locked.package_id != PACKAGE_ID_UNKNOWN:
-            pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
-            self._process_node(node, pref, build_mode, update, remotes)
-            if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
-                node.binary = BINARY_BUILD
-            if node.binary == BINARY_BUILD:
-                locked.unlock_prev()
-
-            if node.package_id != locked.package_id:  # It was a compatible package
-                # https://github.com/conan-io/conan/issues/9002
-                # We need to iterate to search the compatible combination
-                for compatible_package in node.conanfile.compatible_packages:
-                    comp_package_id = compatible_package.package_id()
-                    if comp_package_id == locked.package_id:
-                        node._package_id = locked.package_id  # FIXME: Ugly definition of private
-                        node.conanfile.settings.values = compatible_package.settings
-                        node.conanfile.options.values = compatible_package.options
-                        break
-                else:
-                    raise ConanException("'%s' package-id '%s' doesn't match the locked one '%s'"
-                                         % (repr(locked.ref), node.package_id, locked.package_id))
-        else:
+        if True:  # legacy removal, to avoid huge diff
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             assert node.binary is None, "Node.binary should be None if not locked"
             pref = PackageReference(node.ref, node.package_id)
@@ -163,10 +139,6 @@ class GraphBinariesAnalyzer(object):
                         node.binary = BINARY_INVALID
                 if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                     node.binary = BINARY_BUILD
-
-            if locked:
-                # package_id was not locked, this means a base lockfile that is being completed
-                locked.complete_base_node(node.package_id, node.prev)
 
         if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
                 node.conanfile.info.invalid[0] == BINARY_INVALID):
