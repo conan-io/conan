@@ -23,6 +23,7 @@ from conans.client.cmd.user import user_set, users_clean, users_list, token_pres
 from conans.client.conanfile.package import run_package_method
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.generators import GeneratorManager
+from conans.client.middleware import MiddlewareManager
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -201,8 +202,11 @@ class ConanApp(object):
         self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver,
                                                   self.generator_manager)
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
+        self.middleware_manager = MiddlewareManager(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.runner, self.out, self.python_requires,
-                                      self.generator_manager, self.pyreq_loader, self.requester)
+                                      self.generator_manager, self.pyreq_loader, self.requester,
+                                      middleware_manager=self.middleware_manager)
+        self.loader.load_middleware_from_cache(self.cache)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
@@ -215,6 +219,7 @@ class ConanApp(object):
         self.python_requires.enable_remotes(update=update, check_updates=check_updates,
                                             remotes=remotes)
         self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
+        self.middleware_manager.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
         return remotes
 
 

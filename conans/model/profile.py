@@ -9,6 +9,7 @@ from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.values import Values
+from conans.client.middleware.cache import MiddlewareCache
 
 
 class Profile(object):
@@ -24,12 +25,19 @@ class Profile(object):
         self.build_requires = OrderedDict()  # ref pattern: list of ref
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
+        self.middleware_requires = OrderedDict()  # ref pattern: list of ref
+        self.middleware = OrderedDict()  # ref pattern: list of str
+        self._cached_middleware = MiddlewareCache()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
         self._user_options = None
         self._package_settings_values = None
         self.dev_reference = None  # Reference of the package being develop
+
+    @property
+    def cached_middleware(self):
+        return self._cached_middleware
 
     @property
     def user_options(self):
@@ -94,6 +102,16 @@ class Profile(object):
             result.append("[buildenv]")
             result.append(self.buildenv.dumps())
 
+        if self.middleware_requires:
+            result.append("[middleware_requires]")
+            for pattern, req_list in self.middleware_requires.items():
+                result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
+
+        if self.middleware:
+            result.append("[middleware]")
+            for pattern, mw_list in self.middleware.items():
+                result.append("%s: %s" % (pattern, ", ".join(str(mw) for mw in mw_list)))
+
         return "\n".join(result).replace("\n\n", "\n")
 
     def compose_profile(self, other):
@@ -118,6 +136,33 @@ class Profile(object):
                      if not isinstance(req, ConanFileReference) else req
                 existing[r.name] = req
             self.build_requires[pattern] = list(existing.values())
+        # It is possible that middleware are repeated, or same package but different versions
+        for pattern, req_list in other.middleware_requires.items():
+            existing_middleware_requires = self.middleware_requires.get(pattern)
+            existing = OrderedDict()
+            if existing_middleware_requires is not None:
+                for mw in existing_middleware_requires:
+                    # TODO: Understand why sometimes they are str and other are ConanFileReference
+                    r = ConanFileReference.loads(mw) \
+                         if not isinstance(mw, ConanFileReference) else mw
+                    existing[r.name] = mw
+            for req in req_list:
+                r = ConanFileReference.loads(req) \
+                     if not isinstance(req, ConanFileReference) else req
+                existing[r.name] = req
+            self.middleware_requires[pattern] = list(existing.values())
+        # It is possible that middleware are repeated
+        for pattern, mw_list in other.middleware.items():
+            existing_middleware = self.middleware.get(pattern)
+            existing = OrderedDict()
+            if existing_middleware is not None:
+                for mw in existing_middleware:
+                    existing[mw] = mw
+            for mw in mw_list:
+                existing[mw] = mw
+            self.middleware[pattern] = list(existing.values())
+        # Rebuild middleware cache with new settings
+        self._cached_middleware = MiddlewareCache()
 
         self.conf.update_conf_definition(other.conf)
         self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority

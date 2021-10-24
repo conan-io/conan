@@ -14,6 +14,7 @@ from conans.errors import ConanException, NotFoundException, ConanInvalidConfigu
     conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
+from conans.model.conan_middleware import Middleware
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
@@ -24,9 +25,10 @@ from conans.util.files import load
 class ConanFileLoader(object):
 
     def __init__(self, runner, output, python_requires, generator_manager=None, pyreq_loader=None,
-                 requester=None):
+                 requester=None, middleware_manager=None):
         self._runner = runner
         self._generator_manager = generator_manager
+        self._middleware_manager = middleware_manager
         self._output = output
         self._pyreq_loader = pyreq_loader
         self._python_requires = python_requires
@@ -34,20 +36,29 @@ class ConanFileLoader(object):
         self._cached_conanfile_classes = {}
         self._requester = requester
 
+    def apply_middleware(self, conanfile_path, conanfile, user=None, channel=None,
+                         profile=None, consumer=False):
+        if not profile:
+            return conanfile
+        return self._middleware_manager.apply_middleware(conanfile_path, conanfile, user, channel,
+                                                         consumer, profile, self)
+
     def load_basic(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
-                   display=""):
+                   display="", profile=None):
         """ loads a conanfile basic object without evaluating anything
         """
         return self.load_basic_module(conanfile_path, lock_python_requires, user, channel,
-                                      display)[0]
+                                      display, profile)[0]
 
     def load_basic_module(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
-                          display=""):
+                          display="", profile=None, consumer=False):
         """ loads a conanfile basic object without evaluating anything, returns the module too
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
-            conanfile = cached[0](self._output, self._runner, display, user, channel)
+            recipe_class = self.apply_middleware(conanfile_path, cached[0], user, channel,
+                                                 profile, consumer)
+            conanfile = recipe_class(self._output, self._runner, display, user, channel)
             conanfile._conan_requester = self._requester
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(str(conanfile), "init"):
@@ -83,6 +94,8 @@ class ConanFileLoader(object):
                 if scm_data:
                     conanfile.scm.update(scm_data)
 
+            conanfile = self.apply_middleware(conanfile_path, conanfile, user, channel,
+                                              profile, consumer)
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
                                                               module)
             result = conanfile(self._output, self._runner, display, user, channel)
@@ -110,6 +123,35 @@ class ConanFileLoader(object):
             if issubclass(attr, Generator) and attr != Generator:
                 self._generator_manager.add(attr.__name__, attr, custom=True)
 
+    def load_middleware(self, conanfile_path):
+        """ Load middleware classes from a module. Any non-middleware classes
+        will be ignored. python_requires is not processed.
+        """
+        """ Parses a python in-memory module and adds any middleware found
+            to the provided middleware list
+            @param conanfile_module: the module to be processed
+            """
+        conanfile_module, module_id = _parse_conanfile(conanfile_path)
+        middleware = None
+        for name, attr in conanfile_module.__dict__.items():
+            if (name.startswith("_") or not inspect.isclass(attr) or
+                    attr.__dict__.get("__module__") != module_id):
+                continue
+            if issubclass(attr, Middleware) and attr != Middleware:
+                self._middleware_manager.add(attr.__name__, attr, custom=True)
+                if middleware is None:
+                    middleware = attr
+        if middleware is None:
+            raise ConanException("No subclass of Middleware in the file")
+        return middleware, conanfile_module
+
+    def load_middleware_from_cache(self, cache):
+        # Load custom middleware from the cache.
+        # Middleware loaded here from the cache will have precedence
+        # and overwrite possible middleware loaded from packages.
+        for middleware_path in cache.middleware:
+            self.load_middleware(middleware_path)
+
     @staticmethod
     def _load_data(conanfile_path):
         data_path = os.path.join(os.path.dirname(conanfile_path), DATA_YML)
@@ -123,10 +165,12 @@ class ConanFileLoader(object):
 
         return data or {}
 
-    def load_named(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
+    def load_named(self, conanfile_path, name, version, user, channel, lock_python_requires=None,
+                   profile=None, consumer=False):
         """ loads the basic conanfile object and evaluates its name and version
         """
-        conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires, user, channel)
+        conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires, user, channel,
+                                              profile=profile, consumer=consumer)
 
         # Export does a check on existing name & version
         if name:
@@ -207,7 +251,7 @@ class ConanFileLoader(object):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
         conanfile = self.load_named(conanfile_path, name, version, user, channel,
-                                    lock_python_requires)
+                                    lock_python_requires, profile_host, consumer=True)
 
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel, validate=False)
         if str(ref):
@@ -243,7 +287,7 @@ class ConanFileLoader(object):
         """
         try:
             conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
-                                                  ref.user, ref.channel, str(ref))
+                                                  ref.user, ref.channel, str(ref), profile)
         except Exception as e:
             raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
 
@@ -272,7 +316,8 @@ class ConanFileLoader(object):
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
-        conanfile = ConanFile(self._output, self._runner, display_name)
+        conanfile = self.apply_middleware(path, ConanFile, profile=profile, consumer=True)
+        conanfile = conanfile(self._output, self._runner, display_name)
         tmp_settings = profile.processed_settings.copy()
         package_settings_values = profile.package_settings_values
         if "&" in package_settings_values:

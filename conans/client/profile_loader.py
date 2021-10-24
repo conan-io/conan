@@ -162,7 +162,7 @@ def _load_profile(text, profile_path, default_folder):
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
                            allowed_fields=["build_requires", "settings", "env", "options", "conf",
-                                           "buildenv"])
+                                           "buildenv", "middleware_requires", "middleware"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
@@ -183,6 +183,28 @@ def _load_single_build_require(profile, line):
         pattern, req_list = tokens
     refs = [ConanFileReference.loads(reference.strip()) for reference in req_list.split(",")]
     profile.build_requires.setdefault(pattern, []).extend(refs)
+
+
+def _load_single_middleware_require(profile, line):
+
+    tokens = line.split(":", 1)
+    if len(tokens) == 1:
+        pattern, req_list = "*", line
+    else:
+        pattern, req_list = tokens
+    refs = [ConanFileReference.loads(reference.strip()) for reference in req_list.split(",")]
+    profile.middleware_requires.setdefault(pattern, []).extend(refs)
+
+
+def _load_single_middleware(profile, line):
+
+    tokens = line.split(":", 1)
+    if len(tokens) == 1:
+        pattern, mw_list = "*", line
+    else:
+        pattern, mw_list = tokens
+    middleware = [mw.strip() for mw in mw_list.split(",")]
+    profile.middleware.setdefault(pattern, []).extend(middleware)
 
 
 def _apply_inner_profile(doc, base_profile):
@@ -221,6 +243,16 @@ def _apply_inner_profile(doc, base_profile):
         # FIXME CHECKS OF DUPLICATED?
         for req in doc.build_requires.splitlines():
             _load_single_build_require(base_profile, req)
+
+    if doc.middleware_requires:
+        # FIXME CHECKS OF DUPLICATED?
+        for req in doc.middleware_requires.splitlines():
+            _load_single_middleware_require(base_profile, req)
+
+    if doc.middleware:
+        # FIXME CHECKS OF DUPLICATED?
+        for req in doc.middleware.splitlines():
+            _load_single_middleware(base_profile, req)
 
     if doc.options:
         base_profile.options.update(OptionsValues.loads(doc.options))
