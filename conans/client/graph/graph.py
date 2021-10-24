@@ -55,8 +55,6 @@ class Node(object):
         self.binary_remote = None
         self.context = context
 
-        self.graph_lock_node = None  # the locking information can be None
-
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
         self.dependencies = []  # Ordered Edges

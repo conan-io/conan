@@ -69,7 +69,3 @@ def export_pkg(app, ref, source_folder, build_folder, package_folder,
     cache.assign_prev(pkg_layout, ConanReference(pref))
     # Make sure folder is updated
     conanfile.folders.set_base_package(pkg_layout.package())
-    if pkg_node.graph_lock_node:
-        # after the package has been created we need to update the node PREV
-        pkg_node.prev = pref.revision
-        pkg_node.graph_lock_node.prev = pref.revision
