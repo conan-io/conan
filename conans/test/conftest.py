@@ -18,6 +18,7 @@ To override these locations with your own in your dev machine:
 tools_locations = {
     'svn': {"disabled": True},
     'cmake': {
+        "default": "3.19",
         "3.15": {},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
@@ -26,6 +27,7 @@ tools_locations = {
     'ninja': {
         "1.10.2": {}
     },
+    'meson': {"disabled": True},
     'bazel':  {
         "system": {"path": {'Windows': 'C:/ws/bazel/4.2.0'}},
     }
