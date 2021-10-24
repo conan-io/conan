@@ -218,7 +218,6 @@ class Command(object):
         args = parser.parse_args(*args)
 
         self._warn_python_version()
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -268,7 +267,6 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
-        self._check_lockfile_args(args)
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -403,13 +401,10 @@ class Command(object):
                             'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        parser.add_argument("--lockfile-node-id", action=OnceArgument,
-                            help="NodeID of the referenced package in the lockfile")
         parser.add_argument("--require-override", action="append",
                             help="Define a requirement override")
 
         args = parser.parse_args(*args)
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -460,7 +455,6 @@ class Command(object):
                                                          install_folder=args.install_folder,
                                                          lockfile=args.lockfile,
                                                          lockfile_out=args.lockfile_out,
-                                                         lockfile_node_id=args.lockfile_node_id,
                                                          is_build_require=args.build_require,
                                                          require_overrides=args.require_override)
 
@@ -598,7 +592,7 @@ class Command(object):
             result = InstallGraph()
             for f in args.file:
                 f = _make_abs_path(f)
-                install_graph = InstallGraph.deserialize(json.loads(load(f)))
+                install_graph = InstallGraph.load(f)
                 result.merge(install_graph)
 
             install_order_serialized = result.install_build_order()
@@ -655,7 +649,6 @@ class Command(object):
                       "recipe if not using revisions)."
         _add_common_install_arguments(parser, update_help=update_help, build_help=build_help)
         args = parser.parse_args(*args)
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -785,7 +778,6 @@ class Command(object):
                             help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -906,7 +898,6 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
-        self._check_lockfile_args(args)
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -1354,30 +1345,10 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
-        # create the parser for the "a" command
-        update_help = ("Complete missing information in the first lockfile with information "
-                       "defined in the second lockfile. Both lockfiles must represent the same "
-                       "graph, and have the same topology with the same identifiers, i.e. the "
-                       "second lockfile must be an evolution based on the first one")
-        update_cmd = subparsers.add_parser('update', help=update_help)
-        update_cmd.add_argument('old_lockfile', help='Path to lockfile to be updated')
-        update_cmd.add_argument('new_lockfile', help='Path to lockfile containing the new '
-                                'information that is going to be updated into the first lockfile')
-
-        build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
-        build_order_cmd.add_argument('lockfile', help='lockfile file')
-        build_order_cmd.add_argument("--json", action=OnceArgument,
-                                     help="generate output file in json format")
-
-        clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
-        clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
-
-        install_cmd = subparsers.add_parser('install', help='Install a lockfile')
-        install_cmd.add_argument('lockfile', help='Path to the lockfile')
-        install_cmd.add_argument("--recipes", action="store_true",
-                                 help="Install only recipes, not binaries")
-        install_cmd.add_argument("-g", "--generator", nargs=1, action=Extender,
-                                 help='Generators to use')
+        merge_cmd = subparsers.add_parser('merge', help="merge 2 or more lockfiles")
+        merge_cmd.add_argument('--lockfile', action="append", help='Path to lockfile to be merged')
+        merge_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
+                               help="Filename of the created lockfile")
 
         create_cmd = subparsers.add_parser('create',
                                            help='Create a lockfile from a conanfile or a reference')
@@ -1395,66 +1366,17 @@ class Command(object):
                                 help='Provide a package reference instead of a conanfile')
         create_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
                                 help="Path to lockfile to be used as a base")
-        create_cmd.add_argument("--base", action="store_true",
-                                help="Lock only recipe versions and revisions")
         create_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                                 help="Filename of the created lockfile")
+        create_cmd.add_argument("--clean", action="store_true", help="remove unused")
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
-
-        bundle = subparsers.add_parser('bundle', help='Manages lockfile bundles')
-        bundle_subparsers = bundle.add_subparsers(dest='bundlecommand', help='sub-command help')
-        bundle_create_cmd = bundle_subparsers.add_parser('create', help='Create lockfile bundle')
-        bundle_create_cmd.add_argument("lockfiles", nargs="+",
-                                       help="Path to lockfiles")
-        bundle_create_cmd.add_argument("--bundle-out", action=OnceArgument, default="lock.bundle",
-                                       help="Filename of the created bundle")
-
-        build_order_bundle_cmd = bundle_subparsers.add_parser('build-order',
-                                                              help='Returns build-order')
-        build_order_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
-        build_order_bundle_cmd.add_argument("--json", action=OnceArgument,
-                                            help="generate output file in json format")
-
-        update_help = ("Update both the bundle information as well as every individual lockfile, "
-                       "from the information that was modified in the individual lockfile. At the "
-                       "end, all lockfiles will have the same package revision for the binary of "
-                       "same package_id")
-        update_bundle_cmd = bundle_subparsers.add_parser('update', help=update_help)
-        update_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
-
-        clean_modified_bundle_cmd = bundle_subparsers.add_parser('clean-modified',
-                                                                 help='Clean modified flag')
-        clean_modified_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
 
         args = parser.parse_args(*args)
         self._warn_python_version()
 
-        if args.subcommand == "install":
-            self._conan_api.lock_install(args.lockfile, generators=args.generator, recipes=args.recipes)
-        elif args.subcommand == "update":
-            self._conan_api.lock_update(args.old_lockfile, args.new_lockfile)
-        elif args.subcommand == "bundle":
-            if args.bundlecommand == "create":
-                self._conan_api.lock_bundle_create(args.lockfiles, args.bundle_out)
-            elif args.bundlecommand == "update":
-                self._conan_api.lock_bundle_update(args.bundle)
-            elif args.bundlecommand == "clean-modified":
-                self._conan_api.lock_bundle_clean_modified(args.bundle)
-            elif args.bundlecommand == "build-order":
-                build_order = self._conan_api.lock_bundle_build_order(args.bundle)
-                self._out.info(build_order)
-                if args.json:
-                    json_file = _make_abs_path(args.json)
-                    save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "build-order":
-            build_order = self._conan_api.lock_build_order(args.lockfile)
-            self._out.info(build_order)
-            if args.json:
-                json_file = _make_abs_path(args.json)
-                save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "clean-modified":
-            self._conan_api.lock_clean_modified(args.lockfile)
+        if args.subcommand == "merge":
+            self._conan_api.lock_merge(args.lockfile, args.lockfile_out)
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build,
@@ -1474,9 +1396,9 @@ class Command(object):
                                     remote_name=args.remote,
                                     update=args.update,
                                     build=args.build,
-                                    base=args.base,
                                     lockfile=args.lockfile,
-                                    lockfile_out=args.lockfile_out)
+                                    lockfile_out=args.lockfile_out,
+                                    clean=args.clean)
 
     def _commands(self):
         """ Returns a list of available commands.
@@ -1510,19 +1432,6 @@ class Command(object):
             self._out.info("    %s" % match)
 
         self._out.info("")
-
-    @staticmethod
-    def _check_lockfile_args(args):
-        if args.lockfile and (args.profile_build or args.settings_build or args.options_build or
-                              args.env_build or args.conf_build):
-            raise ConanException("Cannot use profile, settings, options, env or conf 'build' when "
-                                 "using lockfile")
-        if args.lockfile and (args.profile_host or args.settings_host or args.options_host or
-                              args.env_host or args.conf_host):
-            raise ConanException("Cannot use profile, settings, options, env or conf 'host' when "
-                                 "using lockfile")
-        if args.lockfile_out and not args.lockfile:
-            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
 
     def _warn_python_version(self):
         import textwrap

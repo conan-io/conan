@@ -19,6 +19,7 @@ To override these locations with your own in your dev machine:
 tools_locations = {
     'svn': {"disabled": True},
     'cmake': {
+        "default": "3.19",
         "3.15": {},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
@@ -27,6 +28,7 @@ tools_locations = {
     'ninja': {
         "1.10.2": {}
     },
+    'meson': {"disabled": True},
     'bazel':  {
         "system": {"path": {'Windows': 'C:/ws/bazel/4.2.0'}},
     }
@@ -40,11 +42,15 @@ tools_locations = {
                       "15": {},
                       "16": {"disabled": True},
                       "17": {"disabled": True}},
-    'pkg_config': {"exe": "pkg-config",
-                   "default": "system",
-                   # pacman -S pkg-config inside msys2-mingw64
-                   "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
-                   },
+    'pkg_config': {
+        "exe": "pkg-config",
+        "default": "0.28",
+        "0.28": {
+            "path": {
+                # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
+                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin"
+            }
+        }},
     'autotools': {"exe": "autoconf"},
     'cmake': {
         "default": "3.15",

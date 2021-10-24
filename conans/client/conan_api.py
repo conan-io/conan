@@ -28,8 +28,7 @@ from conans.client.remover import ConanRemover
 from conans.client.source import config_source_local
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NotFoundException)
-from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
-from conans.model.lock_bundle import LockBundle
+from conans.model.graph_lock import LOCKFILE, Lockfile
 from conans.model.manifest import discarded_file
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
@@ -234,8 +233,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
         except ConanException as exc:
             raise
 
@@ -289,8 +287,7 @@ class ConanAPIV1(object):
                        source_conanfile_path=conanfile_path)
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
         except ConanException as exc:
             raise
 
@@ -318,7 +315,7 @@ class ConanAPIV1(object):
                           remote_name=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
                           lockfile=None, lockfile_out=None, profile_build=None,
-                          lockfile_node_id=None, is_build_require=False, conf=None,
+                          is_build_require=False, conf=None,
                           require_overrides=None):
         app = ConanApp(self.cache_folder)
         # FIXME: remote_name should be remote
@@ -334,6 +331,8 @@ class ConanAPIV1(object):
                                                                                app.cache,
                                                                                lockfile=lockfile)
 
+            if graph_lock is not None:
+                graph_lock.strict = True
             install_folder = _make_abs_path(install_folder, cwd)
 
             mkdir(install_folder)
@@ -341,14 +340,12 @@ class ConanAPIV1(object):
                          profile_host=profile_host, profile_build=profile_build,
                          graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
                          generators=generators,
-                         lockfile_node_id=lockfile_node_id,
                          is_build_require=is_build_require,
                          require_overrides=require_overrides)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
         except ConanException as exc:
             raise
 
@@ -380,6 +377,9 @@ class ConanAPIV1(object):
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
+            # Make lockfile strict for consuming and install
+            if graph_lock is not None:
+                graph_lock.strict = True
             deps_install(app=app,
                          ref_or_path=conanfile_path,
                          install_folder=install_folder,
@@ -396,8 +396,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
         except ConanException as exc:
             raise
 
@@ -533,8 +532,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-                graph_lock_file.save(lockfile_out)
+                graph_lock.save(lockfile_out)
 
             conanfile = deps_info.root.conanfile
             cmd_build(app, conanfile_path, conanfile, base_path=cwd,
@@ -613,18 +611,17 @@ class ConanAPIV1(object):
 
         app = ConanApp(self.cache_folder)
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        graph_lock, graph_lock_file = None, None
+        graph_lock = None
         if lockfile:
             lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock_file = GraphLockFile.load(lockfile)
-            graph_lock = graph_lock_file.graph_lock
+            graph_lock = Lockfile.load(lockfile)
             ConanOutput().info("Using lockfile: '{}'".format(lockfile))
         cmd_export(app, conanfile_path, name, version, user, channel,
                    graph_lock=graph_lock, ignore_dirty=ignore_dirty)
 
-        if lockfile_out and graph_lock_file:
+        if lockfile_out and graph_lock:
             lockfile_out = _make_abs_path(lockfile_out, cwd)
-            graph_lock_file.save(lockfile_out)
+            graph_lock.save(lockfile_out)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
@@ -847,117 +844,22 @@ class ConanAPIV1(object):
         return {str(k): v for k, v in app.cache.editable_packages.edited_refs.items()}
 
     @api_method
-    def lock_update(self, old_lockfile, new_lockfile, cwd=None):
-        cwd = cwd or os.getcwd()
-        old_lockfile = _make_abs_path(old_lockfile, cwd)
-        old_lock = GraphLockFile.load(old_lockfile)
-        new_lockfile = _make_abs_path(new_lockfile, cwd)
-        new_lock = GraphLockFile.load(new_lockfile)
-        if old_lock.profile_host.dumps() != new_lock.profile_host.dumps():
-            raise ConanException("Profiles of lockfiles are different\n%s:\n%s\n%s:\n%s"
-                                 % (old_lockfile, old_lock.profile_host.dumps(),
-                                    new_lockfile, new_lock.profile_host.dumps()))
-        old_lock.graph_lock.update_lock(new_lock.graph_lock)
-        old_lock.save(old_lockfile)
+    def lock_merge(self, lockfiles, lockfile_out):
+        result = Lockfile()
+        for lockfile in lockfiles:
+            lockfile = _make_abs_path(lockfile)
+            graph_lock = Lockfile.load(lockfile)
+            result.merge(graph_lock)
 
-    @api_method
-    def lock_build_order(self, lockfile, cwd=None):
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd)
-
-        graph_lock_file = GraphLockFile.load(lockfile)
-        if graph_lock_file.profile_host is None:
-            raise ConanException("Lockfiles with --base do not contain profile information, "
-                                 "cannot be used. Create a full lockfile")
-
-        graph_lock = graph_lock_file.graph_lock
-        build_order = graph_lock.build_order()
-        return build_order
-
-    @api_method
-    def lock_clean_modified(self, lockfile, cwd=None):
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd)
-
-        graph_lock_file = GraphLockFile.load(lockfile)
-        graph_lock = graph_lock_file.graph_lock
-        graph_lock.clean_modified()
-        graph_lock_file.save(lockfile)
-
-    @api_method
-    def lock_install(self, lockfile, remote_name=None, build=None,
-                     generators=None, install_folder=None, cwd=None,
-                     lockfile_out=None, recipes=None):
-        app = ConanApp(self.cache_folder)
-        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-        graph_info = get_graph_info(None, None, cwd,
-                                    app.cache, lockfile=lockfile)
-        phost, pbuild, graph_lock, root_ref = graph_info
-
-        if not generators:  # We don't want the default txt
-            generators = False
-
-        install_folder = _make_abs_path(install_folder, cwd)
-
-        mkdir(install_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-
-        root_id = graph_lock.root_node_id()
-        reference = graph_lock.nodes[root_id].ref
-        if recipes:
-            graph = app.graph_manager.load_graph(reference, create_reference=None,
-                                                 profile_host=phost, profile_build=pbuild,
-                                                 graph_lock=graph_lock,
-                                                 root_ref=root_ref,
-                                                 build_mode=None, update=None,
-                                                 lockfile_node_id=root_id)
-            print_graph(graph)
-        else:
-            deps_install(app, ref_or_path=reference, install_folder=install_folder,
-                         base_folder=cwd,
-                         profile_host=phost, profile_build=pbuild, graph_lock=graph_lock,
-                         root_ref=root_ref, build_modes=build,
-                         generators=generators, lockfile_node_id=root_id)
-
-        if lockfile_out:
-            lockfile_out = _make_abs_path(lockfile_out, cwd)
-            graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
-            graph_lock_file.save(lockfile_out)
-
-    @api_method
-    def lock_bundle_create(self, lockfiles, lockfile_out, cwd=None):
-        cwd = cwd or os.getcwd()
-        result = LockBundle.create(lockfiles, cwd)
-        lockfile_out = _make_abs_path(lockfile_out, cwd)
-        save(lockfile_out, result.dumps())
-
-    @api_method
-    def lock_bundle_build_order(self, lockfile, cwd=None):
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd)
-        lock_bundle = LockBundle()
-        lock_bundle.loads(load(lockfile))
-        build_order = lock_bundle.build_order()
-        return build_order
-
-    @api_method
-    def lock_bundle_update(self, lock_bundle_path, cwd=None):
-        cwd = cwd or os.getcwd()
-        lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
-        LockBundle.update_bundle(lock_bundle_path)
-
-    @api_method
-    def lock_bundle_clean_modified(self, lock_bundle_path, cwd=None):
-        cwd = cwd or os.getcwd()
-        lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
-        LockBundle.clean_modified(lock_bundle_path)
+        lockfile_out = _make_abs_path(lockfile_out)
+        result.save(lockfile_out)
+        ConanOutput().info("Generated lockfile: %s" % lockfile_out)
 
     @api_method
     def lock_create(self, path, lockfile_out,
                     reference=None, name=None, version=None, user=None, channel=None,
                     profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
-                    base=None, lockfile=None):
+                    lockfile=None, clean=False):
         app = ConanApp(self.cache_folder)
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)], update=update)
@@ -980,47 +882,40 @@ class ConanAPIV1(object):
         else:  # reference
             ref_or_path = ConanFileReference.loads(reference)
 
-        phost = pbuild = graph_lock = None
+        graph_lock = None
         if lockfile:
             lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock_file = GraphLockFile.load(lockfile)
-            phost = graph_lock_file.profile_host
-            pbuild = graph_lock_file.profile_build
-            graph_lock = graph_lock_file.graph_lock
-            graph_lock.relax()
+            graph_lock= Lockfile.load(lockfile)
 
-        if not phost:
-            phost = profile_from_args(profile_host.profiles, profile_host.settings,
-                                      profile_host.options, profile_host.env, profile_host.conf,
-                                      cwd, app.cache)
+        phost = profile_from_args(profile_host.profiles, profile_host.settings,
+                                  profile_host.options, profile_host.env, profile_host.conf,
+                                  cwd, app.cache)
 
-        if not pbuild:
-            # Only work on the profile_build if something is provided
-            pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                       profile_build.options, profile_build.env, profile_build.conf,
-                                       cwd, app.cache, build_profile=True)
+        # Only work on the profile_build if something is provided
+        pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                                   profile_build.options, profile_build.env, profile_build.conf,
+                                   cwd, app.cache, build_profile=True)
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         phost.process_settings(app.cache)
-        if pbuild:
-            pbuild.process_settings(app.cache)
+        pbuild.process_settings(app.cache)
 
+        # FIXME: Using update as check_update?
         deps_graph = app.graph_manager.load_graph(ref_or_path, None, phost, pbuild, graph_lock,
-                                                  root_ref, build)
+                                                  root_ref, build,)
+        if deps_graph.error:
+            raise deps_graph.error
+
         print_graph(deps_graph)
 
         # The computed graph-lock by the graph expansion
-        graph_lock = graph_lock or GraphLock(deps_graph)
-        # Pure graph_lock, no more graph_info mess
-        graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
-        if lockfile:
-            new_graph_lock = GraphLock(deps_graph)
-            graph_lock_file = GraphLockFile(phost, pbuild, new_graph_lock)
-        if base:
-            graph_lock_file.only_recipes()
+        if lockfile is None or clean:
+            graph_lock = Lockfile(deps_graph)
+        else:
+            graph_lock.update_lock(deps_graph)
 
         lockfile_out = _make_abs_path(lockfile_out or "conan.lock")
-        graph_lock_file.save(lockfile_out)
+        graph_lock.save(lockfile_out)
         ConanOutput().info("Generated lockfile: %s" % lockfile_out)
 
     def get_template_path(self, template_name, user_overrides=False):
@@ -1033,24 +928,17 @@ def get_graph_info(profile_host, profile_build, cwd, cache,
 
     root_ref = ConanFileReference(name, version, user, channel, validate=False)
 
+    graph_lock = None
     if lockfile:
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
-        graph_lock_file = GraphLockFile.load(lockfile)
-        profile_host = graph_lock_file.profile_host
-        profile_build = graph_lock_file.profile_build
-        if profile_host is None:
-            raise ConanException("Lockfiles with --base do not contain profile information, "
-                                 "cannot be used. Create a full lockfile")
-        profile_host.process_settings(cache, preprocess=False)
-        profile_build.process_settings(cache, preprocess=False)
-        graph_lock = graph_lock_file.graph_lock
+        graph_lock = Lockfile.load(lockfile)
         ConanOutput().info("Using lockfile: '{}'".format(lockfile))
-        return profile_host, profile_build, graph_lock, root_ref
 
     phost = profile_from_args(profile_host.profiles, profile_host.settings,
                               profile_host.options, profile_host.env, profile_host.conf,
                               cwd, cache)
     phost.process_settings(cache)
+
     # Only work on the profile_build if something is provided
     pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                profile_build.options, profile_build.env, profile_build.conf,
@@ -1062,4 +950,4 @@ def get_graph_info(profile_host, profile_build, cwd, cache,
     # FIXME: Apply to locked graph-info as well
     phost.conf.rebase_conf_definition(cache.new_config)
     pbuild.conf.rebase_conf_definition(cache.new_config)
-    return phost, pbuild, None, root_ref
+    return phost, pbuild, graph_lock, root_ref
