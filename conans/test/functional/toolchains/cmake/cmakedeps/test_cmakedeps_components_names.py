@@ -622,6 +622,8 @@ class TestComponentsCMakeGenerators:
 
                     self.cpp_info.components["1"].set_property("cmake_target_name", "{name}")
                     self.cpp_info.components["1"].libs = ["{name}"]
+                    self.cpp_info.components["1"].includedirs = ["include"]
+                    self.cpp_info.components["1"].libdirs = ["lib"]
             """)
         basic_cmake = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
