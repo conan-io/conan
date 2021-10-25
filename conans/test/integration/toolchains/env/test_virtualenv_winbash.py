@@ -68,7 +68,7 @@ def test_virtualenv_deactivated(client, win_bash):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_nowinbash_virtual_msys(client):
-    # Make sure the "tools.microsoft.bash:subsystem=cygwin" is ignored if not win_bash
+    # Make sure the "tools.microsoft.bash:subsystem=msys2" is ignored if not win_bash
     conanfile = str(GenConanfile().with_settings("os")
                     .with_generator("VirtualBuildEnv").with_generator("VirtualRunEnv")
                     .with_require("foo/1.0"))
