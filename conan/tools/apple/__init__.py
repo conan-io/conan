@@ -5,3 +5,4 @@
 # from conan.tools.apple.apple import apple_sdk_name
 # from conan.tools.apple.apple import apple_deployment_target_flag
 # from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.xcodedeps import XcodeDeps

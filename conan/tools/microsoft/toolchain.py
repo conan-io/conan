@@ -3,7 +3,7 @@ import textwrap
 from xml.dom import minidom
 
 from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars
 from conans.errors import ConanException
 from conans.util.files import save, load
@@ -131,6 +131,11 @@ class MSBuildToolchain(object):
                   <RuntimeLibrary>{}</RuntimeLibrary>
                   <LanguageStandard>{}</LanguageStandard>{}
                 </ClCompile>
+                <ResourceCompile>
+                  <PreprocessorDefinitions>
+                     {};%(PreprocessorDefinitions)
+                  </PreprocessorDefinitions>
+                </ResourceCompile>
               </ItemDefinitionGroup>
               <PropertyGroup Label="Configuration">
                 <PlatformToolset>{}</PlatformToolset>
@@ -150,7 +155,7 @@ class MSBuildToolchain(object):
         compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
                                   for k, v in self.compile_options.items())
         config_props = toolchain_file.format(preprocessor_definitions, runtime_library, cppstd,
-                                             compile_options, toolset)
+                                             compile_options, preprocessor_definitions, toolset)
         config_filepath = os.path.join(self._conanfile.generators_folder, config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)
