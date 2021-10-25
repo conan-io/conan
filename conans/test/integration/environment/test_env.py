@@ -476,6 +476,7 @@ def test_multiple_deactivate():
     client.save({"conanfile.py": conanfile,
                  "display.bat": display_bat,
                  "display.sh": display_sh})
+    os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
     client.run("install .")
 
     if platform.system() == "Windows":
