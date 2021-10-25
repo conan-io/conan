@@ -85,11 +85,11 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, cache, remote_manager, remotes):
-        self._user_input = UserInput(cache.config.non_interactive)
-        self._cache = cache
-        self._remote_manager = remote_manager
-        self._remotes = remotes
+    def __init__(self, app):
+        self._app = app
+        self._user_input = UserInput(app.cache.config.non_interactive)
+        self._cache = app.cache
+        self._remote_manager = app.remote_manager
 
     def _remote_remove(self, ref, package_ids, remote):
         assert (isinstance(remote, Remote))
@@ -165,7 +165,7 @@ class ConanRemover(object):
             ref_layout = self._cache.ref_layout(ref)
             self._cache.remove_layout(ref_layout)
 
-    def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
+    def remove(self, pattern, src=None, build_ids=None, package_ids_filter=None,
                force=False, packages_query=None):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
@@ -176,7 +176,7 @@ class ConanRemover(object):
         @param packages_query: Only if src is a reference. Query settings and options
         """
 
-        if remote_name and (build_ids is not None or src):
+        if self._app.selected_remote and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
         is_reference = check_valid_ref(pattern)
@@ -192,12 +192,11 @@ class ConanRemover(object):
                     raise ConanException("Specify a recipe revision if you specify a package "
                                          "revision")
 
-        if remote_name:
-            remote = self._remotes[remote_name]
+        if self._app.selected_remote:
             if input_ref:
                 refs = [input_ref]
             else:
-                refs = self._remote_manager.search_recipes(remote, pattern)
+                refs = self._remote_manager.search_recipes(self._app.selected_remote, pattern)
         else:
             if input_ref:
                 # TODO: cache2.0 do we want to get all revisions or just the latest?
@@ -222,8 +221,9 @@ class ConanRemover(object):
             package_ids = package_ids_filter
             if packages_query:
                 # search packages
-                if remote_name:
-                    packages = self._remote_manager.search_packages(remote, ref, packages_query)
+                if self._app.selected_remote:
+                    packages = self._remote_manager.search_packages(self._app.selected_remote,
+                                                                    ref, packages_query)
                 else:
                     pkg_ids = self._cache.get_package_ids(ref)
                     all_package_revs = []
@@ -242,8 +242,8 @@ class ConanRemover(object):
 
             if self._ask_permission(ref, src, build_ids, package_ids, force):
                 try:
-                    if remote_name:
-                        self._remote_remove(ref, package_ids, remote)
+                    if self._app.selected_remote:
+                        self._remote_remove(ref, package_ids, self._app.selected_remote)
                     else:
                         self._local_remove(ref, src, build_ids, package_ids)
                 except NotFoundException:

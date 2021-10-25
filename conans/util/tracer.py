@@ -148,9 +148,10 @@ def log_client_rest_api_call(url, method, duration, headers):
                                      "duration": duration, "headers": headers})
 
 
-def log_command(name, parameters):
-    if name == "authenticate" and "password" in parameters:
-        parameters = copy.copy(parameters)  # Ensure we don't alter any app object like args
+def log_command(name, kwargs):
+    parameters = copy.copy(kwargs)  # Ensure we don't alter any app object like args
+    if name == "remotes.login":
+        # FIXME: This is not doing anything because the password is not a kwarg anymore, is an arg
         parameters["password"] = MASKED_FIELD
     _append_action("COMMAND", {"name": name, "parameters": parameters})
     logger.debug("CONAN_API: %s(%s)" % (name, ",".join("%s=%s" % (k, v)

@@ -11,13 +11,14 @@ from conans.model.ref import ConanFileReference
 
 
 class GraphManager(object):
-    def __init__(self, cache, loader, proxy, resolver, binary_analyzer):
-        self._proxy = proxy
+    def __init__(self, conan_app):
+        self._conan_app = conan_app
+        self._proxy = conan_app.proxy
         self._output = ConanOutput()
-        self._resolver = resolver
-        self._cache = cache
-        self._loader = loader
-        self._binary_analyzer = binary_analyzer
+        self._range_resolver = conan_app.range_resolver
+        self._cache = conan_app.cache
+        self._loader = conan_app.loader
+        self._binaries_analyzer = conan_app.binaries_analyzer
 
     def load_consumer_conanfile(self, conanfile_path):
         """loads a conanfile for local flow: source
@@ -44,8 +45,7 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
-                   root_ref, build_mode, check_updates, update,
-                   remotes, is_build_require=False, require_overrides=None):
+                   root_ref, build_mode, is_build_require=False, require_overrides=None):
         """ main entry point to compute a full dependency graph
         """
         assert profile_host is not None
@@ -55,20 +55,19 @@ class GraphManager(object):
                                          root_ref, is_build_require,
                                          require_overrides)
         profile_host_build_requires = profile_host.build_requires
-        builder = DepsGraphBuilder(self._proxy, self._loader, self._resolver)
-        deps_graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
-                                        profile_build, graph_lock)
-        version_ranges_output = self._resolver.output
+        builder = DepsGraphBuilder(self._proxy, self._loader, self._range_resolver)
+        deps_graph = builder.load_graph(root_node, profile_host, profile_build, graph_lock)
+        version_ranges_output = self._range_resolver.output
         if version_ranges_output:
             self._output.success("Version ranges solved")
             for msg in version_ranges_output:
                 self._output.info("    %s" % msg)
             self._output.writeln("")
-            self._resolver.clear_output()
+            self._range_resolver.clear_output()
 
         # TODO: Move binary_analyzer elsewhere
         if not deps_graph.error:
-            self._binary_analyzer.evaluate_graph(deps_graph, build_mode, update, remotes)
+            self._binaries_analyzer.evaluate_graph(deps_graph, build_mode)
 
         return deps_graph
 
