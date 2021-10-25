@@ -13,7 +13,7 @@ def conanfile():
                     .with_import("import os")
                     .with_setting("build_type").with_setting("arch")
                     .with_import("from conan.tools.layout import {ly}")
-                    .with_import("from conan.tools.file import AutoPackager"))
+                    .with_import("from conan.tools.files import AutoPackager"))
 
     conanfile += """
     def source(self):

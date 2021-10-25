@@ -48,22 +48,23 @@ def cmd_build(app, conanfile_path, base_path, source_folder, build_folder, packa
             conan_file.folders.set_base_package(conanfile_folder)
             conan_file.folders.set_base_generators(conanfile_folder)
             conan_file.folders.set_base_install(conanfile_folder)
-            mkdir(conan_file.build_folder)
-            os.chdir(conanfile_folder)
         else:
             conan_file.folders.set_base_build(build_folder)
             conan_file.folders.set_base_source(source_folder)
             conan_file.folders.set_base_package(package_folder)
             conan_file.folders.set_base_generators(base_path)
             conan_file.folders.set_base_install(install_folder)
-            mkdir(conan_file.build_folder)
-            os.chdir(conan_file.build_folder)
+
+        mkdir(conan_file.build_folder)
+        os.chdir(conan_file.build_folder)
 
         run_build_method(conan_file, app.hook_manager, conanfile_path=conanfile_path)
         if test:
             with get_env_context_manager(conan_file):
                 conan_file.output.highlight("Running test()")
                 with conanfile_exception_formatter(str(conan_file), "test"):
+                    if hasattr(conan_file, "layout"):
+                        os.chdir(conan_file.conanfile_folder)
                     conan_file.test()
     except ConanException:
         raise  # Raise but not let to reach the Exception except (not print traceback)
