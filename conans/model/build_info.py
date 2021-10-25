@@ -218,7 +218,9 @@ class _CppInfo(object):
     #  Use get_property for 2.0
     def get_name(self, generator, default_name=True):
         property_name = None
-        if "cmake" in generator:
+        if generator == "cmake_find_package" and self.get_property("cmake_module_target_name", generator):
+            property_name = "cmake_module_target_name"
+        elif "cmake" in generator:
             property_name = "cmake_target_name"
         elif "pkg_config" in generator:
             property_name = "pkg_config_name"
@@ -227,7 +229,11 @@ class _CppInfo(object):
 
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
     def get_filename(self, generator, default_name=True):
-        result = self.get_property("cmake_file_name", generator) or self.filenames.get(generator)
+        if generator == "cmake_find_package" and self.get_property("cmake_module_file_name", generator):
+            property_name = "cmake_module_file_name"
+        else:
+            property_name = "cmake_file_name"
+        result = self.get_property(property_name, generator) or self.filenames.get(generator)
         if result:
             return result
         return self.get_name(generator, default_name=default_name)

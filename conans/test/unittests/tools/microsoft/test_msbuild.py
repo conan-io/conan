@@ -106,6 +106,43 @@ def test_msbuild_standard():
     assert '<LanguageStandard>stdcpp20</LanguageStandard>' in load(props_file)
 
 
+def test_resource_compile():
+    test_folder = temp_folder()
+
+    settings = Settings({"build_type": ["Release"],
+                         "compiler": {"msvc": {"version": ["19.3"], "cppstd": ["20"]}},
+                         "os": ["Windows"],
+                         "arch": ["x86_64"]})
+    conanfile = ConanFile(Mock(), None)
+    conanfile.folders.set_base_generators(test_folder)
+    conanfile.install_folder = test_folder
+    conanfile.conf = ConfDefinition()
+    conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.settings_build = settings
+    conanfile.initialize(settings, EnvValues())
+    conanfile.settings.build_type = "Release"
+    conanfile.settings.compiler = "msvc"
+    conanfile.settings.compiler.version = "19.3"
+    conanfile.settings.compiler.cppstd = "20"
+    conanfile.settings.os = "Windows"
+    conanfile.settings.arch = "x86_64"
+
+    msbuild = MSBuildToolchain(conanfile)
+    msbuild.preprocessor_definitions["MYTEST"] = "MYVALUE"
+    props_file = os.path.join(test_folder, 'conantoolchain_release_x64.props')
+    with mock.patch("conan.tools.microsoft.visual.vcvars_path", mock.MagicMock(return_value=".")):
+        msbuild.generate()
+    expected = """
+        <ResourceCompile>
+          <PreprocessorDefinitions>
+             MYTEST=MYVALUE;%(PreprocessorDefinitions)
+          </PreprocessorDefinitions>
+        </ResourceCompile>"""
+    props_file = load(props_file)  # Remove all blanks and CR to compare
+    props_file = "".join(s.strip() for s in props_file.splitlines())
+    assert "".join(s.strip() for s in expected.splitlines()) in props_file
+
+
 @pytest.mark.parametrize("mode,expected_toolset", [
     ("icx", "Intel C++ Compiler 2021"),
     ("dpcpp", "Intel(R) oneAPI DPC++ Compiler"),
