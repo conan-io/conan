@@ -62,7 +62,7 @@ class ConanApiAuthManager(object):
                 # (will be anonymous call but exporting who is calling)
                 logger.info("Token expired or not valid, cleaning the saved token and retrying")
                 self._clear_user_tokens_in_db(user, remote)
-                return self._retry_with_new_token(user, remote, method_name, *args, **kwargs)
+                return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 
     def _retry_with_new_token(self, user, remote, method_name, *args, **kwargs):
         """Try LOGIN_RETRIES to obtain a password from user input for which
