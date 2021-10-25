@@ -449,13 +449,6 @@ class CppInfo(_CppInfo):
                                          "but %s" % (comp_require, reason))
 
         if self.components:
-            # Raise on component name
-            for comp_name, comp in self.components.items():
-                if comp_name == package_name:
-                    raise ConanException(
-                        "Component name cannot be the same as the package name: '%s'"
-                        % comp_name)
-
             # check that requires are used in components and check that components exists in requires
             requires_from_components = set()
             for comp_name, comp in self.components.items():
