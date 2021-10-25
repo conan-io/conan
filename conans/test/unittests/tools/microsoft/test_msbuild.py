@@ -115,7 +115,8 @@ def test_resource_compile():
     conanfile = ConanFile(Mock(), None)
     conanfile.folders.set_base_generators(test_folder)
     conanfile.install_folder = test_folder
-    conanfile.conf = ConfDefinition()
+    conanfile.conf = Conf()
+    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings_build = settings
     conanfile.initialize(settings, EnvValues())
@@ -129,8 +130,7 @@ def test_resource_compile():
     msbuild = MSBuildToolchain(conanfile)
     msbuild.preprocessor_definitions["MYTEST"] = "MYVALUE"
     props_file = os.path.join(test_folder, 'conantoolchain_release_x64.props')
-    with mock.patch("conan.tools.microsoft.visual.vcvars_path", mock.MagicMock(return_value=".")):
-        msbuild.generate()
+    msbuild.generate()
     expected = """
         <ResourceCompile>
           <PreprocessorDefinitions>
