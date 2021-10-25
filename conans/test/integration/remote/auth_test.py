@@ -177,7 +177,7 @@ def test_token_expired():
     server_folder = temp_folder()
     server_conf = textwrap.dedent("""
        [server]
-       jwt_expire_minutes: 1
+       jwt_expire_minutes: 0.001
        authorize_timeout: 0
        disk_authorize_timeout: 0
        disk_storage_path: ./data
@@ -189,22 +189,23 @@ def test_token_expired():
        [write_permissions]
        */*@*/*: admin
        """)
-    save(os.path.join(server_folder, ".conan_server", "server.conf"),
-         server_conf)
+    save(os.path.join(server_folder, ".conan_server", "server.conf"), server_conf)
     server = TestServer(base_path=server_folder, users={"admin": "password"})
 
     c = TestClient(servers={"default": server}, users={"default": [("admin", "password")]})
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . pkg/0.1@user/stable")
     c.run("upload * -r=default --all -c")
-    print(c.out)
-    print(c.cache.localdb.get_login(server.fake_url))
+    user, token, _ = c.cache.localdb.get_login(server.fake_url)
+    assert user == "admin"
+    assert token is not None
 
     import time
-    time.sleep(61)
+    time.sleep(1)
     c.users = {}
     c.run("config set general.non_interactive=1")
     c.run("remove * -f")
     c.run("install pkg/0.1@user/stable")
-    print(c.out)
-    print(c.cache.localdb.get_login(server.fake_url))
+    user, token, _ = c.cache.localdb.get_login(server.fake_url)
+    assert user == "admin"
+    assert token is None
