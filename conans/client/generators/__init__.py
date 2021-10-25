@@ -4,6 +4,7 @@ import traceback
 from os.path import join
 
 from conan.tools.env import VirtualRunEnv
+from conan.tools.microsoft.subsystems import deduce_subsystem
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
@@ -254,9 +255,10 @@ def write_toolchain(conanfile, path, output):
 
 
 def _generate_aggregated_env(conanfile):
-    from conan.tools.microsoft import unix_path
+    from conan.tools.microsoft.subsystems import subsystem_path
 
     for group, env_scripts in conanfile.env_scripts.items():
+        subsystem = deduce_subsystem(conanfile, group)
         bats = []
         shs = []
         for env_script in env_scripts:
@@ -264,15 +266,11 @@ def _generate_aggregated_env(conanfile):
             if env_script.endswith(".bat"):
                 bats.append(path)
             elif env_script.endswith(".sh"):
-                shs.append(unix_path(conanfile, path))
+                shs.append(subsystem_path(subsystem, path))
         if shs:
             sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
             save(os.path.join(conanfile.generators_folder, "conan{}.sh".format(group)), sh_content)
         if bats:
-            lines = "\r\n".join('call "{}"'.format(b) for b in bats)
-            bat_content = textwrap.dedent("""\
-                            @echo off
-                            {}
-                            """.format(lines))
+            lines = ["@echo off"] + ['call "{}"'.format(b) for b in bats]
+            bat_content = "\r\n".join(lines)
             save(os.path.join(conanfile.generators_folder, "conan{}.bat".format(group)), bat_content)
-
