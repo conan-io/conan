@@ -160,7 +160,7 @@ class AuthenticationTest(unittest.TestCase):
                 return resp_basic_auth
 
         client = TestClient(requester_class=RequesterMock, default_server_user=True)
-        client.run("user user -p PASSWORD! -r=default")
+        client.run("remote login default user -p PASSWORD!")
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
                       client.out)
         client.run("search pkg -r=default")

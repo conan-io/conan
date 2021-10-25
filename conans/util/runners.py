@@ -35,7 +35,7 @@ else:
 
 
 def version_runner(cmd, shell=False):
-    # Used by build helpers like CMake and Meson and MSBuild to get the version
+    # Used by build subapi like CMake and Meson and MSBuild to get the version
     out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=shell).communicate()
     return out
 

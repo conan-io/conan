@@ -272,7 +272,7 @@ class CommandOutputer(object):
 
     def print_user_list(self, info):
         for remote in info["remotes"]:
-            authenticated = " [Authenticated]" if remote["authenticated"] else ""
+            authenticated = " [authenticated]" if remote["authenticated"] else ""
             anonymous = " (anonymous)" if not remote["user_name"] else ""
             self._output.info("Current user of remote '%s' set to: '%s'%s%s" %
                               (remote["name"], str(remote["user_name"]), anonymous, authenticated))

@@ -55,11 +55,6 @@ class PyRequireLoader(object):
         self._range_resolver = range_resolver
         self._cached_py_requires = {}
 
-    def enable_remotes(self, check_updates=False, update=False, remotes=None):
-        self._check_updates = check_updates
-        self._update = update
-        self._remotes = remotes
-
     def load_py_requires(self, conanfile, loader, graph_lock=None):
         py_requires_refs = getattr(conanfile, "python_requires", None)
         if py_requires_refs is None:
@@ -105,15 +100,12 @@ class PyRequireLoader(object):
             if alias is not None:
                 ref = alias
             else:
-                resolved_ref = self._range_resolver.resolve(requirement, "py_require",
-                                                            update=self._update,
-                                                            remotes=self._remotes)
+                resolved_ref = self._range_resolver.resolve(requirement, "py_require")
                 ref = resolved_ref
         return ref
 
     def _load_pyreq_conanfile(self, loader, graph_lock, ref):
-        recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
-                                        remotes=self._remotes)
+        recipe = self._proxy.get_recipe(ref)
         path, _, _, new_ref = recipe
         conanfile, module = loader.load_basic_module(path, graph_lock)
         conanfile.name = new_ref.name

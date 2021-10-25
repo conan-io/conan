@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 import pytest
 
+from conans.cli.api.model import Remote
 from conans.client.graph.graph_error import GraphError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
@@ -181,6 +182,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
+        app.enabled_remotes = [Remote("foo", None)]
         libb = app.dependencies[0].dst
         libc = app.dependencies[1].dst
         liba = libb.dependencies[0].dst
