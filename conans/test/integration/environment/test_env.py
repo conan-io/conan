@@ -1,11 +1,11 @@
 import os
 import platform
+import subprocess
 import textwrap
 
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
 
@@ -448,3 +448,45 @@ def test_environment_scripts_generated_envvars():
     conanrunenv = client.load("conanrunenv.sh")
     assert "LD_LIBRARY_PATH" not in conanbuildenv
     assert "LD_LIBRARY_PATH" in conanrunenv
+
+
+def test_multiple_deactivate():
+    conanfile = textwrap.dedent(r"""
+        from conans import ConanFile
+        from conan.tools.env import Environment
+        class Pkg(ConanFile):
+            def generate(self):
+                e1 = Environment()
+                e1.define("VAR1", "Value1")
+                e1.vars(self).save_script("mybuild1")
+                e2 = Environment()
+                e2.define("VAR2", "Value2")
+                e2.vars(self).save_script("mybuild2")
+        """)
+    display_bat = textwrap.dedent("""\
+        @echo off
+        echo VAR1=%VAR1%!!
+        echo VAR2=%VAR2%!!
+        """)
+    display_sh = textwrap.dedent("""\
+        echo VAR1=$VAR1!!
+        echo VAR2=$VAR2!!
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "display.bat": display_bat,
+                 "display.sh": display_sh})
+    client.run("install .")
+
+    if platform.system() == "Windows":
+        cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+    else:
+        cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              shell=True, cwd=client.current_folder).communicate()
+    out = out.decode()
+    assert "VAR1=Value1!!" in out
+    assert "VAR2=Value2!!" in out
+    assert 2 == str(out).count("Restoring environment")
+    assert "VAR1=!!" in out
+    assert "VAR2=!!" in out
