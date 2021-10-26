@@ -76,7 +76,7 @@ class MesonInstall(TestMesonBase):
 
             def test(self):
                 if not tools.cross_building(self):
-                    cmd = os.path.join(self.cpp.build.bindirs[0], "test_package")
+                    cmd = os.path.join(self.cpp.local.bindirs[0], "test_package")
                     self.run(cmd, env=["conanrunenv"])
         """)
 
