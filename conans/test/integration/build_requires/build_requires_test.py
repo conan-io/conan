@@ -631,7 +631,7 @@ def test_dependents_new_buildenv():
        class Lib(ConanFile):
            requires = {}
            def generate(self):
-               build_env = VirtualBuildEnv(self).environment()
+               build_env = VirtualBuildEnv(self).vars()
                with build_env.apply():
                    self.output.info("LIB PATH %s" % os.getenv("PATH"))
        """)

@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from requests.models import Response
@@ -8,6 +9,9 @@ from conans.errors import AuthenticationException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestRequester
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer
 from conans.util.files import save
 
@@ -165,3 +169,47 @@ class AuthenticationTest(unittest.TestCase):
                       client.out)
         client.run("search pkg -r=default")
         self.assertIn("There are no matching recipe references", client.out)
+
+
+def test_token_expired():
+    server_folder = temp_folder()
+    server_conf = textwrap.dedent("""
+       [server]
+       jwt_expire_minutes: 0.01
+       authorize_timeout: 0
+       disk_authorize_timeout: 0
+       disk_storage_path: ./data
+       updown_secret: 12345
+       jwt_secret: mysecret
+       port: 12345
+       [read_permissions]
+       */*@*/*: *
+       [write_permissions]
+       */*@*/*: admin
+       """)
+    save(os.path.join(server_folder, ".conan_server", "server.conf"), server_conf)
+    server = TestServer(base_path=server_folder, users={"admin": "password"})
+
+    c = TestClient(servers={"default": server}, inputs=["admin", "password"])
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . pkg/0.1@user/stable")
+    c.run("upload * -r=default --all -c")
+    user, token, _ = c.cache.localdb.get_login(server.fake_url)
+    assert user == "admin"
+    assert token is not None
+
+    import time
+    time.sleep(2)
+    c.users = {}
+    conan_conf = textwrap.dedent("""
+                                        [storage]
+                                        path = ./data
+                                        [general]
+                                        non_interactive=True
+                                    """)
+    c.save({"conan.conf": conan_conf}, path=c.cache.cache_folder)
+    c.run("remove * -f")
+    c.run("install pkg/0.1@user/stable")
+    user, token, _ = c.cache.localdb.get_login(server.fake_url)
+    assert user == "admin"
+    assert token is None

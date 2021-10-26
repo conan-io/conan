@@ -4,7 +4,10 @@ from conan.cache.conan_reference import ConanReference
 from conans.cli.output import ConanOutput
 from conans.client import packager
 from conans.client.conanfile.package import run_package_method
-from conans.errors import ConanException
+
+
+from conans.client.graph.graph import BINARY_INVALID
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.ref import PackageReference
 
 
@@ -29,6 +32,10 @@ def export_pkg(app, ref, source_folder, build_folder, package_folder,
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()
     pkg_node = nodes[0]
+    if pkg_node.binary == BINARY_INVALID:
+        binary, reason = pkg_node.conanfile.info.invalid
+        msg = "{}: Invalid ID: {}: {}".format(ref, binary, reason)
+        raise ConanInvalidConfiguration(msg)
     conanfile = pkg_node.conanfile
 
     package_id = pkg_node.package_id
