@@ -1,6 +1,6 @@
 import os
+import platform
 
-import mock
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
