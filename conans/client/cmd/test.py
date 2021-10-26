@@ -17,9 +17,18 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
     and builds the test_package/conanfile.py running the test() method.
     """
     base_folder = os.path.dirname(conanfile_abs_path)
-    test_build_folder, delete_after_build = _build_folder(test_build_folder, graph_info.profile_host,
-                                                          base_folder)
-    rmdir(test_build_folder)
+
+    # FIXME: Remove this check in 2.0, always use the base_folder
+    conanfile = app.loader.load_basic(conanfile_abs_path)
+    if hasattr(conanfile, "layout"):
+        # Don't use "test_package/build/HASH/" as the build_f
+        delete_after_build = False
+        test_build_folder = base_folder
+    else:
+        test_build_folder, delete_after_build = _build_folder(test_build_folder,
+                                                              graph_info.profile_host,
+                                                              base_folder)
+        rmdir(test_build_folder)
     if build_modes is None:
         build_modes = ["never"]
     try:
