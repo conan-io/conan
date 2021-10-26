@@ -24,8 +24,9 @@ def cmake_layout(conanfile, generator=None):
 
     conanfile.cpp.local.includedirs = ["src"]
     if multi:
-        libdir = os.path.join(conanfile.folders.build, str(conanfile.settings.build_type))
-        conanfile.cpp.local.libdirs = [libdir]
+        _dir = os.path.join(conanfile.folders.build, str(conanfile.settings.build_type))
+        conanfile.cpp.local.libdirs = [_dir]
+        conanfile.cpp.local.bindirs = [_dir]
     else:
         conanfile.cpp.local.libdirs = [conanfile.folders.build]
         conanfile.cpp.local.bindirs = [conanfile.folders.build]
