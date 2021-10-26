@@ -322,7 +322,6 @@ class EnvVars:
                    echo unset $v >> deactivate_{filename}
                fi
            done
-           echo Configuring environment variables
            """.format(filename=os.path.basename(filename), vars=" ".join(self._values.keys())))
         capture = textwrap.dedent("""\
               {deactivate}
