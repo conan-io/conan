@@ -65,6 +65,9 @@ def _get_generator_class(generator_name):
     elif generator_name == "deploy":
         from conans.client.generators.deploy import DeployGenerator
         return DeployGenerator
+    elif generator_name == "XcodeDeps":
+        from conan.tools.apple import XcodeDeps
+        return XcodeDeps
     else:
         raise ConanException("Internal Conan error: Generator '{}' "
                              "not complete".format(generator_name))
