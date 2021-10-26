@@ -187,11 +187,9 @@ def create_xcode_project(client, project_name, source):
                         GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
                         GCC_WARN_UNUSED_FUNCTION = YES;
                         GCC_WARN_UNUSED_VARIABLE = YES;
-                        MACOSX_DEPLOYMENT_TARGET = 11.3;
                         MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
                         MTL_FAST_MATH = YES;
                         ONLY_ACTIVE_ARCH = YES;
-                        SDKROOT = macosx;
                     }};
                     name = Debug;
                 }};
@@ -240,10 +238,8 @@ def create_xcode_project(client, project_name, source):
                         GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
                         GCC_WARN_UNUSED_FUNCTION = YES;
                         GCC_WARN_UNUSED_VARIABLE = YES;
-                        MACOSX_DEPLOYMENT_TARGET = 11.3;
                         MTL_ENABLE_DEBUG_INFO = NO;
                         MTL_FAST_MATH = YES;
-                        SDKROOT = macosx;
                     }};
                     name = Release;
                 }};
@@ -330,12 +326,12 @@ def test_xcodedeps_build_configurations():
     create_xcode_project(client, project_name, main)
 
     for config in ["Release", "Debug"]:
-        client.run(
-            "install . -s build_type={} -s arch=x86_64 -s os.sdk=macosx --build=missing -g XcodeDeps".format(config))
+        client.run("install . -s build_type={} -s arch=x86_64 -s os.sdk=macosx "
+                   "-s os.sdk_version=12.0 --build=missing -g XcodeDeps".format(config))
 
     for config in ["Release", "Debug"]:
         client.run_command("xcodebuild -project {}.xcodeproj -xcconfig conandeps.xcconfig "
-                           "-configuration {} -sdk macosx -arch x86_64".format(project_name, config))
+                           "-configuration {} -sdk macosx12.0 -arch x86_64".format(project_name, config))
         client.run_command("./build/{}/{}".format(config, project_name))
         assert "App {}!".format(config) in client.out
         assert "hello/0.1: Hello World {}!".format(config).format(config) in client.out
