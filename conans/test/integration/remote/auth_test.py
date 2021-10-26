@@ -201,7 +201,7 @@ def test_token_expired():
     assert token is not None
 
     import time
-    time.sleep(1)
+    time.sleep(2)
     c.users = {}
     c.run("config set general.non_interactive=1")
     c.run("remove * -f")
