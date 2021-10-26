@@ -94,6 +94,7 @@ def test_layout_with_local_methods(conanfile, layout_helper_name, build_type, ar
         assert os.path.exists(path)
 
     # Check the package
-    client.run("package .")
-    assert os.path.exists(os.path.join(client.current_folder, "my_package", "lib", "mylib.lib"))
+    client.run("package .", assert_error=True)
+    assert "The usage of the 'conan package' local method is disabled when using layout()" \
+           "" in client.out
 

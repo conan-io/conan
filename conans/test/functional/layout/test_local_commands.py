@@ -282,7 +282,7 @@ def test_export_pkg_local():
     client.run("install . -if=my_install")
     client.run("source . -if=my_install")
     client.run("build . -if=my_install")
-    client.run("package . -if=my_install")
+    client.run("export-pkg . -if=my_install")
     sf = os.path.join(client.current_folder, "my_source")
     bf = os.path.join(client.current_folder, "my_build")
     pf = os.path.join(client.current_folder, "my_package")
