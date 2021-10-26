@@ -663,8 +663,7 @@ class TestComponentsCMakeGenerators:
                     cmake = CMake(self)
                     cmake.configure(build_script_folder="src")
                     cmake.build()
-                    cmd = os.path.join(self.cpp.build.bindirs[0], "main")
-                    self.run(cmd, env="conanrun")
+                    self.run("./main", env="conanrun")
             """.format("CMakeDeps"))
         cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
