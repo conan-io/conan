@@ -7,7 +7,7 @@ from conans.cli.output import ConanOutput, ScopedOutput
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
-from conans.model.layout import Folders, Patterns, Infos
+from conans.model.layout import Folders, Infos
 from conans.model.options import Options
 from conans.model.requires import Requirements
 from conans.paths import RUN_LOG_NAME
@@ -88,16 +88,14 @@ class ConanFile:
 
         # layout() method related variables:
         self.folders = Folders()
-        self.patterns = Patterns()
         self.cpp = Infos()
 
-        self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.source.lib = []
-        self.patterns.source.bin = []
-
-        self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
-        self.patterns.build.bin = ["*.exe", "*.dll"]
+        self.cpp.package.includedirs = ["include"]
+        self.cpp.package.libdirs = ["lib"]
+        self.cpp.package.bindirs = ["bin"]
+        self.cpp.package.resdirs = ["res"]
+        self.cpp.package.builddirs = [""]
+        self.cpp.package.frameworkdirs = ["Frameworks"]
 
     @property
     def output(self):

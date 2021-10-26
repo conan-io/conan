@@ -10,7 +10,7 @@ _generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-               "VCVars", "deploy", "IntelCC"]
+               "VCVars", "deploy", "IntelCC", "XcodeDeps"]
 
 
 def _get_generator_class(generator_name):

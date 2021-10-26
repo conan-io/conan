@@ -8,22 +8,19 @@ def test_cpp_info_editable():
 
     client = TestClient()
 
-    conan_hello = str(GenConanfile())
+    conan_hello = str(GenConanfile().with_import("import os"))
     conan_hello += """
     def layout(self):
         self.folders.source = "my_sources"
         self.folders.build = "my_build"
 
-        self.cpp.build.includedirs = ["my_include"]
-        self.cpp.build.libdirs = ["my_libdir"]
-        self.cpp.build.libs = ["hello"]
-
-        # This should overwrite the cpp_info and remove the default values
-        self.cpp.build.frameworkdirs = []
-
-        self.cpp.source.cxxflags = ["my_cxx_flag"]
-        self.cpp.source.includedirs = ["my_include_source"]
-        self.cpp.source.builddirs = ["my_builddir_source"]
+        self.cpp.local.includedirs = [os.path.join(self.folders.source, "my_include_source"),
+                                      os.path.join(self.folders.build, "my_include")]
+        self.cpp.local.libdirs = [os.path.join(self.folders.build, "my_libdir")]
+        self.cpp.local.libs = ["hello"]
+        self.cpp.local.frameworkdirs = []  # Empty list is also explicit priority declaration
+        self.cpp.local.cxxflags = ["my_cxx_flag"]
+        self.cpp.local.builddirs = [os.path.join(self.folders.source, "my_builddir_source")]
 
         self.cpp.package.libs = ["lib_when_package"]
 
@@ -42,7 +39,6 @@ def test_cpp_info_editable():
 
         # when editable: This one WONT be discarded as has not been declared in the editables layout
         self.cpp_info.cflags.append("my_c_flag")
-
      """
 
     client.save({"conanfile.py": conan_hello})
@@ -104,21 +100,20 @@ def test_cpp_info_components_editable():
         self.folders.source = "my_sources"
         self.folders.build = "my_build"
 
-        self.cpp.build.components["foo"].includedirs = ["my_include_foo"]
-        self.cpp.build.components["foo"].libdirs = ["my_libdir_foo"]
-        self.cpp.build.components["foo"].libs = ["hello_foo"]
+        self.cpp.local.components["foo"].includedirs = ["my_sources/my_include_source_foo",
+                                                        "my_build/my_include_foo"]
+        self.cpp.local.components["foo"].libdirs = ["my_build/my_libdir_foo"]
+        self.cpp.local.components["foo"].libs = ["hello_foo"]
+        self.cpp.local.components["foo"].cxxflags = ["my_cxx_flag_foo"]
+        self.cpp.local.components["foo"].builddirs = ["my_sources/my_builddir_source_foo"]
 
-        self.cpp.build.components["var"].includedirs = ["my_include_var"]
-        self.cpp.build.components["var"].libdirs = ["my_libdir_var"]
-        self.cpp.build.components["var"].libs = ["hello_var"]
 
-        self.cpp.source.components["foo"].cxxflags = ["my_cxx_flag_foo"]
-        self.cpp.source.components["foo"].includedirs = ["my_include_source_foo"]
-        self.cpp.source.components["foo"].builddirs = ["my_builddir_source_foo"]
-
-        self.cpp.source.components["var"].cxxflags = ["my_cxx_flag_var"]
-        self.cpp.source.components["var"].includedirs = ["my_include_source_var"]
-        self.cpp.source.components["var"].builddirs = ["my_builddir_source_var"]
+        self.cpp.local.components["var"].includedirs = ["my_sources/my_include_source_var",
+                                                        "my_build/my_include_var"]
+        self.cpp.local.components["var"].libdirs = ["my_build/my_libdir_var"]
+        self.cpp.local.components["var"].libs = ["hello_var"]
+        self.cpp.local.components["var"].cxxflags = ["my_cxx_flag_var"]
+        self.cpp.local.components["var"].builddirs = ["my_sources/my_builddir_source_var"]
 
         self.cpp.package.components["foo"].libs = ["lib_when_package_foo"]
         self.cpp.package.components["var"].libs = ["lib_when_package_var"]

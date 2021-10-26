@@ -269,6 +269,7 @@ def test_apple_own_framework_cmake_deps():
         import os
         from conans import ConanFile
         from conan.tools.cmake import CMake, CMakeDeps
+        from conan.tools.layout import cmake_layout
 
         class TestPkg(ConanFile):
             generators = "CMakeToolchain"
@@ -287,7 +288,7 @@ def test_apple_own_framework_cmake_deps():
                 cmake.generate()
 
             def layout(self):
-                self.folders.build = str(self.settings.build_type)
+                cmake_layout(self)
 
             def build(self):
                 cmake = CMake(self)
@@ -295,7 +296,7 @@ def test_apple_own_framework_cmake_deps():
                 cmake.build()
 
             def test(self):
-                self.run(os.path.join(str(self.settings.build_type), "timer"), env="conanrunenv")
+                self.run(os.path.join(self.cpp.local.bindirs[0], "timer"), env="conanrunenv")
         """)
     client.save({'conanfile.py': conanfile,
                  "src/CMakeLists.txt": cmake,
