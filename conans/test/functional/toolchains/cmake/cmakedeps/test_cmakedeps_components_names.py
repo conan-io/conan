@@ -702,9 +702,10 @@ class TestComponentsCMakeGenerators:
                     cmake = CMake(self)
                     cmake.configure(build_script_folder="src")
                     cmake.build()
-                    cmd = os.path.join(self.cpp.build.bindirs[0], "main")
+                    local_path = os.path.relpath(self.cpp.local.bindirs[0], self.folders.build)
+                    cmd = os.path.join(local_path, "main")
                     self.run(cmd, env="conanrun")
-            """.format("CMakeDeps"))
+            """)
         cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)

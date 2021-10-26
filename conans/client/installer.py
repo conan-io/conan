@@ -477,20 +477,9 @@ class BinaryInstaller(object):
                     conanfile.folders.set_base_source(package_folder)
                     conanfile.folders.set_base_generators(package_folder)
 
-                    # convert directory entries to be relative to the declared folders.build
-                    build_cppinfo = conanfile.cpp.build.copy()
-                    build_cppinfo.set_relative_base_folder(conanfile.folders.build)
-
-                    # convert directory entries to be relative to the declared folders.source
-                    source_cppinfo = conanfile.cpp.source.copy()
-                    source_cppinfo.set_relative_base_folder(conanfile.folders.source)
-
-                    full_editable_cppinfo = CppInfo()
-                    full_editable_cppinfo.merge(source_cppinfo)
-                    full_editable_cppinfo.merge(build_cppinfo)
                     # In editables if we defined anything in the cpp infos we want to discard
                     # the one defined in the conanfile cpp_info
-                    conanfile.cpp_info.merge(full_editable_cppinfo, overwrite=True)
+                    conanfile.cpp_info.merge(conanfile.cpp.local.copy(), overwrite=True)
 
                 self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                            reference=ref)

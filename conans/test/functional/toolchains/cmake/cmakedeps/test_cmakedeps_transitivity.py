@@ -7,7 +7,6 @@ from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 
 
@@ -91,8 +90,7 @@ def test_shared_requires_static():
             "conanfile.py": conanfile}, clean_first=True)
 
     c.run("build .")
-    command = environment_wrap_command(ConanFileMock(),
-                                       "conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
+    command = environment_wrap_command("conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
 
@@ -134,8 +132,7 @@ def test_transitive_binary_skipped():
             "conanfile.py": conanfile}, clean_first=True)
 
     c.run("build . -g VirtualRunEnv")
-    command = environment_wrap_command(ConanFileMock(), "conanrun", ".\\Release\\myapp.exe",
-                                       cwd=c.current_folder)
+    command = environment_wrap_command("conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
 

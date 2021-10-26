@@ -43,7 +43,7 @@ class MyConanfile(ConanFile):
     version = "0.1"
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert(os.environ.get("Value1") == "A")
 '''
@@ -129,7 +129,7 @@ class MyConanfile(ConanFile):
 
     def build(self):
         # This has changed, the value from profile higher priority than build require
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             if platform.system() == "Windows":
                 self.run("set MyVAR")
@@ -165,7 +165,7 @@ from conan.tools.env import VirtualBuildEnv
 class MyConanfile(ConanFile):
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info(">>> env_variable={}".format(os.environ.get('env_variable')))
 '''
