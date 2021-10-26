@@ -135,7 +135,7 @@ def test_editable_cmake_windows_exe(generator):
     editable_cmake_exe(generator)
 
 
-@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
+# @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Ninja Multi-Config"])
 def test_editable_cmake_linux_exe(generator):
     editable_cmake_exe(generator)
