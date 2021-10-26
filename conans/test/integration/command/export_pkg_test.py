@@ -154,7 +154,7 @@ class HelloPythonConan(ConanFile):
             from conan.tools.env import VirtualBuildEnv
             class HelloPythonConan(ConanFile):
                 def package(self):
-                    build_env = VirtualBuildEnv(self).environment()
+                    build_env = VirtualBuildEnv(self).vars()
                     with build_env.apply():
                         self.output.info("ENV-VALUE: %s!!!" % os.getenv("MYCUSTOMVAR"))
             """)

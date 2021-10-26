@@ -173,7 +173,7 @@ class MyLib(ConanFile):
     {}
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("ToolPath: %s" % os.getenv("TOOL_PATH"))
 """
@@ -263,7 +263,7 @@ import os
 class MyLib(ConanFile):
     build_requires = "Build2/0.1@conan/stable"
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert(os.environ['MYVAR']=='1')
             assert(os.environ['MYVAR2']=='2')
@@ -277,7 +277,7 @@ import os
 from conan.tools.env import VirtualBuildEnv
 class MyTest(ConanFile):
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert(os.environ['MYVAR']=='1')
     def test(self):
@@ -350,7 +350,7 @@ import os
 class App(ConanFile):
     name = "consumer"
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
 """
@@ -380,7 +380,7 @@ from conan.tools.env import VirtualBuildEnv
 import os
 class Gtest(ConanFile):
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("GTEST PATH FOR BUILD %s" % os.getenv("MYVAR"))
 """
@@ -390,7 +390,7 @@ import os
 class App(ConanFile):
     build_requires = "gtest/0.1@lasote/stable"
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("APP PATH FOR BUILD %s" % os.getenv("MYVAR"))
 """
@@ -434,7 +434,7 @@ from conan.tools.env import VirtualBuildEnv
 import os
 class App(ConanFile):
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("FOR BUILD %s" % os.getenv("MYVAR"))
 """

@@ -5,7 +5,6 @@ import pytest
 
 from conans.client.profile_loader import ProfileParser, read_profile
 from conans.errors import ConanException
-from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.profiles import create_profile as _create_profile
@@ -271,4 +270,5 @@ def test_profile_buildenv():
     conanfile = ConanFileMock()
     env_vars = env.vars(conanfile)
     assert env_vars.get("MyVar1") == "My Value; 11 MyValue12"
-    assert env_vars.get("MyPath1") == "/some/path11{}/other path/path12".format(os.pathsep)
+    # Mock is never Windows path
+    assert env_vars.get("MyPath1") == "/some/path11:/other path/path12"

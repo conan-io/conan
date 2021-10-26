@@ -235,6 +235,7 @@ def test_env_files():
         out, _ = subprocess.Popen(cmd_, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   env=prevenv, shell=True).communicate()
         out = out.decode()
+        print(out)
         assert "MyVar=MyValue!!" in out
         assert "MyVar1=MyValue1!!" in out
         assert "MyVar2=OldVar2 MyValue2!!" in out
@@ -263,6 +264,7 @@ def test_env_files():
     with chdir(folder):
         if platform.system() == "Windows":
             env = env.vars(ConanFileMock())
+            env._subsystem = WINDOWS
             env.save_bat("test.bat")
 
             save("display.bat", display_bat)
@@ -358,10 +360,11 @@ def test_dict_access():
     old_env = dict(os.environ)
     os.environ.update({"MyVar": "PreviousValue"})
     env_vars = env.vars(ConanFileMock())
+    env_vars._subsystem = WINDOWS
     try:
-        assert env_vars["MyVar"] == "PreviousValue{}MyValue".format(os.pathsep)
+        assert env_vars["MyVar"] == "PreviousValue;MyValue"
         with env_vars.apply():
-            assert os.getenv("MyVar") == "PreviousValue{}MyValue".format(os.pathsep)
+            assert os.getenv("MyVar") == "PreviousValue;MyValue"
     finally:
         os.environ.clear()
         os.environ.update(old_env)
@@ -396,6 +399,7 @@ def test_public_access():
     env.define_path("MyPath", "c:/path/to/something")
     env.append_path("MyPath", "D:/Otherpath")
     env_vars = env.vars(ConanFileMock())
+    env_vars._subsystem = WINDOWS
     for name, values in env_vars.items():
         if name == "MyVar":
             assert values == "MyValue MyValue2"
