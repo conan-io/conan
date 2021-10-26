@@ -71,15 +71,14 @@ class XcodeDeps(object):
         self._conanfile = conanfile
         self.configuration = conanfile.settings.get_safe("build_type")
         self.architecture = conanfile.settings.get_safe("arch")
-        # TODO: check if it makes sense to add a subsetting for sdk version
-        #  related to: https://github.com/conan-io/conan/issues/9608
         self.os_version = conanfile.settings.get_safe("os.version")
         self.sdk = conanfile.settings.get_safe("os.sdk")
+        self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
         check_using_build_profile(self._conanfile)
 
     @property
     def sdk_condition(self):
-        return "*" if not self.sdk else "{}".format(self.sdk)
+        return "*" if not self.sdk else "{}{}".format(self.sdk, self.sdk_version or "")
 
     def generate(self):
         if self.configuration is None:
