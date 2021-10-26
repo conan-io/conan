@@ -791,33 +791,20 @@ class ConanAPIV1(object):
 
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
-        if not conanfile.folders.package:
-            default_pkg_folder = os.path.join(build_folder, "package")
-            package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
-        else:
-            package_folder = _make_abs_path(package_folder, cwd, default=build_folder)
+        default_pkg_folder = os.path.join(build_folder, "package")
+        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
         if hasattr(conanfile, "layout"):
-            dir_path = os.path.dirname(conanfile_path)
-            conanfile.folders.set_base_generators(dir_path)
-            conanfile.folders.set_base_build(dir_path)
-            conanfile.folders.set_base_source(dir_path)
-            # FIXME: this is bad, but conanfile.folders.package=xxx is broken atm, cant be used
-            # The "conan package" will create "include", "lib" subfolders directly at the root folder
-            # level, which pollutes the source repo itself. It is not possible to change this via
-            # self.folders.package="package" in layout(), because that breaks packaging and create
-            conanfile.folders.set_base_package(os.path.join(dir_path, "package"))
-            conanfile.folders.set_base_install(install_folder)
+            raise ConanException("The usage of the 'conan package' local method is disabled when "
+                                 "using layout(). Use 'export-pkg' to test if the recipe is "
+                                 "packaging the files correctly or use the cpp.info.local object "
+                                 "if you are going to use this package as editable package.")
         else:
             conanfile.folders.set_base_build(build_folder)
             conanfile.folders.set_base_source(source_folder)
             conanfile.folders.set_base_package(package_folder)
             conanfile.folders.set_base_install(install_folder)
 
-        # Use the complete package layout for the local method
-        if conanfile.folders.package:
-            pf = os.path.join(package_folder, conanfile.folders.package)
-            conanfile.folders.set_base_package(pf)
         run_package_method(conanfile, None, self.app.hook_manager, conanfile_path, None,
                            copy_info=True)
 

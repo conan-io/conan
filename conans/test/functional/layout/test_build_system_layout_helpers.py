@@ -23,7 +23,6 @@ def conanfile():
 
     def layout(self):
         {ly}(self)
-        self.folders.package = "my_package"
 
     def package(self):
         LayoutPackager(self).package()

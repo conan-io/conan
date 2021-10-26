@@ -262,7 +262,6 @@ def test_export_pkg_local():
     def layout(self):
         self.folders.source = "my_source"
         self.folders.build = "my_build"
-        self.folders.package = "my_package"
 
     def source(self):
         tools.save("downloaded.h", "bar")
