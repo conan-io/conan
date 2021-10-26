@@ -404,7 +404,7 @@ def test_public_access():
         if name == "MyVar":
             assert values == "MyValue MyValue2"
         if name == "MyPath":
-            assert values == "c:/path/to/something{}D:/Otherpath".format(os.pathsep)
+            assert values == "c:/path/to/something;D:/Otherpath"
 
     env.remove("MyPath", "D:/Otherpath")
     assert env_vars.get("MyPath") == "c:/path/to/something"
