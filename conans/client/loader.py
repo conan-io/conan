@@ -386,9 +386,10 @@ def _parse_conanfile(conan_file_path):
     try:
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
+            old_dont_write_bytecode = sys.dont_write_bytecode
             sys.dont_write_bytecode = True
             loaded = imp.load_source(module_id, conan_file_path)
-            sys.dont_write_bytecode = False
+            sys.dont_write_bytecode = old_dont_write_bytecode
 
         required_conan_version = getattr(loaded, "required_conan_version", None)
         if required_conan_version:
