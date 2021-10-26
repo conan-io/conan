@@ -177,7 +177,7 @@ def test_token_expired():
     server_folder = temp_folder()
     server_conf = textwrap.dedent("""
        [server]
-       jwt_expire_minutes: 0.01
+       jwt_expire_minutes: 0.001
        authorize_timeout: 0
        disk_authorize_timeout: 0
        disk_storage_path: ./data
