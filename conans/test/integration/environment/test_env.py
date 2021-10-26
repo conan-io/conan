@@ -96,14 +96,14 @@ def test_complete(client):
 
             def build(self):
                 self.run("mycmake.bat", env="conanbuildenv")
-                assert os.path.exists(os.path.join(self.generators_folder, "conanrunenv.bat"))
+                assert os.path.exists(os.path.join(self.generators_folder, "conanrunenv.sh"))
        """)
 
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
     if platform.system() == "Windows":
-        cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycmake.bat",
+        cmd = environment_wrap_command("conanbuildenv", "mycmake.bat",
                                        cwd=client.current_folder)
         client.run_command(cmd)
         assert "MYCMAKE=Windows!!" in client.out
@@ -111,8 +111,7 @@ def test_complete(client):
 
     # Run the RUN environment
     if platform.system() != "Windows":
-        cmd = environment_wrap_command(ConanFileMock(), "conanrunenv",
-                                       "mygtest.sh && .{}myrunner.sh".format(os.sep),
+        cmd = environment_wrap_command("conanrunenv", "mygtest.sh && .{}myrunner.sh".format(os.sep),
                                        cwd=client.current_folder)
         client.run_command(cmd)
         assert "MYGTEST=Linux!!" in client.out
@@ -131,7 +130,7 @@ def test_profile_included_multiple():
         from conans import ConanFile
         class Pkg(ConanFile):
             def generate(self):
-                buildenv = self.buildenv
+                buildenv = self.buildenv.vars(self)
                 self.output.info("MYVAR1: {}!!!".format(buildenv.get("MYVAR1")))
                 self.output.info("MYVAR2: {}!!!".format(buildenv.get("MYVAR2")))
                 self.output.info("MYVAR3: {}!!!".format(buildenv.get("MYVAR3")))
@@ -173,7 +172,7 @@ def test_profile_buildenv():
         from conans import ConanFile
         class Pkg(ConanFile):
             def generate(self):
-                self.buildenv.save_script("pkgenv")
+                self.buildenv.vars(self).save_script("pkgenv")
                 if platform.system() != "Windows":
                     os.chmod("pkgenv.sh", 0o777)
 
@@ -205,7 +204,7 @@ def test_profile_buildenv():
     client.run("install . -pr=myprofile")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycompiler.{}".format(ext),
+    cmd = environment_wrap_command("conanbuildenv", "mycompiler.{}".format(ext),
                                    cwd=client.current_folder)
     client.run_command(cmd)
     assert "MYCOMPILER!!" in client.out
@@ -258,9 +257,9 @@ def test_transitive_order():
             requires = "openssl/1.0"
             build_requires = "cmake/1.0", "gcc/1.0"
             def generate(self):
-                buildenv = VirtualBuildEnv(self).environment()
+                buildenv = VirtualBuildEnv(self).vars()
                 self.output.info("BUILDENV: {}!!!".format(buildenv.get("MYVAR")))
-                runenv = VirtualRunEnv(self).environment()
+                runenv = VirtualRunEnv(self).vars()
                 self.output.info("RUNENV: {}!!!".format(runenv.get("MYVAR")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
@@ -306,8 +305,7 @@ def test_buildenv_from_requires():
         class Pkg(ConanFile):
             requires = "poco/1.0"
             def generate(self):
-                env = VirtualBuildEnv(self)
-                buildenv = env.environment()
+                buildenv = VirtualBuildEnv(self).vars()
                 self.output.info("BUILDENV POCO: {}!!!".format(buildenv.get("Poco_ROOT")))
                 self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.get("OpenSSL_ROOT")))
         """)
@@ -364,7 +362,7 @@ def test_diamond_repeated():
            requires = "pkgd/1.0"
            def generate(self):
                 env = VirtualRunEnv(self)
-                runenv = env.environment()
+                runenv = env.vars(scope="run")
                 self.output.info("MYVAR1: {}!!!".format(runenv.get("MYVAR1")))
                 self.output.info("MYVAR2: {}!!!".format(runenv.get("MYVAR2")))
                 self.output.info("MYVAR3: {}!!!".format(runenv.get("MYVAR3")))

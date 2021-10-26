@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import platform
 import unittest
 
 import pytest
@@ -28,8 +27,6 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 """
 
 
-@pytest.mark.unix
-@pytest.mark.skipif(platform.system() == "Windows", reason="Requires pkg-config")
 class PkgConfigTest(unittest.TestCase):
     def test_negative(self):
         pc = PkgConfig('libsomething_that_does_not_exist_in_the_world')
