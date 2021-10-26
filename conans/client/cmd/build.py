@@ -64,7 +64,7 @@ def cmd_build(app, conanfile_path, base_path, source_folder, build_folder, packa
                 conan_file.output.highlight("Running test()")
                 with conanfile_exception_formatter(str(conan_file), "test"):
                     if hasattr(conan_file, "layout"):
-                        os.chdir(conan_file.conanfile_folder)
+                        os.chdir(conanfile_folder)
                     conan_file.test()
     except ConanException:
         raise  # Raise but not let to reach the Exception except (not print traceback)
