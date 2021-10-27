@@ -29,7 +29,7 @@ _expected_vars_xconfig = [
     "CONAN_{name}_LIBRARIES_{configuration} = -l{name}",
     "CONAN_{name}_SYSTEM_LIBS_{configuration} =",
     "CONAN_{name}_FRAMEWORKS_DIRECTORIES_{configuration} =",
-    "CONAN_{name}_FRAMEWORKS_{configuration} ="
+    "CONAN_{name}_FRAMEWORKS_{configuration} = -framework framework_{name}"
 ]
 
 _expected_conf_xconfig = [
@@ -93,10 +93,14 @@ def check_contents(client, deps, configuration, architecture, sdk=None):
 def test_generator_files():
     client = TestClient()
     client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                                           .with_package_info(cpp_info={"libs": ["hello"]}, env_info={})})
+                                           .with_package_info(cpp_info={"libs": ["hello"],
+                                                                        "frameworks": ['framework_hello']},
+                                                              env_info={})})
     client.run("export hello.py hello/0.1@")
     client.save({"goodbye.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                                             .with_package_info(cpp_info={"libs": ["goodbye"]}, env_info={})})
+                                             .with_package_info(cpp_info={"libs": ["goodbye"],
+                                                                          "frameworks": ['framework_goodbye']},
+                                                                env_info={})})
     client.run("export goodbye.py goodbye/0.1@")
     client.save({"conanfile.txt": "[requires]\nhello/0.1\ngoodbye/0.1\n"}, clean_first=True)
 
