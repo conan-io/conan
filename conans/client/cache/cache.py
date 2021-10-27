@@ -57,11 +57,8 @@ class ClientCache(object):
     def closedb(self):
         self._data_cache.closedb()
 
-    def update_recipe(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_timestamp=None):
-        new_ref = ConanReference(new_ref) if new_ref else None
-        return self._data_cache.update_recipe(ConanReference(old_ref), new_ref, new_path,
-                                                 new_timestamp,)
+    def update_recipe_timestamp(self, ref: ConanReference, new_timestamp=None):
+        return self._data_cache.update_recipe_timestamp(ref, new_timestamp,)
 
     def update_package(self, old_ref: ConanReference, new_ref: ConanReference = None,
                          new_path=None, new_timestamp=None, new_build_id=None):
@@ -74,26 +71,22 @@ class ClientCache(object):
         self._data_cache.dump(out)
         return out.getvalue()
 
-    def assign_rrev(self, layout: RecipeLayout, ref: ConanReference):
-        return self._data_cache.assign_rrev(layout, ref)
+    def assign_rrev(self, layout: RecipeLayout):
+        return self._data_cache.assign_rrev(layout)
 
     def assign_prev(self, layout: PackageLayout, ref: ConanReference):
         return self._data_cache.assign_prev(layout, ref)
 
     def ref_layout(self, ref):
+        # It must exists
+        assert ref.revision is not None
         return self._data_cache.get_reference_layout(ConanReference(ref))
 
     def pkg_layout(self, ref):
         return self._data_cache.get_package_layout(ConanReference(ref))
 
-    def create_ref_layout(self, ref):
-        return self._data_cache.create_reference_layout(ConanReference(ref))
-
-    def create_pkg_layout(self, ref):
-        return self._data_cache.create_package_layout(ConanReference(ref))
-
-    def create_temp_ref_layout(self, ref):
-        return self._data_cache.create_tmp_reference_layout(ConanReference(ref))
+    def create_export_recipe_layout(self, ref):
+        return self._data_cache.create_export_recipe_layout(ConanReference(ref))
 
     def create_temp_pkg_layout(self, ref):
         return self._data_cache.create_tmp_package_layout(ConanReference(ref))
@@ -119,7 +112,7 @@ class ClientCache(object):
         return self._data_cache.get_package_timestamp(ConanReference(ref))
 
     def set_recipe_timestamp(self, ref, timestamp):
-        return self._data_cache.update_recipe(ConanReference(ref), new_timestamp=timestamp)
+        return self._data_cache.update_recipe_timestamp(ConanReference(ref), new_timestamp=timestamp)
 
     def set_package_timestamp(self, ref, timestamp):
         return self._data_cache.update_package(ConanReference(ref), new_timestamp=timestamp)

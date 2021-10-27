@@ -55,7 +55,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
 
-    recipe_layout = cache.create_temp_ref_layout(ref)
+    recipe_layout = cache.create_export_recipe_layout(ref)
 
     _check_settings_for_warnings(conanfile)
 
@@ -102,7 +102,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
                              revision_mode=conanfile.revision_mode)
 
     ref = ref.copy_with_rev(revision=revision)
-    cache.assign_rrev(recipe_layout, ConanReference(ref))
+    recipe_layout.reference = ConanReference(ref)
+    cache.assign_rrev(recipe_layout)
     # TODO: cache2.0 check if this is the message we want to output
     scoped_output.success('A new %s version was exported' % CONANFILE)
     scoped_output.info('Folder: %s' % recipe_layout.export())
