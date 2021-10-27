@@ -82,6 +82,7 @@ def test_foo():
         env.remove("LDFLAGS", "-F /path/to/folder_dep1/one/framework/path/dep1")
         env.append("LDFLAGS", "OtherSuperStuff")
 
+        env = deps.vars()
         # The contents are of course modified
         assert env["LDFLAGS"] == 'dep1_shared_link_flag ' \
                                  'dep1_exe_link_flag dep2_exe_link_flag ' \

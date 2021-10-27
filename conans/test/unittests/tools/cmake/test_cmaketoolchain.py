@@ -247,10 +247,13 @@ def conanfile_linux_shared():
     return c
 
 
-def test_no_fpic_when_shared(conanfile_linux_shared):
+@pytest.mark.parametrize("fPIC", [True, False])
+def test_fpic_when_shared_true(conanfile_linux_shared, fPIC):
+    conanfile_linux_shared.options.fPIC = fPIC
     toolchain = CMakeToolchain(conanfile_linux_shared)
+    cmake_value = 'ON' if fPIC else 'OFF'
     content = toolchain.content
-    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE' not in content
+    assert 'set(CMAKE_POSITION_INDEPENDENT_CODE {})'.format(cmake_value) in content
 
 
 def test_fpic_when_not_shared(conanfile_linux_shared):

@@ -1,9 +1,9 @@
 import os
-import textwrap
 import traceback
 from os.path import join
 
 from conan.tools.env import VirtualRunEnv
+from conan.tools.microsoft.subsystems import deduce_subsystem
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
@@ -72,7 +72,7 @@ class GeneratorManager(object):
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                                 "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-                                "VCVars", "IntelCC"]
+                                "VCVars", "IntelCC", "XcodeDeps"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -137,6 +137,9 @@ class GeneratorManager(object):
         elif generator_name == "BazelToolchain":
             from conan.tools.google import BazelToolchain
             return BazelToolchain
+        elif generator_name == "XcodeDeps":
+            from conan.tools.apple import XcodeDeps
+            return XcodeDeps
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -254,9 +257,17 @@ def write_toolchain(conanfile, path, output):
 
 
 def _generate_aggregated_env(conanfile):
-    from conan.tools.microsoft import unix_path
+    from conan.tools.microsoft.subsystems import subsystem_path
+
+    def deactivates(filenames):
+        result = []
+        for s in filenames:
+            folder, f = os.path.split(s)
+            result.append(os.path.join(folder, "deactivate_{}".format(f)))
+        return result
 
     for group, env_scripts in conanfile.env_scripts.items():
+        subsystem = deduce_subsystem(conanfile, group)
         bats = []
         shs = []
         for env_script in env_scripts:
@@ -264,15 +275,18 @@ def _generate_aggregated_env(conanfile):
             if env_script.endswith(".bat"):
                 bats.append(path)
             elif env_script.endswith(".sh"):
-                shs.append(unix_path(conanfile, path))
+                shs.append(subsystem_path(subsystem, path))
         if shs:
-            sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
-            save(os.path.join(conanfile.generators_folder, "conan{}.sh".format(group)), sh_content)
+            def sh_content(files):
+                return ". " + " && . ".join('"{}"'.format(s) for s in files)
+            filename = "conan{}.sh".format(group)
+            save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 sh_content(deactivates(shs)))
         if bats:
-            lines = "\r\n".join('call "{}"'.format(b) for b in bats)
-            bat_content = textwrap.dedent("""\
-                            @echo off
-                            {}
-                            """.format(lines))
-            save(os.path.join(conanfile.generators_folder, "conan{}.bat".format(group)), bat_content)
-
+            def bat_content(files):
+                return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
+            filename = "conan{}.bat".format(group)
+            save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 bat_content(deactivates(bats)))

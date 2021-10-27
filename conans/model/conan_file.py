@@ -16,7 +16,7 @@ from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
-from conans.model.layout import Folders, Patterns, Infos
+from conans.model.layout import Folders, Infos
 from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
@@ -156,8 +156,8 @@ class ConanFile(object):
         self._conan_using_build_profile = False
         self._conan_requester = None
 
-        self.buildenv_info = Environment(self)
-        self.runenv_info = Environment(self)
+        self.buildenv_info = Environment()
+        self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
@@ -169,16 +169,7 @@ class ConanFile(object):
 
         # layout() method related variables:
         self.folders = Folders()
-        self.patterns = Patterns()
         self.cpp = Infos()
-
-        self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.source.lib = []
-        self.patterns.source.bin = []
-
-        self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
-        self.patterns.build.bin = ["*.exe", "*.dll"]
 
         self.cpp.package.includedirs = ["include"]
         self.cpp.package.libdirs = ["lib"]
@@ -212,7 +203,7 @@ class ConanFile(object):
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
         return self._conan_buildenv
 
     def initialize(self, settings, env, buildenv=None):
@@ -407,7 +398,7 @@ class ConanFile(object):
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
             if _env is None:
                 _env = "conanbuild"
-            wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
+            wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:
