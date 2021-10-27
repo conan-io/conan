@@ -167,6 +167,7 @@ def test_osx_deployment_target(conanfile_apple):
     content = toolchain.content
     assert 'set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "")' in content
 
+
 @pytest.fixture
 def conanfile_msvc():
     c = ConanFile(Mock(), None)
@@ -186,6 +187,7 @@ def conanfile_msvc():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     return c
+
 
 def test_toolset(conanfile_msvc):
     toolchain = CMakeToolchain(conanfile_msvc)
