@@ -62,7 +62,6 @@ def build_type_flags(settings):
     (-s, -g, /Zi, etc.)
     """
     compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-
     build_type = settings.get_safe("build_type")
     vs_toolset = settings.get_safe("compiler.toolset")
     if not compiler or not build_type:
@@ -70,7 +69,7 @@ def build_type_flags(settings):
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
-    if str(compiler) == 'Visual Studio':
+    if str(compiler) in ['Visual Studio', 'msvc']:
         if vs_toolset and "clang" in str(vs_toolset):
             flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
                      "Release": ["-O2"],
