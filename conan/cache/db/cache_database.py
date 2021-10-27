@@ -40,8 +40,14 @@ class CacheDatabase:
     def delete_package_by_path(self, path):
         self._recipes.delete_by_path(path)
 
-    def remove(self, ref: ConanReference):
+    def remove_recipe(self, ref: ConanReference):
+        # Removing the recipe must remove all the package binaries too from DB
         self._recipes.remove(ref)
+        self._packages.remove(ref)
+
+    def remove_package(self, ref: ConanReference):
+        # Removing the recipe must remove all the package binaries too from DB
+        self._packages.remove(ref)
 
     def try_get_recipe(self, ref: ConanReference):
         """ Returns the reference data as a dictionary (or fails) """
@@ -61,6 +67,9 @@ class CacheDatabase:
 
     def create_recipe(self, path, ref: ConanReference):
         self._recipes.save(path, ref, timestamp=time.time())
+
+    def create_package(self, path, ref: ConanReference):
+        self._packages.save(path, ref, timestamp=time.time())
 
     def list_references(self, only_latest_rrev):
         for it in self._recipes.all_references(only_latest_rrev):

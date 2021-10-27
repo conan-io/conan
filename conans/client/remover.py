@@ -148,12 +148,12 @@ class ConanRemover(object):
         if package_ids is None and build_ids is None:
             for package in all_package_revisions:
                 package_layout = self._cache.pkg_layout(package)
-                self._cache.remove_layout(package_layout)
+                self._cache.remove_package_layout(package_layout)
         else:
             # for -p argument we remove the whole package, for -b just the build folder
             for package in prev_remove:
                 package_layout = self._cache.pkg_layout(package)
-                self._cache.remove_layout(package_layout)
+                self._cache.remove_package_layout(package_layout)
 
             for package in prev_remove_build:
                 package_layout = self._cache.pkg_layout(package)
@@ -163,7 +163,7 @@ class ConanRemover(object):
 
         if not src and remove_recipe:
             ref_layout = self._cache.ref_layout(ref)
-            self._cache.remove_layout(ref_layout)
+            self._cache.remove_recipe_layout(ref_layout)
 
     def remove(self, pattern, src=None, build_ids=None, package_ids_filter=None,
                force=False, packages_query=None):

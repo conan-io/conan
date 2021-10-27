@@ -1,4 +1,5 @@
 import re
+import traceback
 from collections import namedtuple
 
 from conans.errors import ConanException, InvalidNameException
@@ -184,6 +185,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             ConanName.validate_revision(self.revision)
 
         if not self.name or not self.version:
+            traceback.print_stack()
             raise InvalidNameException("Specify the 'name' and the 'version'")
 
         if (self.user and not self.channel) or (self.channel and not self.user):

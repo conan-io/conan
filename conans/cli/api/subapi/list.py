@@ -35,7 +35,10 @@ class ListAPI:
             revs = getattr(app.cache, getter_name)(ref)
             results = []
             for revision in revs:
-                timestamp = app.cache.get_timestamp(revision)
+                if getter_name == "get_recipe_revisions":
+                    timestamp = app.cache.get_recipe_timestamp(revision)
+                else:
+                    timestamp = app.cache.get_package_timestamp(revision)
                 result = {
                     "revision": revision.revision,
                     "time": timestamp

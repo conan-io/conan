@@ -32,7 +32,7 @@ class RecipesDBTable(BaseDbTable):
             [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
-    def _set_clause(self, ref: ConanReference, path=None, timestamp=None, build_id=None):
+    def _set_clause(self, ref: ConanReference, path=None, timestamp=None):
         set_dict = {
             self.columns.reference: ref.reference,
             self.columns.rrev: ref.rrev,
@@ -50,13 +50,14 @@ class RecipesDBTable(BaseDbTable):
         r = self._conn.execute(query)
         row = r.fetchone()
         if not row:
-            raise ConanReferenceDoesNotExistInDB(f"No entry for reference '{ref.full_reference}'")
+            raise ConanReferenceDoesNotExistInDB(f"No entry for recipe '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
     def save(self, path, ref: ConanReference, timestamp):
         # we set the timestamp to 0 until they get a complete reference, here they
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
+        assert ref.reference is not None
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = self._conn.execute(f'INSERT INTO {self.table_name} '
                                f'VALUES ({placeholders})',
@@ -67,6 +68,8 @@ class RecipesDBTable(BaseDbTable):
                new_timestamp=None):
         if not new_ref:
             new_ref = old_ref
+        assert new_ref is not None
+        assert new_ref.reference is not None
         where_clause = self._where_clause(old_ref)
         set_clause = self._set_clause(new_ref, path=new_path, timestamp=new_timestamp)
         query = f"UPDATE {self.table_name} " \
@@ -114,14 +117,15 @@ class RecipesDBTable(BaseDbTable):
                     f'{self.columns.path}, ' \
                     f'MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
-                    f'WHERE {self.columns.reference} = "{ref.reference}" ' \
-                    f'{check_rrev} '
+                    f'WHERE {self.columns.reference}="{ref.reference}" ' \
+                    f'{check_rrev} '\
+                    f'GROUP BY {self.columns.reference} '  # OTHERWISE IT FAILS THE MAX()
         else:
             query = f'SELECT * FROM {self.table_name} ' \
                     f'WHERE {self.columns.reference} = "{ref.reference}" ' \
                     f'{check_rrev} ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
-        print(query)
+
         r = self._conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))

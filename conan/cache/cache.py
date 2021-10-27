@@ -111,7 +111,7 @@ class DataCache:
         pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
                               pref.pkgid, pref.prev)
         package_path = self._get_path(pref)
-        self._db.create_reference(package_path, pref)
+        self._db.create_package(package_path, pref)
         self._create_path(package_path, remove_contents=False)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
@@ -191,9 +191,9 @@ class DataCache:
 
         return new_path
 
-    def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_timestamp=None, new_build_id=None):
-        self._db.update_reference(old_ref, new_ref, new_path, new_timestamp, new_build_id)
+    def update_recipe(self, old_ref: ConanReference, new_ref: ConanReference = None,
+                         new_path=None, new_timestamp=None):
+        self._db.update_recipe(old_ref, new_ref, new_path, new_timestamp)
 
     def list_references(self, only_latest_rrev=False):
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
@@ -215,15 +215,22 @@ class DataCache:
             yield it
 
     def get_build_id(self, ref):
-        ref_data = self._db.try_get_reference(ref)
+        ref_data = self._db.try_get_package(ref)
         return ref_data.get("build_id")
 
-    def get_timestamp(self, ref):
-        ref_data = self._db.try_get_reference(ref)
+    def get_recipe_timestamp(self, ref):
+        ref_data = self._db.try_get_recipe(ref)
         return ref_data.get("timestamp")
 
-    def remove(self, ref: ConanReference):
-        self._db.remove(ref)
+    def get_package_timestamp(self, ref):
+        ref_data = self._db.try_get_package(ref)
+        return ref_data.get("timestamp")
+
+    def remove_recipe(self, ref: ConanReference):
+        self._db.remove_recipe(ref)
+
+    def remove_package(self, ref: ConanReference):
+        self._db.remove_package(ref)
 
     def assign_prev(self, layout: PackageLayout, ref: ConanReference):
         layout_conan_reference = ConanReference(layout.reference)

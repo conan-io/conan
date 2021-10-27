@@ -60,7 +60,7 @@ class PackagesDBTable(BaseDbTable):
         r = self._conn.execute(query)
         row = r.fetchone()
         if not row:
-            raise ConanReferenceDoesNotExistInDB(f"No entry for reference '{ref.full_reference}'")
+            raise ConanReferenceDoesNotExistInDB(f"No entry for package '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
     def save(self, path, ref: ConanReference, timestamp):
