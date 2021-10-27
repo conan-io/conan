@@ -26,23 +26,8 @@ class VCVars:
 
         vs_version = vs_ide_version(conanfile)
         vcvarsarch = vcvars_arch(conanfile)
-        vcvars_ver = None
-        if compiler == "Visual Studio":
-            toolset = conanfile.settings.get_safe("compiler.toolset")
-            if toolset is not None:
-                vcvars_ver = {"v140": "14.0",
-                              "v141": "14.1",
-                              "v142": "14.2",
-                              "v143": "14.3"}.get(toolset)
-        else:
-            assert compiler == "msvc"
-            # Code similar to CMakeToolchain toolset one
-            compiler_version = str(conanfile.settings.compiler.version)
-            version_components = compiler_version.split(".")
-            assert len(version_components) >= 2  # there is a 19.XX
-            minor = version_components[1]
-            # The equivalent of compiler 19.26 is toolset 14.26
-            vcvars_ver = "14.{}".format(minor)
+        vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
+
         vs_install_path = conanfile.conf["tools.microsoft.msbuild:installation_path"]
         # The vs_install_path is like
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
@@ -163,3 +148,27 @@ def vcvars_arch(conanfile):
         raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))
 
     return arch
+
+
+def _vcvars_vers(conanfile, compiler, vs_version):
+    if int(vs_version) <= 14:
+        return None
+
+    vcvars_ver = None
+    if compiler == "Visual Studio":
+        toolset = conanfile.settings.get_safe("compiler.toolset")
+        if toolset is not None:
+            vcvars_ver = {"v140": "14.0",
+                          "v141": "14.1",
+                          "v142": "14.2",
+                          "v143": "14.3"}.get(toolset)
+    else:
+        assert compiler == "msvc"
+        # Code similar to CMakeToolchain toolset one
+        compiler_version = str(conanfile.settings.compiler.version)
+        version_components = compiler_version.split(".")
+        assert len(version_components) >= 2  # there is a 19.XX
+        minor = version_components[1]
+        # The equivalent of compiler 19.26 is toolset 14.26
+        vcvars_ver = "14.{}".format(minor)
+    return vcvars_ver
