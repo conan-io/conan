@@ -81,7 +81,7 @@ class _PackageBuilder(object):
                 build_folder = other_pkg_layout.build()
                 skip_build = True
             elif build_prev == pref:
-                self._cache.update_reference(build_prev, new_build_id=recipe_build_id)
+                self._cache.update_package(build_prev, new_build_id=recipe_build_id)
 
         if is_dirty(build_folder):
             self._scoped_output.warning("Build folder is dirty, removing it: %s" % build_folder)

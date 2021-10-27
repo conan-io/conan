@@ -31,8 +31,8 @@ class CacheDatabase:
         self._recipes.update(old_ref, new_ref, new_path, new_timestamp)
 
     def update_package(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                       new_path=None, new_timestamp=None):
-        self._packages.update(old_ref, new_ref, new_path, new_timestamp)
+                       new_path=None, new_timestamp=None, new_build_id=None):
+        self._packages.update(old_ref, new_ref, new_path, new_timestamp, new_build_id)
 
     def delete_recipe_by_path(self, path):
         self._recipes.delete_by_path(path)
