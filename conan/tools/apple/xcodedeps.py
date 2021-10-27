@@ -116,7 +116,7 @@ class XcodeDeps(object):
             'libs': " ".join("-l{}".format(lib) for lib in cpp_info.libs),
             'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in cpp_info.system_libs),
             'frameworksdirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.frameworkdirs),
-            'frameworks': " ".join(cpp_info.frameworks),
+            'frameworks': " ".join("-framework {}".format(framework) for framework in cpp_info.frameworks),
             'definitions': " ".join(cpp_info.defines),
             'c_compiler_flags': " ".join(cpp_info.cflags),
             'cxx_compiler_flags': " ".join(cpp_info.cxxflags),
