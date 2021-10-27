@@ -6,7 +6,8 @@ from conans.model.new_build_info import NewCppInfo
 class Infos(object):
 
     def __init__(self):
-        self.local = NewCppInfo()
+        self.source = NewCppInfo()
+        self.build = NewCppInfo()
         self.package = NewCppInfo()
 
 
