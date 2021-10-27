@@ -352,7 +352,6 @@ class LinuxTest(Base):
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
-        pic_str = "" if shared else "ON"
         arch_str = "-m32" if arch == "x86" else "-m64"
         cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
         defines = '_GLIBCXX_USE_CXX11_ABI=%s;MYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
@@ -371,7 +370,7 @@ class LinuxTest(Base):
                 "CMAKE_SHARED_LINKER_FLAGS": arch_str,
                 "CMAKE_EXE_LINKER_FLAGS": arch_str,
                 "COMPILE_DEFINITIONS": defines,
-                "CMAKE_POSITION_INDEPENDENT_CODE": pic_str
+                "CMAKE_POSITION_INDEPENDENT_CODE": "ON"
                 }
 
         def _verify_out(marker=">>"):

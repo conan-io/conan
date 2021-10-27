@@ -94,6 +94,7 @@ class HookManager(object):
         filename = os.path.splitext(os.path.basename(hook_path))[0]
         current_dir = os.path.dirname(hook_path)
 
+        old_dont_write_bytecode = sys.dont_write_bytecode
         try:
             sys.path.append(current_dir)
             old_modules = list(sys.modules.keys())
@@ -125,6 +126,6 @@ class HookManager(object):
             raise ConanException("Unable to load Hook in %s\n%s" % (hook_path,
                                                                     '\n'.join(trace[3:])))
         finally:
-            sys.dont_write_bytecode = False
+            sys.dont_write_bytecode = old_dont_write_bytecode
             sys.path.pop()
         return loaded

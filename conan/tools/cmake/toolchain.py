@@ -148,11 +148,6 @@ class FPicBlock(Block):
         if os_ and "Windows" in os_:
             self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined for Windows")
             return None
-        shared = self._conanfile.options.get_safe("shared")
-        if shared:
-            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined "
-                                        "for a shared library")
-            return None
         return {"fpic": "ON" if fpic else "OFF"}
 
 
