@@ -16,7 +16,7 @@ class _PatternEntry(object):
         self.framework = []
 
 
-class Patterns(object):
+class _Patterns(object):
 
     def __init__(self):
         self.source = _PatternEntry()
@@ -27,7 +27,7 @@ class AutoPackager(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.patterns = Patterns()
+        self.patterns = _Patterns()
 
         self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
         self.patterns.source.lib = []
