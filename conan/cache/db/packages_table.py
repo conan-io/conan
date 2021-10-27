@@ -5,8 +5,8 @@ from conan.cache.db.table import BaseDbTable
 from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 
 
-class ReferencesDbTable(BaseDbTable):
-    table_name = 'conan_references'
+class PackagesDBTable(BaseDbTable):
+    table_name = 'packages'
     columns_description = [('reference', str),
                            ('rrev', str),
                            ('pkgid', str, True),

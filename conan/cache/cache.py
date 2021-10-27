@@ -79,7 +79,7 @@ class DataCache:
         ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, temp_rrev,
                              ref.pkgid, ref.prev)
         reference_path = self._get_tmp_path()
-        self._db.create_tmp_reference(reference_path, ref)
+        self._db.create_tmp_recipe(reference_path, ref)
         self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
@@ -91,7 +91,7 @@ class DataCache:
         pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
                               pref.pkgid, temp_prev)
         package_path = self._get_tmp_path()
-        self._db.create_tmp_reference(package_path, pref)
+        self._db.create_tmp_package(package_path, pref)
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
@@ -100,7 +100,7 @@ class DataCache:
         ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, ref.rrev,
                              ref.pkgid, ref.prev)
         reference_path = self._get_path(ref)
-        self._db.create_reference(reference_path, ref)
+        self._db.create_recipe(reference_path, ref)
         self._create_path(reference_path, remove_contents=False)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
@@ -117,7 +117,7 @@ class DataCache:
 
     def get_reference_layout(self, ref: ConanReference):
         assert ref.rrev, "Recipe revision must be known to get the reference layout"
-        ref_data = self._db.try_get_reference(ref)
+        ref_data = self._db.try_get_recipe(ref)
         ref_path = ref_data.get("path")
         return RecipeLayout(ref, os.path.join(self.base_folder, ref_path))
 
@@ -125,7 +125,7 @@ class DataCache:
         assert pref.rrev, "Recipe revision must be known to get the package layout"
         assert pref.pkgid, "Package id must be known to get the package layout"
         assert pref.prev, "Package revision must be known to get the package layout"
-        pref_data = self._db.try_get_reference(pref)
+        pref_data = self._db.try_get_package(pref)
         pref_path = pref_data.get("path")
         return PackageLayout(pref, os.path.join(self.base_folder, pref_path))
 
@@ -142,17 +142,17 @@ class DataCache:
             return self.create_package_layout(ref)
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
-        ref_data = self._db.try_get_reference(old_ref)
+        ref_data = self._db.try_get_recipe(old_ref)
         old_path = ref_data.get("path")
         new_path = self._get_path(new_ref)
 
         try:
-            self._db.update_reference(old_ref, new_ref, new_path=new_path, new_timestamp=time.time())
+            self._db.update_recipe(old_ref, new_ref, new_path=new_path, new_timestamp=time.time())
         except ConanReferenceAlreadyExistsInDB:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
-            self._db.delete_ref_by_path(old_path)
-            self._db.update_reference(new_ref, new_timestamp=time.time())
+            self._db.delete_recipe_by_path(old_path)
+            self._db.update_recipe(new_ref, new_timestamp=time.time())
 
         # TODO: Here we are always overwriting the contents of the rrev folder where
         #  we are putting the exported files for the reference, but maybe we could
@@ -168,7 +168,7 @@ class DataCache:
         return new_path
 
     def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference):
-        ref_data = self._db.try_get_reference(old_pref)
+        ref_data = self._db.try_get_package(old_pref)
         old_path = ref_data.get("path")
         new_path = self._get_path(new_pref)
         if os.path.exists(self._full_path(new_path)):
@@ -179,13 +179,13 @@ class DataCache:
                                      "Couldn't remove folder, might be busy or open\n"
                                      "Close any app using it, and retry")
         try:
-            self._db.update_reference(old_pref, new_pref, new_path=new_path, new_timestamp=time.time())
+            self._db.update_package(old_pref, new_pref, new_path=new_path, new_timestamp=time.time())
         except ConanReferenceAlreadyExistsInDB:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             # TODO: cache2.0 locks
-            self._db.delete_ref_by_path(old_path)
-            self._db.update_reference(new_pref, new_timestamp=time.time())
+            self._db.delete_package_by_path(old_path)
+            self._db.update_package(new_pref, new_timestamp=time.time())
 
         shutil.move(self._full_path(old_path), self._full_path(new_path))
 
