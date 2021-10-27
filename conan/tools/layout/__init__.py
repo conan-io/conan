@@ -22,14 +22,13 @@ def cmake_layout(conanfile, generator=None):
         conanfile.folders.build = "cmake-build-{}".format(build_type)
         conanfile.folders.generators = os.path.join(conanfile.folders.build, "conan")
 
-    conanfile.cpp.local.includedirs = ["src"]
+    conanfile.cpp.source.includedirs = ["src"]
     if multi:
-        _dir = os.path.join(conanfile.folders.build, str(conanfile.settings.build_type))
-        conanfile.cpp.local.libdirs = [_dir]
-        conanfile.cpp.local.bindirs = [_dir]
+        conanfile.cpp.build.libdirs = ["{}".format(conanfile.settings.build_type)]
+        conanfile.cpp.build.bindirs = ["{}".format(conanfile.settings.build_type)]
     else:
-        conanfile.cpp.local.libdirs = [conanfile.folders.build]
-        conanfile.cpp.local.bindirs = [conanfile.folders.build]
+        conanfile.cpp.build.libdirs = ["."]
+        conanfile.cpp.build.bindirs = ["."]
 
 
 def clion_layout(conanfile):
@@ -37,10 +36,10 @@ def clion_layout(conanfile):
         raise ConanException("The 'clion_layout' requires the 'build_type' setting")
     base = "cmake-build-{}".format(str(conanfile.settings.build_type).lower())
     conanfile.folders.build = base
-    conanfile.cpp.local.libdirs = [conanfile.folders.build]
+    conanfile.cpp.build.libdirs = ["."]
     conanfile.folders.generators = os.path.join(base, "generators")
     conanfile.folders.source = "."
-    conanfile.cpp.local.includedirs = [conanfile.folders.source]
+    conanfile.cpp.source.includedirs = ["."]
 
 
 def vs_layout(conanfile):
@@ -59,7 +58,7 @@ def vs_layout(conanfile):
         base = str(conanfile.settings.build_type)
 
     conanfile.folders.build = base
-    conanfile.cpp.local.libdirs = [conanfile.folders.build]
+    conanfile.cpp.build.libdirs = ["."]
     conanfile.folders.generators = os.path.join(base, "generators")
     conanfile.folders.source = "."
-    conanfile.cpp.local.includedirs = [conanfile.folders.source]
+    conanfile.cpp.source.includedirs = ["."]

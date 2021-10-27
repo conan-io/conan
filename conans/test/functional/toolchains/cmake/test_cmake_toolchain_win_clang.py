@@ -43,8 +43,7 @@ def client():
                 cmake = CMake(self)
                 cmake.configure()
                 cmake.build()
-                local_path = os.path.relpath(self.cpp.local.bindirs[0], self.folders.build)
-                cmd = os.path.join(local_path, "my_app")
+                cmd = os.path.join(self.cpp.build.bindirs[0], "my_app")
                 self.run(cmd, env=["conanrunenv"])
         """)
     c.save({"conanfile.py": conanfile,
