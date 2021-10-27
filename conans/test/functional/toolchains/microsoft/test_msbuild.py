@@ -1,5 +1,6 @@
 import os
 import platform
+import shutil
 import textwrap
 import unittest
 
@@ -549,6 +550,10 @@ class WinTest(unittest.TestCase):
                    ("Debug", "x86", False), ("Debug", "x86_64", False)]
         for build_type, arch, shared in configs:
             # Build the profile according to the settings provided
+            # TODO: It is a bit ugly to remove manually
+            build_test_folder = os.path.join(client.current_folder, "test_package", "build")
+            if os.path.exists(build_test_folder):
+                shutil.rmtree(build_test_folder)
             runtime = "MT" if build_type == "Release" else "MTd"
             client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))

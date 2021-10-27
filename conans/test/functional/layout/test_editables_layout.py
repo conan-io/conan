@@ -82,7 +82,6 @@ def test_cpp_info_editable():
     # Create the consumer again, now it will use the hello editable
     client2.run("create . lib/1.0@")
     out = str(client2.out).replace("\\", "/").replace("//", "/")
-    print(out)
     assert "**includedirs:['my_sources/my_include_source', 'my_build/my_include']**" in out
     assert "**libdirs:['my_build/my_libdir']**" in out
     assert "**builddirs:['my_sources/my_builddir_source']**" in out
@@ -180,7 +179,7 @@ def test_cpp_info_components_editable():
     client2.run("create . lib/1.0@")
     assert "**FOO includedirs:['package_include_foo']**" in client2.out
     assert "**FOO libdirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**FOO builddirs:[]**" in client2.out # The components don't have default dirs
+    assert "**FOO builddirs:[]**" in client2.out  # The components don't have default dirs
     assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in client2.out
     assert "**FOO cxxflags:['my_cxx_flag2_foo']**" in client2.out
     assert "**FOO cflags:['my_c_flag_foo']**" in client2.out

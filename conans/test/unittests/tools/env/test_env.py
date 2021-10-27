@@ -235,7 +235,6 @@ def test_env_files():
         out, _ = subprocess.Popen(cmd_, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   env=prevenv, shell=True).communicate()
         out = out.decode()
-        print(out)
         assert "MyVar=MyValue!!" in out
         assert "MyVar1=MyValue1!!" in out
         assert "MyVar2=OldVar2 MyValue2!!" in out
