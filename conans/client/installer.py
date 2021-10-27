@@ -17,6 +17,7 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
+from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import ConanFileReference, PackageReference
@@ -484,10 +485,12 @@ class BinaryInstaller(object):
                     source_cppinfo = conanfile.cpp.source.copy()
                     source_cppinfo.set_relative_base_folder(conanfile.folders.source)
 
+                    full_editable_cppinfo = CppInfo()
+                    full_editable_cppinfo.merge(source_cppinfo)
+                    full_editable_cppinfo.merge(build_cppinfo)
                     # In editables if we defined anything in the cpp infos we want to discard
                     # the one defined in the conanfile cpp_info
-                    conanfile.cpp_info.merge(source_cppinfo, overwrite=True)
-                    conanfile.cpp_info.merge(build_cppinfo, overwrite=True)
+                    conanfile.cpp_info.merge(full_editable_cppinfo, overwrite=True)
 
                 self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                            reference=ref)
