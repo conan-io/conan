@@ -1,4 +1,3 @@
-import platform
 from os import chdir
 
 import pytest
@@ -104,7 +103,7 @@ def test_cppstd():
          "compiler.version": "19.3",
          "compiler.cppstd": "17"})
     be = AutotoolsToolchain(conanfile)
-    env = be.environment()
+    env = be.vars()
     assert "/std:c++17" in env["CXXFLAGS"]
 
 
