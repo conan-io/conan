@@ -12,17 +12,14 @@ from os import path
 # Always prefer setuptools over distutils
 from setuptools import find_packages, setup
 
-from setup import load_version, generate_long_description_file, get_requires
+from setup import load_version, generate_long_description_file, get_requires, excluded_test_packages
 
 here = path.abspath(path.dirname(__file__))
 
 project_requirements = get_requires("conans/requirements.txt")
 project_requirements.extend(get_requires("conans/requirements_server.txt"))
 dev_requirements = get_requires("conans/requirements_dev.txt")
-# The tests utils are used by conan-package-tools
-exclude_test_packages = ["conans.test.{}*".format(d)
-                         for d in os.listdir(os.path.join(here, "conans/test"))
-                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
+
 
 setup(
     name='conan_server',
@@ -63,7 +60,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=exclude_test_packages),
+    packages=find_packages(exclude=excluded_test_packages),
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:

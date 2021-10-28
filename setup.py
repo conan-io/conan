@@ -28,9 +28,11 @@ def get_requires(filename):
 project_requirements = get_requires("conans/requirements.txt")
 dev_requirements = get_requires("conans/requirements_dev.txt")
 # The tests utils are used by conan-package-tools
-exclude_test_packages = ["conans.test.{}*".format(d)
+excluded_test_packages = ["conans.test.{}*".format(d)
                          for d in os.listdir(os.path.join(here, "conans/test"))
                          if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
+excluded_server_packages = ["conans.server*"]
+exclude = excluded_test_packages + excluded_server_packages
 
 
 def load_version():
@@ -89,7 +91,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=exclude_test_packages),
+    packages=find_packages(exclude=exclude),
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
