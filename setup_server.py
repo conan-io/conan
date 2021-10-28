@@ -5,7 +5,6 @@ https://github.com/pypa/sampleproject
 """
 
 import os
-import re
 # To use a consistent encoding
 from codecs import open
 from os import path
@@ -13,51 +12,26 @@ from os import path
 # Always prefer setuptools over distutils
 from setuptools import find_packages, setup
 
+from setup import load_version, generate_long_description_file, get_requires
+
 here = path.abspath(path.dirname(__file__))
 
-
-def get_requires(filename):
-    requirements = []
-    with open(filename, "rt") as req_file:
-        for line in req_file.read().splitlines():
-            if not line.strip().startswith("#"):
-                requirements.append(line)
-    return requirements
-
-
 project_requirements = get_requires("conans/requirements.txt")
+project_requirements.extend(get_requires("conans/requirements_server.txt"))
 dev_requirements = get_requires("conans/requirements_dev.txt")
 # The tests utils are used by conan-package-tools
 exclude_test_packages = ["conans.test.{}*".format(d)
                          for d in os.listdir(os.path.join(here, "conans/test"))
                          if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
 
-
-def load_version():
-    """ Loads a file content """
-    filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                            "conans", "__init__.py"))
-    with open(filename, "rt") as version_file:
-        conan_init = version_file.read()
-        version = re.search(r"__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
-        return version
-
-
-def generate_long_description_file():
-    this_directory = path.abspath(path.dirname(__file__))
-    with open(path.join(this_directory, 'README.rst'), encoding='utf-8') as f:
-        long_description = f.read()
-    return long_description
-
-
 setup(
-    name='conan',
+    name='conan_server',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
     version=load_version(),  # + ".rc1",
 
-    description='Conan C/C++ package manager',
+    description='Conan Server of Conan C/C++ package manager',
     long_description=generate_long_description_file(),
     long_description_content_type='text/x-rst',
 
@@ -128,7 +102,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'conan=conans.conan:run',
+            'conan_server=conans.conan_server:run'
         ],
     },
 )
