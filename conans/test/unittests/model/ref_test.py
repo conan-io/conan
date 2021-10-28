@@ -136,11 +136,11 @@ class ConanNameTestCase(unittest.TestCase):
         self._check_invalid_type(("item1", "item2",))
 
     def test_validate_name_version(self):
-        self.assertIsNone(ConanName.validate_name("[vvvv]", version=True))
+        self.assertIsNone(ConanName.validate_name("name", "[vvvv]"))
 
     def test_validate_name_version_invalid(self):
-        self._check_invalid_format("[no.close.bracket", True)
-        self._check_invalid_format("no.open.bracket]", True)
+        self._check_invalid_format("name", "[no.close.bracket")
+        self._check_invalid_format("name", "no.open.bracket]")
 
 
 class CheckValidRefTest(unittest.TestCase):
@@ -286,4 +286,3 @@ class CompatiblePrefTest(unittest.TestCase):
         # Completing RREV and PREV is also OK
         self.assertTrue(ok("packageA/1.0@user/channel:packageid1",
                            "packageA/1.0@user/channel#RREV:packageid1#PREV"))
-
