@@ -147,7 +147,7 @@ class ConanName(object):
         string_to_validate = version if version else name
 
         ConanName.validate_string(string_to_validate, reference_token=reference_token)
-        if name == "*":
+        if string_to_validate == "*":
             return
         if ConanName._validation_pattern.match(string_to_validate) is None:
             if version:
