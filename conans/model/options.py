@@ -15,10 +15,6 @@ def option_not_exist_msg(option_name, existing_options):
     return "\n".join(result)
 
 
-def option_undefined_msg(name):
-    return "'%s' value not defined" % name
-
-
 class _PackageOption:
     def __init__(self, name, value, possible_values=None):
         self._name = name
@@ -77,7 +73,7 @@ class _PackageOption:
         # check that this has a valid option value defined
         if self._value is None and self._possible_values is not None \
                 and None not in self._possible_values:
-            raise ConanException(option_undefined_msg(self._name))
+            raise ConanException("'%s' value not defined" % self._name)
 
 
 class _PackageOptions:
@@ -136,7 +132,7 @@ class _PackageOptions:
         del self._data[field]
 
     def __setattr__(self, field, value):
-        if field[0] == "_" or field.startswith("values"):
+        if field[0] == "_":
             return super(_PackageOptions, self).__setattr__(field, value)
         self._set(field, value)
 
@@ -296,9 +292,11 @@ class Options:
     def get_upstream_options(self, down_options, own_ref):
         assert isinstance(down_options, Options)
         # self_options are the minimal necessary for a build-order
+        # TODO: check this, isn't this just a copy?
         self_options = Options()
         for pattern, options in down_options._deps_package_options.items():
-            self_options._deps_package_options.setdefault(pattern, _PackageOptions()).update_options(options)
+            self_options._deps_package_options.setdefault(pattern,
+                                                          _PackageOptions()).update_options(options)
 
         # compute now the necessary to propagate all down - self + self deps
         upstream = Options()
