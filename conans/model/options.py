@@ -215,6 +215,10 @@ class Options:
     def scope(self, name):
         package_options = self._deps_package_options.setdefault(name, _PackageOptions())
         package_options.update_options(self._package_options)
+        # If there is an & referred to consumer only, we need to apply to it too
+        existing = self._deps_package_options.pop("&", None)
+        if existing is not None:
+            package_options.update_options(existing)
         self._package_options = _PackageOptions()
 
     def dumps(self):
@@ -284,7 +288,7 @@ class Options:
             if own_ref is None or own_ref.name is None:
                 self._package_options.update_options(defined_options._package_options)
                 for pattern, options in defined_options._deps_package_options.items():
-                    if pattern == "*":
+                    if pattern == "*" or pattern == "&":
                         self._package_options.update_options(options, is_pattern=True)
             else:
                 for pattern, options in defined_options._deps_package_options.items():
