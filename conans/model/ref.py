@@ -99,7 +99,7 @@ class ConanName(object):
     _validation_revision_pattern = re.compile("^[a-zA-Z0-9]{1,%s}$" % _max_chars)
 
     @staticmethod
-    def invalid_name_message(value, reference_token=None):
+    def raise_invalid_name_error(value, reference_token=None):
         if len(value) > ConanName._max_chars:
             reason = "is too long. Valid names must contain at most %s characters."\
                      % ConanName._max_chars
@@ -118,7 +118,7 @@ class ConanName(object):
         raise InvalidNameException(message)
 
     @staticmethod
-    def invalid_version_message(name, version):
+    def raise_invalid_version_error(name, version):
         message = ("Package {} has an invalid version number: '{}'. Valid names "
                    "MUST begin with a letter, number or underscore, have "
                    "between {}-{} chars, including letters, numbers, "
@@ -148,7 +148,7 @@ class ConanName(object):
         if name == "*":
             return
         if ConanName._validation_pattern.match(name) is None:
-            ConanName.invalid_name_message(name, reference_token=reference_token)
+            ConanName.raise_invalid_name_error(name, reference_token=reference_token)
 
     @staticmethod
     def validate_version(version, pkg_name):
@@ -161,7 +161,7 @@ class ConanName(object):
                 or (version.startswith("(") and version.endswith(")"))
             ):
                 return
-            ConanName.invalid_version_message(pkg_name, version)
+            ConanName.raise_invalid_version_error(pkg_name, version)
 
     @staticmethod
     def validate_revision(revision):
