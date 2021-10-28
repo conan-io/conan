@@ -7,40 +7,39 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 _expected_dep_xconfig = [
-    "HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{name}_$(CONFIGURATION))",
-    "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) $(GCC_PREPROCESSOR_DEFINITIONS_{name}_$(CONFIGURATION))",
-    "OTHER_CFLAGS = $(inherited) $(OTHER_CFLAGS_{name}_$(CONFIGURATION))",
-    "OTHER_CPLUSPLUSFLAGS = $(inherited) $(OTHER_CPLUSPLUSFLAGS_{name}_$(CONFIGURATION))",
-    "FRAMEWORK_SEARCH_PATHS = $(inherited) $(FRAMEWORK_SEARCH_PATHS_{name}_$(CONFIGURATION))",
-    "LIBRARY_SEARCH_PATHS = $(inherited) $(LIBRARY_SEARCH_PATHS_{name}_$(CONFIGURATION))",
-    "OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{name}_$(CONFIGURATION))",
+    "HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{name})",
+    "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) $(GCC_PREPROCESSOR_DEFINITIONS_{name})",
+    "OTHER_CFLAGS = $(inherited) $(OTHER_CFLAGS_{name})",
+    "OTHER_CPLUSPLUSFLAGS = $(inherited) $(OTHER_CPLUSPLUSFLAGS_{name})",
+    "FRAMEWORK_SEARCH_PATHS = $(inherited) $(FRAMEWORK_SEARCH_PATHS_{name})",
+    "LIBRARY_SEARCH_PATHS = $(inherited) $(LIBRARY_SEARCH_PATHS_{name})",
+    "OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{name})",
 ]
 
 _expected_vars_xconfig = [
-    "CONAN_{name}_ROOT_FOLDER_{configuration}",
-    "CONAN_{name}_BINARY_DIRECTORIES_{configuration} = $(CONAN_{name}_ROOT_FOLDER_{configuration})/bin",
-    "CONAN_{name}_C_COMPILER_FLAGS_{configuration} =",
-    "CONAN_{name}_CXX_COMPILER_FLAGS_{configuration} =",
-    "CONAN_{name}_LINKER_FLAGS_{configuration} =",
-    "CONAN_{name}_PREPROCESSOR_DEFINITIONS_{configuration} =",
-    "CONAN_{name}_INCLUDE_DIRECTORIES_{configuration} = $(CONAN_{name}_ROOT_FOLDER_{configuration})/include",
-    "CONAN_{name}_RESOURCE_DIRECTORIES_{configuration} = $(CONAN_{name}_ROOT_FOLDER_{configuration})/res",
-    "CONAN_{name}_LIBRARY_DIRECTORIES_{configuration} = $(CONAN_{name}_ROOT_FOLDER_{configuration})/lib",
-    "CONAN_{name}_LIBRARIES_{configuration} = -l{name}",
-    "CONAN_{name}_SYSTEM_LIBS_{configuration} =",
-    "CONAN_{name}_FRAMEWORKS_DIRECTORIES_{configuration} =",
-    "CONAN_{name}_FRAMEWORKS_{configuration} = -framework framework_{name}"
+    "CONAN_{name}_BINARY_DIRECTORIES[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_C_COMPILER_FLAGS[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_CXX_COMPILER_FLAGS[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_LINKER_FLAGS[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_PREPROCESSOR_DEFINITIONS[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_INCLUDE_DIRECTORIES[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_RESOURCE_DIRECTORIES[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_LIBRARY_DIRECTORIES[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_LIBRARIES[config={configuration}][arch={architecture}] = -l{name}",
+    "CONAN_{name}_SYSTEM_LIBS[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_FRAMEWORKS_DIRECTORIES[config={configuration}][arch={architecture}] =",
+    "CONAN_{name}_FRAMEWORKS[config={configuration}][arch={architecture}] = -framework framework_{name}"
 ]
 
 _expected_conf_xconfig = [
     "#include \"{vars_name}\"",
-    "HEADER_SEARCH_PATHS_{name}_{configuration}[arch=x86_64] = $(CONAN_{name}_INCLUDE_DIRECTORIES_{configuration})",
-    "GCC_PREPROCESSOR_DEFINITIONS_{name}_{configuration}[arch=x86_64] = $(CONAN_{name}_PREPROCESSOR_DEFINITIONS_{configuration})",
-    "OTHER_CFLAGS_{name}_{configuration}[arch=x86_64] = $(CONAN_{name}_C_COMPILER_FLAGS_{configuration})",
-    "OTHER_CPLUSPLUSFLAGS_{name}_{configuration}[arch=x86_64] = $(CONAN_{name}_CXX_COMPILER_FLAGS_{configuration})",
-    "FRAMEWORK_SEARCH_PATHS_{name}_{configuration}[arch=x86_64] = $(CONAN_{name}_FRAMEWORKS_DIRECTORIES_{configuration})",
-    "LIBRARY_SEARCH_PATHS_{name}_{configuration}[arch=x86_64] = $(CONAN_{name}_LIBRARY_DIRECTORIES_{configuration})",
-    "OTHER_LDFLAGS_{name}_{configuration}[arch=x86_64] = $(CONAN_{name}_LINKER_FLAGS_{configuration}) $(CONAN_{name}_LIBRARIES_{configuration}) $(CONAN_{name}_SYSTEM_LIBS_{configuration}) $(CONAN_{name}_FRAMEWORKS_{configuration})"
+    "HEADER_SEARCH_PATHS_{name} = $(CONAN_{name}_INCLUDE_DIRECTORIES",
+    "GCC_PREPROCESSOR_DEFINITIONS_{name} = $(CONAN_{name}_PREPROCESSOR_DEFINITIONS",
+    "OTHER_CFLAGS_{name} = $(CONAN_{name}_C_COMPILER_FLAGS",
+    "OTHER_CPLUSPLUSFLAGS_{name} = $(CONAN_{name}_CXX_COMPILER_FLAGS",
+    "FRAMEWORK_SEARCH_PATHS_{name} = $(CONAN_{name}_FRAMEWORKS_DIRECTORIES",
+    "LIBRARY_SEARCH_PATHS_{name} = $(CONAN_{name}_LIBRARY_DIRECTORIES",
+    "OTHER_LDFLAGS_{name} = $(CONAN_{name}_LINKER_FLAGS) $(CONAN_{name}_LIBRARIES) $(CONAN_{name}_SYSTEM_LIBS) $(CONAN_{name}_FRAMEWORKS"
 ]
 
 
@@ -78,12 +77,12 @@ def check_contents(client, deps, configuration, architecture):
                                                       get_name(configuration, architecture))
         conan_vars = client.load(vars_name)
         for var in _expected_vars_xconfig:
-            line = var.format(name=dep_name, configuration=configuration)
+            line = var.format(name=dep_name, configuration=configuration, architecture=architecture)
             assert line in conan_vars
 
         conan_conf = client.load(conf_name)
         for var in _expected_conf_xconfig:
-            assert var.format(vars_name=vars_name, name=dep_name, configuration=configuration) in conan_conf
+            assert var.format(vars_name=vars_name, name=dep_name) in conan_conf
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
