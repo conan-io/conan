@@ -83,12 +83,16 @@ class GraphManager(object):
 
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
+            # options without scope like ``-o shared=True`` refer to this reference
+            profile_host.options.scope(reference.name)
+            # FIXME: Might need here the profile_build
             return self._load_root_direct_reference(reference, profile_host,
                                                     is_build_require,
                                                     require_overrides)
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
+            profile_host.options.scope(create_reference.name)
             return self._load_root_test_package(path, create_reference, graph_lock, profile_host,
                                                 require_overrides)
 
@@ -117,6 +121,8 @@ class GraphManager(object):
 
             ref = ConanFileReference(conanfile.name, conanfile.version,
                                      ref.user, ref.channel, validate=False)
+            if ref.name:
+                profile.options.scope(ref.name)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
             conanfile = self._loader.load_conanfile_txt(path, profile, ref=ref)

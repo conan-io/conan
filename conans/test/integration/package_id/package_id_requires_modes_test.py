@@ -332,9 +332,7 @@ libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package fo
 - Options: an_option=off
 - Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
 - Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
-- Package ID: 6bc65b4894592ca5f492d000cf2cc793b904c14e
-
-ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""" % " ", self.client.out)
+- Package ID: 6bc65b4894592ca5f492d000cf2cc793b904c14e""" % " ", self.client.out)
 
 
 class PackageIDErrorTest(unittest.TestCase):

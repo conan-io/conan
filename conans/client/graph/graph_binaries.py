@@ -135,7 +135,7 @@ class GraphBinariesAnalyzer(object):
                             # So they are available in package_info() method
                             node.conanfile.settings.values = compatible_package.settings
                             # TODO: Conan 2.0 clean this ugly
-                            node.conanfile.options._package_options.values = compatible_package.options._package_values
+                            node.conanfile.options._package_options = compatible_package.options._package_options
                             break
                     if node.binary == BINARY_MISSING and node.package_id == PACKAGE_ID_INVALID:
                         node.binary = BINARY_INVALID
