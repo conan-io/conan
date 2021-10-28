@@ -236,7 +236,8 @@ class _CppInfo(object):
         result = self.get_property(property_name, generator) or self.filenames.get(generator)
         if result:
             return result
-        return self.get_name(generator, default_name=default_name)
+        # Default to the legacy "names", but not using the other properties like "cmake_target_name"
+        return self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self):
