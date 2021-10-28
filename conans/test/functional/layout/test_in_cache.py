@@ -173,11 +173,9 @@ def test_same_conanfile_local(conanfile):
     assert "Build folder: {}".format(build_folder) in client.out
     assert os.path.exists(os.path.join(build_folder, "build.lib"))
 
-    client.run("package .  -if=install")
-    # By default, the "package" folder is still used (not breaking)
-    pf = os.path.join(client.current_folder, "package")
-    assert "Package folder: {}".format(pf) in client.out
-    assert os.path.exists(os.path.join(pf, "LICENSE"))
+    client.run("package .  -if=install", assert_error=True)
+    assert "The usage of the 'conan package' local method is disabled when using " \
+           "layout()" in client.out
 
 
 def test_imports():

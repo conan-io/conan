@@ -3,6 +3,8 @@ import platform
 import re
 import textwrap
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.pkg_cmake import pkg_cmake
@@ -252,6 +254,8 @@ def test_export_pkg():
     assert os.path.exists(os.path.join(pf, "library.lib"))
 
 
+@pytest.mark.xfail(reason="We cannot test the export-pkg from a local package folder when we cannot "
+                          "run the package method")
 def test_export_pkg_local():
     """The export-pkg, without calling "package" method, with local package, follows the layout"""
     client = TestClient()
