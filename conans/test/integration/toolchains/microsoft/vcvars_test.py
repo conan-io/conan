@@ -51,3 +51,22 @@ def test_vcvars_generator_string():
                '-s compiler.cppstd=14 -s compiler.runtime=static')
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_vcvars_2015_error():
+    # https://github.com/conan-io/conan/issues/9888
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class TestConan(ConanFile):
+            generators = "VCVars"
+            settings = "os", "compiler", "arch", "build_type"
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=19.0 '
+               '-s compiler.cppstd=14 -s compiler.runtime=static')
+
+    vcvars = client.load("conanvcvars.bat")
+    assert "-vcvars_ver" not in vcvars

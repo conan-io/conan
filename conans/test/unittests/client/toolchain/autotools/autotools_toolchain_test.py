@@ -1,4 +1,3 @@
-import platform
 from os import chdir
 
 import pytest
@@ -96,6 +95,17 @@ def test_cppstd():
     be = AutotoolsToolchain(conanfile)
     env = be.vars()
     assert "/std:c++latest" in env["CXXFLAGS"]
+
+    # With MSVC
+    conanfile.settings = MockSettings(
+        {"build_type": "Release",
+         "arch": "x86",
+         "compiler": "msvc",
+         "compiler.version": "19.3",
+         "compiler.cppstd": "17"})
+    be = AutotoolsToolchain(conanfile)
+    env = be.vars()
+    assert "/std:c++17" in env["CXXFLAGS"]
 
 
 def test_fpic():
@@ -221,13 +231,14 @@ def test_architecture_flag(config):
     assert expected in env["LDFLAGS"]
 
 
-def test_build_type_flag():
+@pytest.mark.parametrize("compiler", ['Visual Studio', 'msvc'])
+def test_build_type_flag(compiler):
     """Architecture flag is set in CXXFLAGS, CFLAGS and LDFLAGS"""
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings(
         {"build_type": "Debug",
          "os": "Windows",
-         "compiler": "Visual Studio",
+         "compiler": compiler,
          "arch": "x86_64"})
     conanfile.settings_build = conanfile.settings
     be = AutotoolsToolchain(conanfile)
