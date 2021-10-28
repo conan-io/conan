@@ -4,7 +4,6 @@ from unittest.mock import patch, Mock
 
 import pytest
 
-from conans.cli.api.helpers.search import Search
 from conans.errors import ConanConnectionError, ConanException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
@@ -19,7 +18,7 @@ class TestListRecipesBase:
     def _add_remote(self, remote_name):
         self.client.servers[remote_name] = TestServer(users={"username": "passwd"}, write_permissions=[("*/*@*/*", "*")])
         self.client.update_servers()
-        self.client.run("user username -p passwd -r {}".format(remote_name))
+        self.client.run("remote login {} username -p passwd".format(remote_name))
 
     def _create_recipe(self, reference):
         self.client.save({'conanfile.py': GenConanfile()})
@@ -34,7 +33,7 @@ class TestListRecipesBase:
 class TestParams(TestListRecipesBase):
     def test_fail_if_remote_list_is_empty(self):
         self.client.run("list recipes -r whatever *", assert_error=True)
-        assert "ERROR: The remotes registry is empty" in self.client.out
+        assert "Remote 'whatever' not found in remotes" in self.client.out
 
     def test_query_param_is_required(self):
         self._add_remote("remote1")
@@ -45,17 +44,11 @@ class TestParams(TestListRecipesBase):
         self.client.run("list recipes -c", assert_error=True)
         assert "error: the following arguments are required: query" in self.client.out
 
-        self.client.run("list recipes --all-remotes", assert_error=True)
+        self.client.run('list recipes -r="*"', assert_error=True)
         assert "error: the following arguments are required: query" in self.client.out
 
         self.client.run("list recipes --remote remote1 --cache", assert_error=True)
         assert "error: the following arguments are required: query" in self.client.out
-
-    def test_remote_and_all_remotes_are_mutually_exclusive(self):
-        self._add_remote("remote1")
-
-        self.client.run("list recipes --all-remotes --remote remote1 package", assert_error=True)
-        assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
 
 
 class TestListRecipesFromRemotes(TestListRecipesBase):
@@ -80,12 +73,12 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
                            "remote2:\n"
                            "  There are no matching recipe references\n")
 
-        self.client.run("list recipes -c -a whatever")
+        self.client.run('list recipes -c -r="*" whatever')
         assert expected_output == self.client.out
 
     def test_fail_if_no_configured_remotes(self):
-        self.client.run("list recipes -a whatever", assert_error=True)
-        assert "ERROR: The remotes registry is empty" in self.client.out
+        self.client.run('list recipes -r="*" whatever', assert_error=True)
+        assert "Remotes for pattern '*' can't be found or are disabled" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
@@ -93,14 +86,8 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
         self.client.run("remote disable remote1")
         # He have to put both remotes instead of using "-a" because of the
         # disbaled remote won't appear
-        self.client.run("list recipes whatever -r remote1 -r remote2")
-        expected_output = textwrap.dedent("""\
-        remote1:
-          ERROR: Remote 'remote1' is disabled
-        remote2:
-          There are no matching recipe references
-        """)
-        assert expected_output == self.client.out
+        self.client.run("list recipes whatever -r remote1 -r remote2", assert_error=True)
+        assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
@@ -110,9 +97,9 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
         self._add_remote("remote1")
         self._add_remote("remote2")
-        with patch.object(Search, "search_remote_recipes",
-                          new=Mock(side_effect=exc)):
-            self.client.run("list recipes whatever -a -c")
+        with patch("conans.cli.api.subapi.search.SearchAPI.search_remote_recipes",
+                   new=Mock(side_effect=exc)):
+            self.client.run('list recipes whatever -r="*" -c')
         expected_output = textwrap.dedent(f"""\
         Local Cache:
           There are no matching recipe references
@@ -173,7 +160,7 @@ class TestRemotes(TestListRecipesBase):
         self._upload_recipe(remote2, "test_recipe/2.0.0@user/channel")
         self._upload_recipe(remote2, "test_recipe/2.1.0@user/channel")
 
-        self.client.run("list recipes -a -c test_recipe")
+        self.client.run('list recipes -r="*" -c test_recipe')
         output = str(self.client.out)
 
         assert bool(re.match(expected_output, output, re.MULTILINE))
@@ -201,7 +188,7 @@ class TestRemotes(TestListRecipesBase):
         self._upload_recipe(remote2, "test_recipe/2.0.0@user/channel")
         self._upload_recipe(remote2, "test_recipe/2.1.0@user/channel")
 
-        self.client.run("list recipes -a test_recipe")
+        self.client.run('list recipes -r="*" test_recipe')
         output = str(self.client.out)
 
         assert bool(re.match(expected_output, output, re.MULTILINE))
@@ -264,7 +251,7 @@ class TestRemotes(TestListRecipesBase):
         self._upload_recipe(remote2, remote2_recipe1)
         self._upload_recipe(remote2, remote2_recipe2)
 
-        self.client.run("list recipes -a -c test_recipe")
+        self.client.run('list recipes -r="*" -c test_recipe')
 
         output = str(self.client.out)
         assert bool(re.match(expected_output, output, re.MULTILINE))
@@ -275,7 +262,7 @@ class TestRemotes(TestListRecipesBase):
         remote1_recipe1 = "test_recipe/1.0.0@user/channel"
         remote1_recipe2 = "test_recipe/1.1.0@user/channel"
 
-        expected_output = "No remote 'wrong_remote' defined in remotes"
+        expected_output = "Remote 'wrong_remote' not found in remotes"
 
         self._add_remote(remote1)
         self._upload_recipe(remote1, remote1_recipe1)
@@ -315,6 +302,6 @@ class TestRemotes(TestListRecipesBase):
         self._upload_recipe(remote1, remote1_recipe3)
         self._upload_recipe(remote1, remote1_recipe4)
 
-        self.client.run("list recipes -a -c test_*")
+        self.client.run('list recipes -r "*" -c test_*')
         output = str(self.client.out)
         assert bool(re.match(expected_output, output, re.MULTILINE))

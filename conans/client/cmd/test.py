@@ -9,16 +9,25 @@ from conans.util.files import rmdir
 
 
 def install_build_and_test(app, conanfile_abs_path, reference, profile_host, profile_build,
-                           graph_lock, root_ref, remotes, update, build_modes=None,
+                           graph_lock, root_ref, build_modes=None,
                            test_build_folder=None, require_overrides=None):
     """
     Installs the reference (specified by the parameters or extracted from the test conanfile)
     and builds the test_package/conanfile.py running the test() method.
     """
     base_folder = os.path.dirname(conanfile_abs_path)
-    test_build_folder, delete_after_build = _build_folder(test_build_folder, profile_host,
-                                                          base_folder)
-    rmdir(test_build_folder)
+
+    # FIXME: Remove this check in 2.0, always use the base_folder
+    conanfile = app.loader.load_basic(conanfile_abs_path)
+    if hasattr(conanfile, "layout"):
+        # Don't use "test_package/build/HASH/" as the build_f
+        delete_after_build = False
+        test_build_folder = base_folder
+    else:
+        test_build_folder, delete_after_build = _build_folder(test_build_folder, profile_host,
+                                                              base_folder)
+        rmdir(test_build_folder)
+
     if build_modes is None:
         build_modes = ["never"]
     try:
@@ -27,12 +36,10 @@ def install_build_and_test(app, conanfile_abs_path, reference, profile_host, pro
                                  ref_or_path=conanfile_abs_path,
                                  install_folder=test_build_folder,
                                  base_folder=test_build_folder,
-                                 remotes=remotes,
                                  profile_host=profile_host,
                                  profile_build=profile_build,
                                  graph_lock=graph_lock,
                                  root_ref=root_ref,
-                                 update=update,
                                  build_modes=build_modes,
                                  require_overrides=require_overrides,
                                  conanfile_path=os.path.dirname(conanfile_abs_path),

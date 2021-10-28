@@ -1,13 +1,10 @@
-import mock
 import os
 import platform
 import unittest
 
 import pytest
 
-from conan.tools.microsoft import unix_path
-from conan.tools.microsoft.subsystems import get_cased_path
-from conans.test.utils.mocks import ConanFileMock
+from conan.tools.microsoft.subsystems import get_cased_path, subsystem_path
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 
@@ -43,69 +40,48 @@ class GetCasedPath(unittest.TestCase):
 class UnixPathTest(unittest.TestCase):
 
     def test_none(self):
-        conanfile = ConanFileMock()
-        self.assertEqual(None, unix_path(conanfile, path=None))
+        self.assertEqual(None, subsystem_path(None, path=None))
 
-    @mock.patch("platform.system", mock.MagicMock(return_value='Darwin'))
-    def test_not_windows(self):
-        path = 'C:\\Windows\\System32'
-        conanfile = ConanFileMock()
-        self.assertEqual(path, unix_path(conanfile, path))
-
-    @mock.patch("platform.system", mock.MagicMock(return_value='Windows'))
     def test_msys_path(self):
-        conanfile = ConanFileMock()
-        conanfile.win_bash = True
-        conanfile.conf["tools.microsoft.bash:subsystem"] = "msys2"
-        self.assertEqual('/c/windows/system32', unix_path(conanfile, 'C:\\Windows\\System32'))
+        self.assertEqual('/c/windows/system32', subsystem_path("msys2", 'C:\\Windows\\System32'))
 
-    @mock.patch("platform.system", mock.MagicMock(return_value='Windows'))
     def test_cygwin_path(self):
-        conanfile = ConanFileMock()
-        conanfile.win_bash = True
-        conanfile.conf["tools.microsoft.bash:subsystem"] = "cygwin"
-        self.assertEqual('/cygdrive/c/windows/system32', unix_path(conanfile, 'C:\\Windows\\System32'))
+        self.assertEqual('/cygdrive/c/windows/system32', subsystem_path("cygwin",
+                                                                        'C:\\Windows\\System32'))
 
         # another drive
-        self.assertEqual('/cygdrive/d/work', unix_path(conanfile, "D:\\work"))
+        self.assertEqual('/cygdrive/d/work', subsystem_path("cygwin", "D:\\work"))
 
         # path inside the cygwin
-        self.assertEqual('/home/.conan', unix_path(conanfile, '/home/.conan'))
-        self.assertEqual('/dev/null', unix_path(conanfile, '/dev/null'))
+        self.assertEqual('/home/.conan', subsystem_path("cygwin", '/home/.conan'))
+        self.assertEqual('/dev/null', subsystem_path("cygwin", '/dev/null'))
 
         # relative paths
-        self.assertEqual('./configure', unix_path(conanfile, './configure'))
-        self.assertEqual('../configure', unix_path(conanfile, '../configure'))
+        self.assertEqual('./configure', subsystem_path("cygwin", './configure'))
+        self.assertEqual('../configure', subsystem_path("cygwin", '../configure'))
         self.assertEqual('source_subfolder/configure',
-                         unix_path(conanfile, 'source_subfolder/configure'))
+                         subsystem_path("cygwin", 'source_subfolder/configure'))
 
-        self.assertEqual('./configure', unix_path(conanfile, '.\\configure'))
-        self.assertEqual('../configure', unix_path(conanfile, '..\\configure'))
+        self.assertEqual('./configure', subsystem_path("cygwin", '.\\configure'))
+        self.assertEqual('../configure', subsystem_path("cygwin", '..\\configure'))
         self.assertEqual('source_subfolder/configure',
-                         unix_path(conanfile, 'source_subfolder\\configure'))
+                         subsystem_path("cygwin", 'source_subfolder\\configure'))
 
         # already with cygdrive
         self.assertEqual('/cygdrive/c/conan',
-                         unix_path(conanfile, '/cygdrive/c/conan'))
+                         subsystem_path("cygwin", '/cygdrive/c/conan'))
 
         # UNC (file share)
         self.assertEqual('//server/share',
-                         unix_path(conanfile, "\\\\SERVER\\Share"))
+                         subsystem_path("cygwin", "\\\\SERVER\\Share"))
 
         # long path
         self.assertEqual('/cygdrive/c/windows/system32',
-                         unix_path(conanfile, '\\\\?\\C:\\Windows\\System32'))
+                         subsystem_path("cygwin", '\\\\?\\C:\\Windows\\System32'))
 
-    @mock.patch("platform.system", mock.MagicMock(return_value='Windows'))
     def test_wsl_path(self):
-        conanfile = ConanFileMock()
-        conanfile.win_bash = True
-        conanfile.conf["tools.microsoft.bash:subsystem"] = "wsl"
-        self.assertEqual('/mnt/c/Windows/System32', unix_path(conanfile, 'C:\\Windows\\System32'))
+        self.assertEqual('/mnt/c/Windows/System32', subsystem_path("wsl", 'C:\\Windows\\System32'))
 
-    @mock.patch("platform.system", mock.MagicMock(return_value='Windows'))
     def test_sfu_path(self):
-        conanfile = ConanFileMock()
-        conanfile.win_bash = True
-        conanfile.conf["tools.microsoft.bash:subsystem"] = "sfu"
-        self.assertEqual('/dev/fs/C/windows/system32', unix_path(conanfile, 'C:\\Windows\\System32'))
+        self.assertEqual('/dev/fs/C/windows/system32', subsystem_path("sfu",
+                                                                      'C:\\Windows\\System32'))

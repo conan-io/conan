@@ -98,7 +98,7 @@ class AutotoolsToolchain:
             return "-Y _%s" % str(libcxx)
 
     def environment(self):
-        env = Environment(conanfile=self._conanfile)
+        env = Environment()
         # defines
         if self.ndebug:
             self.defines.append(self.ndebug)
@@ -139,9 +139,13 @@ class AutotoolsToolchain:
         env.append("LDFLAGS", self.ldflags)
         return env
 
-    def generate(self, env=None, group="build"):
+    def vars(self):
+        return self.environment().vars(self._conanfile, scope="build")
+
+    def generate(self, env=None, scope="build"):
         env = env or self.environment()
-        env.save_script("conanautotoolstoolchain", group=group)
+        env = env.vars(self._conanfile, scope=scope)
+        env.save_script("conanautotoolstoolchain")
         self.generate_args()
 
     def generate_args(self):

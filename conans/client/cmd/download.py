@@ -1,18 +1,26 @@
 from conans.cli.output import ScopedOutput, ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
+from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException, \
+    ConanException
 from multiprocessing.pool import ThreadPool
 
 
-def download(app, ref, package_ids, remote, recipe, remotes):
+def download(app, ref, package_ids, recipe):
     remote_manager, cache, loader = app.remote_manager, app.cache, app.loader
     hook_manager = app.hook_manager
     assert(isinstance(ref, ConanFileReference))
     scoped_output = ScopedOutput(str(ref), ConanOutput())
+    remote = app.selected_remote
+    if not remote:
+        # FIXME: Probably this shouldn't be done, the "default" remote concept when no remote is
+        #        specify is confusing. Probably it should be: Or I specify one or Conan iterates
+        try:
+            remote = app.enabled_remotes[0]
+        except IndexError:
+            raise ConanException("No active remotes configured")
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
-
     try:
         if not ref.revision:
             ref, _ = remote_manager.get_recipe(ref, remote)
@@ -27,7 +35,7 @@ def download(app, ref, package_ids, remote, recipe, remotes):
     conanfile = loader.load_basic(conan_file_path, display=ref)
 
     # Download the sources too, don't be lazy
-    retrieve_exports_sources(remote_manager, layout, conanfile, ref, remotes)
+    retrieve_exports_sources(remote_manager, layout, conanfile, ref, app.enabled_remotes)
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
@@ -38,8 +46,8 @@ def download(app, ref, package_ids, remote, recipe, remotes):
                 scoped_output.warning("No remote binary packages found in remote")
 
         parallel = cache.config.parallel_download
-        _download_binaries(conanfile, ref, package_ids, cache, remote_manager,
-                           remote, scoped_output, parallel)
+        _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote,
+                           scoped_output, parallel)
     hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,
                          remote=remote)
 

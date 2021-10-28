@@ -218,7 +218,6 @@ class Command(object):
         args = parser.parse_args(*args)
 
         self._warn_python_version()
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -268,7 +267,6 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
-        self._check_lockfile_args(args)
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -403,13 +401,10 @@ class Command(object):
                             'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        parser.add_argument("--lockfile-node-id", action=OnceArgument,
-                            help="NodeID of the referenced package in the lockfile")
         parser.add_argument("--require-override", action="append",
                             help="Define a requirement override")
 
         args = parser.parse_args(*args)
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -460,7 +455,6 @@ class Command(object):
                                                          install_folder=args.install_folder,
                                                          lockfile=args.lockfile,
                                                          lockfile_out=args.lockfile_out,
-                                                         lockfile_node_id=args.lockfile_node_id,
                                                          is_build_require=args.build_require,
                                                          require_overrides=args.require_override)
 
@@ -598,7 +592,7 @@ class Command(object):
             result = InstallGraph()
             for f in args.file:
                 f = _make_abs_path(f)
-                install_graph = InstallGraph.deserialize(json.loads(load(f)))
+                install_graph = InstallGraph.load(f)
                 result.merge(install_graph)
 
             install_order_serialized = result.install_build_order()
@@ -655,7 +649,6 @@ class Command(object):
                       "recipe if not using revisions)."
         _add_common_install_arguments(parser, update_help=update_help, build_help=build_help)
         args = parser.parse_args(*args)
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -785,7 +778,6 @@ class Command(object):
                             help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
-        self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
@@ -906,7 +898,6 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python_version()
-        self._check_lockfile_args(args)
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -1063,77 +1054,6 @@ class Command(object):
                                   packages=packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote)
 
-    def user(self, *args):
-        """
-        Authenticates against a remote with user/pass, caching the auth token.
-
-        Useful to avoid the user and password being requested later. e.g. while
-        you're uploading a package.  You can have one user for each remote.
-        Changing the user, or introducing the password is only necessary to
-        perform changes in remote packages.
-        """
-        # FIXME: Difficult and confusing CLI. Better with:
-        # - conan user clean -> clean users
-        # - conan user list ('remote') -> list users (of a remote)
-        # - conan user auth 'remote' ('user') ('password') -> login a remote (w/o user or pass)
-        # - conan user set 'user' 'remote' -> set user for a remote (not login) necessary??
-        parser = argparse.ArgumentParser(description=self.user.__doc__,
-                                         prog="conan user",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("name", nargs='?', default=None,
-                            help='Username you want to use. If no name is provided it will show the'
-                            ' current user')
-        parser.add_argument('-c', '--clean', default=False, action='store_true',
-                            help='Remove user and tokens for all remotes')
-        parser.add_argument("-p", "--password", nargs='?', const="", type=str, action=OnceArgument,
-                            help='User password. Use double quotes if password with spacing, '
-                                 'and escape quotes if existing. If empty, the password is '
-                                 'requested interactively (not exposed)')
-        parser.add_argument("-r", "--remote", help='Use the specified remote server',
-                            action=OnceArgument)
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='json file path where the user list will be written to')
-        parser.add_argument("-s", "--skip-auth", default=False, action='store_true',
-                            help='Skips the authentication with the server if there are local '
-                                 'stored credentials. It doesn\'t check if the '
-                                 'current credentials are valid or not')
-        args = parser.parse_args(*args)
-
-        if args.clean and any((args.name, args.remote, args.password, args.json, args.skip_auth)):
-            raise ConanException("'--clean' argument cannot be used together with 'name', "
-                                 "'--password', '--remote', '--json' or '--skip.auth'")
-        elif args.json and any((args.name, args.password)):
-            raise ConanException("'--json' cannot be used together with 'name' or '--password'")
-
-        cwd = os.getcwd()
-        info = None
-
-        try:
-            if args.clean:  # clean users
-                self._conan_api.users_clean()
-            elif not args.name and args.password is None:  # list users
-                info = self._conan_api.users_list(args.remote)
-                CommandOutputer().print_user_list(info)
-            elif args.password is None:  # set user for remote (no password indicated)
-                remote_name, prev_user, user = self._conan_api.user_set(args.name, args.remote)
-                CommandOutputer().print_user_set(remote_name, prev_user, user)
-            else:  # login a remote
-                remote_name = args.remote or self._conan_api.get_default_remote().name
-                name = args.name
-                password = args.password
-                remote_name, prev_user, user = self._conan_api.authenticate(name,
-                                                                        remote_name=remote_name,
-                                                                        password=password,
-                                                                        skip_auth=args.skip_auth)
-
-                CommandOutputer().print_user_set(remote_name, prev_user, user)
-        except ConanException as exc:
-            info = exc.info
-            raise
-        finally:
-            if args.json and info:
-                CommandOutputer().json_output(info, args.json, cwd)
-
     def upload(self, *args):
         """
         Uploads a recipe and binary packages to a remote.
@@ -1229,73 +1149,6 @@ class Command(object):
         finally:
             if args.json and info:
                 CommandOutputer().json_output(info, args.json, os.getcwd())
-
-    def remote(self, *args):
-        """
-        Manages the remote list and the package recipes associated with a remote.
-        """
-        parser = argparse.ArgumentParser(description=self.remote.__doc__,
-                                         prog="conan remote",
-                                         formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        # create the parser for the "a" command
-        parser_list = subparsers.add_parser('list', help='List current remotes')
-        parser_list.add_argument("-raw", "--raw", action='store_true', default=False,
-                                 help='Raw format. Valid for "remotes.txt" file for '
-                                 '"conan config install"')
-        parser_add = subparsers.add_parser('add', help='Add a remote')
-        parser_add.add_argument('remote', help='Name of the remote')
-        parser_add.add_argument('url', help='URL of the remote')
-        parser_add.add_argument('verify_ssl', nargs="?", default="True",
-                                help='Verify SSL certificated. Default True')
-        parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
-                                help="insert remote at specific index")
-        parser_add.add_argument("-f", "--force", default=False, action='store_true',
-                                help="Force addition, will update if existing")
-        parser_rm = subparsers.add_parser('remove', help='Remove a remote')
-        parser_rm.add_argument('remote', help='Name of the remote')
-        parser_upd = subparsers.add_parser('update', help='Update the remote url')
-        parser_upd.add_argument('remote', help='Name of the remote')
-
-        parser_upd.add_argument('url', help='URL')
-        parser_upd.add_argument('verify_ssl', nargs="?", default="True",
-                                help='Verify SSL certificated. Default True')
-        parser_upd.add_argument("-i", "--insert", nargs="?", const=0, type=int, action=OnceArgument,
-                                help="Insert remote at specific index")
-        parser_rename = subparsers.add_parser('rename', help='Update the remote name')
-        parser_rename.add_argument('remote', help='The old remote name')
-        parser_rename.add_argument('new_remote', help='The new remote name')
-
-        parser_enable = subparsers.add_parser('enable', help='Enable a remote')
-        parser_enable.add_argument('remote', help='Name of the remote')
-        parser_disable = subparsers.add_parser('disable', help='Disable a remote')
-        parser_disable.add_argument('remote', help='Name of the remote')
-
-        args = parser.parse_args(*args)
-
-        verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
-
-        remote_name = args.remote if hasattr(args, 'remote') else None
-        new_remote = args.new_remote if hasattr(args, 'new_remote') else None
-        url = args.url if hasattr(args, 'url') else None
-
-        if args.subcommand == "list":
-            remotes = self._conan_api.remote_list()
-            CommandOutputer().remote_list(remotes, args.raw)
-        elif args.subcommand == "add":
-            return self._conan_api.remote_add(remote_name, url, verify_ssl, args.insert, args.force)
-        elif args.subcommand == "remove":
-            return self._conan_api.remote_remove(remote_name)
-        elif args.subcommand == "rename":
-            return self._conan_api.remote_rename(remote_name, new_remote)
-        elif args.subcommand == "update":
-            return self._conan_api.remote_update(remote_name, url, verify_ssl, args.insert)
-        elif args.subcommand == "enable":
-            return self._conan_api.remote_set_disabled_state(remote_name, False)
-        elif args.subcommand == "disable":
-            return self._conan_api.remote_set_disabled_state(remote_name, True)
 
     def profile(self, *args):
         """
@@ -1492,30 +1345,10 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
-        # create the parser for the "a" command
-        update_help = ("Complete missing information in the first lockfile with information "
-                       "defined in the second lockfile. Both lockfiles must represent the same "
-                       "graph, and have the same topology with the same identifiers, i.e. the "
-                       "second lockfile must be an evolution based on the first one")
-        update_cmd = subparsers.add_parser('update', help=update_help)
-        update_cmd.add_argument('old_lockfile', help='Path to lockfile to be updated')
-        update_cmd.add_argument('new_lockfile', help='Path to lockfile containing the new '
-                                'information that is going to be updated into the first lockfile')
-
-        build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
-        build_order_cmd.add_argument('lockfile', help='lockfile file')
-        build_order_cmd.add_argument("--json", action=OnceArgument,
-                                     help="generate output file in json format")
-
-        clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
-        clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
-
-        install_cmd = subparsers.add_parser('install', help='Install a lockfile')
-        install_cmd.add_argument('lockfile', help='Path to the lockfile')
-        install_cmd.add_argument("--recipes", action="store_true",
-                                 help="Install only recipes, not binaries")
-        install_cmd.add_argument("-g", "--generator", nargs=1, action=Extender,
-                                 help='Generators to use')
+        merge_cmd = subparsers.add_parser('merge', help="merge 2 or more lockfiles")
+        merge_cmd.add_argument('--lockfile', action="append", help='Path to lockfile to be merged')
+        merge_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
+                               help="Filename of the created lockfile")
 
         create_cmd = subparsers.add_parser('create',
                                            help='Create a lockfile from a conanfile or a reference')
@@ -1533,66 +1366,17 @@ class Command(object):
                                 help='Provide a package reference instead of a conanfile')
         create_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
                                 help="Path to lockfile to be used as a base")
-        create_cmd.add_argument("--base", action="store_true",
-                                help="Lock only recipe versions and revisions")
         create_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                                 help="Filename of the created lockfile")
+        create_cmd.add_argument("--clean", action="store_true", help="remove unused")
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
-
-        bundle = subparsers.add_parser('bundle', help='Manages lockfile bundles')
-        bundle_subparsers = bundle.add_subparsers(dest='bundlecommand', help='sub-command help')
-        bundle_create_cmd = bundle_subparsers.add_parser('create', help='Create lockfile bundle')
-        bundle_create_cmd.add_argument("lockfiles", nargs="+",
-                                       help="Path to lockfiles")
-        bundle_create_cmd.add_argument("--bundle-out", action=OnceArgument, default="lock.bundle",
-                                       help="Filename of the created bundle")
-
-        build_order_bundle_cmd = bundle_subparsers.add_parser('build-order',
-                                                              help='Returns build-order')
-        build_order_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
-        build_order_bundle_cmd.add_argument("--json", action=OnceArgument,
-                                            help="generate output file in json format")
-
-        update_help = ("Update both the bundle information as well as every individual lockfile, "
-                       "from the information that was modified in the individual lockfile. At the "
-                       "end, all lockfiles will have the same package revision for the binary of "
-                       "same package_id")
-        update_bundle_cmd = bundle_subparsers.add_parser('update', help=update_help)
-        update_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
-
-        clean_modified_bundle_cmd = bundle_subparsers.add_parser('clean-modified',
-                                                                 help='Clean modified flag')
-        clean_modified_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
 
         args = parser.parse_args(*args)
         self._warn_python_version()
 
-        if args.subcommand == "install":
-            self._conan_api.lock_install(args.lockfile, generators=args.generator, recipes=args.recipes)
-        elif args.subcommand == "update":
-            self._conan_api.lock_update(args.old_lockfile, args.new_lockfile)
-        elif args.subcommand == "bundle":
-            if args.bundlecommand == "create":
-                self._conan_api.lock_bundle_create(args.lockfiles, args.bundle_out)
-            elif args.bundlecommand == "update":
-                self._conan_api.lock_bundle_update(args.bundle)
-            elif args.bundlecommand == "clean-modified":
-                self._conan_api.lock_bundle_clean_modified(args.bundle)
-            elif args.bundlecommand == "build-order":
-                build_order = self._conan_api.lock_bundle_build_order(args.bundle)
-                self._out.info(build_order)
-                if args.json:
-                    json_file = _make_abs_path(args.json)
-                    save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "build-order":
-            build_order = self._conan_api.lock_build_order(args.lockfile)
-            self._out.info(build_order)
-            if args.json:
-                json_file = _make_abs_path(args.json)
-                save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "clean-modified":
-            self._conan_api.lock_clean_modified(args.lockfile)
+        if args.subcommand == "merge":
+            self._conan_api.lock_merge(args.lockfile, args.lockfile_out)
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build,
@@ -1612,9 +1396,9 @@ class Command(object):
                                     remote_name=args.remote,
                                     update=args.update,
                                     build=args.build,
-                                    base=args.base,
                                     lockfile=args.lockfile,
-                                    lockfile_out=args.lockfile_out)
+                                    lockfile_out=args.lockfile_out,
+                                    clean=args.clean)
 
     def _commands(self):
         """ Returns a list of available commands.
@@ -1648,19 +1432,6 @@ class Command(object):
             self._out.info("    %s" % match)
 
         self._out.info("")
-
-    @staticmethod
-    def _check_lockfile_args(args):
-        if args.lockfile and (args.profile_build or args.settings_build or args.options_build or
-                              args.env_build or args.conf_build):
-            raise ConanException("Cannot use profile, settings, options, env or conf 'build' when "
-                                 "using lockfile")
-        if args.lockfile and (args.profile_host or args.settings_host or args.options_host or
-                              args.env_host or args.conf_host):
-            raise ConanException("Cannot use profile, settings, options, env or conf 'host' when "
-                                 "using lockfile")
-        if args.lockfile_out and not args.lockfile:
-            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
 
     def _warn_python_version(self):
         import textwrap
@@ -1730,6 +1501,8 @@ class Command(object):
             ret_code = ERROR_INVALID_CONFIGURATION
             self._out.error(exc)
         except ConanException as exc:
+            import traceback
+            print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             self._out.error(exc)
         except Exception as exc:

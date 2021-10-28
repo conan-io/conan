@@ -2,15 +2,14 @@
     This is a helper class which offers a lot of useful methods and attributes
 """
 # FIXME: only for tools.gnu? perhaps it should be a global module
-import platform
-
-from conan.tools.microsoft import unix_path
+from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
 
 
 class GnuDepsFlags(object):
 
     def __init__(self, conanfile, cpp_info):
         self._conanfile = conanfile
+        self._subsystem = deduce_subsystem(conanfile, scope="build")
 
         # From cppinfo, calculated flags
         self.include_paths = self._format_include_paths(cpp_info.includedirs)
@@ -120,7 +119,7 @@ class GnuDepsFlags(object):
         else:
             path = path.replace('\\', '/')
 
-        path = unix_path(self._conanfile, path)
+        path = subsystem_path(self._subsystem, path)
         return '"%s"' % path if ' ' in path else path
 
     @property

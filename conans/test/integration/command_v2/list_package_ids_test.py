@@ -20,7 +20,7 @@ class TestListPackageIdsBase:
         self.client.servers[remote_name] = TestServer(users={"username": "passwd"},
                                                       write_permissions=[("*/*@*/*", "*")])
         self.client.update_servers()
-        self.client.run("user username -p passwd -r {}".format(remote_name))
+        self.client.run("remote login {} username -p passwd".format(remote_name))
 
     def _upload_recipe(self, remote, reference):
         self.client.save({'conanfile.py': GenConanfile()})
@@ -69,20 +69,14 @@ class TestParams(TestListPackageIdsBase):
         self.client.run("list package-ids -c", assert_error=True)
         assert "error: the following arguments are required: reference" in self.client.out
 
-        self.client.run("list package-ids --all-remotes", assert_error=True)
+        self.client.run('list package-ids -r="*"', assert_error=True)
         assert "error: the following arguments are required: reference" in self.client.out
 
         self.client.run("list package-ids --remote remote1 --cache", assert_error=True)
         assert "error: the following arguments are required: reference" in self.client.out
 
-    def test_remote_and_all_remotes_are_mutually_exclusive(self):
-        self._add_remote("remote1")
-
-        self.client.run("list package-ids --all-remotes --remote remote1 package/1.0", assert_error=True)
-        assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
-
     def test_wildcard_not_accepted(self):
-        self.client.run("list package-ids -a -c test_*", assert_error=True)
+        self.client.run('list package-ids -r="*" -c test_*', assert_error=True)
         expected_output = "ERROR: test_* is not a valid recipe reference, provide a " \
                           "reference in the form name/version[@user/channel][#RECIPE_REVISION]"
         assert expected_output in self.client.out
@@ -115,12 +109,12 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         """)
 
         rrev = self._get_fake_recipe_refence('whatever/0.1')
-        self.client.run(f"list package-ids -c -a {rrev}")
+        self.client.run(f'list package-ids -c -r="*" {rrev}')
         assert expected_output == self.client.out
 
     def test_fail_if_no_configured_remotes(self):
-        self.client.run("list package-ids -a whatever/1.0", assert_error=True)
-        assert "ERROR: The remotes registry is empty" in self.client.out
+        self.client.run('list package-ids -r="*" whatever/1.0', assert_error=True)
+        assert "Remotes for pattern '*' can't be found or are disabled" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
@@ -128,14 +122,8 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self.client.run("remote disable remote1")
         # He have to put both remotes instead of using "-a" because of the
         # disbaled remote won't appear
-        self.client.run("list package-ids whatever/1.0 -r remote1 -r remote2")
-        expected_output = textwrap.dedent("""\
-        remote1:
-          ERROR: Remote 'remote1' is disabled
-        remote2:
-          There are no matching recipe references
-        """)
-        assert expected_output == self.client.out
+        self.client.run("list package-ids whatever/1.0 -r remote1 -r remote2", assert_error=True)
+        assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
@@ -148,7 +136,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         rrev = self._get_fake_recipe_refence("whatever/1.0")
         with patch.object(RemoteManager, "search_packages",
                           new=Mock(side_effect=exc)):
-            self.client.run(f"list package-ids {rrev} -a -c")
+            self.client.run(f'list package-ids {rrev} -r="*" -c')
         expected_output = textwrap.dedent(f"""\
         Local Cache:
           There are no matching recipe references
@@ -219,7 +207,7 @@ class TestRemotes(TestListPackageIdsBase):
         ref = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
         self._upload_full_recipe(remote_name, ref)
-        self.client.run(f"list package-ids -a -c {ref}")
+        self.client.run(f'list package-ids -r="*" -c {ref}')
         # Now, let's check that we're using the latest one by default
         rrev = self._get_lastest_recipe_ref(ref)
         expected_output = textwrap.dedent("""\
@@ -262,7 +250,7 @@ class TestRemotes(TestListPackageIdsBase):
 
         # Getting the latest recipe ref
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
-        self.client.run(f"list package-ids -a -c {repr(rrev)}")
+        self.client.run(f'list package-ids -r="*" -c {repr(rrev)}')
         output = str(self.client.out)
         expected_output = textwrap.dedent("""\
         Local Cache:
@@ -296,7 +284,7 @@ class TestRemotes(TestListPackageIdsBase):
         remote1_recipe1 = "test_recipe/1.0.0@user/channel"
         remote1_recipe2 = "test_recipe/1.1.0@user/channel"
 
-        expected_output = "No remote 'wrong_remote' defined in remotes"
+        expected_output = "Remote 'wrong_remote' not found in remotes"
 
         self._add_remote(remote1)
         self._upload_recipe(remote1, remote1_recipe1)

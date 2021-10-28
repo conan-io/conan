@@ -27,7 +27,7 @@ def _get_test_conanfile_path(tf, conanfile_path):
                                  % tf)
 
 
-def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes, update, build_modes,
+def create(app, ref, profile_host, profile_build, graph_lock, root_ref, build_modes,
            test_build_folder, test_folder, conanfile_path, is_build_require=False,
            require_overrides=None):
     assert isinstance(ref, ConanFileReference), "ref needed"
@@ -48,22 +48,19 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
                          create_reference=ref,
                          install_folder=None,  # Not output conaninfo etc
                          base_folder=None,  # Not output generators
-                         remotes=remotes,
                          profile_host=profile_host,
                          profile_build=profile_build,
                          graph_lock=graph_lock,
                          root_ref=root_ref,
                          build_modes=build_modes,
-                         update=update,
                          conanfile_path=os.path.dirname(test_conanfile_path))
             out.info("Executing test_package %s" % repr(ref))
             try:
-                graph_lock.relax()
                 # FIXME: It needs to clear the cache, otherwise it fails
                 app.binaries_analyzer._evaluated = {}
                 # FIXME: Forcing now not building test dependencies, binaries should be there
                 install_build_and_test(app, test_conanfile_path, ref, profile_host, profile_build,
-                                       graph_lock, root_ref, remotes, update, build_modes=None,
+                                       graph_lock, root_ref, build_modes=None,
                                        test_build_folder=test_build_folder)
             except Exception as e:
                 raise ConanException("Something failed while testing '%s' test_package after "
@@ -72,7 +69,7 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
 
         else:
             install_build_and_test(app, test_conanfile_path, ref, profile_host, profile_build,
-                                   graph_lock, root_ref, remotes, update,
+                                   graph_lock, root_ref,
                                    build_modes=build_modes,
                                    test_build_folder=test_build_folder,
                                    require_overrides=require_overrides
@@ -83,12 +80,10 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
                      create_reference=ref,
                      install_folder=None,  # Not output infos etc
                      base_folder=None,  # Not output generators
-                     remotes=remotes,
                      profile_host=profile_host,
                      profile_build=profile_build,
                      graph_lock=graph_lock,
                      root_ref=root_ref,
                      build_modes=build_modes,
-                     update=update,
                      is_build_require=is_build_require,
                      require_overrides=require_overrides)

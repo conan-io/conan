@@ -577,7 +577,7 @@ class MyPkg(ConanFile):
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("create . user/testing")
-        client.run("user -c")
+        client.run("remote logout '*'")
         client.run("upload Hello0/1.2.1@user/testing -r default", assert_error=True)
 
         self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
@@ -599,8 +599,8 @@ class MyPkg(ConanFile):
                                 """)
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("create . user/testing")
-        client.run("user -c")
-        client.run("user lasote")
+        client.run("remote logout '*'")
+        client.run("remote set-user default lasote")
         client.run("upload Hello0/1.2.1@user/testing -r default", assert_error=True)
         self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
                       "Conan interactive mode disabled", client.out)
@@ -621,8 +621,8 @@ class MyPkg(ConanFile):
                                 """)
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("create . user/testing")
-        client.run("user -c")
-        client.run("user admin -p password")
+        client.run("remote logout '*'")
+        client.run("remote login default admin -p password")
         client.run("upload Hello0/1.2.1@user/testing -r default")
 
         self.assertIn("Uploading conanmanifest.txt", client.out)
@@ -638,8 +638,8 @@ class MyPkg(ConanFile):
         client = TestClient(servers=servers)
         client.save(files)
         client.run("create . user/testing")
-        client.run("user lasote -p mypass")
-        client.run("user lasote -p mypass -r server2")
+        client.run("remote login server1 lasote -p mypass")
+        client.run("remote login server2 lasote -p mypass")
         client.run("upload Hello0/1.2.1@user/testing --all -r server1")
         client.run("remove * --force")
         client.run("install Hello0/1.2.1@user/testing -r server1")
@@ -777,7 +777,7 @@ class MyPkg(ConanFile):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         client.save(files)
         client.run("create . user/testing")
-        client.run("user -c")
+        client.run("remote logout '*'")
         client.run("upload Hello0/1.2.1@user/testing --all -r default")
         assert "Uploading Hello0/1.2.1@user/testing to remote" in client.out
 
