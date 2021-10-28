@@ -4,7 +4,6 @@ import textwrap
 
 import pytest
 
-from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
@@ -166,6 +165,9 @@ def test_same_conanfile_local(conanfile):
     client.run("build .  -if=install")
     assert "Build folder: {}".format(build_folder) in client.out
     assert os.path.exists(os.path.join(build_folder, "build.lib"))
+
+    client.run("package .  -if=install", assert_error=True)
+    assert "'package' is not a Conan command" in client.out
 
 
 def test_imports():

@@ -130,6 +130,13 @@ def _receive_conf(conanfile):
 def _generate_aggregated_env(conanfile):
     from conan.tools.microsoft.subsystems import subsystem_path
 
+    def deactivates(filenames):
+        result = []
+        for s in filenames:
+            folder, f = os.path.split(s)
+            result.append(os.path.join(folder, "deactivate_{}".format(f)))
+        return result
+
     for group, env_scripts in conanfile.env_scripts.items():
         subsystem = deduce_subsystem(conanfile, group)
         bats = []
@@ -141,9 +148,16 @@ def _generate_aggregated_env(conanfile):
             elif env_script.endswith(".sh"):
                 shs.append(subsystem_path(subsystem, path))
         if shs:
-            sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
-            save(os.path.join(conanfile.generators_folder, "conan{}.sh".format(group)), sh_content)
+            def sh_content(files):
+                return ". " + " && . ".join('"{}"'.format(s) for s in files)
+            filename = "conan{}.sh".format(group)
+            save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 sh_content(deactivates(shs)))
         if bats:
-            lines = ["@echo off"] + ['call "{}"'.format(b) for b in bats]
-            bat_content = "\r\n".join(lines)
-            save(os.path.join(conanfile.generators_folder, "conan{}.bat".format(group)), bat_content)
+            def bat_content(files):
+                return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
+            filename = "conan{}.bat".format(group)
+            save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 bat_content(deactivates(bats)))
