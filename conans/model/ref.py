@@ -151,7 +151,7 @@ class ConanName(object):
             ConanName.invalid_name_message(name, reference_token=reference_token)
 
     @staticmethod
-    def validate_version(name, version):
+    def validate_version(version, pkg_name):
         ConanName.validate_string(version)
         if version == "*":
             return
@@ -161,7 +161,7 @@ class ConanName(object):
                 or (version.startswith("(") and version.endswith(")"))
             ):
                 return
-            ConanName.invalid_version_message(name, version)
+            ConanName.invalid_version_message(pkg_name, version)
 
     @staticmethod
     def validate_revision(revision):
@@ -200,7 +200,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         if self.name is not None:
             ConanName.validate_name(self.name, reference_token="package name")
         if self.version is not None:
-            ConanName.validate_version(self.name, self.version)
+            ConanName.validate_version(self.version, self.name)
         if self.user is not None:
             ConanName.validate_name(self.user, reference_token="user name")
         if self.channel is not None:

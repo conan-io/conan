@@ -116,7 +116,7 @@ class ConanNameTestCase(unittest.TestCase):
 
     def _check_invalid_version(self, name, version):
         with six.assertRaisesRegex(self, InvalidNameException, "invalid version number"):
-            ConanName.validate_version(name, version)
+            ConanName.validate_version(version, name)
 
     def _check_invalid_type(self, value):
         with six.assertRaisesRegex(self, InvalidNameException, "is not a string"):
