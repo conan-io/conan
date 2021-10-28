@@ -126,6 +126,8 @@ class _PackageBuilder(object):
                 raise ConanException("%s\nError copying sources to build folder" % msg)
             logger.debug("BUILD: Copied to %s", build_folder)
             logger.debug("BUILD: Files copied %s", ",".join(os.listdir(build_folder)))
+            if hasattr(conanfile, "copy_sources"):
+                conanfile.copy_sources(build_folder)
 
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
@@ -211,8 +213,12 @@ class _PackageBuilder(object):
             try:
                 if getattr(conanfile, 'no_copy_source', False):
                     conanfile.folders.set_base_source(base_source)
+                    if hasattr(conanfile, 'enable_variants'):
+                        conanfile.enable_variants(True, source=False)
                 else:
                     conanfile.folders.set_base_source(base_build)
+                    if hasattr(conanfile, 'enable_variants'):
+                        conanfile.enable_variants(True, source=True)
 
                 conanfile.folders.set_base_build(base_build)
                 conanfile.folders.set_base_imports(base_build)

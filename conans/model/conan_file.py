@@ -1,3 +1,4 @@
+import copy
 import os
 import platform
 from contextlib import contextmanager
@@ -178,6 +179,9 @@ class ConanFile(object):
         self.cpp.package.builddirs = [""]
         self.cpp.package.frameworkdirs = ["Frameworks"]
 
+    def __iter__(self):
+        yield self
+
     @property
     def context(self):
         return self._conan_node.context
@@ -242,6 +246,12 @@ class ConanFile(object):
             self.virtualbuildenv = True
         if not hasattr(self, "virtualrunenv"):  # Allow the user to override it with True or False
             self.virtualrunenv = True
+
+    def clone(self):
+        result = copy.copy(self)
+        result.settings = self.settings.copy()
+        result.folders = copy.deepcopy(self.folders)
+        return result
 
     @property
     def new_cpp_info(self):

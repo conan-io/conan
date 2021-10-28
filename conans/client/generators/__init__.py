@@ -144,7 +144,7 @@ class GeneratorManager(object):
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
 
-    def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
+    def _write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
         """ produces auxiliary files, required to build a project or a package.
         """
         _receive_conf(conanfile)
@@ -210,6 +210,26 @@ class GeneratorManager(object):
                              % (generator_name, generator.filename, str(e)))
                 raise ConanException(e)
 
+    def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
+        """ produces auxiliary files, required to build a project or a package.
+        """
+        is_variant = True
+        for c in conanfile:
+            if c is conanfile:
+                is_variant = False
+            old = _update_conanfile_path(conanfile, c, old_gen_folder)
+            new = _update_conanfile_path(conanfile, c, new_gen_folder)
+            self._write_generators(c, old, new, output)
+        if is_variant and "txt" in conanfile.generators:
+            self._write_generators(conanfile, old_gen_folder, new_gen_folder, output)
+
+
+def _update_conanfile_path(old, new, path):
+    if path == old.install_folder:
+        return new.install_folder
+    else:
+        return path
+
 
 def _receive_conf(conanfile):
     """  collect conf_info from the immediate build_requires, aggregate it and injects/update
@@ -224,7 +244,7 @@ def _receive_conf(conanfile):
             conanfile.conf.compose(build_require.conf_info)
 
 
-def write_toolchain(conanfile, path, output):
+def _write_toolchain(conanfile, path, output):
     if hasattr(conanfile, "toolchain"):
         msg = ("\n*****************************************************************\n"
                "******************************************************************\n"
@@ -254,6 +274,11 @@ def write_toolchain(conanfile, path, output):
 
     output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)
+
+
+def write_toolchain(conanfile, path, output):
+    for c in conanfile:
+        _write_toolchain(c, _update_conanfile_path(conanfile, c, path), output)
 
 
 def _generate_aggregated_env(conanfile):

@@ -5,6 +5,7 @@ from conans.client.build.msbuild import MSBuild
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 from conans.client.run_environment import RunEnvironment
 from conans.model.conan_file import ConanFile
+from conans.model.conan_variants import Variants
 from conans.model.options import Options
 from conans.model.settings import Settings
 from conans.util.files import load
