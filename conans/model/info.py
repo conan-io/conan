@@ -531,7 +531,7 @@ class ConanInfo(object):
         This info will be shown in search results.
         """
         conan_info_json = {"settings": dict(self.settings.serialize()),
-                           "options": dict(self.options.serialize()),
+                           "options": dict(self.options.serialize_options())["options"],
                            "full_requires": self.full_requires.serialize()
                            }
         return conan_info_json

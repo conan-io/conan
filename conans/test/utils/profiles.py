@@ -18,7 +18,7 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
         profile.package_settings = package_settings
 
     if options:
-        profile.options = Options(options)
+        profile.options = Options(options_values=options)
 
     if conf:
         _conf = "\n".join(conf) if isinstance(conf, list) else conf

@@ -18,7 +18,7 @@ class Profile(object):
         # Input sections, as defined by user profile files and command line
         self.settings = OrderedDict()
         self.package_settings = defaultdict(OrderedDict)
-        self.options = Options(constrained=False)
+        self.options = Options()
         self.build_requires = OrderedDict()  # ref pattern: list of ref
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()

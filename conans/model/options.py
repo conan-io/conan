@@ -77,11 +77,14 @@ class _PackageOption:
 
 
 class _PackageOptions:
-    def __init__(self, recipe_options_definition=None, constrained=False):
-        self._constrained = constrained
-        definition = recipe_options_definition or {}
-        self._data = {str(option): _PackageOption(str(option), None, possible_values)
-                      for option, possible_values in definition.items()}
+    def __init__(self, recipe_options_definition=None):
+        if recipe_options_definition is None:
+            self._constrained = False
+            self._data = {}
+        else:
+            self._constrained = True
+            self._data = {str(option): _PackageOption(str(option), None, possible_values)
+                          for option, possible_values in recipe_options_definition.items()}
         self._freeze = False
 
     def clear(self):
@@ -167,9 +170,10 @@ class Options:
     """ All options of a package, both its own options and the upstream ones.
     Owned by ConanFile.
     """
-    def __init__(self, options=None, options_values=None, constrained=True):
+    def __init__(self, options=None, options_values=None):
+        # options=None means an unconstrained/profile definition
         try:
-            self._package_options = _PackageOptions(options, constrained)
+            self._package_options = _PackageOptions(options)
             # Addressed only by name, as only 1 configuration is allowed
             # if more than 1 is present, 1 should be "private" requirement and its options
             # are not public, not overridable
@@ -206,7 +210,7 @@ class Options:
                 continue
             name, value = line.split("=", 1)
             values[name] = value
-        return Options(options_values=values, constrained=False)
+        return Options(options_values=values)
 
     def scope(self, name):
         package_options = self._deps_package_options.setdefault(name, _PackageOptions())
@@ -229,8 +233,9 @@ class Options:
         self._package_options.clear()
         self._deps_package_options.clear()
 
-    def serialize(self):
-        return {k: str(v) for k, v in self._package_options.items()}
+    def serialize_options(self):
+        # we need to maintain the "options" and "req_options" first level or servers will break
+        return {"options": {k: str(v) for k, v in self._package_options.items()}}
 
     def get_info_options(self, clear_deps=False):
         # To generate the cpp_info.options copy, that can destroy, change and remove things

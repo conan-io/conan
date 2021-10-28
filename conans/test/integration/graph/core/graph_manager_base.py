@@ -144,7 +144,7 @@ class GraphManagerTest(unittest.TestCase):
         if profile_build_requires:
             profile_host.build_requires = profile_build_requires
         if options_build:
-            profile_build.options = Options(options_values=options_build, constrained=False)
+            profile_build.options = Options(options_values=options_build)
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
         build_mode = []  # Means build all

@@ -110,8 +110,7 @@ class TestOptionsPropagate:
 
         ref = ConanFileReference.loads("boost/1.0")
         # if ref!=None option MUST be preceded by boost:
-        down_options = Options(options_values={"zlib:other": 1, "boost:static": False},
-                               constrained=False)
+        down_options = Options(options_values={"zlib:other": 1, "boost:static": False})
         sut.apply_downstream(down_options, Options(), ref)
         assert not sut.static
 

@@ -65,7 +65,7 @@ def cmd_profile_update(profile_name, key, value, cache_profiles_path):
     if first_key == "settings":
         profile.settings[rest_key] = value
     elif first_key == "options":
-        tmp = Options(options_values={rest_key, value})
+        tmp = Options(options_values={rest_key: value})
         profile.options.update_options(tmp)
     elif first_key == "buildenv":
         raise ConanException("Edit the profile manually to change the buildenv")
@@ -88,7 +88,11 @@ def cmd_profile_get(profile_name, key, cache_profiles_path):
         if first_key == "settings":
             return profile.settings[rest_key]
         elif first_key == "options":
-            return dict(profile.options.as_list())[rest_key]
+            if ":" in rest_key:
+                pkg, var = rest_key.split(":")
+                return getattr(profile.options[pkg], var)
+            else:
+                return getattr(profile.options, rest_key)
         elif first_key == "env":
             package = None
             var = rest_key
@@ -117,7 +121,10 @@ def cmd_profile_delete_key(profile_name, key, cache_profiles_path):
         if first_key == "settings":
             del profile.settings[rest_key]
         elif first_key == "options":
-            profile.options.remove(name, package)
+            if package is None:
+                delattr(profile.options, name)
+            else:
+                delattr(profile.options[package], name)
         elif first_key == "env":
             profile.env_values.remove(name, package)
         elif first_key == "conf":

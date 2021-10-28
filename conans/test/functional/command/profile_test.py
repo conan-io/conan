@@ -6,7 +6,6 @@ import unittest
 
 import pytest
 
-from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
 from conans.paths import DEFAULT_PROFILE_NAME
@@ -75,7 +74,7 @@ class ProfileTest(unittest.TestCase):
     def test_show(self):
         client = TestClient()
         create_profile(client.cache.profiles_path, "profile1", settings={"os": "Windows"},
-                       options=[("MyOption", "32")])
+                       options={"MyOption": "32"})
         create_profile(client.cache.profiles_path, "profile3",
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")],
