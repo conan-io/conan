@@ -114,6 +114,10 @@ class ConanNameTestCase(unittest.TestCase):
         with six.assertRaisesRegex(self, InvalidNameException, "Valid names"):
             ConanName.validate_name(value, *args)
 
+    def _check_invalid_version(self, name, version):
+        with six.assertRaisesRegex(self, InvalidNameException, "invalid version number"):
+            ConanName.validate_version(name, version)
+
     def _check_invalid_type(self, value):
         with six.assertRaisesRegex(self, InvalidNameException, "is not a string"):
             ConanName.validate_name(value)
@@ -136,11 +140,11 @@ class ConanNameTestCase(unittest.TestCase):
         self._check_invalid_type(("item1", "item2",))
 
     def test_validate_name_version(self):
-        self.assertIsNone(ConanName.validate_name("name", "[vvvv]"))
+        self.assertIsNone(ConanName.validate_version("name", "[vvvv]"))
 
     def test_validate_name_version_invalid(self):
-        self._check_invalid_format("name", "[no.close.bracket")
-        self._check_invalid_format("name", "no.open.bracket]")
+        self._check_invalid_version("name", "[no.close.bracket")
+        self._check_invalid_version("name", "no.open.bracket]")
 
 
 class CheckValidRefTest(unittest.TestCase):

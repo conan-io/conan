@@ -142,23 +142,26 @@ class ConanName(object):
             raise InvalidNameException(message)
 
     @staticmethod
-    def validate_name(name, version=None, reference_token=None):
+    def validate_name(name, reference_token=None):
         """Check for name compliance with pattern rules"""
-        string_to_validate = version if version else name
-
-        ConanName.validate_string(string_to_validate, reference_token=reference_token)
-        if string_to_validate == "*":
+        ConanName.validate_string(name, reference_token=reference_token)
+        if name == "*":
             return
-        if ConanName._validation_pattern.match(string_to_validate) is None:
-            if version:
-                if (
-                    (version.startswith("[") and version.endswith("]"))
-                    or (version.startswith("(") and version.endswith(")"))
-                ):
-                    return
-                ConanName.invalid_version_message(name, version)
-            else:
-                ConanName.invalid_name_message(name, reference_token=reference_token)
+        if ConanName._validation_pattern.match(name) is None:
+            ConanName.invalid_name_message(name, reference_token=reference_token)
+
+    @staticmethod
+    def validate_version(name, version):
+        ConanName.validate_string(version)
+        if version == "*":
+            return
+        if ConanName._validation_pattern.match(version) is None:
+            if (
+                (version.startswith("[") and version.endswith("]"))
+                or (version.startswith("(") and version.endswith(")"))
+            ):
+                return
+            ConanName.invalid_version_message(name, version)
 
     @staticmethod
     def validate_revision(revision):
@@ -197,7 +200,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         if self.name is not None:
             ConanName.validate_name(self.name, reference_token="package name")
         if self.version is not None:
-            ConanName.validate_name(self.name, self.version, reference_token="package version")
+            ConanName.validate_version(self.name, self.version)
         if self.user is not None:
             ConanName.validate_name(self.user, reference_token="user name")
         if self.channel is not None:
