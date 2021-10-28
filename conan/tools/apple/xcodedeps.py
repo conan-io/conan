@@ -31,15 +31,15 @@ class XcodeDeps(object):
         #include "{{vars_filename}}"
 
         // Compiler options for {{name}}
-        HEADER_SEARCH_PATHS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_INCLUDE_DIRECTORIES_{{configuration}})
-        GCC_PREPROCESSOR_DEFINITIONS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_PREPROCESSOR_DEFINITIONS_{{configuration}})
-        OTHER_CFLAGS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_C_COMPILER_FLAGS_{{configuration}})
-        OTHER_CPLUSPLUSFLAGS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_CXX_COMPILER_FLAGS_{{configuration}})
-        FRAMEWORK_SEARCH_PATHS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_FRAMEWORKS_DIRECTORIES_{{configuration}})
+        HEADER_SEARCH_PATHS_{{name}}_{{configuration}}[arch={{architecture}}] = $(CONAN_{{name}}_INCLUDE_DIRECTORIES_{{configuration}})
+        GCC_PREPROCESSOR_DEFINITIONS_{{name}}_{{configuration}}[arch={{architecture}}] = $(CONAN_{{name}}_PREPROCESSOR_DEFINITIONS_{{configuration}})
+        OTHER_CFLAGS_{{name}}_{{configuration}}[arch={{architecture}}] = $(CONAN_{{name}}_C_COMPILER_FLAGS_{{configuration}})
+        OTHER_CPLUSPLUSFLAGS_{{name}}_{{configuration}}[arch={{architecture}}] = $(CONAN_{{name}}_CXX_COMPILER_FLAGS_{{configuration}})
+        FRAMEWORK_SEARCH_PATHS_{{name}}_{{configuration}}[arch={{architecture}}] = $(CONAN_{{name}}_FRAMEWORKS_DIRECTORIES_{{configuration}})
 
         // Link options for {{name}}
-        LIBRARY_SEARCH_PATHS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_LIBRARY_DIRECTORIES_{{configuration}})
-        OTHER_LDFLAGS_{{name}}_{{configuration}}[arch={{architecture}}][sdk={{sdk}}] = $(CONAN_{{name}}_LINKER_FLAGS_{{configuration}}) $(CONAN_{{name}}_LIBRARIES_{{configuration}}) $(CONAN_{{name}}_SYSTEM_LIBS_{{configuration}}) $(CONAN_{{name}}_FRAMEWORKS_{{configuration}})
+        LIBRARY_SEARCH_PATHS_{{name}}_{{configuration}}[arch={{architecture}}] = $(CONAN_{{name}}_LIBRARY_DIRECTORIES_{{configuration}})
+        OTHER_LDFLAGS_{{name}}_{{configuration}}[arch={{architecture}}] = $(CONAN_{{name}}_LINKER_FLAGS_{{configuration}}) $(CONAN_{{name}}_LIBRARIES_{{configuration}}) $(CONAN_{{name}}_SYSTEM_LIBS_{{configuration}}) $(CONAN_{{name}}_FRAMEWORKS_{{configuration}})
         """)
 
     _dep_xconfig = textwrap.dedent("""\
@@ -74,12 +74,7 @@ class XcodeDeps(object):
         # TODO: check if it makes sense to add a subsetting for sdk version
         #  related to: https://github.com/conan-io/conan/issues/9608
         self.os_version = conanfile.settings.get_safe("os.version")
-        self.sdk = conanfile.settings.get_safe("os.sdk")
         check_using_build_profile(self._conanfile)
-
-    @property
-    def sdk_condition(self):
-        return "*" if not self.sdk else "{}".format(self.sdk)
 
     def generate(self):
         if self.configuration is None:
@@ -93,8 +88,7 @@ class XcodeDeps(object):
     def _config_filename(self):
         # Default name
         props = [("configuration", self.configuration),
-                 ("architecture", self.architecture),
-                 ("sdk", self.sdk)]
+                 ("architecture", self.architecture)]
         name = "".join("_{}".format(v) for _, v in props if v is not None)
         return name.lower()
 
@@ -116,7 +110,7 @@ class XcodeDeps(object):
             'libs': " ".join("-l{}".format(lib) for lib in cpp_info.libs),
             'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in cpp_info.system_libs),
             'frameworksdirs': " ".join('{}'.format(pkg_placeholder + p) for p in cpp_info.frameworkdirs),
-            'frameworks': " ".join(cpp_info.frameworks),
+            'frameworks': " ".join("-framework {}".format(framework) for framework in cpp_info.frameworks),
             'definitions': " ".join(cpp_info.defines),
             'c_compiler_flags': " ".join(cpp_info.cflags),
             'cxx_compiler_flags': " ".join(cpp_info.cxxflags),
@@ -130,13 +124,14 @@ class XcodeDeps(object):
         """
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
-        # TODO: we are not taking into account the version for the sdk because we probably
+        # TODO: when it's more clear what to do with the sdk, add the condition for it and also
+        #  we are not taking into account the version for the sdk because we probably
         #  want to model also the sdk version decoupled of the compiler version
         #  for example XCode 13 is now using sdk=macosx11.3
         #  related to: https://github.com/conan-io/conan/issues/9608
         template = Template(self._conf_xconfig)
         content_multi = template.render(name=dep_name, vars_filename=vars_xconfig_name,
-                                        architecture=self.architecture, sdk=self.sdk_condition,
+                                        architecture=self.architecture,
                                         configuration=self.configuration)
         return content_multi
 

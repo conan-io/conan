@@ -666,8 +666,6 @@ class BinaryInstaller(object):
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
                         if not is_editable:
-                            package_cppinfo = conanfile.cpp.package.copy()
-                            package_cppinfo.set_relative_base_folder(conanfile.folders.package)
                             # Copy the infos.package into the old cppinfo
                             fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
                         else:
@@ -682,9 +680,20 @@ class BinaryInstaller(object):
                         conanfile.folders.set_base_source(package_folder)
                         conanfile.folders.set_base_generators(package_folder)
 
+                        # convert directory entries to be relative to the declared folders.build
+                        build_cppinfo = conanfile.cpp.build.copy()
+                        build_cppinfo.set_relative_base_folder(conanfile.folders.build)
+
+                        # convert directory entries to be relative to the declared folders.source
+                        source_cppinfo = conanfile.cpp.source.copy()
+                        source_cppinfo.set_relative_base_folder(conanfile.folders.source)
+
+                        full_editable_cppinfo = NewCppInfo()
+                        full_editable_cppinfo.merge(source_cppinfo)
+                        full_editable_cppinfo.merge(build_cppinfo)
                         # Paste the editable cpp_info but prioritizing it, only if a
-                        # variable is not declared at cpp.local, the package will keep the value
-                        fill_old_cppinfo(conanfile.cpp.local, conanfile.cpp_info)
+                        # variable is not declared at build/source, the package will keep the value
+                        fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:
