@@ -12,7 +12,6 @@ def replace_in_file(file_path, search, replace):
     with open(file_path, "wb") as handle:
         handle.write(content)
 
-
 def bump_dev():
     vfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../conans/__init__.py")
     snapshot = "%s" % int(time.time())
