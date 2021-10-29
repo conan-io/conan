@@ -1,11 +1,8 @@
 import unittest
-import mock
+
 from requests import Response
 
-from conans.errors import ConanException, NotFoundException
-from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
-from conans.client.cache.remote_registry import Remotes
 
 myconan1 = """
 from conans import ConanFile

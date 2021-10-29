@@ -593,7 +593,6 @@ class TestComponentsCMakeGenerators:
         assert "Component 'mypkg::zlib' not found in 'mypkg' package requirement" in client.out
 
     @pytest.mark.slow
-    @pytest.mark.xfail(reason="This test is failing in Py27, waiting for CMakeDeps improvements")
     def test_same_name_global_target_collision(self):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
@@ -623,6 +622,8 @@ class TestComponentsCMakeGenerators:
 
                     self.cpp_info.components["1"].set_property("cmake_target_name", "{name}")
                     self.cpp_info.components["1"].libs = ["{name}"]
+                    self.cpp_info.components["1"].includedirs = ["include"]
+                    self.cpp_info.components["1"].libdirs = ["lib"]
             """)
         basic_cmake = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -653,7 +654,8 @@ class TestComponentsCMakeGenerators:
         middle_cpp = gen_function_cpp(name="middle", includes=["middle", "expected", "variant"],
                                       calls=["expected", "variant"])
         middle_conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
 
             class Conan(ConanFile):
                 name = "middle"
@@ -683,6 +685,7 @@ class TestComponentsCMakeGenerators:
             import os
             from conans import ConanFile
             from conan.tools.cmake import CMake
+            from conan.tools.layout import cmake_layout
 
             class Conan(ConanFile):
                 name = "consumer"
@@ -692,12 +695,16 @@ class TestComponentsCMakeGenerators:
                 exports_sources = "src/*"
                 requires = "middle/1.0"
 
+                def layout(self):
+                    cmake_layout(self)
+
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure(build_script_folder="src")
                     cmake.build()
-                    self.run(".%smain" % os.sep)
-            """.format("CMakeDeps"))
+                    cmd = os.path.join(self.cpp.build.bindirs[0], "main")
+                    self.run(cmd, env="conanrun")
+            """)
         cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)

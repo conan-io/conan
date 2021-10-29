@@ -102,11 +102,11 @@ def editable_cmake_exe(generator):
 
     def run_pkg(msg):
         # FIXME: This only works with ``--install-folder``, layout() will break this
-        cmd_release = environment_wrap_command(ConanFileMock(), "conanrunenv-release-x86_64",
+        cmd_release = environment_wrap_command("conanrunenv-release-x86_64",
                                                "dep_app", cwd=c.current_folder)
         c.run_command(cmd_release)
         assert "{}: Release!".format(msg) in c.out
-        cmd_release = environment_wrap_command(ConanFileMock(), "conanrunenv-debug-x86_64",
+        cmd_release = environment_wrap_command("conanrunenv-debug-x86_64",
                                                "dep_app", cwd=c.current_folder)
         c.run_command(cmd_release)
         assert "{}: Debug!".format(msg) in c.out

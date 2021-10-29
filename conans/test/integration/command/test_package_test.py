@@ -214,12 +214,12 @@ class HelloTestConan(ConanFile):
     generators = "VirtualBuildEnv"
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert("new/pythonpath/value" in os.environ["MYVAR"])
 
     def test(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert("new/pythonpath/value" in os.environ["MYVAR"])
 '''

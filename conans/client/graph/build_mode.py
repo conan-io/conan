@@ -70,7 +70,7 @@ class BuildMode(object):
         if self.all:
             return True
 
-        if conan_file.build_policy_always:
+        if conan_file.build_policy == "always":
             conan_file.output.info("Building package from source as defined by "
                                    "build_policy='always'")
             return True
@@ -89,9 +89,11 @@ class BuildMode(object):
         return False
 
     def allowed(self, conan_file):
+        if conan_file.build_policy == "never":  # this package has been export-pkg
+            return False
         if self.missing:
             return True
-        if conan_file.build_policy_missing:
+        if conan_file.build_policy == "missing":
             conan_file.output.info("Building package from source as defined by "
                                    "build_policy='missing'")
             return True

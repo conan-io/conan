@@ -268,7 +268,7 @@ def test_apple_own_framework_cmake_deps():
     test_conanfile = textwrap.dedent("""
         import os
         from conans import ConanFile
-        from conan.tools.cmake import CMake, CMakeDeps
+        from conan.tools.cmake import CMake
 
         class TestPkg(ConanFile):
             generators = "CMakeToolchain"

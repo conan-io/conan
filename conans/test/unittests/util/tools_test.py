@@ -5,27 +5,22 @@ import subprocess
 import unittest
 
 import pytest
-import requests
-from bottle import request, static_file, HTTPError
 from mock.mock import mock_open, patch
 from parameterized import parameterized
-from requests.models import Response
 
+from conans.cli.api.conan_api import ConanAPIV2
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
-from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import get_default_client_conf
 from conans.cli.output import ConanOutput
 from conans.client.conf.detect_vs import vswhere
-from conans.client.tools import chdir
 from conans.client.tools.files import replace_in_file
-from conans.errors import ConanException, AuthenticationException
-from conans.model.build_info import CppInfo
+from conans.errors import ConanException
 from conans.model.layout import Infos
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, TestClient, zipdir, redirect_output
-from conans.util.files import load, md5, mkdir, save
+from conans.test.utils.tools import TestClient, redirect_output
+from conans.util.files import load, md5, save
 from conans.util.runners import check_output_runner
 
 
@@ -256,8 +251,8 @@ class HelloConan(ConanFile):
         conf = get_default_client_conf().replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
         save(os.path.join(tmp, CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            conan_api = ConanAPIV1()
-        conan_api.remote_list()
+            conan_api = ConanAPIV2()
+        conan_api.remotes.list()
         from conans.tools import _global_requester
         self.assertEqual(_global_requester.proxies, {"http": "http://myproxy.com"})
 

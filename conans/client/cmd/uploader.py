@@ -367,23 +367,24 @@ class CmdUpload(object):
     - get_recipe_sources() to get the export_sources if they are missing
     - get_recipe_snapshot() to do the diff and know what files to upload
     """
-    def __init__(self, cache, remote_manager, loader, hook_manager):
-        self._cache = cache
+    def __init__(self, app):
+        self._app = app
+        self._cache = app.cache
         self._progress_output = progress_bar.ProgressOutput(ConanOutput())
-        self._remote_manager = remote_manager
-        self._loader = loader
-        self._hook_manager = hook_manager
+        self._remote_manager = app.remote_manager
+        self._loader = app.loader
+        self._hook_manager = app.hook_manager
         self._upload_thread_pool = None
         self._exceptions_list = []
-        self._preparator = _PackagePreparator(cache, remote_manager, hook_manager)
+        self._preparator = _PackagePreparator(app.cache, app.remote_manager, app.hook_manager)
         self._user_input = UserInput(self._cache.config.non_interactive)
 
-    def upload(self, reference_or_pattern, remotes, package_id=None,
+    def upload(self, reference_or_pattern, package_id=None,
                all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
                policy=None, query=None, parallel_upload=False):
         t1 = time.time()
 
-        remote = remotes.selected
+        remote = self._app.selected_remote
         collecter = _UploadCollecter(self._cache, self._loader)
         refs_to_upload = collecter.collect(package_id, reference_or_pattern, confirm, remote.name,
                                            all_packages, query)
@@ -398,7 +399,7 @@ class CmdUpload(object):
             _ref, _conanfile, _prefs = ref_conanfile_prefs
             try:
                 self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait,
-                                 integrity_check, policy, remote, remotes)
+                                 integrity_check, policy)
             except BaseException as base_exception:
                 base_trace = traceback.format_exc()
                 self._exceptions_list.append((base_exception, _ref, base_trace, remote))
@@ -418,19 +419,19 @@ class CmdUpload(object):
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
-    def _upload_ref(self, conanfile, ref, prefs, retry, retry_wait, integrity_check, policy,
-                    remote, remotes):
+    def _upload_ref(self, conanfile, ref, prefs, retry, retry_wait, integrity_check, policy):
         """ Uploads the recipes and binaries identified by ref
         """
         assert (ref.revision is not None), "Cannot upload a recipe without RREV"
         conanfile_path = self._cache.ref_layout(ref).conanfile()
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
         # FIXME: because the recipe can have one and the package a different one
+        remote = self._app.selected_remote
         self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
         msg = "\rUploading %s to remote '%s'" % (str(ref), remote.name)
         self._progress_output.info(left_justify_message(msg))
-        self._upload_recipe(ref, conanfile, retry, retry_wait, policy, remote, remotes)
+        self._upload_recipe(ref, conanfile, retry, retry_wait, policy, remote)
 
         # Now the binaries
         if prefs:
@@ -469,7 +470,7 @@ class CmdUpload(object):
             self._hook_manager.execute("post_upload", conanfile_path=conanfile_path, reference=ref,
                                        remote=remote)
 
-    def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
+    def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote):
         force = False
         try:
             assert ref.revision
@@ -487,6 +488,7 @@ class CmdUpload(object):
                 self._progress_output.info("{} already in server, skipping upload".format(repr(ref)))
                 return
 
+        remotes = self._app.enabled_remotes
         prep = self._preparator.prepare_recipe(ref, conanfile, remote, remotes, policy, force)
 
         if policy == UPLOAD_POLICY_SKIP:

@@ -21,7 +21,6 @@ import os
 import platform
 import textwrap
 
-from conan.tools.env.environment import create_env_script
 from conans.errors import ConanException
 
 
@@ -71,7 +70,7 @@ class IntelCC:
         else:  # DPC++ compiler
             return "Intel(R) oneAPI DPC++ Compiler"
 
-    def generate(self, group="build"):
+    def generate(self, scope="build"):
         """Generate the Conan Intel file to be loaded in build environment by default"""
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\
@@ -82,14 +81,15 @@ class IntelCC:
         else:
             filename = self.filename + '.sh'
             content = self.command
-        create_env_script(self._conanfile, content, filename, group)
+        from conan.tools.env.environment import create_env_script
+        create_env_script(self._conanfile, content, filename, scope)
 
     @property
     def installation_path(self):
         """Get the Intel oneAPI installation root path"""
         installation_path = self._conanfile.conf["tools.intel:installation_path"]
         if not installation_path:
-            raise ConanException("To use Intel oneAPI, specify a [conf] entry " 
+            raise ConanException("To use Intel oneAPI, specify a [conf] entry "
                                  "'tools.intel:installation_path' containing the path to the "
                                  "installation folder.")
         self._out.info("Got Intel oneAPI installation folder: %s" % installation_path)

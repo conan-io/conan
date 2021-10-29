@@ -17,9 +17,7 @@ def test_cpp_info_editable():
         self.cpp.build.includedirs = ["my_include"]
         self.cpp.build.libdirs = ["my_libdir"]
         self.cpp.build.libs = ["hello"]
-
-        # This should overwrite the cpp_info and remove the default values
-        self.cpp.build.frameworkdirs = []
+        self.cpp.build.frameworkdirs = []  # Empty list is also explicit priority declaration
 
         self.cpp.source.cxxflags = ["my_cxx_flag"]
         self.cpp.source.includedirs = ["my_include_source"]
@@ -42,7 +40,6 @@ def test_cpp_info_editable():
 
         # when editable: This one WONT be discarded as has not been declared in the editables layout
         self.cpp_info.cflags.append("my_c_flag")
-
      """
 
     client.save({"conanfile.py": conan_hello})
@@ -182,7 +179,7 @@ def test_cpp_info_components_editable():
     client2.run("create . lib/1.0@")
     assert "**FOO includedirs:['package_include_foo']**" in client2.out
     assert "**FOO libdirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**FOO builddirs:[]**" in client2.out # The components don't have default dirs
+    assert "**FOO builddirs:[]**" in client2.out  # The components don't have default dirs
     assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in client2.out
     assert "**FOO cxxflags:['my_cxx_flag2_foo']**" in client2.out
     assert "**FOO cflags:['my_c_flag_foo']**" in client2.out

@@ -82,7 +82,7 @@ class ConanTraceTest(unittest.TestCase):
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
                          "file.txt": "content"})
-            client.run("user lasote -p mypass -r default")
+            client.run("remote login default lasote -p mypass")
             client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(ref))
             client.run("upload %s --all -r default" % str(ref))
@@ -93,29 +93,6 @@ class ConanTraceTest(unittest.TestCase):
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
-        without_rest_api = [it for it in actions if "REST_API_CALL" not in it]
-        assert len(without_rest_api) == 11
-        for trace in actions:
-            doc = json.loads(trace)
-            self.assertIn("_action", doc)  # Valid jsons
-
-        print(without_rest_api)
-        self.assertEqual(json.loads(without_rest_api[0])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[0])["name"], "authenticate")
-        self.assertEqual(json.loads(without_rest_api[2])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[2])["name"], "export")
-        self.assertEqual(json.loads(without_rest_api[3])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[3])["name"], "install_reference")
-        self.assertEqual(json.loads(without_rest_api[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
-        self.assertEqual(json.loads(without_rest_api[4])["_id"], "Hello0/0.1@lasote/stable")
-        self.assertEqual(json.loads(without_rest_api[5])["_action"], "PACKAGE_BUILT_FROM_SOURCES")
-        self.assertEqual(json.loads(without_rest_api[6])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[6])["name"], "upload")
-        self.assertEqual(json.loads(without_rest_api[7])["_action"], "ZIP")
-        self.assertEqual(json.loads(without_rest_api[8])["_action"], "UPLOADED_RECIPE")
-        self.assertEqual(json.loads(without_rest_api[9])["_action"], "ZIP")
-        self.assertEqual(json.loads(without_rest_api[10])["_action"], "UPLOADED_PACKAGE")
-
         num_put = len([it for it in actions if "REST_API_CALL" in it and "PUT" in it])
         self.assertEqual(num_put, 6)   # 3 files the recipe 3 files the package
 

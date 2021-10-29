@@ -7,7 +7,7 @@ from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.env_reader import get_env
-from conans.util.runners import check_output_runner
+
 
 
 def _visual_compiler(version):
@@ -151,6 +151,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-nologo")
 
     try:
+        from conans.util.runners import check_output_runner
         output = check_output_runner(arguments).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)

@@ -1,10 +1,13 @@
+import json
+import os
 import textwrap
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, BINARY_ERROR
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference
+from conans.util.files import load
 
 
 class _InstallPackageReference:
@@ -14,17 +17,20 @@ class _InstallPackageReference:
     PREF could have PREV if to be downloaded (must be the same for all), but won't if to be built
     """
     def __init__(self):
-        self.pref = None
+        self.package_id = None
+        self.prev = None
         self.nodes = []  # GraphNode
         self.binary = None  # The action BINARY_DOWNLOAD, etc must be the same for all nodes
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
         self.options = []  # to be able to fire a build, the options will be necessary
+        self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
 
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
-        result.pref = node.pref
+        result.package_id = node.pref.id
+        result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
         # FIXME: The aggregation of the upstream options is not correct here
@@ -33,25 +39,30 @@ class _InstallPackageReference:
         return result
 
     def add(self, node):
-        assert self.pref == node.pref
+        assert self.package_id == node.package_id
         assert self.binary == node.binary
+        assert self.prev == node.prev
         # The context might vary, but if same package_id, all fine
         # assert self.context == node.context
         self.nodes.append(node)
 
     def serialize(self):
-        return {"pref": repr(self.pref),
+        return {"package_id": self.package_id,
+                "prev": self.prev,
                 "context": self.context,
                 "binary": self.binary,
-                "options": self.options}
+                "options": self.options,
+                "filenames": self.filenames}
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, filename):
         result = _InstallPackageReference()
-        result.pref = PackageReference.loads(data["pref"])
+        result.package_id = data["package_id"]
+        result.prev = data["prev"]
         result.binary = data["binary"]
         result.context = data["context"]
         result.options = data["options"]
+        result.filenames = data["filenames"] or [filename]
         return result
 
 
@@ -76,9 +87,21 @@ class _InstallRecipeReference:
 
     def merge(self, other):
         assert self.ref == other.ref
+        for d in other.depends:
+            if d not in self.depends:
+                self.depends.append(d)
+        for p in other.packages:
+            existing = self._package_ids.get(p.package_id)
+            if existing is None:
+                self.packages.append(p)
+            else:
+                assert existing.binary == p.binary
+                for f in p.filenames:
+                    if f not in existing.filenames:
+                        existing.filenames.append(f)
 
     def update_unknown(self, package):
-        package_id = package.pref.id
+        package_id = package.package_id
         if package_id == PACKAGE_ID_UNKNOWN:
             return False
         existing = self._package_ids.get(package_id)
@@ -88,18 +111,18 @@ class _InstallRecipeReference:
         return True
 
     def add(self, node):
-        if node.pref.id == PACKAGE_ID_UNKNOWN:
+        if node.package_id == PACKAGE_ID_UNKNOWN:
             # PACKAGE_ID_UNKNOWN are all different items, because when package_id is computed
             # it could be different
             self.packages.append(_InstallPackageReference.create(node))
         else:
-            existing = self._package_ids.get(node.pref.id)
+            existing = self._package_ids.get(node.package_id)
             if existing is not None:
                 existing.add(node)
             else:
                 pkg = _InstallPackageReference.create(node)
                 self.packages.append(pkg)
-                self._package_ids[node.pref.id] = pkg
+                self._package_ids[node.package_id] = pkg
 
         for dep in node.dependencies:
             if dep.dst.binary != BINARY_SKIP:
@@ -112,13 +135,15 @@ class _InstallRecipeReference:
                 }
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, filename):
         result = _InstallRecipeReference()
         result.ref = ConanFileReference.loads(data["ref"])
         for d in data["depends"]:
             result.depends.append(ConanFileReference.loads(d))
         for p in data["packages"]:
-            result.packages.append(_InstallPackageReference.deserialize(p))
+            install_node = _InstallPackageReference.deserialize(p, filename)
+            result.packages.append(install_node)
+            result._package_ids[install_node.package_id] = install_node
         return result
 
 
@@ -132,9 +157,16 @@ class InstallGraph:
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
 
+    @staticmethod
+    def load(filename):
+        data = json.loads(load(filename))
+        filename = os.path.basename(filename)
+        filename = os.path.splitext(filename)[0]
+        install_graph = InstallGraph.deserialize(data, filename)
+        return install_graph
+
     def merge(self, other):
         """
-
         @type other: InstallGraph
         """
         for ref, install_node in other._nodes.items():
@@ -145,11 +177,11 @@ class InstallGraph:
                 existing.merge(install_node)
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, filename):
         result = InstallGraph()
         for level in data:
             for item in level:
-                elem = _InstallRecipeReference.deserialize(item)
+                elem = _InstallRecipeReference.deserialize(item, filename)
                 result._nodes[elem.ref] = elem
         return result
 
