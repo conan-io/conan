@@ -804,3 +804,30 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert "config_install_interval = 5m" in conf
         dirs = os.listdir(client.cache.cache_folder)
         assert ".git" not in dirs
+
+    def test_config_install_reestructuring_source(self):
+        """  https://github.com/conan-io/conan/issues/9885 """
+
+        folder = temp_folder()
+        client = TestClient()
+        with client.chdir(folder):
+            client.save({"profiles/debug/address-sanitizer": ""})
+            client.run("config install .")
+
+        debug_cache_folder = os.path.join(client.cache_folder, "profiles", "debug")
+        assert os.path.isdir(debug_cache_folder)
+
+        # Now reestructure the files, what it was already a directory in the cache now we want
+        # it to be a file
+        folder = temp_folder()
+        with client.chdir(folder):
+            client.save({"profiles/debug": ""})
+            client.run("config install .")
+        assert os.path.isfile(debug_cache_folder)
+
+        # And now is a directory again
+        folder = temp_folder()
+        with client.chdir(folder):
+            client.save({"profiles/debug/address-sanitizer": ""})
+            client.run("config install .")
+        assert os.path.isdir(debug_cache_folder)
