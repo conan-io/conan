@@ -51,7 +51,7 @@ def test_auto_package_no_components():
         self.folders.build = "my_build"
         self.folders.generators = "my_build/generators"
 
-        # Package locati
+        # Package locations
         self.cpp.package.includedirs = ["my_includes"]
         self.cpp.package.srcdirs = ["my_sources"]
         self.cpp.package.bindirs = ["my_bins"]
@@ -59,24 +59,33 @@ def test_auto_package_no_components():
         self.cpp.package.frameworkdirs = ["my_frameworks"]
 
         # Source CPP INFO
-        self.cpp.local.srcdirs = ["my_source/source_sources",
-                                  "my_build/build_sources",
-                                  "my_build/build_sources/subdir/othersubdir"]
-        self.cpp.local.includedirs = ["my_source/source_includes",
-                                      "my_source/source_includes2",
-                                      "my_build/build_includes"]
-        self.cpp.local.libdirs = ["my_source/source_libs", "my_build/build_libs"]
-        self.cpp.local.bindirs = ["my_source/source_bins", "my_build/build_bins"]
-        self.cpp.local.frameworkdirs = ["my_source/source_frameworks", "my_build/build_frameworks"]
+        self.cpp.source.srcdirs = ["source_sources"]
+        self.cpp.source.includedirs = ["source_includes", "source_includes2"]
+        self.cpp.source.libdirs = ["source_libs"]
+        self.cpp.source.bindirs = ["source_bins"]
+        self.cpp.source.frameworkdirs = ["source_frameworks"]
+
+        # Build CPP INFO
+        self.cpp.build.srcdirs = ["build_sources",
+                                              "build_sources/subdir/othersubdir"]
+        self.cpp.build.includedirs = ["build_includes"]
+        self.cpp.build.libdirs = ["build_libs"]
+        self.cpp.build.bindirs = ["build_bins"]
+        self.cpp.build.frameworkdirs = ["build_frameworks"]
 
     def package(self):
         # Discard include3.h from source
         packager = AutoPackager(self)
-        packager.patterns.include = ["*.hpp", "*.h", "include3.h"]
-        packager.patterns.lib = ["*.a"]
-        packager.patterns.bin = ["*.exe"]
-        packager.patterns.src = ["*.cpp"]
-        packager.patterns.framework = ["sframe*", "bframe*"]
+        packager.patterns.build.include = ["*.hpp", "*.h", "include3.h"]
+        packager.patterns.build.lib = ["*.a"]
+        packager.patterns.build.bin = ["*.exe"]
+        packager.patterns.build.src = ["*.cpp"]
+        packager.patterns.build.framework = ["sframe*", "bframe*"]
+        packager.patterns.source.include = ["*.hpp"] # Discard include3.h from source
+        packager.patterns.source.lib = ["*.a"]
+        packager.patterns.source.bin = ["*.exe"]
+        packager.patterns.source.src = ["*.cpp"]
+        packager.patterns.source.framework = ["sframe*"]
         packager.run()
     """
     client.save({"conanfile.py": conan_file})
@@ -118,7 +127,10 @@ def test_auto_package_no_components():
 
     # Check files build
     assert os.path.exists(p_path("my_sources/build_stuff.cpp"))
+    # note: as the "selective_stuff.cpp" is included in another my_sources dir, is copied twice
+    #       it would need manual adjustement of the copy to avoid it
     assert os.path.exists(p_path("my_sources/selective_stuff.cpp"))
+    assert os.path.exists(p_path("my_sources/subdir/othersubdir/selective_stuff.cpp"))
 
     assert os.path.exists(p_path("my_includes/include3.h"))
     assert not os.path.exists(p_path("my_includes/include4.h"))
@@ -152,12 +164,11 @@ def test_auto_package_with_components():
 
     def layout(self):
         # Build and source infos
-        self.cpp.local.components["component1"].includedirs = ["includes1"]
-        self.cpp.local.components["component1"].libdirs = ["build_libs"]
-
-        self.cpp.local.components["component2"].libdirs = ["build_libs"]
-        self.cpp.local.components["component2"].includedirs = ["includes2"]
-        self.cpp.local.components["component3"].bindirs = ["build_bins"]
+        self.cpp.source.components["component1"].includedirs = ["includes1"]
+        self.cpp.source.components["component2"].includedirs = ["includes2"]
+        self.cpp.build.components["component1"].libdirs = ["build_libs"]
+        self.cpp.build.components["component2"].libdirs = ["build_libs"]
+        self.cpp.build.components["component3"].bindirs = ["build_bins"]
 
         # Package infos
         self.cpp.package.components["component1"].includedirs = ["include"]
@@ -210,11 +221,11 @@ def test_auto_package_with_components_declared_badly():
 
     def layout(self):
         # Build and source infos
-        self.cpp.local.components["component1"].includedirs = ["includes1"]
-        self.cpp.local.components["component2"].includedirs = ["includes2"]
-        self.cpp.local.components["component1"].libdirs = ["build_libs"]
-        self.cpp.local.components["component2"].libdirs = ["build_libs"]
-        self.cpp.local.components["component3"].bindirs = ["build_bins"]
+        self.cpp.source.components["component1"].includedirs = ["includes1"]
+        self.cpp.source.components["component2"].includedirs = ["includes2"]
+        self.cpp.build.components["component1"].libdirs = ["build_libs"]
+        self.cpp.build.components["component2"].libdirs = ["build_libs"]
+        self.cpp.build.components["component3"].bindirs = ["build_bins"]
 
         # Package infos BUT NOT DECLARING component2
         self.cpp.package.components["component1"].includedirs = ["include"]
@@ -227,7 +238,8 @@ def test_auto_package_with_components_declared_badly():
 
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@", assert_error=True)
-    assert "There are components declared in cpp.local.components that are not declared in " \
+    assert "There are components declared in cpp.source.components or in " \
+           "cpp.build.components that are not declared in " \
            "cpp.package.components" in client.out
 
 
@@ -260,9 +272,9 @@ def test_auto_package_default_patterns():
         tools.save("ugly_build/mylib.janderclander", "")
 
     def layout(self):
-        self.cpp.local.includedirs = ["myincludes"]
-        self.cpp.local.libdirs = ["ugly_build"]
-        self.cpp.local.bindirs = ["ugly_build"]
+        self.cpp.source.includedirs = ["myincludes"]
+        self.cpp.build.libdirs = ["ugly_build"]
+        self.cpp.build.bindirs = ["ugly_build"]
 
     def package(self):
         AutoPackager(self).run()
@@ -290,12 +302,13 @@ def test_auto_package_default_folders_with_components():
                      .with_import("from conan.tools.files import AutoPackager"))
     conan_file += """
     def layout(self):
-        assert self.cpp.local.components["foo"].includedirs == []
-        assert self.cpp.local.components["foo"].libdirs == []
-        assert self.cpp.local.components["foo"].bindirs == []
-        assert self.cpp.local.components["foo"].frameworkdirs == []
-        assert self.cpp.local.components["foo"].srcdirs == []
-        assert self.cpp.local.components["foo"].resdirs == []
+        for el in [self.cpp.source, self.cpp.build]:
+            assert el.components["foo"].includedirs == []
+            assert el.components["foo"].libdirs == []
+            assert el.components["foo"].bindirs == []
+            assert el.components["foo"].frameworkdirs == []
+            assert el.components["foo"].srcdirs == []
+            assert el.components["foo"].resdirs == []
 
         assert self.cpp.package.components["foo"].includedirs == []
         assert self.cpp.package.components["foo"].libdirs == []
@@ -327,13 +340,13 @@ def test_auto_package_with_custom_package_too():
         tools.save("ugly_build/mylib.a", "")
 
     def layout(self):
-        self.cpp.local.includedirs = ["myincludes"]
-        self.cpp.local.libdirs = ["ugly_build"]
+        self.cpp.source.includedirs = ["myincludes"]
+        self.cpp.build.libdirs = ["ugly_build"]
 
     def package(self):
         packager = AutoPackager(self)
-        packager.patterns.include = ["*.header"]
-        packager.patterns.lib = ["*.a"]
+        packager.patterns.source.include = ["*.header"]
+        packager.patterns.build.lib = ["*.a"]
         packager.run()
         assert os.path.exists(os.path.join(self.package_folder, "include", "mylib.header"))
         assert os.path.exists(os.path.join(self.package_folder, "lib", "mylib.a"))
@@ -361,19 +374,20 @@ def test_auto_package_only_one_destination():
        tools.save("ugly_build/mylib.a", "")
 
     def layout(self):
-       self.cpp.local.includedirs = ["myincludes"]
-       self.cpp.local.libdirs = ["ugly_build"]
-       self.cpp.local.bindirs = ["ugly_build"]
-       self.cpp.local.frameworkdirs = ["ugly_build"]
-       self.cpp.local.srcdirs = ["ugly_build"]
-       self.cpp.local.builddirs = ["ugly_build"]
-       self.cpp.local.resdirs = ["ugly_build"]
+       self.cpp.source.includedirs = ["myincludes"]
+       self.cpp.build.libdirs = ["ugly_build"]
+       self.cpp.build.bindirs = ["ugly_build"]
+       self.cpp.build.frameworkdirs = ["ugly_build"]
+       self.cpp.build.srcdirs = ["ugly_build"]
+       self.cpp.build.builddirs = ["ugly_build"]
+       self.cpp.build.resdirs = ["ugly_build"]
+
        self.cpp.package.{} = ["folder1", "folder2"]
 
     def package(self):
         packager = AutoPackager(self)
-        packager.patterns.include = ["*.header"]
-        packager.patterns.lib = ["*.a"]
+        packager.patterns.source.include = ["*.header"]
+        packager.patterns.build.lib = ["*.a"]
         packager.run()
 
     """

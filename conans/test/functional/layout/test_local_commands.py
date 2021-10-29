@@ -216,7 +216,8 @@ def test_export_pkg():
     assert os.path.exists(os.path.join(pf, "library.lib"))
 
 
-@pytest.mark.xfail(reason="the conan package command was removed atm in Conan 2.0")
+@pytest.mark.xfail(reason="We cannot test the export-pkg from a local package folder when we cannot "
+                          "run the package method")
 def test_export_pkg_local():
     """The export-pkg, without calling "package" method, with local package, follows the layout"""
     client = TestClient()
