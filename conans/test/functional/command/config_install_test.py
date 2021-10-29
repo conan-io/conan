@@ -51,7 +51,6 @@ level = 10                  # environment CONAN_LOGGING_LEVEL
 [general]
 compression_level = 6                 # environment CONAN_COMPRESSION_LEVEL
 cpu_count = 1             # environment CONAN_CPU_COUNT
-default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
 
 [proxies]
 # Empty (or missing) section will try to use system proxies.

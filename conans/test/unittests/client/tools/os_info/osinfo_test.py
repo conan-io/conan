@@ -26,15 +26,14 @@ class OSInfoTest(unittest.TestCase):
         self._uname = None
         self._version = None
         with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
-            with environment_append({'CONAN_BASH_PATH': None}):
-                self.assertTrue(OSInfo().is_windows)
-                self.assertFalse(OSInfo().is_cygwin)
-                self.assertFalse(OSInfo().is_msys)
-                self.assertFalse(OSInfo().is_linux)
-                self.assertFalse(OSInfo().is_freebsd)
-                self.assertFalse(OSInfo().is_macos)
-                self.assertFalse(OSInfo().is_solaris)
-                self.assertFalse(OSInfo().is_aix)
+            self.assertTrue(OSInfo().is_windows)
+            self.assertFalse(OSInfo().is_cygwin)
+            self.assertFalse(OSInfo().is_msys)
+            self.assertFalse(OSInfo().is_linux)
+            self.assertFalse(OSInfo().is_freebsd)
+            self.assertFalse(OSInfo().is_macos)
+            self.assertFalse(OSInfo().is_solaris)
+            self.assertFalse(OSInfo().is_aix)
 
     def test_cygwin(self):
         self._uname = 'CYGWIN_NT-10.0'
