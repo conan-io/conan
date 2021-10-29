@@ -16,7 +16,7 @@ def replace_in_file(file_path, search, replace):
 def bump_dev():
     vfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../conans/__init__.py")
     snapshot = "%s" % int(time.time())
-    replace_in_file(vfile, "-alpha'", "-alpha.%s'" % snapshot)
+    replace_in_file(vfile, "-dev'", "-dev%s'" % snapshot)
 
 
 if __name__ == "__main__":
