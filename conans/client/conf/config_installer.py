@@ -82,8 +82,12 @@ def _filecopy(src, filename, dst):
     # copying with permissions that later cause bugs
     src = os.path.join(src, filename)
     dst = os.path.join(dst, filename)
+    # Clear the destination file
     if os.path.exists(dst):
-        remove(dst)
+        if os.path.isdir(dst):  # dst was a directory and now src is a file
+            rmdir(dst)
+        else:
+            remove(dst)
     shutil.copyfile(src, dst)
 
 
@@ -119,6 +123,11 @@ def _process_file(directory, filename, config, cache, output, folder):
                                              relpath)
             else:
                 target_folder = os.path.join(cache.cache_folder, relpath)
+
+            if os.path.exists(target_folder):
+                if os.path.isfile(target_folder):  # Existed as a file and now should be a folder
+                    remove(target_folder)
+
             mkdir(target_folder)
             output.info("Copying file %s to %s" % (filename, target_folder))
             _filecopy(directory, filename, target_folder)
