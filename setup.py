@@ -4,16 +4,19 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
-import os
-import re
-# To use a consistent encoding
-from codecs import open
-from os import path
-
 # Always prefer setuptools over distutils
 from setuptools import find_packages, setup
 
+import os
+import re
+from os import path
+
+
+# The tests utils are used by conan-package-tools
 here = path.abspath(path.dirname(__file__))
+excluded_test_packages = ["conans.test.{}*".format(d)
+                         for d in os.listdir(os.path.join(here, "conans/test"))
+                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
 
 
 def get_requires(filename):
@@ -23,16 +26,6 @@ def get_requires(filename):
             if not line.strip().startswith("#"):
                 requirements.append(line)
     return requirements
-
-
-project_requirements = get_requires("conans/requirements.txt")
-dev_requirements = get_requires("conans/requirements_dev.txt")
-# The tests utils are used by conan-package-tools
-excluded_test_packages = ["conans.test.{}*".format(d)
-                         for d in os.listdir(os.path.join(here, "conans/test"))
-                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
-excluded_server_packages = ["conans.server*"]
-exclude = excluded_test_packages + excluded_server_packages
 
 
 def load_version():
@@ -50,6 +43,11 @@ def generate_long_description_file():
     with open(path.join(this_directory, 'README.rst'), encoding='utf-8') as f:
         long_description = f.read()
     return long_description
+
+project_requirements = get_requires("conans/requirements.txt")
+dev_requirements = get_requires("conans/requirements_dev.txt")
+excluded_server_packages = ["conans.server*"]
+exclude = excluded_test_packages + excluded_server_packages
 
 
 setup(

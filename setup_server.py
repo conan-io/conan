@@ -4,17 +4,49 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
-import os
 # To use a consistent encoding
-from codecs import open
 from os import path
 
 # Always prefer setuptools over distutils
 from setuptools import find_packages, setup
 
-from setup import load_version, generate_long_description_file, get_requires, excluded_test_packages
+import os
+import re
+from os import path
 
+
+# The tests utils are used by conan-package-tools
 here = path.abspath(path.dirname(__file__))
+excluded_test_packages = ["conans.test.{}*".format(d)
+                         for d in os.listdir(os.path.join(here, "conans/test"))
+                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
+
+
+def get_requires(filename):
+    requirements = []
+    with open(filename, "rt") as req_file:
+        for line in req_file.read().splitlines():
+            if not line.strip().startswith("#"):
+                requirements.append(line)
+    return requirements
+
+
+def load_version():
+    """ Loads a file content """
+    filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                            "conans", "__init__.py"))
+    with open(filename, "rt") as version_file:
+        conan_init = version_file.read()
+        version = re.search(r"__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
+        return version
+
+
+def generate_long_description_file():
+    this_directory = path.abspath(path.dirname(__file__))
+    with open(path.join(this_directory, 'README.rst'), encoding='utf-8') as f:
+        long_description = f.read()
+    return long_description
+
 
 project_requirements = get_requires("conans/requirements.txt")
 project_requirements.extend(get_requires("conans/requirements_server.txt"))
@@ -60,7 +92,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=excluded_test_packages),
+    packages=find_packages(exclude=excluded_test_packages + ["./setup.py"]),
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
