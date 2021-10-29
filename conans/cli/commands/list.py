@@ -1,5 +1,3 @@
-import json
-
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS, \
     get_remote_selection
 from conans.cli.commands import json_formatter
@@ -7,7 +5,8 @@ from conans.cli.output import Color
 from conans.cli.output import cli_out_write
 from conans.errors import ConanException, InvalidNameException, PackageNotFoundException, \
     NotFoundException
-from conans.model.ref import PackageReference, ConanFileReference, RecipeReference
+from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.dates import from_timestamp_to_iso8601
 
 remote_color = Color.BRIGHT_BLUE

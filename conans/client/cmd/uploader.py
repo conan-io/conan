@@ -7,13 +7,14 @@ from multiprocessing.pool import ThreadPool
 
 from conans.cli.output import ConanOutput
 from conans.client.userio import UserInput
+from conans.model.recipe_ref import RecipeReference
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files
-from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref, RecipeReference
+from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_recipes

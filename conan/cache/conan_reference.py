@@ -1,5 +1,6 @@
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, PackageReference, RecipeReference
+from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import ConanFileReference, PackageReference
 
 
 class ConanReference:
