@@ -2,6 +2,7 @@ import re
 from functools import total_ordering
 
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.util.dates import from_timestamp_to_iso8601
 
 
@@ -66,6 +67,10 @@ class RecipeReference:
     def from_conanref(ref, timestamp=None):
         return RecipeReference(ref.name, ref.version, ref.user, ref.channel, ref.revision, timestamp)
 
+    def to_conanfileref(self):
+        return ConanFileReference(self.name, str(self.version), self.user, self.channel,
+                                  self.revision)
+
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
         result = self.__str__()
@@ -103,14 +108,15 @@ class RecipeReference:
         return (self.name, self.version, self.user, self.channel, self.timestamp, self.revision) \
                < (ref.name, ref.version, ref.user, ref.channel, ref.timestamp, ref.revision)
 
-    def __eq__(self, other):
-        # TODO: In case of equality, should it use the revision and timestamp?
-        raise Exception("WHO IS COMPARING RECIPE REFERENCES?")
-        # return self.__dict__ == other.__dict__
+    def __eq__(self, ref):
+        # Timestamp doesn't affect equality.
+        # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile
+        return (self.name, self.version, self.user, self.channel, self.revision) \
+               == (ref.name, ref.version, ref.user, ref.channel, ref.revision)
 
     def __hash__(self):
-        raise Exception("WHO IS COMPARING RECIPE REFERENCES?")
-        # return hash((self.name, self.version, self.user, self.channel, self.revision))
+        # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile
+        return hash((self.name, self.version, self.user, self.channel, self.revision))
 
     @staticmethod
     def loads(text):  # TODO: change this default to validate only on end points
