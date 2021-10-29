@@ -190,10 +190,9 @@ try {
         runTestsModule(moduleName, branchName, jobName)
     }
 
-    // Commenting this to test in the PR, has to be removed before merging
-    //if (branchName == "develop2") {
+    if (branchName == "develop2") {
         deployToPypiTest()
-    //}
+    }
 }
 catch(e){
     echo "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
