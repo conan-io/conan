@@ -56,13 +56,13 @@ class RegistryTest(unittest.TestCase):
         self.assertEqual(registry.list()[2].disabled, False)
 
         # Remove
-        registry.remove(Remote("local", None))
+        registry.remove("local")
         self.assertEqual(registry.list()[0].name, "conancenter")
         self.assertEqual(registry.list()[1].name, "new")
         self.assertEqual(len(registry.list()), 2)
 
         with self.assertRaises(ConanException):
-            registry.remove(Remote("new2", None))
+            registry.remove("new2")
 
         self.assertEqual(len(registry.list()), 2)
 
@@ -115,7 +115,7 @@ class RegistryTest(unittest.TestCase):
                              [Remote("conancenter", "https://center.conan.io"),
                               Remote("foobar", None)])
             self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", output)
-            registry.remove(Remote("foobar", None))
+            registry.remove("foobar")
             output.clear()
             registry.update(Remote("conancenter", None))
             self.assertEqual(registry.list(),
@@ -140,6 +140,6 @@ class RegistryTest(unittest.TestCase):
         cc.disabled = True
         registry.update(cc)
         self.assertEqual(registry.list()[0].disabled, True)
-        registry.remove(cc)
-        registry.remove(local_expected)
+        registry.remove(cc.name)
+        registry.remove(local_expected.name)
         self.assertEqual(list(registry.list()), [])

@@ -100,12 +100,11 @@ class _Remotes(object):
 
         index = self._remotes.index(current)
         self._remotes.remove(current)
-        print(remote)
         self._remotes.insert(index, remote)
 
     def move(self, remote: Remote, new_index: int):
         assert isinstance(remote, Remote)
-        self.remove(remote)
+        self.remove(remote.name)
         self._remotes.insert(new_index, remote)
 
     def get_by_name(self, name):
