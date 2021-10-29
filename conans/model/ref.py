@@ -3,6 +3,7 @@ from collections import namedtuple
 
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
+from conans.util.dates import from_timestamp_to_iso8601
 
 
 def _split_pair(pair, split_char):
@@ -182,7 +183,7 @@ class RecipeReference:
         self.user = user
         self.channel = channel
         self.revision = revision
-        self.timestamp = timestamp  # TODO: Which format? int timestamp?
+        self.timestamp = timestamp  # integer, seconds from 0 in UTC
 
     @staticmethod
     def from_conanref(ref, timestamp=None):
@@ -207,6 +208,16 @@ class RecipeReference:
         if self.channel:
             assert self.user
             result += "/{}".format(self.channel)
+        return result
+
+    def format_time(self):
+        """ same as repr(), but with human readable time """
+        result = self.__str__()
+        if self.revision is not None:
+            result += "#{}".format(self.revision)
+        if self.timestamp is not None:
+            # TODO: Improve the time format
+            result += "({})".format(from_timestamp_to_iso8601(self.timestamp))
         return result
 
     def __lt__(self, ref):
