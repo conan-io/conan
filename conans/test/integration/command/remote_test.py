@@ -231,7 +231,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
-        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
+        self.assertIn("ERROR: The specified remote doesn't exist", self.client.out)
 
     def test_duplicated_error(self):
         """ check remote name and URL are not duplicated
@@ -248,7 +248,6 @@ class RemoteTest(unittest.TestCase):
 
         remote1 = self.client.api.remotes.get("remote1")
         assert remote1.url == url
-
 
     def test_missing_subarguments(self):
         self.client.run("remote", assert_error=True)

@@ -451,7 +451,7 @@ class TestClient(object):
     def update_servers(self):
         api = self.get_conan_api()
         for r in api.remotes.list():
-            api.remotes.remove(r)
+            api.remotes.remove(r.name)
 
         for name, server in self.servers.items():
             if isinstance(server, ArtifactoryServer):

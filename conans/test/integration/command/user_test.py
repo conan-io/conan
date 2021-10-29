@@ -56,7 +56,8 @@ class UserTest(unittest.TestCase):
         self.assertEqual(('john', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('remote set-user default will')
-        self.assertIn("Changed user of remote 'default' from 'john' (anonymous) to 'will'", client.out)
+        self.assertIn("Changed user of remote 'default' from 'john' (anonymous) to 'will'",
+                      client.out)
         self.assertEqual(('will', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('remote logout default')
@@ -185,9 +186,6 @@ class ConanLib(ConanFile):
         assert 'default:\n  Username: danimtb\n  authenticated: True' in client.out
 
     def test_json(self):
-        def _compare_dicts(first_dict, second_dict):
-            self.assertTrue(set(first_dict), set(second_dict))
-
         default_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
         other_server = TestServer()
         servers = OrderedDict()
@@ -328,3 +326,19 @@ class ConanLib(ConanFile):
 
         client.run("remote login default lasote -p BAD_PASS", assert_error=True)
         self.assertIn("Wrong user or password", client.out)
+
+        # Login again correctly
+        client.run("remote login default lasote -p mypass")
+
+
+def test_user_removed_remote_removed():
+    # Make sure that removing a remote clears the credentials
+    # https://github.com/conan-io/conan/issues/5562
+    c = TestClient(default_server_user=True)
+    server_url = c.servers["default"].fake_url
+    c.run("remote login default admin -p password")
+    login = c.cache.localdb.get_login(server_url)
+    assert login[0] == "admin"
+    c.run("remote remove default")
+    login = c.cache.localdb.get_login(server_url)
+    assert login == (None, None, None)
