@@ -152,6 +152,35 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
 
 def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
 
+void deployToPypiTest() {
+    node("Linux") {
+        try {
+            docker.image("conanio/ci-functional").inside("--entrypoint=") {
+                def scmVars = checkout scm
+                stage("Deploy snapshot to pypitesting") {
+                    withCredentials([string(credentialsId: 'TWINE_USERNAME', variable: 'TWINE_USERNAME'), 
+                    string(credentialsId: 'TWINE_PASSWORD', variable: 'TWINE_PASSWORD')]) {
+                        def pythonVersion = "PY38"
+                        def deployPypiTest = "su - conan -c \"" \
+                                           + "export PYENV_ROOT=${pyenvdir} && " \
+                                           + "export PATH=\"${pyenvdir}/versions/\$${pythonVersion}/bin:${pyenvdir}/bin:\$PATH\" && " \
+                                           + "pyenv global \$${pythonVersion} && " \
+                                           + "python -m pip install twine && " \
+                                           + "python .ci/bump_dev_version.py && " \
+                                           + "rm -rf dist/ && python setup.py sdist && " \
+                                           //+ "python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/* && " \
+                                           + "rm -rf dist/ rm setup.py && mv setup_server.py setup.py && python setup.py sdist && " \
+                                           //+ "python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/* && " \
+                                           + "\""
+                        sh(script: deployPypiTest)
+                    }
+                }
+            }
+        }
+        finally {}
+    }    
+}
+
 try {
     cancelPrevious()
 
@@ -162,6 +191,10 @@ try {
         runTestsModule(moduleName, branchName, jobName)
     }
 
+    // Commenting this to test in the PR, has to be removed before merging
+    //if (branchName == "develop2") {
+        deployToPypiTest()
+    //}
 }
 catch(e){
     echo "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
