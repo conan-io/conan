@@ -1,12 +1,3 @@
-MSVS_YEAR = {"17": "2022",
-             "16": "2019",
-             "15": "2017",
-             "14": "2015",
-             "12": "2013",
-             "11": "2012",
-             "10": "2010",
-             "9": "2008",
-             "8": "2005"}
 
 
 # inverse version of the above MSVS_DEFAULT_TOOLSETS (keys and values are swapped)
