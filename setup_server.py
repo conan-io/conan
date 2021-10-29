@@ -4,6 +4,9 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
+# To use a consistent encoding
+from os import path
+
 # Always prefer setuptools over distutils
 from setuptools import find_packages, setup
 
@@ -44,20 +47,20 @@ def generate_long_description_file():
         long_description = f.read()
     return long_description
 
+
 project_requirements = get_requires("conans/requirements.txt")
+project_requirements.extend(get_requires("conans/requirements_server.txt"))
 dev_requirements = get_requires("conans/requirements_dev.txt")
-excluded_server_packages = ["conans.server*"]
-exclude = excluded_test_packages + excluded_server_packages
 
 
 setup(
-    name='conan',
+    name='conan-server',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
     version=load_version(),  # + ".rc1",
 
-    description='Conan C/C++ package manager',
+    description='Conan Server of Conan C/C++ package manager',
     long_description=generate_long_description_file(),
     long_description_content_type='text/x-rst',
 
@@ -89,7 +92,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=exclude),
+    packages=find_packages(exclude=excluded_test_packages + ["./setup.py"]),
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
@@ -128,7 +131,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'conan=conans.conan:run',
+            'conan_server=conans.conan_server:run'
         ],
     },
 )
