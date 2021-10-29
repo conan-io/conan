@@ -40,7 +40,6 @@ def test_cpp_info_editable():
 
         # when editable: This one WONT be discarded as has not been declared in the editables layout
         self.cpp_info.cflags.append("my_c_flag")
-
      """
 
     client.save({"conanfile.py": conan_hello})
@@ -180,7 +179,7 @@ def test_cpp_info_components_editable():
     client2.run("create . lib/1.0@")
     assert "**FOO includedirs:['package_include_foo']**" in client2.out
     assert "**FOO libdirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**FOO builddirs:[]**" in client2.out # The components don't have default dirs
+    assert "**FOO builddirs:[]**" in client2.out  # The components don't have default dirs
     assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in client2.out
     assert "**FOO cxxflags:['my_cxx_flag2_foo']**" in client2.out
     assert "**FOO cflags:['my_c_flag_foo']**" in client2.out
@@ -214,4 +213,3 @@ def test_cpp_info_components_editable():
     assert "**VAR libs:['hello_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
-

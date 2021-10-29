@@ -7,8 +7,7 @@ from conans.cli.output import ConanOutput, ScopedOutput
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
-from conans.model.layout import Folders, Patterns, Infos
-from conans.model.new_build_info import from_old_cppinfo
+from conans.model.layout import Folders, Infos
 from conans.model.options import Options
 from conans.model.requires import Requirements
 from conans.paths import RUN_LOG_NAME
@@ -61,8 +60,8 @@ class ConanFile:
         self.compatible_packages = []
         self._conan_requester = None
 
-        self.buildenv_info = Environment(self)
-        self.runenv_info = Environment(self)
+        self.buildenv_info = Environment()
+        self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
@@ -76,10 +75,8 @@ class ConanFile:
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None))
 
-        self.cpp_info = None  # Will be initialized at processing time
         # user declared variables
         self.user_info = None
-        self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
 
         if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
@@ -91,16 +88,7 @@ class ConanFile:
 
         # layout() method related variables:
         self.folders = Folders()
-        self.patterns = Patterns()
         self.cpp = Infos()
-
-        self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.source.lib = []
-        self.patterns.source.bin = []
-
-        self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
-        self.patterns.build.bin = ["*.exe", "*.dll"]
 
         self.cpp.package.includedirs = ["include"]
         self.cpp.package.libdirs = ["lib"]
@@ -142,7 +130,7 @@ class ConanFile:
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
         return self._conan_buildenv
 
     def initialize(self, settings, buildenv=None):
@@ -158,10 +146,12 @@ class ConanFile:
         self.settings = settings
 
     @property
-    def new_cpp_info(self):
-        if not self._conan_new_cpp_info:
-            self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
-        return self._conan_new_cpp_info
+    def cpp_info(self):
+        return self.cpp.package
+
+    @cpp_info.setter
+    def cpp_info(self, value):
+        self.cpp.package = value
 
     @property
     def source_folder(self):
@@ -181,7 +171,7 @@ class ConanFile:
 
     @property
     def package_folder(self):
-        return self.folders.package_folder
+        return self.folders.base_package
 
     @package_folder.setter
     def package_folder(self, folder):
@@ -209,14 +199,6 @@ class ConanFile:
     @imports_folder.setter
     def imports_folder(self, folder):
         self.folders.set_base_imports(folder)
-
-    @property
-    def build_policy_missing(self):
-        return self.build_policy == "missing"
-
-    @property
-    def build_policy_always(self):
-        return self.build_policy == "always"
 
     def source(self):
         pass
@@ -272,7 +254,7 @@ class ConanFile:
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
             if _env is None:
                 _env = "conanbuild"
-            wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
+            wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         retcode = _run(command, env)

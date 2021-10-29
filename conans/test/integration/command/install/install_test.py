@@ -295,8 +295,8 @@ def test_install_disabled_remote(client):
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload * --confirm --all -r default")
     client.run("remote disable default")
-    client.run("install Pkg/0.1@lasote/testing -r default")
-    assert "Pkg/0.1@lasote/testing: Already installed!" in client.out
+    client.run("install Pkg/0.1@lasote/testing -r default", assert_error=True)
+    assert "Remote 'default' is disabled" in client.out
     client.run("remote enable default")
     client.run("install Pkg/0.1@lasote/testing -r default")
     client.run("remote disable default")

@@ -154,7 +154,7 @@ class HelloPythonConan(ConanFile):
             from conan.tools.env import VirtualBuildEnv
             class HelloPythonConan(ConanFile):
                 def package(self):
-                    build_env = VirtualBuildEnv(self).environment()
+                    build_env = VirtualBuildEnv(self).vars()
                     with build_env.apply():
                         self.output.info("ENV-VALUE: %s!!!" % os.getenv("MYCUSTOMVAR"))
             """)
@@ -529,3 +529,17 @@ def test_build_policy_never():
     client.run("install pkg/1.0@ --build")
     assert "pkg/1.0:{} - Cache".format(NO_SETTINGS_PACKAGE_ID) in client.out
     assert "pkg/1.0: Calling build()" not in client.out
+
+
+def test_build_policy_never_missing():
+    # https://github.com/conan-io/conan/issues/9798
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_class_attribute('build_policy = "never"'),
+                 "consumer.txt": "[requires]\npkg/1.0"})
+    client.run("export . pkg/1.0@")
+
+    client.run("install pkg/1.0@ --build", assert_error=True)
+    assert "ERROR: Missing binary: pkg/1.0" in client.out
+
+    client.run("install pkg/1.0@ --build=missing", assert_error=True)
+    assert "ERROR: Missing binary: pkg/1.0" in client.out

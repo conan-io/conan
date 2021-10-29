@@ -88,6 +88,7 @@ def client():
     return client
 
 
+@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 def test_conanfile_txt(client):
     # conanfile.txt -(br)-> cmake
     client.save({"conanfile.txt": "[build_requires]\nmycmake/1.0"}, clean_first=True)
@@ -104,6 +105,7 @@ def test_conanfile_txt(client):
     assert "MYOPENSSL=Windows!!" in client.out
 
 
+@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 def test_complete(client):
     conanfile = textwrap.dedent("""
         import platform
@@ -171,7 +173,7 @@ class MyLib(ConanFile):
     {}
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("ToolPath: %s" % os.getenv("TOOL_PATH"))
 """
@@ -261,7 +263,7 @@ import os
 class MyLib(ConanFile):
     build_requires = "Build2/0.1@conan/stable"
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert(os.environ['MYVAR']=='1')
             assert(os.environ['MYVAR2']=='2')
@@ -275,7 +277,7 @@ import os
 from conan.tools.env import VirtualBuildEnv
 class MyTest(ConanFile):
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert(os.environ['MYVAR']=='1')
     def test(self):
@@ -348,7 +350,7 @@ import os
 class App(ConanFile):
     name = "consumer"
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
 """
@@ -378,7 +380,7 @@ from conan.tools.env import VirtualBuildEnv
 import os
 class Gtest(ConanFile):
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("GTEST PATH FOR BUILD %s" % os.getenv("MYVAR"))
 """
@@ -388,7 +390,7 @@ import os
 class App(ConanFile):
     build_requires = "gtest/0.1@lasote/stable"
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("APP PATH FOR BUILD %s" % os.getenv("MYVAR"))
 """
@@ -432,7 +434,7 @@ from conan.tools.env import VirtualBuildEnv
 import os
 class App(ConanFile):
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info("FOR BUILD %s" % os.getenv("MYVAR"))
 """
@@ -629,7 +631,7 @@ def test_dependents_new_buildenv():
        class Lib(ConanFile):
            requires = {}
            def generate(self):
-               build_env = VirtualBuildEnv(self).environment()
+               build_env = VirtualBuildEnv(self).vars()
                with build_env.apply():
                    self.output.info("LIB PATH %s" % os.getenv("PATH"))
        """)

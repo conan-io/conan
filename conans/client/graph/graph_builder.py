@@ -19,21 +19,18 @@ class DepsGraphBuilder(object):
         self._loader = loader
         self._resolver = resolver
 
-    def load_graph(self, root_node, check_updates, update, remotes, profile_host, profile_build,
-                   graph_lock=None):
+    def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
         assert profile_build is not None
         # print("Loading graph")
-        check_updates = check_updates or update
-        initial = graph_lock.initial_counter if graph_lock else None
-        dep_graph = DepsGraph(initial_node_id=initial)
+        dep_graph = DepsGraph()
 
         # TODO: Why assign here the settings_build and settings_target?
         root_node.conanfile.settings_build = profile_build.processed_settings.copy()
         root_node.conanfile.settings_target = None
 
         self._prepare_node(root_node, profile_host, profile_build, graph_lock, None, None)
-        self._initialize_requires(root_node, dep_graph, check_updates, update, remotes)
+        self._initialize_requires(root_node, dep_graph, graph_lock)
         dep_graph.add_node(root_node)
 
         open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
@@ -43,10 +40,10 @@ class DepsGraphBuilder(object):
                 (require, node) = open_requires.popleft()
                 if require.override:
                     continue
-                new_node = self._expand_require(require, node, dep_graph, check_updates, update,
-                                                remotes, profile_host, profile_build, graph_lock)
+                new_node = self._expand_require(require, node, dep_graph, profile_host,
+                                                profile_build, graph_lock)
                 if new_node:
-                    self._initialize_requires(new_node, dep_graph, check_updates, update, remotes)
+                    self._initialize_requires(new_node, dep_graph, graph_lock)
                     open_requires.extendleft((r, new_node)
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
@@ -55,7 +52,7 @@ class DepsGraphBuilder(object):
             dep_graph.error = e
         return dep_graph
 
-    def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
+    def _expand_require(self, require, node, graph, profile_host,
                         profile_build, graph_lock, populate_settings_target=True):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
@@ -84,8 +81,7 @@ class DepsGraphBuilder(object):
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
             new_node = self._create_new_node(node, require, graph, profile_host, profile_build,
-                                             graph_lock, update, check_updates, remotes,
-                                             populate_settings_target)
+                                             graph_lock, populate_settings_target)
             return new_node
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
@@ -140,9 +136,6 @@ class DepsGraphBuilder(object):
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, graph_lock, down_ref, down_options):
-        if graph_lock:
-            graph_lock.pre_lock_node(node)
-
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 
@@ -162,17 +155,19 @@ class DepsGraphBuilder(object):
                     # FIXME: converting back to string?
                     node.conanfile.requires.build_require(str(build_require),
                                                           raise_if_duplicated=False)
-        if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
-            graph_lock.lock_node(node, node.conanfile.requires.values())
 
-    def _initialize_requires(self, node, graph, check_updates, update, remotes):
+    def _initialize_requires(self, node, graph, graph_lock):
         # Introduce the current requires to define overrides
         # This is the first pass over one recip requires
+        if graph_lock is not None:
+            for require in node.conanfile.requires.values():
+                graph_lock.resolve_locked(node, require)
+
         for require in node.conanfile.requires.values():
-            self._resolve_alias(node, require, graph, check_updates, update, remotes)
+            self._resolve_alias(node, require, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, None)
 
-    def _resolve_alias(self, node, require, graph, check_updates, update, remotes):
+    def _resolve_alias(self, node, require, graph):
         alias = require.alias
         if alias is None:
             return
@@ -192,7 +187,7 @@ class DepsGraphBuilder(object):
         while alias is not None:
             # if not cached, then resolve
             try:
-                result = self._proxy.get_recipe(alias, check_updates, update, remotes)
+                result = self._proxy.get_recipe(alias)
                 conanfile_path, recipe_status, remote, new_ref = result
             except ConanException as e:
                 raise GraphError.missing(node, require, str(e))
@@ -209,24 +204,20 @@ class DepsGraphBuilder(object):
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
 
-    def _resolve_recipe(self, ref, check_updates,
-                        update, remotes, profile, graph_lock):
-        result = self._proxy.get_recipe(ref, check_updates, update, remotes)
+    def _resolve_recipe(self, ref, profile, graph_lock):
+        result = self._proxy.get_recipe(ref)
         conanfile_path, recipe_status, remote, new_ref = result
-
-        # TODO locked_id = requirement.locked_id
-        locked_id = None
-        lock_py_requires = graph_lock.python_requires(locked_id) if locked_id is not None else None
         dep_conanfile = self._loader.load_conanfile(conanfile_path, profile, ref=ref,
-                                                    lock_python_requires=lock_py_requires)
+                                                    graph_lock=graph_lock)
+
         if recipe_status == RECIPE_EDITABLE:
             dep_conanfile.in_local_cache = False
             dep_conanfile.develop = True
 
-        return new_ref, dep_conanfile, recipe_status, remote, locked_id
+        return new_ref, dep_conanfile, recipe_status, remote
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock,
-                         update, check_updates, remotes, populate_settings_target):
+                         populate_settings_target):
 
         if require.build:
             profile = profile_build
@@ -240,15 +231,14 @@ class DepsGraphBuilder(object):
             #  if not require.locked_id:  # if it is locked, nothing to resolved
             # TODO: This range-resolve might resolve in a given remote or cache
             # Make sure next _resolve_recipe use it
-            resolved_ref = self._resolver.resolve(require, str(node.ref), update, remotes)
+            resolved_ref = self._resolver.resolve(require, str(node.ref))
 
             # This accounts for alias too
-            resolved = self._resolve_recipe(resolved_ref, check_updates, update,
-                                            remotes, profile, graph_lock)
+            resolved = self._resolve_recipe(resolved_ref, profile, graph_lock)
         except ConanException as e:
             raise GraphError.missing(node, require, str(e))
 
-        new_ref, dep_conanfile, recipe_status, remote, locked_id = resolved
+        new_ref, dep_conanfile, recipe_status, remote = resolved
 
         # TODO: This should be out of here
         # If there is a context_switch, it is because it is a BR-build
@@ -269,9 +259,6 @@ class DepsGraphBuilder(object):
         new_node = Node(new_ref, dep_conanfile, context=context)
         new_node.recipe = recipe_status
         new_node.remote = remote
-
-        if locked_id is not None:
-            new_node.id = locked_id
 
         down_options = node.conanfile.options.deps_package_values
         self._prepare_node(new_node, profile_host, profile_build, graph_lock,

@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.client.cache.cache import PROFILES_FOLDER
 from conans.paths import CONANFILE
@@ -41,7 +43,7 @@ class MyConanfile(ConanFile):
     version = "0.1"
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert(os.environ.get("Value1") == "A")
 '''
@@ -71,6 +73,7 @@ class MyConanfile(ConanFile):
         client.run("export . lasote/stable")
         client.run('install mylib/0.1@lasote/stable --build')
 
+    @pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
     def test_profile_applied_ok(self):
         br = '''
 import os
@@ -126,7 +129,7 @@ class MyConanfile(ConanFile):
 
     def build(self):
         # This has changed, the value from profile higher priority than build require
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             if platform.system() == "Windows":
                 self.run("set MyVAR")
@@ -162,7 +165,7 @@ from conan.tools.env import VirtualBuildEnv
 class MyConanfile(ConanFile):
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info(">>> env_variable={}".format(os.environ.get('env_variable')))
 '''

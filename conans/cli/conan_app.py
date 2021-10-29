@@ -12,6 +12,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
+from conans.errors import ConanException
 from conans.tools import set_global_instances
 from conans.util.log import configure_logger
 
@@ -47,18 +48,42 @@ class ConanApp(object):
                                   self.config.generate_run_log_file,
                                   self.config.log_run_to_output)
 
-        self.proxy = ConanProxy(self.cache, self.remote_manager)
-        self.range_resolver = RangeResolver(self.cache, self.remote_manager)
+        self.proxy = ConanProxy(self)
+        self.range_resolver = RangeResolver(self)
 
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.runner, self.pyreq_loader, self.requester)
-        self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.remote_manager)
-        self.graph_manager = GraphManager(self.cache, self.loader, self.proxy, self.range_resolver,
-                                          self.binaries_analyzer)
+        self.binaries_analyzer = GraphBinariesAnalyzer(self)
+        self.graph_manager = GraphManager(self)
 
-    def load_remotes(self, remote_name=None, update=False, check_updates=False):
-        remotes = self.cache.registry.load_remotes()
-        if remote_name:
-            remotes.select(remote_name)
-        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
-        return remotes
+        # Remotes
+        self.selected_remotes = []
+        self.enabled_remotes = []
+        self.all_remotes = []
+        self.update = False
+        self.check_updates = False
+
+    @property
+    def selected_remote(self):
+        # FIXME: To ease the migration to N selected remotes
+        if len(self.selected_remotes) == 0:
+            return None
+        if len(self.selected_remotes) == 1:
+            return self.selected_remotes[0]
+        else:
+            assert False, "It makes no sense to obtain the selected remote when there are several " \
+                          "selected remotes"
+
+    def load_remotes(self, remotes=None, update=False, check_updates=False):
+        self.all_remotes = self.cache.remotes_registry.list()
+        self.enabled_remotes = [r for r in self.all_remotes if not r.disabled]
+        self.update = update
+        self.check_updates = check_updates
+        self.selected_remotes = []
+        if remotes:
+            for r in remotes:
+                if r.name is not None:  # FIXME: Remove this when we pass always remote objects
+                    tmp = self.cache.remotes_registry.read(r.name)
+                    if tmp.disabled:
+                        raise ConanException("Remote '{}' is disabled".format(tmp.name))
+                    self.selected_remotes.append(tmp)

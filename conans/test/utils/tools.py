@@ -26,9 +26,9 @@ from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import load, REVISIONS
 from conans.cli.api.conan_api import ConanAPIV2
+from conans.cli.api.model import Remote
 from conans.cli.cli import Cli, CLI_V1_COMMANDS
 from conans.client.cache.cache import ClientCache
-from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.client.rest.file_uploader import IterableToFileAdapter
@@ -449,17 +449,17 @@ class TestClient(object):
                             strict=not bool(cache_folder))
 
     def update_servers(self):
-        cache = self.cache
-        Remotes().save(cache.remotes_path)
-        registry = cache.registry
+        api = self.get_conan_api()
+        for r in api.remotes.list():
+            api.remotes.remove(r.name)
 
         for name, server in self.servers.items():
             if isinstance(server, ArtifactoryServer):
-                registry.add(name, server.repo_api_url)
+                self.cache.remotes_registry.add(Remote(name, server.repo_api_url))
             elif isinstance(server, TestServer):
-                registry.add(name, server.fake_url)
+                self.cache.remotes_registry.add(Remote(name, server.fake_url))
             else:
-                registry.add(name, server)
+                self.cache.remotes_registry.add(Remote(name, server))
 
     @contextmanager
     def chdir(self, newdir):

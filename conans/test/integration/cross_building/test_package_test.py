@@ -21,7 +21,7 @@ class TestPackageTestCase(unittest.TestCase):
             def build(self):
                 self.output.info(">> settings.os: {}".format(self.settings.os))
                 self.output.info(">> settings_build.os: {}".format(self.settings_build.os))
-                build_env = VirtualBuildEnv(self).environment()
+                build_env = VirtualBuildEnv(self).vars()
                 with build_env.apply():
                     self.output.info(">> tools.get_env('INFO'): {}".format(tools.get_env("INFO")))
 

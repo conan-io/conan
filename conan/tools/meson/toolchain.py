@@ -15,6 +15,10 @@ class MesonToolchain(object):
     cross_filename = "conan_meson_cross.ini"
 
     _native_file_template = textwrap.dedent("""
+    [constants]
+    preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
+    '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
+
     [project options]
     {{project_options}}
 
@@ -30,8 +34,6 @@ class MesonToolchain(object):
     {% if pkgconfig %}pkgconfig = {{pkgconfig}}{% endif %}
 
     [built-in options]
-    preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
-    '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
     {% if buildtype %}buildtype = {{buildtype}}{% endif %}
     {% if debug %}debug = {{debug}}{% endif %}
     {% if default_library %}default_library = {{default_library}}{% endif %}
@@ -74,7 +76,7 @@ class MesonToolchain(object):
         self._cppstd = cppstd_from_settings(self._conanfile.settings)
         self._shared = self._conanfile.options.get_safe("shared")
         self._fpic = self._conanfile.options.get_safe("fPIC")
-        self._build_env = VirtualBuildEnv(self._conanfile).environment()
+        self._build_env = VirtualBuildEnv(self._conanfile).vars()
 
         self.definitions = dict()
         self.preprocessor_definitions = dict()

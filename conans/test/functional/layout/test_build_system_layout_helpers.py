@@ -12,7 +12,8 @@ def conanfile():
     conanfile = str(GenConanfile().with_import("from conans import tools")
                     .with_import("import os")
                     .with_setting("build_type").with_setting("arch")
-                    .with_import("from conan.tools.layout import {ly}, LayoutPackager"))
+                    .with_import("from conan.tools.layout import {ly}")
+                    .with_import("from conan.tools.files import AutoPackager"))
 
     conanfile += """
     def source(self):
@@ -23,10 +24,9 @@ def conanfile():
 
     def layout(self):
         {ly}(self)
-        self.folders.package = "my_package"
 
     def package(self):
-        LayoutPackager(self).package()
+        AutoPackager(self).run()
     """
     return conanfile
 
@@ -93,8 +93,3 @@ def test_layout_with_local_methods(conanfile, layout_helper_name, build_type, ar
         else:
             path = os.path.join(client.current_folder, build_type, "mylib.lib")
         assert os.path.exists(path)
-
-    # Check the package
-    # client.run("package .")
-    # assert os.path.exists(os.path.join(client.current_folder, "my_package", "lib", "mylib.lib"))
-

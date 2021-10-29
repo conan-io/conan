@@ -23,19 +23,25 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             version: ["5.0", "6.0", "7.0", "8.0"]
         Linux:
         Macos:
-            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "13.0"]
+            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
             sdk: [None, "macosx"]
             subsystem: [None, catalyst]
         Android:
             api_level: ANY
         iOS:
-            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6"]
+            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3",
+                      "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
+                      "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6", "13.7",
+                      "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", "14.8", "15.0", "15.1"]
             sdk: [None, "iphoneos", "iphonesimulator"]
         watchOS:
-            version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1"]
+            version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
+                      "7.0", "7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.0", "8.1"]
             sdk: [None, "watchos", "watchsimulator"]
         tvOS:
-            version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0"]
+            version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
+                      "13.0", "13.2", "13.3", "13.4", "14.0", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7",
+                      "15.0", "15.1"]
             sdk: [None, "appletvos", "appletvsimulator"]
         FreeBSD:
         SunOS:
@@ -429,33 +435,6 @@ class ConanClientConfigParser(ConfigParser, object):
         except ConanException:
             return "minor_mode"
         return default_package_id_mode
-
-    @property
-    def storage_path(self):
-        # Try with CONAN_STORAGE_PATH
-        result = get_env('CONAN_STORAGE_PATH', None)
-        if not result:
-            # Try with conan.conf "path"
-            try:
-                # TODO: Fix this mess for Conan 2.0
-                env_conan_user_home = os.getenv("CONAN_USER_HOME")
-                current_dir = os.path.dirname(self.filename)
-                # if env var is declared, any specified path will be relative to CONAN_USER_HOME
-                # even with the ~/
-                result = dict(self._get_conf("storage"))["path"]
-                if result.startswith("."):
-                    result = os.path.abspath(os.path.join(current_dir, result))
-                elif result[:2] == "~/":
-                    if env_conan_user_home:
-                        result = os.path.join(env_conan_user_home, result[2:])
-            except (KeyError, ConanException):  # If storage not defined, to return None
-                pass
-
-        if result:
-            result = conan_expand_user(result)
-            if not os.path.isabs(result):
-                raise ConanException("Conan storage path has to be an absolute path")
-        return result
 
     @property
     def proxies(self):

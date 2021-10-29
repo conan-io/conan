@@ -197,7 +197,7 @@ class AConan(ConanFile):
     build_requires = "lib/1.0@lasote/stable"
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert(os.environ["MYVAR"] == "23")
 """

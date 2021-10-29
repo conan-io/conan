@@ -40,7 +40,7 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
 
     try:
         sources_remote = None
-        for r in remotes.values():
+        for r in remotes:
             sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, r)
             if sources_remote:
                 break
@@ -99,7 +99,7 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
         conanfile.output.warning("Trying to remove corrupted source folder")
         remove_source()
         clean_dirty(conanfile.folders.base_source)
-    elif conanfile.build_policy_always:
+    elif conanfile.build_policy == "always":
         conanfile.output.warning("Detected build_policy 'always', trying to remove source folder")
         remove_source()
 
