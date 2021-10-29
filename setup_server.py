@@ -22,7 +22,7 @@ dev_requirements = get_requires("conans/requirements_dev.txt")
 
 
 setup(
-    name='conan_server',
+    name='conan-server',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
