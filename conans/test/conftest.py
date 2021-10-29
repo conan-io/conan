@@ -5,7 +5,8 @@ import uuid
 
 import pytest
 
-from conans.client.tools import vswhere, which
+
+from conans.client.tools import which
 
 """
 To override these locations with your own in your dev machine:
@@ -221,6 +222,7 @@ def _get_tool(name, version):
 
         # Check this particular tool is installed
         if name == "visual_studio":
+            from conans.client.conf.detect_vs import vswhere
             if not vswhere():  # TODO: Missing version detection
                 cached = True
         else:  # which based detection

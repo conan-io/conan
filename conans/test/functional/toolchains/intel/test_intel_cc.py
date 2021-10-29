@@ -41,3 +41,6 @@ class TestIntelCC:
                "/linux/bin/dpcpp -- works" in self.client.out
         assert "hello/0.1: Package " \
                "'5d42bcd2e9be3378ed0c2f2928fe6dc9ea1b0922' created" in self.client.out
+        # TODO:
+        #  self.t.run_command(exe)
+        #  self.assertIn("main __INTEL_COMPILER1910", self.t.out)
