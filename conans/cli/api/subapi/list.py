@@ -81,7 +81,6 @@ class ListAPI:
         getter_name = 'get_recipe_revisions'
         return self._get_revisions(reference, getter_name, remote=remote)
 
-
     @api_method
     def get_package_ids(self, reference, remote=None):
         """
