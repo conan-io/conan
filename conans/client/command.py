@@ -19,7 +19,7 @@ from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
-    ConanMigrationError
+    ConanMigrationError, ConanInvalidSystemRequirements
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
 from conans.model.conf import DEFAULT_CONFIGURATION
@@ -29,7 +29,7 @@ from conans.util.files import save
 from conans.util.log import logger
 from conans.assets import templates
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
-    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_INVALID_SYSTEM_REQUIREMENTS
 
 
 class Extender(argparse.Action):
@@ -2240,6 +2240,9 @@ class Command(object):
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
+            self._out.error(exc)
+        except ConanInvalidSystemRequirements as exc:
+            ret_code = ERROR_INVALID_SYSTEM_REQUIREMENTS
             self._out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL
