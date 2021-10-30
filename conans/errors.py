@@ -144,6 +144,10 @@ class ConanExceptionInUserConanfileMethod(ConanException):
     pass
 
 
+class ConanInvalidSystemRequirements(ConanException):
+    pass
+
+
 class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
     pass
 
