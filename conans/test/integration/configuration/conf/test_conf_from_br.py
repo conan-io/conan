@@ -95,7 +95,7 @@ def test_declared_generators_get_conf():
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -pr:b=default")
     toolchain = client.load("conan_toolchain.cmake")
-    assert "include(mytoolchain.cmake)" in toolchain
+    assert 'include("mytoolchain.cmake")' in toolchain
 
     consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -111,4 +111,4 @@ def test_declared_generators_get_conf():
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -pr:b=default")
     toolchain = client.load("conan_toolchain.cmake")
-    assert "include(mytoolchain.cmake)" in toolchain
+    assert 'include("mytoolchain.cmake")' in toolchain
