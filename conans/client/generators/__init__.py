@@ -131,6 +131,7 @@ def _generate_aggregated_env(conanfile):
     from conan.tools.microsoft.subsystems import subsystem_path
 
     def deactivates(filenames):
+        # FIXME: Probably the order needs to be reversed
         result = []
         for s in filenames:
             folder, f = os.path.split(s)
