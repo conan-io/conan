@@ -78,7 +78,7 @@ def list_package_ids_cli_formatter(results):
             error = f"ERROR: {result['error']}"
             cli_out_write(error, fg=error_color, indentation=2)
         elif not result.get("results"):
-            cli_out_write("There are no matching recipe references", indentation=2)
+            cli_out_write("There are no package-ids", indentation=2)
         else:
             reference = result["reference"]
             for pkg_id, props in result["results"].items():
@@ -95,6 +95,7 @@ def list_package_ids_cli_formatter(results):
                         cli_out_write(f"{prop_name}:", fg=field_color, indentation=4)
                         for name, val in values.items():
                             cli_out_write(f"{name}={val}", fg=value_color, indentation=6)
+
 
 list_recipes_formatters = {
     "cli": list_recipes_cli_formatter,
