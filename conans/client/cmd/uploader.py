@@ -7,6 +7,7 @@ from multiprocessing.pool import ThreadPool
 
 from conans.cli.output import ConanOutput
 from conans.client.userio import UserInput
+from conans.model.recipe_ref import RecipeReference
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
@@ -496,7 +497,8 @@ class CmdUpload(object):
 
         files_to_upload, deleted, cache_files, conanfile_path, t1, layout = prep
         if files_to_upload or deleted:
-            self._remote_manager.upload_recipe(ref, files_to_upload, deleted, remote, retry,
+            upload_ref = RecipeReference.from_conanref(ref)
+            self._remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote, retry,
                                                retry_wait)
             msg = "\rUploaded conan recipe '%s' to '%s': %s" % (str(ref), remote.name, remote.url)
             self._progress_output.info(left_justify_message(msg))

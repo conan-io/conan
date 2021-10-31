@@ -5,8 +5,6 @@ from .env import *
 # noinspection PyUnresolvedReferences
 from .files import *
 # noinspection PyUnresolvedReferences
-from .intel import *
-# noinspection PyUnresolvedReferences
 from .oss import *
 # noinspection PyUnresolvedReferences
 from .pkg_config import *
@@ -16,5 +14,3 @@ from .scm import *
 from .settings import *
 # noinspection PyUnresolvedReferences
 from .system_pm import *
-# noinspection PyUnresolvedReferences
-from .win import *

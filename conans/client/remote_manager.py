@@ -9,6 +9,7 @@ from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException, ConanReferenceDoesNotExistInDB
+from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.search.search import filter_packages
@@ -61,6 +62,7 @@ class RemoteManager(object):
         return self._call_remote(remote, "get_recipe_snapshot", ref)
 
     def upload_recipe(self, ref, files_to_upload, deleted, remote, retry, retry_wait):
+        assert isinstance(ref, RecipeReference)
         assert ref.revision, "upload_recipe requires RREV"
         self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted,
                           retry, retry_wait)

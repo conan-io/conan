@@ -4,8 +4,6 @@ import pytest
 import textwrap
 
 from conan.tools.microsoft.visual import vcvars_command
-from ._base import BaseIntelTestCase
-
 from conans.test.assets.sources import gen_function_cpp
 from ..microsoft.test_msbuild import sln_file, myapp_vcxproj
 
@@ -32,7 +30,7 @@ conanfile_py = textwrap.dedent("""
 @pytest.mark.tool_icc
 @pytest.mark.xfail(reason="Intel compiler not installed yet on CI")
 @pytest.mark.skipif(platform.system() != "Windows", reason="msbuild requires Windows")
-class MSBuildIntelTestCase(BaseIntelTestCase):
+class MSBuildIntelTestCase:
     def test_use_msbuild_toolchain(self):
         self.t.save({'profile': self.profile})
         self.t.run("new hello/0.1 -s")

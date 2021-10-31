@@ -1,5 +1,3 @@
-import json
-
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS, \
     get_remote_selection
 from conans.cli.commands import json_formatter
@@ -7,6 +5,7 @@ from conans.cli.output import Color
 from conans.cli.output import cli_out_write
 from conans.errors import ConanException, InvalidNameException, PackageNotFoundException, \
     NotFoundException
+from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.dates import from_timestamp_to_iso8601
 
@@ -200,11 +199,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
     _add_remotes_and_cache_options(subparser)
     args = parser.parse_args(*args)
 
-    try:
-        ref = ConanFileReference.loads(args.reference)
-    except (ConanException, InvalidNameException):
-        raise ConanException(f"{args.reference} is not a valid recipe reference, provide a reference"
-                             f" in the form name/version[@user/channel]")
+    ref = RecipeReference.loads(args.reference)
     if ref.revision:
         raise ConanException(f"Cannot list the revisions of a specific recipe revision")
 
