@@ -8,7 +8,6 @@ from textwrap import dedent
 import pytest
 from parameterized import parameterized
 
-from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
@@ -711,7 +710,7 @@ def test_consumer_specific_settings():
     assert "I'm None and my shared is False" in client.out
 
     # Now the consumer using &
-    client.run("install . -s &:build_type=Debug -o &:shared=True")
+    client.run("install . -s &:build_type=Debug -o shared=True")
     assert "I'm dep and my build type is Release" in client.out
     assert "I'm None and my build type is Debug" in client.out
     assert "I'm dep and my shared is False" in client.out

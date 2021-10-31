@@ -33,7 +33,7 @@ class _InstallPackageReference:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        # FIXME: The aggregation of the upstream options is not correct here
+        # self_options are the minimum to reproduce state
         result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
         return result

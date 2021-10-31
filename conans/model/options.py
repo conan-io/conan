@@ -25,7 +25,8 @@ class _PackageOption:
         else:
             self._possible_values = [str(v) if v is not None else None for v in possible_values]
 
-    def get_info_options(self):
+    def copy_conaninfo_option(self):
+        # To generate a copy without validation, for package_id info.options value
         return _PackageOption(self._name, self._value)
 
     def __bool__(self):
@@ -106,10 +107,11 @@ class _PackageOptions:
         for child in self._data.values():
             child.validate()
 
-    def get_info_options(self):
+    def copy_conaninfo_options(self):
+        # To generate a copy without validation, for package_id info.options value
         result = _PackageOptions()
         for k, v in self._data.items():
-            result._data[k] = v.get_info_options()
+            result._data[k] = v.copy_conaninfo_option()
         return result
 
     @property
@@ -167,9 +169,7 @@ class _PackageOptions:
 
 
 class Options:
-    """ All options of a package, both its own options and the upstream ones.
-    Owned by ConanFile.
-    """
+
     def __init__(self, options=None, options_values=None):
         # options=None means an unconstrained/profile definition
         try:
@@ -196,12 +196,23 @@ class Options:
     def __repr__(self):
         return self.dumps()
 
+    def dumps(self):
+        """ produces a multiline text representation of all values, first self then others.
+        In alphabetical order, skipping real None (not string "None") values:
+            option1=value1
+            other_option=3
+            OtherPack:opt3=12.1
+        """
+        result = ["%s=%s" % (k, v) for k, v in self._package_options.items() if v is not None]
+        for pkg_pattern, pkg_option in sorted(self._deps_package_options.items()):
+            for key, value in pkg_option.items():
+                if value is not None:
+                    result.append("%s:%s=%s" % (pkg_pattern, key, value))
+        return "\n".join(result)
+
     @staticmethod
     def loads(text):
-        """ parses a multiline text in the form, no validation here
-        Package:option=value
-        other_option=3
-        OtherPack:opt3=12.1
+        """ parses a multiline text in the form produced by dumps(), NO validation here
         """
         values = {}
         for line in text.splitlines():
@@ -212,57 +223,25 @@ class Options:
             values[name] = value
         return Options(options_values=values)
 
-    def scope(self, name):
-        package_options = self._deps_package_options.setdefault(name, _PackageOptions())
-        package_options.update_options(self._package_options)
-        # If there is an & referred to consumer only, we need to apply to it too
-        existing = self._deps_package_options.pop("&", None)
-        if existing is not None:
-            package_options.update_options(existing)
-        self._package_options = _PackageOptions()
-
-    def dumps(self):
-        result = []
-        for key, value in self._package_options.items():
-            if value is not None:
-                result.append("%s=%s" % (key, value))
-        for pkg, pkg_option in sorted(self._deps_package_options.items()):
+    def serialize(self):
+        # used by ConanInfo serialization, involved in "list package-ids" output
+        # we need to maintain the "options" and "req_options" first level or servers will break
+        # This happens always after reading from conaninfo.txt => all str and not None
+        result = {k: v for k, v in self._package_options.items()}
+        # Include the dependencies ones, in case they have been explicitly added in package_id()
+        # to the conaninfo.txt, we want to report them
+        for pkg_pattern, pkg_option in sorted(self._deps_package_options.items()):
             for key, value in pkg_option.items():
-                if value is not None:
-                    result.append("%s:%s=%s" % (pkg, key, value))
-        return "\n".join(result)
+                result["%s:%s" % (pkg_pattern, key)] = value
+        return {"options": result}
 
     def clear(self):
         # for header_only() clearing
         self._package_options.clear()
         self._deps_package_options.clear()
 
-    def serialize_options(self):
-        # we need to maintain the "options" and "req_options" first level or servers will break
-        return {"options": {k: str(v) for k, v in self._package_options.items()}}
-
-    def get_info_options(self, clear_deps=False):
-        # To generate the cpp_info.options copy, that can destroy, change and remove things
-        result = Options()
-        result._package_options = self._package_options.get_info_options()
-        if not clear_deps:
-            for k, v in self._deps_package_options.items():
-                result._deps_package_options[k] = v.get_info_options()
-        return result
-
-    def update_options(self, other):
-        """
-        @type other: Options
-        """
-        self._package_options.update_options(other._package_options)
-        for pkg, pkg_option in other._deps_package_options.items():
-            self._deps_package_options.setdefault(pkg, _PackageOptions()).update_options(pkg_option)
-
     def __contains__(self, option):
         return option in self._package_options
-
-    def __getitem__(self, item):
-        return self._deps_package_options.setdefault(item, _PackageOptions())
 
     def __getattr__(self, attr):
         return getattr(self._package_options, attr)
@@ -278,19 +257,56 @@ class Options:
         except ConanException:
             pass
 
-    def apply_downstream(self, down_options, profile_options, own_ref):
-        """ Only modifies the current package_options, not the dependencies ones
+    def __getitem__(self, item):
+        # To access dependencies options like ``options["mydep"]``. This will no longer be
+        # a read case, only for defining values. Read access will be via self.dependencies["dep"]
+        return self._deps_package_options.setdefault(item, _PackageOptions())
+
+    def scope(self, name):
+        """ when there are free options like "shared=True", they apply to the "consumer" package
+        Once we know the name of such consumer package, it can be defined in the data, so it will
+        be later correctly apply when processing options """
+        package_options = self._deps_package_options.setdefault(name, _PackageOptions())
+        package_options.update_options(self._package_options)
+        self._package_options = _PackageOptions()
+
+    def copy_conaninfo_options(self):
+        # To generate the package_id info.options copy, that can destroy, change and remove things
+        result = Options()
+        result._package_options = self._package_options.copy_conaninfo_options()
+        # In most scenarios this should be empty at this stage, because it was cleared
+        for pkg_pattern, pkg_option in sorted(self._deps_package_options.items()):
+            result._deps_package_options[pkg_pattern] = pkg_option.copy_conaninfo_options()
+        return result
+
+    def update_options(self, other):
         """
-        assert isinstance(down_options, Options), type(down_options)
-        assert isinstance(profile_options, Options), type(profile_options)
+        dict-like update of options, "other" has priority, overwrite existing
+        @type other: Options
+        """
+        self._package_options.update_options(other._package_options)
+        for pkg, pkg_option in other._deps_package_options.items():
+            self._deps_package_options.setdefault(pkg, _PackageOptions()).update_options(pkg_option)
+
+    def apply_downstream(self, down_options, profile_options, own_ref):
+        """ compute the current package options, starting from the self defined ones and applying
+        the options defined by the downstrream consumers and the profile
+        Only modifies the current package_options, not the dependencies ones
+        """
+        assert isinstance(down_options, Options)
+        assert isinstance(profile_options, Options)
 
         for defined_options in down_options, profile_options:
             if own_ref is None or own_ref.name is None:
+                # If the current package doesn't have a name defined, is a pure consumer without name
+                # Get the non-scoped options, plus the "all-matching=*" pattern
                 self._package_options.update_options(defined_options._package_options)
                 for pattern, options in defined_options._deps_package_options.items():
-                    if pattern == "*" or pattern == "&":
+                    if pattern == "*":
                         self._package_options.update_options(options, is_pattern=True)
             else:
+                # If the current package has a name, there should be a match, either exact name
+                # match, or a fnmatch approximate one
                 for pattern, options in defined_options._deps_package_options.items():
                     if pattern == own_ref.name:  # exact match
                         self._package_options.update_options(options)
@@ -299,6 +315,11 @@ class Options:
         self._package_options.freeze()
 
     def get_upstream_options(self, down_options, own_ref):
+        """ compute which options should be propagated to the dependencies, a combination of the
+        downstream defined default_options with the current default_options ones. This happens
+        at "configure()" time, while building the graph. Also compute the minimum "self_options"
+        which is the state that a package should define in order to reproduce
+        """
         assert isinstance(down_options, Options)
         # self_options are the minimal necessary for a build-order
         # TODO: check this, isn't this just a copy?
@@ -308,17 +329,22 @@ class Options:
                                                           _PackageOptions()).update_options(options)
 
         # compute now the necessary to propagate all down - self + self deps
-        upstream = Options()
+        upstream_options = Options()
         for pattern, options in down_options._deps_package_options.items():
             if pattern == own_ref.name:
+                # Remove the exact match to this package, don't further propagate up
                 continue
             self._deps_package_options.setdefault(pattern, _PackageOptions()).update_options(options)
 
-        upstream._deps_package_options = self._deps_package_options.copy()
-        self._deps_package_options.clear()
-        return self_options, upstream
+        upstream_options._deps_package_options = self._deps_package_options
+        # When the upstream is computed, the current dependencies are invalidated, so users will
+        # not be able to do ``self.options["mydep"]`` because it will be empty. self.dependencies
+        # is the way to access dependencies (in other methods)
+        self._deps_package_options = {}
+        return self_options, upstream_options
 
     def validate(self):
+        # Check that all options have a value defined
         return self._package_options.validate()
 
     @property

@@ -407,7 +407,7 @@ class ConanInfo(object):
         result = ConanInfo()
         result.invalid = self.invalid
         result.settings = self.settings.copy()
-        result.options = self.options.get_info_options()
+        result.options = self.options.copy_conaninfo_options()
         result.requires = self.requires.copy()
         result.build_requires = self.build_requires.copy()
         result.python_requires = self.python_requires.copy()
@@ -420,7 +420,7 @@ class ConanInfo(object):
         result.invalid = None
         result.full_settings = settings
         result.settings = settings.copy()
-        result.options = options.get_info_options(clear_deps=True)
+        result.options = options.copy_conaninfo_options()
         result.requires = reqs_info
         result.build_requires = build_requires_info
         result.full_requires = _PackageReferenceList()
@@ -531,7 +531,7 @@ class ConanInfo(object):
         This info will be shown in search results.
         """
         conan_info_json = {"settings": dict(self.settings.serialize()),
-                           "options": dict(self.options.serialize_options())["options"],
+                           "options": dict(self.options.serialize())["options"],
                            "full_requires": self.full_requires.serialize()
                            }
         return conan_info_json
