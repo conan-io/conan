@@ -2,7 +2,7 @@ from urllib.parse import quote, urlencode
 
 from conans.model.ref import ConanFileReference
 from conans.model.rest_routes import RestRoutes
-from conans.paths import CONAN_MANIFEST, CONANINFO, ARTIFACTS_PROPERTIES_PUT_PREFIX
+from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 
 
 def _format_ref(url, ref, matrix_params=""):

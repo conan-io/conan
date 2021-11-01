@@ -214,29 +214,22 @@ class NotFoundException(ConanException):  # 404
 class RecipeNotFoundException(NotFoundException):
 
     def __init__(self, ref, remote=None):
-        from conans.model.ref import ConanFileReference
-        assert isinstance(ref, ConanFileReference), "RecipeNotFoundException requires a " \
-                                                    "ConanFileReference"
         self.ref = ref
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.ref.full_str()
+        tmp = repr(self.ref)
         return "Recipe not found: '{}'".format(tmp, self.remote_message())
 
 
 class PackageNotFoundException(NotFoundException):
 
     def __init__(self, pref, remote=None):
-        from conans.model.ref import PackageReference
-        assert isinstance(pref, PackageReference), "PackageNotFoundException requires a " \
-                                                   "PackageReference"
         self.pref = pref
-
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.pref.full_str()
+        tmp = repr(self.pref)
         return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
 
 

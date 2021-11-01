@@ -7,6 +7,7 @@ from multiprocessing.pool import ThreadPool
 
 from conans.cli.output import ConanOutput
 from conans.client.userio import UserInput
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
@@ -14,11 +15,10 @@ from conans.util.progress_bar import left_justify_message
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files
-from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_recipes
-from conans.util.files import (load, clean_dirty, is_dirty,
+from conans.util.files import (clean_dirty, is_dirty,
                                gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.log import logger
 from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
@@ -46,103 +46,78 @@ class _UploadCollecter(object):
         self._user_input = UserInput(cache.config.non_interactive)
         self._loader = loader
 
-    def collect(self, package_id, reference_or_pattern, confirm, remote_name, all_packages, query):
-        refs, confirm = self._collects_refs_to_upload(package_id, reference_or_pattern, confirm)
-        refs = self._collect_packages_to_upload(refs, confirm, remote_name, all_packages,
-                                                query, package_id)
+    def collect(self, pattern, confirm, all_packages):
+        refs = self._collects_refs_to_upload(pattern, confirm)
+        refs = self._collect_packages_to_upload(refs, all_packages)
         return refs
 
-    def _collects_refs_to_upload(self, package_id, reference_or_pattern, confirm):
+    def _collects_refs_to_upload(self, pattern, confirm):
         """ validate inputs and compute the refs (without revisions) to be uploaded
         """
-        if package_id and not check_valid_ref(reference_or_pattern, strict_mode=False):
-            raise ConanException("-p parameter only allowed with a valid recipe reference, "
-                                 "not with a pattern")
+        def complete_latest_rev(recipe_ref):
+            # If the user input doesn't provide revision, assume latest
+            if recipe_ref.revision is None:
+                latest = self._cache.get_latest_rrev(recipe_ref)
+                if not latest:
+                    raise RecipeNotFoundException(recipe_ref)
+                recipe_ref.revision = latest.revision
 
-        if package_id or check_valid_ref(reference_or_pattern):
-            # Upload package
-            ref = ConanFileReference.loads(reference_or_pattern)
-            rrev = self._cache.get_latest_rrev(ref)
-            if not rrev:
-                raise RecipeNotFoundException(ref)
-            else:
-                refs = [rrev, ]
-            confirm = True
-        else:
-            refs = search_recipes(self._cache, reference_or_pattern)
-            if not refs:
-                raise NotFoundException(("No packages found matching pattern '%s'" %
-                                         reference_or_pattern))
-        return refs, confirm
+        try:
+            pref = PkgReference.loads(pattern)
+            complete_latest_rev(pref.ref)
+            return [pref]
+        except ConanException:
+            try:
+                ref = RecipeReference.loads(pattern)
+                complete_latest_rev(ref)
+                return [ref]
+            except ConanException:
+                refs = search_recipes(self._cache, pattern)
+                if not refs:
+                    raise NotFoundException(f"No packages found matching pattern '{pattern}'")
+                refs = [RecipeReference.from_conanref(r) for r in refs]
+                for r in refs:
+                    assert r.revision is not None  # search should return with revision
 
-    def _collect_packages_to_upload(self, refs, confirm, remote_name, all_packages, query,
-                                    package_id):
-        """ compute the references with revisions and the package_ids to be uploaded
-        """
-        # Group recipes by remote
+                # Confirmation is requested only for pattern case, because if exact, not an issue
+                if not confirm:
+                    confirmed_refs = []
+                    for ref in refs:
+                        msg = "Are you sure you want to upload '%s'?" % (str(ref))
+                        upload = self._user_input.request_boolean(msg)
+                        if upload:
+                            confirmed_refs.append(ref)
+                    refs = confirmed_refs
+                return refs
+
+    def _collect_packages_to_upload(self, refs, all_packages):
         result = []
+        for r in refs:
+            is_pkg = isinstance(r, PkgReference)
+            ref = r.ref if is_pkg else r
+            assert ref.revision is not None
+            conanfile_path = self._cache.ref_layout(ref).conanfile()
+            conanfile = self._loader.load_basic(conanfile_path)
 
-        for ref in refs:
-            # TODO: cache2.0. For 2.0 we should always specify the revision of the reference
-            #  that we want to upload, check if  we should move this to other place
-
-            upload = True
-            if not confirm:
-                msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), remote_name)
-                upload = self._user_input.request_boolean(msg)
-            if upload:
-                try:
-                    conanfile_path = self._cache.ref_layout(ref).conanfile()
-                    conanfile = self._loader.load_basic(conanfile_path)
-                except NotFoundException:
-                    raise NotFoundException(("There is no local conanfile exported as %s" %
-                                             str(ref)))
-
-                # TODO: This search of binary packages has to be improved, more robust
-                # So only real packages are retrieved
-                if all_packages or query:
-                    if all_packages:
-                        query = None
-
-                    # TODO: cache2.0 do we want to upload all package_revisions ? Just the latest
-                    #  upload just the latest for the moment
-                    # TODO: cache2.0 Ignoring the query for the moment
-                    packages_ids = []
-                    for pkg_id in self._cache.get_package_ids(ref):
-                        packages_ids.append(self._cache.get_latest_prev(pkg_id))
-
-                elif package_id:
-                    # TODO: cache2.0 if we specify a package id we could have multiple package revisions
-                    #  something like: upload pkg/1.0:pkg_id will upload the package id for the latest prev
-                    #  or for all of them
-                    prev = package_id.split("#")[1] if "#" in package_id else ""
-                    package_id = package_id.split("#")[0]
-                    pref = PackageReference(ref, package_id, prev)
-                    # FIXME: The name is package_ids but we pass the latest prev for each package id
-                    packages_ids = []
-                    packages = [pref] if pref.revision else self._cache.get_package_ids(pref)
-                    for pkg in packages:
-                        latest_prev = self._cache.get_latest_prev(pkg) if pkg.id == package_id else None
-                        if latest_prev:
-                            packages_ids.append(latest_prev)
-
-                    if not packages_ids:
-                        prev = f"#{prev}" if prev else ""
-                        raise ConanException(f"Binary package {str(ref)}:{package_id}{prev} not found")
-                else:
-                    packages_ids = []
-                if packages_ids:
-                    if conanfile.build_policy == "always":
-                        raise ConanException("Conanfile '%s' has build_policy='always', "
-                                             "no packages can be uploaded" % str(ref))
+            if is_pkg:
+                prefs = [r]
+            else:
                 prefs = []
-                # Gather all the complete PREFS with PREV
-                for package in packages_ids:
-                    package_id, package_revision = package.id, package.revision
-                    assert package_revision is not None, "PREV cannot be None to upload"
-                    prefs.append(PackageReference(ref, package_id, package_revision))
-                result.append((ref, conanfile, prefs))
+                if all_packages:
+                    for pkg in self._cache.get_package_ids(ref):
+                        prefs.append(PkgReference(ref, pkg.id))
 
+            for p in prefs:
+                if p.revision is None:
+                    latest_prev = self._cache.get_latest_prev(p)
+                    p.revision = latest_prev.revision
+
+            if prefs:
+                if conanfile.build_policy == "always":
+                    raise ConanException("Conanfile '%s' has build_policy='always', "
+                                         "no packages can be uploaded" % str(ref))
+
+            result.append((ref, conanfile, prefs))
         return result
 
 
@@ -189,26 +164,6 @@ class _PackagePreparator(object):
 
         files_to_upload, deleted = self._recipe_files_to_upload(ref, cache_files, remote, force)
         return files_to_upload, deleted, cache_files, conanfile_path, t1, recipe_layout
-
-    def _print_manifest_information(self, remote_recipe_manifest, local_manifest, ref, remote):
-        try:
-            self._output.info("\n%s" % ("-"*40))
-            self._output.info("Remote manifest:")
-            self._output.info(remote_recipe_manifest)
-            self._output.info("Local manifest:")
-            self._output.info(local_manifest)
-            difference = remote_recipe_manifest.difference(local_manifest)
-            if "conanfile.py" in difference:
-                contents = load(self._cache.ref_layout(ref).conanfile())
-                endlines = "\\r\\n" if "\r\n" in contents else "\\n"
-                self._output.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
-                remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",
-                                                                       remote=remote)
-                endlines = "\\r\\n" if "\r\n" in remote_contents else "\\n"
-                self._output.info("Remote 'conanfile.py' using '%s' line-ends" % endlines)
-            self._output.info("\n%s" % ("-"*40))
-        except Exception as e:
-            self._output.info("Error printing information about the diff: %s" % str(e))
 
     def _recipe_files_to_upload(self, ref, files, remote, force):
         # TODO: Check this weird place to check credentials
@@ -380,15 +335,14 @@ class CmdUpload(object):
         self._preparator = _PackagePreparator(app.cache, app.remote_manager, app.hook_manager)
         self._user_input = UserInput(self._cache.config.non_interactive)
 
-    def upload(self, reference_or_pattern, package_id=None,
+    def upload(self, reference_or_pattern,
                all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
-               policy=None, query=None, parallel_upload=False):
+               policy=None, parallel_upload=False):
         t1 = time.time()
 
         remote = self._app.selected_remote
         collecter = _UploadCollecter(self._cache, self._loader)
-        refs_to_upload = collecter.collect(package_id, reference_or_pattern, confirm, remote.name,
-                                           all_packages, query)
+        refs_to_upload = collecter.collect(reference_or_pattern, confirm, all_packages)
 
         if parallel_upload:
             self._cache.config.non_interactive = True
@@ -403,6 +357,7 @@ class CmdUpload(object):
                                  integrity_check, policy)
             except BaseException as base_exception:
                 base_trace = traceback.format_exc()
+                print(base_trace)
                 self._exceptions_list.append((base_exception, _ref, base_trace, remote))
 
         self._upload_thread_pool.map(upload_ref, refs_to_upload)
@@ -411,11 +366,12 @@ class CmdUpload(object):
 
         if len(self._exceptions_list) > 0:
             for exc, ref, trace, remote in self._exceptions_list:
-                t = "recipe" if isinstance(ref, ConanFileReference) else "package"
+                t = "recipe" if isinstance(ref, RecipeReference) else "package"
                 msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
                 if get_env("CONAN_VERBOSE_TRACEBACK", False):
                     msg += trace
                 self._progress_output.error(msg)
+
             raise ConanException("Errors uploading some packages")
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
@@ -543,7 +499,8 @@ class CmdUpload(object):
         if policy == UPLOAD_POLICY_SKIP:
             return None
 
-        self._remote_manager.upload_package(pref, cache_files, remote, retry, retry_wait)
+        upload_pref = PkgReference.from_conanref(pref)
+        self._remote_manager.upload_package(upload_pref, cache_files, remote, retry, retry_wait)
         logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
 
         duration = time.time() - t1

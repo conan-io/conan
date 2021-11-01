@@ -75,7 +75,7 @@ def _file_document(name, path):
 def log_recipe_upload(ref, duration, files_uploaded, remote_name):
     files_uploaded = files_uploaded or {}
     files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
-    _append_action("UPLOADED_RECIPE", {"_id": repr(ref.copy_clear_rev()),
+    _append_action("UPLOADED_RECIPE", {"_id": repr(ref),
                                        "duration": duration,
                                        "files": files_uploaded,
                                        "remote": remote_name})
@@ -85,7 +85,7 @@ def log_package_upload(pref, duration, files_uploaded, remote):
     """files_uploaded is a dict with relative path as keys and abs path as values"""
     files_uploaded = files_uploaded or {}
     files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
-    _append_action("UPLOADED_PACKAGE", {"_id": repr(pref.copy_clear_revs()),
+    _append_action("UPLOADED_PACKAGE", {"_id": repr(pref),
                                         "duration": duration,
                                         "files": files_uploaded,
                                         "remote": remote.name})

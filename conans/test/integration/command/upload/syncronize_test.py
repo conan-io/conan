@@ -75,7 +75,8 @@ class SynchronizeTest(unittest.TestCase):
         ref_with_rev = client.cache.get_latest_rrev(ref)
         pkg_ids = client.cache.get_package_ids(ref_with_rev)
         pref = client.cache.get_latest_prev(pkg_ids[0])
-        client.run("upload %s -p %s -r default" % (str(ref), str(pkg_ids[0].id)))
+        client.run("upload %s:%s -r default" % (str(ref), str(pkg_ids[0].id)))
+        print(client.out)
 
         # Check that package exists on server
         package_server_path = remote_paths.package(pref)
