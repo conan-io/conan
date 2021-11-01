@@ -102,7 +102,7 @@ class HelloPythonConan(ConanFile):
         pref = client.get_latest_prev(ref)
         latest_package = client.get_latest_pkg_layout(pref).package()
         conaninfo = load(os.path.join(latest_package, "conaninfo.txt"))
-        self.assertEqual(2, conaninfo.count("os=Windows"))
+        self.assertEqual(1, conaninfo.count("os=Windows"))
         manifest = load(os.path.join(latest_package, "conanmanifest.txt"))
         self.assertIn("conaninfo.txt:", manifest)
         self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
