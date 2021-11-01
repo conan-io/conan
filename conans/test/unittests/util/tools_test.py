@@ -9,12 +9,12 @@ from mock.mock import mock_open, patch
 from parameterized import parameterized
 
 from conans.cli.api.conan_api import ConanAPIV2
-from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conf import get_default_client_conf
+from conans.cli.output import ConanOutput
+from conans.client.conf.detect_vs import vswhere
 from conans.client.tools.files import replace_in_file
-from conans.client.tools.win import vswhere
 from conans.errors import ConanException
 from conans.model.layout import Infos
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
@@ -331,7 +331,7 @@ class HelloConan(ConanFile):
         myoutput = myoutput.encode()
         myrunner = mock_open()
         myrunner.check_output = lambda x: myoutput
-        with patch('conans.client.tools.win.subprocess', myrunner):
+        with patch('conans.client.conf.detect_vs.subprocess', myrunner):
             json = vswhere()
             self.assertNotIn("descripton", json)
 

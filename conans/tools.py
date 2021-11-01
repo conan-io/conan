@@ -15,12 +15,11 @@ import requests
 from conans.cli.output import ConanOutput
 # Tools from conans.client.tools
 from conans.client.tools import files as tools_files, oss as tools_oss, \
-    system_pm as tools_system_pm, win as tools_win
+    system_pm as tools_system_pm
 from conans.client.tools.env import *  # pylint: disable=unused-import
 from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
 from conans.client.tools.scm import *  # pylint: disable=unused-import
 from conans.client.tools.settings import *  # pylint: disable=unused-import
-from conans.client.tools.intel import *  # pylint: disable=unused-import
 from conans.client.tools.apple import *
 # Tools form conans.util
 from conans.util.env_reader import get_env
@@ -159,24 +158,6 @@ class PacManTool(tools_system_pm.PacManTool):
 class ZypperTool(tools_system_pm.ZypperTool):
     def __init__(self, *args, **kwargs):
         super(ZypperTool, self).__init__(*args, **kwargs)
-
-
-# from conans.client.tools.win
-vs_installation_path = tools_win.vs_installation_path
-vswhere = tools_win.vswhere
-vs_comntools = tools_win.vs_comntools
-find_windows_10_sdk = tools_win.find_windows_10_sdk
-MSYS2 = tools_win.MSYS2
-MSYS = tools_win.MSYS
-CYGWIN = tools_win.CYGWIN
-WSL = tools_win.WSL
-SFU = tools_win.SFU
-msvs_toolset = tools_win.msvs_toolset
-
-
-def latest_vs_version_installed(*args, **kwargs):
-    return tools_win.latest_vs_version_installed(*args, **kwargs)
-
 
 
 # Ready to use objects.

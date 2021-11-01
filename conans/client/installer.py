@@ -494,4 +494,3 @@ class BinaryInstaller(object):
 
                 self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                            reference=ref)
-

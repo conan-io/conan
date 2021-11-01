@@ -8,8 +8,8 @@ import unittest
 import pytest
 
 from conans.client import tools
+from conans.client.conf.detect_vs import vswhere
 from conans.client.tools.files import which
-from conans.client.tools.win import vswhere
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env

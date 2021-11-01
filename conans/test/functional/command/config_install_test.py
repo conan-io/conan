@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import tarfile
 import textwrap
 import time
 import unittest
@@ -15,6 +14,7 @@ from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
+from conans.paths import DEFAULT_CONAN_USER_HOME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
@@ -783,7 +783,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
 
     def test_config_fails_git_folder(self):
         # https://github.com/conan-io/conan/issues/8594
-        folder = os.path.join(temp_folder(), ".gitlab-conan", ".conan")
+        folder = os.path.join(temp_folder(), ".gitlab-conan", DEFAULT_CONAN_USER_HOME)
         client = TestClient(cache_folder=folder)
         with client.chdir(self.folder):
             client.run_command('git init .')
@@ -792,7 +792,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
             client.run_command('git config user.email myname@mycompany.com')
             client.run_command('git commit -m "mymsg"')
         assert ".gitlab-conan" in client.cache_folder
-        assert os.path.basename(client.cache_folder) == ".conan"
+        assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_USER_HOME
         conf = load(client.cache.conan_conf_path)
         assert "config_install_interval = 5m" not in conf
         client.run('config install "%s/.git" --type git' % self.folder)
@@ -800,3 +800,30 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert "config_install_interval = 5m" in conf
         dirs = os.listdir(client.cache.cache_folder)
         assert ".git" not in dirs
+
+    def test_config_install_reestructuring_source(self):
+        """  https://github.com/conan-io/conan/issues/9885 """
+
+        folder = temp_folder()
+        client = TestClient()
+        with client.chdir(folder):
+            client.save({"profiles/debug/address-sanitizer": ""})
+            client.run("config install .")
+
+        debug_cache_folder = os.path.join(client.cache_folder, "profiles", "debug")
+        assert os.path.isdir(debug_cache_folder)
+
+        # Now reestructure the files, what it was already a directory in the cache now we want
+        # it to be a file
+        folder = temp_folder()
+        with client.chdir(folder):
+            client.save({"profiles/debug": ""})
+            client.run("config install .")
+        assert os.path.isfile(debug_cache_folder)
+
+        # And now is a directory again
+        folder = temp_folder()
+        with client.chdir(folder):
+            client.save({"profiles/debug/address-sanitizer": ""})
+            client.run("config install .")
+        assert os.path.isdir(debug_cache_folder)

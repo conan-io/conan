@@ -19,9 +19,9 @@ def output_remote_list_json(remotes):
     cli_out_write(myjson)
 
 
-def output_remote_list_cli(remote):
-    for remote in remote:
-        output_str = str(remote)
+def output_remote_list_cli(remotes):
+    for r in remotes:
+        output_str = str(r)
         cli_out_write(output_str)
 
 
@@ -100,8 +100,7 @@ def remote_remove(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Name of the remote to remove. "
                                           "Accepts 'fnmatch' style wildcards.")  # to discuss
     args = parser.parse_args(*args)
-    current = conan_api.remotes.get(args.remote)
-    conan_api.remotes.remove(current)
+    conan_api.remotes.remove(args.remote)
 
 
 @conan_subcommand()
@@ -163,7 +162,7 @@ def remote_enable(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Pattern of the remote/s to enable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
-    remotes = conan_api.remotes.list(filter=args.remote)
+    remotes = conan_api.remotes.list(pattern=args.remote)
     for r in remotes:
         r.disabled = False
         conan_api.remotes.update(r)
@@ -177,7 +176,7 @@ def remote_disable(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Pattern of the remote/s to disable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
-    remotes = conan_api.remotes.list(filter=args.remote)
+    remotes = conan_api.remotes.list(pattern=args.remote)
     for r in remotes:
         r.disabled = True
         conan_api.remotes.update(r)
@@ -192,8 +191,8 @@ def remote_list_users(conan_api, parser, subparser, *args):
     ret = OrderedDict()
     if not remotes:
         raise ConanException("No remotes defined")
-    for remote in remotes:
-        ret[remote.name] = conan_api.remotes.user_info(remote)
+    for r in remotes:
+        ret[r.name] = conan_api.remotes.user_info(r)
     return ret
 
 
@@ -209,7 +208,7 @@ def remote_login(conan_api, parser, subparser, *args):
                                 'requested interactively (not exposed)')
 
     args = parser.parse_args(*args)
-    remotes = conan_api.remotes.list(filter=args.remote)
+    remotes = conan_api.remotes.list(pattern=args.remote)
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
@@ -238,7 +237,7 @@ def remote_set_user(conan_api, parser, subparser, *args):
     subparser.add_argument("username", help='Username')
 
     args = parser.parse_args(*args)
-    remotes = conan_api.remotes.list(filter=args.remote)
+    remotes = conan_api.remotes.list(pattern=args.remote)
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
@@ -258,7 +257,7 @@ def remote_logout(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Pattern or name of the remote to logout. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
-    remotes = conan_api.remotes.list(filter=args.remote)
+    remotes = conan_api.remotes.list(pattern=args.remote)
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 

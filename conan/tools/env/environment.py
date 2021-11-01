@@ -311,7 +311,7 @@ class EnvVars:
     def save_sh(self, filename, generate_deactivate=True):
         deactivate = textwrap.dedent("""\
            echo Capturing current environment in deactivate_{filename}
-           echo echo Restoring variables >> deactivate_{filename}
+           echo echo Restoring environment >> deactivate_{filename}
            for v in {vars}
            do
                value=$(printenv $v)

@@ -24,7 +24,6 @@ def conanfile():
 
     def layout(self):
         {ly}(self)
-        self.folders.package = "my_package"
 
     def package(self):
         AutoPackager(self).run()
@@ -94,8 +93,3 @@ def test_layout_with_local_methods(conanfile, layout_helper_name, build_type, ar
         else:
             path = os.path.join(client.current_folder, build_type, "mylib.lib")
         assert os.path.exists(path)
-
-    # Check the package
-    # client.run("package .")
-    # assert os.path.exists(os.path.join(client.current_folder, "my_package", "lib", "mylib.lib"))
-
