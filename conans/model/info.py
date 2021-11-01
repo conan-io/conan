@@ -395,9 +395,6 @@ class _PackageReferenceList(list):
         return _PackageReferenceList([PackageReference.loads(package_reference)
                                      for package_reference in text.splitlines()])
 
-    def dumps(self):
-        return "\n".join(self.serialize())
-
 
 class ConanInfo(object):
 
@@ -465,7 +462,6 @@ class ConanInfo(object):
     def clone(self):
         q = self.copy()
         q.full_settings = self.full_settings.copy()
-        q.full_requires = _PackageReferenceList.loads(self.full_requires.dumps())
         return q
 
     def __eq__(self, other):
