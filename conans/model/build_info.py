@@ -301,7 +301,6 @@ class CppInfo(object):
         return filter(None, self.components.keys())
 
     def merge(self, other, overwrite=False):
-        """Merge 'other' into self. 'other' can be an old cpp_info object"""
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
 

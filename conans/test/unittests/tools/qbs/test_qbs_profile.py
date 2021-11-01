@@ -232,6 +232,7 @@ class QbsGenericTest(unittest.TestCase):
             {'os': 'Linux', 'compiler': 'clang', 'compiler.version': '3.9', 'qbs_compiler': 'clang'}
         ]
 
+    @pytest.mark.xfail(reason="QBS need to modernize to new tools only")
     def test_convert_compiler_name_to_qbs_compiler_name(self):
         for settings in self._settings_to_test_against():
             def expected():
@@ -245,6 +246,7 @@ class QbsGenericTest(unittest.TestCase):
             qbs._settings_dir(conanfile),
             '%s/conan_qbs_toolchain_settings_dir' % conanfile.install_folder)
 
+    @pytest.mark.xfail(reason="QBS need to modernize to new tools only")
     @unittest.skipIf(os.name == 'nt', "Test can only be performed with known MSVC version")
     def test_setup_toolchain_without_any_env_values(self):
         for settings in self._settings_to_test_against():

@@ -1,7 +1,7 @@
 import os
 import textwrap
 
-from conans.client.tools import vs_installation_path
+from conans.client.conf.detect_vs import vs_installation_path
 from conans.errors import ConanException
 
 CONAN_VCVARS_FILE = "conanvcvars.bat"

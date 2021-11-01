@@ -13,17 +13,17 @@ class RemotesAPI:
         self.conan_api = conan_api
 
     @api_method
-    def list(self, filter=None, only_active=False):
+    def list(self, pattern=None, only_active=False):
         app = ConanApp(self.conan_api.cache_folder)
         remotes = app.cache.remotes_registry.list()
-        if filter:
+        if pattern:
             filtered_remotes = []
             for remote in remotes:
-                if fnmatch.fnmatch(remote.name, filter):
+                if fnmatch.fnmatch(remote.name, pattern):
                     filtered_remotes.append(remote)
 
-            if not filtered_remotes and "*" not in filter:
-                raise ConanException("Remote '%s' not found in remotes" % filter)
+            if not filtered_remotes and "*" not in pattern:
+                raise ConanException(f"Remote '{pattern}' not found in remotes")
 
             remotes = filtered_remotes
         if only_active:
@@ -41,9 +41,10 @@ class RemotesAPI:
         app.cache.remotes_registry.add(remote)
 
     @api_method
-    def remove(self, remote: Remote):
+    def remove(self, remote_name):
         app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.remove(remote)
+        remote = app.cache.remotes_registry.remove(remote_name)
+        users_clean(app.cache.localdb, remote.url)
 
     @api_method
     def update(self, remote: Remote):

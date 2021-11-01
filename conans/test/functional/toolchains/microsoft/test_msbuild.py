@@ -8,7 +8,7 @@ import pytest
 from parameterized import parameterized, parameterized_class
 
 from conan.tools.microsoft.visual import vcvars_command
-from conans.client.tools import vs_installation_path
+from conans.client.conf.detect_vs import vs_installation_path
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.conftest import tools_locations
 from conans.test.functional.utils import check_vs_runtime, check_exe_run

@@ -23,6 +23,7 @@ class AutotoolsDeps:
 
     @property
     def environment(self):
+        # TODO: Seems we want to make this uniform, equal to other generators
         if self._environment is None:
             flags = GnuDepsFlags(self._conanfile, self._get_cpp_info())
 

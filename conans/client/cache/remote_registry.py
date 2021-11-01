@@ -74,12 +74,12 @@ class _Remotes(object):
             raise NoRemoteAvailable("No default remote defined")
         return ret
 
-    def remove(self, remote: Remote):
-        r = self.get_by_name(remote.name)
+    def remove(self, remote_name):
+        r = self.get_by_name(remote_name)
         if r is None:
             raise ConanException("The specified remote doesn't exist")
         index = self._remotes.index(r)
-        self._remotes.pop(index)
+        return self._remotes.pop(index)
 
     def add(self, new_remote: Remote, index=None):
         assert isinstance(new_remote, Remote)
@@ -100,12 +100,11 @@ class _Remotes(object):
 
         index = self._remotes.index(current)
         self._remotes.remove(current)
-        print(remote)
         self._remotes.insert(index, remote)
 
     def move(self, remote: Remote, new_index: int):
         assert isinstance(remote, Remote)
-        self.remove(remote)
+        self.remove(remote.name)
         self._remotes.insert(new_index, remote)
 
     def get_by_name(self, name):
@@ -195,10 +194,12 @@ class RemoteRegistry(object):
         remotes.add(remote)
         self.save_remotes(remotes)
 
-    def remove(self, remote):
+    def remove(self, remote_name):
+        assert isinstance(remote_name, str)
         remotes = self._load_remotes()
-        remotes.remove(remote)
+        remote = remotes.remove(remote_name)
         self.save_remotes(remotes)
+        return remote
 
     def update(self, remote):
         self._validate_url(remote.url)
