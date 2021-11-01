@@ -78,7 +78,7 @@ def list_package_ids_cli_formatter(results):
             error = f"ERROR: {result['error']}"
             cli_out_write(error, fg=error_color, indentation=2)
         elif not result.get("results"):
-            cli_out_write("There are no package-ids", indentation=2)
+            cli_out_write("There are no packages", indentation=2)
         else:
             reference = result["reference"]
             for pkg_id, props in result["results"].items():
