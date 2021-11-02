@@ -78,7 +78,7 @@ class GraphManagerTest(unittest.TestCase):
 
     def _put_in_cache(self, ref, conanfile):
         ref = ConanFileReference.loads("{}#123".format(ref))
-        layout = self.cache.create_ref_layout(ref)
+        layout = self.cache.get_or_create_ref_layout(ref)
         save(layout.conanfile(), str(conanfile))
         manifest = FileTreeManifest.create(layout.export())
         manifest.save(layout.export())
@@ -88,7 +88,7 @@ class GraphManagerTest(unittest.TestCase):
         if not isinstance(ref, ConanFileReference):
             ref = ConanFileReference.loads(ref)
         ref = ConanFileReference.loads(repr(ref) + "#{}".format(revision or 123))  # FIXME: Make access
-        recipe_layout = self.cache.create_ref_layout(ref)
+        recipe_layout = self.cache.get_or_create_ref_layout(ref)
         save(recipe_layout.conanfile(), str(test_conanfile))
         manifest = FileTreeManifest.create(recipe_layout.export())
         manifest.save(recipe_layout.export())
