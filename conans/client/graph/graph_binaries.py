@@ -4,7 +4,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
                                        BINARY_INVALID, BINARY_ERROR)
-from conans.errors import NoRemoteAvailable, NotFoundException, ConanException, \
+from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
 from conans.model.info import PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.ref import PackageReference
@@ -194,7 +194,7 @@ class GraphBinariesAnalyzer(object):
                 except NoRemoteAvailable:
                     output.warning("Can't update, there are no remotes configured or enabled")
                 else:
-                    cache_time = self._cache.get_timestamp(cache_latest_prev)
+                    cache_time = self._cache.get_package_timestamp(cache_latest_prev)
                     # TODO: cache 2.0 should we update the date if the prev is the same?
                     if cache_time < prev_time and cache_latest_prev != remote_prev:
                         node.binary = BINARY_UPDATE

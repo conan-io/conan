@@ -47,7 +47,9 @@ class BaseDbTable:
         table_checks = f", UNIQUE({', '.join(self.unique_together)})" if self.unique_together else ''
         self._conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
 
-    def dump(self, output: StringIO):
+    def dump(self):
+        print(f"********* BEGINTABLE {self.table_name}*************")
         r = self._conn.execute(f'SELECT rowid, * FROM {self.table_name}')
         for it in r.fetchall():
-            output.write(str(it) + '\n')
+            print(str(it))
+        print(f"********* ENDTABLE {self.table_name}*************")

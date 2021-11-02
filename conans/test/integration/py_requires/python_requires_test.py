@@ -497,7 +497,6 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . base/1.1@user/testing")
         client.run("upload * --confirm -r default")
 
-        db = client2.cache.dump()
         client2.run("install . --update")
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
 

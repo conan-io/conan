@@ -57,11 +57,17 @@ class ClientCache(object):
     def closedb(self):
         self._data_cache.closedb()
 
-    def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
+    def update_recipe(self, old_ref: ConanReference, new_ref: ConanReference = None,
+                         new_path=None, new_timestamp=None):
+        new_ref = ConanReference(new_ref) if new_ref else None
+        return self._data_cache.update_recipe(ConanReference(old_ref), new_ref, new_path,
+                                                 new_timestamp,)
+
+    def update_package(self, old_ref: ConanReference, new_ref: ConanReference = None,
                          new_path=None, new_timestamp=None, new_build_id=None):
         new_ref = ConanReference(new_ref) if new_ref else None
-        return self._data_cache.update_reference(ConanReference(old_ref), new_ref, new_path,
-                                                 new_timestamp, new_build_id)
+        return self._data_cache.update_package(ConanReference(old_ref), new_ref, new_path,
+                                              new_timestamp, new_build_id)
 
     def dump(self):
         out = StringIO()
@@ -98,15 +104,25 @@ class ClientCache(object):
     def get_or_create_pkg_layout(self, ref: ConanReference):
         return self._data_cache.get_or_create_package_layout(ConanReference(ref))
 
-    def remove_layout(self, layout):
+    def remove_recipe_layout(self, layout):
         layout.remove()
-        self._data_cache.remove(ConanReference(layout.reference))
+        self._data_cache.remove_recipe(ConanReference(layout.reference))
 
-    def get_timestamp(self, ref):
-        return self._data_cache.get_timestamp(ConanReference(ref))
+    def remove_package_layout(self, layout):
+        layout.remove()
+        self._data_cache.remove_package(ConanReference(layout.reference))
 
-    def set_timestamp(self, ref, timestamp):
-        return self._data_cache.update_reference(ConanReference(ref), new_timestamp=timestamp)
+    def get_recipe_timestamp(self, ref):
+        return self._data_cache.get_recipe_timestamp(ConanReference(ref))
+
+    def get_package_timestamp(self, ref):
+        return self._data_cache.get_package_timestamp(ConanReference(ref))
+
+    def set_recipe_timestamp(self, ref, timestamp):
+        return self._data_cache.update_recipe(ConanReference(ref), new_timestamp=timestamp)
+
+    def set_package_timestamp(self, ref, timestamp):
+        return self._data_cache.update_package(ConanReference(ref), new_timestamp=timestamp)
 
     def all_refs(self, only_latest_rrev=False):
         # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check

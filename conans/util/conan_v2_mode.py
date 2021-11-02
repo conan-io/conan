@@ -6,13 +6,6 @@ from conans.errors import ConanV2Exception
 CONAN_V2_MODE_ENVVAR = "CONAN_V2_MODE"
 
 
-def conan_v2_error(msg, condition=True):
-    # FIXME: to deprecate replace this by a "conan_v2_deprecate" that only raises if enabled
-    if condition:
-        if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
-            raise ConanV2Exception(msg)
-
-
 @contextmanager
 def conan_v2_property(inst, name, msg):
     if not os.environ.get(CONAN_V2_MODE_ENVVAR, False):
