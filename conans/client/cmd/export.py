@@ -28,7 +28,7 @@ class AliasConanfile(ConanFile):
     revision_mode = "%s"
 """ % (target_ref.full_str(), revision_mode)
 
-    alias_layout = cache.create_temp_ref_layout(alias_ref)
+    alias_layout = cache.create_export_recipe_layout(alias_ref)
 
     save(alias_layout.conanfile(), conanfile)
     manifest = FileTreeManifest.create(alias_layout.export())
@@ -38,7 +38,8 @@ class AliasConanfile(ConanFile):
                          path=None, manifest=manifest, revision_mode=revision_mode)
 
     ref_with_rrev = alias_ref.copy_with_rev(rrev)
-    cache.assign_rrev(alias_layout, ConanReference(ref_with_rrev))
+    alias_layout.reference = ConanReference(ref_with_rrev)
+    cache.assign_rrev(alias_layout)
 
 
 def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None,
