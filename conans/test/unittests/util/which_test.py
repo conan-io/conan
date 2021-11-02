@@ -27,7 +27,7 @@ class WhichTest(unittest.TestCase):
 
     def test_which_positive(self):
         tmp_dir = temp_folder()
-        ext = ".sh" if platform.system() != "Windows" else ".bat"
+        ext = "" if platform.system() != "Windows" else ".bat"
         fullname = os.path.join(tmp_dir, 'example%s' % ext)
         self._touch(fullname)
         self._add_executable_bit(fullname)
