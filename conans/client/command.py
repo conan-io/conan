@@ -7,21 +7,23 @@ from argparse import ArgumentError
 from difflib import get_close_matches
 
 from conans.assets import templates
-from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION
+from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION, \
+    ERROR_INVALID_SYSTEM_REQUIREMENTS
+from conans.cli.output import Color, ConanOutput
 from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import ConanAPIV1, _make_abs_path, ProfileData
 from conans.client.conan_command_output import CommandOutputer
-from conans.client.graph.install_graph import InstallGraph
-from conans.cli.output import Color, ConanOutput
 from conans.client.conf.config_installer import is_config_install_scheduled
+from conans.client.graph.install_graph import InstallGraph
 from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration
+from conans.errors import ConanInvalidSystemRequirements
 from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import exception_message_safe, load
+from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
 
@@ -1499,6 +1501,9 @@ class Command(object):
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
+            self._out.error(exc)
+        except ConanInvalidSystemRequirements as exc:
+            ret_code = ERROR_INVALID_SYSTEM_REQUIREMENTS
             self._out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL

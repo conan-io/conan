@@ -1,6 +1,6 @@
 import json
 import os
-import sys
+
 from collections import OrderedDict
 from collections import namedtuple
 
@@ -34,7 +34,6 @@ from conans.model.ref import ConanFileReference, PackageReference, check_valid_r
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_recipes
-from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import mkdir, save_files, load, save
 
 
@@ -100,9 +99,6 @@ class ConanAPIV1(object):
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
         check_required_conan_version(self.cache_folder)
-        python_folder = os.path.join(self.cache_folder, "python")
-        conan_v2_error("Using code from cache/python not allowed", os.path.isdir(python_folder))
-        sys.path.append(python_folder)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,

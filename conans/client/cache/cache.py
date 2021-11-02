@@ -57,14 +57,11 @@ class ClientCache(object):
     def closedb(self):
         self._data_cache.closedb()
 
-    def update_recipe_timestamp(self, ref: ConanReference, new_timestamp=None):
-        return self._data_cache.update_recipe_timestamp(ref, new_timestamp,)
-
     def update_package(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_timestamp=None, new_build_id=None):
+                       new_path=None, new_timestamp=None, new_build_id=None):
         new_ref = ConanReference(new_ref) if new_ref else None
         return self._data_cache.update_package(ConanReference(old_ref), new_ref, new_path,
-                                              new_timestamp, new_build_id)
+                                               new_timestamp, new_build_id)
 
     def dump(self):
         out = StringIO()
