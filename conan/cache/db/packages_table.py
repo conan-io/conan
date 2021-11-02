@@ -5,8 +5,8 @@ from conan.cache.db.table import BaseDbTable
 from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 
 
-class ReferencesDbTable(BaseDbTable):
-    table_name = 'conan_references'
+class PackagesDBTable(BaseDbTable):
+    table_name = 'packages'
     columns_description = [('reference', str),
                            ('rrev', str),
                            ('pkgid', str, True),
@@ -60,7 +60,7 @@ class ReferencesDbTable(BaseDbTable):
         r = self._conn.execute(query)
         row = r.fetchone()
         if not row:
-            raise ConanReferenceDoesNotExistInDB(f"No entry for reference '{ref.full_reference}'")
+            raise ConanReferenceDoesNotExistInDB(f"No entry for package '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
     def save(self, path, ref: ConanReference, timestamp):

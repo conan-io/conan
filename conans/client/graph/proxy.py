@@ -70,7 +70,7 @@ class ConanProxy(object):
                 #  download anything but we will UPDATE the date of that revision in the
                 #  local cache and WE ARE ALSO UPDATING THE REMOTE
                 #  Check if this is the flow we want to follow
-                cache_time = self._cache.get_timestamp(ref)
+                cache_time = self._cache.get_recipe_timestamp(ref)
                 if latest_rrev.revision != ref.revision:
                     if cache_time < remote_time:
                         # the remote one is newer
@@ -92,8 +92,7 @@ class ConanProxy(object):
                         status = RECIPE_INCACHE
                     else:
                         selected_remote = remote
-                        self._cache.update_reference(ref,
-                                                     new_timestamp=remote_time)
+                        self._cache.set_recipe_timestamp(ref, timestamp=remote_time)
                         status = RECIPE_INCACHE_DATE_UPDATED
                 return conanfile_path, status, selected_remote, ref
             else:
@@ -137,7 +136,7 @@ class ConanProxy(object):
             scoped_output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
             _ref, _ref_time = self._remote_manager.get_recipe(reference, the_remote)
-            self._cache.set_timestamp(_ref, _ref_time)
+            self._cache.set_recipe_timestamp(_ref, _ref_time)
             scoped_output.info("Downloaded recipe revision %s" % _ref.revision)
             return _ref
 

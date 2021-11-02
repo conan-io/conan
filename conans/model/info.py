@@ -517,6 +517,7 @@ class ConanInfo(object):
         """
         This info will be shown in search results.
         """
+        # Lets keep returning the legacy "full_requires" just in case some client uses it
         conan_info_json = {"settings": dict(self.settings.serialize()),
                            "options": dict(self.options.serialize())["options"],
                            "requires": self.requires.serialize()

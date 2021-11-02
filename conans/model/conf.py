@@ -81,7 +81,7 @@ class Conf(object):
         """
         self._values.update(other._values)
 
-    def compose(self, other):
+    def compose_conf(self, other):
         """
         :param other: other has less priority than current one
         :type other: Conf
