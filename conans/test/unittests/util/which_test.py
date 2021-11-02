@@ -20,7 +20,7 @@ class WhichTest(unittest.TestCase):
 
     @staticmethod
     def _add_executable_bit(filename):
-        if os.name == 'posix':
+        if platform.system() != "Windows":
             mode = os.stat(filename).st_mode
             mode |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
             os.chmod(filename, stat.S_IMODE(mode))
