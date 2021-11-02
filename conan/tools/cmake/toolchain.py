@@ -450,7 +450,7 @@ class FindConfigFiles(Block):
 class UserToolchain(Block):
     template = textwrap.dedent("""
         {% if user_toolchain %}
-        include({{user_toolchain}})
+        include("{{user_toolchain}}")
         {% endif %}
         """)
 
@@ -459,7 +459,10 @@ class UserToolchain(Block):
     def context(self):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
-        return {"user_toolchain": user_toolchain or self.user_toolchain}
+        user_toolchain = user_toolchain or self.user_toolchain
+        if user_toolchain:
+            user_toolchain = user_toolchain.replace("\\", "/")
+        return {"user_toolchain": user_toolchain}
 
 
 class CMakeFlagsInitBlock(Block):
