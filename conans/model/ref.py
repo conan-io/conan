@@ -1,5 +1,4 @@
 import re
-import traceback
 from collections import namedtuple
 
 from conans.errors import ConanException, InvalidNameException

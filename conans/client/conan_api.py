@@ -210,11 +210,11 @@ class ConanAPIV1(object):
                                                                                profile_build, cwd,
                                                                                app.cache,
                                                                                lockfile=lockfile)
-
             new_ref = cmd_export(app, conanfile_path, name, version, user, channel,
                                  graph_lock=graph_lock,
                                  ignore_dirty=ignore_dirty)
 
+            profile_host.options.scope(new_ref.name)
             app.range_resolver.clear_output()  # invalidate version range output
 
             if build_modes is None:  # Not specified, force build the tested library

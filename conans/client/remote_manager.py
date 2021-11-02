@@ -37,7 +37,7 @@ def _headers_for_info(info):
         settings = ['{}={}'.format(*it) for it in settings]
         r.update({CONAN_REQUEST_HEADER_SETTINGS: ';'.join(settings)})
 
-    options = info.options.as_list()
+    options = info.options._package_options.items()  # FIXME
     if options:
         options = filter(lambda u: u[0] in ['shared', 'fPIC', 'header_only'], options)
         options = ['{}={}'.format(*it) for it in options]

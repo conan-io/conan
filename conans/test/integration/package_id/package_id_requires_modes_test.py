@@ -102,7 +102,7 @@ class PackageIDTest(unittest.TestCase):
         # As we have changed Hello2, the binary is not valid anymore so it won't find it
         # but will look for the same package_id
         self.client.run("install .", assert_error=True)
-        self.assertIn("- Package ID: d5d0eee18cd94846c5c42773267949ca9c05e0de",
+        self.assertIn("- Package ID: 9a2fb5e0220e8f5e7f94cf8616c4217dbf05a16b",
                       self.client.out)
 
         # Now change the Hello version and build it, if we install out requires is
@@ -325,16 +325,14 @@ class PackageIDTest(unittest.TestCase):
         self._export("libd", "0.1.0", channel=channel, package_id_text=None,
                      requires=["libc/0.1.0@user/testing"])
         self.client.run("create . libd/0.1.0@user/testing", assert_error=True)
-        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:d4d0d064f89ab22de34fe7d99476736a87c1e254
+        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:6bc65b4894592ca5f492d000cf2cc793b904c14e
 
 libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
 - Settings:%s
 - Options: an_option=off
 - Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
 - Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
-- Package ID: d4d0d064f89ab22de34fe7d99476736a87c1e254
-
-ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""" % " ", self.client.out)
+- Package ID: 6bc65b4894592ca5f492d000cf2cc793b904c14e""" % " ", self.client.out)
 
 
 class PackageIDErrorTest(unittest.TestCase):

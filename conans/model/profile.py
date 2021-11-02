@@ -5,7 +5,7 @@ from conan.tools.env.environment import ProfileEnvironment
 from conans.client import settings_preprocessor
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.ref import ConanFileReference
 from conans.model.values import Values
 
@@ -18,7 +18,7 @@ class Profile(object):
         # Input sections, as defined by user profile files and command line
         self.settings = OrderedDict()
         self.package_settings = defaultdict(OrderedDict)
-        self.options = OptionsValues()
+        self.options = Options()
         self.build_requires = OrderedDict()  # ref pattern: list of ref
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
@@ -29,11 +29,12 @@ class Profile(object):
         self._package_settings_values = None
         self.dev_reference = None  # Reference of the package being develop
 
+    def __repr__(self):
+        return self.dumps()
+
     @property
     def user_options(self):
-        if self._user_options is None:
-            self._user_options = self.options.copy()
-        return self._user_options
+        return self.options
 
     @property
     def package_settings_values(self):
@@ -97,7 +98,7 @@ class Profile(object):
     def compose_profile(self, other):
         self.update_settings(other.settings)
         self.update_package_settings(other.package_settings)
-        self.options.update(other.options)
+        self.options.update_options(other.options)
         # It is possible that build_requires are repeated, or same package but different versions
         for pattern, req_list in other.build_requires.items():
             existing_build_requires = self.build_requires.get(pattern)

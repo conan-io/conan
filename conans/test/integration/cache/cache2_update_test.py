@@ -138,7 +138,7 @@ class TestUpdateFlows:
         # --> result: Update date and server because server0 has a newer date
         latest_rrev = self.client.cache.get_latest_rrev(self.liba)
         assert "liba/1.0.0 from 'server2' - Updated" in self.client.out
-        assert "liba/1.0.0: Downloaded package revision cf924fbb5ed463b8bb960cf3a4ad4f3a" in self.client.out
+        assert "liba/1.0.0: Downloaded package" in self.client.out
         assert self.client.cache.get_recipe_timestamp(latest_rrev) == self.server_times["server2"]
 
         # we create a newer revision in client

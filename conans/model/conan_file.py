@@ -136,7 +136,7 @@ class ConanFile:
     def initialize(self, settings, buildenv=None):
         # If we move this to constructor, the python_require inheritance in init fails
         # and "conan inspect" also breaks
-        self.options = Options.create_options(self.options, self.default_options)
+        self.options = Options(self.options or {}, self.default_options)
         self._conan_buildenv = buildenv
         try:
             settings.constraint(self.settings or [])

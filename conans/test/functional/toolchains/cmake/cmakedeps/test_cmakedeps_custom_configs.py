@@ -26,13 +26,13 @@ class CustomConfigurationTest(unittest.TestCase):
             def generate(self):
                 cmake = CMakeDeps(self)
                 cmake.configurations.append("ReleaseShared")
-                if self.options["hello"].shared:
+                if self.dependencies["hello"].options.shared:
                     cmake.configuration = "ReleaseShared"
                 cmake.generate()
 
             def imports(self):
                 config = str(self.settings.build_type)
-                if self.options["hello"].shared:
+                if self.dependencies["hello"].options.shared:
                     config = "ReleaseShared"
                 self.copy("*.dll", src="bin", dst=config, keep_path=False)
         """)

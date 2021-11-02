@@ -33,8 +33,8 @@ class _InstallPackageReference:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        # FIXME: The aggregation of the upstream options is not correct here
-        result.options = node.conanfile.options.values.as_list()
+        # self_options are the minimum to reproduce state
+        result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
         return result
 
@@ -264,7 +264,7 @@ def raise_missing(missing, out):
     dependencies = [str(dep.dst) for dep in node.dependencies]
 
     settings_text = ", ".join(conanfile.info.full_settings.dumps().splitlines())
-    options_text = ", ".join(conanfile.info.full_options.dumps().splitlines())
+    options_text = ", ".join(conanfile.info.options.dumps().splitlines())
     dependencies_text = ', '.join(dependencies)
     requires_text = ", ".join(conanfile.info.requires.dumps().splitlines())
 
