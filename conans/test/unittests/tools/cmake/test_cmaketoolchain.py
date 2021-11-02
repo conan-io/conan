@@ -136,11 +136,12 @@ def test_user_toolchain(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks["user_toolchain"].user_toolchain = "myowntoolchain.cmake"
     content = toolchain.content
-    assert 'include(myowntoolchain.cmake)' in content
+    assert 'include("myowntoolchain.cmake")' in content
 
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content
     assert 'include(' not in content
+
 
 @pytest.fixture
 def conanfile_apple():
@@ -161,6 +162,7 @@ def conanfile_apple():
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     return c
+
 
 def test_osx_deployment_target(conanfile_apple):
     toolchain = CMakeToolchain(conanfile_apple)
