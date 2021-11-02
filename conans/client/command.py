@@ -1436,44 +1436,9 @@ class Command(object):
         self._out.info("")
 
     def _warn_python_version(self):
-        import textwrap
-
-        width = 70
         version = sys.version_info
-        if version.major == 2:
-            self._out.info("*"*width, fg=Color.BRIGHT_RED)
-            msg = textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
-                                " stopped supporting it officially. We strongly recommend"
-                                " you to use Python >= 3.5. Conan will completely stop"
-                                " working with Python 2 in the following releases", width)
-            self._out.info(msg, fg=Color.BRIGHT_RED)
-            self._out.info("*"*width, fg=Color.BRIGHT_RED)
-            if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
-                # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently
-                # deprecated and some libraries we use as dependencies have stopped supporting it.
-                # Conan might fail to run and we are no longer fixing errors related to Python 2.
-                self._out.info(textwrap.fill("Python 2 deprecation notice has been bypassed"
-                                             " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'",
-                                             width))
-            else:
-                msg = textwrap.fill("If you really need to run Conan with Python 2 in your"
-                                    " CI without this interactive input, please contact us"
-                                    " at info@conan.io", width)
-                self._out.info(msg, fg=Color.BRIGHT_RED)
-                self._out.info("*" * width, fg=Color.BRIGHT_RED)
-                _msg = textwrap.fill("Understood the risk, keep going [y/N]: ", width,
-                                     drop_whitespace=False)
-                self._out.write(_msg, fg=Color.BRIGHT_RED)
-                ret = input().lower()
-                if ret not in ["yes", "ye", "y"]:
-                    self._out.info(textwrap.fill("Wise choice. Stopping here!", width))
-                    sys.exit(0)
-        elif version.minor == 4:
-            self._out.info("*"*width, fg=Color.BRIGHT_RED)
-            self._out.info(textwrap.fill("Python 3.4 support has been dropped. It is strongly "
-                                            "recommended to use Python >= 3.5 with Conan", width),
-                              fg=Color.BRIGHT_RED)
-            self._out.info("*"*width, fg=Color.BRIGHT_RED)
+        if version.major == 2 or  version.minor < 6:
+            raise ConanException("Conan needs Python >= 3.6")
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class

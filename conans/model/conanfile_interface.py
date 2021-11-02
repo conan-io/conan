@@ -22,9 +22,6 @@ class ConanFileInterface:
     def __hash__(self):
         return hash(self._conanfile)
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     @property
     def options(self):
         return self._conanfile.options

@@ -186,8 +186,5 @@ class Version(str):
     def __eq__(self, other):
         return self.__cmp__(other) == 0
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def __hash__(self):
         return str.__hash__(self)

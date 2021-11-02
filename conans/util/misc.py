@@ -1,8 +1,4 @@
-
-try:
-    from collections.abc import Iterable
-except ImportError:  # FIXME: Remove if Python2 support is removed
-    from collections import Iterable
+from collections.abc import Iterable
 
 
 def make_tuple(value):

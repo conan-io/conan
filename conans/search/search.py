@@ -57,7 +57,7 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
 
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
-    properties = ["os", "os_build", "compiler", "arch", "arch_build", "build_type"]
+    properties = ["os", "compiler", "arch", "build_type"]
 
     def starts_with_common_settings(_prop_name):
         return any(_prop_name.startswith(setting + '.') for setting in properties)
