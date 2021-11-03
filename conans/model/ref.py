@@ -1,5 +1,4 @@
 import re
-import traceback
 from collections import namedtuple
 
 from conans.errors import ConanException, InvalidNameException
@@ -263,68 +262,3 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             return False
 
         return self.revision is None
-
-"""
-class REMOVEDPackageReference(namedtuple("PackageReference", "ref id revision")):
-
-
-    def __new__(cls, ref, package_id, revision=None, validate=True):
-        if "#" in package_id:
-            package_id, revision = package_id.rsplit("#", 1)
-        obj = super(cls, PackageReference).__new__(cls, ref, package_id, revision)
-        if validate:
-            obj.validate()
-        return obj
-
-    def validate(self):
-        if self.revision:
-            ConanName.validate_revision(self.revision)
-
-    @staticmethod
-    def loads(text, validate=True):
-        text = text.strip()
-        tmp = text.split(":")
-        try:
-            ref = ConanFileReference.loads(tmp[0].strip(), validate=validate)
-            package_id = tmp[1].strip()
-        except IndexError:
-            raise ConanException("Wrong package reference %s" % text)
-        return PackageReference(ref, package_id, validate=validate)
-
-    def __repr__(self):
-        str_rev = "#%s" % self.revision if self.revision else ""
-        tmp = "%s:%s%s" % (repr(self.ref), self.id, str_rev)
-        return tmp
-
-    def __str__(self):
-        return "%s:%s" % (self.ref, self.id)
-
-    def __lt__(self, other):
-        # We need this operator to sort prefs to compute the package_id
-        # package_id() -> ConanInfo.package_id() -> RequirementsInfo.sha() -> sorted(prefs) -> lt
-        me = self.ref, self.id, self.revision or ""
-        other = other.ref, other.id, other.revision or ""
-        return me < other
-
-    def full_str(self):
-        str_rev = "#%s" % self.revision if self.revision else ""
-        tmp = "%s:%s%s" % (self.ref.full_str(), self.id, str_rev)
-        return tmp
-
-    def copy_with_revs(self, revision, p_revision):
-        return PackageReference(self.ref.copy_with_rev(revision), self.id, p_revision, validate=False)
-
-    def copy_clear_prev(self):
-        return self.copy_with_revs(self.ref.revision, None)
-
-    def copy_clear_revs(self):
-        return self.copy_with_revs(None, None)
-
-    def is_compatible_with(self, new_ref):
-        if repr(self) == repr(new_ref):
-            return True
-        if not self.ref.is_compatible_with(new_ref.ref) or self.id != new_ref.id:
-            return False
-
-        return self.revision is None  # Only the revision is different and we don't have one
-"""

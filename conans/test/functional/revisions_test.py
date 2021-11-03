@@ -449,8 +449,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         remover_client.run(command, assert_error=True)
         fakeref = copy.copy(pref2)
         fakeref.revision = "fakerev"
-        self.assertIn("Binary package not found: '{}'".format(fakeref),
-                      remover_client.out)
+        self.assertIn("Binary package not found: '{}'".format(repr(fakeref)), remover_client.out)
 
 
 class SearchingPackagesWithRevisions(unittest.TestCase):

@@ -44,8 +44,11 @@ class PkgReference:
 
     def __eq__(self, other):
         # TODO: In case of equality, should it use the revision and timestamp?
-        # raise Exception("WHO IS COMPARING PACKAGE REFERENCES?")
-        return self.__dict__ == other.__dict__
+        # Used:
+        #    at "graph_binaries" to check: cache_latest_prev != pref
+        #    at "installer" to check: if pkg_layout.reference != pref (probably just optimization?)
+        #    at "revisions_test"
+        return self.ref == other.ref and self.revision == other.revision
 
     def __hash__(self):
         # Used in dicts of PkgReferences as keys
