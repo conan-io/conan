@@ -5,7 +5,7 @@ from collections import OrderedDict, defaultdict
 from jinja2 import Environment, FileSystemLoader
 
 from conan.tools.env.environment import ProfileEnvironment
-from conans.errors import ConanException, ConanV2Exception
+from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.env_info import unquote
 from conans.model.options import Options
@@ -51,6 +51,7 @@ class ProfileLoader:
 
         args_profile = _profile_parse_args(settings, options, env, conf)
         result.compose_profile(args_profile)
+        # Only after everything has been aggregated, try to complete missing settings
         result.process_settings(self._cache)
         return result
 
@@ -78,8 +79,6 @@ class ProfileLoader:
 
         try:
             return self._recurse_load_profile(text, profile_path)
-        except ConanV2Exception:
-            raise
         except ConanException as exc:
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 

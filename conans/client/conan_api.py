@@ -23,7 +23,7 @@ from conans.client.graph.printer import print_graph
 from conans.client.importer import run_imports, undo_imports
 from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
-from conans.client.profileloader import ProfileLoader
+from conans.client.profile_loader import ProfileLoader
 from conans.client.remover import ConanRemover
 from conans.client.source import config_source_local
 from conans.errors import (ConanException, RecipeNotFoundException,

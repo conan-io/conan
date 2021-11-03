@@ -2,7 +2,7 @@ import os
 
 from conans.cli.output import ConanOutput
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.profileloader import ProfileLoader
+from conans.client.profile_loader import ProfileLoader
 from conans.errors import ConanException
 from conans.model.options import Options
 from conans.model.profile import Profile

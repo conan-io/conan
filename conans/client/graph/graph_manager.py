@@ -7,7 +7,7 @@ from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import Node, CONTEXT_HOST
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.profileloader import ProfileLoader
+from conans.client.profile_loader import ProfileLoader
 from conans.model.options import Options
 from conans.model.ref import ConanFileReference
 

@@ -6,7 +6,7 @@ from jinja2 import Template
 
 from conans.client.cache.cache import ClientCache
 from conans.client.conf import get_default_settings_yml
-from conans.client.profileloader import ProfileLoader
+from conans.client.profile_loader import ProfileLoader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
