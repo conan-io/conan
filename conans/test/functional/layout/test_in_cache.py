@@ -4,7 +4,8 @@ import textwrap
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -121,7 +122,7 @@ def test_cache_in_layout(conanfile):
     client.run("create . lib/1.0@")
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, package_id)
+    pref = PkgReference(ref, package_id)
     sf = client.get_latest_ref_layout(ref).source()
     bf = client.get_latest_pkg_layout(pref).build()
     pf = client.get_latest_pkg_layout(pref).package()

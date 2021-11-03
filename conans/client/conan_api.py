@@ -30,7 +30,8 @@ from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NotFoundException)
 from conans.model.graph_lock import LOCKFILE, Lockfile
 from conans.model.manifest import discarded_file
-from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference, check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_recipes
@@ -712,7 +713,7 @@ class ConanAPIV1(object):
             if package_id is None:  # Get the file in the exported files
                 folder = cache.ref_layout(latest_rrev).export()
             else:
-                latest_pref = cache.get_latest_prev(PackageReference(latest_rrev, package_id))
+                latest_pref = cache.get_latest_prev(PkgReference(latest_rrev, package_id))
                 folder = cache.get_pkg_layout(latest_pref).package()
 
             abs_path = os.path.join(folder, path)
@@ -737,7 +738,7 @@ class ConanAPIV1(object):
             if not ref.revision:
                 ref, _ = app.remote_manager.get_latest_recipe_revision(ref, remote)
             if package_id:
-                pref = PackageReference(ref, package_id)
+                pref = PkgReference(ref, package_id)
                 if not pref.revision:
                     pref, _ = app.remote_manager.get_latest_package_revision(pref, remote)
                 return app.remote_manager.get_package_path(pref, path, remote), path
@@ -781,7 +782,7 @@ class ConanAPIV1(object):
         app = ConanApp(self.cache_folder)
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)])
-        pref = PackageReference.loads(reference, validate=True)
+        pref = PkgReference.loads(reference)
         if not pref.ref.revision:
             raise ConanException("Specify a recipe reference with revision")
         if pref.revision:

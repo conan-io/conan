@@ -29,7 +29,8 @@ class DownloadRevisionsTest(unittest.TestCase):
         client.run("upload pkg/1.0@user/channel --all --confirm -r default")
         client.run("remove * -f")
         client.run("download pkg/1.0@user/channel#{}".format(pref.ref.revision))
-        self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.id), client.out)
+        self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.package_id),
+                      client.out)
         search_result = client.search("pkg/1.0@user/channel --revisions")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
@@ -46,7 +47,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         client.run("upload pkg/1.0@ --all --confirm -r default")
         client.run("remove * -f")
         client.run("download pkg/1.0@#{}".format(pref.ref.revision))
-        self.assertIn("pkg/1.0: Package installed {}".format(pref.id), client.out)
+        self.assertIn("pkg/1.0: Package installed {}".format(pref.package_id), client.out)
         search_result = client.search("pkg/1.0@ --revisions")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
@@ -61,11 +62,12 @@ class DownloadRevisionsTest(unittest.TestCase):
         client.run("upload pkg/1.0@user/channel --all --confirm -r default")
         client.run("remove * -f")
         client.run("download pkg/1.0@user/channel#{}:{}#{}".format(pref.ref.revision,
-                                                                   pref.id,
+                                                                   pref.package_id,
                                                                    pref.revision))
-        self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.id), client.out)
+        self.assertIn("pkg/1.0@user/channel: Package installed {}".format(pref.package_id),
+                      client.out)
         search_result = client.search("pkg/1.0@user/channel --revisions")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
         search_result = client.search(
-            "pkg/1.0@user/channel#{}:{} --revisions".format(pref.ref.revision, pref.id))[0]
+            "pkg/1.0@user/channel#{}:{} --revisions".format(pref.ref.revision, pref.package_id))[0]
         self.assertIn(pref.revision, search_result["revision"])

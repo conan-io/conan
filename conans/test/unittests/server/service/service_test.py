@@ -6,7 +6,8 @@ from time import sleep
 from conans import DEFAULT_REVISION_V1
 from conans.errors import NotFoundException, RequestErrorException
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO, CONAN_MANIFEST
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.service.authorize import BasicAuthorizer
@@ -80,7 +81,7 @@ class ConanServiceTest(unittest.TestCase):
     def setUp(self):
         self.ref = ConanFileReference.loads("openssl/2.0.3@lasote/testing#%s" % DEFAULT_REVISION_V1)
 
-        self.pref = PackageReference(self.ref, "123123123", DEFAULT_REVISION_V1)
+        self.pref = PkgReference(self.ref, "123123123", DEFAULT_REVISION_V1)
         self.tmp_dir = temp_folder()
 
         read_perms = [("*/*@*/*", "*")]
@@ -138,7 +139,7 @@ class ConanServiceTest(unittest.TestCase):
             return (self.fake_url
                     + "/" + self.pref.ref.dir_repr()
                     + "/" + self.pref.ref.revision
-                    + "/package/" + self.pref.id
+                    + "/package/" + self.pref.package_id
                     + "/" + self.pref.revision
                     + "/" + filename)
 
@@ -172,7 +173,7 @@ class ConanServiceTest(unittest.TestCase):
             return (self.fake_url
                     + "/" + self.pref.ref.dir_repr()
                     + "/" + self.pref.ref.revision
-                    + "/package/" + self.pref.id
+                    + "/package/" + self.pref.package_id
                     + "/" + self.pref.revision
                     + "/" + filename)
 
@@ -188,8 +189,8 @@ class ConanServiceTest(unittest.TestCase):
         ref3 = ConanFileReference("Assimp", "1.10", "fenix", "stable", DEFAULT_REVISION_V1)
         ref4 = ConanFileReference("assimpFake", "0.1", "phil", "stable", DEFAULT_REVISION_V1)
 
-        pref2 = PackageReference(ref2, "12345587754", DEFAULT_REVISION_V1)
-        pref3 = PackageReference(ref3, "77777777777", DEFAULT_REVISION_V1)
+        pref2 = PkgReference(ref2, "12345587754", DEFAULT_REVISION_V1)
+        pref3 = PkgReference(ref3, "77777777777", DEFAULT_REVISION_V1)
 
         conan_vars = """
 [options]
@@ -229,8 +230,8 @@ class ConanServiceTest(unittest.TestCase):
         ref2 = ConanFileReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)
         ref3 = ConanFileReference("Assimp", "1.10", "lasote", "stable", DEFAULT_REVISION_V1)
 
-        pref2 = PackageReference(ref2, "12345587754", DEFAULT_REVISION_V1)
-        pref3 = PackageReference(ref3, "77777777777", DEFAULT_REVISION_V1)
+        pref2 = PkgReference(ref2, "12345587754", DEFAULT_REVISION_V1)
+        pref3 = PkgReference(ref3, "77777777777", DEFAULT_REVISION_V1)
 
         save_files(self.server_store.export(ref2), {"fake.txt": "//fake"})
         self.server_store.update_last_revision(ref2)
@@ -246,7 +247,7 @@ class ConanServiceTest(unittest.TestCase):
 
         # Delete one package
         self.service.remove_packages(ref3, ["77777777777"])
-        pref = PackageReference(ref3, '77777777777')
+        pref = PkgReference(ref3, '77777777777')
         package_folder_3 = self.server_store.package_revisions_root(pref)
         self.assertFalse(os.path.exists(package_folder_3))
 

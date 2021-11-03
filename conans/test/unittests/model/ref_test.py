@@ -1,7 +1,8 @@
 import unittest
 
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, PackageReference, \
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, \
     check_valid_ref, get_reference_fields
 
 
@@ -74,11 +75,11 @@ class RefTest(unittest.TestCase):
         ref = ConanFileReference("opencv", "2.3", "lasote", "testing", "34")
         self.assertEqual(ref.revision, "34")
 
-        pref = PackageReference.loads("opencv/2.4.10@lasote/testing#23:123123123#989")
+        pref = PkgReference.loads("opencv/2.4.10@lasote/testing#23:123123123#989")
         self.assertEqual(pref.revision, "989")
         self.assertEqual(pref.ref.revision, "23")
 
-        pref = PackageReference(ref, "123123123#989")
+        pref = PkgReference(ref, "123123123#989")
         self.assertEqual(pref.ref.revision, "34")
 
     def test_equal(self):
@@ -249,8 +250,8 @@ class CompatiblePrefTest(unittest.TestCase):
     def test_compatible(self):
 
         def ok(pref1, pref2):
-            pref1 = PackageReference.loads(pref1)
-            pref2 = PackageReference.loads(pref2)
+            pref1 = PkgReference.loads(pref1)
+            pref2 = PkgReference.loads(pref2)
             return pref1.is_compatible_with(pref2)
 
         # Same ref is ok

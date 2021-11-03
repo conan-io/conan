@@ -154,7 +154,7 @@ class PackagesDBTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_package_ids(self, ref: ConanReference):
+    def get_package_references(self, ref: ConanReference):
         assert ref.rrev, "To search for package id's you must provide a recipe revision."
         # we select the latest prev for each package_id
         query = f'SELECT {self.columns.reference}, ' \

@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized.parameterized import parameterized
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run

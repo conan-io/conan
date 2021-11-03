@@ -1,6 +1,6 @@
 import os
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import uncompress_packaged_files
 from conans.test.utils.tools import TestClient
@@ -68,21 +68,21 @@ def test_upload_only_tgz_if_needed():
     assert os.path.exists(conan_path)
 
     latest_rrev = client.cache.get_latest_rrev(ref)
-    package_ids = client.cache.get_package_ids(latest_rrev)
+    package_ids = client.cache.get_package_references(latest_rrev)
     pref = package_ids[0]
 
     # Upload package
-    client.run("upload %s -p %s -r default" % (str(ref), str(pref.id)))
+    client.run("upload %s -p %s -r default" % (str(ref), str(pref.package_id)))
     assert "Compressing package" in client.out
 
     # Not needed to tgz again
-    client.run("upload %s -p %s -r default" % (str(ref), str(pref.id)))
+    client.run("upload %s -p %s -r default" % (str(ref), str(pref.package_id)))
     assert "Compressing package" not in client.out
 
     # If we install the package again will be removed and re tgz
     client.run("install %s --build missing" % str(ref))
     # Upload package
-    client.run("upload %s -p %s -r default" % (str(ref), str(pref.id)))
+    client.run("upload %s -p %s -r default" % (str(ref), str(pref.package_id)))
     assert "Compressing package" not in client.out
 
     # Check library on server

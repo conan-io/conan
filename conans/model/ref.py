@@ -264,11 +264,9 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
 
         return self.revision is None
 
+"""
+class REMOVEDPackageReference(namedtuple("PackageReference", "ref id revision")):
 
-class PackageReference(namedtuple("PackageReference", "ref id revision")):
-    """ Full package reference, e.g.:
-    opencv/2.4.10@lasote/testing, fe566a677f77734ae
-    """
 
     def __new__(cls, ref, package_id, revision=None, validate=True):
         if "#" in package_id:
@@ -323,11 +321,10 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         return self.copy_with_revs(None, None)
 
     def is_compatible_with(self, new_ref):
-        """Returns true if the new_ref is completing the PREV field of this object but
-         having the rest equal """
         if repr(self) == repr(new_ref):
             return True
         if not self.ref.is_compatible_with(new_ref.ref) or self.id != new_ref.id:
             return False
 
         return self.revision is None  # Only the revision is different and we don't have one
+"""

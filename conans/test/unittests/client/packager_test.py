@@ -7,7 +7,8 @@ from mock import Mock
 
 from conans.client.conanfile.package import run_package_method
 from conans.client.loader import ConanFileLoader
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.utils.tools import TestClient, create_profile
 
@@ -68,7 +69,7 @@ class ExporterTest(unittest.TestCase):
                      "modules/opencv_mod.hpp":                     "copy"}, path=reg_folder)
 
         conanfile_path = os.path.join(reg_folder, CONANFILE)
-        pref = PackageReference(ref, "myfakeid")
+        pref = PkgReference(ref, "myfakeid")
         pkg_layout = client.get_latest_pkg_layout(pref)
         build_folder = pkg_layout.build()
         package_folder = pkg_layout.package()

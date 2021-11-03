@@ -20,7 +20,8 @@ from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.conf import DEFAULT_CONFIGURATION
-from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference, get_reference_fields, \
     check_valid_ref
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
@@ -338,7 +339,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            pref = PackageReference.loads(args.reference, validate=True)
+            pref = PkgReference.loads(args.reference)
         except ConanException:
             reference = args.reference
             packages_list = args.package
@@ -354,7 +355,8 @@ class Command(object):
                     reference = "%s/%s@#%s" % (pref.ref.name, pref.ref.version, pref.ref.revision)
                 else:
                     reference += "@"
-            pkgref = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
+            pkgref = "{}#{}".format(pref.package_id, pref.revision) \
+                if pref.revision else pref.package_id
             packages_list = [pkgref]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -1041,8 +1043,8 @@ class Command(object):
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
         try:
-            pref = PackageReference.loads(args.pattern_or_reference, validate=True)
-            packages = [pref.id]
+            pref = PkgReference.loads(args.pattern_or_reference)
+            packages = [pref.package_id]
             pattern_or_reference = repr(pref.ref)
         except ConanException:
             pref = None
@@ -1101,7 +1103,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            pref = PackageReference.loads(args.pattern_or_reference, validate=True)
+            pref = PkgReference.loads(args.pattern_or_reference)
         except ConanException:
             reference = args.pattern_or_reference
             package_id = args.package
@@ -1115,7 +1117,8 @@ class Command(object):
                 raise ConanException("'--query' argument cannot be used together with '--package'")
         else:
             reference = repr(pref.ref)
-            package_id = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
+            package_id = "{}#{}".format(pref.package_id, pref.revision) \
+                if pref.revision else pref.package_id
 
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -1247,7 +1250,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            pref = PackageReference.loads(args.reference, validate=True)
+            pref = PkgReference.loads(args.reference)
         except ConanException:
             reference = args.reference
             package_id = args.package
@@ -1258,7 +1261,7 @@ class Command(object):
                                "`conan get [...] {}:{}`".format(reference, package_id))
         else:
             reference = repr(pref.ref)
-            package_id = pref.id
+            package_id = pref.package_id
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")

@@ -5,7 +5,8 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
 
@@ -65,7 +66,7 @@ class SystemReqsTest(unittest.TestCase):
         package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
         self.assertIn("*+Running system requirements+*", client.out)
         ref = ConanFileReference.loads("Test/0.1@user/testing")
-        pref = PackageReference(ref, package_id)
+        pref = PkgReference(ref, package_id)
         pkg_layout = client.get_latest_pkg_layout(pref)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs()))
         load_file = load(pkg_layout.system_reqs_package())
@@ -81,7 +82,7 @@ class SystemReqsTest(unittest.TestCase):
 
         # Run with different option
         client.run("install Test/0.1@user/testing -o myopt=False --build missing")
-        pref2 = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        pref2 = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
         pkg_layout = client.get_latest_pkg_layout(pref)
         pkg_layout2 = client.get_latest_pkg_layout(pref2)
         self.assertIn("*+Running system requirements+*", client.out)
@@ -112,7 +113,7 @@ class SystemReqsTest(unittest.TestCase):
         client.run("install Test/0.1@user/testing --build missing")
         self.assertIn("*+Running system requirements+*", client.out)
         ref = ConanFileReference.loads("Test/0.1@user/testing")
-        pref = PackageReference(ref, "a527106fd9f2e3738a55b02087c20c0a63afce9d")
+        pref = PkgReference(ref, "a527106fd9f2e3738a55b02087c20c0a63afce9d")
         pkg_layout = client.get_latest_pkg_layout(pref)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
         load_file = load(pkg_layout.system_reqs())
@@ -129,7 +130,7 @@ class SystemReqsTest(unittest.TestCase):
         # Run with different option
         client.run("install Test/0.1@user/testing -o myopt=False --build missing")
         self.assertNotIn("*+Running system requirements+*", client.out)
-        pref2 = PackageReference(ref, "54c9626b48cefa3b819e64316b49d3b1e1a78c26")
+        pref2 = PkgReference(ref, "54c9626b48cefa3b819e64316b49d3b1e1a78c26")
         pkg_layout = client.get_latest_pkg_layout(pref)
         pkg_layout2 = client.get_latest_pkg_layout(pref2)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
@@ -159,7 +160,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("*+Running system requirements+*", client.out)
         ref = ConanFileReference.loads("Test/0.1@user/testing")
         self.assertFalse(os.path.exists(client.cache.package_layout(ref).system_reqs()))
-        pref = PackageReference(ref, package_id)
+        pref = PkgReference(ref, package_id)
         load_file = load(client.cache.package_layout(pref.ref).system_reqs_package(pref))
         self.assertEqual('', load_file)
 

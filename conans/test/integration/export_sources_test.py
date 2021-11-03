@@ -6,13 +6,13 @@ from collections import OrderedDict
 from mock import patch
 from parameterized.parameterized import parameterized
 
-from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
 from conans.server.revision_list import RevisionList
 from conans.test.utils.test_files import scan_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
-from conans.util.files import load, md5sum, save
+from conans.util.files import load
 
 conanfile_py = """
 from conans import ConanFile
@@ -78,7 +78,7 @@ class ExportsSourcesTest(unittest.TestCase):
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
         self.client = client
         self.ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
-        self.pref = PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID)
+        self.pref = PkgReference(self.ref, NO_SETTINGS_PACKAGE_ID)
 
     def _get_folders(self):
         latest_rrev = self.client.cache.get_latest_rrev(self.ref)
@@ -87,8 +87,8 @@ class ExportsSourcesTest(unittest.TestCase):
         self.export_folder = ref_layout.export()
         self.export_sources_folder = ref_layout.export_sources()
 
-        latest_prev = self.client.cache.get_latest_prev(PackageReference(latest_rrev,
-                                                                         NO_SETTINGS_PACKAGE_ID))
+        latest_prev = self.client.cache.get_latest_prev(PkgReference(latest_rrev,
+                                                                     NO_SETTINGS_PACKAGE_ID))
         if latest_prev:
             pkg_layout = self.client.cache.pkg_layout(latest_prev)
             self.package_folder = pkg_layout.package()

@@ -44,12 +44,12 @@ class PkgReference:
 
     def __eq__(self, other):
         # TODO: In case of equality, should it use the revision and timestamp?
-        raise Exception("WHO IS COMPARING PACKAGE REFERENCES?")
-        # return self.__dict__ == other.__dict__
+        # raise Exception("WHO IS COMPARING PACKAGE REFERENCES?")
+        return self.__dict__ == other.__dict__
 
     def __hash__(self):
-        raise Exception("WHO IS COMPARING RECIPE REFERENCES?")
-        # return hash((self.name, self.version, self.user, self.channel, self.revision))
+        # Used in dicts of PkgReferences as keys
+        return hash(repr(self))
 
     @staticmethod
     def loads(text):  # TODO: change this default to validate only on end points

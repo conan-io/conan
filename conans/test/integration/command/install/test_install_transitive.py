@@ -4,7 +4,8 @@ import re
 import pytest
 
 from conans.model.info import ConanInfo
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE_TXT, CONANINFO
 from conans.test.utils.tools import TestClient,  GenConanfile
 from conans.util.files import save
@@ -66,12 +67,12 @@ def test_reuse(client):
         assert "Configuration:[settings]", "".join(str(client.out).splitlines())
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
-        hello0 = client.get_latest_pkg_layout(PackageReference(ref, id0)).package()
+        hello0 = client.get_latest_pkg_layout(PkgReference(ref, id0)).package()
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         assert lang == hello0_conan_info.options.language
 
-        pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"), id1)
+        pref1 = PkgReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"), id1)
         hello1 = client.get_latest_pkg_layout(pref1).package()
         hello1_info = os.path.join(hello1, CONANINFO)
         hello1_conan_info = ConanInfo.load_file(hello1_info)

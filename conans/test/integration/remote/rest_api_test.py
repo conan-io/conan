@@ -17,7 +17,8 @@ from conans.client.tools import environment_append
 from conans.client.userio import UserInput
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.mocks import LocalDBMock
@@ -122,7 +123,7 @@ class RestApiTest(unittest.TestCase):
         self._upload_recipe(ref)
 
         # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA2", "mypackagerev")
+        pref = PkgReference(ref, "1F23223EFDA2", "mypackagerev")
         self._upload_package(pref)
 
         # Get the package
@@ -162,7 +163,7 @@ class RestApiTest(unittest.TestCase):
     Say/2.1@user/testing
     Chat/2.1@user/testing:SHA_ABC
 """
-        pref = PackageReference(ref1, "1F23223EFDA", "mypackagerev")
+        pref = PkgReference(ref1, "1F23223EFDA", "mypackagerev")
         self._upload_package(pref, {CONANINFO: conan_info})
 
         # Upload a conan2
@@ -197,7 +198,7 @@ class RestApiTest(unittest.TestCase):
         folders = {}
         for sha in ["1", "2", "3", "4", "5"]:
             # Upload an package
-            pref = PackageReference(ref, sha, "mypackagerev")
+            pref = PkgReference(ref, sha, "mypackagerev")
             self._upload_package(pref, {CONANINFO: ""})
             folder = self.server.server_store.package(pref)
             self.assertTrue(os.path.exists(folder))

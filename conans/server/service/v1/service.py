@@ -53,7 +53,7 @@ class ConanService(CommonService):
 
     def get_package_upload_urls(self, pref, filesizes):
         """
-        :param pref: PackageReference
+        :param pref: PkgReference
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
         new_pref = self._get_latest_pref(pref)

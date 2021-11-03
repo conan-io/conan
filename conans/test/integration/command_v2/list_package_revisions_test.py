@@ -6,7 +6,8 @@ import pytest
 
 from conans.client.remote_manager import RemoteManager
 from conans.errors import ConanConnectionError, ConanException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
@@ -35,7 +36,7 @@ class TestListPackageRevisionsBase:
 
     def _get_lastest_package_ref(self, recipe_name):
         rref = self.client.cache.get_latest_rrev(ConanFileReference.loads(recipe_name))
-        pref = PackageReference(rref, NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference(rref, NO_SETTINGS_PACKAGE_ID)
         return pref
 
 

@@ -29,7 +29,7 @@ class _InstallPackageReference:
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
-        result.package_id = node.pref.id
+        result.package_id = node.pref.package_id
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context

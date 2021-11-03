@@ -3,7 +3,8 @@ from os.path import join, normpath, relpath
 
 from conans import DEFAULT_REVISION_V1
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 
@@ -38,12 +39,12 @@ class ServerStore(object):
                                       "package_revisions_root"
         assert pref.ref.revision is not None, "BUG: server store needs RREV to " \
                                               "package_revisions_root"
-        tmp = join(self.packages(pref.ref), pref.id)
+        tmp = join(self.packages(pref.ref), pref.package_id)
         return tmp
 
     def package(self, pref):
         assert pref.revision is not None, "BUG: server store needs PREV for package"
-        tmp = join(self.packages(pref.ref), pref.id)
+        tmp = join(self.packages(pref.ref), pref.package_id)
         return join(tmp, pref.revision)
 
     def export(self, ref):
@@ -80,7 +81,7 @@ class ServerStore(object):
 
     def get_package_file_list(self, pref):
         """Returns a {filepath: md5} """
-        assert isinstance(pref, PackageReference)
+        assert isinstance(pref, PkgReference)
         return self._get_file_list(self.package(pref))
 
     def _get_file_list(self, relative_path):
@@ -124,14 +125,14 @@ class ServerStore(object):
             self._storage_adapter.delete_folder(packages_folder)
         else:
             for package_id in package_ids_filter:
-                pref = PackageReference(ref, package_id)
+                pref = PkgReference(ref, package_id)
                 # Remove all package revisions
                 package_folder = self.package_revisions_root(pref)
                 self._storage_adapter.delete_folder(package_folder)
         self._delete_empty_dirs(ref)
 
     def remove_package(self, pref):
-        assert isinstance(pref, PackageReference)
+        assert isinstance(pref, PkgReference)
         assert pref.revision is not None, "BUG: server store needs PREV remove_package"
         assert pref.ref.revision is not None, "BUG: server store needs RREV remove_package"
         package_folder = self.package(pref)
@@ -165,7 +166,7 @@ class ServerStore(object):
 
     def get_download_package_urls(self, pref, files_subset=None, user=None):
         """Returns a {filepath: url} """
-        assert isinstance(pref, PackageReference)
+        assert isinstance(pref, PkgReference)
         return self._get_download_urls(self.package(pref), files_subset, user)
 
     # ############ UPLOAD URLS
@@ -180,10 +181,10 @@ class ServerStore(object):
 
     def get_upload_package_urls(self, pref, filesizes, user):
         """
-        :param pref: PackageReference
+        :param pref: PkgReference
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
-        assert isinstance(pref, PackageReference)
+        assert isinstance(pref, PkgReference)
         assert isinstance(filesizes, dict)
 
         return self._get_upload_urls(self.package(pref), filesizes, user)
@@ -233,7 +234,7 @@ class ServerStore(object):
         return revs
 
     def get_last_package_revision(self, pref):
-        assert(isinstance(pref, PackageReference))
+        assert(isinstance(pref, PkgReference))
         rev_file_path = self._package_revisions_file(pref)
         return self._get_latest_revision(rev_file_path)
 
@@ -243,7 +244,7 @@ class ServerStore(object):
         self._update_last_revision(rev_file_path, ref)
 
     def update_last_package_revision(self, pref):
-        assert(isinstance(pref, PackageReference))
+        assert(isinstance(pref, PkgReference))
         rev_file_path = self._package_revisions_file(pref)
         self._update_last_revision(rev_file_path, pref)
 
@@ -305,7 +306,7 @@ class ServerStore(object):
     def _package_revisions_file(self, pref):
         tmp = normpath(join(self._store_folder, pref.ref.dir_repr()))
         revision = {None: ""}.get(pref.ref.revision, pref.ref.revision)
-        p_folder = join(tmp, revision, PACKAGES_FOLDER, pref.id)
+        p_folder = join(tmp, revision, PACKAGES_FOLDER, pref.package_id)
         return join(p_folder, REVISIONS_FILE)
 
     def get_revision_time(self, ref):

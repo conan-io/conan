@@ -1,7 +1,7 @@
 import os
 from collections import OrderedDict, defaultdict
 
-from conans.model.ref import PackageReference
+from conans.model.package_ref import PkgReference
 from conans.util.files import save
 from conans import __version__ as client_version
 
@@ -34,7 +34,7 @@ class RowResult(object):
         for it in headers.options:
             yield self._data['options'].get(it, None)
         if headers.requires:
-            prefs = [PackageReference.loads(it) for it in self._data['requires']]
+            prefs = [PkgReference.loads(it) for it in self._data['requires']]
             yield ', '.join(map(str, [it.ref for it in prefs]))
 
 
