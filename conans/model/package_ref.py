@@ -52,7 +52,7 @@ class PkgReference:
 
     def __hash__(self):
         # Used in dicts of PkgReferences as keys like the cached nodes in the graph binaries
-        return hash((hash(self.ref), self.package_id, self.revision))
+        return hash((self.ref, self.package_id, self.revision))
 
     @staticmethod
     def loads(text):  # TODO: change this default to validate only on end points

@@ -72,7 +72,7 @@ def export_pkg(app, ref, source_folder, build_folder, package_folder,
         else:
             prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
 
-    pref.revision = prev
+    pref = PkgReference(pref.ref, pref.package_id, prev)
     cache.assign_prev(pkg_layout, ConanReference(pref))
     # Make sure folder is updated
     conanfile.folders.set_base_package(pkg_layout.package())
