@@ -14,7 +14,7 @@ class CommonService(object):
             prev = DEFAULT_REVISION_V1
         else:
             prev = tmp.revision
-        tmp = copy.copy(prev)
+        tmp = copy.copy(pref)
         tmp.revision = prev
         return tmp
 
@@ -47,8 +47,9 @@ class CommonService(object):
         self._authorizer.check_delete_package(self._auth_user, pref)
 
         for rrev in self._server_store.get_recipe_revisions(pref.ref):
-            new_ref = pref.ref.copy_with_rev(rrev)
-            new_pref = PkgReference(new_ref, pref.revision)
+            new_ref = pref.ref.copy_with_rev(rrev.revision)
+            # FIXME: Just assign rrev when introduce RecipeReference
+            new_pref = PkgReference(new_ref, pref.package_id, pref.revision)
             for prev in self._server_store.get_package_revisions(new_pref):
                 full_pref = copy.copy(new_pref)
                 full_pref.revision = prev.revision

@@ -130,6 +130,7 @@ class RestApiClient(object):
         return self._get_api().remove_conanfile(ref)
 
     def remove_packages(self, ref, package_ids=None):
+        # FIXME: This interface is a mess, the package_ids containing the revision.
         return self._get_api().remove_packages(ref, package_ids)
 
     def server_capabilities(self):

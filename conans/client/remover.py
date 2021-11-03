@@ -107,13 +107,14 @@ class ConanRemover(object):
                "command 'conan editable remove {r}'".format(r=ref)
 
     # TODO: cache2.0 refactor this part when we can change the implementation of search_packages
-    def _get_revisions_to_remove(self, pref, ids, all_package_revisions):
+    def _get_revisions_to_remove(self, ref, ids, all_package_revisions):
         folders_to_remove = []
         if len(ids) == 0:
             folders_to_remove = all_package_revisions
         for package_id in ids:
-            revision = package_id.split("#")[1] if "#" in package_id else None
-            _pref = PkgReference(pref, package_id, revision=revision)
+            _tmp = package_id.split("#") if "#" in package_id else (package_id, None)
+            package_id, revision = _tmp
+            _pref = PkgReference(ref, package_id, revision=revision)
             prev = self._cache.get_package_revisions(_pref)
             if not prev:
                 raise PackageNotFoundException(_pref)

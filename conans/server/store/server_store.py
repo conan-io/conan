@@ -4,11 +4,16 @@ from os.path import join, normpath, relpath
 from conans import DEFAULT_REVISION_V1
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import ConanFileReference
 from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 
 REVISIONS_FILE = "revisions.txt"
+
+
+def ref_dir_repr(ref):
+    return "/".join([ref.name, str(ref.version), ref.user or "_", ref.channel or "_"])
 
 
 class ServerStore(object):
@@ -23,13 +28,13 @@ class ServerStore(object):
 
     def base_folder(self, ref):
         assert ref.revision is not None, "BUG: server store needs RREV to get recipe reference"
-        tmp = normpath(join(self.store, ref.dir_repr()))
+        tmp = normpath(join(self.store, ref_dir_repr(ref)))
         return join(tmp, ref.revision)
 
     def conan_revisions_root(self, ref):
         """Parent folder of the conan package, for all the revisions"""
         assert not ref.revision, "BUG: server store doesn't need RREV to conan_revisions_root"
-        return normpath(join(self.store, ref.dir_repr()))
+        return normpath(join(self.store, ref_dir_repr(ref)))
 
     def packages(self, ref):
         return join(self.base_folder(ref), PACKAGES_FOLDER)
@@ -92,7 +97,7 @@ class ServerStore(object):
     def _delete_empty_dirs(self, ref):
         lock_files = set([REVISIONS_FILE, "%s.lock" % REVISIONS_FILE])
 
-        ref_path = normpath(join(self.store, ref.dir_repr()))
+        ref_path = normpath(join(self.store, ref_dir_repr(ref)))
         if ref.revision:
             ref_path = join(ref_path, ref.revision)
         for _ in range(4 if not ref.revision else 5):
@@ -217,7 +222,7 @@ class ServerStore(object):
 
     # Methods to manage revisions
     def get_last_revision(self, ref):
-        assert(isinstance(ref, ConanFileReference))
+        assert(isinstance(ref, (ConanFileReference, RecipeReference)))
         rev_file_path = self._recipe_revisions_file(ref)
         return self._get_latest_revision(rev_file_path)
 
@@ -300,11 +305,11 @@ class ServerStore(object):
         return rev_list.latest_revision()
 
     def _recipe_revisions_file(self, ref):
-        recipe_folder = normpath(join(self._store_folder, ref.dir_repr()))
+        recipe_folder = normpath(join(self._store_folder, ref_dir_repr(ref)))
         return join(recipe_folder, REVISIONS_FILE)
 
     def _package_revisions_file(self, pref):
-        tmp = normpath(join(self._store_folder, pref.ref.dir_repr()))
+        tmp = normpath(join(self._store_folder, ref_dir_repr(pref.ref)))
         revision = {None: ""}.get(pref.ref.revision, pref.ref.revision)
         p_folder = join(tmp, revision, PACKAGES_FOLDER, pref.package_id)
         return join(p_folder, REVISIONS_FILE)

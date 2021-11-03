@@ -244,7 +244,7 @@ class PackageNotFoundException(NotFoundException):
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = str(self.pref)
+        tmp = repr(self.pref)
         return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
 
 

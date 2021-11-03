@@ -207,6 +207,8 @@ class RestV2Methods(RestCommonMethods):
 
     def remove_packages(self, ref, package_ids):
         """ Remove any packages specified by package_ids"""
+        # FIXME: package_ids containing the revisions is a mess, why not passing prefs directly
+        #        and separate the methods to not do many different things???
         self.check_credentials()
 
         if ref.revision is None:
@@ -236,10 +238,15 @@ class RestV2Methods(RestCommonMethods):
                     response.charset = "utf-8"
                     raise get_exception_from_error(response.status_code)(response.text)
             else:
-                for pid in package_ids:
-                    pref = PkgReference(ref, pid)
-                    revisions = self.get_package_revisions(pref)
-                    prefs = [PkgReference(ref, pid, rev["revision"]) for rev in revisions]
+                for mix_pid in package_ids:
+                    _tmp = mix_pid.split("#") if "#" in mix_pid else (mix_pid, None)
+                    pid, revision = _tmp
+                    pref = PkgReference(ref, pid, revision=revision)
+                    if not revision:
+                        revisions = self.get_package_revisions(pref)
+                        prefs = [PkgReference(ref, pid, rev["revision"]) for rev in revisions]
+                    else:
+                        prefs = [pref]
                     for pref in prefs:
                         url = self.router.remove_package(pref)
                         response = self.requester.delete(url, auth=self.auth,

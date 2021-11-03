@@ -251,9 +251,9 @@ def raise_missing(missing, out):
     # TODO: Remove out argument
     # TODO: A bit dirty access to .pref
     missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
-    missing_prefs = list(sorted(missing_prefs))
-    for pref in missing_prefs:
-        out.error("Missing binary: %s" % str(pref))
+    missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
+    for pref_str in missing_prefs_str:
+        out.error("Missing binary: %s" % pref_str)
     out.writeln("")
 
     # Report details just the first one
@@ -277,11 +277,11 @@ def raise_missing(missing, out):
        - Package ID: %s
        ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
     conanfile.output.warning(msg)
-    missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
+    missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
     if len(missing_prefs) >= 5:
         build_str = "--build=missing"
     else:
-        build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
+        build_str = " ".join(list(sorted(["--build=%s" % pref.ref.name for pref in missing_prefs])))
 
     raise ConanException(textwrap.dedent('''\
        Missing prebuilt package for '%s'

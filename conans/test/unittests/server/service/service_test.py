@@ -15,7 +15,7 @@ from conans.server.service.common.search import SearchService
 from conans.server.service.v1.service import ConanService
 from conans.server.service.v1.upload_download_service import FileUploadDownloadService
 from conans.server.store.disk_adapter import ServerDiskAdapter
-from conans.server.store.server_store import ServerStore
+from conans.server.store.server_store import ServerStore, ref_dir_repr
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, md5sum, mkdir, save, save_files
@@ -122,7 +122,7 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url + "/"
-                    + self.ref.dir_repr()
+                    + ref_dir_repr(self.ref)
                     + "/" + self.ref.revision
                     + "/export/" + filename)
 
@@ -137,7 +137,7 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url
-                    + "/" + self.pref.ref.dir_repr()
+                    + "/" + ref_dir_repr(self.pref.ref)
                     + "/" + self.pref.ref.revision
                     + "/package/" + self.pref.package_id
                     + "/" + self.pref.revision
@@ -156,7 +156,7 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url
-                    + "/" + self.ref.dir_repr()
+                    + "/" + ref_dir_repr(self.ref)
                     + "/" + self.ref.revision
                     + "/export/" + filename)
 
@@ -171,7 +171,7 @@ class ConanServiceTest(unittest.TestCase):
 
         def fake_url_build(filename):
             return (self.fake_url
-                    + "/" + self.pref.ref.dir_repr()
+                    + "/" + ref_dir_repr(self.pref.ref)
                     + "/" + self.pref.ref.revision
                     + "/package/" + self.pref.package_id
                     + "/" + self.pref.revision

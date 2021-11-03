@@ -40,6 +40,7 @@ from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
+from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.assets import copy_assets
@@ -703,10 +704,14 @@ class TurboTestClient(TestClient):
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(ref.full_str(), remote, args or ""),
+        self.run("upload {} -c --all -r {} {}".format(str(ref), remote, args or ""),
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
+            # FIXME: remove this when ConanFileReference disappears
+            if isinstance(ref, RecipeReference):
+                ref.revision = remote_rrev
+                return ref
             return ref.copy_with_rev(remote_rrev)
         return
 
