@@ -29,9 +29,7 @@ class QbsModuleTemplate(object):
             return self.conanfile.ref.name not in self.qbsdeps.build_context_build_modules
 
     def render(self):
-        print("### QbsModuleTemplate.render")
         context = self.context
-        print("#### context: {}".format(context))
         if context is None:
             return
         return Template(self.template, trim_blocks=True, lstrip_blocks=True,
@@ -39,15 +37,10 @@ class QbsModuleTemplate(object):
 
     @property
     def context(self):
-        print("### QbsModuleTemplate.context")
         pkg_version = self.conanfile.ref.version
         cpp = DepsCppQbs(
             self.conanfile.cpp_info.components[self.component_name], self.conanfile.package_folder)
         dependencies = self.get_direct_dependencies()
-
-        print("#### pkg_version: {}".format(pkg_version))
-        # print("#### cpp: {}".format(cpp))
-        print("#### dependencies: {}".format(dependencies))
 
         return {
             "pkg_version": pkg_version,
@@ -56,7 +49,6 @@ class QbsModuleTemplate(object):
         }
 
     def get_direct_dependencies(self):
-        print("### QbsModuleTemplate.get_direct_dependencies")
         ret = {}
 
         def create_module(conanfile, comp, comp_name):
@@ -71,13 +63,10 @@ class QbsModuleTemplate(object):
             if "::" not in req:
                 ret.update(create_module(self.conanfile, cpp_info, comp_name))
             else:
-                print("#### **** {} | {} {}".format(req, pkg_name, comp_name))
                 req_conanfile = self.conanfile.dependencies.direct_host[pkg_name]
                 if req_conanfile.cpp_info.has_components:
-                    print("#### append module {}.{}".format(pkg_name, comp_name))
                     ret.update(create_module(req_conanfile, req_conanfile.cpp_info, comp_name))
                 else:
-                    print("#### append module {}".format(pkg_name))
                     ret[self.get_module_name(req_conanfile)] = req_conanfile.ref.version
 
         return ret
@@ -155,12 +144,10 @@ class QbsModuleTemplate(object):
         return ret
 
     def get_module_name(self, dependency):
-        print("### get qbs_module_name from {}".format(dependency))
         return dependency.cpp_info.get_property("qbs_module_name", "QbsDeps") or \
             dependency.ref.name
 
     def get_component_name(self, component, default):
-        print("### get qbs_module_name from {}, default {}".format(component, default))
         return component.get_property("qbs_module_name", "QbsDeps") or \
             default
 
@@ -168,8 +155,6 @@ class QbsModuleTemplate(object):
 class DepsCppQbs(object):
     def __init__(self, cpp_info, package_folder):
         def prepent_package_folder(paths):
-            print("################# Yolo")
-            print("################# {}".format(package_folder))
             return [os.path.join(package_folder, path) for path in paths]
 
         self.includedirs = prepent_package_folder(cpp_info.includedirs)

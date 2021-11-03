@@ -40,11 +40,8 @@ class QbsDeps(object):
                                      "generator.".format(common_name))
 
         def add_module(require, dep, comp_name):
-            print("## dependency {}".format(dep))
             qbs_module_template = QbsModuleTemplate(self, require, dep, comp_name)
             file_content = qbs_module_template.render()
-            # print("## added {} | content:\n{}".format(
-            #     qbs_module_template.filename, file_content))
             ret["modules/{}/module.qbs".format(qbs_module_template.filename)] = file_content
 
         for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
@@ -60,11 +57,8 @@ class QbsDeps(object):
 
             if dep.cpp_info.has_components:
                 for comp_name in dep.cpp_info.component_names:
-                    print("## comp {} requires {}".format(
-                        comp_name, dep.cpp_info.components[comp_name].requires))
                     add_module(require, dep, comp_name)
             else:
                 add_module(require, dep, None)
 
-        # print("## ret {}".format(ret))
         return ret
