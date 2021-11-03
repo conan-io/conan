@@ -31,8 +31,8 @@ class OptionsTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
         client.run("create . Pkg/0.1@user/testing -o Pkg:shared=2")
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
-        client.run("create . Pkg/0.1@user/testing -o shared=1", assert_error=True)
-        self.assertIn("option 'shared' doesn't exist", client.out)
+        client.run("create . Pkg/0.1@user/testing -o shared=1")
+        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
 
     def test_general_scope_options_test_package_notdefined(self):
         client = TestClient()
@@ -54,27 +54,31 @@ class OptionsTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
-                options = {"shared": ["1", "2", "3"]}
+                options = {"shared": ["1", "2", "3"], "other": [4, 5, 6]}
                 def configure(self):
-                    self.output.info("BUILD SHARED: %s" % self.options.shared)
+                    self.output.info("BUILD SHARED: %s OTHER: %s"
+                                     % (self.options.shared, self.options.other))
             """)
         client.save({"conanfile.py": conanfile})
         # Consumer has priority
-        client.run("create . Pkg/0.1@user/testing -o *:shared=1 -o shared=2")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        client.run("create . pkg/0.1@ -o *:shared=1 -o shared=2 -o p*:other=4")
+        self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 4", client.out)
         # Consumer has priority over pattern, even if the pattern specifies the package name
-        client.run("create . Pkg/0.1@user/testing -o *:shared=1 -o Pkg:shared=2 -o shared=3")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 3", client.out)
+        client.run("create . pkg/0.1@ -o *:shared=1 -o pkg:shared=2 -o shared=3 -o p*:other=4")
+        self.assertIn("pkg/0.1: BUILD SHARED: 3 OTHER: 4", client.out)
+        client.run("create . pkg/0.1@ -o pkg:shared=2 -o p*:other=4 -o pk*:other=5")
+        self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 5", client.out)
+
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         # Sorted (longest, alphabetical) patterns, have priority
-        client.run("create . Pkg/0.1@user/testing -o *:shared=1 -o Pkg:shared=2")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
-        client.run("create . Pkg/0.1@user/testing  -o Pk*:shared=2 -o P*:shared=1")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
-        client.run("create . Pkg/0.1@user/testing  -o Pk*:shared=2 -o P*:shared=1")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        client.run("create . pkg/0.1@ -o *:shared=1 -o pkg:shared=2 -o other=4")
+        self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 4", client.out)
+        client.run("create . pkg/0.1@ -o pk*:shared=2 -o p*:shared=1 -o pkg:other=5")
+        self.assertIn("pkg/0.1: BUILD SHARED: 1 OTHER: 5", client.out)
+        client.run("create . pkg/0.1@ -o pk*:shared=2 -o p*:shared=1 -o pkg:other=5 -o *g:other=6")
+        self.assertIn("pkg/0.1: BUILD SHARED: 1 OTHER: 6", client.out)
 
     def test_parsing(self):
         client = TestClient()
@@ -87,7 +91,7 @@ class EqualerrorConan(ConanFile):
     default_options = {"opt": "b=c"}
 
     def build(self):
-        self.output.warn("OPTION %s" % self.options.opt)
+        self.output.warning("OPTION %s" % self.options.opt)
 '''
         client.save({"conanfile.py": conanfile})
         client.run("export . user/testing")
@@ -100,53 +104,6 @@ equal:opt=a=b
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . --build=missing")
         self.assertIn("OPTION a=b", client.out)
-
-    def test_default_options(self):
-        client = TestClient()
-        conanfile = """
-from conans import ConanFile
-
-class MyConanFile(ConanFile):
-    name = "MyConanFile"
-    version = "1.0"
-    options = {"config": %s}
-    default_options = {"config": %s}
-
-    def configure(self):
-        if self.options.config:
-            self.output.info("Boolean evaluation")
-        if self.options.config is None:
-            self.output.info("None evaluation")
-        if self.options.config == "None":
-            self.output.info("String evaluation")
-"""
-        # Using "ANY" as possible options
-        client.save({"conanfile.py": conanfile % ("\"ANY\"", "None")})
-        client.run("create . danimtb/testing")
-        self.assertNotIn("Boolean evaluation", client.out)
-        self.assertNotIn("None evaluation", client.out)
-        self.assertIn("String evaluation", client.out)
-
-        # Using None as possible options
-        client.save({"conanfile.py": conanfile % ("[None]", "None")})
-        client.run("create . danimtb/testing")
-        self.assertNotIn("Boolean evaluation", client.out)
-        self.assertNotIn("None evaluation", client.out)
-        self.assertIn("String evaluation", client.out)
-
-        # Using "None" as possible options
-        client.save({"conanfile.py": conanfile % ("[\"None\"]", "None")})
-        client.run("create . danimtb/testing")
-        self.assertNotIn("Boolean evaluation", client.out)
-        self.assertNotIn("None evaluation", client.out)
-        self.assertIn("String evaluation", client.out)
-
-        # Using "ANY" as possible options and "otherstringvalue" as default
-        client.save({"conanfile.py": conanfile % ("\"ANY\"", '"otherstringvalue"')})
-        client.run("create . danimtb/testing")
-        self.assertIn("Boolean evaluation", client.out)
-        self.assertNotIn("None evaluation", client.out)
-        self.assertNotIn("String evaluation", client.out)
 
     def test_general_scope_options(self):
         # https://github.com/conan-io/conan/issues/2538

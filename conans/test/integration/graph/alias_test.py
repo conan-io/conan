@@ -274,8 +274,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         '"myoption=True"',
-                        '"myoption=True", "LibD:myoption=False"',
-                        output=client.out)
+                        '"myoption=True", "LibD:myoption=False"')
         client.run("export . LibB/0.1@user/testing")
         client.run("alias LibB/latest@user/testing LibB/0.1@user/testing")
 
@@ -345,7 +344,7 @@ class Pkg(ConanFile):
     def test_basic(self):
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         for i in (1, 2):
             client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.%s" % i)})
             client.run("export . lasote/channel")
@@ -376,7 +375,7 @@ class Pkg(ConanFile):
         self.assertIn("Hello/0.1@lasote/channel", conaninfo)
         self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)
 
-        client.run('upload "*" --all --confirm')
+        client.run('upload "*" --all --confirm -r default')
         client.run('remove "*" -f')
 
         client.run("install .")

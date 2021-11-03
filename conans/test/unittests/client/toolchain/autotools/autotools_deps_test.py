@@ -7,16 +7,16 @@ from mock import Mock
 
 from conan.tools.gnu import AutotoolsDeps
 from conans import ConanFile
-from conans.model.build_info import CppInfo
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
+from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import MockSettings
 from conans.test.utils.test_files import temp_folder
 
 
 def get_cpp_info(name):
-    cppinfo = CppInfo("{}/1.0".format(name), "/tmp/root")
+    cppinfo = CppInfo()
     cppinfo.includedirs = []
     cppinfo.includedirs.append("path/includes/{}".format(name))
     cppinfo.includedirs.append("other\\include\\path\\{}".format(name))
@@ -46,13 +46,13 @@ def get_cpp_info(name):
 
 
 def test_foo():
-    dep1 = ConanFile(Mock(), None)
+    dep1 = ConanFile(None)
     dep1.cpp_info = get_cpp_info("dep1")
     dep1._conan_node = Mock()
     dep1._conan_node.ref = ConanFileReference.loads("dep1/1.0")
     dep1.package_folder = "/path/to/folder_dep1"
 
-    dep2 = ConanFile(Mock(), None)
+    dep2 = ConanFile(None)
     dep2.cpp_info = get_cpp_info("dep2")
     dep2._conan_node = Mock()
     dep2._conan_node.ref = ConanFileReference.loads("dep2/1.0")
@@ -65,7 +65,7 @@ def test_foo():
         deps[req1] = ConanFileInterface(dep1)
         deps[req2] = ConanFileInterface(dep2)
         mock_deps.return_value = ConanFileDependencies(deps)
-        consumer = ConanFile(Mock(), None)
+        consumer = ConanFile(None)
         consumer.settings = MockSettings(
             {"build_type": "Release",
              "arch": "x86",
@@ -82,6 +82,7 @@ def test_foo():
         env.remove("LDFLAGS", "-F /path/to/folder_dep1/one/framework/path/dep1")
         env.append("LDFLAGS", "OtherSuperStuff")
 
+        env = deps.vars()
         # The contents are of course modified
         assert env["LDFLAGS"] == 'dep1_shared_link_flag ' \
                                  'dep1_exe_link_flag dep2_exe_link_flag ' \

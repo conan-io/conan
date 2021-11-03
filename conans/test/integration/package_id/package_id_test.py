@@ -106,6 +106,7 @@ def test_value_parse():
             def package_id(self):
                 self.info.settings.os = "kk=kk"
         """)
+<<<<<<< HEAD
 
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": conanfile})
@@ -122,6 +123,21 @@ def test_value_parse():
     client.run("install pkg/1.0@")
     client.run("list package-ids pkg/1.0@")
     assert "os=kk=kk" in client.out
+=======
+    server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
+    servers = {"default": server}
+    client = TestClient(servers=servers, inputs=["lasote", "mypass"])
+    client.save({"conanfile.py": conanfile,
+                 "header.h": "header content"})
+    client.run("create . danimtb/testing")
+    client.run("search test/0.1@danimtb/testing")
+    assert "arch: kk=kk" in client.out
+    client.run("upload test/0.1@danimtb/testing --all -r default")
+    client.run("remove test/0.1@danimtb/testing --force")
+    client.run("install test/0.1@danimtb/testing")
+    client.run("search test/0.1@danimtb/testing")
+    assert "arch: kk=kk" in client.out
+>>>>>>> develop2
 
 
 def test_option_in():

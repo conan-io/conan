@@ -9,6 +9,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration, get_file_name
 from conan.tools.files import save_toolchain_args
+from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
 from conans.errors import ConanException
@@ -101,7 +102,7 @@ class VSRuntimeBlock(Block):
         # Parsing existing toolchain file to get existing configured runtimes
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc"):
+        if compiler not in ("Visual Studio", "msvc", "intel-cc"):
             return
 
         config_dict = {}
@@ -121,7 +122,7 @@ class VSRuntimeBlock(Block):
                                        "MTd": "MultiThreadedDebug",
                                        "MD": "MultiThreadedDLL",
                                        "MDd": "MultiThreadedDebugDLL"}[runtime]
-        if compiler == "msvc":
+        if compiler == "msvc" or compiler == "intel-cc":
             runtime_type = settings.get_safe("compiler.runtime_type")
             rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
             if runtime != "static":
@@ -132,8 +133,10 @@ class VSRuntimeBlock(Block):
 
 class FPicBlock(Block):
     template = textwrap.dedent("""
-        message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
-        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+        {% if fpic %}
+        message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE={{ fpic }} (options.fPIC)")
+        set(CMAKE_POSITION_INDEPENDENT_CODE {{ fpic }})
+        {% endif %}
         """)
 
     def context(self):
@@ -142,14 +145,9 @@ class FPicBlock(Block):
             return None
         os_ = self._conanfile.settings.get_safe("os")
         if os_ and "Windows" in os_:
-            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined for Windows")
+            self._conanfile.output.warning("Toolchain: Ignoring fPIC option defined for Windows")
             return None
-        shared = self._conanfile.options.get_safe("shared")
-        if shared:
-            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined "
-                                        "for a shared library")
-            return None
-        return {"fpic": fpic}
+        return {"fpic": "ON" if fpic else "OFF"}
 
 
 class GLibCXXBlock(Block):
@@ -171,7 +169,7 @@ class GLibCXXBlock(Block):
         if compiler == "apple-clang":
             # In apple-clang 2 only values atm are "libc++" and "libstdc++"
             lib = "-stdlib={}".format(libcxx)
-        elif compiler == "clang":
+        elif compiler == "clang" or compiler == "intel-cc":
             if libcxx == "libc++":
                 lib = "-stdlib=libc++"
             elif libcxx == "libstdc++" or libcxx == "libstdc++11":
@@ -406,9 +404,9 @@ class FindConfigFiles(Block):
 
         # To support cross building to iOS, watchOS and tvOS where CMake looks for config files
         # only in the system frameworks unless you declare the XXX_DIR variables
-        {% for name in find_names %}
-        set({{ name }}_DIR "{{ generators_folder }}")
-        {% endfor %}
+        {% if cross_ios %}
+            set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+        {% endif %}
         """)
 
     def context(self):
@@ -423,14 +421,12 @@ class FindConfigFiles(Block):
         android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
 
         host_req = self._conanfile.dependencies.host.values()
-        find_names_needed = os_ in ('iOS', "watchOS", "tvOS")
-        find_names = [get_file_name(req)
-                      for req in host_req] if find_names_needed else []
+        cross_ios = os_ in ('iOS', "watchOS", "tvOS")
 
         # Read the buildirs
         build_paths = []
         for req in host_req:
-            cppinfo = req.new_cpp_info.copy()
+            cppinfo = req.cpp_info.copy()
             cppinfo.aggregate_components()
             build_paths.extend([os.path.join(req.package_folder,
                                        p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
@@ -447,14 +443,14 @@ class FindConfigFiles(Block):
                 "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
                 "cmake_module_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
                 "android_prefix_path": android_prefix,
-                "find_names": find_names,
+                "cross_ios": cross_ios,
                 "generators_folder": "${CMAKE_CURRENT_LIST_DIR}"}
 
 
 class UserToolchain(Block):
     template = textwrap.dedent("""
         {% if user_toolchain %}
-        include({{user_toolchain}})
+        include("{{user_toolchain}}")
         {% endif %}
         """)
 
@@ -463,15 +459,18 @@ class UserToolchain(Block):
     def context(self):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
-        return {"user_toolchain": user_toolchain or self.user_toolchain}
+        user_toolchain = user_toolchain or self.user_toolchain
+        if user_toolchain:
+            user_toolchain = user_toolchain.replace("\\", "/")
+        return {"user_toolchain": user_toolchain}
 
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
-        set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
-        set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
-        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
-        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} ${CONAN_CXX_FLAGS}")
+        set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} ${CONAN_C_FLAGS}")
+        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CMAKE_SHARED_LINKER_FLAGS_INIT} ${CONAN_SHARED_LINKER_FLAGS}")
+        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CMAKE_EXE_LINKER_FLAGS_INIT} ${CONAN_EXE_LINKER_FLAGS}")
         """)
 
 
@@ -531,6 +530,8 @@ class GenericSystemBlock(Block):
                 compiler_version = compiler_version if "." in compiler_version else \
                     "%s.0" % compiler_version
                 return "Intel C++ Compiler " + compiler_version
+        elif compiler == "intel-cc":
+            return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
             compiler_version = str(settings.compiler.version)
             version_components = compiler_version.split(".")
@@ -615,7 +616,7 @@ class GenericSystemBlock(Block):
         compiler = self._conanfile.settings.get_safe("compiler")
         # TODO: Check if really necessary now that conanvcvars is used
         if (generator is not None and "Ninja" in generator
-                and ("Visual" in compiler or compiler == "msvc")):
+                and (compiler is not None and "Visual" in compiler or compiler == "msvc")):
             compiler = "cl"
         else:
             compiler = None  # compiler defined by default
@@ -713,9 +714,10 @@ class CMakeToolchain(object):
         {{ iterate_configs(preprocessor_definitions_config, action='add_definitions') }}
         """)
 
-    def __init__(self, conanfile, generator=None):
+    def __init__(self, conanfile, generator=None, namespace=None):
         self._conanfile = conanfile
         self.generator = self._get_generator(generator)
+        self._namespace = namespace
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 
@@ -766,8 +768,11 @@ class CMakeToolchain(object):
         toolchain_file = self._conanfile.conf["tools.cmake.cmaketoolchain:toolchain_file"]
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(self.filename, self.content)
+        # If we're using Intel oneAPI, we need to generate the environment file and run it
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()
         # Generators like Ninja or NMake requires an active vcvars
-        if self.generator is not None and "Visual" not in self.generator:
+        elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
         self._writebuild(toolchain_file)
 
@@ -780,7 +785,7 @@ class CMakeToolchain(object):
         result["cmake_toolchain_file"] = toolchain_file or self.filename
 
         if result:
-            save_toolchain_args(result)
+            save_toolchain_args(result, namespace=self._namespace)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

@@ -102,7 +102,7 @@ class PackageIDTest(unittest.TestCase):
         # As we have changed Hello2, the binary is not valid anymore so it won't find it
         # but will look for the same package_id
         self.client.run("install .", assert_error=True)
-        self.assertIn("- Package ID: d5d0eee18cd94846c5c42773267949ca9c05e0de",
+        self.assertIn("- Package ID: 9a2fb5e0220e8f5e7f94cf8616c4217dbf05a16b",
                       self.client.out)
 
         # Now change the Hello version and build it, if we install out requires is
@@ -275,7 +275,13 @@ class PackageIDTest(unittest.TestCase):
         """
 
         channel = "user/testing"
-        self.client.run("config set general.default_package_id_mode=patch_mode")
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=patch_mode'
+                """.format())
+        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
         self._export("liba", "0.1.0", channel=channel, package_id_text=None, requires=None)
         self.client.run("create . liba/0.1.0@user/testing")
         self._export("libb", "0.1.0", channel=channel, package_id_text=None,
@@ -291,6 +297,7 @@ class PackageIDTest(unittest.TestCase):
         self._export("libd", "0.1.0", channel=channel, package_id_text=None,
                      requires=["libc/0.1.0@user/testing"])
         self.client.run("create . libd/0.1.0@user/testing", assert_error=True)
+<<<<<<< HEAD
         self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:50ba743402da48a791ff796f6045158e54402c57
 
 libc/0.1.0@user/testing: WARN: Can't find 'libc/0.1.0@user/testing:50ba743402da48a791ff796f6045158e54402c57' package for the specified settings, options and dependencies:
@@ -304,6 +311,16 @@ libbar/0.1.0
 libfoo/0.1.0
 
 ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""", self.client.out)
+=======
+        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:6bc65b4894592ca5f492d000cf2cc793b904c14e
+
+libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
+- Settings:%s
+- Options: an_option=off
+- Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
+- Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
+- Package ID: 6bc65b4894592ca5f492d000cf2cc793b904c14e""" % " ", self.client.out)
+>>>>>>> develop2
 
 
 class PackageIDErrorTest(unittest.TestCase):
@@ -311,7 +328,13 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_transitive_multi_mode_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
-        client.run("config set general.default_package_id_mode=full_package_mode")
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=full_package_mode'
+                """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
@@ -331,8 +354,19 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_transitive_multi_mode2_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
+<<<<<<< HEAD
         client.run("config set general.default_package_id_mode=package_revision_mode")
 
+=======
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=package_revision_mode'
+                """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        # This is mandatory, otherwise it doesn't work
+>>>>>>> develop2
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
 
@@ -359,9 +393,13 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_transitive_multi_mode_build_requires(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
-        client.run("config set general.default_package_id_mode=package_revision_mode")
-
-
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=package_revision_mode'
+                """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
         client.run("create . tool/1.0@user/testing")
@@ -392,8 +430,13 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_package_revision_mode_editable(self):
         # Package revision mode crash when using editables
         client = TestClient()
-        client.run("config set general.default_package_id_mode=package_revision_mode")
-
+        conan_conf = textwrap.dedent("""
+                        [storage]
+                        path = ./data
+                        [general]
+                        default_package_id_mode=package_revision_mode'
+                """.format())
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("editable add . dep1/1.0@user/testing")
@@ -454,7 +497,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         t.run("create package1.py pkg1/1.0@")
         t.run("create package2.py pkg2/1.0@")
         t.run("create package3.py pkg3/1.0@")
-        t.run("upload * --all -c")
+        t.run("upload * --all -c -r default")
         t.run("remove * -f")
 
         # If we build pkg1, we need a new packageID for pkg2

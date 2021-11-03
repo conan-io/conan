@@ -89,9 +89,9 @@ class SCMData(object):
 class SCM(object):
     availables = {'git': Git, 'svn': SVN}
 
-    def __init__(self, data, repo_folder, output):
+    def __init__(self, data, repo_folder, scoped_output):
         self._data = data
-        self._output = output
+        self._scoped_output = scoped_output
         self.repo_folder = repo_folder
         # Finally instance a repo
         self.repo = self._get_repo()
@@ -113,7 +113,7 @@ class SCM(object):
 
         return repo_class(folder=self.repo_folder, verify_ssl=self._data.verify_ssl,
                           username=self._data.username, password=self._data.password,
-                          output=self._output)
+                          scoped_output=self._scoped_output)
 
     @property
     def excluded_files(self):
@@ -190,7 +190,7 @@ class SCM(object):
         if self._data.type == "git":
             return src_root
 
-        url_root = SCM(self._data, src_root, self._output).get_remote_url(remove_credentials=True)
+        url_root = SCM(self._data, src_root, self._scoped_output).get_remote_url(remove_credentials=True)
         if url_root:
             url = self.clean_url(url)
             src_path = os.path.join(src_root, os.path.relpath(url, url_root))

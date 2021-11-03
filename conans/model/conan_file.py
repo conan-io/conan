@@ -3,36 +3,17 @@ import platform
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
-from conans.client import tools
-from conans.client.output import ScopedOutput
-
-from conans.client.tools.oss import OSInfo
+from conans.cli.output import ConanOutput, ScopedOutput
 from conans.errors import ConanException, ConanInvalidConfiguration
-from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
-from conans.model.layout import Folders, Patterns, Infos
-from conans.model.new_build_info import from_old_cppinfo
+from conans.model.layout import Folders, Infos
 from conans.model.options import Options
 from conans.model.requires import Requirements
-from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 
 
-def create_settings(conanfile, settings):
-    try:
-        defined_settings = getattr(conanfile, "settings", None)
-        if isinstance(defined_settings, str):
-            defined_settings = [defined_settings]
-        current = defined_settings or {}
-        settings.constraint(current)
-        return settings
-    except Exception as e:
-        raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
-                                        conanfile.display_name, str(e)))
-
-
-class ConanFile(object):
+class ConanFile:
     """ The base class for all package recipes
     """
     name = None
@@ -48,6 +29,7 @@ class ConanFile(object):
     description = None
     topics = None
     homepage = None
+
     build_policy = None
     short_paths = False
     exports = None
@@ -55,11 +37,6 @@ class ConanFile(object):
     generators = []
     revision_mode = "hash"
 
-    # Vars to control the build steps (build(), package())
-    should_configure = True
-    should_build = True
-    should_install = True
-    should_test = True
     in_local_cache = True
     develop = False
 
@@ -71,17 +48,11 @@ class ConanFile(object):
     provides = None
     deprecated = None
 
-    # Folders
-    folders = None
-    patterns = None
-
     package_type = None
     # Run in windows bash
     win_bash = None
 
-    def __init__(self, output, runner, display_name=""):
-        # an output stream (writeln, info, warn error)
-        self.output = ScopedOutput(display_name, output)
+    def __init__(self, runner, display_name=""):
         self.display_name = display_name
         # something that can run commands, as os.sytem
         self._conan_runner = runner
@@ -89,34 +60,35 @@ class ConanFile(object):
         self.compatible_packages = []
         self._conan_requester = None
 
-        self.buildenv_info = Environment(self)
-        self.runenv_info = Environment(self)
+        self.buildenv_info = Environment()
+        self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
 
+        if isinstance(self.generators, str):
+            self.generators = [self.generators]
+        if isinstance(self.settings, str):
+            self.settings = [self.settings]
         self.requires = Requirements(getattr(self, "requires", None),
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None))
 
-        self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
+        # user declared variables
+        self.user_info = None
         self._conan_dependencies = None
 
-        self.environment_scripts = []  # Accumulate the env scripts generated in order
+        if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
+            self.virtualbuildenv = True
+        if not hasattr(self, "virtualrunenv"):  # Allow the user to override it with True or False
+            self.virtualrunenv = True
+
+        self.env_scripts = {}  # Accumulate the env scripts generated in order
 
         # layout() method related variables:
         self.folders = Folders()
-        self.patterns = Patterns()
         self.cpp = Infos()
-
-        self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.source.lib = []
-        self.patterns.source.bin = []
-
-        self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
-        self.patterns.build.bin = ["*.exe", "*.dll"]
 
         self.cpp.package.includedirs = ["include"]
         self.cpp.package.libdirs = ["lib"]
@@ -124,6 +96,14 @@ class ConanFile(object):
         self.cpp.package.resdirs = ["res"]
         self.cpp.package.builddirs = [""]
         self.cpp.package.frameworkdirs = ["Frameworks"]
+
+    @property
+    def output(self):
+        # an output stream (writeln, info, warn error)
+        scope = self.display_name
+        if not scope:
+            scope = self.ref if self._conan_node else ""
+        return ScopedOutput(scope, ConanOutput())
 
     @property
     def context(self):
@@ -150,39 +130,28 @@ class ConanFile(object):
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
         return self._conan_buildenv
 
     def initialize(self, settings, buildenv=None):
+        # If we move this to constructor, the python_require inheritance in init fails
+        # and "conan inspect" also breaks
+        self.options = Options(self.options or {}, self.default_options)
         self._conan_buildenv = buildenv
-        if isinstance(self.generators, str):
-            self.generators = [self.generators]
-        # User defined options
-
-        self.options = Options.create_options(self.options, self.default_options)
-        self.settings = create_settings(self, settings)
-
-        # needed variables to pack the project
-        self.cpp_info = None  # Will be initialized at processing time
-        self._conan_dep_cpp_info = None  # Will be initialized at processing time
-        self.deps_cpp_info = DepsCppInfo()
-
-        # user declared variables
-        self.user_info = None
-        # Keys are the package names (only 'host' if different contexts)
-        self.deps_user_info = DepsUserInfo()
-
-        if self.description is not None and not isinstance(self.description, str):
-            raise ConanException("Recipe 'description' must be a string.")
-
-        if not hasattr(self, "virtualenv"):  # Allow the user to override it with True or False
-            self.virtualenv = True
+        try:
+            settings.constraint(self.settings or [])
+        except Exception as e:
+            raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
+                self.display_name, str(e)))
+        self.settings = settings
 
     @property
-    def new_cpp_info(self):
-        if not self._conan_new_cpp_info:
-            self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
-        return self._conan_new_cpp_info
+    def cpp_info(self):
+        return self.cpp.package
+
+    @cpp_info.setter
+    def cpp_info(self, value):
+        self.cpp.package = value
 
     @property
     def source_folder(self):
@@ -202,7 +171,7 @@ class ConanFile(object):
 
     @property
     def package_folder(self):
-        return self.folders.package_folder
+        return self.folders.base_package
 
     @package_folder.setter
     def package_folder(self, folder):
@@ -230,14 +199,6 @@ class ConanFile(object):
     @imports_folder.setter
     def imports_folder(self, folder):
         self.folders.set_base_imports(folder)
-
-    @property
-    def build_policy_missing(self):
-        return self.build_policy == "missing"
-
-    @property
-    def build_policy_always(self):
-        return self.build_policy == "always"
 
     def source(self):
         pass
@@ -269,13 +230,13 @@ class ConanFile(object):
         """ build your project calling the desired build tools as done in the command line.
         E.g. self.run("cmake --build .") Or use the provided build helpers. E.g. cmake.build()
         """
-        self.output.warn("This conanfile has no build step")
+        self.output.warning("This conanfile has no build step")
 
     def package(self):
         """ package the needed files from source and build folders.
         E.g. self.copy("*.h", src="src/includes", dst="includes")
         """
-        self.output.warn("This conanfile has no package step")
+        self.output.warning("This conanfile has no package step")
 
     def package_info(self):
         """ define cpp_build_info, flags, etc
@@ -288,14 +249,12 @@ class ConanFile(object):
         def _run(cmd, _env):
             # FIXME: run in windows bash is not using output
             if platform.system() == "Windows":
-                if win_bash:
-                    return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
-                                                     msys_mingw=msys_mingw, with_login=with_login)
-                elif self.win_bash:  # New, Conan 2.0
+                if self.win_bash:  # New, Conan 2.0
                     from conan.tools.microsoft.subsystems import run_in_windows_bash
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
-            _env = _env or "conanenv"
-            wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
+            if _env is None:
+                _env = "conanbuild"
+            wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         retcode = _run(command, env)

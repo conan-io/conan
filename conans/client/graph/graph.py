@@ -57,9 +57,6 @@ class Node(object):
         self.binary_remote = None
         self.context = context
 
-        self.id = None  # Unique ID (incremental integer assigned by Graph) of a node in the graph
-        self.graph_lock_node = None  # the locking information can be None
-
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
         self.dependencies = []  # Ordered Edges
@@ -67,8 +64,12 @@ class Node(object):
         self.error = None
 
     def __lt__(self, other):
+        """
+
+        @type other: Node
+        """
         # TODO: Remove this order, shouldn't be necessary
-        return str(self.ref) < str(other.ref)
+        return (str(self.ref), self._package_id) < (str(other.ref), other._package_id)
 
     def propagate_closing_loop(self, require, prev_node):
         self.propagate_downstream(require, prev_node)
@@ -196,12 +197,10 @@ class Edge(object):
 
 
 class DepsGraph(object):
-    def __init__(self, initial_node_id=None):
+    def __init__(self):
         self.nodes = []
         self.aliased = {}
         self.error = False
-        self.new_aliased = {}
-        self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     def __repr__(self):
         return "\n".join((repr(n) for n in self.nodes))
@@ -211,9 +210,6 @@ class DepsGraph(object):
         return self.nodes[0] if self.nodes else None
 
     def add_node(self, node):
-        if node.id is None:
-            self._node_counter += 1
-            node.id = str(self._node_counter)
         self.nodes.append(node)
 
     def add_edge(self, src, dst, require):
@@ -222,34 +218,26 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def ordered_iterate(self, nodes_subset=None):
-        ordered = self.by_levels(nodes_subset)
+    def ordered_iterate(self):
+        ordered = self.by_levels()
         for level in ordered:
             for node in level:
                 yield node
 
-    def nodes_to_build(self):
-        ret = []
-        for node in self.ordered_iterate():
-            if node.binary == BINARY_BUILD:
-                if node.ref.copy_clear_rev() not in ret:
-                    ret.append(node.ref.copy_clear_rev())
-        return ret
-
-    def by_levels(self, nodes_subset=None):
-        return self._order_levels(True, nodes_subset)
+    def by_levels(self):
+        return self._order_levels(True)
 
     def inverse_levels(self):
         return self._order_levels(False)
 
-    def _order_levels(self, direct, nodes_subset=None):
+    def _order_levels(self, direct):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
         return [[node1, node34], [node3], [node23, node8],...]
         """
         result = []
-        opened = nodes_subset if nodes_subset is not None else set(self.nodes)
+        opened = set(self.nodes)
         while opened:
             current_level = []
             for o in opened:

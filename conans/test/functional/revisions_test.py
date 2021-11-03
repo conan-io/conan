@@ -25,7 +25,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.server2 = TestServer()
         self.servers = OrderedDict([("default", self.server),
                                     ("remote2", self.server2)])
-        self.c_v2 = TurboTestClient(servers=self.servers)
+        self.c_v2 = TurboTestClient(servers=self.servers, inputs=2*["admin", "password"])
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
     def test_install_binary_iterating_remotes_same_rrev(self):
@@ -53,36 +53,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.run("install {}".format(self.ref))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.id), self.c_v2.out)
-
-    def test_update_recipe_iterating_remotes(self):
-        """We have two servers (remote1 and remote2), both with a recipe but the second one with a
-        new RREV. If a client installs without specifying -r remote1, it WONT iterate
-        remote2, because it is associated in the registry and have it in the cache. Unless we
-        specify the -r remote2"""
-
-        conanfile = GenConanfile().with_package_file("file.txt", env_var="MY_VAR")
-        with environment_append({"MY_VAR": "1"}):
-            pref = self.c_v2.create(self.ref, conanfile=conanfile)
-        self.c_v2.upload_all(self.ref, remote="default")
-        time.sleep(1)
-
-        other_v2 = TurboTestClient(servers=self.servers)
-        # Same RREV, different new PREV
-        with environment_append({"MY_VAR": "2"}):
-            other_v2.create(self.ref, conanfile=conanfile)
-        other_v2.upload_all(self.ref, remote="remote2")
-
-        remote2_latest_prev = other_v2.get_latest_prev(self.ref)
-
-        self.c_v2.run("install {} --update".format(self.ref))
-        self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache (Updated date)", self.c_v2.out)
-        self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
-
-        # Now with the remote specified it will retrieve the binary fromm the remote2:
-        # https://github.com/conan-io/conan/pull/9355
-        self.c_v2.run("install {} --update -r remote2".format(self.ref))
-        self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache", self.c_v2.out)
-        self.assertIn("lib/1.0@conan/testing:{} - Update".format(pref.id), self.c_v2.out)
 
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,
@@ -202,26 +172,30 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         Another client v2 upload the same RREV with PREV2
         The first client can upgrade from the remote, only
         in the package, because the recipe is the same and it is not updated"""
-        client = TurboTestClient(servers={"default": self.server})
-        client2 = TurboTestClient(servers={"default": self.server})
+        client = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
+        client2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
 
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
         with environment_append({"MY_VAR": "1"}):
             pref = client.create(self.ref, conanfile=conanfile)
-        client.upload_all(self.ref)
 
-        time.sleep(1)  # Wait a second, to be considered an update
+        time.sleep(1)
+
+        with patch.object(RevisionList, '_now', return_value=time.time()):
+            client.upload_all(self.ref)
+
         with environment_append({"MY_VAR": "2"}):
             pref2 = client2.create(self.ref, conanfile=conanfile)
 
-        client2.upload_all(self.ref)
+        with patch.object(RevisionList, '_now', return_value=time.time() + 20.0):
+            client2.upload_all(self.ref)
 
         prev1_time_remote = self.server.package_revision_time(pref)
         prev2_time_remote = self.server.package_revision_time(pref2)
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)  # Two package revisions
 
         client.run("install {} --update".format(self.ref))
-        self.assertIn("{} from 'default' - Cache".format(self.ref), client.out)
+        self.assertIn("{} from 'default' - Cache (Updated date)".format(self.ref), client.out)
         self.assertIn("Retrieving package {}".format(pref.id), client.out)
 
         prev = client.package_revision(pref)
@@ -257,7 +231,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
 
         # Now create a new revision with other client and upload it, we will request it
-        new_client = TurboTestClient(servers=self.servers)
+        new_client = TurboTestClient(servers=self.servers, inputs=["admin", "password"])
         pref = new_client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
         new_client.upload_all(self.ref)
 
@@ -279,19 +253,12 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client.run(command, assert_error=True)
         self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
 
-    def test_json_output(self):
-        client = TurboTestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . {} --json file.json".format(self.ref.full_str()))
-        data = json.loads(client.load("file.json"))
-        ref = ConanFileReference.loads(data["installed"][0]["recipe"]["id"])
-        self.assertIsNotNone(ref.revision)
 
 class RemoveWithRevisionsTest(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(servers={"default": self.server})
+        self.c_v2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
     def test_remove_local_recipe(self):
@@ -772,7 +739,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(servers={"default": self.server})
+        self.c_v2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
     def test_upload_a_recipe(self):
@@ -800,7 +767,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
                               args=" -s os=Linux")
 
         self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0], pref.ref.revision)
-        client.upload_all(self.ref, args="--no-overwrite")
+        client.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0], pref2.ref.revision)
 
     def test_upload_no_overwrite_packages(self):
@@ -821,7 +788,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 
         self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
                          pref.revision)
-        client.upload_all(self.ref, args="--no-overwrite")
+        client.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
                          pref2.revision)
 
@@ -882,7 +849,7 @@ class SCMRevisions(unittest.TestCase):
 class CapabilitiesRevisionsTest(unittest.TestCase):
     def test_server_with_only_v2_capability(self):
         server = TestServer(server_capabilities=[])
-        c_v2 = TurboTestClient(servers={"default": server})
+        c_v2 = TurboTestClient(servers={"default": server}, inputs=["admin", "password"])
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         c_v2.create(ref)
         c_v2.upload_all(ref, remote="default")
@@ -906,7 +873,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(servers={"default": self.server})
+        self.c_v2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
     def test_rotation_deleting_recipe_revisions(self):
@@ -1046,7 +1013,7 @@ def test_touching_other_server():
     # https://github.com/conan-io/conan/issues/9333
     servers = OrderedDict([("remote1", TestServer()),
                            ("remote2", None)])  # None server will crash if touched
-    c = TestClient(servers=servers, users={"remote1": [("conan", "password")]})
+    c = TestClient(servers=servers, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
     c.run("create . pkg/0.1@conan/channel -s os=Windows")
     c.run("upload * --all -c -r=remote1")

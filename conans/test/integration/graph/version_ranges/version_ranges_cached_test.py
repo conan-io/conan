@@ -34,7 +34,7 @@ class TestVersionRangesCache:
         users = {"server0": [("user", "password")],
                  "server1": [("user", "password")]}
 
-        client = TestClient(servers=servers, users=users)
+        client = TestClient(servers=servers, inputs=["user", "password", "user", "password"])
 
         # server0 does not satisfy range
         # server1 does

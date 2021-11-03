@@ -1,9 +1,6 @@
 import os
 import platform
 import textwrap
-import unittest
-
-import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -11,7 +8,6 @@ from conans.util.files import load
 
 
 # Without compiler, def rpath_flags(settings, os_build, lib_paths): doesn't append the -Wl...etc
-@pytest.mark.tool_compiler
 def test_pkg_config_dirs():
     # https://github.com/conan-io/conan/issues/2756
     conanfile = textwrap.dedent("""
@@ -43,18 +39,21 @@ def test_pkg_config_dirs():
     pc_content = load(pc_path)
     expected_rpaths = ""
     if platform.system() in ("Linux", "Darwin"):
-        expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir2}"'
+        expected_rpaths = ' -Wl,-rpath,"${libdir1}" -Wl,-rpath,"${libdir2}"'
     expected_content = textwrap.dedent("""\
-        libdir=/my_absoulte_path/fake/mylib/lib
+        libdir1=/my_absoulte_path/fake/mylib/lib
         libdir2=${prefix}/lib2
-        includedir=/my_absoulte_path/fake/mylib/include
+        includedir1=/my_absoulte_path/fake/mylib/include
 
         Name: MyLib
         Description: Conan package: MyLib
         Version: 0.1
-        Libs: -L"${libdir}" -L"${libdir2}"%s
-        Cflags: -I"${includedir}\"""" % expected_rpaths)
-    assert "\n".join(pc_content.splitlines()[1:]) == expected_content
+        Libs: -L"${libdir1}" -L"${libdir2}"%s
+        Cflags: -I"${includedir1}\"""" % expected_rpaths)
+
+    # Avoiding trailing whitespaces in Jinja template
+    for line in pc_content.splitlines()[1:]:
+        assert line.strip() in expected_content
 
     def assert_is_abs(path):
         assert os.path.isabs(path) is True
@@ -138,7 +137,7 @@ def test_pkg_config_rpaths():
     pc_path = os.path.join(client.current_folder, "MyLib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
-    assert "-Wl,-rpath,\"${libdir}\"" in pc_content
+    assert '-Wl,-rpath,"${libdir1}"' in pc_content
 
 
 def test_system_libs():
@@ -164,7 +163,7 @@ def test_system_libs():
     client.run("install MyLib/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("MyLib.pc")
-    assert 'Libs: -L"${libdir}" -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ' in pc_content
+    assert 'Libs: -L"${libdir1}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
 
 
 def test_multiple_include():
@@ -189,13 +188,13 @@ def test_multiple_include():
     client.run("install pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
-    assert "includedir=${prefix}/inc1" in pc_content
+    assert "includedir1=${prefix}/inc1" in pc_content
     assert "includedir2=${prefix}/inc2" in pc_content
     assert "includedir3=${prefix}/inc3/foo" in pc_content
-    assert "libdir=${prefix}/lib1" in pc_content
+    assert "libdir1=${prefix}/lib1" in pc_content
     assert "libdir2=${prefix}/lib2" in pc_content
-    assert 'Libs: -L"${libdir}" -L"${libdir2}"' in pc_content
-    assert 'Cflags: -I"${includedir}" -I"${includedir2}" -I"${includedir3}"' in pc_content
+    assert 'Libs: -L"${libdir1}" -L"${libdir2}"' in pc_content
+    assert 'Cflags: -I"${includedir1}" -I"${includedir2}" -I"${includedir3}"' in pc_content
 
 
 def test_custom_content():
@@ -228,7 +227,7 @@ def test_custom_content():
     client.run("install pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
-    assert "libdir=${prefix}/lib" in pc_content
+    assert "libdir1=${prefix}/lib" in pc_content
     assert "datadir=${prefix}/share" in pc_content
     assert "schemasdir=${datadir}/mylib/schemas" in pc_content
     assert "bindir=${prefix}/bin" in pc_content
@@ -285,8 +284,12 @@ def test_pkg_with_component_requires():
         """)
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
+    pc_content = client2.load("pkg.pc")
+    assert "Requires: pkg-mycomponent" in pc_content
     pc_content = client2.load("pkg-mycomponent.pc")
     assert "Requires: other" in pc_content
+    pc_content = client2.load("pkg-myothercomp.pc")
+    assert "Requires: pkg-mycomponent" in pc_content
 
 
 def test_pkg_getting_public_requires():
@@ -328,8 +331,10 @@ def test_pkg_getting_public_requires():
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
     pc_content = client2.load("pkg.pc")
-    assert "Requires: cmp1" in pc_content
+    assert "Requires: other-cmp1" in pc_content
+    pc_content = client2.load("other.pc")
+    assert "Requires: other-cmp1 other-cmp2 other-cmp3" in pc_content
     assert client2.load("other-cmp1.pc")
     assert client2.load("other-cmp2.pc")
     pc_content = client2.load("other-cmp3.pc")
-    assert "Requires: cmp1" in pc_content
+    assert "Requires: other-cmp1" in pc_content

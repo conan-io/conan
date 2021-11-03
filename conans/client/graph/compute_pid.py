@@ -52,9 +52,14 @@ def compute_package_id(node, new_config):
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
 
+<<<<<<< HEAD
     conanfile.info = ConanInfo.create(conanfile,
                                       conanfile.settings.values,
                                       conanfile.options.values,
+=======
+    conanfile.info = ConanInfo.create(conanfile.settings.values,
+                                      conanfile.options,
+>>>>>>> develop2
                                       reqs_info,
                                       build_requires_info,
                                       python_requires=python_requires,
@@ -86,7 +91,12 @@ def compute_package_id(node, new_config):
                 node.binary_error_msg = str(e)
 
     try:
+<<<<<<< HEAD
         # TODO: Not defining inputs dissallow to build
+=======
+        # TODO: What if something is not defined, but still the binary exists and the option is for
+        # consumers only?
+>>>>>>> develop2
         conanfile.settings.validate()  # All has to be ok!
         conanfile.options.validate()
     except ConanException as e:

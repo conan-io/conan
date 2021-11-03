@@ -3,6 +3,7 @@ import textwrap
 from xml.dom import minidom
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars
 from conans.errors import ConanException
 from conans.util.files import save, load
@@ -39,7 +40,7 @@ class MSBuildToolchain(object):
         self.configuration = conanfile.settings.build_type
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
-        self.toolset = self._msvs_toolset(conanfile.settings)
+        self.toolset = self._msvs_toolset(conanfile)
         check_using_build_profile(self._conanfile)
 
     def _name_condition(self, settings):
@@ -57,10 +58,14 @@ class MSBuildToolchain(object):
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
-        VCVars(self._conanfile).generate()
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()
+        else:
+            VCVars(self._conanfile).generate()
 
     @staticmethod
-    def _msvs_toolset(settings):
+    def _msvs_toolset(conanfile):
+        settings = conanfile.settings
         compiler = settings.get_safe("compiler")
         compiler_version = settings.get_safe("compiler.version")
         if compiler == "msvc":
@@ -74,6 +79,8 @@ class MSBuildToolchain(object):
             compiler_version = compiler_version if "." in compiler_version else \
                 "%s.0" % compiler_version
             return "Intel C++ Compiler " + compiler_version
+        if compiler == "intel-cc":
+            return IntelCC(conanfile).ms_toolset
         if compiler == "Visual Studio":
             toolset = settings.get_safe("compiler.toolset")
             if not toolset:
@@ -93,7 +100,7 @@ class MSBuildToolchain(object):
     def _runtime_library(settings):
         compiler = settings.compiler
         runtime = settings.get_safe("compiler.runtime")
-        if compiler == "msvc":
+        if compiler == "msvc" or compiler == "intel-cc":
             build_type = settings.get_safe("build_type")
             if build_type != "Debug":
                 runtime_library = {"static": "MultiThreaded",
@@ -124,6 +131,11 @@ class MSBuildToolchain(object):
                   <RuntimeLibrary>{}</RuntimeLibrary>
                   <LanguageStandard>{}</LanguageStandard>{}
                 </ClCompile>
+                <ResourceCompile>
+                  <PreprocessorDefinitions>
+                     {};%(PreprocessorDefinitions)
+                  </PreprocessorDefinitions>
+                </ResourceCompile>
               </ItemDefinitionGroup>
               <PropertyGroup Label="Configuration">
                 <PlatformToolset>{}</PlatformToolset>
@@ -143,7 +155,7 @@ class MSBuildToolchain(object):
         compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
                                   for k, v in self.compile_options.items())
         config_props = toolchain_file.format(preprocessor_definitions, runtime_library, cppstd,
-                                             compile_options, toolset)
+                                             compile_options, preprocessor_definitions, toolset)
         config_filepath = os.path.join(self._conanfile.generators_folder, config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)

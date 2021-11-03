@@ -1,35 +1,14 @@
 import os
 
-from conans.model.new_build_info import NewCppInfo
-
-
-class _PatternEntry(object):
-
-    def __init__(self):
-        self.include = []
-        self.lib = []
-        self.bin = []
-        self.src = []
-        self.build = []
-        self.res = []
-        self.framework = []
-
-
-class Patterns(object):
-
-    def __init__(self):
-        self.source = _PatternEntry()
-        self.build = _PatternEntry()
-        # TODO: Pending use case
-        # self.package = _PatternEntry()
+from conans.model.build_info import CppInfo
 
 
 class Infos(object):
 
     def __init__(self):
-        self.source = NewCppInfo()
-        self.build = NewCppInfo()
-        self.package = NewCppInfo()
+        self.source = CppInfo()
+        self.build = CppInfo()
+        self.package = CppInfo(set_defaults=True)
 
 
 class Folders(object):

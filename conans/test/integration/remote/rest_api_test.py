@@ -14,18 +14,17 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.rest.rest_client_v1 import complete_url
 from conans.client.tools import environment_append
-from conans.client.userio import UserIO
+from conans.client.userio import UserInput
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
+from conans.test.utils.mocks import LocalDBMock
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder
-from conans.util.env_reader import get_env
-from conans.util.files import md5, save
 from conans.test.utils.tools import get_free_port
+from conans.util.files import md5, save
 
 
 class RestApiUnitTest(unittest.TestCase):
@@ -74,16 +73,20 @@ class RestApiTest(unittest.TestCase):
                 filename = os.path.join(temp_folder(), "conan.conf")
                 save(filename, "")
                 config = ConanClientConfigParser(filename)
-                requester = ConanRequester(config, requests)
-                client_factory = RestApiClientFactory(Mock(), requester=requester,
+                requester = ConanRequester(config)
+                client_factory = RestApiClientFactory(requester=requester,
                                                       config=config)
                 localdb = LocalDBMock()
+                cache = Mock()
+                cache.localdb = localdb
+                cache.config.non_interactive = False
 
-                mocked_user_io = UserIO(out=TestBufferConanOutput())
-                mocked_user_io.get_username = Mock(return_value="private_user")
-                mocked_user_io.get_password = Mock(return_value="private_pass")
+                mocked_user_input = UserInput(non_interactive=False)
+                mocked_user_input.get_username = Mock(return_value="private_user")
+                mocked_user_input.get_password = Mock(return_value="private_pass")
 
-                cls.auth_manager = ConanApiAuthManager(client_factory, mocked_user_io, localdb)
+                # FIXME: Missing mock
+                cls.auth_manager = ConanApiAuthManager(client_factory, cache)
                 cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
                                     True)
                 cls.auth_manager._authenticate(cls.remote, user="private_user",
@@ -113,16 +116,6 @@ class RestApiTest(unittest.TestCase):
         self.assertIn(CONANFILE, os.listdir(tmp_dir))
         self.assertIn(CONAN_MANIFEST, os.listdir(tmp_dir))
 
-    def test_get_recipe_manifest(self):
-        # Upload a conans
-        ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing#myreciperev")
-        self._upload_recipe(ref)
-
-        # Get the conans digest
-        digest = self.api.get_recipe_manifest(ref)
-        self.assertEqual(digest.summary_hash, "6fae00c91be4d09178af3c6fdc4d59e9")
-        self.assertEqual(digest.time, 123123123)
-
     def test_get_package(self):
         # Upload a conans
         ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")
@@ -136,32 +129,6 @@ class RestApiTest(unittest.TestCase):
         tmp_dir = temp_folder()
         self.api.get_package(pref, tmp_dir)
         self.assertIn("hello.cpp", os.listdir(tmp_dir))
-
-    def test_get_package_info(self):
-        # Upload a conans
-        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")
-        self._upload_recipe(ref)
-
-        # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA", "mypackagerev")
-        conan_info = """[settings]
-    arch=x86_64
-    compiler=gcc
-    os=Linux
-[options]
-    386=False
-[requires]
-    Hello
-    Bye/2.9
-    Say/2.1@user/testing
-    Chat/2.1@user/testing:SHA_ABC
-"""
-        self._upload_package(pref, {CONANINFO: conan_info})
-
-        # Get the package info
-        info = self.api.get_package_info(pref, headers=None)
-        self.assertIsInstance(info, ConanInfo)
-        self.assertEqual(info, ConanInfo.loads(conan_info))
 
     def test_upload_huge_conan(self):
         if platform.system() != "Windows":
@@ -274,7 +241,7 @@ class RestApiTest(unittest.TestCase):
             save(abs_path, str(content))
             abs_paths[filename] = abs_path
 
-        self.api.upload_package(package_reference, abs_paths, None, retry=1, retry_wait=0)
+        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0)
 
     def _upload_recipe(self, ref, base_files=None, retry=1, retry_wait=0):
 

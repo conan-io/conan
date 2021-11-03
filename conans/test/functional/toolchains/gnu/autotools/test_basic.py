@@ -51,7 +51,7 @@ def test_autotools():
     client.run("install .")
     client.run("build .")
     client.run_command("./main")
-    cxx11_abi = 0 if platform.system() == "Linux" else None
+    cxx11_abi = 1 if platform.system() == "Linux" else None
     check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, cxx11_abi=cxx11_abi)
     assert "hello/0.1: Hello World Release!" in client.out
 
@@ -92,8 +92,7 @@ def build_windows_subsystem(profile, make_program):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    cmd = environment_wrap_command(ConanFileMock(),
-                                   ["conanbuildenv",
+    cmd = environment_wrap_command(["conanbuildenv",
                                     "conanautotoolstoolchain",
                                     "conanautotoolsdeps"], make_program, cwd=client.current_folder)
     client.run_command(cmd)

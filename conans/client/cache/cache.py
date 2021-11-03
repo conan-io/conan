@@ -1,28 +1,25 @@
 import os
 import shutil
-from collections import OrderedDict
 from io import StringIO
 from typing import List
+
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conans.assets.templates import dict_loader
+from conans.cli.output import ConanOutput
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
     get_default_settings_yml
-from conans.client.conf.detect import detect_defaults_settings
-from conans.client.output import Color
-from conans.client.profile_loader import read_profile
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
-from conans.paths import ARTIFACTS_PROPERTIES_FILE
+from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
 
@@ -41,9 +38,9 @@ class ClientCache(object):
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
     """
 
-    def __init__(self, cache_folder, output):
+    def __init__(self, cache_folder):
         self.cache_folder = cache_folder
-        self._output = output
+        self._output = ConanOutput()
 
         # Caching
         self._no_lock = None
@@ -51,7 +48,7 @@ class ClientCache(object):
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
+        self._store_folder = os.path.join(self.cache_folder, "p")
 
         mkdir(self._store_folder)
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
@@ -60,37 +57,33 @@ class ClientCache(object):
     def closedb(self):
         self._data_cache.closedb()
 
-    def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_remote=None, new_timestamp=None, new_build_id=None):
+    def update_package(self, old_ref: ConanReference, new_ref: ConanReference = None,
+                       new_path=None, new_timestamp=None, new_build_id=None):
         new_ref = ConanReference(new_ref) if new_ref else None
-        return self._data_cache.update_reference(ConanReference(old_ref), new_ref, new_path,
-                                                 new_remote, new_timestamp, new_build_id)
+        return self._data_cache.update_package(ConanReference(old_ref), new_ref, new_path,
+                                               new_timestamp, new_build_id)
 
     def dump(self):
         out = StringIO()
         self._data_cache.dump(out)
         return out.getvalue()
 
-    def assign_rrev(self, layout: RecipeLayout, ref: ConanReference):
-        return self._data_cache.assign_rrev(layout, ref)
+    def assign_rrev(self, layout: RecipeLayout):
+        return self._data_cache.assign_rrev(layout)
 
     def assign_prev(self, layout: PackageLayout, ref: ConanReference):
         return self._data_cache.assign_prev(layout, ref)
 
     def ref_layout(self, ref):
+        # It must exists
+        assert ref.revision is not None
         return self._data_cache.get_reference_layout(ConanReference(ref))
 
     def pkg_layout(self, ref):
         return self._data_cache.get_package_layout(ConanReference(ref))
 
-    def create_ref_layout(self, ref):
-        return self._data_cache.create_reference_layout(ConanReference(ref))
-
-    def create_pkg_layout(self, ref):
-        return self._data_cache.create_package_layout(ConanReference(ref))
-
-    def create_temp_ref_layout(self, ref):
-        return self._data_cache.create_tmp_reference_layout(ConanReference(ref))
+    def create_export_recipe_layout(self, ref):
+        return self._data_cache.create_export_recipe_layout(ConanReference(ref))
 
     def create_temp_pkg_layout(self, ref):
         return self._data_cache.create_tmp_package_layout(ConanReference(ref))
@@ -101,21 +94,25 @@ class ClientCache(object):
     def get_or_create_pkg_layout(self, ref: ConanReference):
         return self._data_cache.get_or_create_package_layout(ConanReference(ref))
 
-    def remove_layout(self, layout):
+    def remove_recipe_layout(self, layout):
         layout.remove()
-        self._data_cache.remove(ConanReference(layout.reference))
+        self._data_cache.remove_recipe(ConanReference(layout.reference))
 
-    def get_remote(self, ref):
-        return self._data_cache.get_remote(ConanReference(ref))
+    def remove_package_layout(self, layout):
+        layout.remove()
+        self._data_cache.remove_package(ConanReference(layout.reference))
 
-    def set_remote(self, ref, remote):
-        return self._data_cache.set_remote(ConanReference(ref), remote)
+    def get_recipe_timestamp(self, ref):
+        return self._data_cache.get_recipe_timestamp(ConanReference(ref))
 
-    def get_timestamp(self, ref):
-        return self._data_cache.get_timestamp(ConanReference(ref))
+    def get_package_timestamp(self, ref):
+        return self._data_cache.get_package_timestamp(ConanReference(ref))
 
-    def set_timestamp(self, ref, timestamp):
-        return self._data_cache.update_reference(ConanReference(ref), new_timestamp=timestamp)
+    def set_recipe_timestamp(self, ref, timestamp):
+        return self._data_cache.update_recipe_timestamp(ConanReference(ref), new_timestamp=timestamp)
+
+    def set_package_timestamp(self, ref, timestamp):
+        return self._data_cache.update_package(ConanReference(ref), new_timestamp=timestamp)
 
     def all_refs(self, only_latest_rrev=False):
         # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
@@ -182,8 +179,8 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, REMOTES)
 
     @property
-    def registry(self):
-        return RemoteRegistry(self, self._output)
+    def remotes_registry(self) -> RemoteRegistry:
+        return RemoteRegistry(self)
 
     def _no_locks(self):
         if self._no_lock is None:
@@ -260,10 +257,8 @@ class ClientCache(object):
 
     @property
     def default_profile_path(self):
-        if os.path.isabs(self.config.default_profile):
-            return self.config.default_profile
-        else:
-            return os.path.join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
+        # Used only in testing, and this class "reset_default_profile"
+        return os.path.join(self.cache_folder, PROFILES_FOLDER, DEFAULT_PROFILE_NAME)
 
     @property
     def hooks_path(self):
@@ -271,12 +266,6 @@ class ClientCache(object):
         :return: Hooks folder in client cache
         """
         return os.path.join(self.cache_folder, HOOKS_FOLDER)
-
-    @property
-    def default_profile(self):
-        self.initialize_default_profile()
-        default_profile, _ = read_profile(self.default_profile_path, os.getcwd(), self.profiles_path)
-        return default_profile
 
     @property
     def settings(self):
@@ -331,31 +320,9 @@ class ClientCache(object):
             remove(self.conan_conf_path)
         self.initialize_config()
 
-    def initialize_default_profile(self):
-        if not os.path.exists(self.default_profile_path):
-            self._output.writeln("Auto detecting your dev setup to initialize the "
-                                 "default profile (%s)" % self.default_profile_path,
-                                 Color.BRIGHT_YELLOW)
-
-            default_settings = detect_defaults_settings(self._output,
-                                                        profile_path=self.default_profile_path)
-            self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
-            self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
-                                 Color.BRIGHT_YELLOW)
-            self._output.writeln("*** You can change them in %s ***" % self.default_profile_path,
-                                 Color.BRIGHT_MAGENTA)
-            self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n",
-                                 Color.BRIGHT_MAGENTA)
-
-            default_profile = Profile()
-            tmp = OrderedDict(default_settings)
-            default_profile.update_settings(tmp)
-            save(self.default_profile_path, default_profile.dumps())
-
     def reset_default_profile(self):
         if os.path.exists(self.default_profile_path):
             remove(self.default_profile_path)
-        self.initialize_default_profile()
 
     def initialize_settings(self):
         if not os.path.exists(self.settings_path):

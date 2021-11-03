@@ -53,16 +53,8 @@ def cpu_count(output=None):
         else:
             return CpuProperties().get_cpus()
     except NotImplementedError:
-        output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
+        output.warning("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
-
-
-def detected_os():
-    if OSInfo().is_macos:
-        return "Macos"
-    if OSInfo().is_windows:
-        return "Windows"
-    return platform.system()
 
 
 def detected_architecture():
@@ -389,30 +381,6 @@ class OSInfo(object):
             return Version("%s.%s" % (platform.version(), platform.release()))
 
     @staticmethod
-    def bash_path():
-        if os.getenv("CONAN_BASH_PATH"):
-            return os.getenv("CONAN_BASH_PATH")
-        return which("bash")
-
-    @staticmethod
-    def uname(options=None):
-        options = " %s" % options if options else ""
-        if not OSInfo().is_windows:
-            raise ConanException("Command only for Windows operating system")
-        custom_bash_path = OSInfo.bash_path()
-        if not custom_bash_path:
-            raise ConanException("bash is not in the path")
-
-        command = '"%s" -c "uname%s"' % (custom_bash_path, options)
-        try:
-            # the uname executable is many times located in the same folder as bash.exe
-            with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
-                ret = check_output_runner(command).strip().lower()
-                return ret
-        except Exception:
-            return None
-
-    @staticmethod
     def get_aix_conf(options=None):
         options = " %s" % options if options else ""
         if not OSInfo().is_aix:
@@ -422,38 +390,6 @@ class OSInfo(object):
             ret = check_output_runner("getconf%s" % options).strip()
             return ret
         except Exception:
-            return None
-
-    @staticmethod
-    def detect_windows_subsystem():
-        from conans.client.tools.win import CYGWIN, MSYS2, MSYS, WSL
-        if OSInfo().is_linux:
-            try:
-                # https://github.com/Microsoft/WSL/issues/423#issuecomment-221627364
-                with open("/proc/sys/kernel/osrelease") as f:
-                    return WSL if f.read().endswith("Microsoft") else None
-            except IOError:
-                return None
-        try:
-            output = OSInfo.uname()
-        except ConanException:
-            return None
-        if not output:
-            return None
-        if "cygwin" in output:
-            return CYGWIN
-        elif "msys" in output or "mingw" in output:
-            version = OSInfo.uname("-r").split('.')
-            if version and version[0].isdigit():
-                major = int(version[0])
-                if major == 1:
-                    return MSYS
-                elif major >= 2:
-                    return MSYS2
-            return None
-        elif "linux" in output:
-            return WSL
-        else:
             return None
 
 

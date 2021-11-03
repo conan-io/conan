@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.client.cache.cache import PROFILES_FOLDER
 from conans.paths import CONANFILE
@@ -41,7 +43,7 @@ class MyConanfile(ConanFile):
     version = "0.1"
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             assert(os.environ.get("Value1") == "A")
 '''
@@ -49,7 +51,16 @@ class MyConanfile(ConanFile):
         default_profile_path = os.path.join(tmp, "myprofile")
         save(default_profile_path, "[buildenv]\nValue1=A")
         client = TestClient()
-        client.run("config set general.default_profile='%s'" % default_profile_path)
+        save(client.cache.new_config_path, "core:default_profile={}".format(default_profile_path))
+
+        conan_conf = textwrap.dedent("""
+                [storage]
+                path = ./data
+                [general]
+                default_profile={}
+        """.format(default_profile_path))
+        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+
         client.save({CONANFILE: br})
         client.run("export . lasote/stable")
         client.run('install mylib/0.1@lasote/stable --build')
@@ -57,11 +68,12 @@ class MyConanfile(ConanFile):
         # Now use a name, in the default profile folder
         os.unlink(default_profile_path)
         save(os.path.join(client.cache.profiles_path, "other"), "[buildenv]\nValue1=A")
-        client.run("config set general.default_profile=other")
+        save(client.cache.new_config_path, "core:default_profile=other")
         client.save({CONANFILE: br})
         client.run("export . lasote/stable")
         client.run('install mylib/0.1@lasote/stable --build')
 
+    @pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
     def test_profile_applied_ok(self):
         br = '''
 import os
@@ -117,7 +129,7 @@ class MyConanfile(ConanFile):
 
     def build(self):
         # This has changed, the value from profile higher priority than build require
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             if platform.system() == "Windows":
                 self.run("set MyVAR")
@@ -153,7 +165,7 @@ from conan.tools.env import VirtualBuildEnv
 class MyConanfile(ConanFile):
 
     def build(self):
-        build_env = VirtualBuildEnv(self).environment()
+        build_env = VirtualBuildEnv(self).vars()
         with build_env.apply():
             self.output.info(">>> env_variable={}".format(os.environ.get('env_variable')))
 '''
@@ -172,7 +184,7 @@ class MyConanfile(ConanFile):
         env_variable = "env_variable=profile_environment"
         default_profile_path = os.path.join(tmp, 'env_profile')
         save(default_profile_path, "[buildenv]\n" + env_variable)
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': default_profile_path}):
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE': default_profile_path}):
             client.run("create . name/version@user/channel")
             self.assertIn(">>> " + env_variable, client.out)
 
@@ -183,17 +195,16 @@ class MyConanfile(ConanFile):
         default_profile_path = os.path.join(client.cache_folder,
                                             PROFILES_FOLDER, rel_path)
         save(default_profile_path, "[buildenv]\n" + env_variable)
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': rel_path}):
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE': rel_path}):
             client.run("create . name/version@user/channel")
             self.assertIn(">>> " + env_variable, client.out)
 
         # Use non existing path
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': profile_path}):
+        with tools.environment_append({'CONAN_DEFAULT_PROFILE': profile_path}):
             client.run("create . name/version@user/channel", assert_error=True)
-            self.assertIn("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
-                          "an existing profile file.", client.out)
+            self.assertIn("The default profile file doesn't exist", client.out)
 
 
 def test_conf_default_two_profiles():

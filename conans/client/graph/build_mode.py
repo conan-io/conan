@@ -1,5 +1,6 @@
 import fnmatch
 
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 
 
@@ -11,8 +12,7 @@ class BuildMode(object):
                    => True if user wrote "missing"
                    => ["!foo"] means exclude when building all from sources
     """
-    def __init__(self, params, output):
-        self._out = output
+    def __init__(self, params):
         self.missing = False
         self.never = False
         self.cascade = False
@@ -70,7 +70,7 @@ class BuildMode(object):
         if self.all:
             return True
 
-        if conan_file.build_policy_always:
+        if conan_file.build_policy == "always":
             conan_file.output.info("Building package from source as defined by "
                                    "build_policy='always'")
             return True
@@ -89,9 +89,11 @@ class BuildMode(object):
         return False
 
     def allowed(self, conan_file):
+        if conan_file.build_policy == "never":  # this package has been export-pkg
+            return False
         if self.missing:
             return True
-        if conan_file.build_policy_missing:
+        if conan_file.build_policy == "missing":
             conan_file.output.info("Building package from source as defined by "
                                    "build_policy='missing'")
             return True
@@ -99,4 +101,4 @@ class BuildMode(object):
 
     def report_matches(self):
         for pattern in self._unused_patterns:
-            self._out.error("No package matching '%s' pattern found." % pattern)
+            ConanOutput().error("No package matching '%s' pattern found." % pattern)

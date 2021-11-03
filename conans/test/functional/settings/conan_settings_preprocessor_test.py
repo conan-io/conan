@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
 
-@pytest.mark.tool_compiler
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 class ConanSettingsPreprocessorTest(unittest.TestCase):
 
     def setUp(self):
@@ -21,12 +21,10 @@ class HelloConan(ConanFile):
     settings = "os", "compiler", "build_type"
 
     def configure(self):
-        self.output.warn("Runtime: %s" % self.settings.get_safe("compiler.runtime"))
-
+        self.output.warning("Runtime: %s" % self.settings.get_safe("compiler.runtime"))
         '''
+        self.client.save({"conanfile.py": self.conanfile})
 
-        files = {"conanfile.py": self.conanfile}
-        self.client.save(files)
         self.client.run("export . lasote/channel")
 
     def test_runtime_auto(self):
@@ -34,14 +32,12 @@ class HelloConan(ConanFile):
         default_profile = load(self.client.cache.default_profile_path)
         self.assertNotIn(default_profile, "compiler.runtime")
         self.client.run("install Hello0/0.1@lasote/channel --build missing")
-        if platform.system() == "Windows":
-            self.assertIn("Runtime: MD", self.client.out)
-            self.client.run("install Hello0/0.1@lasote/channel --build missing -s build_type=Debug")
-            self.assertIn("Runtime: MDd", self.client.out)
+        self.assertIn("Runtime: MD", self.client.out)
+        self.client.run("install Hello0/0.1@lasote/channel --build missing -s build_type=Debug")
+        self.assertIn("Runtime: MDd", self.client.out)
 
     def test_runtime_not_present_ok(self):
-        # Generate the settings.yml
-        self.client.run("config init")
+        self.client.run("install .")
         default_settings = load(self.client.cache.settings_path)
         default_settings = default_settings.replace("runtime:", "# runtime:")
         save(self.client.cache.settings_path, default_settings)

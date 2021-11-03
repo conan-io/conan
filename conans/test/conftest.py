@@ -1,10 +1,12 @@
 import os
 import platform
+import textwrap
 import uuid
 
 import pytest
 
-from conans.client.tools import vswhere, which
+
+from conans.client.tools import which
 
 """
 To override these locations with your own in your dev machine:
@@ -18,6 +20,7 @@ To override these locations with your own in your dev machine:
 tools_locations = {
     'svn': {"disabled": True},
     'cmake': {
+        "default": "3.19",
         "3.15": {},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
@@ -26,6 +29,7 @@ tools_locations = {
     'ninja': {
         "1.10.2": {}
     },
+    'meson': {"disabled": True},
     'bazel':  {
         "system": {"path": {'Windows': 'C:/ws/bazel/4.2.0'}},
     }
@@ -39,11 +43,15 @@ tools_locations = {
                       "15": {},
                       "16": {"disabled": True},
                       "17": {"disabled": True}},
-    'pkg_config': {"exe": "pkg-config",
-                   "default": "system",
-                   # pacman -S pkg-config inside msys2-mingw64
-                   "system": {"path": {'Windows': "C:/msys64/usr/bin"}},
-                   },
+    'pkg_config': {
+        "exe": "pkg-config",
+        "default": "0.28",
+        "0.28": {
+            "path": {
+                # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
+                'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin"
+            }
+        }},
     'autotools': {"exe": "autoconf"},
     'cmake': {
         "default": "3.15",
@@ -102,7 +110,44 @@ tools_locations = {
         "default": "system",
         "system": {"path": {'Windows': 'C:/bazel/bin',
                             "Darwin": '/Users/jenkins/bin'}},
-    }
+    },
+    # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
+    # "intel_oneapi": {
+    #     "default": "2021.3",
+    #     "exe": "dpcpp",
+    #     "2021.3": {"path": {"Linux": "/opt/intel/oneapi/compiler/2021.3.0/linux/bin"}}
+    # }
+}
+
+
+# TODO: Make this match the default tools (compilers) above automatically
+default_profiles = {
+    "Windows": textwrap.dedent("""\
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=Visual Studio
+        compiler.version=15
+        build_type=Release
+        """),
+    "Linux": textwrap.dedent("""\
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=8
+        compiler.libcxx=libstdc++11
+        build_type=Release
+        """),
+    "Darwin": textwrap.dedent("""\
+        [settings]
+        os=Macos
+        arch=x86_64
+        compiler=apple-clang
+        compiler.version=12.0
+        compiler.libcxx=libc++
+        build_type=Release
+        """)
 }
 
 try:
@@ -119,6 +164,13 @@ try:
     update(tools_locations, user_tool_locations)
 except ImportError as e:
     user_tool_locations = None
+
+try:
+    from conans.test.conftest_user import default_profiles as user_default_profiles
+    default_profiles.update(user_default_profiles)
+except ImportError as e:
+    user_default_profiles = None
+
 
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
@@ -170,6 +222,7 @@ def _get_tool(name, version):
 
         # Check this particular tool is installed
         if name == "visual_studio":
+            from conans.client.conf.detect_vs import vswhere
             if not vswhere():  # TODO: Missing version detection
                 cached = True
         else:  # which based detection
@@ -188,14 +241,6 @@ def _get_tool(name, version):
     return cached
 
 
-def _tool_name_mapping(tool_name):
-    if tool_name == "compiler":
-        tool_name = {"Windows": "visual_studio",
-                     "Linux": "gcc",
-                     "Darwin": "clang"}.get(platform.system())
-    return tool_name
-
-
 @pytest.fixture(autouse=True)
 def add_tool(request):
     tools_paths = []
@@ -203,7 +248,6 @@ def add_tool(request):
     for mark in request.node.iter_markers():
         if mark.name.startswith("tool_"):
             tool_name = mark.name[5:]
-            tool_name = _tool_name_mapping(tool_name)
             tool_version = mark.kwargs.get('version')
             result = _get_tool(tool_name, tool_version)
             if result is True:

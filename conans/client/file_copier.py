@@ -7,7 +7,7 @@ from conans.errors import ConanException
 from conans.util.files import mkdir, walk
 
 
-def report_copied_files(copied, output, message_suffix="Copied"):
+def report_copied_files(copied, scoped_output, message_suffix="Copied"):
     ext_files = defaultdict(list)
     for f in copied:
         _, ext = os.path.splitext(f)
@@ -20,10 +20,10 @@ def report_copied_files(copied, output, message_suffix="Copied"):
         files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
         file_or_files = "file" if len(files) == 1 else "files"
         if not ext:
-            output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
+            scoped_output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
         else:
-            output.info("%s %d '%s' %s%s"
-                        % (message_suffix, len(files), ext, file_or_files, files_str))
+            scoped_output.info("%s %d '%s' %s%s"
+                               % (message_suffix, len(files), ext, file_or_files, files_str))
     return True
 
 
@@ -47,8 +47,8 @@ class FileCopier(object):
         self._dst_folder = root_destination_folder
         self._copied = []
 
-    def report(self, output):
-        return report_copied_files(self._copied, output)
+    def report(self, scoped_output):
+        return report_copied_files(self._copied, scoped_output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
                  excludes=None, ignore_case=True):

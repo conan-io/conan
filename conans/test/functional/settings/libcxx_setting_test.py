@@ -7,6 +7,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Move this test to CMakeToolchain")
 class LibcxxSettingTest(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Not in Windows")
@@ -21,7 +22,7 @@ class LibcxxSettingTest(unittest.TestCase):
 
                 def build(self):
                     cmake = CMake(self)
-                    self.output.warn(cmake.command_line)
+                    self.output.warning(cmake.command_line)
                     self.run('cmake . %s' % cmake.command_line)
                     self.run("cmake --build . %s" %  cmake.build_config)
                 ''')

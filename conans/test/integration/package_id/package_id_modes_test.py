@@ -1,3 +1,5 @@
+import textwrap
+
 import pytest
 
 from conans.client.tools import environment_append
@@ -38,13 +40,11 @@ def test_recipe_modes():
         assert "libb/0.1:{} - Cache".format(package_id_arg) in client.out
 
     for package_id_mode, ref, package_id in configs:
-        # client.run("config set general.default_package_id_mode={}".format(package_id_mode))
         save(client.cache.new_config_path, f"core.package_id:default_mode={package_id_mode}")
         _assert_recipe_mode(ref, package_id)
 
     for package_id_mode, ref, package_id in configs:
-        with environment_append({"CONAN_DEFAULT_PACKAGE_ID_MODE": package_id_mode}):
-            _assert_recipe_mode(ref, package_id)
+        _assert_recipe_mode(ref, package_id)
 
 
 @pytest.mark.xfail(reason="package id computation has changed")
@@ -53,9 +53,13 @@ def test_package_revision_mode():
     # TODO: These 2 little simplifications can reduce test time by 30-40%, to do in test framework
     save(client.cache.settings_path, "")
     save(client.cache.default_profile_path, "")
-
-    client.run("config set general.default_package_id_mode=package_revision_mode")
-
+    conan_conf = textwrap.dedent("""
+                    [storage]
+                    path = ./data
+                    [general]
+                    default_package_id_mode=package_revision_mode'
+            """.format())
+    client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
     client.save({"liba/conanfile.py": GenConanfile("liba", "0.1.1"),
                  "libb/conanfile.py": GenConanfile("libb", "0.1").with_require("liba/0.1.1"),
                  "app/conanfile.py": GenConanfile("app", "0.1").with_require("libb/0.1")})

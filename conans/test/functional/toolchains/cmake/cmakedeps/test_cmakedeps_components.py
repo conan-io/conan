@@ -56,7 +56,6 @@ class PropagateSpecificComponents(unittest.TestCase):
         client.run('create middle.py middle/version@')
         self.cache_folder = client.cache_folder
 
-    @pytest.mark.tool_compiler
     def test_cmakedeps_app(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.save({'conanfile.py': self.app})
@@ -182,12 +181,14 @@ def test_components_system_libs():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, tools, CMake
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
+
         class Consumer(ConanFile):
             name = "consumer"
             version = "0.1"
             requires = "requirement/system"
-            generators = "CMakeDeps"
+            generators = "CMakeDeps", "CMakeToolchain"
             exports_sources = "CMakeLists.txt"
             settings = "os", "arch", "compiler", "build_type"
 
@@ -211,6 +212,6 @@ def test_components_system_libs():
             "$<$<CONFIG:Release>:system_lib_component;"
             "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
             "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>") in t.out
+            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>") in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>

@@ -5,7 +5,6 @@ import pytest
 
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
@@ -64,7 +63,7 @@ def client():
 @pytest.mark.parametrize("build_profile", ["", "-pr:b=default"])
 def test_build_require_test_package(existing_br, build_profile, client):
     test_cmake = textwrap.dedent(r"""
-        import os, platform
+        import os, platform, sys
         from conans import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
@@ -159,8 +158,7 @@ def test_build_require_conanfile_text(client):
     client.save({"conanfile.txt": "[build_requires]\nmycmake/1.0"}, clean_first=True)
     client.run("install . -g VirtualBuildEnv")
     ext = ".bat" if platform.system() == "Windows" else ".sh"
-    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", f"mycmake{ext}",
-                                   cwd=client.current_folder)
+    cmd = environment_wrap_command("conanbuild", f"mycmake{ext}", cwd=client.current_folder)
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "MYCMAKE={}!!".format(system) in client.out
@@ -170,8 +168,7 @@ def test_build_require_conanfile_text(client):
 def test_build_require_command_line_build_context(client):
     client.run("install mycmake/1.0@ --build-require -g VirtualBuildEnv -pr:b=default")
     ext = ".bat" if platform.system() == "Windows" else ".sh"
-    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", f"mycmake{ext}",
-                                   cwd=client.current_folder)
+    cmd = environment_wrap_command("conanbuild", f"mycmake{ext}", cwd=client.current_folder)
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "MYCMAKE={}!!".format(system) in client.out

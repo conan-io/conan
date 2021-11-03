@@ -9,14 +9,31 @@ class VirtualBuildEnv:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._conanfile.virtualenv = False
+        self._conanfile.virtualbuildenv = False
+        self.basename = "conanbuildenv"
+        # TODO: Make this use the settings_build
+        self.configuration = conanfile.settings.get_safe("build_type")
+        if self.configuration:
+            self.configuration = self.configuration.lower()
+        self.arch = conanfile.settings.get_safe("arch")
+        if self.arch:
+            self.arch = self.arch.lower()
+
+    @property
+    def _filename(self):
+        f = self.basename
+        if self.configuration:
+            f += "-" + self.configuration
+        if self.arch:
+            f += "-" + self.arch
+        return f
 
     def environment(self):
         """ collects the buildtime information from dependencies. This is the typical use case
         of build_requires defining information for consumers
         """
         # FIXME: Cache value?
-        build_env = Environment(self._conanfile)
+        build_env = Environment()
 
         # Top priority: profile
         profile_env = self._conanfile.buildenv
@@ -32,7 +49,12 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 build_env.compose_env(build_require.runenv_info)
             # Then the implicit
-            build_env.compose_env(runenv_from_cpp_info(self._conanfile, build_require.cpp_info))
+
+            if hasattr(self._conanfile, "settings_build"):
+                os_name = self._conanfile.settings_build.get_safe("os")
+            else:
+                os_name = self._conanfile.settings.get_safe("os")
+            build_env.compose_env(runenv_from_cpp_info(self._conanfile, build_require, os_name))
 
         # Requires in host context can also bring some direct buildenv_info
         host_requires = self._conanfile.dependencies.host.topological_sort
@@ -42,7 +64,10 @@ class VirtualBuildEnv:
 
         return build_env
 
-    def generate(self, auto_activate=True):
+    def vars(self, scope="build"):
+        return self.environment().vars(self._conanfile, scope=scope)
+
+    def generate(self, scope="build"):
         build_env = self.environment()
         if build_env:  # Only if there is something defined
-            build_env.save_script("conanbuildenv", auto_activate=auto_activate)
+            build_env.vars(self._conanfile, scope=scope).save_script(self._filename)

@@ -30,9 +30,12 @@ DEFAULT_CONFIGURATION = {
                                          "'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m (/maxCpuCount) when running MSBuild",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
+    "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community",
     "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
     "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
     "tools.ninja:jobs": "Argument for the --jobs parameter when running Ninja generator",
+    "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
+    "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI"
 }
 
 
@@ -78,7 +81,7 @@ class Conf(object):
         """
         self._values.update(other._values)
 
-    def compose(self, other):
+    def compose_conf(self, other):
         """
         :param other: other has less priority than current one
         :type other: Conf

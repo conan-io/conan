@@ -6,6 +6,7 @@ from subprocess import CalledProcessError
 
 from urllib.parse import quote_plus, unquote, urlparse
 
+from conans.cli.output import ConanOutput
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
@@ -40,7 +41,8 @@ class SCMBase(object):
             raise ConanException("Error retrieving {} version: '{}'".format(cls.cmd_command, e))
 
     def __init__(self, folder=None, verify_ssl=True, username=None, password=None,
-                 force_english=True, runner=None, output=None):
+                 force_english=True, runner=None, scoped_output=None):
+
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
@@ -49,7 +51,7 @@ class SCMBase(object):
         self._username = username
         self._password = password
         self._runner = runner
-        self._output = output
+        self._scoped_output = scoped_output or ConanOutput()
 
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
@@ -63,30 +65,33 @@ class SCMBase(object):
 
     def _handle_scp_pattern(self, user, domain, url):
         if self._password:
-            self._output.warn("SCM password cannot be set for scp url, ignoring parameter")
+            self._scoped_output.warning("SCM password cannot be set for scp url, "
+                                          "ignoring parameter")
         if self._username:
-            self._output.warn("SCM username got from URL, ignoring 'username' parameter")
+            self._scoped_output.warning("SCM username got from URL, ignoring 'username' "
+                                        "parameter")
         return "{user}@{domain}:{url}".format(user=user, domain=domain, url=url)
 
     def _handle_url_pattern(self, scheme, url, user=None, password=None):
         if scheme in ["file", "git"]:
             if self._username:
-                self._output.warn("SCM username cannot be set for {} url, ignoring "
-                                  "parameter".format(scheme))
+                self._scoped_output.warning("SCM username cannot be set for {} url, ignoring "
+                                            "parameter".format(scheme))
             if self._password:
-                self._output.warn("SCM password cannot be set for {} url, ignoring "
-                                  "parameter".format(scheme))
+                self._scoped_output.warning("SCM password cannot be set for {} url, ignoring "
+                                            "parameter".format(scheme))
             if user or password:
-                self._output.warn("Username/Password in URL cannot be set for '{}' SCM type, "
-                                  "removing it".format(scheme))
+                self._scoped_output.warning("Username/Password in URL cannot be set for '{}' SCM type, "
+                                            "removing it".format(scheme))
             return "{scheme}://{url}".format(scheme=scheme, url=url)
         elif scheme == "ssh" and self._password:
-            self._output.warn("SCM password cannot be set for ssh url, ignoring parameter")
+            self._scoped_output.warning("SCM password cannot be set for ssh url, "
+                                        "ignoring parameter")
         elif password and self._password:
-            self._output.warn("SCM password got from URL, ignoring 'password' parameter")
+            self._scoped_output.warning("SCM password got from URL, ignoring 'password' parameter")
 
         if user and self._username:
-            self._output.warn("SCM username got from URL, ignoring 'username' parameter")
+            self._scoped_output.warning("SCM username got from URL, ignoring 'username' parameter")
 
         the_user = user or self._username
         the_password = password or self._password
@@ -98,7 +103,8 @@ class SCMBase(object):
                                                                url=url)
         elif the_user:
             if scheme == "ssh" and password:
-                self._output.warn("Password in URL cannot be set for 'ssh' SCM type, removing it")
+                self._scoped_output.warning("Password in URL cannot be set for 'ssh' SCM type, "
+                                            "removing it")
             return "{scheme}://{user}@{url}".format(scheme=scheme, user=quote_plus(the_user),
                                                     url=url)
         else:
@@ -126,7 +132,7 @@ class SCMBase(object):
             match = regex.match(url)
             if match:
                 return handler(**match.groupdict())
-        self._output.warn("URL type not supported, ignoring 'username' and 'password' parameters")
+        self._scoped_output.warning("URL type not supported, ignoring 'username' and 'password' parameters")
         return url
 
     @classmethod
@@ -236,9 +242,9 @@ class Git(SCMBase):
                 grep_stdout = decode_text(out)
                 ret = grep_stdout.splitlines()
         except (CalledProcessError, IOError, OSError) as e:
-            if self._output:
-                self._output.warn("Error checking excluded git files: %s. "
-                                  "Ignoring excluded files" % e)
+            if self._scoped_output:
+                self._scoped_output.warning("Error checking excluded git files: %s. "
+                                            "Ignoring excluded files" % e)
             ret = []
         return ret
 
@@ -441,11 +447,11 @@ class SVN(SCMBase):
                         return False
                 return True
         else:
-            if self._output:
-                self._output.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented,"
-                                  " it is returning not-pristine always because it cannot compare"
-                                  " with checked out version.".format(self.version,
-                                                                      SVN.API_CHANGE_VERSION))
+            if self._scoped_output:
+                self._scoped_output.warning("SVN::is_pristine for SVN v{} (less than {}) is not "
+                                            "implemented, it is returning not-pristine always "
+                                             "because it cannot compare with checked out version."
+                                             .format(self.version, SVN.API_CHANGE_VERSION))
             return False
 
     def get_revision(self):

@@ -50,7 +50,7 @@ def test_install_system_requirements(client):
     client.run("export . Pkg/0.1@lasote/testing")
     client.run(" install Pkg/0.1@lasote/testing --build")
     assert "Running system requirements!!" in client.out
-    client.run("upload * --all --confirm")
+    client.run("upload * --all --confirm -r default")
     client.run('remove "*" -f')
     client.run(" install Pkg/0.1@lasote/testing")
     assert "Running system requirements!!" in client.out
@@ -114,13 +114,13 @@ def test_install_transitive_pattern(client):
     client.run(" install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
     assert "Pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    # Prevalence of alphabetical pattern, opposite order
+    # Prevalence of last match, even first pattern match
     client.run("create . Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
     assert "Pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     client.run(" install Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
     assert "Pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Prevalence and override of alphabetical pattern
     client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
     assert "Pkg/0.1@user/testing: PKG OPTION: header" in client.out
@@ -263,9 +263,9 @@ def test_install_anonymous(client):
     # https://github.com/conan-io/conan/issues/4871
     client.save({"conanfile.py": GenConanfile("Pkg", "0.1")})
     client.run("create . lasote/testing")
-    client.run("upload * --confirm --all")
+    client.run("upload * --confirm --all -r default")
 
-    client2 = TestClient(servers=client.servers, users={})
+    client2 = TestClient(servers=client.servers, inputs=[])
     client2.run("install Pkg/0.1@lasote/testing")
     assert "Pkg/0.1@lasote/testing: Package installed" in client2.out
 
@@ -275,7 +275,7 @@ def test_install_without_ref(client):
     client.run('create .')
     assert "lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
-    client.run('upload lib/1.0 -c --all')
+    client.run('upload lib/1.0 -c --all -r default')
     assert "Uploaded conan recipe 'lib/1.0' to 'default'" in client.out
 
     client.run('remove "*" -f')
@@ -287,7 +287,7 @@ def test_install_without_ref(client):
 
     # Try this syntax to upload too
     client.run('install lib/1.0@')
-    client.run('upload lib/1.0@ -c --all')
+    client.run('upload lib/1.0@ -c --all -r default')
 
 
 def test_install_disabled_remote(client):
@@ -295,12 +295,12 @@ def test_install_disabled_remote(client):
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload * --confirm --all -r default")
     client.run("remote disable default")
-    client.run("install Pkg/0.1@lasote/testing -r default")
-    assert "Pkg/0.1@lasote/testing: Already installed!" in client.out
+    client.run("install Pkg/0.1@lasote/testing -r default", assert_error=True)
+    assert "Remote 'default' is disabled" in client.out
     client.run("remote enable default")
     client.run("install Pkg/0.1@lasote/testing -r default")
     client.run("remote disable default")
-    client.run("install Pkg/0.1@lasote/testing --update", assert_error=True)
+    client.run("install Pkg/0.1@lasote/testing --update -r default", assert_error=True)
     assert "Remote 'default' is disabled" in client.out
 
 
@@ -308,8 +308,7 @@ def test_install_skip_disabled_remote():
     client = TestClient(servers=OrderedDict({"default": TestServer(),
                                              "server2": TestServer(),
                                              "server3": TestServer()}),
-                        users={"default": [("lasote", "mypass")],
-                               "server3": [("lasote", "mypass")]})
+                        inputs=2*["admin", "password"])
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload * --confirm --all -r default")

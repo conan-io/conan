@@ -10,7 +10,7 @@ from parameterized import parameterized
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader, _parse_conanfile
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
@@ -22,7 +22,7 @@ from conans.util.files import save
 class ConanLoaderTest(unittest.TestCase):
 
     def test_inherit_short_paths(self):
-        loader = ConanFileLoader(None, Mock())
+        loader = ConanFileLoader(None)
 
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
@@ -59,7 +59,7 @@ class MyTest(ConanFile):
         profile = Profile()
         profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
-        loader = ConanFileLoader(None, Mock())
+        loader = ConanFileLoader(None)
         recipe = loader.load_consumer(conanfile_path, profile)
         self.assertEqual(recipe.settings.os, "Windows")
 
@@ -150,16 +150,16 @@ OpenCV2:other_option=Cosa
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Mock(), None)
+        loader = ConanFileLoader(None, None)
         ret = loader.load_conanfile_txt(file_path, create_profile())
-        options1 = OptionsValues.loads("""OpenCV:use_python=True
+        options1 = Options.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
 OpenCV2:use_python2=1
 OpenCV2:other_option=Cosa""")
 
         self.assertEqual(len(ret.requires.values()), 3)
         self.assertEqual(ret.generators, ["one", "two"])
-        self.assertEqual(ret.options.values.dumps(), options1.dumps())
+        self.assertEqual(ret.options.dumps(), options1.dumps())
 
         ret.copy = Mock()
         ret.imports()
@@ -174,7 +174,7 @@ OpenCV/2.4.104phil/stable
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Mock(), None)
+        loader = ConanFileLoader(None, None)
         with self.assertRaisesRegex(ConanException, "The reference has too many '/'"):
             loader.load_conanfile_txt(file_path, create_profile())
 
@@ -186,7 +186,7 @@ OpenCV/bin/* - ./bin
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Mock(), None)
+        loader = ConanFileLoader(None, None)
         with self.assertRaisesRegex(ConanException, "is too long. Valid names must contain"):
             loader.load_conanfile_txt(file_path, create_profile())
 
@@ -202,7 +202,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, ex
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Mock(), None)
+        loader = ConanFileLoader(None, None)
         ret = loader.load_conanfile_txt(file_path, create_profile())
 
         ret.copy = Mock()
@@ -223,7 +223,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, ex
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, conanfile_txt)
-        loader = ConanFileLoader(None, Mock(), None)
+        loader = ConanFileLoader(None, None)
         with self.assertRaisesRegex(ConanException,
                                    r"Error while parsing \[options\] in conanfile\n"
                                    "Options should be specified as 'pkg:option=value'"):

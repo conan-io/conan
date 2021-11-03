@@ -5,9 +5,9 @@ import tempfile
 import textwrap
 
 from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
-from conans.client.output import Color
-from conans.client.tools import detected_os, detected_architecture
-from conans.client.tools.win import latest_visual_studio_version_installed
+from conans.cli.output import Color, ConanOutput
+from conans.client.conf.detect_vs import latest_visual_studio_version_installed
+from conans.client.tools import detected_architecture
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
@@ -15,7 +15,8 @@ from conans.util.files import save
 from conans.util.runners import detect_runner
 
 
-def _get_compiler_and_version(output, compiler_exe):
+def _get_compiler_and_version(compiler_exe):
+    output = ConanOutput()
     compiler_id = detect_compiler_id(compiler_exe)
     if compiler_id.name == LLVM_GCC:
         output.error("%s detected as a frontend using apple-clang. "
@@ -27,7 +28,7 @@ def _get_compiler_and_version(output, compiler_exe):
     return None
 
 
-def _gcc_compiler(output, compiler_exe="gcc"):
+def _gcc_compiler(compiler_exe="gcc"):
 
     try:
         if platform.system() == "Darwin":
@@ -46,13 +47,13 @@ def _gcc_compiler(output, compiler_exe="gcc"):
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
         if installed_version:
-            output.success("Found %s %s" % (compiler, installed_version))
+            ConanOutput().success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
     except Exception:
         return None
 
 
-def _clang_compiler(output, compiler_exe="clang"):
+def _clang_compiler(compiler_exe="clang"):
     try:
         ret, out = detect_runner('%s --version' % compiler_exe)
         if ret != 0:
@@ -63,13 +64,13 @@ def _clang_compiler(output, compiler_exe="clang"):
             compiler = "clang"
         installed_version = re.search(r"([0-9]+\.[0-9])", out).group()
         if installed_version:
-            output.success("Found %s %s" % (compiler, installed_version))
+            ConanOutput().success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
     except Exception:
         return None
 
 
-def _sun_cc_compiler(output, compiler_exe="cc"):
+def _sun_cc_compiler(compiler_exe="cc"):
     try:
         _, out = detect_runner('%s -V' % compiler_exe)
         compiler = "sun-cc"
@@ -79,13 +80,13 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
         else:
             installed_version = re.search(r"([0-9]+\.[0-9]+)", out).group()
         if installed_version:
-            output.success("Found %s %s" % (compiler, installed_version))
+            ConanOutput().success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
     except Exception:
         return None
 
 
-def _get_default_compiler(output):
+def _get_default_compiler():
     """
     find the default compiler on the build machine
     search order and priority:
@@ -96,6 +97,7 @@ def _get_default_compiler(output):
     5. gcc executable
     6. clang executable
     """
+    output = ConanOutput()
     v2_mode = get_env(CONAN_V2_MODE_ENVVAR, False)
     cc = os.environ.get("CC", "")
     cxx = os.environ.get("CXX", "")
@@ -103,40 +105,40 @@ def _get_default_compiler(output):
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
         if v2_mode:
-            compiler = _get_compiler_and_version(output, command)
+            compiler = _get_compiler_and_version(command)
             if compiler:
                 return compiler
         else:
             if "clang" in command.lower():
-                return _clang_compiler(output, command)
+                return _clang_compiler(command)
             if "gcc" in command:
-                gcc = _gcc_compiler(output, command)
+                gcc = _gcc_compiler(command)
                 if platform.system() == "Darwin" and gcc is None:
                     output.error("%s detected as a frontend using apple-clang. "
                                  "Compiler not supported" % command)
                 return gcc
             if platform.system() == "SunOS" and command.lower() == "cc":
-                return _sun_cc_compiler(output, command)
+                return _sun_cc_compiler(command)
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
         return None
 
     vs = cc = sun_cc = None
-    if detected_os() == "Windows":
-        version = latest_visual_studio_version_installed(output)
+    if platform.system() == "Windows":
+        version = latest_visual_studio_version_installed()
         vs = ('Visual Studio', version) if version else None
 
     if v2_mode:
-        cc = _get_compiler_and_version(output, "cc")
-        gcc = _get_compiler_and_version(output, "gcc")
-        clang = _get_compiler_and_version(output, "clang")
+        cc = _get_compiler_and_version("cc")
+        gcc = _get_compiler_and_version("gcc")
+        clang = _get_compiler_and_version("clang")
     else:
-        gcc = _gcc_compiler(output)
-        clang = _clang_compiler(output)
+        gcc = _gcc_compiler()
+        clang = _clang_compiler()
         if platform.system() == "SunOS":
-            sun_cc = _sun_cc_compiler(output)
+            sun_cc = _sun_cc_compiler()
 
-    if detected_os() == "Windows":
+    if platform.system() == "Windows":
         return vs or cc or gcc or clang
     elif platform.system() == "Darwin":
         return clang or cc or gcc
@@ -146,7 +148,8 @@ def _get_default_compiler(output):
         return cc or gcc or clang
 
 
-def _get_profile_compiler_version(compiler, version, output):
+def _get_profile_compiler_version(compiler, version):
+    output = ConanOutput()
     tokens = version.split(".")
     major = tokens[0]
     minor = tokens[1] if len(tokens) > 1 else 0
@@ -167,7 +170,8 @@ def _get_profile_compiler_version(compiler, version, output):
     return version
 
 
-def _detect_gcc_libcxx(executable, version, output, profile_name, profile_path):
+def _detect_gcc_libcxx(executable, version, profile_name, profile_path):
+    output = ConanOutput()
     # Assumes a working g++ executable
     new_abi_available = Version(version) >= Version("5.1")
     if not new_abi_available:
@@ -210,8 +214,8 @@ def _detect_gcc_libcxx(executable, version, output, profile_name, profile_path):
                 output.info("gcc C++ standard library: libstdc++")
                 return "libstdc++"
             # Other error, but can't know, lets keep libstdc++11
-            output.warn("compiler.libcxx check error: %s" % out_str)
-            output.warn("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
+            output.warning("compiler.libcxx check error: %s" % out_str)
+            output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
         else:
             output.info("gcc C++ standard library: libstdc++11")
         return "libstdc++11"
@@ -219,13 +223,13 @@ def _detect_gcc_libcxx(executable, version, output, profile_name, profile_path):
         os.chdir(old_path)
 
 
-def _detect_compiler_version(result, output, profile_path):
+def _detect_compiler_version(result, profile_path):
     try:
-        compiler, version = _get_default_compiler(output)
+        compiler, version = _get_default_compiler()
     except Exception:
         compiler, version = None, None
     if not compiler or not version:
-        output.error("Unable to find a working compiler")
+        ConanOutput().error("Unable to find a working compiler")
         return
 
     # Visual Studio 2022 onwards, detect as a new compiler "msvc"
@@ -236,14 +240,14 @@ def _detect_compiler_version(result, output, profile_path):
             version = "19.3"
 
     result.append(("compiler", compiler))
-    result.append(("compiler.version", _get_profile_compiler_version(compiler, version, output)))
+    result.append(("compiler.version", _get_profile_compiler_version(compiler, version)))
 
     # Get compiler C++ stdlib
     if compiler == "apple-clang":
         result.append(("compiler.libcxx", "libc++"))
     elif compiler == "gcc":
         profile_name = os.path.basename(profile_path)
-        libcxx = _detect_gcc_libcxx("g++", version, output, profile_name, profile_path)
+        libcxx = _detect_gcc_libcxx("g++", version, profile_name, profile_path)
         result.append(("compiler.libcxx", libcxx))
     elif compiler == "cc":
         if platform.system() == "SunOS":
@@ -269,11 +273,13 @@ def _detect_compiler_version(result, output, profile_path):
             result.append(("compiler.base.version", "4.4"))
 
 
-def _detect_os_arch(result, output):
+def _detect_os_arch(result):
     from conans.client.conf import get_default_settings_yml
     from conans.model.settings import Settings
 
-    the_os = detected_os()
+    the_os = platform.system()
+    if the_os == "Darwin":
+        the_os = "Macos"
     result.append(("os", the_os))
 
     arch = detected_architecture()
@@ -289,21 +295,21 @@ def _detect_os_arch(result, output):
                     arch = a
                     break
             else:
-                output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
-                             "Please check your conan.conf and settings.yml files" % arch)
+                ConanOutput().error("Your ARM '%s' architecture is probably not defined in "
+                                    "settings.yml\n Please check your conan.conf and settings.yml "
+                                    "files" % arch)
 
         result.append(("arch", arch))
 
 
-def detect_defaults_settings(output, profile_path):
+def detect_defaults_settings(profile_path):
     """ try to deduce current machine values without any constraints at all
-    :param output: Conan Output instance
     :param profile_path: Conan profile file path
     :return: A list with default settings
     """
     result = []
-    _detect_os_arch(result, output)
-    _detect_compiler_version(result, output, profile_path)
+    _detect_os_arch(result)
+    _detect_compiler_version(result, profile_path)
     result.append(("build_type", "Release"))
 
     return result

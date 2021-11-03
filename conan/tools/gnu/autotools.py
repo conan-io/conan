@@ -1,16 +1,21 @@
 import os
+
 from conan.tools.files import load_toolchain_args
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
-from conan.tools.microsoft import unix_path
-from conans.client.build import join_arguments
+from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
+
+
+def join_arguments(args):
+    return " ".join(filter(None, args))
 
 
 class Autotools(object):
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
 
-        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder)
+        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
+                                                     namespace=namespace)
         self._configure_args = toolchain_file_content.get("configure_args")
         self._make_args = toolchain_file_content.get("make_args")
 
@@ -19,16 +24,13 @@ class Autotools(object):
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         """
-        # FIXME: Conan 2.0 Are we keeping the "should_XXX" properties???
-        if not self._conanfile.should_configure:
-            return
-
         source = self._conanfile.source_folder
         if build_script_folder:
             source = os.path.join(self._conanfile.source_folder, build_script_folder)
 
         configure_cmd = "{}/configure".format(source)
-        configure_cmd = unix_path(self._conanfile, configure_cmd)
+        subsystem = deduce_subsystem(self._conanfile, scope="build")
+        configure_cmd = subsystem_path(subsystem, configure_cmd)
         cmd = "{} {}".format(configure_cmd, self._configure_args)
         self._conanfile.output.info("Calling:\n > %s" % cmd)
         self._conanfile.run(cmd)
@@ -46,8 +48,6 @@ class Autotools(object):
         self._conanfile.run(command)
 
     def install(self):
-        if not self._conanfile.should_install:
-            return
         self.make(target="install")
 
     def _use_win_mingw(self):

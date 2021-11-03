@@ -7,12 +7,13 @@ from collections import namedtuple
 import pytest
 from mock import mock
 
+from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.test.utils.mocks import TestBufferConanOutput
-
-
 # TODO: 2.0: add some unittests for the new cache on getting the fields that replace the metadata
+from conans.test.utils.mocks import RedirectedTestOutput
+from conans.test.utils.tools import redirect_output
+
 
 class UpdateRevisionInMetadataTests(unittest.TestCase):
 
@@ -21,7 +22,6 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
         # FIXME: 2.0: PackageCacheLayout does not exist anymore
         # self.package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref,
         #                                          short_paths=False, no_lock=True)
-        self.output = TestBufferConanOutput()
 
     @pytest.mark.xfail(reason="cache2.0")
     def test_scm_warn_not_pristine(self):
@@ -29,10 +29,11 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
                         return_value=("revision", "git", False)):
             path = None
             digest = namedtuple("Digest", "summary_hash")
-            _update_revision_in_metadata(self.package_layout, self.output,
-                                         path, digest, "scm")
+            output = RedirectedTestOutput()
+            with redirect_output(output):
+                _update_revision_in_metadata(self.package_layout, ConanOutput(), path, digest, "scm")
             self.assertIn("WARN: Repo status is not pristine: there might be modified files",
-                          self.output)
+                          output.getvalue())
 
     @pytest.mark.xfail(reason="cache2.0")
     def test_scm_behavior(self):
@@ -42,10 +43,12 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
         path = None
         with mock.patch("conans.client.cmd.export._detect_scm_revision",
                         return_value=("1234", "git", True)):
-            rev = _update_revision_in_metadata(self.package_layout, self.output,
+            output = RedirectedTestOutput()
+            with redirect_output(output):
+                rev = _update_revision_in_metadata(self.package_layout, ConanOutput(),
                                                path, digest, revision_mode)
         self.assertEqual(rev, "1234")
-        self.assertIn("Using git commit as the recipe revision", self.output)
+        self.assertIn("Using git commit as the recipe revision", output.getvalue())
 
     @pytest.mark.xfail(reason="cache2.0")
     def test_hash_behavior(self):

@@ -19,8 +19,7 @@ class ExportPkgTest(unittest.TestCase):
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": None},
-                            requester_class=None,
-                            users={"default": [("lasote", "mypass")]})
+                            requester_class=None, inputs=["admin", "password"])
 
         client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("install .")
@@ -29,8 +28,7 @@ class ExportPkgTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Build-requires are expanded now, so this is expected to fail atm")
     def test_dont_touch_server_build_require(self):
         client = TestClient(servers={"default": None},
-                            requester_class=None,
-                            users={"default": [("lasote", "mypass")]})
+                            requester_class=None, inputs=["admin", "password"])
         profile = dedent("""
             [build_requires]
             some/other@pkg/notexists
@@ -106,7 +104,7 @@ class HelloPythonConan(ConanFile):
         conaninfo = load(os.path.join(latest_package, "conaninfo.txt"))
         self.assertEqual(2, conaninfo.count("os=Windows"))
         manifest = load(os.path.join(latest_package, "conanmanifest.txt"))
-        self.assertIn("conaninfo.txt: bc02e11c87c7dbe64952b85f0167c142", manifest)
+        self.assertIn("conaninfo.txt:", manifest)
         self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
 
     def test_develop(self):
@@ -156,7 +154,7 @@ class HelloPythonConan(ConanFile):
             from conan.tools.env import VirtualBuildEnv
             class HelloPythonConan(ConanFile):
                 def package(self):
-                    build_env = VirtualBuildEnv(self).environment()
+                    build_env = VirtualBuildEnv(self).vars()
                     with build_env.apply():
                         self.output.info("ENV-VALUE: %s!!!" % os.getenv("MYCUSTOMVAR"))
             """)
@@ -219,7 +217,8 @@ class TestConan(ConanFile):
                      "lib/bye.txt": ""}, clean_first=True)
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#f99320295379ced53f338446912a2cff:{package_id}#ca390c141f4dfd77f5ffd03eca67b2e0")
+        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
+        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#f99320295379ced53f338446912a2cff:{package_id}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -242,7 +241,8 @@ class TestConan(ConanFile):
                      "build/lib/hello.lib": "My Lib"})
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#cd0221af3af8be9e3d7e7b6ae56ce0b6:{package_id}#b1205438a95acf45b1814573e48f6c50")
+        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
+        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#cd0221af3af8be9e3d7e7b6ae56ce0b6:{package_id}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
@@ -269,7 +269,8 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build "
                    "--source-folder=src")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#c05196f9787f3f375005b1b9772ab828:{package_id}#ca390c141f4dfd77f5ffd03eca67b2e0")
+        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
+        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#c05196f9787f3f375005b1b9772ab828:{package_id}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -353,6 +354,7 @@ class TestConan(ConanFile):
         cmakeinfo = client.load("Hello1-release-data.cmake")
         self.assertIn("set(Hello1_LIBS_RELEASE mycoollib)", cmakeinfo)
 
+    @pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
     def test_export_pkg_json(self):
 
         def _check_json_output_no_folder():
@@ -467,7 +469,8 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
-        pref = PackageReference.loads(f"Hello/0.1#7824a75809349a3700283a00e63086ee:{NO_SETTINGS_PACKAGE_ID}#44e87ea1a65a899b6291991959a22b62")
+        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
+        pref = PackageReference.loads(f"Hello/0.1#7824a75809349a3700283a00e63086ee:{NO_SETTINGS_PACKAGE_ID}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
@@ -530,3 +533,17 @@ def test_build_policy_never():
     client.run("install pkg/1.0@ --build")
     assert "pkg/1.0:{} - Cache".format(NO_SETTINGS_PACKAGE_ID) in client.out
     assert "pkg/1.0: Calling build()" not in client.out
+
+
+def test_build_policy_never_missing():
+    # https://github.com/conan-io/conan/issues/9798
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_class_attribute('build_policy = "never"'),
+                 "consumer.txt": "[requires]\npkg/1.0"})
+    client.run("export . pkg/1.0@")
+
+    client.run("install pkg/1.0@ --build", assert_error=True)
+    assert "ERROR: Missing binary: pkg/1.0" in client.out
+
+    client.run("install pkg/1.0@ --build=missing", assert_error=True)
+    assert "ERROR: Missing binary: pkg/1.0" in client.out

@@ -1,5 +1,4 @@
 import os
-import platform
 
 import pytest
 import textwrap
@@ -9,7 +8,6 @@ from conans.test.functional.toolchains.meson._base import TestMesonBase
 
 
 @pytest.mark.tool_pkg_config
-@pytest.mark.skipif(platform.system() == "Windows", reason="Doesn't work in Windows")
 class MesonPkgConfigTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
     from conans import ConanFile, tools
@@ -38,8 +36,8 @@ class MesonPkgConfigTest(TestMesonBase):
     """)
 
     def test_reuse(self):
-        self.t.run("new hello/0.1 -s")
-        self.t.run("create . hello/0.1@ %s" % self._settings_str)
+        self.t.run("new hello/0.1 --template=cmake_lib")
+        self.t.run("create . hello/0.1@ -tf=None")
 
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
@@ -50,7 +48,7 @@ class MesonPkgConfigTest(TestMesonBase):
                     clean_first=True)
 
         # Build in the cache
-        self.t.run("install . %s" % self._settings_str)
+        self.t.run("install .")
 
         self.t.run("build .")
         self.t.run_command(os.path.join("build", "demo"))

@@ -5,20 +5,18 @@ import unittest
 
 
 from conans.client import tools
-from conans.client.runner import ConanRunner
 from conans.model.ref import ConanFileReference
 from conans.paths import RUN_LOG_NAME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load
 
 
 class ConanTraceTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer()
+        test_server = TestServer(users={"lasote": "mypass"})
         self.servers = {"default": test_server}
 
     def test_run_log_file_packaged(self):
@@ -39,20 +37,23 @@ class ConanTraceTest(unittest.TestCase):
             """ % RUN_LOG_NAME)
 
         def _install_a_package(print_commands_to_output, generate_run_log_file):
-            out = TestBufferConanOutput()
-            runner = ConanRunner(print_commands_to_output, generate_run_log_file,
-                                 log_run_to_output=True, output=out)
-
-            client = TestClient(servers=self.servers,
-                                users={"default": [("lasote", "mypass")]},
-                                runner=runner)
+            client = TestClient(servers=self.servers)
+            conan_conf = textwrap.dedent("""
+                                        [storage]
+                                        path = ./data
+                                        [log]
+                                        print_run_commands={}
+                                        run_to_file={}
+                                        run_to_output=True
+                                    """.format(print_commands_to_output, generate_run_log_file))
+            client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": base})
             client.run("create . lasote/stable")
             pref = client.get_latest_prev(ref)
             package_dir = client.get_latest_pkg_layout(pref).package()
             log_file_packaged_ = os.path.join(package_dir, RUN_LOG_NAME)
-            out = "\n".join([str(out), str(client.out)])
+            out = "\n".join([str(client.out), str(client.out)])
             return log_file_packaged_, out
 
         log_file_packaged, output = _install_a_package(False, True)
@@ -74,18 +75,17 @@ class ConanTraceTest(unittest.TestCase):
         self.assertFalse(os.path.exists(log_file_packaged))
 
     def test_trace_actions(self):
-        client = TestClient(servers=self.servers,
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=self.servers)
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
                          "file.txt": "content"})
-            client.run("user lasote -p mypass -r default")
+            client.run("remote login default lasote -p mypass")
             client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(ref))
-            client.run("upload %s --all" % str(ref))
+            client.run("upload %s --all -r default" % str(ref))
 
         traces = load(trace_file)
         self.assertNotIn("mypass", traces)
@@ -93,29 +93,6 @@ class ConanTraceTest(unittest.TestCase):
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
-        without_rest_api = [it for it in actions if "REST_API_CALL" not in it]
-        assert len(without_rest_api) == 11
-        for trace in actions:
-            doc = json.loads(trace)
-            self.assertIn("_action", doc)  # Valid jsons
-
-        print(without_rest_api)
-        self.assertEqual(json.loads(without_rest_api[0])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[0])["name"], "authenticate")
-        self.assertEqual(json.loads(without_rest_api[2])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[2])["name"], "export")
-        self.assertEqual(json.loads(without_rest_api[3])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[3])["name"], "install_reference")
-        self.assertEqual(json.loads(without_rest_api[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
-        self.assertEqual(json.loads(without_rest_api[4])["_id"], "Hello0/0.1@lasote/stable")
-        self.assertEqual(json.loads(without_rest_api[5])["_action"], "PACKAGE_BUILT_FROM_SOURCES")
-        self.assertEqual(json.loads(without_rest_api[6])["_action"], "COMMAND")
-        self.assertEqual(json.loads(without_rest_api[6])["name"], "upload")
-        self.assertEqual(json.loads(without_rest_api[7])["_action"], "ZIP")
-        self.assertEqual(json.loads(without_rest_api[8])["_action"], "UPLOADED_RECIPE")
-        self.assertEqual(json.loads(without_rest_api[9])["_action"], "ZIP")
-        self.assertEqual(json.loads(without_rest_api[10])["_action"], "UPLOADED_PACKAGE")
-
         num_put = len([it for it in actions if "REST_API_CALL" in it and "PUT" in it])
         self.assertEqual(num_put, 6)   # 3 files the recipe 3 files the package
 
@@ -126,7 +103,7 @@ class ConanTraceTest(unittest.TestCase):
             self.assertEqual(num_post, 2)  # 2 get urls
 
         num_get = len([it for it in actions if "REST_API_CALL" in it and "GET" in it])
-        self.assertEqual(num_get, 10)
+        self.assertEqual(num_get, 8)
 
         # Check masked signature
         for action in actions:

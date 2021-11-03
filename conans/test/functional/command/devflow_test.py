@@ -17,7 +17,6 @@ class ConanFileToolsTest(ConanFile):
     name = "Pkg"
     version = "0.1"
     exports_sources = "*"
-    generators = "cmake"
 
     def build(self):
         self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
@@ -115,7 +114,6 @@ import os
 class ConanFileToolsTest(ConanFile):
     name = "Pkg"
     version = "0.1"
-    generators = "cmake"
 
     def source(self):
         save("file.h", "file_h_contents!")
@@ -206,24 +204,3 @@ class DevOutSourceFlowTest(unittest.TestCase):
         pref = client.get_latest_prev(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
-
-    @pytest.mark.tool_compiler
-    def test_build_local_different_folders(self):
-        # Real build, needed to ensure that the generator is put in the correct place and
-        # cmake finds it, using an install_folder different from build_folder
-        client = TestClient()
-        client.run("new lib/1.0")
-        # FIXME: this test, so it doesn't need to clone from github
-        client.run("source . --source-folder src")
-
-        # Patch the CMakeLists to include the generator file from a different folder
-        install_dir = os.path.join(client.current_folder, "install_x86_64")
-        tools.replace_in_file(os.path.join(client.current_folder, "src", "hello", "CMakeLists.txt"),
-                              "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake",
-                              '"%s/conanbuildinfo.cmake"' % install_dir.replace("\\", "/"),
-                              output=client.out)
-
-        client.run("install . --install-folder install_x86_64 -s arch=x86_64")
-        client.run("build . --build-folder build_x86_64 --install-folder '%s' "
-                   "--source-folder src" % install_dir)
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_x86_64", "lib")))

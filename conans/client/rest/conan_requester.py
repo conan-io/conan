@@ -21,10 +21,10 @@ logging.captureWarnings(True)
 
 class ConanRequester(object):
 
-    def __init__(self, config, http_requester=None):
-        if http_requester:
-            self._http_requester = http_requester
-        else:
+    def __init__(self, config):
+
+        # FIXME: Trick for testing when requests is mocked
+        if hasattr(requests, "Session"):
             self._http_requester = requests.Session()
             adapter = HTTPAdapter(max_retries=self._get_retries(config.retry))
 
@@ -78,7 +78,7 @@ class ConanRequester(object):
         }
         return urllib3.Retry(
             total=retry,
-            backoff_factor = 0.05,
+            backoff_factor=0.05,
             status_forcelist=retry_status_code_set
         )
 
@@ -109,8 +109,7 @@ class ConanRequester(object):
                 " ".join([platform.system(), platform.release()]),
                 "Python "+platform.python_version(),
                 platform.machine()])
-            user_agent = "Conan/%s (%s) %s" % (client_version, platform_info,
-                                               requests.utils.default_user_agent())
+            user_agent = "Conan/%s (%s)" % (client_version, platform_info)
             kwargs["headers"]["User-Agent"] = user_agent
 
         return kwargs
@@ -138,7 +137,7 @@ class ConanRequester(object):
         try:
             t1 = time.time()
             all_kwargs = self._add_kwargs(url, kwargs)
-            tmp = getattr(self._http_requester, method)(url, **all_kwargs)
+            tmp = getattr(requests, method)(url, **all_kwargs)
             duration = time.time() - t1
             log_client_rest_api_call(url, method.upper(), duration, all_kwargs.get("headers"))
             return tmp

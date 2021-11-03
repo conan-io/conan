@@ -1,10 +1,8 @@
 import fnmatch
 from collections import OrderedDict
 
-from conans.client.output import Color
-from conans.model.options import OptionsValues
+from conans.cli.output import Color
 from conans.model.ref import ConanFileReference
-from conans.util.conan_v2_mode import conan_v2_error
 
 
 class Printer(object):
@@ -23,22 +21,10 @@ class Printer(object):
 
     def print_inspect(self, inspect, raw=False):
         for k, v in inspect.items():
-            if k == "default_options":
-                conan_v2_error("Declare 'default_options' as a dictionary", not isinstance(v, dict))
-
-                if isinstance(v, str):
-                    v = OptionsValues.loads(v)
-                elif isinstance(v, tuple):
-                    v = OptionsValues(v)
-                elif isinstance(v, list):
-                    v = OptionsValues(tuple(v))
-                elif isinstance(v, dict):
-                    v = OptionsValues(v)
-
             if raw:
                 self._out.write(str(v))
             else:
-                if isinstance(v, (dict, OptionsValues)):
+                if isinstance(v, dict):
                     self._out.writeln("%s:" % k)
                     for ok, ov in sorted(v.items()):
                         self._out.writeln("    %s: %s" % (ok, ov))
@@ -81,14 +67,6 @@ class Printer(object):
                 _print("build_folder")
                 _print("package_folder")
 
-            if show("remote") and is_ref:
-                if "remote" in it:
-                    self._out.writeln("    Remote: %s=%s" % (it["remote"]["name"],
-                                                             it["remote"]["url"]),
-                                      Color.BRIGHT_GREEN)
-                else:
-                    self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
-
             _print("url", name="URL")
             _print("homepage", name="Homepage")
 
@@ -112,12 +90,6 @@ class Printer(object):
             _print("revision", name="Revision", color=None)
             _print("package_revision", name="Package revision", color=None)
             _print("binary", name="Binary", color=None)
-
-            if show("binary_remote") and is_ref:
-                if "binary_remote" in it:
-                    self._out.writeln("    Binary remote: %s" % it["binary_remote"])
-                else:
-                    self._out.writeln("    Binary remote: None")
 
             _print("creation_date", show_field="date", name="Creation date")
 
@@ -214,7 +186,7 @@ class Printer(object):
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings.items(), separator="=")
-        self._print_profile_section("options", profile.options.as_list(), separator="=")
+        self._out.writeln("[options]\n"+profile.options.dumps())
         self._print_profile_section("conf", profile.conf.as_list(), separator="=")
         self._print_profile_section("build_requires", [(key, ", ".join(str(val) for val in values))
                                                        for key, values in
@@ -243,7 +215,7 @@ class Printer(object):
         indent_text = ' ' * Printer.INDENT_SPACES * indent
         if value is not None:
             value_color = Color.BRIGHT_WHITE
-            self._out.write('%s%s%s' % (indent_text, text, separator), text_color)
-            self._out.writeln(value, value_color)
+            self._out.write('%s%s%s' % (indent_text, text, separator), fg=text_color)
+            self._out.writeln(value, fg=value_color)
         else:
             self._out.writeln('%s%s' % (indent_text, text), text_color)

@@ -15,7 +15,7 @@ def client():
     conanfile = GenConanfile("MinGWBuild", "0.1").with_settings("compiler")
     build_msg = """
     def build(self):
-        self.output.warn("COMPILER=> %s %s" % (self.name, str(self.settings.compiler)))
+        self.output.warning("COMPILER=> %s %s" % (self.name, str(self.settings.compiler)))
     """
     client.save({"conanfile.py": str(conanfile) + build_msg})
     client.run("export . lasote/testing")

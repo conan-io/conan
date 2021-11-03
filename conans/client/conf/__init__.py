@@ -23,19 +23,25 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             version: ["5.0", "6.0", "7.0", "8.0"]
         Linux:
         Macos:
-            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "13.0"]
+            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
             sdk: [None, "macosx"]
             subsystem: [None, catalyst]
         Android:
             api_level: ANY
         iOS:
-            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6"]
+            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3",
+                      "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
+                      "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6", "13.7",
+                      "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", "14.8", "15.0", "15.1"]
             sdk: [None, "iphoneos", "iphonesimulator"]
         watchOS:
-            version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1"]
+            version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
+                      "7.0", "7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.0", "8.1"]
             sdk: [None, "watchos", "watchsimulator"]
         tvOS:
-            version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0"]
+            version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
+                      "13.0", "13.2", "13.3", "13.4", "14.0", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7",
+                      "15.0", "15.1"]
             sdk: [None, "appletvos", "appletvsimulator"]
         FreeBSD:
         SunOS:
@@ -45,7 +51,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         Emscripten:
         Neutrino:
             version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
-    arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
+    arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
     compiler:
         sun-cc:
             version: ["5.10", "5.11", "5.12", "5.13", "5.14", "5.15"]
@@ -89,11 +95,12 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             cppstd: [98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
             runtime: [None, MD, MT, MTd, MDd]
         apple-clang: &apple_clang
-            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0"]
+            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13.0"]
             libcxx: [libstdc++, libc++]
             cppstd: [98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
         intel:
             version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
+            update: [None, ANY]
             base:
                 gcc:
                     <<: *gcc
@@ -103,6 +110,14 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                     <<: *visual_studio
                 apple-clang:
                     <<: *apple_clang
+        intel-cc:
+            version: ["2021.1", "2021.2", "2021.3"]
+            update: [None, ANY]
+            mode: ["icx", "classic", "dpcpp"]
+            libcxx: [None, libstdc++, libstdc++11, libc++]
+            cppstd: [None, 98, gnu98, 03, gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+            runtime: [None, static, dynamic]
+            runtime_type: [None, Debug, Release]
         qcc:
             version: ["4.4", "5.4", "8.3"]
             libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
@@ -136,35 +151,18 @@ _t_default_client_conf = Template(textwrap.dedent("""
     compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
     sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
     request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
-    default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
+
     # retry = 2                             # environment CONAN_RETRY
     # retry_wait = 5                        # environment CONAN_RETRY_WAIT (seconds)
     # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
-    # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
     # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
     # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
     # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
     # cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
-    # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
+
     # non_interactive = False             # environment CONAN_NON_INTERACTIVE
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
 
-    # conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
-    # conan_cmake_program = cmake         # environment CONAN_CMAKE_PROGRAM (overrides the make program used in CMake.cmake_program)
-
-    # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
-    # cmake generator platform            # environment CONAN_CMAKE_GENERATOR_PLATFORM
-    # http://www.vtk.org/Wiki/CMake_Cross_Compiling
-    # cmake_toolchain_file                # environment CONAN_CMAKE_TOOLCHAIN_FILE
-    # cmake_system_name                   # environment CONAN_CMAKE_SYSTEM_NAME
-    # cmake_system_version                # environment CONAN_CMAKE_SYSTEM_VERSION
-    # cmake_system_processor              # environment CONAN_CMAKE_SYSTEM_PROCESSOR
-    # cmake_find_root_path                # environment CONAN_CMAKE_FIND_ROOT_PATH
-    # cmake_find_root_path_mode_program   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
-    # cmake_find_root_path_mode_library   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
-    # cmake_find_root_path_mode_include   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
-
-    # msbuild_verbosity = minimal         # environment CONAN_MSBUILD_VERBOSITY
 
     # cpu_count = 1             # environment CONAN_CPU_COUNT
 
@@ -176,8 +174,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
 
     # config_install_interval = 1h
     # required_conan_version = >=1.26
-
-    # keep_python_files = False           # environment CONAN_KEEP_PYTHON_FILES
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
@@ -228,30 +224,11 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_REQUEST_TIMEOUT", "request_timeout", None),
             ("CONAN_RETRY", "retry", None),
             ("CONAN_RETRY_WAIT", "retry_wait", None),
-            ("CONAN_VS_INSTALLATION_PREFERENCE", "vs_installation_preference", None),
             ("CONAN_CPU_COUNT", "cpu_count", None),
             ("CONAN_READ_ONLY_CACHE", "read_only_cache", None),
             ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
-            # http://www.vtk.org/Wiki/CMake_Cross_Compiling
-            ("CONAN_CMAKE_GENERATOR", "cmake_generator", None),
-            ("CONAN_CMAKE_GENERATOR_PLATFORM", "cmake_generator_platform", None),
-            ("CONAN_CMAKE_TOOLCHAIN_FILE", "cmake_toolchain_file", None),
-            ("CONAN_CMAKE_SYSTEM_NAME", "cmake_system_name", None),
-            ("CONAN_CMAKE_SYSTEM_VERSION", "cmake_system_version", None),
-            ("CONAN_CMAKE_SYSTEM_PROCESSOR", "cmake_system_processor", None),
-            ("CONAN_CMAKE_FIND_ROOT_PATH", "cmake_find_root_path", None),
-            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM", "cmake_find_root_path_mode_program", None),
-            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY", "cmake_find_root_path_mode_library", None),
-            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE", "cmake_find_root_path_mode_include", None),
-            ("CONAN_BASH_PATH", "bash_path", None),
-            ("CONAN_MAKE_PROGRAM", "conan_make_program", None),
-            ("CONAN_CMAKE_PROGRAM", "conan_cmake_program", None),
             ("CONAN_TEMP_TEST_FOLDER", "temp_test_folder", False),
-            ("CONAN_SKIP_VS_PROJECTS_UPGRADE", "skip_vs_projects_upgrade", False),
-            ("CONAN_MSBUILD_VERBOSITY", "msbuild_verbosity", None),
             ("CONAN_CACERT_PATH", "cacert_path", None),
-            ("CONAN_DEFAULT_PACKAGE_ID_MODE", "default_package_id_mode", None),
-            ("CONAN_KEEP_PYTHON_FILES", "keep_python_files", False),
             # ("CONAN_DEFAULT_PROFILE_PATH", "default_profile", DEFAULT_PROFILE_NAME),
         ],
         "hooks": [
@@ -263,6 +240,7 @@ class ConanClientConfigParser(ConfigParser, object):
         super(ConanClientConfigParser, self).__init__(allow_no_value=True)
         self.read(filename)
         self.filename = filename
+        self._non_interactive = None
 
     @property
     def env_vars(self):
@@ -363,25 +341,6 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("Invalid configuration, missing %s" % varname)
 
     @property
-    def default_profile(self):
-        ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
-        if ret:
-            if not os.path.isabs(ret):
-                from conans.client.cache.cache import PROFILES_FOLDER
-                profiles_folder = os.path.join(os.path.dirname(self.filename), PROFILES_FOLDER)
-                ret = os.path.abspath(os.path.join(profiles_folder, ret))
-
-            if not os.path.exists(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' "
-                                     "must point to an existing profile file.")
-            return ret
-        else:
-            try:
-                return unquote(self.get_item("general.default_profile"))
-            except ConanException:
-                return DEFAULT_PROFILE_NAME
-
-    @property
     def cache_no_locks(self):
         try:
             return get_env("CONAN_CACHE_NO_LOCKS", False)
@@ -421,53 +380,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return download_cache
         except ConanException:
             return None
-
-    @property
-    def default_package_id_mode(self):
-        try:
-            default_package_id_mode = get_env("CONAN_DEFAULT_PACKAGE_ID_MODE")
-            if default_package_id_mode is None:
-                default_package_id_mode = self.get_item("general.default_package_id_mode")
-            return default_package_id_mode
-        except ConanException:
-            return "semver_direct_mode"
-
-    @property
-    def default_python_requires_id_mode(self):
-        try:
-            default_package_id_mode = get_env("CONAN_DEFAULT_PYTHON_REQUIRES_ID_MODE")
-            if default_package_id_mode is None:
-                default_package_id_mode = self.get_item("general.default_python_requires_id_mode")
-        except ConanException:
-            return "minor_mode"
-        return default_package_id_mode
-
-    @property
-    def storage_path(self):
-        # Try with CONAN_STORAGE_PATH
-        result = get_env('CONAN_STORAGE_PATH', None)
-        if not result:
-            # Try with conan.conf "path"
-            try:
-                # TODO: Fix this mess for Conan 2.0
-                env_conan_user_home = os.getenv("CONAN_USER_HOME")
-                current_dir = os.path.dirname(self.filename)
-                # if env var is declared, any specified path will be relative to CONAN_USER_HOME
-                # even with the ~/
-                result = dict(self._get_conf("storage"))["path"]
-                if result.startswith("."):
-                    result = os.path.abspath(os.path.join(current_dir, result))
-                elif result[:2] == "~/":
-                    if env_conan_user_home:
-                        result = os.path.join(env_conan_user_home, result[2:])
-            except (KeyError, ConanException):  # If storage not defined, to return None
-                pass
-
-        if result:
-            result = conan_expand_user(result)
-            if not os.path.isabs(result):
-                raise ConanException("Conan storage path has to be an absolute path")
-        return result
 
     @property
     def proxies(self):
@@ -550,13 +462,22 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def non_interactive(self):
-        try:
-            non_interactive = get_env("CONAN_NON_INTERACTIVE")
-            if non_interactive is None:
-                non_interactive = self.get_item("general.non_interactive")
-            return non_interactive.lower() in ("1", "true")
-        except ConanException:
-            return False
+        if self._non_interactive is None:
+            try:
+                non_interactive = get_env("CONAN_NON_INTERACTIVE")
+                if non_interactive is None:
+                    non_interactive = self.get_item("general.non_interactive")
+                self._non_interactive = non_interactive.lower() in ("1", "true")
+            except ConanException:
+                self._non_interactive = False
+        return self._non_interactive
+
+    @non_interactive.setter
+    def non_interactive(self, value):
+        # Made this because uploads in parallel need a way to disable the interactive
+        # FIXME: Can't we fail in the command line directly if no interactive?
+        #        see uploader.py  if parallel_upload:
+        self._non_interactive = value
 
     @property
     def logging_level(self):

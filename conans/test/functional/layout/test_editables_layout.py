@@ -40,7 +40,6 @@ def test_cpp_info_editable():
 
         # when editable: This one WONT be discarded as has not been declared in the editables layout
         self.cpp_info.cflags.append("my_c_flag")
-
      """
 
     client.save({"conanfile.py": conan_hello})
@@ -56,13 +55,13 @@ def test_cpp_info_editable():
         requires = "hello/1.0"
         def build(self):
             info = self.dependencies["hello"].cpp_info
-            self.output.warn("**includedirs:{}**".format(info.includedirs))
-            self.output.warn("**libdirs:{}**".format(info.libdirs))
-            self.output.warn("**builddirs:{}**".format(info.builddirs))
-            self.output.warn("**frameworkdirs:{}**".format(info.frameworkdirs))
-            self.output.warn("**libs:{}**".format(info.libs))
-            self.output.warn("**cxxflags:{}**".format(info.cxxflags))
-            self.output.warn("**cflags:{}**".format(info.cflags))
+            self.output.warning("**includedirs:{}**".format(info.includedirs))
+            self.output.warning("**libdirs:{}**".format(info.libdirs))
+            self.output.warning("**builddirs:{}**".format(info.builddirs))
+            self.output.warning("**frameworkdirs:{}**".format(info.frameworkdirs))
+            self.output.warning("**libs:{}**".format(info.libs))
+            self.output.warning("**cxxflags:{}**".format(info.cxxflags))
+            self.output.warning("**cflags:{}**".format(info.cflags))
     """)
     # When hello is not editable
     client2 = TestClient(client.cache_folder)
@@ -160,19 +159,19 @@ def test_cpp_info_components_editable():
         requires = "hello/1.0"
         def build(self):
             info = self.dependencies["hello"].cpp_info
-            self.output.warn("**FOO includedirs:{}**".format(info.components["foo"].includedirs))
-            self.output.warn("**FOO libdirs:{}**".format(info.components["foo"].libdirs))
-            self.output.warn("**FOO builddirs:{}**".format(info.components["foo"].builddirs))
-            self.output.warn("**FOO libs:{}**".format(info.components["foo"].libs))
-            self.output.warn("**FOO cxxflags:{}**".format(info.components["foo"].cxxflags))
-            self.output.warn("**FOO cflags:{}**".format(info.components["foo"].cflags))
+            self.output.warning("**FOO includedirs:{}**".format(info.components["foo"].includedirs))
+            self.output.warning("**FOO libdirs:{}**".format(info.components["foo"].libdirs))
+            self.output.warning("**FOO builddirs:{}**".format(info.components["foo"].builddirs))
+            self.output.warning("**FOO libs:{}**".format(info.components["foo"].libs))
+            self.output.warning("**FOO cxxflags:{}**".format(info.components["foo"].cxxflags))
+            self.output.warning("**FOO cflags:{}**".format(info.components["foo"].cflags))
 
-            self.output.warn("**VAR includedirs:{}**".format(info.components["var"].includedirs))
-            self.output.warn("**VAR libdirs:{}**".format(info.components["var"].libdirs))
-            self.output.warn("**VAR builddirs:{}**".format(info.components["var"].builddirs))
-            self.output.warn("**VAR libs:{}**".format(info.components["var"].libs))
-            self.output.warn("**VAR cxxflags:{}**".format(info.components["var"].cxxflags))
-            self.output.warn("**VAR cflags:{}**".format(info.components["var"].cflags))
+            self.output.warning("**VAR includedirs:{}**".format(info.components["var"].includedirs))
+            self.output.warning("**VAR libdirs:{}**".format(info.components["var"].libdirs))
+            self.output.warning("**VAR builddirs:{}**".format(info.components["var"].builddirs))
+            self.output.warning("**VAR libs:{}**".format(info.components["var"].libs))
+            self.output.warning("**VAR cxxflags:{}**".format(info.components["var"].cxxflags))
+            self.output.warning("**VAR cflags:{}**".format(info.components["var"].cflags))
     """)
     # When hello is not editable
     client2 = TestClient(client.cache_folder)
@@ -180,7 +179,7 @@ def test_cpp_info_components_editable():
     client2.run("create . lib/1.0@")
     assert "**FOO includedirs:['package_include_foo']**" in client2.out
     assert "**FOO libdirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**FOO builddirs:[]**" in client2.out # The components don't have default dirs
+    assert "**FOO builddirs:[]**" in client2.out  # The components don't have default dirs
     assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in client2.out
     assert "**FOO cxxflags:['my_cxx_flag2_foo']**" in client2.out
     assert "**FOO cflags:['my_c_flag_foo']**" in client2.out
@@ -214,4 +213,3 @@ def test_cpp_info_components_editable():
     assert "**VAR libs:['hello_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
-

@@ -237,7 +237,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         client.run("export . pkg/0.1@")
         self.assertIn("pkg/0.1 export_sources() method: Copied 1 '.txt' file: myfile.txt",
                       client.out)
-        client.run("upload pkg/0.1@")
+        client.run("upload pkg/0.1@ -r default")
         client.run("remove * -f")
         client.run("install pkg/0.1@ --build")
         self.assertIn("Downloading conan_sources.tgz", client.out)
