@@ -14,7 +14,6 @@ from conans.model.ref import ConanFileReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
-from conans.util.log import logger
 
 
 class ProfileLoader:
@@ -55,7 +54,8 @@ class ProfileLoader:
         result.process_settings(self._cache)
         return result
 
-    def load_profile(self, profile_name, cwd):
+    def load_profile(self, profile_name, cwd=None):
+        cwd = cwd or os.getcwd()
         profile, _ = self._load_profile(profile_name, cwd)
         return profile
 
@@ -66,7 +66,6 @@ class ProfileLoader:
         """
 
         profile_path = self.get_profile_path(profile_name, cwd)
-        logger.debug("PROFILE LOAD: %s" % profile_path)
         text = load(profile_path)
 
         if profile_name.endswith(".jinja"):
@@ -117,7 +116,6 @@ class ProfileLoader:
             raise ConanException("Error parsing the profile text file: %s" % str(exc))
 
     def get_profile_path(self, profile_name, cwd, exists=True):
-        default_folder = self._cache.profiles_path
 
         def valid_path(_profile_path, _profile_name=None):
             if exists and not os.path.isfile(_profile_path):
@@ -131,6 +129,7 @@ class ProfileLoader:
             profile_path = os.path.abspath(os.path.join(cwd, profile_name))
             return valid_path(profile_path, profile_name)
 
+        default_folder = self._cache.profiles_path
         if not os.path.exists(default_folder):
             mkdir(default_folder)
         profile_path = os.path.join(default_folder, profile_name)

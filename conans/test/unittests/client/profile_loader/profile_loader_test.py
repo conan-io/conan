@@ -3,30 +3,14 @@ import textwrap
 
 import pytest
 
-
+from conans.client.profileloader import _ProfileParser, ProfileLoader
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import load, save
+from conans.util.files import save
 
 
-def create_profile(folder, name, settings=None, package_settings=None, env=None,
-                   package_env=None, options=None):
-    _create_profile(folder, name, settings, package_settings, env, package_env, options)
-    content = load(os.path.join(folder, name))
-    content = "include(default)\n" + content
-    save(os.path.join(folder, name), content)
-
-
-def get_profile(folder, txt):
-    abs_profile_path = os.path.join(folder, "Myprofile.txt")
-    save(abs_profile_path, txt)
-    return read_profile(abs_profile_path, None, None)
-
-
-@pytest.mark.xfail(reason="ProfileLoader new wrapper")
 def test_profile_parser():
     txt = textwrap.dedent("""
         include(a/path/to\profile.txt)
@@ -80,7 +64,6 @@ os=thing""")
             raise
 
 
-@pytest.mark.xfail(reason="ProfileLoader new wrapper")
 def test_profiles_includes():
     tmp = temp_folder()
 
@@ -141,7 +124,8 @@ def test_profiles_includes():
 
     save_profile(profile4, "profile4.txt")
 
-    profile, variables = read_profile("./profile4.txt", tmp, None)
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile = profile_loader.load_profile("./profile4.txt", tmp)
 
     assert profile.settings == {"os": "1"}
     assert profile.options["zlib"].aoption == 1
@@ -150,7 +134,6 @@ def test_profiles_includes():
                                             ConanFileReference.loads("two/1.2@lasote/stable")]}
 
 
-@pytest.mark.xfail(reason="ProfileLoader new wrapper")
 def test_profile_include_order():
     tmp = temp_folder()
 
@@ -163,106 +146,55 @@ def test_profile_include_order():
             os=$MYVAR
         """)
     save(os.path.join(tmp, "profile2.txt"), profile2)
-    profile, variables = read_profile("./profile2.txt", tmp, None)
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile = profile_loader.load_profile("./profile2.txt", tmp)
 
-    assert variables == {"MYVAR": "fromProfile2",
-                         "PROFILE_DIR": tmp.replace('\\', '/')}
     assert profile.settings["os"] == "fromProfile2"
 
 
-@pytest.mark.xfail(reason="ProfileLoader new wrapper")
 def test_profile_load_absolute_path():
     """ When passing absolute path as profile file, it MUST be used.
         read_profile(/abs/path/profile, /abs, /.conan/profiles)
         /abs/path/profile MUST be consumed as target profile
     """
-    profile_name = "default"
-    default_profile_folder = os.path.join(temp_folder(), "profiles")
-    default_profile_path = os.path.join(default_profile_folder, profile_name)
     current_profile_folder = temp_folder()
-    current_profile_path = os.path.join(current_profile_folder, profile_name)
-    default_profile_content = textwrap.dedent("""
-            [settings]
-            BORSCHT=BEET SOUP
-        """)
-    current_profile_content = default_profile_content.replace("BEET", "RUSSIAN")
+    current_profile_path = os.path.join(current_profile_folder, "default")
+    save(current_profile_path, "[settings]\nos=Windows")
 
-    save(default_profile_path, default_profile_content)
-    save(current_profile_path, current_profile_content)
-
-    profile, variables = read_profile(current_profile_path, current_profile_folder,
-                                      default_profile_folder)
-    assert "RUSSIAN SOUP" == profile.settings["BORSCHT"]
-    assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile = profile_loader.load_profile(current_profile_path)
+    assert "Windows" == profile.settings["os"]
 
 
-@pytest.mark.xfail(reason="ProfileLoader new wrapper")
 def test_profile_load_relative_path_dot():
     """ When passing relative ./path as profile file, it MUST be used
         read_profile(./profiles/profile, /tmp, /.conan/profiles)
         /tmp/profiles/profile MUST be consumed as target profile
     """
-    profile_name = "default"
-    default_profile_folder = os.path.join(temp_folder(), "profiles")
-    default_profile_path = os.path.join(default_profile_folder, profile_name)
     current_profile_folder = temp_folder()
-    current_profile_path = os.path.join(current_profile_folder, profile_name)
-    default_profile_content = textwrap.dedent("""
-            [settings]
-            BORSCHT=BEET SOUP
-        """)
-    current_profile_content = default_profile_content.replace("BEET", "RUSSIAN")
-    relative_current_profile_path = "." + os.path.join(os.sep,
-                                                       os.path.basename(current_profile_folder),
-                                                       profile_name)
+    current_profile_path = os.path.join(current_profile_folder, "profiles", "default")
+    save(current_profile_path, "[settings]\nos=Windows")
 
-    save(default_profile_path, default_profile_content)
-    save(current_profile_path, current_profile_content)
-
-    profile, variables = read_profile(relative_current_profile_path,
-                                      os.path.dirname(current_profile_folder),
-                                      default_profile_folder)
-    assert "RUSSIAN SOUP" == profile.settings["BORSCHT"]
-    assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile = profile_loader.load_profile("./profiles/default", current_profile_folder)
+    assert "Windows" == profile.settings["os"]
 
 
-@pytest.mark.xfail(reason="ProfileLoader new wrapper")
 def test_profile_load_relative_path_pardir():
     """ When passing relative ../path as profile file, it MUST be used
         read_profile(../profiles/profile, /tmp/current, /.conan/profiles)
         /tmp/profiles/profile MUST be consumed as target profile
     """
-    profile_name = "default"
-    default_profile_folder = os.path.join(temp_folder(), "profiles")
-    os.mkdir(default_profile_folder)
-    default_profile_path = os.path.join(default_profile_folder, profile_name)
+    tmp = temp_folder()
+    current_profile_path = os.path.join(tmp, "profiles", "default")
+    cwd = os.path.join(tmp, "user_folder")
+    save(current_profile_path, "[settings]\nos=Windows")
 
-    current_temp_folder = temp_folder()
-    current_profile_folder = os.path.join(current_temp_folder, "profiles")
-    current_running_folder = os.path.join(current_temp_folder, "current")
-
-    os.mkdir(current_profile_folder)
-    os.mkdir(current_running_folder)
-
-    current_profile_path = os.path.join(current_profile_folder, profile_name)
-    default_profile_content = textwrap.dedent("""
-            [settings]
-            BORSCHT=BEET SOUP
-        """)
-    current_profile_content = default_profile_content.replace("BEET", "RUSSIAN")
-    relative_current_profile_path = os.pardir + os.path.join(os.sep, "profiles", profile_name)
-
-    save(default_profile_path, default_profile_content)
-    save(current_profile_path, current_profile_content)
-
-    profile, variables = read_profile(relative_current_profile_path,
-                                      current_running_folder,
-                                      default_profile_folder)
-    assert "RUSSIAN SOUP" == profile.settings["BORSCHT"]
-    assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile = profile_loader.load_profile("../profiles/default", cwd)
+    assert "Windows" == profile.settings["os"]
 
 
-@pytest.mark.xfail(reason="ProfileLoader new wrapper")
 def test_profile_buildenv():
     tmp = temp_folder()
     txt = textwrap.dedent("""
@@ -272,7 +204,11 @@ def test_profile_buildenv():
         MyPath1=(path)/some/path11
         MyPath1+=(path)/other path/path12
         """)
-    profile, _ = get_profile(tmp, txt)
+    current_profile_path = os.path.join(tmp, "default")
+    save(current_profile_path, txt)
+
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile = profile_loader.load_profile(current_profile_path)
     buildenv = profile.buildenv
     env = buildenv.get_profile_env(None)
     conanfile = ConanFileMock()

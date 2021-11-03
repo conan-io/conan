@@ -1,22 +1,15 @@
-import os
 import unittest
 from collections import OrderedDict
 
-import pytest
 
 from conans.model.profile import Profile
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
 
 
-@pytest.mark.xfail(reason="ProfileLoader new wrapper")
 class ProfileTest(unittest.TestCase):
 
     def test_profile_settings_update(self):
-        prof = '''[settings]
-os=Windows
-'''
-        new_profile, _ = _load_profile(prof, None, None)
+        new_profile = Profile()
+        new_profile.update_settings(OrderedDict([("os", "Windows")]))
 
         new_profile.update_settings(OrderedDict([("OTHER", "2")]))
         self.assertEqual(new_profile.settings, OrderedDict([("os", "Windows"), ("OTHER", "2")]))
@@ -27,16 +20,19 @@ os=Windows
                                       ("compiler", "2"), ("compiler.version", "3")]))
 
     def test_profile_subsettings_update(self):
-        prof = '''[settings]
-os=Windows
-compiler=Visual Studio
-compiler.runtime=MT
-'''
-        new_profile, _ = _load_profile(prof, None, None)
+        new_profile = Profile()
+        new_profile.update_settings(OrderedDict([("os", "Windows"),
+                                                ("compiler", "Visual Studio"),
+                                                ("compiler.runtime", "MT")]))
+
         new_profile.update_settings(OrderedDict([("compiler", "gcc")]))
         self.assertEqual(dict(new_profile.settings), {"compiler": "gcc", "os": "Windows"})
 
-        new_profile, _ = _load_profile(prof, None, None)
+        new_profile = Profile()
+        new_profile.update_settings(OrderedDict([("os", "Windows"),
+                                                 ("compiler", "Visual Studio"),
+                                                 ("compiler.runtime", "MT")]))
+
         new_profile.update_settings(OrderedDict([("compiler", "Visual Studio"),
                                                  ("compiler.subsetting", "3"),
                                                  ("other", "value")]))
@@ -48,12 +44,8 @@ compiler.runtime=MT
                                                       "other": "value"})
 
     def test_package_settings_update(self):
-        prof = '''[settings]
-MyPackage:os=Windows
-
-    # In the previous line there are some spaces
-'''
-        np, _ = _load_profile(prof, None, None)
+        np = Profile()
+        np.update_package_settings({"MyPackage": [("os", "Windows")]})
 
         np.update_package_settings({"MyPackage": [("OTHER", "2")]})
         self.assertEqual(np.package_settings_values,
