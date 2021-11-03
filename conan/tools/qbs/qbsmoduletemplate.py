@@ -1,3 +1,4 @@
+import os
 import jinja2
 from jinja2 import Template
 import textwrap
@@ -40,7 +41,8 @@ class QbsModuleTemplate(object):
     def context(self):
         print("### QbsModuleTemplate.context")
         pkg_version = self.conanfile.ref.version
-        cpp = self.conanfile.cpp_info.components[self.component_name]
+        cpp = DepsCppQbs(
+            self.conanfile.cpp_info.components[self.component_name], self.conanfile.package_folder)
         dependencies = self.get_direct_dependencies()
 
         print("#### pkg_version: {}".format(pkg_version))
@@ -161,3 +163,23 @@ class QbsModuleTemplate(object):
         print("### get qbs_module_name from {}, default {}".format(component, default))
         return component.get_property("qbs_module_name", "QbsDeps") or \
             default
+
+
+class DepsCppQbs(object):
+    def __init__(self, cpp_info, package_folder):
+        def prepent_package_folder(paths):
+            print("################# Yolo")
+            print("################# {}".format(package_folder))
+            return [os.path.join(package_folder, path) for path in paths]
+
+        self.includedirs = prepent_package_folder(cpp_info.includedirs)
+        self.libdirs = prepent_package_folder(cpp_info.libdirs)
+        self.system_libs = cpp_info.system_libs
+        self.libs = cpp_info.libs
+        self.frameworkdirs = prepent_package_folder(cpp_info.frameworkdirs)
+        self.frameworks = cpp_info.frameworks
+        self.defines = cpp_info.defines
+        self.cflags = cpp_info.cflags
+        self.cxxflags = cpp_info.cxxflags
+        self.sharedlinkflags = cpp_info.sharedlinkflags
+        self.exelinkflags = cpp_info.exelinkflags
