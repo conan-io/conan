@@ -244,6 +244,7 @@ class RemoteManager(object):
                            timestamp=timestamp)
         return ref
 
+
     # FIXME: this method returns the latest recipe revision with the time or if a rrev is specified
     #  it returns that rrev if it exists in the server with the time
     def get_latest_recipe_revision_with_time(self, ref, remote):

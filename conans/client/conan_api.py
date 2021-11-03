@@ -41,7 +41,6 @@ from conans.util.files import mkdir, save_files, load, save
 class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env", "conf"])):
     def __bool__(self):
         return bool(self.profiles or self.settings or self.options or self.env or self.conf)
-    __nonzero__ = __bool__
 
 
 def _make_abs_path(path, cwd=None, default=None):

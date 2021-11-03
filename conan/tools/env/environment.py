@@ -152,8 +152,6 @@ class Environment:
     def __bool__(self):
         return bool(self._values)
 
-    __nonzero__ = __bool__
-
     def copy(self):
         e = Environment()
         e._values = self._values.copy()
@@ -215,9 +213,6 @@ class Environment:
         :type other: Environment
         """
         return other._values == self._values
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     def vars(self, conanfile, scope="build"):
         return EnvVars(conanfile, self, scope)
@@ -365,8 +360,6 @@ class ProfileEnvironment:
 
     def __bool__(self):
         return bool(self._environments)
-
-    __nonzero__ = __bool__
 
     def get_profile_env(self, ref):
         """ computes package-specific Environment

@@ -371,7 +371,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conaninfo.txt", client2.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#37545dd5551161db93addff8b6bd2aea:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#c73d3a760d6d606d6444e9a951cdaf78"
+                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
                       " already in server, skipping upload", client2.out)
 
         # first client tries to upload again
@@ -385,7 +385,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conaninfo.txt", client.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#37545dd5551161db93addff8b6bd2aea:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#c73d3a760d6d606d6444e9a951cdaf78"
+                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
                       " already in server, skipping upload", client2.out)
 
     def test_upload_no_overwrite_all(self):
@@ -420,7 +420,7 @@ class MyPkg(ConanFile):
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already "
                       "in server, skipping upload", client.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#aeca26eec4b6ee246b964fcb00fe03e4"
+                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
                       " already in server, skipping upload", client.out)
         self.assertNotIn("Forbidden overwrite", client.out)
 
@@ -431,7 +431,7 @@ class MyPkg(ConanFile):
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already "
                       "in server, skipping upload", client.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#aeca26eec4b6ee246b964fcb00fe03e4"
+                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
                       " already in server, skipping upload", client.out)
         self.assertNotIn("Forbidden overwrite", client.out)
 
@@ -484,7 +484,7 @@ class MyPkg(ConanFile):
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already "
                       "in server, skipping upload", client.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#aeca26eec4b6ee246b964fcb00fe03e4"
+                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
                       " already in server, skipping upload", client.out)
         self.assertNotIn("Forbidden overwrite", client.out)
 
@@ -495,7 +495,7 @@ class MyPkg(ConanFile):
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already in "
                       "server, skipping upload", client.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#aeca26eec4b6ee246b964fcb00fe03e4"
+                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
                       " already in server, skipping upload", client.out)
         self.assertNotIn("Forbidden overwrite", client.out)
 

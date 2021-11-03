@@ -3,10 +3,9 @@ import os
 from conan.tools.env import Environment
 
 
-def runenv_from_cpp_info(conanfile, dep, os_name):
+def runenv_from_cpp_info(dep, os_name):
     """ return an Environment deducing the runtime information from a cpp_info
     """
-    # FIXME: Remove conanfile arg
     dyn_runenv = Environment()
 
     cpp_info = dep.cpp_info
@@ -75,8 +74,7 @@ class VirtualRunEnv:
         for _, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
                 runenv.compose_env(dep.runenv_info)
-            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep,
-                                                    self._conanfile.settings.get_safe("os")))
+            runenv.compose_env(runenv_from_cpp_info(dep, self._conanfile.settings.get_safe("os")))
 
         return runenv
 
