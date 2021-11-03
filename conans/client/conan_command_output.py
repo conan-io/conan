@@ -8,7 +8,8 @@ from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.search.binary_html_table import html_binary_graph
 from conans.util.dates import iso8601_to_str
 from conans.util.files import save
@@ -48,8 +49,8 @@ class CommandOutputer(object):
 
     def remote_pref_list(self, package_references):
         for package_reference, remote_name in package_references.items():
-            pref = PackageReference.loads(package_reference)
-            self._output.info("%s: %s" % (pref.full_str(), remote_name))
+            pref = PkgReference.loads(package_reference)
+            self._output.info("%s: %s" % (str(pref), remote_name))
 
     def json_output(self, info, json_output, cwd):
         cwd = os.path.abspath(cwd or os.getcwd())

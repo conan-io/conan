@@ -17,7 +17,8 @@ from conans.client.conf import ConanClientConfigParser, get_default_client_conf,
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
@@ -131,15 +132,14 @@ class ClientCache(object):
 
     def get_package_revisions(self, ref, only_latest_prev=False):
         return [
-            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
-                                   validate=False) for pref in
+            PkgReference.loads(f'{pref["reference"]}#{pref["rrev"]}:'
+                               f'{pref["pkgid"]}#{pref["prev"]}') for pref in
             self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
 
-    def get_package_ids(self, ref: ConanReference) -> List[PackageReference]:
+    def get_package_references(self, ref: ConanReference) -> List[PkgReference]:
         return [
-            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}',
-                                   validate=False) for pref in
-            self._data_cache.get_package_ids(ConanReference(ref))]
+            PkgReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}') for pref in
+            self._data_cache.get_package_references(ConanReference(ref))]
 
     def get_build_id(self, ref):
         return self._data_cache.get_build_id(ConanReference(ref))

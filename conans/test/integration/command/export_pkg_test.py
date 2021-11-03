@@ -8,7 +8,8 @@ from textwrap import dedent
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load, mkdir, is_dirty
@@ -218,7 +219,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#f99320295379ced53f338446912a2cff:{package_id}#{prev}")
+        pref = PkgReference.loads(f"Hello/0.1@lasote/stable#f99320295379ced53f338446912a2cff:{package_id}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -242,7 +243,8 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#cd0221af3af8be9e3d7e7b6ae56ce0b6:{package_id}#{prev}")
+        pref = PkgReference.loads(f"Hello/0.1@lasote/stable#cd0221af3af8be9e3d7e7b6ae56ce0b6:{package_id}#{prev}")
+
         package_folder = client.cache.pkg_layout(pref).package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
@@ -270,7 +272,7 @@ class TestConan(ConanFile):
                    "--source-folder=src")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#c05196f9787f3f375005b1b9772ab828:{package_id}#{prev}")
+        pref = PkgReference.loads(f"Hello/0.1@lasote/stable#c05196f9787f3f375005b1b9772ab828:{package_id}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -470,7 +472,7 @@ class TestConan(ConanFile):
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PackageReference.loads(f"Hello/0.1#7824a75809349a3700283a00e63086ee:{NO_SETTINGS_PACKAGE_ID}#{prev}")
+        pref = PkgReference.loads(f"Hello/0.1#7824a75809349a3700283a00e63086ee:{NO_SETTINGS_PACKAGE_ID}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
@@ -491,7 +493,7 @@ class TestConan(ConanFile):
         client.run("create . pkg/0.1@", assert_error=True)
         self.assertIn("Can't build while installing", client.out)
         ref = ConanFileReference.loads("pkg/0.1")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
         layout = client.get_latest_pkg_layout(pref)
         build_folder = layout.build()
         self.assertTrue(is_dirty(build_folder))

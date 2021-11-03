@@ -1,7 +1,8 @@
 import unittest
 
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, PackageReference, \
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, \
     check_valid_ref, get_reference_fields
 
 
@@ -74,11 +75,11 @@ class RefTest(unittest.TestCase):
         ref = ConanFileReference("opencv", "2.3", "lasote", "testing", "34")
         self.assertEqual(ref.revision, "34")
 
-        pref = PackageReference.loads("opencv/2.4.10@lasote/testing#23:123123123#989")
+        pref = PkgReference.loads("opencv/2.4.10@lasote/testing#23:123123123#989")
         self.assertEqual(pref.revision, "989")
         self.assertEqual(pref.ref.revision, "23")
 
-        pref = PackageReference(ref, "123123123#989")
+        pref = PkgReference(ref, "123123123#989")
         self.assertEqual(pref.ref.revision, "34")
 
     def test_equal(self):
@@ -243,48 +244,3 @@ class GetReferenceFieldsTest(unittest.TestCase):
         ref_pattern = ConanFileReference.loads("package/*@user/channel")
         self.assertFalse(check_valid_ref(ref_pattern, strict_mode=False))
 
-
-class CompatiblePrefTest(unittest.TestCase):
-
-    def test_compatible(self):
-
-        def ok(pref1, pref2):
-            pref1 = PackageReference.loads(pref1)
-            pref2 = PackageReference.loads(pref2)
-            return pref1.is_compatible_with(pref2)
-
-        # Same ref is ok
-        self.assertTrue(ok("package/1.0@user/channel#RREV1:packageid1#PREV1",
-                           "package/1.0@user/channel#RREV1:packageid1#PREV1"))
-
-        # Change PREV is not ok
-        self.assertFalse(ok("package/1.0@user/channel#RREV1:packageid1#PREV1",
-                            "package/1.0@user/channel#RREV1:packageid1#PREV2"))
-
-        # Different ref is not ok
-        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1#PREV1",
-                            "packageB/1.0@user/channel#RREV1:packageid1#PREV1"))
-
-        # Different ref is not ok
-        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1",
-                            "packageB/1.0@user/channel#RREV1:packageid1#PREV1"))
-
-        # Different package_id is not ok
-        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1",
-                            "packageA/1.0@user/channel#RREV1:packageid2#PREV1"))
-
-        # Completed PREV is ok
-        self.assertTrue(ok("packageA/1.0@user/channel#RREV1:packageid1",
-                           "packageA/1.0@user/channel#RREV1:packageid1#PREV1"))
-
-        # But only in order, the second ref cannot remove PREV
-        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1#PREV1",
-                            "packageA/1.0@user/channel#RREV1:packageid1"))
-
-        # Completing RREV is also OK
-        self.assertTrue(ok("packageA/1.0@user/channel:packageid1",
-                           "packageA/1.0@user/channel#RREV1:packageid1"))
-
-        # Completing RREV and PREV is also OK
-        self.assertTrue(ok("packageA/1.0@user/channel:packageid1",
-                           "packageA/1.0@user/channel#RREV:packageid1#PREV"))

@@ -5,8 +5,8 @@ from bottle import request
 
 from conans import DEFAULT_REVISION_V1
 from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONAN_MANIFEST
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.service.v1.service import ConanService
 
@@ -53,7 +53,7 @@ class ConanController(object):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             ref = ConanFileReference(name, version, username, channel)
-            pref = PackageReference(ref, package_id)
+            pref = PkgReference(ref, package_id)
             try:
                 urls = conan_service.get_package_download_urls(pref)
             except NotFoundException:
@@ -83,7 +83,7 @@ class ConanController(object):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             ref = ConanFileReference(name, version, username, channel, DEFAULT_REVISION_V1)
-            pref = PackageReference(ref, package_id, DEFAULT_REVISION_V1)
+            pref = PkgReference(ref, package_id, DEFAULT_REVISION_V1)
 
             reader = codecs.getreader("utf-8")
             filesizes = json.load(reader(request.body))

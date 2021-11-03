@@ -12,6 +12,7 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.export import _capture_scm_auto_fields
 from conans.client.tools.scm import Git
 from conans.model.ref import ConanFileReference
+from conans.server.store.server_store import ref_dir_repr
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.test_files import temp_folder
@@ -34,7 +35,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
                                                       folder=self.git.folder)
 
         # Mock the cache item (return the cache_ref_folder)
-        self.cache_ref_folder = os.path.join(temp_folder(), ref.dir_repr())
+        self.cache_ref_folder = os.path.join(temp_folder(), ref_dir_repr(ref))
 
     @parameterized.expand([(True, ), (False, )])
     def test_url_auto_revision_auto(self, _, local_origin):

@@ -5,8 +5,9 @@ from conans.cli.output import Color
 from conans.cli.output import cli_out_write
 from conans.errors import ConanException, InvalidNameException, PackageNotFoundException, \
     NotFoundException
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference
 from conans.util.dates import from_timestamp_to_iso8601
 
 remote_color = Color.BRIGHT_BLUE
@@ -257,7 +258,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     try:
-        pref = PackageReference.loads(args.package_reference)
+        pref = PkgReference.loads(args.package_reference)
     except (ConanException, InvalidNameException):
         raise ConanException(f"{args.package_reference} is not a valid package reference,"
                              f" provide a reference in the form "
@@ -329,7 +330,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
     if args.cache or not args.remote:
         error = None
         try:
-            result = conan_api.list.get_package_ids(ref)
+            result = conan_api.list.get_package_references(ref)
         except Exception as e:
             error = str(e)
             result = {}
@@ -342,7 +343,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
         for remote in remotes:
             error = None
             try:
-                result = conan_api.list.get_package_ids(ref, remote=remote)
+                result = conan_api.list.get_package_references(ref, remote=remote)
             except (NotFoundException, PackageNotFoundException):
                 # This exception must be caught manually due to a server inconsistency:
                 # Artifactory API returns an empty result if the recipe doesn't exist, but

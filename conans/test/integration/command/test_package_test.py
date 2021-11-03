@@ -5,7 +5,7 @@ import unittest
 import pytest
 
 from conans.client import tools
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load

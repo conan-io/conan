@@ -10,7 +10,8 @@ from requests import ConnectionError
 
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
@@ -118,7 +119,7 @@ class UploadTest(unittest.TestCase):
     def setUp(self):
         self.client = self._get_client()
         self.ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#myreciperev")
-        self.pref = PackageReference(self.ref, "myfakeid", "mypackagerev")
+        self.pref = PkgReference(self.ref, "myfakeid", "mypackagerev")
         reg_folder = self.client.get_latest_ref_layout(self.ref).export()
 
         self.client.run('upload %s -r default' % str(self.ref), assert_error=True)
@@ -323,7 +324,7 @@ class UploadTest(unittest.TestCase):
 
     def test_single_binary(self):
         # Try to upload an package without upload conans first
-        self.client.run('upload %s -p %s -r default' % (self.ref, str(self.pref.id)))
+        self.client.run('upload %s -p %s -r default' % (self.ref, str(self.pref.package_id)))
         self.assertIn("Uploading %s to remote" % str(self.ref), self.client.out)
 
     def test_simple(self):
@@ -334,7 +335,7 @@ class UploadTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.server_reg_folder))
 
         # Upload package
-        self.client.run('upload %s -p %s -r default' % (str(self.ref), str(self.pref.id)))
+        self.client.run('upload %s -p %s -r default' % (str(self.ref), str(self.pref.package_id)))
 
         self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
@@ -390,8 +391,8 @@ class UploadTest(unittest.TestCase):
         rev = self.client.cache.get_latest_rrev(self.ref).revision
         prev = self.client.cache.get_latest_prev(self.ref).revision
         self.ref = self.ref.copy_with_rev(rev)
-        self.pref = self.pref.copy_with_revs(rev, prev)
 
+        self.pref.revision = prev
         server_reg_folder = self.test_server.server_store.export(self.ref)
         server_pack_folder = self.test_server.server_store.package(self.pref)
 
@@ -406,7 +407,8 @@ class UploadTest(unittest.TestCase):
         rev = self.client.cache.get_latest_rrev(self.ref).revision
         prev = self.client.cache.get_latest_prev(self.ref).revision
         self.ref = self.ref.copy_with_rev(rev)
-        self.pref = self.pref.copy_with_revs(rev, prev)
+
+        self.pref.revision = prev
 
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
         self.server_pack_folder = self.test_server.server_store.package(self.pref)

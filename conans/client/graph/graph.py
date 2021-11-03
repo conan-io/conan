@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.model.ref import PackageReference
+from conans.model.package_ref import PkgReference
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -165,7 +165,7 @@ class Node(object):
     @property
     def pref(self):
         assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
-        return PackageReference(self.ref, self.package_id, self.prev)
+        return PkgReference(self.ref, self.package_id, self.prev)
 
     def add_edge(self, edge):
         if edge.src == self:

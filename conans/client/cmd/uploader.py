@@ -7,6 +7,7 @@ from multiprocessing.pool import ThreadPool
 
 from conans.cli.output import ConanOutput
 from conans.client.userio import UserInput
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
@@ -14,7 +15,7 @@ from conans.util.progress_bar import left_justify_message
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files
-from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
+from conans.model.ref import ConanFileReference, check_valid_ref
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_recipes
@@ -108,7 +109,7 @@ class _UploadCollecter(object):
                     #  upload just the latest for the moment
                     # TODO: cache2.0 Ignoring the query for the moment
                     packages_ids = []
-                    for pkg_id in self._cache.get_package_ids(ref):
+                    for pkg_id in self._cache.get_package_references(ref):
                         packages_ids.append(self._cache.get_latest_prev(pkg_id))
 
                 elif package_id:
@@ -117,12 +118,13 @@ class _UploadCollecter(object):
                     #  or for all of them
                     prev = package_id.split("#")[1] if "#" in package_id else ""
                     package_id = package_id.split("#")[0]
-                    pref = PackageReference(ref, package_id, prev)
+                    pref = PkgReference(ref, package_id, prev)
                     # FIXME: The name is package_ids but we pass the latest prev for each package id
                     packages_ids = []
-                    packages = [pref] if pref.revision else self._cache.get_package_ids(pref)
-                    for pkg in packages:
-                        latest_prev = self._cache.get_latest_prev(pkg) if pkg.id == package_id else None
+                    packages = [pref] if pref.revision else self._cache.get_package_references(pref)
+                    for pkg_ref in packages:
+                        latest_prev = self._cache.get_latest_prev(pkg_ref) \
+                            if pkg_ref.package_id == package_id else None
                         if latest_prev:
                             packages_ids.append(latest_prev)
 
@@ -138,9 +140,9 @@ class _UploadCollecter(object):
                 prefs = []
                 # Gather all the complete PREFS with PREV
                 for package in packages_ids:
-                    package_id, package_revision = package.id, package.revision
+                    package_id, package_revision = package.package_id, package.revision
                     assert package_revision is not None, "PREV cannot be None to upload"
-                    prefs.append(PackageReference(ref, package_id, package_revision))
+                    prefs.append(PkgReference(ref, package_id, package_revision))
                 result.append((ref, conanfile, prefs))
 
         return result
@@ -272,7 +274,7 @@ class _PackagePreparator(object):
         if layout.package_is_dirty():
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'"
-                                 % (pref, pref.ref, pref.id))
+                                 % (pref, pref.ref, pref.package_id))
 
         download_pkg_folder = layout.download_package()
         package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
@@ -442,7 +444,7 @@ class CmdUpload(object):
                 index, pref = index_pref
                 try:
                     up_msg = "\rUploading package %d/%d: %s to '%s'" % (index + 1, total,
-                                                                        str(pref.id),
+                                                                        str(pref.package_id),
                                                                         remote.name)
                     self._progress_output.info(left_justify_message(up_msg))
                     self._upload_package(pref, remote, retry, retry_wait, integrity_check, policy)
@@ -535,7 +537,7 @@ class CmdUpload(object):
         conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,
-                                   package_id=pref.id,
+                                   package_id=pref.package_id,
                                    remote=remote)
 
         t1 = time.time()
@@ -549,7 +551,7 @@ class CmdUpload(object):
         duration = time.time() - t1
         log_package_upload(pref, duration, cache_files, remote)
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.id, remote=remote)
+                                   reference=pref.ref, package_id=pref.package_id, remote=remote)
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
 

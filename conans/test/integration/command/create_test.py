@@ -6,7 +6,7 @@ import unittest
 import pytest
 
 from conans.client import tools
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import load, save
 
@@ -351,7 +351,7 @@ class MyPkg(ConanFile):
         ref = ConanFileReference.loads("Bye/0.1")
 
         refs = client.cache.get_latest_rrev(ref)
-        pkgs = client.cache.get_package_ids(refs)
+        pkgs = client.cache.get_package_references(refs)
         prev = client.cache.get_latest_prev(pkgs[0])
         package_folder = client.cache.pkg_layout(prev).package()
 

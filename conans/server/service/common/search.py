@@ -5,7 +5,8 @@ from fnmatch import translate
 from conans import load
 from conans.errors import NotFoundException, ForbiddenException, RecipeNotFoundException
 from conans.model.info import ConanInfo
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.search.search import filter_packages, _partial_match
 from conans.util.files import list_folder_subdirs
@@ -25,11 +26,11 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
                 continue
             # Read conaninfo
             try:
-                pref = PackageReference(new_ref, package_id)
+                pref = PkgReference(new_ref, package_id)
                 revision_entry = server_store.get_last_package_revision(pref)
                 if not revision_entry:
                     raise NotFoundException("")
-                pref = PackageReference(new_ref, package_id, revision_entry.revision)
+                pref.revision = revision_entry.revision
                 info_path = os.path.join(server_store.package(pref), CONANINFO)
                 if not os.path.exists(info_path):
                     raise NotFoundException("")

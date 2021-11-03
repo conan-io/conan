@@ -6,13 +6,13 @@ import pytest
 from mock import patch
 
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_FOLDER, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
 from conans.server.store.server_store import ServerStore
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
-from conans.util.files import load
 
 
 @pytest.mark.xfail(reason="cache2.0: TODO: FIX for new locking system")
@@ -117,7 +117,7 @@ class RemoveTest(unittest.TestCase):
             for pack_id in (1, 2):
                 i = pack_id
                 pack_id = "%s_%s" % (pack_id, key)
-                prefs.append(PackageReference(ref, str(pack_id)))
+                prefs.append(PkgReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
                 files[
@@ -135,7 +135,7 @@ class RemoveTest(unittest.TestCase):
             expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,
-                                   pref.id,
+                                   pref.package_id,
                                    CONAN_MANIFEST)] = repr(expected_manifest)
 
         client.save(files, client.cache.store)
@@ -172,7 +172,7 @@ class RemoveTest(unittest.TestCase):
                         sha = "%s_%s" % (value, k)
                         package_folder = os.path.join(folder, "package", sha)
                         if isinstance(base_path, ServerStore):
-                            pref = PackageReference(ref, sha)
+                            pref = PkgReference(ref, sha)
                             try:
                                 prev = self.client.cache.get_latest_prev(pref).revision
                             except:
@@ -412,7 +412,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.client.run("create . lib/1.0@")
         latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("lib/1.0"))
         ref_layout = self.client.cache.ref_layout(latest_rrev)
-        pkg_ids = self.client.cache.get_package_ids(latest_rrev)
+        pkg_ids = self.client.cache.get_package_references(latest_rrev)
         latest_prev = self.client.cache.get_latest_prev(pkg_ids[0])
         pkg_layout = self.client.cache.pkg_layout(latest_prev)
         self.client.run("remove lib/1.0 -f")
