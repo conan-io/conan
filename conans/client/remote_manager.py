@@ -72,16 +72,6 @@ class RemoteManager(object):
         assert pref.revision, "upload_package requires PREV"
         self._call_remote(remote, "upload_package", pref, files_to_upload, retry, retry_wait)
 
-    # FIXME: this method returns the latest package revision with the time or if a prev is specified
-    #  it returns that prev if it exists in the server with the time
-    def get_latest_package_revision_with_time(self, pref, remote, info=None):
-        headers = _headers_for_info(info)
-        revisions = self._call_remote(remote, "get_package_revisions", pref, headers=headers)
-        timestamp = revisions[0].get("time")
-        ref = PkgReference(pref.ref, pref.package_id, revisions[0].get("revision"),
-                           timestamp=timestamp)
-        return ref
-
     def get_recipe(self, ref, remote):
         """
         Read the conans from remotes
@@ -152,7 +142,7 @@ class RemoteManager(object):
 
         conanfile.output.info("Retrieving package %s from remote '%s' " % (pref.package_id,
                                                                            remote.name))
-        latest_prev, _ = self.get_latest_package_revision(pref, remote)
+        latest_prev = self.get_latest_package_revision(pref, remote)
 
         pkg_layout = self._cache.get_or_create_pkg_layout(latest_prev)
 
@@ -242,9 +232,17 @@ class RemoteManager(object):
         return revision, rev_time
 
     def get_latest_package_revision(self, pref, remote, headers=None):
-        pkgref, rev_time = self._call_remote(remote, "get_latest_package_revision", pref,
-                                             headers=headers)
-        return pkgref, rev_time
+        return self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)
+
+    # FIXME: this method returns the latest package revision with the time or if a prev is specified
+    #  it returns that prev if it exists in the server with the time
+    def get_latest_package_revision_with_time(self, pref, remote, info=None):
+        headers = _headers_for_info(info)
+        revisions = self._call_remote(remote, "get_package_revisions", pref, headers=headers)
+        timestamp = revisions[0].get("time")
+        ref = PkgReference(pref.ref, pref.package_id, revisions[0].get("revision"),
+                           timestamp=timestamp)
+        return ref
 
     # FIXME: this method returns the latest recipe revision with the time or if a rrev is specified
     #  it returns that rrev if it exists in the server with the time
@@ -259,7 +257,7 @@ class RemoteManager(object):
 
     def _resolve_latest_pref(self, pref, remote, headers):
         if pref.revision is None:
-            pref, _ = self.get_latest_package_revision(pref, remote, headers=headers)
+            pref = self.get_latest_package_revision(pref, remote, headers=headers)
         return pref
 
     def _call_remote(self, remote, method, *args, **kwargs):

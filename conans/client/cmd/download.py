@@ -60,7 +60,7 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
         pref = PkgReference(ref, package_id)
         try:
             if not pref.revision:
-                pref, _ = remote_manager.get_latest_package_revision(pref, remote)
+                pref = remote_manager.get_latest_package_revision(pref, remote)
         except NotFoundException:
             raise PackageNotFoundException(pref)
         else:

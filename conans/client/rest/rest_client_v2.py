@@ -313,9 +313,10 @@ class RestV2Methods(RestCommonMethods):
         # FIXME: the server API is returning an iso date, we have to convert to timestamp
         return ref.copy_with_rev(data.get("revision")), from_iso8601_to_timestamp(data.get("time"))
 
-    def get_latest_package_revision(self, pref, headers):
+    def get_latest_package_revision(self, pref: PkgReference, headers):
         url = self.router.package_latest(pref)
         data = self.get_json(url, headers=headers)
         full_pref = copy.copy(pref)
         full_pref.revision = data.get("revision")
-        return full_pref, from_iso8601_to_timestamp(data.get("time"))
+        full_pref.timestamp = from_iso8601_to_timestamp(data.get("time"))
+        return full_pref

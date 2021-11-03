@@ -69,8 +69,8 @@ class GraphBinariesAnalyzer(object):
         results = []
         for r in self._app.enabled_remotes:
             try:
-                latest_pref, latest_time = self._remote_manager.get_latest_package_revision(pref, r)
-                results.append({'pref': latest_pref, 'time': latest_time, 'remote': r})
+                latest_pref = self._remote_manager.get_latest_package_revision(pref, r)
+                results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not self._app.update:
                     break
             except NotFoundException:
@@ -83,7 +83,7 @@ class GraphBinariesAnalyzer(object):
             remotes_results = sorted(results, key=lambda k: k['time'], reverse=True)
             result = remotes_results[0]
             pref.revision = result.get("pref").revision
-            pref.timestamp = result.get("time")
+            pref.timestamp = result.get("pref").timestamp
             return result.get('remote')
         else:
             raise PackageNotFoundException(pref)
