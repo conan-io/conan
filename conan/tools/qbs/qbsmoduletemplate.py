@@ -3,9 +3,7 @@ import jinja2
 from jinja2 import Template
 import textwrap
 
-from conans.errors import ConanException
-from conans.model import dependencies
-from conans.model.conanfile_interface import ConanFileInterface
+import conan.tools.qbs.utils as utils
 
 
 class QbsModuleTemplate(object):
@@ -52,8 +50,8 @@ class QbsModuleTemplate(object):
         ret = {}
 
         def create_module(conanfile, comp, comp_name):
-            return {"{}.{}".format(self.get_module_name(conanfile),
-                                   self.get_component_name(comp, comp_name)):
+            return {"{}.{}".format(utils.get_module_name(conanfile),
+                                   utils.get_component_name(comp, comp_name)):
                     self.conanfile.ref.version}
 
         cpp_info = self.conanfile.cpp_info.components[self.component_name]
@@ -67,7 +65,7 @@ class QbsModuleTemplate(object):
                 if req_conanfile.cpp_info.has_components:
                     ret.update(create_module(req_conanfile, req_conanfile.cpp_info, comp_name))
                 else:
-                    ret[self.get_module_name(req_conanfile)] = req_conanfile.ref.version
+                    ret[utils.get_module_name(req_conanfile)] = req_conanfile.ref.version
 
         return ret
 
@@ -137,25 +135,17 @@ class QbsModuleTemplate(object):
 
     @ property
     def filename(self):
-        ret = self.get_module_name(self.conanfile) + self.suffix
+        ret = utils.get_module_name(self.conanfile) + self.suffix
         if self.conanfile.cpp_info.has_components:
             assert(self.component_name)
             ret = "{}/{}".format(ret, self.component_name)
         return ret
 
-    def get_module_name(self, dependency):
-        return dependency.cpp_info.get_property("qbs_module_name", "QbsDeps") or \
-            dependency.ref.name
-
-    def get_component_name(self, component, default):
-        return component.get_property("qbs_module_name", "QbsDeps") or \
-            default
-
 
 class DepsCppQbs(object):
     def __init__(self, cpp_info, package_folder):
         def prepent_package_folder(paths):
-            return [os.path.join(package_folder, path) for path in paths]
+            return utils.prepent_package_folder(paths, package_folder)
 
         self.includedirs = prepent_package_folder(cpp_info.includedirs)
         self.libdirs = prepent_package_folder(cpp_info.libdirs)
