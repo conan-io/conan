@@ -342,9 +342,6 @@ class PythonRequiresInfo(object):
     def __bool__(self):
         return bool(self._refs)
 
-    def __nonzero__(self):
-        return self.__bool__()
-
     def clear(self):
         self._refs = None
 
@@ -481,9 +478,6 @@ class ConanInfo(object):
         """ currently just for testing purposes
         """
         return self.dumps() == other.dumps()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     @staticmethod
     def load_file(conan_info_path):

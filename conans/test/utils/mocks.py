@@ -144,8 +144,5 @@ class RedirectedTestOutput(StringIO):
     def __eq__(self, value):
         return self.__repr__() == value
 
-    def __ne__(self, value):
-        return not self.__eq__(value)
-
     def __contains__(self, value):
         return value in self.__repr__()

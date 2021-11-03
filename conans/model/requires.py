@@ -94,9 +94,6 @@ class Requirement:
         self.visible |= other.visible
         # TODO: self.package_id_mode => Choose more restrictive?
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """
         consumer(not known type) -> requires(self) -> pkg_type -> require -> dep_pkg_type

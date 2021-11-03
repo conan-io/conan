@@ -82,9 +82,6 @@ class SettingsItem(object):
             return False
         return self._value.lower() not in ["false", "none", "0", "off"]
 
-    def __nonzero__(self):
-        return self.__bool__()
-
     def __str__(self):
         return str(self._value)
 
@@ -98,9 +95,6 @@ class SettingsItem(object):
         if self._not_any() and other not in self.values_range:
             raise ConanException(bad_value_msg(self._name, other, self.values_range))
         return other == self.__str__()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     def __delattr__(self, item):
         """ This is necessary to remove libcxx subsetting from compiler in config()

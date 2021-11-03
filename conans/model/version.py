@@ -187,6 +187,7 @@ class Version(str):
         return self.__cmp__(other) == 0
 
     def __ne__(self, other):
+        # This one CANNOT BE REMOVED without breaking
         return not self.__eq__(other)
 
     def __hash__(self):

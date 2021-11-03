@@ -63,9 +63,6 @@ class CompilerId(object):
     def __eq__(self, other):
         return self.name == other.name and self._version == other._version
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
 
 UNKNOWN_COMPILER = CompilerId(None, None, None, None)
 
