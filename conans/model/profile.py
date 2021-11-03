@@ -39,28 +39,16 @@ class Profile(object):
                 self._package_settings_values[pkg] = list(settings.items())
         return self._package_settings_values
 
-    def process_settings(self, cache, preprocess=True):
+    def process_settings(self, cache):
         assert self.processed_settings is None, "processed settings must be None"
         self.processed_settings = cache.settings.copy()
         self.processed_settings.values = Values.from_list(list(self.settings.items()))
-        if preprocess:
-            settings_preprocessor.preprocess(self.processed_settings)
-            # Redefine the profile settings values with the preprocessed ones
-            # FIXME: Simplify the values.as_list()
-            self.settings = OrderedDict(self.processed_settings.values.as_list())
 
-            # Preprocess also scoped settings
-            for pkg, pkg_settings in self.package_settings.items():
-                pkg_profile = Profile()
-                pkg_profile.settings = self.settings
-                pkg_profile.update_settings(pkg_settings)
-                try:
-                    pkg_profile.process_settings(cache=cache, preprocess=True)
-                except Exception as e:
-                    pkg_profile = ["{}={}".format(k, v) for k, v in pkg_profile.settings.items()]
-                    raise ConanException("Error in resulting settings for package"
-                                         " '{}': {}\n{}".format(pkg, e, '\n'.join(pkg_profile)))
-                # TODO: Assign the _validated_ settings and do not compute again
+        settings_preprocessor.preprocess(self.processed_settings)
+        # Redefine the profile settings values with the preprocessed ones
+        # FIXME: Simplify the values.as_list()
+        self.settings = OrderedDict(self.processed_settings.values.as_list())
+        # Per-package settings cannot be processed here, until composed not possible
 
     def dumps(self):
         result = ["[settings]"]
