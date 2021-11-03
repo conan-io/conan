@@ -11,9 +11,13 @@ from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
+<<<<<<< HEAD
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID, \
     BINARY_INVALID_BUILD
+=======
+    BINARY_MISSING, BINARY_UPDATE, BINARY_UNKNOWN
 from conans.client.graph.install_graph import InstallGraph, raise_missing
+>>>>>>> develop2
 from conans.client.importer import remove_imports, run_imports
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
