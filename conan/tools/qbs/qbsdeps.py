@@ -1,6 +1,7 @@
 import os
 
 from conan.tools.qbs.qbsmoduletemplate import QbsModuleTemplate
+from conan.tools.qbs.qbsconanmoduleproviderinfotemplate import QbsConanModuleProviderInfoTemplate
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -44,6 +45,8 @@ class QbsDeps(object):
             file_content = qbs_module_template.render()
             ret["modules/{}/module.qbs".format(qbs_module_template.filename)] = file_content
 
+        requires = []
+        dependencies = []
         for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
@@ -55,10 +58,16 @@ class QbsDeps(object):
                 # Skip the generation of config files for this node, it will be located externally
                 continue
 
+            requires.append(require)
+            dependencies.append(dep)
+
             if dep.cpp_info.has_components:
                 for comp_name in dep.cpp_info.component_names:
                     add_module(require, dep, comp_name)
             else:
                 add_module(require, dep, None)
+        qbsConanModuleProviderInfoTemplate = QbsConanModuleProviderInfoTemplate(
+            self, requires, dependencies)
+        ret["qbs_conan-moduleprovider_info.json"] = qbsConanModuleProviderInfoTemplate.render()
 
         return ret
