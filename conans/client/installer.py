@@ -63,10 +63,10 @@ class _PackageBuilder(object):
         if pref.package_id != recipe_build_id and hasattr(conanfile, "build_id"):
             # check if we already have a package with the calculated build_id
             recipe_ref = ConanFileReference.loads(ConanReference(pref).recipe_reference)
-            package_ids = self._cache.get_package_references(recipe_ref)
+            package_refs = self._cache.get_package_references(recipe_ref)
             build_prev = None
-            for pkg_id in package_ids:
-                prev = self._cache.get_latest_prev(pkg_id)
+            for _pkg_ref in package_refs:
+                prev = self._cache.get_latest_prev(_pkg_ref)
                 prev_build_id = self._cache.get_build_id(prev)
                 if prev_build_id == recipe_build_id:
                     build_prev = prev
