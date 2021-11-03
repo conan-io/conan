@@ -63,7 +63,8 @@ class PackagesDBTable(BaseDbTable):
             raise ConanReferenceDoesNotExistInDB(f"No entry for package '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
-    def create(self, path, ref: ConanReference, timestamp):
+    def create(self, path, ref: ConanReference, timestamp, build_id):
+        assert ref.prev
         # we set the timestamp to 0 until they get a complete reference, here they
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
@@ -72,16 +73,16 @@ class PackagesDBTable(BaseDbTable):
             r = self._conn.execute(f'INSERT INTO {self.table_name} '
                                    f'VALUES ({placeholders})',
                                    [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp,
-                                    None])
+                                    build_id])
         except sqlite3.IntegrityError:
             raise ConanReferenceAlreadyExistsInDB(f"Reference '{ref.full_reference}' already exists")
 
         return r.lastrowid
 
-    def update(self, ref: ConanReference, new_path=None, new_timestamp=None, new_build_id=None):
+    def update_timestamp(self, ref: ConanReference, new_timestamp=None):
+        assert ref.prev
         where_clause = self._where_clause(ref)
-        set_clause = self._set_clause(ref, path=new_path, timestamp=new_timestamp,
-                                      build_id=new_build_id)
+        set_clause = self._set_clause(ref, timestamp=new_timestamp)
         query = f"UPDATE {self.table_name} " \
                 f"SET {set_clause} " \
                 f"WHERE {where_clause};"

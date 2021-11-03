@@ -22,9 +22,8 @@ class CacheDatabase:
     def update_recipe_timestamp(self, ref: ConanReference, new_timestamp=None):
         self._recipes.update_timestamp(ref, new_timestamp)
 
-    def update_package(self, ref: ConanReference,
-                       new_path=None, new_timestamp=None, new_build_id=None):
-        self._packages.update(ref, new_path, new_timestamp, new_build_id)
+    def update_package_timestamp(self, ref: ConanReference, new_timestamp=None):
+        self._packages.update_timestamp(ref,  new_timestamp)
 
     def remove_recipe(self, ref: ConanReference):
         # Removing the recipe must remove all the package binaries too from DB
@@ -48,8 +47,8 @@ class CacheDatabase:
     def create_recipe(self, path, ref: ConanReference):
         self._recipes.create(path, ref, timestamp=time.time())
 
-    def create_package(self, path, ref: ConanReference):
-        self._packages.create(path, ref, timestamp=time.time())
+    def create_package(self, path, ref: ConanReference, build_id):
+        self._packages.create(path, ref, timestamp=time.time(), build_id=build_id)
 
     def list_references(self, only_latest_rrev):
         for it in self._recipes.all_references(only_latest_rrev):

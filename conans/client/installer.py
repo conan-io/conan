@@ -60,7 +60,8 @@ class _PackageBuilder(object):
         build_folder = package_layout.build()
         recipe_build_id = build_id(conanfile)
         pref = package_layout.reference
-        if pref.package_id != recipe_build_id and hasattr(conanfile, "build_id"):
+        if recipe_build_id is not None and pref.package_id != recipe_build_id:
+            package_layout.build_id = recipe_build_id
             # check if we already have a package with the calculated build_id
             recipe_ref = ConanFileReference.loads(ConanReference(pref).recipe_reference)
             package_refs = self._cache.get_package_references(recipe_ref)
@@ -81,8 +82,6 @@ class _PackageBuilder(object):
                 other_pkg_layout = self._cache.pkg_layout(build_prev)
                 build_folder = other_pkg_layout.build()
                 skip_build = True
-            elif build_prev == pref:
-                self._cache.update_package(build_prev, new_build_id=recipe_build_id)
 
         if is_dirty(build_folder):
             self._scoped_output.warning("Build folder is dirty, removing it: %s" % build_folder)

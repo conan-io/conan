@@ -10,9 +10,7 @@ from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
 from conan.cache.db.cache_database import CacheDatabase
-from conans.errors import ConanException, ConanReferenceAlreadyExistsInDB, \
-    ConanReferenceDoesNotExistInDB
-from conans.model.info import PREV_UNKNOWN
+from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB
 from conans.util.files import rmdir
 
 
@@ -111,16 +109,15 @@ class DataCache:
             assert pref.pkgid, "Package id must be known to create the package layout"
             assert pref.prev, "Package revision should be known to create the package layout"
             package_path = self._get_path(pref)
-            self._db.create_package(package_path, pref)
+            self._db.create_package(package_path, pref, None)
             self._create_path(package_path, remove_contents=False)
             return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
-    def update_recipe_timestamp(self, ref: ConanReference,  new_timestamp=None):
+    def update_recipe_timestamp(self, ref: ConanReference, new_timestamp):
         self._db.update_recipe_timestamp(ref, new_timestamp)
 
-    def update_package(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                       new_path=None, new_timestamp=None, new_build_id=None):
-        self._db.update_package(old_ref, new_ref, new_path, new_timestamp, new_build_id)
+    def update_package_timestamp(self, ref: ConanReference, new_timestamp):
+        self._db.update_package_timestamp(ref, new_timestamp)
 
     def list_references(self, only_latest_rrev=False):
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
@@ -171,12 +168,13 @@ class DataCache:
         shutil.move(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
+        build_id = layout.build_id
         # Wait until it finish to really update the DB
         try:
-            self._db.create_package(new_path, pref)
+            self._db.create_package(new_path, pref, build_id)
         except ConanReferenceAlreadyExistsInDB:
             # This was exported before, making it latest again, update timestamp
-            self._db.update_package(pref, time.time())
+            self._db.update_package_timestamp(pref, time.time())
 
         return new_path
 
