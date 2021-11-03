@@ -53,38 +53,27 @@ class RecipesDBTable(BaseDbTable):
             raise ConanReferenceDoesNotExistInDB(f"No entry for recipe '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
-    def save(self, path, ref: ConanReference, timestamp):
-        # we set the timestamp to 0 until they get a complete reference, here they
-        # are saved with the temporary uuid one, we don't want to consider these
-        # not yet built packages for search and so on
+    def create(self, path, ref: ConanReference, timestamp):
         assert ref.reference is not None
+        assert ref.rrev is not None
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
-        r = self._conn.execute(f'INSERT INTO {self.table_name} '
-                               f'VALUES ({placeholders})',
-                               [ref.reference, ref.rrev, path, timestamp])
-        return r.lastrowid
-
-    def update(self, old_ref: ConanReference, new_ref: ConanReference = None, new_path=None,
-               new_timestamp=None):
-        if not new_ref:
-            new_ref = old_ref
-        assert new_ref is not None
-        assert new_ref.reference is not None
-        where_clause = self._where_clause(old_ref)
-        set_clause = self._set_clause(new_ref, path=new_path, timestamp=new_timestamp)
-        query = f"UPDATE {self.table_name} " \
-                f"SET {set_clause} " \
-                f"WHERE {where_clause};"
         try:
-            r = self._conn.execute(query)
+            r = self._conn.execute(f'INSERT INTO {self.table_name} '
+                                   f'VALUES ({placeholders})',
+                                   [ref.reference, ref.rrev, path, timestamp])
         except sqlite3.IntegrityError:
-            raise ConanReferenceAlreadyExistsInDB(f"Reference '{new_ref.full_reference}' already exists")
+            raise ConanReferenceAlreadyExistsInDB(f"Reference '{ref.full_reference}' already exists")
         return r.lastrowid
 
-    def delete_by_path(self, path):
-        query = f"DELETE FROM {self.table_name} " \
-                f"WHERE path = ?;"
-        r = self._conn.execute(query, (path,))
+    def update_timestamp(self, ref: ConanReference, new_timestamp=None):
+        assert ref is not None
+        assert ref.reference is not None
+        assert ref.rrev is not None
+        where_clause = self._where_clause(ref)
+        query = f"UPDATE {self.table_name} " \
+                f'SET {self.columns.timestamp} = "{new_timestamp}" ' \
+                f"WHERE {where_clause};"
+        r = self._conn.execute(query)
         return r.lastrowid
 
     def remove(self, ref: ConanReference):

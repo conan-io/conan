@@ -1,37 +1,176 @@
-import unittest
+import textwrap
 
 import pytest
 
 from conans.errors import ConanException
-from conans.model.options import Options, OptionsValues, PackageOptionValues, PackageOptions, \
-    option_undefined_msg
+from conans.model.options import Options
 from conans.model.ref import ConanFileReference
 
 
-class OptionsTest(unittest.TestCase):
+class TestOptions:
 
-    def setUp(self):
-        package_options = PackageOptions.loads("""{static: [True, False],
-        optimized: [2, 3, 4],
-        path: ANY}""")
-        values = PackageOptionValues()
-        values.add_option("static", True)
-        values.add_option("optimized", 3)
-        values.add_option("path", "NOTDEF")
-        package_options.values = values
-        self.sut = Options(package_options)
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        options = {"static": [True, False], "optimized": [2, 3, 4], "path": "ANY"}
+        values = {"static": True, "optimized": 3, "path": "mypath"}
+        self.sut = Options(options, values)
+
+    def test_booleans(self):
+        assert self.sut.static
+        assert self.sut.static == True
+        assert self.sut.static != False
+        assert bool(self.sut.static)
+
+        assert self.sut.optimized
+        assert self.sut.optimized == 3
+        assert self.sut.optimized != 2
+
+        assert self.sut.path == "mypath"
+        assert self.sut.path != "otherpath"
+
+    def test_invalid_value(self):
+        with pytest.raises(ConanException) as e:
+            assert self.sut.static != 1
+        assert "'1' is not a valid 'options.static' value" in str(e.value)
+
+        with pytest.raises(ConanException) as e:
+            assert self.sut.optimized != 5
+        assert "'5' is not a valid 'options.optimized' value" in str(e.value)
+
+        with pytest.raises(ConanException) as e:
+            self.sut.static = 1
+        assert "'1' is not a valid 'options.static' value" in str(e.value)
+
+        with pytest.raises(ConanException) as e:
+            self.sut.optimized = 5
+        assert "'5' is not a valid 'options.optimized' value" in str(e.value)
+
+    def test_non_existing_option(self):
+        with pytest.raises(ConanException) as e:
+            assert self.sut.potato
+        assert "option 'potato' doesn't exist" in str(e.value)
 
     def test_int(self):
-        self.assertEqual(3, int(self.sut.optimized))
+        assert 3 == int(self.sut.optimized)
 
     def test_in(self):
-        package_options = PackageOptions.loads("{static: [True, False]}")
-        sut = Options(package_options)
-        self.assertTrue("static" in sut)
-        self.assertFalse("shared" in sut)
-        self.assertTrue("shared" not in sut)
-        self.assertFalse("static" not in sut)
+        assert "static" in self.sut
+        assert "potato" not in self.sut
+        assert "optimized" in self.sut
+        assert "path" in self.sut
 
+    def test_assign(self):
+        self.sut.static = False
+        self.sut.optimized = 2
+        self.sut.optimized = "4"
+        self.sut.path = "otherpath"
+
+        assert not self.sut.static
+        assert self.sut.optimized == 4
+        assert self.sut.path == "otherpath"
+
+    def test_dumps(self):
+        text = self.sut.dumps()
+        # Output is ordereded alphabetically
+        expected = textwrap.dedent("""\
+            optimized=3
+            path=mypath
+            static=True""")
+        assert text == expected
+
+
+class TestOptionsLoad:
+    def test_load(self):
+        text = textwrap.dedent("""\
+            optimized=3
+            path=mypath
+            static=True
+            zlib:option=8
+            *:common=value
+            """)
+        sut = Options.loads(text)
+        assert sut.optimized == 3
+        assert sut.optimized != "whatever"  # Non validating
+        assert sut.path == "mypath"
+        assert sut.path != "whatever"  # Non validating
+        assert sut.static == "True"
+        assert sut.static != "whatever"  # Non validating
+        assert sut["zlib"].option == 8
+        assert sut["zlib"].option != "whatever"  # Non validating
+        assert sut["*"].common == "value"
+        assert sut["*"].common != "whatever"  # Non validating
+
+
+class TestOptionsPropagate:
+    def test_basic(self):
+        options = {"static": [True, False]}
+        values = {"static": True}
+        sut = Options(options, values)
+        assert sut.static
+
+        ref = ConanFileReference.loads("boost/1.0")
+        # if ref!=None option MUST be preceded by boost:
+        down_options = Options(options_values={"zlib:other": 1, "boost:static": False})
+        sut.apply_downstream(down_options, Options(), ref)
+        assert not sut.static
+
+        # Should be freezed now
+        with pytest.raises(ConanException) as e:
+            sut.static = True
+        assert "Incorrect attempt to modify options 'static'" in str(e.value)
+
+        self_options, up_options = sut.get_upstream_options(down_options, ref)
+        assert up_options.dumps() == "zlib:other=1"
+        assert self_options.dumps() == "boost:static=False\nzlib:other=1"
+
+
+class TestOptionsNone:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        options = {"static": [None, 1, 2], "other": "ANY", "more": ["None", 1]}
+        self.sut = Options(options)
+
+    def test_booleans(self):
+        assert self.sut.static == None
+        assert not self.sut.static
+        assert self.sut.static != 1
+        assert self.sut.static != 2
+        with pytest.raises(ConanException) as e:
+            self.sut.static == 3
+        assert "'3' is not a valid 'options.static' value" in str(e.value)
+
+        with pytest.raises(ConanException) as e:
+            self.sut.static == "None"
+        assert "'None' is not a valid 'options.static' value" in str(e.value)
+
+        assert self.sut.other == None
+        assert self.sut.other != "whatever"  # dont raise, ANY
+        self.sut.other = None
+        assert self.sut.other == None
+
+        assert not self.sut.more
+        assert self.sut.more == None
+        assert self.sut.more != 1
+        with pytest.raises(ConanException) as e:
+            self.sut.more == 2
+        assert "'2' is not a valid 'options.more' value" in str(e.value)
+        with pytest.raises(ConanException) as e:
+            self.sut.more = None
+        assert "'None' is not a valid 'options.more' value" in str(e.value)
+        self.sut.more = "None"
+        assert not self.sut.more  # This is still evaluated to false, like OFF, 0, FALSE, etc
+        assert self.sut.more == "None"
+        assert self.sut.more != None
+
+    def test_assign(self):
+        self.sut.static = 1
+        assert self.sut.static == 1
+
+    def test_dumps(self):
+        text = self.sut.dumps()
+        assert text == ""
+
+'''
     def test_undefined_value(self):
         """ Not assigning a value to options will raise an error at validate() step
         """
@@ -55,16 +194,6 @@ class OptionsTest(unittest.TestCase):
                                             ("static", "True")])
         self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "NOTDEF"),
                                             ("static", "True")])
-
-    def test_change(self):
-        self.sut.path = "C:/MyPath"
-        self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "C:/MyPath"),
-                                            ("static", "True")])
-        self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "C:/MyPath"),
-                                            ("static", "True")])
-        with self.assertRaisesRegex(ConanException,
-                                     "'5' is not a valid 'options.optimized' value"):
-            self.sut.optimized = 5
 
     def test_boolean(self):
         self.sut.static = False
@@ -243,11 +372,7 @@ Poco:deps_bundled=True""")
 class OptionsValuesPropagationUpstreamNone(unittest.TestCase):
 
     def test_propagate_in_options(self):
-        package_options = PackageOptions.loads("""{opt: [None, "a", "b"],}""")
-        values = PackageOptionValues()
-        values.add_option("opt", "a")
-        package_options.values = values
-        sut = Options(package_options)
+        sut = Options.create_options({"opt": [None, "a", "b"]}, {"opt": "a"})
 
         other_options = PackageOptionValues()
         other_options.add_option("opt", None)
@@ -260,10 +385,7 @@ class OptionsValuesPropagationUpstreamNone(unittest.TestCase):
                                                 ])
 
     def test_propagate_in_pacakge_options(self):
-        package_options = PackageOptions.loads("""{opt: [None, "a", "b"],}""")
-        values = PackageOptionValues()
-        package_options.values = values
-
+        package_options = Options.create_options({"opt": [None, "a", "b"]}, None)
         package_options.propagate_upstream({'opt': None}, None, None, [])
         self.assertEqual(package_options.values.items(), [('opt', 'None'), ])
 
@@ -374,3 +496,4 @@ class OptionsValuesTest(unittest.TestCase):
     def test_package_with_spaces(self):
         self.assertEqual(OptionsValues([('pck2:opt', 50), ]).dumps(),
                          OptionsValues([('pck2 :opt', 50), ]).dumps())
+'''

@@ -8,7 +8,7 @@ from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException, ConanV2Exception
 from conans.model.conf import ConfDefinition
 from conans.model.env_info import unquote
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.paths import DEFAULT_PROFILE_NAME
@@ -97,7 +97,7 @@ class ProfileValueParser(object):
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = ProfileValueParser._parse_settings(doc)
-        options = OptionsValues.loads(doc.options) if doc.options else None
+        options = Options.loads(doc.options) if doc.options else None
         build_requires = ProfileValueParser._parse_build_requires(doc)
 
         if doc.conf:
@@ -115,7 +115,7 @@ class ProfileValueParser(object):
         for pattern, refs in build_requires.items():
             base_profile.build_requires.setdefault(pattern, []).extend(refs)
         if options is not None:
-            base_profile.options.update(options)
+            base_profile.options.update_options(options)
 
         if conf is not None:
             base_profile.conf.update_conf_definition(conf)
@@ -316,11 +316,10 @@ def _profile_parse_args(settings, options, envs, conf):
                 simple_items.append((name, value))
         return simple_items, package_items
 
-    options = _get_tuples_list_from_extender_arg(options)
     settings, package_settings = _get_simple_and_package_tuples(settings)
 
     result = Profile()
-    result.options = OptionsValues(options)
+    result.options = Options.loads("\n".join(options or []))
     result.settings = OrderedDict(settings)
     if conf:
         result.conf = ConfDefinition()

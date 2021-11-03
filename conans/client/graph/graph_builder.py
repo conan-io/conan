@@ -8,6 +8,7 @@ from conans.client.graph.graph_error import GraphError
 from conans.client.graph.provides import check_graph_provides
 from conans.client.graph.range_resolver import range_satisfies
 from conans.errors import ConanException
+from conans.model.options import Options
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 
@@ -22,6 +23,8 @@ class DepsGraphBuilder(object):
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
         assert profile_build is not None
+        assert isinstance(profile_host.options, Options)
+        assert isinstance(profile_build.options, Options)
         # print("Loading graph")
         dep_graph = DepsGraph()
 
@@ -29,7 +32,7 @@ class DepsGraphBuilder(object):
         root_node.conanfile.settings_build = profile_build.processed_settings.copy()
         root_node.conanfile.settings_target = None
 
-        self._prepare_node(root_node, profile_host, profile_build, graph_lock, None, None)
+        self._prepare_node(root_node, profile_host, profile_build, Options())
         self._initialize_requires(root_node, dep_graph, graph_lock)
         dep_graph.add_node(root_node)
 
@@ -126,7 +129,8 @@ class DepsGraphBuilder(object):
     @staticmethod
     def _conflicting_options(require, node, prev_node, prev_require, base_previous):
         # Even if the version matches, there still can be a configuration conflict
-        upstream_options = node.conanfile.options[require.ref.name]
+        # Only the propagated options can conflict, because profile would have already been asigned
+        upstream_options = node.conanfile.up_options[require.ref.name]
         for k, v in upstream_options.items():
             prev_option = prev_node.conanfile.options.get_safe(k)
             if prev_option is not None:
@@ -135,11 +139,14 @@ class DepsGraphBuilder(object):
                                                      base_previous, k, prev_option, v)
 
     @staticmethod
-    def _prepare_node(node, profile_host, profile_build, graph_lock, down_ref, down_options):
+    def _prepare_node(node, profile_host, profile_build, down_options):
+
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 
-        run_configure_method(conanfile, down_options, down_ref, ref)
+        pro_options = profile_host.options if node.context == CONTEXT_HOST else profile_build.options
+        assert isinstance(pro_options, Options), type(pro_options)
+        run_configure_method(conanfile, down_options, pro_options, ref)
 
         # Apply build_requires from profile, overrriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
@@ -260,9 +267,9 @@ class DepsGraphBuilder(object):
         new_node.recipe = recipe_status
         new_node.remote = remote
 
-        down_options = node.conanfile.options.deps_package_values
-        self._prepare_node(new_node, profile_host, profile_build, graph_lock,
-                           node.ref, down_options)
+        # FIXME
+        down_options = node.conanfile.up_options
+        self._prepare_node(new_node, profile_host, profile_build, down_options)
 
         require.process_package_type(new_node)
         graph.add_node(new_node)
