@@ -185,12 +185,12 @@ class FullRevisionModeTest(unittest.TestCase):
         client.run("create . liba/0.1@user/testing")
         self.assertIn(f"liba/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Build",
                       client.out)
-        self.assertIn("liba/0.1@user/testing: Created package revision "
-                      "cf924fbb5ed463b8bb960cf3a4ad4f3a", client.out)
+        prev = "a397cb03d51fb3b129c78d2968e2676f"
+        self.assertIn(f"liba/0.1@user/testing: Created package revision {prev}", client.out)
         client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
         client.run("create . libb/0.1@user/testing")
-        self.assertIn("libb/0.1@user/testing:75a50c09cb8f4a8a8185f56effe706e78d877ca0 - Build",
-                      client.out)
+        libb_pkgid = "af0c44b853e4651ccafc636d601d9c65d3fa44a8"
+        self.assertIn(f"libb/0.1@user/testing:{libb_pkgid} - Build", client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
         client.run("create . libc/0.1@user/testing")
@@ -200,8 +200,8 @@ class FullRevisionModeTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require('libc/0.1@user/testing')})
         # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
         client.run("install . --build=liba")
-        self.assertIn("liba/0.1@user/testing: Created package revision "
-                      "cf924fbb5ed463b8bb960cf3a4ad4f3a", client.out)
+        rrev_a = "a397cb03d51fb3b129c78d2968e2676f"
+        self.assertIn(f"liba/0.1@user/testing: Created package revision {rrev_a}", client.out)
         # So it is not necessary to build the downstream consumers of LibA
         for lib in ("libb", "libc"):
             self.assertIn("%s/0.1@user/testing: Unknown binary" % lib, client.out)
@@ -237,10 +237,10 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install Invent.py --build missing")
-        self.assertIn("MccApi/3.0.9: Package 'ae4634464e7a1aafab0a567d91a1a1533519150f' created",
-                      self.client.out)
-        self.assertIn("Util/0.3.5: Package '0a00cf19df227fc11bdb70e2de131f6321f85b66' created",
-                      self.client.out)
+        mcapi_pkg_id = "c24c471b778d3c10903ca45f3193587c5f446fd6"
+        self.assertIn(f"MccApi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
+        util_pkg_id = "d175bcd86c51b7f773ddc37a1d46026dafb80fd4"
+        self.assertIn(f"Util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
 
     def test_triangle_dependency_graph(self):
         dependencies = {
@@ -252,10 +252,10 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install GenericSU.py --build missing")
-        self.assertIn("MccApi/3.0.9: Package 'ae4634464e7a1aafab0a567d91a1a1533519150f' created",
-                      self.client.out)
-        self.assertIn("Util/0.3.5: Package '0a00cf19df227fc11bdb70e2de131f6321f85b66' created",
-                      self.client.out)
+        mcapi_pkg_id = "c24c471b778d3c10903ca45f3193587c5f446fd6"
+        self.assertIn(f"MccApi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
+        util_pkg_id = "d175bcd86c51b7f773ddc37a1d46026dafb80fd4"
+        self.assertIn(f"Util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
 
     def test_diamond_dependency_graph(self):
         dependencies = {
@@ -267,10 +267,9 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install GenericSU.py --build missing")
-        self.assertIn("MccApi/3.0.9: Package 'ae4634464e7a1aafab0a567d91a1a1533519150f' created",
-                      self.client.out)
-        self.assertIn("Util/0.3.5: Package 'ae4634464e7a1aafab0a567d91a1a1533519150f' created",
-                      self.client.out)
+        pkg_id = "c24c471b778d3c10903ca45f3193587c5f446fd6"
+        self.assertIn(f"MccApi/3.0.9: Package '{pkg_id}' created", self.client.out)
+        self.assertIn(f"Util/0.3.5: Package '{pkg_id}' created", self.client.out)
 
     @pytest.mark.xfail(reason="package id computation has changed")
     def test_full_dependency_graph(self):
@@ -334,4 +333,5 @@ def test_package_revision_mode_full_transitive_package_id():
     client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
     assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
     assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
-    assert "pkgb/0.1: Package '39f1c1ba9af2b416a3da981070a5351b05be824c' created" in client.out
+    pkg_id = "fbdb93dfebd237827767fd6bc7b235c1af5012dd"
+    assert f"pkgb/0.1: Package '{pkg_id}' created" in client.out

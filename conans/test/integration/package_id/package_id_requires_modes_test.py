@@ -478,15 +478,15 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         # If we only build pkg1, we get a new packageID for pkg3
         t.run("create package3.py pkg3/1.0@ --build=pkg1", assert_error=True)
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0: Updated ID: 734676dcb7c757f2d195f35a67e363ce850783df", t.out)
-        self.assertIn("ERROR: Missing binary: pkg3/1.0:734676dcb7c757f2d195f35a67e363ce850783df",
+        self.assertIn("pkg3/1.0: Updated ID: f6770ce9c022ba560312e0efb75c278426f71cbf", t.out)
+        self.assertIn("ERROR: Missing binary: pkg3/1.0:f6770ce9c022ba560312e0efb75c278426f71cbf",
                       t.out)
 
         # If we build both, we get the new package
         t.run("create package3.py pkg3/1.0@ --build=pkg1 --build=pkg3")
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0: Updated ID: 734676dcb7c757f2d195f35a67e363ce850783df", t.out)
-        self.assertIn("pkg3/1.0: Package '734676dcb7c757f2d195f35a67e363ce850783df' created", t.out)
+        self.assertIn("pkg3/1.0: Updated ID: f6770ce9c022ba560312e0efb75c278426f71cbf", t.out)
+        self.assertIn("pkg3/1.0: Package 'f6770ce9c022ba560312e0efb75c278426f71cbf' created", t.out)
 
     def test_package_revision_mode_download(self):
         t = TestClient(default_server_user=True)
@@ -512,7 +512,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         self.assertIn("pkg2/1.0:Package_ID_unknown - Unknown", t.out)
         self.assertIn("pkg3/1.0:ad2a3c63a3adc6721aeaac45b34f80f0e1b72827 - Download", t.out)
         self.assertIn("pkg2/1.0: Unknown binary for pkg2/1.0, computing updated ID", t.out)
-        self.assertIn("pkg2/1.0: Updated ID: ffaddbda5ec0ebae68de80c88ab23b40ed72912b", t.out)
+        pkg_id = "f1aefa3648a2e2defd70c3ed8c3915061e6c12eb"
+        self.assertIn(f"pkg2/1.0: Updated ID: {pkg_id}", t.out)
         self.assertIn("pkg2/1.0: Binary for updated ID from: Download", t.out)
-        self.assertIn("pkg2/1.0: Retrieving package ffaddbda5ec0ebae68de80c88ab23b40ed72912b "
-                      "from remote 'default'", t.out)
+        self.assertIn(f"pkg2/1.0: Retrieving package {pkg_id} from remote 'default'", t.out)
