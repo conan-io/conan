@@ -443,13 +443,13 @@ class BinaryInstaller(object):
             assert node.pref.revision, "Node PREF revision shouldn't be empty"
             assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
             # at this point the package reference should be complete
-            if pkg_layout.reference != pref:
-                self._cache.assign_prev(pkg_layout, ConanReference(pref))
-                # Make sure the current conanfile.folders is updated (it is later in package_info(),
-                # but better make sure here, and be able to report the actual folder in case
-                # something fails)
-                node.conanfile.folders.set_base_package(pkg_layout.package())
-                self._out.info("Package folder %s" % node.conanfile.package_folder)
+            pkg_layout.reference = ConanReference(pref)
+            self._cache.assign_prev(pkg_layout)
+            # Make sure the current conanfile.folders is updated (it is later in package_info(),
+            # but better make sure here, and be able to report the actual folder in case
+            # something fails)
+            node.conanfile.folders.set_base_package(pkg_layout.package())
+            self._out.info("Package folder %s" % node.conanfile.package_folder)
 
     def _build_package(self, node, pkg_layout):
         builder = _PackageBuilder(self._app, node.conanfile.output)

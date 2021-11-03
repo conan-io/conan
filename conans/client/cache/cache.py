@@ -72,8 +72,8 @@ class ClientCache(object):
     def assign_rrev(self, layout: RecipeLayout):
         return self._data_cache.assign_rrev(layout)
 
-    def assign_prev(self, layout: PackageLayout, ref: ConanReference):
-        return self._data_cache.assign_prev(layout, ref)
+    def assign_prev(self, layout: PackageLayout):
+        return self._data_cache.assign_prev(layout)
 
     def ref_layout(self, ref):
         # It must exists

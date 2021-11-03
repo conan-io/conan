@@ -1,3 +1,5 @@
+import traceback
+
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 
@@ -75,6 +77,7 @@ class PkgReference:
 
             return PkgReference(ref, package_id, revision, timestamp)
         except Exception:
+            print(traceback.format_exc())
             raise ConanException(
                 f"{text} is not a valid package reference, provide a reference"
                 f" in the form name/version[@user/channel:package_id]")

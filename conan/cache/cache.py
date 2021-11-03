@@ -71,26 +71,12 @@ class DataCache:
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
     def create_tmp_package_layout(self, pref: ConanReference):
+        # Temporary layout to build a new package
         assert pref.rrev, "Recipe revision must be known to get or create the package layout"
         assert pref.pkgid, "Package id must be known to get or create the package layout"
         assert not pref.prev, "Package revision should be unknown"
-        temp_prev = f"{PREV_UNKNOWN}-{str(uuid.uuid4())}"
-        pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
-                              pref.pkgid, temp_prev)
         package_path = self._get_tmp_path()
-        self._db.create_tmp_package(package_path, pref)
         self._create_path(package_path)
-        return PackageLayout(pref, os.path.join(self.base_folder, package_path))
-
-    def create_package_layout(self, pref: ConanReference):
-        assert pref.rrev, "Recipe revision must be known to create the package layout"
-        assert pref.pkgid, "Package id must be known to create the package layout"
-        assert pref.prev, "Package revision should be known to create the package layout"
-        pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
-                              pref.pkgid, pref.prev)
-        package_path = self._get_path(pref)
-        self._db.create_package(package_path, pref)
-        self._create_path(package_path, remove_contents=False)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
     def get_reference_layout(self, ref: ConanReference):
@@ -117,41 +103,23 @@ class DataCache:
             self._create_path(reference_path, remove_contents=False)
             return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
-    def get_or_create_package_layout(self, ref: ConanReference):
+    def get_or_create_package_layout(self, pref: ConanReference):
         try:
-            return self.get_package_layout(ref)
+            return self.get_package_layout(pref)
         except ConanReferenceDoesNotExistInDB:
-            return self.create_package_layout(ref)
-
-    def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference):
-        ref_data = self._db.try_get_package(old_pref)
-        old_path = ref_data.get("path")
-        new_path = self._get_path(new_pref)
-        if os.path.exists(self._full_path(new_path)):
-            try:
-                rmdir(self._full_path(new_path))
-            except OSError as e:
-                raise ConanException(f"{self._full_path(new_path)}\n\nFolder: {str(e)}\n"
-                                     "Couldn't remove folder, might be busy or open\n"
-                                     "Close any app using it, and retry")
-        try:
-            self._db.update_package(old_pref, new_pref, new_path=new_path, new_timestamp=time.time())
-        except ConanReferenceAlreadyExistsInDB:
-            # This happens when we create a recipe revision but we already had that one in the cache
-            # we remove the new created one and update the date of the existing one
-            # TODO: cache2.0 locks
-            self._db.delete_package_by_path(old_path)
-            self._db.update_package(new_pref, new_timestamp=time.time())
-
-        shutil.move(self._full_path(old_path), self._full_path(new_path))
-
-        return new_path
+            assert pref.rrev, "Recipe revision must be known to create the package layout"
+            assert pref.pkgid, "Package id must be known to create the package layout"
+            assert pref.prev, "Package revision should be known to create the package layout"
+            package_path = self._get_path(pref)
+            self._db.create_package(package_path, pref)
+            self._create_path(package_path, remove_contents=False)
+            return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
     def update_recipe_timestamp(self, ref: ConanReference,  new_timestamp=None):
         self._db.update_recipe_timestamp(ref, new_timestamp)
 
     def update_package(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_timestamp=None, new_build_id=None):
+                       new_path=None, new_timestamp=None, new_build_id=None):
         self._db.update_package(old_ref, new_ref, new_path, new_timestamp, new_build_id)
 
     def list_references(self, only_latest_rrev=False):
@@ -192,15 +160,25 @@ class DataCache:
     def remove_package(self, ref: ConanReference):
         self._db.remove_package(ref)
 
-    def assign_prev(self, layout: PackageLayout, ref: ConanReference):
-        layout_conan_reference = ConanReference(layout.reference)
-        assert ref.reference == layout_conan_reference.reference, "You cannot change the reference here"
-        assert ref.prev, "It only makes sense to change if you are providing a package revision"
-        assert ref.pkgid, "It only makes sense to change if you are providing a package id"
-        new_path = self._move_prev(layout_conan_reference, ref)
-        layout.reference = ref
-        if new_path:
-            layout._base_folder = os.path.join(self.base_folder, new_path)
+    def assign_prev(self, layout: PackageLayout):
+        pref = ConanReference(layout.reference)
+
+        new_path = self._get_path(pref)
+
+        full_path = self._full_path(new_path)
+        if os.path.exists(full_path):
+            rmdir(self._full_path(new_path))
+        shutil.move(self._full_path(layout.base_folder), full_path)
+        layout._base_folder = os.path.join(self.base_folder, new_path)
+
+        # Wait until it finish to really update the DB
+        try:
+            self._db.create_package(new_path, pref)
+        except ConanReferenceAlreadyExistsInDB:
+            # This was exported before, making it latest again, update timestamp
+            self._db.update_package(pref, time.time())
+
+        return new_path
 
     def assign_rrev(self, layout: RecipeLayout):
         # This is the entry point for a new exported recipe revision
@@ -211,11 +189,6 @@ class DataCache:
 
         # TODO: here maybe we should block the recipe and all the packages too
         new_path = self._get_path(ref)
-        try:
-            self._db.create_recipe(new_path, ref)
-        except ConanReferenceAlreadyExistsInDB:
-            # This was exported before, making it latest again, update timestamp
-            self._db.update_recipe_timestamp(ref, time.time())
 
         # TODO: Here we are always overwriting the contents of the rrev folder where
         #  we are putting the exported files for the reference, but maybe we could
@@ -228,6 +201,11 @@ class DataCache:
         if os.path.exists(full_path):
             rmdir(self._full_path(new_path))
         shutil.move(self._full_path(layout.base_folder), full_path)
-
-        layout.reference = ref
         layout._base_folder = os.path.join(self.base_folder, new_path)
+
+        # Wait until it finish to really update the DB
+        try:
+            self._db.create_recipe(new_path, ref)
+        except ConanReferenceAlreadyExistsInDB:
+            # This was exported before, making it latest again, update timestamp
+            self._db.update_recipe_timestamp(ref, time.time())
