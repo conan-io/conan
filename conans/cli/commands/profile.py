@@ -2,18 +2,27 @@ from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAN
 from conans.cli.commands import json_formatter
 from conans.cli.output import ConanOutput
 
-list_package_ids_formatters = {
-    "json": json_formatter
-}
 
-
-def profiles_output(profiles):
+def profiles_cli_output(profiles):
     host, build = profiles
     output = ConanOutput()
     output.writeln("Host profile:")
     output.writeln(host.dumps())
     output.writeln("Build profile:")
     output.writeln(build.dumps())
+
+
+def profiles_list_cli_output(profiles):
+    output = ConanOutput()
+    output.writeln("Profiles found in the cache:")
+    for p in profiles:
+        output.writeln(p)
+
+
+def detected_profile_cli_output(detect_profile):
+    output = ConanOutput()
+    output.writeln("Detected profile:")
+    output.writeln(detect_profile.dumps())
 
 
 def add_profiles_args(parser):
@@ -59,13 +68,8 @@ def add_profiles_args(parser):
         item_fn("host", ":h", ":host")
 
 
-@conan_subcommand(formatters={"cli": profiles_output})
-def profile_show(conan_api, parser, subparser, *args):
-    """
-    Show profiles
-    """
-    add_profiles_args(subparser)
-    args = parser.parse_args(*args)
+def get_profiles_from_args(args, conan_api):
+    # TODO: Do we want a ProfilesAPI.get_profiles() to return both profiles from args?
     profile_build = conan_api.profiles.get_profile(profiles=args.profile_build,
                                                    settings=args.settings_build,
                                                    options=args.options_build,
@@ -77,7 +81,29 @@ def profile_show(conan_api, parser, subparser, *args):
     return profile_host, profile_build
 
 
-@conan_subcommand(formatters=list_package_ids_formatters)
+@conan_subcommand(formatters={"cli": profiles_cli_output})
+def profile_show(conan_api, parser, subparser, *args):
+    """
+    Show profiles
+    """
+    add_profiles_args(subparser)
+    args = parser.parse_args(*args)
+    return get_profiles_from_args(args, conan_api)
+
+
+@conan_subcommand(formatters={"cli": profiles_cli_output})
+def profile_path(conan_api, parser, subparser, *args):
+    """
+    Show profile path location
+    """
+    add_profiles_args(subparser)
+    subparser.add_argument("name", help="Profile name")
+    args = parser.parse_args(*args)
+    result = conan_api.profiles.profile_path(args.name)
+    return result
+
+
+@conan_subcommand(formatters={"cli": detected_profile_cli_output})
 def profile_detect(conan_api, parser, subparser, *args):
     """
     Detect default profile
@@ -90,7 +116,7 @@ def profile_detect(conan_api, parser, subparser, *args):
     return result
 
 
-@conan_subcommand(formatters=list_package_ids_formatters)
+@conan_subcommand(formatters={"cli": profiles_list_cli_output, "json": json_formatter})
 def profile_list(conan_api, parser, subparser, *args):
     """
     List all profiles in the cache

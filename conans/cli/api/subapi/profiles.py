@@ -57,4 +57,4 @@ class ProfilesAPI:
 
         contents = profile.dumps()
         save(profile_path, contents)
-        return profile_path
+        return profile
