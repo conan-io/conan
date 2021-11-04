@@ -6,6 +6,7 @@ from jinja2 import Template
 from conan.tools._check_build_profile import check_using_build_profile
 from conans.errors import ConanException
 from conans.util.files import load, save
+from conan.tools.apple.apple import to_apple_arch
 
 
 class XcodeDeps(object):
@@ -69,7 +70,10 @@ class XcodeDeps(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.configuration = conanfile.settings.get_safe("build_type")
-        self.architecture = conanfile.settings.get_safe("arch")
+
+        arch = conanfile.settings.get_safe("arch")
+        self.architecture = to_apple_arch(arch) or arch
+
         # TODO: check if it makes sense to add a subsetting for sdk version
         #  related to: https://github.com/conan-io/conan/issues/9608
         self.os_version = conanfile.settings.get_safe("os.version")
