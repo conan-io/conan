@@ -68,7 +68,7 @@ class PkgConfigDeps(object):
                 comp_alias_name = get_component_name(req_conanfile, comp_name)
                 ret.append(self._get_pc_name(pkg_name, comp_alias_name))
         else:
-            # Let's try to get the transitive dependencies for the given package name
+            # Let's try to get all the requires for the given package name
             try:
                 dep_conanfile = self._conanfile.dependencies.host[name]
             except KeyError:
