@@ -60,12 +60,22 @@ class PkgConfigDeps(object):
         Note: CppInfo could be coming from one Component object instead of the dependency
         """
         ret = []
-        for req in cpp_info.requires:
-            pkg_name, comp_name = req.split("::") if "::" in req else (name, req)
-            # FIXME: it could allow defining requires to not direct dependencies
-            req_conanfile = self._conanfile.dependencies.host[pkg_name]
-            comp_alias_name = get_component_name(req_conanfile, comp_name)
-            ret.append(self._get_pc_name(pkg_name, comp_alias_name))
+        if cpp_info.requires:
+            for req in cpp_info.requires:
+                pkg_name, comp_name = req.split("::") if "::" in req else (name, req)
+                # FIXME: it could allow defining requires to not direct dependencies
+                req_conanfile = self._conanfile.dependencies.host[pkg_name]
+                comp_alias_name = get_component_name(req_conanfile, comp_name)
+                ret.append(self._get_pc_name(pkg_name, comp_alias_name))
+        else:
+            # Let's try to get the transitive dependencies for the given package name
+            try:
+                dep_conanfile = self._conanfile.dependencies.host[name]
+            except KeyError:
+                pass
+            else:
+                ret = [get_package_name(req)
+                       for req in dep_conanfile.dependencies.direct_host.values()]
         return ret
 
     def get_components_files_and_content(self, dep):
