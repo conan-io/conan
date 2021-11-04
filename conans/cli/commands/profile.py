@@ -1,28 +1,25 @@
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter
-from conans.cli.output import ConanOutput
+from conans.cli.output import cli_out_write
 
 
 def profiles_cli_output(profiles):
     host, build = profiles
-    output = ConanOutput()
-    output.writeln("Host profile:")
-    output.writeln(host.dumps())
-    output.writeln("Build profile:")
-    output.writeln(build.dumps())
+    cli_out_write("Host profile:")
+    cli_out_write(host.dumps())
+    cli_out_write("Build profile:")
+    cli_out_write(build.dumps())
 
 
 def profiles_list_cli_output(profiles):
-    output = ConanOutput()
-    output.writeln("Profiles found in the cache:")
+    cli_out_write("Profiles found in the cache:")
     for p in profiles:
-        output.writeln(p)
+        cli_out_write(p)
 
 
 def detected_profile_cli_output(detect_profile):
-    output = ConanOutput()
-    output.writeln("Detected profile:")
-    output.writeln(detect_profile.dumps())
+    cli_out_write("Detected profile:")
+    cli_out_write(detect_profile.dumps())
 
 
 def add_profiles_args(parser):
