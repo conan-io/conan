@@ -315,7 +315,7 @@ def test_legacy_cmake_is_not_affected_by_set_property_usage():
     client.run("create greetings.py greetings/1.0@")
     client.run("install greetings/1.0@ -g cmake")
     conanbuildinfo = client.load("conanbuildinfo.cmake")
-    # Let's check
+    # Let's check our final target is the pkg name instead of "MyChat"
     assert "set_property(TARGET CONAN_PKG::greetings" in conanbuildinfo
     assert "add_library(CONAN_PKG::greetings" in conanbuildinfo
     assert "set(CONAN_TARGETS CONAN_PKG::greetings)" in conanbuildinfo
