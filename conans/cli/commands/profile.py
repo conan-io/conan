@@ -1,12 +1,19 @@
-from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS, \
-    get_remote_selection
+from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter
-from conans.cli.output import Color
-
+from conans.cli.output import ConanOutput
 
 list_package_ids_formatters = {
     "json": json_formatter
 }
+
+
+def profiles_output(profiles):
+    host, build = profiles
+    output = ConanOutput()
+    output.writeln("Host profile:")
+    output.writeln(host.dumps())
+    output.writeln("Build profile:")
+    output.writeln(build.dumps())
 
 
 def add_profiles_args(parser):
@@ -52,22 +59,21 @@ def add_profiles_args(parser):
         item_fn("host", ":h", ":host")
 
 
-@conan_subcommand(formatters=list_package_ids_formatters)
+@conan_subcommand(formatters={"cli": profiles_output})
 def profile_show(conan_api, parser, subparser, *args):
     """
-    Show one profile
+    Show profiles
     """
     add_profiles_args(subparser)
     args = parser.parse_args(*args)
-
     profile_build = conan_api.profiles.get_profile(profiles=args.profile_build,
-                                            settings=args.settings_build,
-                                            options=args.options_build, env=args.env_build,
-                                            conf=args.conf_build, build_profile=True)
-    profile_host = conan_api.profiles.get_profile(profiles=args.profile,
-                                                settings=args.settings,
-                                                options=args.options, env=args.env,
-                                                conf=args.conf)
+                                                   settings=args.settings_build,
+                                                   options=args.options_build,
+                                                   conf=args.conf_build, build_profile=True)
+    profile_host = conan_api.profiles.get_profile(profiles=args.profile_host,
+                                                  settings=args.settings_host,
+                                                  options=args.options_host,
+                                                  conf=args.conf_host)
     return profile_host, profile_build
 
 

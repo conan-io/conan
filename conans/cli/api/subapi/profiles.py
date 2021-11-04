@@ -1,13 +1,10 @@
 import os
 
-from conans.cli.api.subapi import api_method
-from conans.cli.conan_app import ConanApp
 from conans.client.cache.cache import ClientCache
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.profile_loader import ProfileLoader
 from conans.errors import ConanException
 from conans.model.profile import Profile
-from conans.search.search import search_packages
 from conans.util.files import save
 
 
@@ -16,10 +13,11 @@ class ProfilesAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    def get_profile(self, profiles=None, settings=None, options=None, env=None, conf=None,
+    def get_profile(self, profiles=None, settings=None, options=None, conf=None,
                     cwd=None, build_profile=False):
         cache = ClientCache(self.conan_api.cache_folder)
         loader = ProfileLoader(cache)
+        env = None  # TODO: Not handling environment
         profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd, build_profile)
         return profile
 
