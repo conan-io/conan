@@ -3,6 +3,7 @@ import shutil
 from io import StringIO
 from typing import List
 
+import yaml
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
@@ -19,7 +20,6 @@ from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
 from conans.model.ref import ConanFileReference
-from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
@@ -47,6 +47,7 @@ class ClientCache(object):
         self._no_lock = None
         self._config = None
         self._new_config = None
+        self._settings_yaml = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = os.path.join(self.cache_folder, "p")
@@ -262,12 +263,17 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, HOOKS_FOLDER)
 
     @property
-    def settings(self):
+    def settings_yaml_definition(self):
         """Returns {setting: [value, ...]} defining all the possible
            settings without values"""
-        self.initialize_settings()
-        content = load(self.settings_path)
-        return Settings.loads(content)
+        if self._settings_yaml is None:
+            self.initialize_settings()
+            content = load(self.settings_path)
+            try:
+                self._settings_yaml = yaml.safe_load(content) or {}
+            except (yaml.YAMLError, AttributeError) as ye:
+                raise ConanException("Invalid settings.yml format: {}".format(ye))
+        return self._settings_yaml
 
     @property
     def hooks(self):

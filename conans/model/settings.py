@@ -187,7 +187,7 @@ class SettingsItem(object):
 
 
 class Settings(object):
-    def __init__(self, definition=None, name="settings", parent_value=None):
+    def __init__(self, definition=None, name="settings", parent_value=None, values=None):
         if parent_value == "None" and definition:
             raise ConanException("settings.yml: None setting can't have subsettings")
         definition = definition or {}
@@ -195,6 +195,13 @@ class Settings(object):
         self._parent_value = parent_value  # gcc, x86
         self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
+        if values is not None:
+            for name, value in values.items():
+                list_settings = name.split(".")
+                attr = self
+                for setting in list_settings[:-1]:
+                    attr = getattr(attr, setting)
+                setattr(attr, list_settings[-1], str(value))
 
     def get_safe(self, name, default=None):
         try:
@@ -286,26 +293,6 @@ class Settings(object):
 
     def items(self):
         return self.values_list
-
-    def iteritems(self):
-        return self.values_list
-
-    def update_values(self, vals):
-        """ receives a list of tuples (compiler.version, value)
-        This is more an updated than a setter
-        """
-        assert isinstance(vals, list), vals
-        for (name, value) in vals:
-            list_settings = name.split(".")
-            attr = self
-            for setting in list_settings[:-1]:
-                attr = getattr(attr, setting)
-            setattr(attr, list_settings[-1], str(value))
-
-    @values.setter
-    def values(self, vals):
-        assert isinstance(vals, Values)
-        self.update_values(vals.as_list())
 
     def constraint(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object

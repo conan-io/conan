@@ -29,7 +29,7 @@ class DepsGraphBuilder(object):
         dep_graph = DepsGraph()
 
         # TODO: Why assign here the settings_build and settings_target?
-        root_node.conanfile.settings_build = profile_build.processed_settings.copy()
+        root_node.conanfile.settings_build = profile_build.settings.copy()
         root_node.conanfile.settings_target = None
 
         self._prepare_node(root_node, profile_host, profile_build, Options())
@@ -250,7 +250,7 @@ class DepsGraphBuilder(object):
         # TODO: This should be out of here
         # If there is a context_switch, it is because it is a BR-build
         # Assign the profiles depending on the context
-        dep_conanfile.settings_build = profile_build.processed_settings.copy()
+        dep_conanfile.settings_build = profile_build.settings.copy()
         context_switch = (node.context == CONTEXT_HOST and require.build)
         if not context_switch:
             if populate_settings_target:
@@ -259,9 +259,9 @@ class DepsGraphBuilder(object):
                 dep_conanfile.settings_target = None
         else:
             if node.context == CONTEXT_HOST:
-                dep_conanfile.settings_target = profile_host.processed_settings.copy()
+                dep_conanfile.settings_target = profile_host.settings.copy()
             else:
-                dep_conanfile.settings_target = profile_build.processed_settings.copy()
+                dep_conanfile.settings_target = profile_build.settings.copy()
 
         new_node = Node(new_ref, dep_conanfile, context=context)
         new_node.recipe = recipe_status

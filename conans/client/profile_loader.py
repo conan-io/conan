@@ -80,6 +80,8 @@ class ProfileLoader:
         try:
             return self._recurse_load_profile(text, profile_path)
         except ConanException as exc:
+            # import traceback
+            # print(traceback.format_exc())
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
     def _recurse_load_profile(self, text, profile_path):
@@ -232,7 +234,7 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
-        base_profile.settings.update(settings)
+        base_profile._settings_values.update(settings)
         for pkg_name, values_dict in package_settings.items():
             base_profile.package_settings[pkg_name].update(values_dict)
         for pattern, refs in build_requires.items():
@@ -326,7 +328,7 @@ def _profile_parse_args(settings, options, envs, conf):
 
     result = Profile()
     result.options = Options.loads("\n".join(options or []))
-    result.settings = OrderedDict(settings)
+    result._settings_values = OrderedDict(settings)
     if conf:
         result.conf = ConfDefinition()
         result.conf.loads("\n".join(conf))

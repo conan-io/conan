@@ -170,7 +170,7 @@ class ConanFileLoader(object):
     def _initialize_conanfile(conanfile, profile):
         # Prepare the settings for the loaded conanfile
         # Mixing the global settings with the specified for that name if exist
-        tmp_settings = profile.processed_settings.copy()
+        tmp_settings = profile.settings.copy()
         package_settings_values = profile.package_settings_values
         if conanfile.user is not None:
             ref_str = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
@@ -266,7 +266,7 @@ class ConanFileLoader(object):
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
         conanfile = ConanFile(self._runner, display_name)
-        tmp_settings = profile.processed_settings.copy()
+        tmp_settings = profile.settings.copy()
         package_settings_values = profile.package_settings_values
         if "&" in package_settings_values:
             pkg_settings = package_settings_values.get("&")
@@ -306,9 +306,9 @@ class ConanFileLoader(object):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._runner, display_name="virtual")
-        conanfile.initialize(profile_host.processed_settings.copy(), profile_host.buildenv)
+        conanfile.initialize(profile_host.settings.copy(), profile_host.buildenv)
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
-        conanfile.settings = profile_host.processed_settings.copy_values()
+        conanfile.settings = profile_host.settings.copy_values()
 
         if is_build_require:
             for reference in references:

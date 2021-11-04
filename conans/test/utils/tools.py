@@ -77,8 +77,8 @@ def inc_package_manifest_timestamp(cache, package_reference, inc_time):
 def create_profile(profile=None, settings=None):
     if profile is None:
         profile = Profile()
-    if profile.processed_settings is None:
-        profile.processed_settings = settings or Settings()
+    if profile.settings is None:
+        profile.settings = settings or Settings()
     return profile
 
 
