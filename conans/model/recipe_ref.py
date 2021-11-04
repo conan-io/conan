@@ -1,7 +1,6 @@
 import re
 from functools import total_ordering
 
-from conans.model.ref import ConanFileReference
 from conans.util.dates import from_timestamp_to_iso8601
 
 
@@ -61,14 +60,6 @@ class RecipeReference:
         self.channel = channel
         self.revision = revision
         self.timestamp = timestamp  # integer, seconds from 0 in UTC
-
-    @staticmethod
-    def from_conanref(ref, timestamp=None):
-        return RecipeReference(ref.name, ref.version, ref.user, ref.channel, ref.revision, timestamp)
-
-    def to_conanfileref(self):
-        return ConanFileReference(self.name, str(self.version), self.user, self.channel,
-                                  self.revision)
 
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """

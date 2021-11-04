@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -36,7 +36,7 @@ def test_override(client):
     assert "COMPILER=> VisualBuild Visual Studio" in client.out
 
     # CHECK CONANINFO FILE
-    latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("MinGWBuild/0.1@lasote/testing"))
+    latest_rrev = client.cache.get_latest_rrev(RecipeReference.loads("MinGWBuild/0.1@lasote/testing"))
     pkg_ids = client.cache.get_package_references(latest_rrev)
     latest_prev = client.cache.get_latest_prev(pkg_ids[0])
     package_path = client.cache.pkg_layout(latest_prev).package()
@@ -44,7 +44,7 @@ def test_override(client):
     assert "compiler=gcc" in conaninfo
 
     # CHECK CONANINFO FILE
-    latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("VisualBuild/0.1@lasote/testing"))
+    latest_rrev = client.cache.get_latest_rrev(RecipeReference.loads("VisualBuild/0.1@lasote/testing"))
     pkg_ids = client.cache.get_package_references(latest_rrev)
     latest_prev = client.cache.get_latest_prev(pkg_ids[0])
     package_path = client.cache.pkg_layout(latest_prev).package()

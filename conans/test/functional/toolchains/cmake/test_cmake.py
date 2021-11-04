@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized.parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
@@ -538,7 +538,7 @@ class CMakeInstallTest(unittest.TestCase):
         # The create flow must work
         client.run("create . pkg/0.1@")
         self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
-        ref = ConanFileReference.loads("pkg/0.1")
+        ref = RecipeReference.loads("pkg/0.1")
         pref = client.get_latest_prev(ref)
         package_folder = client.get_latest_pkg_layout(pref).package()
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))

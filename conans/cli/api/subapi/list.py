@@ -12,7 +12,7 @@ class ListAPI:
         """
         Get all the recipe/package revisions given a reference from cache or remote.
 
-        :param ref: `PkgReference` or `ConanFileReference` without the revisions
+        :param ref: `PkgReference` or `RecipeReference` without the revisions
         :param getter_name: `string` method that should be called by either app.remote_manager
                             or app.cache (remote or local search) to get all the revisions, e.g.:
                                 >> app.remote_manager.get_package_revisions(ref, remote=remote)
@@ -70,7 +70,7 @@ class ListAPI:
         """
         Get all the recipe revisions given a reference from cache or remote.
 
-        :param reference: `ConanFileReference` without the revision
+        :param reference: `RecipeReference` without the revision
         :param remote: `Remote` object
         :return: `list` of `dict` with all the results, e.g.,
                   [
@@ -92,7 +92,7 @@ class ListAPI:
         Note: if reference does not have the revision, we'll return the Package IDs for
         the latest recipe revision by default
 
-        :param reference: `ConanFileReference` with/without revision
+        :param reference: `RecipeReference` with/without revision
         :param remote: `Remote` object
         :return: `dict` with the reference revision and the results with the package_id as keys, e.g.
                   {

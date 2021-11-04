@@ -3,7 +3,7 @@ import platform
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -12,7 +12,7 @@ def test_fail_rmdir():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . MyPkg/0.1@lasote/testing")
-    ref = ConanFileReference.loads("MyPkg/0.1@lasote/testing")
+    ref = RecipeReference.loads("MyPkg/0.1@lasote/testing")
     pref = client.get_latest_prev(ref)
     build_folder = client.get_latest_pkg_layout(pref).build()
     f = open(os.path.join(build_folder, "myfile"), "wb")

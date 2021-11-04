@@ -2,9 +2,8 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer, TurboTestClient, GenConanfile
-from conans.util.env_reader import get_env
 
 
 class DownloadRevisionsTest(unittest.TestCase):
@@ -20,7 +19,7 @@ class DownloadRevisionsTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_download_revs_enabled_with_rrev(self):
-        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        ref = RecipeReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@user/channel --all --confirm -r default")
@@ -36,7 +35,7 @@ class DownloadRevisionsTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_download_revs_enabled_with_rrev_no_user_channel(self):
-        ref = ConanFileReference.loads("pkg/1.0@")
+        ref = RecipeReference.loads("pkg/1.0@")
         servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                          users={"user": "password"})}
         client = TurboTestClient(servers=servers, inputs=["admin", "password"])
@@ -54,7 +53,7 @@ class DownloadRevisionsTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_download_revs_enabled_with_prev(self):
         # https://github.com/conan-io/conan/issues/6106
-        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        ref = RecipeReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@user/channel --all --confirm -r default")

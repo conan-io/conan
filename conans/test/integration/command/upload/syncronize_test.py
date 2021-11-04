@@ -3,7 +3,6 @@ import unittest
 
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
 from conans.paths import EXPORT_TGZ_NAME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
@@ -16,7 +15,7 @@ class SynchronizeTest(unittest.TestCase):
     def test_upload(self):
         client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
         save(client.cache.default_profile_path, "")
-        ref = ConanFileReference.loads("hello/0.1@lasote/stable")
+        ref = RecipeReference.loads("hello/0.1@lasote/stable")
         files = {"conanfile.py": GenConanfile("hello", "0.1").with_exports("*"),
                  "to_be_deleted.txt": "delete me",
                  "to_be_deleted2.txt": "delete me2"}

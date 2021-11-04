@@ -1,3 +1,4 @@
+import copy
 import os
 import time
 import unittest
@@ -7,7 +8,7 @@ from mock import patch
 from parameterized.parameterized import parameterized
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
 from conans.server.revision_list import RevisionList
 from conans.test.utils.test_files import scan_folder
@@ -77,7 +78,7 @@ class ExportsSourcesTest(unittest.TestCase):
                                ("other", self.other_server)])
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
         self.client = client
-        self.ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
+        self.ref = RecipeReference.loads("Hello/0.1@lasote/testing")
         self.pref = PkgReference(self.ref, NO_SETTINGS_PACKAGE_ID)
 
     def _get_folders(self):
@@ -129,7 +130,8 @@ class ExportsSourcesTest(unittest.TestCase):
 
         server = server or self.server
         rev, _ = server.server_store.get_last_revision(self.ref)
-        ref = self.ref.copy_with_rev(rev)
+        ref = copy.copy(self.ref)
+        ref.revision = rev
         self.assertEqual(scan_folder(server.server_store.export(ref)), expected_server)
 
     def _check_export_folder(self, mode, export_folder=None, export_src_folder=None):
@@ -352,7 +354,7 @@ class ExportsSourcesTest(unittest.TestCase):
         with patch.object(RevisionList, '_now', return_value=the_time):
             self.client.run("upload Hello/0.1@lasote/testing --all -r default")
 
-        ref = ConanFileReference.loads('Hello/0.1@lasote/testing')
+        ref = RecipeReference.loads('Hello/0.1@lasote/testing')
         self.client.run(f"remove Hello/0.1@lasote/testing"
                         f"#{self.client.cache.get_latest_rrev(ref).revision} -f")
 

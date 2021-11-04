@@ -11,7 +11,7 @@ from conans.client.rest.rest_client_common import RestCommonMethods, get_excepti
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.files import decode_text
@@ -214,7 +214,11 @@ class RestV2Methods(RestCommonMethods):
         if ref.revision is None:
             # Remove the packages from all the RREVs
             revisions = self.get_recipe_revisions(ref)
-            refs = [ref.copy_with_rev(rev["revision"]) for rev in revisions]
+            refs = []
+            for rev in revisions:
+                _tmp = copy.copy(ref)
+                _tmp.revision = rev["revision"]
+                refs.append(_tmp)
         else:
             refs = [ref]
 
@@ -263,8 +267,7 @@ class RestV2Methods(RestCommonMethods):
         self.check_credentials()
         if ref.revision is None:
             # Remove all the RREVs
-            revisions = self.get_recipe_revisions(ref)
-            refs = [ref.copy_with_rev(rev["revision"]) for rev in revisions]
+            refs = self.get_recipe_revisions(ref)
         else:
             refs = [ref]
 
@@ -283,12 +286,16 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe_revisions(self, ref):
         url = self.router.recipe_revisions(ref)
         tmp = self.get_json(url)["revisions"]
-        # FIXME: return RecipeReference's when ready
-        tmp = [{"revision": item.get("revision"),
-                "time": from_iso8601_to_timestamp(item.get("time"))} for item in tmp]
-        if ref.revision:
-            for r in tmp:
-                if r["revision"] == ref.revision:
+        remote_refs = []
+        for item in tmp:
+            _tmp = copy.copy(ref)
+            _tmp.revision = item.get("revision")
+            _tmp.timestamp = from_iso8601_to_timestamp(item.get("time"))
+            remote_refs.append(_tmp)
+
+        if ref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
+            for r in remote_refs:
+                if r.revision == ref.revision:
                     return [r]
             raise RecipeNotFoundException(ref)
         return tmp
@@ -296,26 +303,28 @@ class RestV2Methods(RestCommonMethods):
     def get_latest_recipe_revision(self, ref):
         url = self.router.recipe_latest(ref)
         data = self.get_json(url)
-        # FIXME: the server API is returning an iso date, we have to convert to timestamp
-        return ref.copy_with_rev(data.get("revision")), from_iso8601_to_timestamp(data.get("time"))
+        remote_ref = copy.copy(ref)
+        remote_ref.revision = data.get("revision")
+        remote_ref.timestamp = from_iso8601_to_timestamp(data.get("time"))
+        return remote_ref
 
     def get_package_revisions(self, pref, headers=None):
         url = self.router.package_revisions(pref)
         tmp = self.get_json(url, headers=headers)["revisions"]
-        prefs = [PkgReference(pref.ref, pref.package_id, item.get("revision"),
+        remote_prefs = [PkgReference(pref.ref, pref.package_id, item.get("revision"),
                               from_iso8601_to_timestamp(item.get("time"))) for item in tmp]
 
-        if pref.revision:  # FIXME: This is a bit messy
-            for _pref in prefs:
+        if pref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
+            for _pref in remote_prefs:
                 if _pref.revision == pref.revision:
                     return [_pref]
             raise PackageNotFoundException(pref)
-        return prefs
+        return remote_prefs
 
     def get_latest_package_revision(self, pref: PkgReference, headers):
         url = self.router.package_latest(pref)
         data = self.get_json(url, headers=headers)
-        full_pref = copy.copy(pref)
-        full_pref.revision = data.get("revision")
-        full_pref.timestamp = from_iso8601_to_timestamp(data.get("time"))
-        return full_pref
+        remote_pref = copy.copy(pref)
+        remote_pref.revision = data.get("revision")
+        remote_pref.timestamp = from_iso8601_to_timestamp(data.get("time"))
+        return remote_pref

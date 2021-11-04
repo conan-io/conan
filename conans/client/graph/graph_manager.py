@@ -8,7 +8,7 @@ from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.profile_loader import profile_from_args
 from conans.model.options import Options
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 
 
 class GraphManager(object):
@@ -82,7 +82,7 @@ class GraphManager(object):
         profile_host.dev_reference = create_reference  # Make sure the created one has develop=True
 
         # create (without test_package), install|info|graph|export-pkg <ref>
-        if isinstance(reference, ConanFileReference):
+        if isinstance(reference, RecipeReference):
             # options without scope like ``-o shared=True`` refer to this reference
             profile_host.options.scope(reference.name)
             # FIXME: Might need here the profile_build
@@ -119,8 +119,7 @@ class GraphManager(object):
                                                    graph_lock=graph_lock,
                                                    require_overrides=require_overrides)
 
-            ref = ConanFileReference(conanfile.name, conanfile.version,
-                                     ref.user, ref.channel, validate=False)
+            ref = RecipeReference(conanfile.name, conanfile.version, ref.user, ref.channel)
             if ref.name:
                 profile.options.scope(ref.name)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
@@ -172,7 +171,7 @@ class GraphManager(object):
             else:
                 conanfile.requires(repr(create_reference))
 
-        ref = ConanFileReference(conanfile.name, conanfile.version,
-                                 create_reference.user, create_reference.channel, validate=False)
+        ref = RecipeReference(conanfile.name, conanfile.version, create_reference.user,
+                              create_reference.channel)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         return root_node

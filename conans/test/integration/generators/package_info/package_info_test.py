@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
@@ -275,7 +275,7 @@ class TestPackageInfo(unittest.TestCase):
                      "galaxy/iss/iss.h": "",
                      "iss_libs/libiss": "",
                      "bin/exelauncher": ""})
-        dep_ref = ConanFileReference("dep", "1.0", "us", "ch")
+        dep_ref = RecipeReference("dep", "1.0", "us", "ch")
         client.run("create conanfile_dep.py dep/1.0@us/ch")
         client.run("create conanfile_consumer.py consumer/1.0@us/ch")
         dep_pref = client.get_latest_prev(dep_ref, NO_SETTINGS_PACKAGE_ID)

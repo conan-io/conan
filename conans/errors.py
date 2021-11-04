@@ -222,14 +222,14 @@ class NotFoundException(ConanException):  # 404
 class RecipeNotFoundException(NotFoundException):
 
     def __init__(self, ref, remote=None):
-        from conans.model.ref import ConanFileReference
-        assert isinstance(ref, ConanFileReference), "RecipeNotFoundException requires a " \
-                                                    "ConanFileReference"
+        from conans.model.recipe_ref import RecipeReference
+        assert isinstance(ref, RecipeReference), "RecipeNotFoundException requires a " \
+                                                    "RecipeReference"
         self.ref = ref
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.ref.full_str()
+        tmp = repr(self.ref)
         return "Recipe not found: '{}'".format(tmp, self.remote_message())
 
 

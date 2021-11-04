@@ -4,7 +4,6 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.utils.tools import TestServer, TurboTestClient
 
@@ -27,7 +26,7 @@ class HelloConan(ConanFile):
         tools.save(os.path.join(self.package_folder, "file.txt"), "contents")
         os.symlink("file.txt", os.path.join(self.package_folder, "link.txt"))
 """
-        ref = ConanFileReference.loads("lib/1.0@conan/stable")
+        ref = RecipeReference.loads("lib/1.0@conan/stable")
         # By default it is not allowed
         pref = client.create(ref, conanfile=conanfile)
         client.create(ref, conanfile=conanfile)

@@ -2,7 +2,7 @@ import fnmatch
 from collections import OrderedDict
 
 from conans.cli.output import Color
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 
 
 class Printer(object):
@@ -133,19 +133,19 @@ class Printer(object):
                     self._out.highlight("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
                     reference = conan_item["recipe"]["id"]
-                    ref = ConanFileReference.loads(reference)
-                    self._print_colored_line(ref.full_str(), indent=0)
+                    ref = RecipeReference.loads(reference)
+                    self._print_colored_line(repr(ref), indent=0)
         else:
             for remote_info in search_info:
                 if all_remotes_search:
                     self._out.writeln("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
                     reference = conan_item["recipe"]["id"]
-                    ref = ConanFileReference.loads(reference)
-                    self._out.writeln(ref.full_str())
+                    ref = RecipeReference.loads(reference)
+                    self._out.writeln(repr(ref))
 
     def print_search_packages(self, search_info, ref, packages_query, raw):
-        assert(isinstance(ref, ConanFileReference))
+        assert(isinstance(ref, RecipeReference))
         if not raw:
             self._out.info("Existing packages for recipe %s:\n" % str(ref))
         for remote_info in search_info:

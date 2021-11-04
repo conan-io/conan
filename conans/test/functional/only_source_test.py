@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -118,7 +118,7 @@ class MyPackage(ConanFile):
 
     def test_reuse(self):
         client = TestClient(default_server_user=True)
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
         client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("install %s --build missing" % str(ref))

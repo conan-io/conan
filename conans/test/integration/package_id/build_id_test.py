@@ -5,7 +5,7 @@ import unittest
 from parameterized.parameterized import parameterized
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -60,7 +60,7 @@ class BuildIdTest(unittest.TestCase):
 
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
-        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("Pkg/0.1@user/channel"))
+        latest_rrev = client.cache.get_latest_rrev(RecipeReference.loads("Pkg/0.1@user/channel"))
         pref_debug = PkgReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                             f"{package_id_windows_debug}")
         prev_debug = client.cache.get_latest_prev(pref_debug)
@@ -222,7 +222,7 @@ class BuildIdTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run('create . user/channel -s os=Windows -s build_type=Debug')
         client.run('create . user/channel -s os=Windows -s build_type=Release')
-        ref = ConanFileReference.loads("Pkg/0.1@user/channel")
+        ref = RecipeReference.loads("Pkg/0.1@user/channel")
 
         def _check_builds():
             latest_rrev = client.cache.get_latest_rrev(ref)

@@ -7,7 +7,7 @@ from mock import patch
 
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import BUILD_FOLDER, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
 from conans.server.store.server_store import ServerStore
@@ -22,7 +22,7 @@ class RemoveLocksTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create . lasote/testing")
         self.assertNotIn('does not contain a number!', client.out)
-        ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
+        ref = RecipeReference.loads("Hello/0.1@lasote/testing")
         conan_folder = client.get_latest_ref_layout(ref).base_folder()
         self.assertIn("locks", os.listdir(conan_folder))
         self.assertTrue(os.path.exists(conan_folder + ".count"))
@@ -108,7 +108,7 @@ class RemoveTest(unittest.TestCase):
         files = {}
         prefs = []
         for key, folder in self.root_folder.items():
-            ref = ConanFileReference.loads(folder)
+            ref = RecipeReference.loads(folder)
             folder = folder.replace("@", "/")
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
             files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = \
@@ -156,7 +156,7 @@ class RemoveTest(unittest.TestCase):
             root_folder = base_path.store
             for k, shas in folders.items():
                 folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
-                ref = ConanFileReference.loads(self.root_folder[k])
+                ref = RecipeReference.loads(self.root_folder[k])
                 if isinstance(base_path, ServerStore):
                     try:
                         rev = self.client.cache.get_latest_rrev(ref).revision
@@ -410,7 +410,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@")
-        latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("lib/1.0"))
+        latest_rrev = self.client.cache.get_latest_rrev(RecipeReference.loads("lib/1.0"))
         ref_layout = self.client.cache.ref_layout(latest_rrev)
         pkg_ids = self.client.cache.get_package_references(latest_rrev)
         latest_prev = self.client.cache.get_latest_prev(pkg_ids[0])

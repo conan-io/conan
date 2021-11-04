@@ -2,7 +2,7 @@ import os
 import re
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -15,7 +15,7 @@ def test_cmake_lib_template():
 
     client.run("export-pkg . hello/0.1@")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    ref = ConanFileReference.loads("hello/0.1")
+    ref = RecipeReference.loads("hello/0.1")
     ref = client.cache.get_latest_rrev(ref)
     pref = PkgReference(ref, package_id)
     pref = client.cache.get_latest_prev(pref)

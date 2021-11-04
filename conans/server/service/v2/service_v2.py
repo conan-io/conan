@@ -1,3 +1,4 @@
+import copy
 import os
 
 from bottle import FileUpload, static_file
@@ -46,14 +47,18 @@ class ConanServiceV2(CommonService):
 
     def get_recipe_revisions(self, ref, auth_user):
         self._authorizer.check_read_conan(auth_user, ref)
-        root = self._server_store.conan_revisions_root(ref.copy_clear_rev())
+        ref_norev = copy.copy(ref)
+        ref_norev.revision = None
+        root = self._server_store.conan_revisions_root(ref_norev)
         if not self._server_store.path_exists(root):
             raise RecipeNotFoundException(ref)
         return self._server_store.get_recipe_revisions(ref)
 
     def get_package_revisions(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)
-        root = self._server_store.conan_revisions_root(pref.ref.copy_clear_rev())
+        ref_norev = copy.copy(pref.ref)
+        ref_norev.revision = None
+        root = self._server_store.conan_revisions_root(ref_norev)
         if not self._server_store.path_exists(root):
             raise RecipeNotFoundException(pref.ref)
 

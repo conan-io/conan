@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -22,7 +22,7 @@ class ExportMetadataTest(unittest.TestCase):
         t = TestClient()
         commit = t.init_git_repo({'conanfile.py': self.conanfile.format(revision_mode="scm")})
 
-        ref = ConanFileReference.loads("name/version@user/channel")
+        ref = RecipeReference.loads("name/version@user/channel")
         t.run("export . {}".format(ref))
 
         latest_rev = t.cache.get_latest_rrev(ref)

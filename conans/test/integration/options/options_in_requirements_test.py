@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -42,7 +42,7 @@ class BoostConan(ConanFile):
         files = {"conanfile.py": boost}
         client.save(files, clean_first=True)
         client.run("create . lasote/testing -o BoostDbg:shared=True --build=missing")
-        ref = ConanFileReference.loads("zlib/0.1@lasote/testing")
+        ref = RecipeReference.loads("zlib/0.1@lasote/testing")
         pref = client.get_latest_prev(ref)
         pkg_folder = client.get_latest_pkg_layout(pref).package()
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))

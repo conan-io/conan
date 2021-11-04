@@ -15,7 +15,7 @@ from conans.util.progress_bar import left_justify_message
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files
-from conans.model.ref import ConanFileReference, check_valid_ref
+from conans.model.ref import check_valid_ref
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_recipes
@@ -62,7 +62,7 @@ class _UploadCollecter(object):
 
         if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
-            ref = ConanFileReference.loads(reference_or_pattern)
+            ref = RecipeReference.loads(reference_or_pattern)
             rrev = self._cache.get_latest_rrev(ref)
             if not rrev:
                 raise RecipeNotFoundException(ref)
@@ -413,7 +413,7 @@ class CmdUpload(object):
 
         if len(self._exceptions_list) > 0:
             for exc, ref, trace, remote in self._exceptions_list:
-                t = "recipe" if isinstance(ref, ConanFileReference) else "package"
+                t = "recipe" if isinstance(ref, RecipeReference) else "package"
                 msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
                 if get_env("CONAN_VERBOSE_TRACEBACK", False):
                     msg += trace

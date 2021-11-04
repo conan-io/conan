@@ -160,7 +160,7 @@ class ConanProxy(object):
         remote, latest_rrev, _ = self._get_rrev_from_remotes(ref)
 
         if not latest_rrev:
-            msg = "Unable to find '%s' in remotes" % ref.full_str()
+            msg = "Unable to find '%s' in remotes" % repr(ref)
             raise NotFoundException(msg)
 
         new_ref = _retrieve_from_remote(remote, latest_rrev)

@@ -6,7 +6,7 @@ from conans.client.rest import response_to_str
 from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            AuthenticationException, RecipeNotFoundException,
                            PackageNotFoundException)
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -229,7 +229,7 @@ class RestCommonMethods(object):
         """
         url = self.router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
-        return [ConanFileReference.loads(reference) for reference in response]
+        return [RecipeReference.loads(reference) for reference in response]
 
     def search_packages(self, ref, query):
         """Client is filtering by the query"""

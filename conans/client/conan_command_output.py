@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 from collections import OrderedDict
@@ -9,7 +10,7 @@ from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.search.binary_html_table import html_binary_graph
 from conans.util.dates import iso8601_to_str
 from conans.util.files import save
@@ -44,8 +45,8 @@ class CommandOutputer(object):
 
     def remote_ref_list(self, refs):
         for reference, remote_name in refs.items():
-            ref = ConanFileReference.loads(reference)
-            self._output.info("%s: %s" % (ref.full_str(), remote_name))
+            ref = RecipeReference.loads(reference)
+            self._output.info("%s: %s" % (repr(ref), remote_name))
 
     def remote_pref_list(self, package_references):
         for package_reference, remote_name in package_references.items():
@@ -112,7 +113,7 @@ class CommandOutputer(object):
                 item_data["revision"] = ref.revision
 
             item_data["reference"] = str(ref)
-            item_data["is_ref"] = isinstance(ref, ConanFileReference)
+            item_data["is_ref"] = isinstance(ref, RecipeReference)
             item_data["display_name"] = conanfile.display_name
             item_data["id"] = package_id
             item_data["build_id"] = build_id(conanfile)
@@ -124,7 +125,7 @@ class CommandOutputer(object):
                                                 for r in conanfile.python_requires.all_refs()]
 
             # Paths
-            if isinstance(ref, ConanFileReference) and grab_paths:
+            if isinstance(ref, RecipeReference) and grab_paths:
                 # ref already has the revision ID, not needed to get it again
                 # FIXME: Not access to the cache should be available here, this information
                 #        should be provided by the conan_api
@@ -161,7 +162,7 @@ class CommandOutputer(object):
             _add_if_exists("provides", as_list=True)
             _add_if_exists("scm")
 
-            if isinstance(ref, ConanFileReference):
+            if isinstance(ref, RecipeReference):
                 item_data["recipe"] = node.recipe
 
                 item_data["revision"] = node.ref.revision
@@ -175,7 +176,7 @@ class CommandOutputer(object):
             if node_times and node_times.get(ref, None):
                 item_data["creation_date"] = node_times.get(ref, None)
 
-            if isinstance(ref, ConanFileReference):
+            if isinstance(ref, RecipeReference):
                 dependants = [n for node in list_nodes for n in node.inverse_neighbors()]
                 required = [d.conanfile for d in dependants if d.recipe != RECIPE_VIRTUAL]
                 if required:
@@ -186,11 +187,18 @@ class CommandOutputer(object):
             build_requires = [d for d in depends if d in build_time_nodes]  # TODO: May use build_require_context information
 
             if requires:
-                item_data["requires"] = [repr(d.ref.copy_clear_rev()) for d in requires]
+                item_data["requires"] = []
+                for d in requires:
+                    _tmp = copy.copy(d.ref)
+                    _tmp.revision = None
+                    item_data["requires"].append(repr(_tmp))
 
             if build_requires:
-                item_data["build_requires"] = [repr(d.ref.copy_clear_rev())
-                                               for d in build_requires]
+                item_data["build_requires"] = []
+                for d in build_requires:
+                    _tmp = copy.copy(d.ref)
+                    _tmp.revision = None
+                    item_data["build_requires"].append(repr(_tmp))
 
             ret.append(item_data)
 

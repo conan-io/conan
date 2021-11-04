@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -35,7 +35,7 @@ class ConanFileToolsTest(ConanFile):
         client.run("export . lasote/testing")
         client.run("install Pkg/0.1@lasote/testing --build")
         self.assertIn("Source files: myfile.h contents", client.out)
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
 
         latest_rrev = client.cache.get_latest_rrev(ref)
         pkg_ids = client.cache.get_package_references(latest_rrev)
@@ -69,7 +69,7 @@ class ConanFileToolsTest(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile % "True"})
         client.run("create . lasote/testing --build")
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
 
         latest_rrev = client.cache.get_latest_rrev(ref)
         latest_prev = client.cache.get_latest_prev(latest_rrev)
@@ -81,7 +81,7 @@ class ConanFileToolsTest(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile % "False"})
         client.run("create . lasote/testing --build")
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
 
         latest_rrev = client.cache.get_latest_rrev(ref)
         latest_prev = client.cache.get_latest_prev(latest_rrev)

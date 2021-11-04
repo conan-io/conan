@@ -3,7 +3,6 @@ import textwrap
 import time
 from time import sleep
 
-from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load
 
@@ -69,7 +68,7 @@ def test_update_not_date():
 
     prev = client.get_latest_prev("Hello0/1.0@lasote/stable")
 
-    ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
+    ref = RecipeReference.loads("Hello0/1.0@lasote/stable")
 
     initial_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_rrev(ref))
     initial_package_timestamp = client.cache.get_package_timestamp(prev)
@@ -124,7 +123,7 @@ def test_reuse():
     client.run("upload Hello0/1.0@lasote/stable --all -r default")
 
     client2.run("install Hello0/1.0@lasote/stable --update")
-    ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
+    ref = RecipeReference.loads("Hello0/1.0@lasote/stable")
     pref = client.get_latest_prev(ref)
     package_path = client2.get_latest_pkg_layout(pref).package()
     header = load(os.path.join(package_path, "header.h"))

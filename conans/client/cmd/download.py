@@ -1,16 +1,17 @@
 from conans.cli.output import ScopedOutput, ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
 from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException, \
     ConanException
 from multiprocessing.pool import ThreadPool
+
+from conans.model.recipe_ref import RecipeReference
 
 
 def download(app, ref, package_ids, recipe):
     remote_manager, cache, loader = app.remote_manager, app.cache, app.loader
     hook_manager = app.hook_manager
-    assert(isinstance(ref, ConanFileReference))
+    assert(isinstance(ref, RecipeReference))
     scoped_output = ScopedOutput(str(ref), ConanOutput())
     remote = app.selected_remote
     if not remote:
@@ -40,7 +41,7 @@ def download(app, ref, package_ids, recipe):
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
-            scoped_output.info("Getting the complete package list from '%s'..." % ref.full_str())
+            scoped_output.info("Getting the complete package list from '%s'..." % repr(ref))
             packages_props = remote_manager.search_packages(remote, ref, None)
             package_ids = list(packages_props.keys())
             if not package_ids:

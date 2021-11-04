@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 class CreateEditablePackageTest(unittest.TestCase):
 
     def test_install_ok(self):
-        ref = ConanFileReference.loads('lib/version@user/name')
+        ref = RecipeReference.loads('lib/version@user/name')
         t = TestClient()
         t.save({'conanfile.py': GenConanfile()})
         t.run('editable add . {}'.format(ref))
@@ -18,7 +18,7 @@ class CreateEditablePackageTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_editable_list_search(self):
-        ref = ConanFileReference.loads('lib/version@user/name')
+        ref = RecipeReference.loads('lib/version@user/name')
         t = TestClient()
         t.save({'conanfile.py': GenConanfile()})
         t.run('editable add . {}'.format(ref))

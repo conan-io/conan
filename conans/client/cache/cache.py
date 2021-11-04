@@ -1,3 +1,4 @@
+import copy
 import os
 import shutil
 from io import StringIO
@@ -18,7 +19,7 @@ from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
@@ -119,7 +120,8 @@ class ClientCache(object):
         # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
         #  this part in the future
         #  check that we are returning not only the latest ref but all of them
-        return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}", validate=False) for ref in
+        # FIXME:
+        return [RecipeReference.loads(f"{ref['reference']}#{ref['rrev']}") for ref in
                 self._data_cache.list_references(only_latest_rrev=only_latest_rrev)]
 
     def exists_rrev(self, ref):
@@ -145,7 +147,7 @@ class ClientCache(object):
         return self._data_cache.get_build_id(ConanReference(ref))
 
     def get_recipe_revisions(self, ref, only_latest_rrev=False):
-        return [ConanFileReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
+        return [RecipeReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
                 self._data_cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev)]
 
     def get_latest_rrev(self, ref):
@@ -161,13 +163,17 @@ class ClientCache(object):
         return self._store_folder
 
     def editable_path(self, ref):
-        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
+        _tmp = copy.copy(ref)
+        _tmp.revision = None
+        edited_ref = self.editable_packages.get(_tmp)
         if edited_ref:
             conanfile_path = edited_ref["path"]
             return conanfile_path
 
     def installed_as_editable(self, ref):
-        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
+        _tmp = copy.copy(ref)
+        _tmp.revision = None
+        edited_ref = self.editable_packages.get(_tmp)
         return bool(edited_ref)
 
     @property

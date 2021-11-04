@@ -1,3 +1,4 @@
+import copy
 import os
 import re
 from fnmatch import translate
@@ -6,7 +7,7 @@ from conans import load
 from conans.errors import NotFoundException, ForbiddenException, RecipeNotFoundException
 from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.search.search import filter_packages, _partial_match
 from conans.util.files import list_folder_subdirs
@@ -19,7 +20,9 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
     rrevs = server_store.get_recipe_revisions(ref) if look_in_all_rrevs else [None]
 
     for rrev in rrevs:
-        new_ref = ref.copy_with_rev(rrev.revision) if rrev else ref
+        new_ref = copy.copy(ref)
+        if rrev:
+            new_ref.revision = rrev.revision
         subdirs = list_folder_subdirs(server_store.packages(new_ref), level=1)
         for package_id in subdirs:
             if package_id in result:
@@ -54,13 +57,15 @@ def search_packages(server_store, ref, query, look_in_all_rrevs):
             {package_ID: {name: "OpenCV",
                            version: "2.14",
                            settings: {os: Windows}}}
-    param ref: ConanFileReference object
+    param ref: RecipeReference object
     """
     if not look_in_all_rrevs and ref.revision is None:
         latest_rev = server_store.get_last_revision(ref).revision
-        ref = ref.copy_with_rev(latest_rev)
+        ref.revision = latest_rev
 
-    if not os.path.exists(server_store.conan_revisions_root(ref.copy_clear_rev())):
+    ref_norev = copy.copy(ref)
+    ref_norev.revision = None
+    if not os.path.exists(server_store.conan_revisions_root(ref_norev)):
         raise RecipeNotFoundException(ref)
     infos = _get_local_infos_min(server_store, ref, look_in_all_rrevs)
     return filter_packages(query, infos)
@@ -82,8 +87,12 @@ class SearchService(object):
     def _search_recipes(self, pattern=None, ignorecase=True):
         subdirs = list_folder_subdirs(basedir=self._server_store.store, level=5)
         if not pattern:
-            return sorted([ConanFileReference(*folder.split("/")).copy_clear_rev()
-                           for folder in subdirs])
+            ret = []
+            for folder in subdirs:
+                r = RecipeReference(*folder.split("/"))
+                r.revision = None
+                ret.append(r)
+            return sorted(ret)
         else:
             # Conan references in main storage
             pattern = str(pattern)
@@ -91,9 +100,10 @@ class SearchService(object):
             b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
             ret = set()
             for subdir in subdirs:
-                new_ref = ConanFileReference(*subdir.split("/"))
+                new_ref = RecipeReference(*subdir.split("/"))
+                new_ref.revision = None
                 if _partial_match(b_pattern, repr(new_ref)):
-                    ret.add(new_ref.copy_clear_rev())
+                    ret.add(new_ref)
 
             return sorted(ret)
 

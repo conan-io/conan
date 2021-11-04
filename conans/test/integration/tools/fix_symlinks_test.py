@@ -5,13 +5,13 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.model.recipe_ref import RecipeReference
+from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="symlink need admin privileges")
 class FixSymlinksTestCase(unittest.TestCase):
-    name_ref = ConanFileReference.loads("name/version")
+    name_ref = RecipeReference.loads("name/version")
 
     conanfile = textwrap.dedent("""
         import os

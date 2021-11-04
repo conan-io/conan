@@ -7,7 +7,8 @@ from conans.client.userio import UserInput
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference, check_valid_ref
+from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import check_valid_ref
 from conans.paths import SYSTEM_REQS
 from conans.search.search import search_packages, search_recipes
 from conans.util.files import rmdir
@@ -171,7 +172,7 @@ class ConanRemover(object):
                force=False, packages_query=None):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
-        @param pattern: it could be OpenCV* or OpenCV or a ConanFileReference
+        @param pattern: it could be OpenCV* or OpenCV or a RecipeReference
         @param build_ids: Lists with ids or empty for all. (Its a filter)
         @param package_ids_filter: Lists with ids or empty for all. (Its a filter)
         @param force: if True, it will be deleted without requesting anything
@@ -182,7 +183,7 @@ class ConanRemover(object):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
         is_reference = check_valid_ref(pattern)
-        input_ref = ConanFileReference.loads(pattern) if is_reference else None
+        input_ref = RecipeReference.loads(pattern) if is_reference else None
 
         if not input_ref and packages_query is not None:
             raise ConanException("query parameter only allowed with a valid recipe "
@@ -219,7 +220,7 @@ class ConanRemover(object):
 
         deleted_refs = []
         for ref in refs:
-            assert isinstance(ref, ConanFileReference)
+            assert isinstance(ref, RecipeReference)
             package_ids = package_ids_filter
             if packages_query:
                 # search packages
@@ -239,7 +240,7 @@ class ConanRemover(object):
                     package_ids = packages
                 if not package_ids:
                     ConanOutput().warning("No matching packages to remove for %s"
-                                              % ref.full_str())
+                                              % repr(ref))
                     continue
 
             if self._ask_permission(ref, src, build_ids, package_ids, force):

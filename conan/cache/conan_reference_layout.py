@@ -38,7 +38,7 @@ class LayoutBase:
 
 class RecipeLayout(LayoutBase):
     # TODO: cache2.0 fix this in the future when we only have to deal
-    #  with ConanReference and not ConanFileReference and PackageReference
+    #  with ConanReference and not RecipeReference and PkgReference
     @property
     def reference(self):
         return self._ref.as_conanfile_reference()

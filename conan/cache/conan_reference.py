@@ -1,12 +1,11 @@
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference
 
 
 class ConanReference:
     def __init__(self, *args):
-        if isinstance(args[0], ConanFileReference):
+        if isinstance(args[0], RecipeReference):
             ref = args[0]
             self._name = ref.name
             self._version = ref.version
@@ -76,7 +75,7 @@ class ConanReference:
         return PkgReference.loads(self.full_reference)
 
     def as_conanfile_reference(self):
-        return ConanFileReference.loads(self.full_reference, validate=False)
+        return RecipeReference.loads(self.full_reference)
 
     @property
     def reference(self):

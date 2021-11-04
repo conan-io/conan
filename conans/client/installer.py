@@ -21,7 +21,7 @@ from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
@@ -62,7 +62,7 @@ class _PackageBuilder(object):
         pref = package_layout.reference
         if pref.package_id != recipe_build_id and hasattr(conanfile, "build_id"):
             # check if we already have a package with the calculated build_id
-            recipe_ref = ConanFileReference.loads(ConanReference(pref).recipe_reference)
+            recipe_ref = RecipeReference.loads(ConanReference(pref).recipe_reference)
             package_refs = self._cache.get_package_references(recipe_ref)
             build_prev = None
             for _pkg_ref in package_refs:

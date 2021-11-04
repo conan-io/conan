@@ -9,7 +9,7 @@ from textwrap import dedent
 import pytest
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load, mkdir, is_dirty
@@ -99,7 +99,7 @@ class HelloPythonConan(ConanFile):
         self.assertNotIn("PACKAGE NOT CALLED", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
         self.assertNotIn("No files in this package!", client.out)
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        ref = RecipeReference.loads("Hello/0.1@lasote/stable")
         pref = client.get_latest_prev(ref)
         latest_package = client.get_latest_pkg_layout(pref).package()
         conaninfo = load(os.path.join(latest_package, "conaninfo.txt"))
@@ -321,7 +321,7 @@ class TestConan(ConanFile):
                       client.out)
 
     def test_with_deps(self):
-        hello_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        hello_ref = RecipeReference.loads("Hello/0.1@lasote/stable")
         client = TestClient()
         conanfile = GenConanfile().with_name("Hello").with_version("0.1")
         client.save({"conanfile.py": str(conanfile)})
@@ -374,7 +374,7 @@ class TestConan(ConanFile):
             json_content = load(json_path)
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
-            tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
+            tmp = RecipeReference.loads(output["installed"][0]["recipe"]["id"])
             self.assertIsNotNone(tmp.revision)
             self.assertEqual(str(tmp), "mypackage/0.1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
@@ -424,7 +424,7 @@ class MyConan(ConanFile):
             json_content = load(json_path)
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
-            tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
+            tmp = RecipeReference.loads(output["installed"][0]["recipe"]["id"])
             self.assertIsNotNone(tmp.revision)
             self.assertEqual(str(tmp), "pkg2/1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
@@ -435,7 +435,7 @@ class MyConan(ConanFile):
                 self.assertEqual(output["installed"][0]["packages"][0]["id"],
                                  "41e2f19ba15c770149de4cefcf9dd1d1f6ee19ce")
                 self.assertTrue(output["installed"][0]["packages"][0]["exported"])
-                tmp = ConanFileReference.loads(output["installed"][1]["recipe"]["id"])
+                tmp = RecipeReference.loads(output["installed"][1]["recipe"]["id"])
                 self.assertIsNotNone(tmp.revision)
                 self.assertEqual(str(tmp), "pkg1/1.0@danimtb/testing")
                 self.assertTrue(output["installed"][1]["recipe"]["dependency"])
@@ -492,7 +492,7 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@", assert_error=True)
         self.assertIn("Can't build while installing", client.out)
-        ref = ConanFileReference.loads("pkg/0.1")
+        ref = RecipeReference.loads("pkg/0.1")
         pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
         layout = client.get_latest_pkg_layout(pref)
         build_folder = layout.build()

@@ -1,8 +1,6 @@
 import re
-from collections import namedtuple
 
 from conans.errors import ConanException, InvalidNameException
-from conans.model.version import Version
 
 
 def _split_pair(pair, split_char):
@@ -76,13 +74,15 @@ def check_valid_ref(reference, strict_mode=True):
             if "@" not in reference:
                 return False
             if "*" in reference:
-                ref = ConanFileReference.loads(reference, validate=True)
+                ref = RecipeReference.loads(reference)
+                # FIXME: validate here the reference
                 if "*" in ref.name or "*" in ref.user or "*" in ref.channel:
                     return False
                 if str(ref.version).startswith("["):  # It is a version range
                     return True
                 return False
-        ConanFileReference.loads(reference, validate=True)
+        # FIXME: validate here the reference
+        RecipeReference.loads(reference)
         return True
     except ConanException:
         return False
@@ -168,97 +168,3 @@ class ConanName(object):
                                        "and numbers with a length between 1 and "
                                        "%s" % ConanName._max_chars)
 
-
-class ConanFileReference(namedtuple("ConanFileReference", "name version user channel revision")):
-    """ Full reference of a package recipes, e.g.:
-    opencv/2.4.10@lasote/testing
-    """
-
-    def __new__(cls, name, version, user, channel, revision=None, validate=True):
-        """Simple name creation.
-        @param name:        string containing the desired name
-        @param version:     string containing the desired version
-        @param user:        string containing the user name
-        @param channel:     string containing the user channel
-        @param revision:    string containing the revision (optional)
-        """
-        if (user and not channel) or (channel and not user):
-            raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
-
-        version = Version(version) if version is not None else None
-        user = _noneize(user)
-        channel = _noneize(channel)
-
-        obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
-        if validate:
-            obj._validate()
-        return obj
-
-    def _validate(self):
-        if self.name is not None:
-            ConanName.validate_name(self.name, reference_token="package name")
-        if self.version is not None:
-            ConanName.validate_version(self.version, self.name)
-        if self.user is not None:
-            ConanName.validate_name(self.user, reference_token="user name")
-        if self.channel is not None:
-            ConanName.validate_name(self.channel, reference_token="channel")
-        if self.revision is not None:
-            ConanName.validate_revision(self.revision)
-
-        if not self.name or not self.version:
-            raise InvalidNameException("Specify the 'name' and the 'version'")
-
-        if (self.user and not self.channel) or (self.channel and not self.user):
-            raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
-
-    @staticmethod
-    def loads(text, validate=True):
-        """ Parses a text string to generate a ConanFileReference object
-        """
-        name, version, user, channel, revision = get_reference_fields(text)
-        ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
-        return ref
-
-    def __str__(self):
-        if self.name is None and self.version is None:
-            return ""
-        if self.user is None and self.channel is None:
-            return "%s/%s" % (self.name, self.version)
-        return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
-
-    def __repr__(self):
-        str_rev = "#%s" % self.revision if self.revision else ""
-        user_channel = "@%s/%s" % (self.user, self.channel) if self.user or self.channel else ""
-        return "%s/%s%s%s" % (self.name, self.version, user_channel, str_rev)
-
-    def full_str(self):
-        str_rev = "#%s" % self.revision if self.revision else ""
-        return "%s%s" % (str(self), str_rev)
-
-    def dir_repr(self):
-        return "/".join([self.name, self.version, self.user or "_", self.channel or "_"])
-
-    def copy_with_rev(self, revision):
-        return ConanFileReference(self.name, self.version, self.user, self.channel, revision,
-                                  validate=False)
-
-    def copy_clear_rev(self):
-        return ConanFileReference(self.name, self.version, self.user, self.channel, None,
-                                  validate=False)
-
-    def __lt__(self, other):
-        def de_noneize(ref):
-            return ref.name, ref.version, ref.user or "", ref.channel or "", ref.revision or ""
-
-        return de_noneize(self) < de_noneize(other)
-
-    def is_compatible_with(self, new_ref):
-        """Returns true if the new_ref is completing the RREV field of this object but
-         having the rest equal """
-        if repr(self) == repr(new_ref):
-            return True
-        if self.copy_clear_rev() != new_ref.copy_clear_rev():
-            return False
-
-        return self.revision is None

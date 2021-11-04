@@ -6,7 +6,7 @@ import textwrap
 import pytest
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.utils.tools import TestClient
@@ -202,7 +202,7 @@ def test_export_pkg():
     client.run("build . -if=my_install")
     client.run("export-pkg . lib/1.0@")
     package_id = re.search(r"lib/1.0: Package '(\S+)' created", str(client.out)).group(1)
-    ref = ConanFileReference.loads("lib/1.0@")
+    ref = RecipeReference.loads("lib/1.0@")
     pref = PkgReference(ref, package_id)
     sf = os.path.join(client.current_folder, "my_source")
     bf = os.path.join(client.current_folder, "my_build")
@@ -255,7 +255,7 @@ def test_export_pkg_local():
     # assert "WARN: Package folder: {}".format(pf) in client.out
 
     client.run("export-pkg . lib/1.0@ -if=my_install -pf=my_package")
-    ref = ConanFileReference.loads("lib/1.0@")
+    ref = RecipeReference.loads("lib/1.0@")
     pref = PkgReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
     pf_cache = client.get_latest_pkg_layout(pref).package()
 
@@ -266,7 +266,7 @@ def test_export_pkg_local():
 
     # Doing a conan create: Same as export-pkg, there is "my_package" in the cache
     client.run("create . lib/1.0@")
-    ref = ConanFileReference.loads("lib/1.0@")
+    ref = RecipeReference.loads("lib/1.0@")
     pref = PkgReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
     pf_cache = client.get_latest_pkg_layout(pref).package()
     assert "my_package" not in pf_cache
@@ -317,7 +317,7 @@ def test_imports():
     # If we do a conan create, the imports folder is used also in the cache
     client.run("create . foo/1.0@")
     package_id = re.search(r"foo/1.0:(\S+)", str(client.out)).group(1)
-    ref = ConanFileReference.loads("foo/1.0@")
+    ref = RecipeReference.loads("foo/1.0@")
     pref = PkgReference(ref, package_id)
     bfolder = client.get_latest_pkg_layout(pref).build()
     imports_folder = os.path.join(bfolder, "my_imports")

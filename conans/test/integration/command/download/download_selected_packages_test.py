@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -13,7 +13,7 @@ def setup():
     client = TestClient(default_server_user=True)
     conanfile = GenConanfile().with_settings("os", "arch").with_package_file("helloHello0.h", "x")
     client.save({"conanfile.py": conanfile})
-    ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+    ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
     client.run("export . {}".format(ref))
     client.run("install {} -s os=Windows --build missing".format(ref))
     client.run("install {} -s os=Linux --build missing".format(ref))
@@ -61,7 +61,7 @@ def test_download_recipe_twice(setup):
     client, ref, package_ids, conanfile = setup
     new_client = TestClient(servers=client.servers, inputs=["admin", "password"])
     new_client.run("download Hello0/0.1@lasote/stable")
-    ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+    ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
 
     conanfile_path = new_client.get_latest_ref_layout(ref).conanfile()
     assert conanfile == load(conanfile_path)

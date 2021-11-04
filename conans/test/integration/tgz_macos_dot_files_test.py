@@ -7,10 +7,9 @@ import textwrap
 import unittest
 
 import pytest
-from mock import Mock
 
 from conans.client.remote_manager import uncompress_file
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
@@ -81,7 +80,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         t.run("create . user/channel")
 
         # Check if the metadata travels through the Conan commands
-        pref = t.get_latest_prev(ConanFileReference.loads("lib/version@user/channel"),
+        pref = t.get_latest_prev(RecipeReference.loads("lib/version@user/channel"),
                                  NO_SETTINGS_PACKAGE_ID)
         pkg_folder = t.get_latest_pkg_layout(pref).package()
 

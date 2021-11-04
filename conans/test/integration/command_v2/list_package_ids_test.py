@@ -6,7 +6,7 @@ import pytest
 
 from conans.client.remote_manager import RemoteManager
 from conans.errors import ConanException, ConanConnectionError
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -45,7 +45,7 @@ class TestListPackageIdsBase:
         return f"{recipe_name}#fca0383e6a43348f7989f11ab8f0a92d"
 
     def _get_lastest_recipe_ref(self, recipe_name):
-        return self.client.cache.get_latest_rrev(ConanFileReference.loads(recipe_name))
+        return self.client.cache.get_latest_rrev(RecipeReference.loads(recipe_name))
 
 
 class TestParams(TestListPackageIdsBase):

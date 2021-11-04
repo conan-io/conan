@@ -31,7 +31,8 @@ from conans.errors import (ConanException, RecipeNotFoundException,
 from conans.model.graph_lock import LOCKFILE, Lockfile
 from conans.model.manifest import discarded_file
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference, check_valid_ref
+from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_recipes
@@ -120,7 +121,7 @@ class ConanAPIV1(object):
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)])
         try:
-            ref = ConanFileReference.loads(path)
+            ref = RecipeReference.loads(path)
         except ConanException:
             conanfile_path = _get_conanfile_path(path, os.getcwd(), py=True)
             conanfile = app.loader.load_named(conanfile_path, None, None, None, None)
@@ -176,7 +177,7 @@ class ConanAPIV1(object):
                                                                            profile_build, cwd,
                                                                            app.cache,
                                                                            lockfile=lockfile)
-        ref = ConanFileReference.loads(reference)
+        ref = RecipeReference.loads(reference)
         install_build_and_test(app, conanfile_path, ref, profile_host,
                                profile_build, graph_lock, root_ref,
                                build_modes=build_modes, test_build_folder=test_build_folder)
@@ -221,7 +222,7 @@ class ConanAPIV1(object):
                 build_modes = [new_ref.name]
 
             # FIXME: Dirty hack: remove the root for the test_package/conanfile.py consumer
-            root_ref = ConanFileReference(None, None, None, None, validate=False)
+            root_ref = RecipeReference(None, None, None, None)
             create(app, new_ref, profile_host, profile_build,
                    graph_lock, root_ref, build_modes,
                    test_build_folder, test_folder, conanfile_path,
@@ -274,7 +275,6 @@ class ConanAPIV1(object):
 
             new_ref = cmd_export(app, conanfile_path, name, version, user, channel,
                                  graph_lock=graph_lock, ignore_dirty=ignore_dirty)
-            ref = new_ref.copy_clear_rev()
             # new_ref has revision
             export_pkg(app, new_ref, source_folder=source_folder,
                        build_folder=build_folder, package_folder=package_folder,
@@ -284,7 +284,7 @@ class ConanAPIV1(object):
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock.save(lockfile_out)
-        except ConanException as exc:
+        except ConanException:
             raise
 
     @api_method
@@ -294,7 +294,7 @@ class ConanAPIV1(object):
             raise ConanException("recipe parameter cannot be used together with packages")
         # Install packages without settings (fixed ids or all)
         if check_valid_ref(reference):
-            ref = ConanFileReference.loads(reference)
+            ref = RecipeReference.loads(reference)
             if packages and ref.revision is None:
                 for package_id in packages:
                     if "#" in package_id:
@@ -445,7 +445,7 @@ class ConanAPIV1(object):
                    name=None, version=None, user=None, channel=None, lockfile=None):
         cwd = os.getcwd()
         if check_valid_ref(reference_or_path):
-            ref = ConanFileReference.loads(reference_or_path)
+            ref = RecipeReference.loads(reference_or_path)
         else:
             ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
 
@@ -647,7 +647,7 @@ class ConanAPIV1(object):
     def remove_system_reqs(self, reference):
         try:
             app = ConanApp(self.cache_folder)
-            ref = ConanFileReference.loads(reference)
+            ref = RecipeReference.loads(reference)
             app.cache.get_pkg_layout(ref).remove_system_reqs()
             ConanOutput().info("Cache system_reqs from %s has been removed" % repr(ref))
         except Exception as error:
@@ -726,7 +726,7 @@ class ConanAPIV1(object):
             else:
                 return load(abs_path)
 
-        ref = ConanFileReference.loads(reference)
+        ref = RecipeReference.loads(reference)
         if not path:
             path = "conanfile.py" if not package_id else "conaninfo.txt"
 
@@ -747,8 +747,8 @@ class ConanAPIV1(object):
     @api_method
     def export_alias(self, reference, target_reference):
         app = ConanApp(self.cache_folder)
-        ref = ConanFileReference.loads(reference)
-        target_ref = ConanFileReference.loads(target_reference)
+        ref = RecipeReference.loads(reference)
+        target_ref = RecipeReference.loads(target_reference)
 
         if ref.name != target_ref.name:
             raise ConanException("An alias can only be defined to a package with the same name")
@@ -818,7 +818,7 @@ class ConanAPIV1(object):
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
         # Check the conanfile is there, and name/version matches
-        ref = ConanFileReference.loads(reference, validate=True)
+        ref = RecipeReference.loads(reference, validate=True)
         target_conanfile = app.loader.load_basic(target_path)
         if (target_conanfile.name and target_conanfile.name != ref.name) or \
                 (target_conanfile.version and target_conanfile.version != ref.version):
@@ -831,7 +831,8 @@ class ConanAPIV1(object):
     @api_method
     def editable_remove(self, reference):
         app = ConanApp(self.cache_folder)
-        ref = ConanFileReference.loads(reference, validate=True)
+        # TODO: Validate the input reference
+        ref = RecipeReference.loads(reference)
         return app.cache.editable_packages.remove(ref)
 
     @api_method
@@ -876,7 +877,7 @@ class ConanAPIV1(object):
             if not os.path.isfile(ref_or_path):
                 raise ConanException("Conanfile does not exist in %s" % ref_or_path)
         else:  # reference
-            ref_or_path = ConanFileReference.loads(reference)
+            ref_or_path = RecipeReference.loads(reference)
 
         graph_lock = None
         if lockfile:
@@ -892,7 +893,7 @@ class ConanAPIV1(object):
                                    profile_build.options, profile_build.env, profile_build.conf,
                                    cwd, app.cache, build_profile=True)
 
-        root_ref = ConanFileReference(name, version, user, channel, validate=False)
+        root_ref = RecipeReference(name, version, user, channel)
         phost.process_settings(app.cache)
         pbuild.process_settings(app.cache)
 
@@ -922,7 +923,7 @@ class ConanAPIV1(object):
 def get_graph_info(profile_host, profile_build, cwd, cache,
                    name=None, version=None, user=None, channel=None, lockfile=None):
 
-    root_ref = ConanFileReference(name, version, user, channel, validate=False)
+    root_ref = RecipeReference(name, version, user, channel)
 
     graph_lock = None
     if lockfile:

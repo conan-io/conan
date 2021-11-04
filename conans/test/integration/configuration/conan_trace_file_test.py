@@ -5,7 +5,8 @@ import unittest
 
 
 from conans.client import tools
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
+
 from conans.paths import RUN_LOG_NAME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
@@ -47,7 +48,7 @@ class ConanTraceTest(unittest.TestCase):
                                         run_to_output=True
                                     """.format(print_commands_to_output, generate_run_log_file))
             client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-            ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+            ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": base})
             client.run("create . lasote/stable")
             pref = client.get_latest_prev(ref)
@@ -79,7 +80,7 @@ class ConanTraceTest(unittest.TestCase):
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
-            ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+            ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
                          "file.txt": "content"})
             client.run("remote login default lasote -p mypass")

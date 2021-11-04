@@ -41,7 +41,6 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
@@ -60,7 +59,7 @@ NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
-    ref = ConanFileReference.loads(reference)
+    ref = RecipeReference.loads(reference)
     path = cache.get_latest_rrev(ref).export()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
@@ -309,8 +308,8 @@ class TestServer(object):
             return False
 
     def latest_recipe(self, ref):
-        rev, _ = self.test_server.server_store.get_last_revision(ref)
-        return ref.copy_with_rev(rev)
+        ref = self.test_server.server_store.get_last_revision(ref)
+        return ref
 
     def recipe_revision_time(self, ref):
         if not ref.revision:
@@ -595,9 +594,11 @@ class TestClient(object):
         """
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(ref.full_str(), args or ""))
+        self.run("export . {} {}".format(repr(ref), args or ""))
         rrev = self.cache.get_latest_rrev(ref).revision
-        return ref.copy_with_rev(rrev)
+        tmp = copy.copy(ref)
+        tmp.revision = rrev
+        return tmp
 
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
         if folder is not None:
@@ -640,8 +641,8 @@ class TestClient(object):
     def scm_info_cache(self, reference):
         import yaml
 
-        if not isinstance(reference, ConanFileReference):
-            reference = ConanFileReference.loads(reference)
+        if not isinstance(reference, RecipeReference):
+            reference = RecipeReference.loads(reference)
         layout = self.get_latest_ref_layout(reference)
         content = load(layout.conandata())
         data = yaml.safe_load(content)
@@ -652,7 +653,7 @@ class TestClient(object):
 
     def get_latest_prev(self, ref: ConanReference or str, package_id=None) -> PkgReference:
         """Get the latest PkgReference given a ConanReference"""
-        ref_ = ConanFileReference.loads(ref) if isinstance(ref, str) else ref
+        ref_ = RecipeReference.loads(ref) if isinstance(ref, str) else ref
         latest_rrev = self.cache.get_latest_rrev(ref_)
         if package_id:
             pref = PkgReference(latest_rrev, package_id)
@@ -686,7 +687,7 @@ class TurboTestClient(TestClient):
     def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        full_str = "{}@".format(ref.full_str()) if not ref.user else ref.full_str()
+        full_str = "{}@".format(repr(ref)) if not ref.user else repr(ref)
         self.run("create . {} {}".format(full_str, args or ""),
                  assert_error=assert_error)
 
@@ -708,18 +709,15 @@ class TurboTestClient(TestClient):
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
-            # FIXME: remove this when ConanFileReference disappears
-            if isinstance(ref, RecipeReference):
-                ref.revision = remote_rrev
-                return ref
-            return ref.copy_with_rev(remote_rrev)
-        return
+            ref.revision = remote_rrev
+            return ref
 
     def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("export-pkg . {} {}".format(ref.full_str(),  args or ""),
+        self.run("export-pkg . {} {}".format(repr(ref),  args or ""),
                  assert_error=assert_error)
+        # FIXME: What is this line? rrev is not used, is it checking existance or something?
         rrev = self.cache.get_latest_rrev(ref)
 
         if assert_error:

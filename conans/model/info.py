@@ -6,7 +6,7 @@ from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.options import Options
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.values import Values
 from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
@@ -71,8 +71,8 @@ class RequirementInfo(object):
         if self.package_id == PACKAGE_ID_INVALID:
             return PACKAGE_ID_INVALID
 
-        ref = ConanFileReference(self.name, self.version, self.user, self.channel,
-                                 self.recipe_revision, validate=False)
+        ref = RecipeReference(self.name, self.version, self.user, self.channel,
+                                 self.recipe_revision)
         pref = repr(ref)
         if self.package_id:
             pref += ":{}".format(self.package_id)
@@ -278,8 +278,8 @@ class PythonRequireInfo(object):
 
     @property
     def sha(self):
-        ref = ConanFileReference(self._name, self._version, self._user, self._channel,
-                                 self._revision, validate=False)
+        ref = RecipeReference(self._name, self._version, self._user, self._channel,
+                              self._revision)
         return repr(ref)
 
     def semver_mode(self):

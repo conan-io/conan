@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -122,7 +122,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile, "my-module.cmake": my_module,
                      "FindFindModule.cmake": find_module})
         client.run("create .")
-        ref = ConanFileReference("test", "1.0", None, None)
+        ref = RecipeReference("test", "1.0", None, None)
         pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
         package_path = client.get_latest_pkg_layout(pref).package()
         modules_path = os.path.join(package_path, "share", "cmake")

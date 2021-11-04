@@ -6,7 +6,6 @@ import pytest
 
 from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
 from conans.model.settings import bad_value_msg
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.assets.genconanfile import GenConanfile
@@ -17,7 +16,7 @@ from conans.util.files import load, save
 class SettingsTest(unittest.TestCase):
 
     def _get_conaninfo(self, reference, client):
-        ref = client.cache.get_latest_rrev(ConanFileReference.loads(reference))
+        ref = client.cache.get_latest_rrev(RecipeReference.loads(reference))
         pkg_ids = client.cache.get_package_references(ref)
         pref = client.cache.get_latest_prev(pkg_ids[0])
         pkg_folder = client.cache.pkg_layout(pref).package()

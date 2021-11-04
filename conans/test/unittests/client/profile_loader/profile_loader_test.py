@@ -5,7 +5,7 @@ import pytest
 
 from conans.client.profile_loader import ProfileParser, read_profile
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
@@ -144,8 +144,8 @@ def test_profiles_includes():
     assert profile.settings == {"os": "1"}
     assert profile.options["zlib"].aoption == 1
     assert profile.options["zlib"].otheroption == 12
-    assert profile.build_requires == {"*": [ConanFileReference.loads("one/1.5@lasote/stable"),
-                                            ConanFileReference.loads("two/1.2@lasote/stable")]}
+    assert profile.build_requires == {"*": [RecipeReference.loads("one/1.5@lasote/stable"),
+                                            RecipeReference.loads("two/1.2@lasote/stable")]}
 
 
 def test_profile_include_order():

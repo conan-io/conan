@@ -1,8 +1,8 @@
 import os
 import textwrap
 
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
-from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -28,7 +28,7 @@ def test_package_python_files():
                  "myfile.pyo": "",
                  ".DS_Store": ""})
     client.run("create . pkg/0.1@")
-    ref = ConanFileReference.loads("pkg/0.1")
+    ref = RecipeReference.loads("pkg/0.1")
     ref_layout = client.get_latest_ref_layout(ref)
     export = ref_layout.export()
     export_sources = ref_layout.export_sources()

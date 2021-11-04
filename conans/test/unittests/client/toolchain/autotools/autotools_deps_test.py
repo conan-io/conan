@@ -10,7 +10,7 @@ from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
 from conans.model.build_info import CppInfo
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import MockSettings
 from conans.test.utils.test_files import temp_folder
 
@@ -49,18 +49,18 @@ def test_foo():
     dep1 = ConanFile(None)
     dep1.cpp_info = get_cpp_info("dep1")
     dep1._conan_node = Mock()
-    dep1._conan_node.ref = ConanFileReference.loads("dep1/1.0")
+    dep1._conan_node.ref = RecipeReference.loads("dep1/1.0")
     dep1.package_folder = "/path/to/folder_dep1"
 
     dep2 = ConanFile(None)
     dep2.cpp_info = get_cpp_info("dep2")
     dep2._conan_node = Mock()
-    dep2._conan_node.ref = ConanFileReference.loads("dep2/1.0")
+    dep2._conan_node.ref = RecipeReference.loads("dep2/1.0")
     dep2.package_folder = "/path/to/folder_dep2"
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
-        req1 = Requirement(ConanFileReference.loads("dep1/1.0"))
-        req2 = Requirement(ConanFileReference.loads("dep2/1.0"))
+        req1 = Requirement(RecipeReference.loads("dep1/1.0"))
+        req2 = Requirement(RecipeReference.loads("dep2/1.0"))
         deps = OrderedDict()
         deps[req1] = ConanFileInterface(dep1)
         deps[req2] = ConanFileInterface(dep2)

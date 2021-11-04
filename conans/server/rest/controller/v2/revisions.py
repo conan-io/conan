@@ -1,4 +1,4 @@
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.rest.controller.v2 import get_package_ref
 from conans.server.service.v2.service_v2 import ConanServiceV2
@@ -17,7 +17,7 @@ class RevisionsController(object):
         def get_recipe_revisions(name, version, username, channel, auth_user):
             """ Gets a JSON with the revisions for the specified recipe
             """
-            conan_reference = ConanFileReference(name, version, username, channel)
+            conan_reference = RecipeReference(name, version, username, channel)
             conan_service = ConanServiceV2(app.authorizer, app.server_store)
             revs = conan_service.get_recipe_revisions(conan_reference, auth_user)
             return _format_revs_return(revs)
@@ -26,7 +26,7 @@ class RevisionsController(object):
         def get_latest_recipe_revision(name, version, username, channel, auth_user):
             """ Gets a JSON with the revisions for the specified recipe
             """
-            conan_reference = ConanFileReference(name, version, username, channel)
+            conan_reference = RecipeReference(name, version, username, channel)
             conan_service = ConanServiceV2(app.authorizer, app.server_store)
             rev = conan_service.get_latest_revision(conan_reference, auth_user)
             return _format_rev_return(rev)

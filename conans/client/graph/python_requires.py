@@ -1,7 +1,7 @@
 import os
 
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.requires import Requirement
 
 
@@ -89,7 +89,7 @@ class PyRequireLoader(object):
         return result
 
     def _resolve_ref(self, py_requires_ref, graph_lock):
-        ref = ConanFileReference.loads(py_requires_ref)
+        ref = RecipeReference.loads(py_requires_ref)
         requirement = Requirement(ref)
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
@@ -116,7 +116,7 @@ class PyRequireLoader(object):
         conanfile.channel = new_ref.channel
 
         if getattr(conanfile, "alias", None):
-            ref = ConanFileReference.loads(conanfile.alias)
+            ref = RecipeReference.loads(conanfile.alias)
             requirement = Requirement(ref)
             alias = requirement.alias
             if alias is not None:

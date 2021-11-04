@@ -1,3 +1,4 @@
+import copy
 import os
 import shutil
 import time
@@ -227,20 +228,11 @@ class RemoteManager(object):
         return self._call_remote(remote, "get_package_revisions", pref, headers=headers)
 
     def get_latest_recipe_revision(self, ref, remote):
-        revision, rev_time = self._call_remote(remote, "get_latest_recipe_revision", ref)
-        # FIXME: return a RecipeReference when ready
-        return revision, rev_time
+        return  self._call_remote(remote, "get_latest_recipe_revision", ref)
 
     def get_latest_package_revision(self, pref, remote, info=None) -> PkgReference:
         headers = _headers_for_info(info) if info else None
         return self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)
-
-    # FIXME: this method returns the latest recipe revision with the time or if a rrev is specified
-    #  it returns that rrev if it exists in the server with the time
-    def get_latest_recipe_revision_with_time(self, ref, remote):
-        # FIXME: Remove this method when RecipeReference contanins the timestamp
-        revisions = self._call_remote(remote, "get_recipe_revisions", ref)
-        return ref.copy_with_rev(revisions[0].get("revision")), revisions[0].get("time")
 
     def _resolve_latest_ref(self, ref, remote):
         if ref.revision is None:

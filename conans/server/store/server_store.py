@@ -5,7 +5,6 @@ from conans import DEFAULT_REVISION_V1
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference
 from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 
@@ -70,7 +69,7 @@ class ServerStore(object):
     # ############ SNAPSHOTS (APIv1)
     def get_recipe_snapshot(self, ref):
         """Returns a {filepath: md5} """
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         return self._get_snapshot_of_files(self.export(ref))
 
     def _get_snapshot_of_files(self, relative_path):
@@ -81,7 +80,7 @@ class ServerStore(object):
     # ############ ONLY FILE LIST SNAPSHOTS (APIv2)
     def get_recipe_file_list(self, ref):
         """Returns a {filepath: md5} """
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         return self._get_file_list(self.export(ref))
 
     def get_package_file_list(self, pref):
@@ -113,7 +112,7 @@ class ServerStore(object):
 
     # ######### DELETE (APIv1 and APIv2)
     def remove_conanfile(self, ref):
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         if not ref.revision:
             self._storage_adapter.delete_folder(self.conan_revisions_root(ref))
         else:
@@ -122,7 +121,7 @@ class ServerStore(object):
         self._delete_empty_dirs(ref)
 
     def remove_packages(self, ref, package_ids_filter):
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         assert isinstance(package_ids_filter, list)
 
         if not package_ids_filter:  # Remove all packages
@@ -146,7 +145,7 @@ class ServerStore(object):
 
     def remove_all_packages(self, ref):
         assert ref.revision is not None, "BUG: server store needs RREV remove_all_packages"
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
 
@@ -166,7 +165,7 @@ class ServerStore(object):
     # ############ DOWNLOAD URLS
     def get_download_conanfile_urls(self, ref, files_subset=None, user=None):
         """Returns a {filepath: url} """
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         return self._get_download_urls(self.export(ref), files_subset, user)
 
     def get_download_package_urls(self, pref, files_subset=None, user=None):
@@ -177,10 +176,10 @@ class ServerStore(object):
     # ############ UPLOAD URLS
     def get_upload_conanfile_urls(self, ref, filesizes, user):
         """
-        :param ref: ConanFileReference
+        :param ref: RecipeReference
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         assert isinstance(filesizes, dict)
         return self._get_upload_urls(self.export(ref), filesizes, user)
 
@@ -222,7 +221,7 @@ class ServerStore(object):
 
     # Methods to manage revisions
     def get_last_revision(self, ref):
-        assert(isinstance(ref, (ConanFileReference, RecipeReference)))
+        assert(isinstance(ref, RecipeReference))
         rev_file_path = self._recipe_revisions_file(ref)
         return self._get_latest_revision(rev_file_path)
 
@@ -247,7 +246,7 @@ class ServerStore(object):
         return None
 
     def update_last_revision(self, ref):
-        assert(isinstance(ref, ConanFileReference))
+        assert(isinstance(ref, RecipeReference))
         rev_file_path = self._recipe_revisions_file(ref)
         self._update_last_revision(rev_file_path, ref)
 
@@ -264,7 +263,7 @@ class ServerStore(object):
         else:
             rev_list = RevisionList()
         if ref.revision is None:
-            raise ConanException("Invalid revision for: %s" % ref.full_str())
+            raise ConanException("Invalid revision for: %s" % repr(ref))
         rev_list.add_revision(ref.revision)
         self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                          lock_file=rev_file_path + ".lock")
