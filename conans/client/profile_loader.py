@@ -56,6 +56,7 @@ class ProfileLoader:
         return result
 
     def load_profile(self, profile_name, cwd=None):
+        # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
         profile, _ = self._load_profile(profile_name, cwd)
         return profile

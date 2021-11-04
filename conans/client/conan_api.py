@@ -14,8 +14,6 @@ from conans.client.cmd.create import create
 from conans.client.cmd.download import download
 from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
-from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
-                                       cmd_profile_list, cmd_profile_update)
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
@@ -663,38 +661,6 @@ class ConanAPIV1(object):
     def remove_locks(self):
         app = ConanApp(self.cache_folder)
         app.cache.remove_locks()
-
-    @api_method
-    def profile_list(self):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_list(app.cache.profiles_path)
-
-    @api_method
-    def create_profile(self, profile_name, detect=False, force=False):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_create(profile_name, app.cache, detect, force)
-
-    @api_method
-    def update_profile(self, profile_name, key, value):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_update(profile_name, key, value, app.cache)
-
-    @api_method
-    def get_profile_key(self, profile_name, key):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_get(profile_name, key, app.cache)
-
-    @api_method
-    def delete_profile_key(self, profile_name, key):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_delete_key(profile_name, key, app.cache)
-
-    @api_method
-    def read_profile(self, profile=None):
-        app = ConanApp(self.cache_folder)
-        profile_loader = ProfileLoader(app.cache)
-        profile = profile_loader.load_profile(profile, os.getcwd())
-        return profile
 
     @api_method
     def get_path(self, reference, package_id=None, path=None, remote_name=None):
