@@ -283,6 +283,11 @@ class Settings(object):
     def values(self):
         return Values.from_list(self.values_list)
 
+    @values.setter
+    def values(self, vals):
+        assert isinstance(vals, Values)
+        self.update_values(vals.as_list())
+
     @property
     def values_list(self):
         result = []
