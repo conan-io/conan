@@ -10,7 +10,8 @@ from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
 from conan.cache.db.cache_database import CacheDatabase
-from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB
+from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB, \
+    ConanException
 from conans.util.files import rmdir
 
 
@@ -164,7 +165,10 @@ class DataCache:
 
         full_path = self._full_path(new_path)
         if os.path.exists(full_path):
-            rmdir(self._full_path(new_path))
+            try:
+                rmdir(full_path)
+            except Exception:
+                raise ConanException(f"Couldn't remove folder, might be busy or open: {full_path}")
         shutil.move(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
@@ -196,8 +200,10 @@ class DataCache:
         # TODO: cache2.0 probably we should not check this and move to other place or just
         #  avoid getting here if old and new paths are the same
         full_path = self._full_path(new_path)
-        if os.path.exists(full_path):
-            rmdir(self._full_path(new_path))
+        try:
+            rmdir(full_path)
+        except Exception:
+            raise ConanException(f"Couldn't remove folder, might be busy or open: {full_path}")
         shutil.move(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
