@@ -6,9 +6,10 @@ from conans.client.cache.remote_registry import Remote
 from conans.client.userio import UserInput
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.errors import NotFoundException
-from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference, check_valid_ref
 from conans.paths import SYSTEM_REQS
-from conans.search.search import search_packages, search_recipes, filter_packages
+from conans.search.search import search_packages, search_recipes
 from conans.util.files import rmdir
 from conans.util.log import logger
 
@@ -60,7 +61,7 @@ class DiskRemover(object):
         else:
             for id_ in ids:
                 # Removal build IDs should be those of the build_id if present
-                pkg_path = package_layout.build(PackageReference(package_layout.ref, id_))
+                pkg_path = package_layout.build(PkgReference(package_layout.ref, id_))
                 self._remove(pkg_path, package_layout.ref, "package:%s" % id_)
 
     def remove_packages(self, package_layout, ids_filter=None):
@@ -68,13 +69,13 @@ class DiskRemover(object):
             path = package_layout.packages()
             # Necessary for short_paths removal
             for package_id in package_layout.package_ids():
-                pref = PackageReference(package_layout.ref, package_id)
+                pref = PkgReference(package_layout.ref, package_id)
                 package_layout.package_remove(pref)
             self._remove(path, package_layout.ref, "packages")
             self._remove_file(package_layout.system_reqs(), package_layout.ref, SYSTEM_REQS)
         else:
             for package_id in ids_filter:  # remove just the specified packages
-                pref = PackageReference(package_layout.ref, package_id)
+                pref = PkgReference(package_layout.ref, package_id)
                 if not package_layout.package_exists(pref):
                     raise PackageNotFoundException(pref)
                 package_layout.package_remove(pref)
@@ -106,13 +107,14 @@ class ConanRemover(object):
                "command 'conan editable remove {r}'".format(r=ref)
 
     # TODO: cache2.0 refactor this part when we can change the implementation of search_packages
-    def _get_revisions_to_remove(self, pref, ids, all_package_revisions):
+    def _get_revisions_to_remove(self, ref, ids, all_package_revisions):
         folders_to_remove = []
         if len(ids) == 0:
             folders_to_remove = all_package_revisions
         for package_id in ids:
-            revision = package_id.split("#")[1] if "#" in package_id else None
-            _pref = PackageReference(pref, package_id, revision=revision)
+            _tmp = package_id.split("#") if "#" in package_id else (package_id, None)
+            package_id, revision = _tmp
+            _pref = PkgReference(ref, package_id, revision=revision)
             prev = self._cache.get_package_revisions(_pref)
             if not prev:
                 raise PackageNotFoundException(_pref)
@@ -127,7 +129,7 @@ class ConanRemover(object):
             return
 
         remove_recipe = False if package_ids is not None or build_ids is not None else True
-        pkg_ids = self._cache.get_package_ids(ref)
+        pkg_ids = self._cache.get_package_references(ref)
         all_package_revisions = []
         for pkg_id in pkg_ids:
             all_package_revisions.extend(self._cache.get_package_revisions(pkg_id))
@@ -225,7 +227,7 @@ class ConanRemover(object):
                     packages = self._remote_manager.search_packages(self._app.selected_remote,
                                                                     ref, packages_query)
                 else:
-                    pkg_ids = self._cache.get_package_ids(ref)
+                    pkg_ids = self._cache.get_package_references(ref)
                     all_package_revs = []
                     for pkg in pkg_ids:
                         all_package_revs.extend(self._cache.get_package_revisions(pkg))

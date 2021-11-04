@@ -1,3 +1,4 @@
+from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import ConanFileReference
 
 
@@ -99,7 +100,7 @@ class GenConanfile(object):
 
     def with_require(self, ref, private=False, override=False):
         self._requires = self._requires or []
-        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+        ref_str = self._get_full_ref_str(ref)
         self._requires.append((ref_str, private, override))
         return self
 
@@ -108,30 +109,39 @@ class GenConanfile(object):
             self.with_require(ref)
         return self
 
+    @staticmethod
+    def _get_full_ref_str(ref):
+        if isinstance(ref, ConanFileReference):
+            ref_str = ref.full_str()
+        elif isinstance(ref, RecipeReference):
+            ref_str = repr(ref)
+        else:
+            ref_str = ref
+        return ref_str
+
     def with_requirement(self, ref, **kwargs):
         self._requirements = self._requirements or []
-
-        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+        ref_str = self._get_full_ref_str(ref)
         self._requirements.append((ref_str, kwargs))
         return self
 
     def with_build_requires(self, *refs):
         self._build_requires = self._build_requires or []
         for ref in refs:
-            ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+            ref_str = self._get_full_ref_str(ref)
             self._build_requires.append(ref_str)
         return self
 
     def with_test_requires(self, *refs):
         self._test_requires = self._test_requires or []
         for ref in refs:
-            ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+            ref_str = self._get_full_ref_str(ref)
             self._test_requires.append(ref_str)
         return self
 
     def with_build_requirement(self, ref, **kwargs):
         self._build_requirements = self._build_requirements or []
-        ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+        ref_str = self._get_full_ref_str(ref)
         self._build_requirements.append((ref_str, kwargs))
         return self
 

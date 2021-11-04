@@ -15,7 +15,7 @@ def _format_ref(url, ref, matrix_params=""):
 def _format_pref(url, pref, matrix_params=""):
     ref = pref.ref
     url = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
-                     channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
+                     channel=ref.channel or "_", revision=ref.revision, package_id=pref.package_id,
                      p_revision=pref.revision, matrix_params=matrix_params)
     return url
 
@@ -188,5 +188,6 @@ class ClientV2Router(ClientCommonRouter):
     def _format_pref_path(url, pref, path, matrix_params):
         ref = pref.ref
         return url.format(name=ref.name, version=ref.version, username=ref.user or "_",
-                          channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
+                          channel=ref.channel or "_", revision=ref.revision,
+                          package_id=pref.package_id,
                           p_revision=pref.revision, path=path, matrix_params=matrix_params or "")

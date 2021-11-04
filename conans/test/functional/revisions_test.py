@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import time
@@ -38,7 +39,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         the_time = time.time()
         with patch.object(RevisionList, '_now', return_value=the_time):
             self.c_v2.upload_all(self.ref, remote="default")
-        self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.id))
+        self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.package_id))
         # Same RREV, different PREV
         with environment_append({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
@@ -52,7 +53,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         self.c_v2.run("install {}".format(self.ref))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
-        self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.id), self.c_v2.out)
+        self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.package_id),
+                      self.c_v2.out)
 
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,
@@ -99,10 +101,10 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.remove_all()
 
         # Create an alias to the first revision
-        self.c_v2.run("alias lib/latest@conan/stable {}".format(pref.ref.full_str()))
+        self.c_v2.run("alias lib/latest@conan/stable {}".format(repr(pref.ref)))
         alias_ref = ConanFileReference.loads("lib/latest@conan/stable")
         exported = load(self.c_v2.get_latest_ref_layout(alias_ref).conanfile())
-        self.assertIn('alias = "{}"'.format(pref.ref.full_str()), exported)
+        self.assertIn('alias = "{}"'.format(repr(pref.ref)), exported)
 
         self.c_v2.upload_all(ConanFileReference.loads("lib/latest@conan/stable"))
         self.c_v2.remove_all()
@@ -158,7 +160,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)
 
         client.run("install {} --update".format(self.ref))
-        self.assertIn("Package installed {}".format(pref2.id), client.out)
+        self.assertIn("Package installed {}".format(pref2.package_id), client.out)
 
         rrev = client.recipe_revision(self.ref)
         self.assertIsNotNone(rrev)
@@ -196,7 +198,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         client.run("install {} --update".format(self.ref))
         self.assertIn("{} from 'default' - Cache (Updated date)".format(self.ref), client.out)
-        self.assertIn("Retrieving package {}".format(pref.id), client.out)
+        self.assertIn("Retrieving package {}".format(pref.package_id), client.out)
 
         prev = client.package_revision(pref)
         self.assertIsNotNone(prev)
@@ -210,7 +212,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         pref = client.create(self.ref)
         ref2 = client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
         # Now we have two RREVs and a PREV corresponding to the first one
-        self.assertEqual(pref.ref.copy_clear_rev(), ref2.copy_clear_rev())
+        self.assertEqual(pref.ref.to_conanfileref().copy_clear_rev(), ref2.copy_clear_rev())
         self.assertNotEqual(pref.ref.revision, ref2.revision)
 
         # Now we try to install the self.ref, the binary is missing when using revisions
@@ -236,7 +238,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         new_client.upload_all(self.ref)
 
         # Repeat the install --update pointing to the new reference
-        client.run("install {} --update".format(pref.ref.full_str()))
+        client.run("install {} --update".format(repr(pref.ref)))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
 
     def test_revision_mismatch_packages_remote(self):
@@ -288,40 +290,41 @@ class RemoveWithRevisionsTest(unittest.TestCase):
 
         # If I remove the ref without RREV, the packages are also removed
         pref1 = client.create(self.ref)
-        client.run("remove {} -f".format(pref1.ref.copy_clear_rev().full_str()))
+        client.run("remove {} -f".format(pref1.ref.to_conanfileref().copy_clear_rev().full_str()))
         self.assertFalse(client.package_exists(pref1))
 
         # If I remove the ref with fake RREV, the packages are not removed
         pref1 = client.create(self.ref)
-        fakeref = pref1.ref.copy_with_rev("fakerev")
-        str_ref = fakeref.full_str()
+        fakeref = pref1.ref.to_conanfileref().copy_with_rev("fakerev")
+        str_ref = repr(fakeref)
         client.run("remove {} -f".format(fakeref.full_str()), assert_error=True)
         self.assertTrue(client.package_exists(pref1))
         self.assertIn("Recipe not found: '{}'".format(str_ref), client.out)
 
         # If I remove the ref with valid RREV, the packages are removed
         pref1 = client.create(self.ref)
-        client.run("remove {} -f".format(pref1.ref.full_str()))
+        client.run("remove {} -f".format(repr(pref1.ref)))
         self.assertFalse(client.package_exists(pref1))
 
         # If I remove the ref without RREV but specifying PREV it raises
         pref1 = client.create(self.ref)
-        command = "remove {} -f -p {}#{}".format(pref1.ref.copy_clear_rev().full_str(),
-                                                 pref1.id, pref1.revision)
+        command = "remove {} -f -p {}#{}".format(pref1.ref.to_conanfileref().copy_clear_rev().full_str(),
+                                                 pref1.package_id, pref1.revision)
         client.run(command, assert_error=True)
         self.assertTrue(client.package_exists(pref1))
         self.assertIn("Specify a recipe revision if you specify a package revision", client.out)
 
         # A wrong PREV doesn't remove the PREV
         pref1 = client.create(self.ref)
-        command = "remove {} -f -p {}#fakeprev".format(pref1.ref.full_str(), pref1.id)
+        command = "remove {} -f -p {}#fakeprev".format(repr(pref1.ref), pref1.package_id)
         client.run(command, assert_error=True)
         self.assertTrue(client.package_exists(pref1))
         self.assertIn("Binary package not found", client.out)
 
         # Everything correct, removes the unique local package revision
         pref1 = client.create(self.ref)
-        command = "remove {} -f -p {}#{}".format(pref1.ref.full_str(), pref1.id, pref1.revision)
+        command = "remove {} -f -p {}#{}".format(repr(pref1.ref), pref1.package_id,
+                                                 pref1.revision)
         client.run(command)
         self.assertFalse(client.package_exists(pref1))
 
@@ -362,7 +365,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         remover_client = self.c_v2
 
         # Remove ref without revision in a remote
-        command = "remove {} -f -r default".format(pref1.ref.full_str())
+        command = "remove {} -f -r default".format(repr(pref1.ref))
         remover_client.run(command)
         self.assertFalse(self.server.recipe_exists(pref1.ref))
         self.assertTrue(self.server.recipe_exists(pref2.ref))
@@ -377,7 +380,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
                                  conanfile=GenConanfile().with_build_msg("RREV 2!"))
         self.c_v2.upload_all(pref2.ref)
 
-        self.assertEqual(pref1.id, pref2.id)
+        self.assertEqual(pref1.package_id, pref2.package_id)
         # Both revisions exist in 2.0 cache
         self.assertTrue(self.c_v2.package_exists(pref1))
         self.assertTrue(self.c_v2.package_exists(pref2))
@@ -385,7 +388,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         remover_client = self.c_v2
 
         # Remove pref without RREV in a remote
-        remover_client.run("remove {} -p {} -f -r default".format(self.ref, pref2.id))
+        remover_client.run("remove {} -p {} -f -r default".format(self.ref, pref2.package_id))
         self.assertTrue(self.server.recipe_exists(pref1.ref))
         self.assertTrue(self.server.recipe_exists(pref2.ref))
         self.assertFalse(self.server.package_exists(pref1))
@@ -415,22 +418,23 @@ class RemoveWithRevisionsTest(unittest.TestCase):
             self.c_v2.upload_all(pref2b.ref)
 
         # Check created revisions
-        self.assertEqual(pref1.id, pref2.id)
-        self.assertEqual(pref2.id, pref2b.id)
+        self.assertEqual(pref1.package_id, pref2.package_id)
+        self.assertEqual(pref2.package_id, pref2b.package_id)
         self.assertEqual(pref2.ref.revision, pref2b.ref.revision)
         self.assertNotEqual(pref2.revision, pref2b.revision)
 
         remover_client = self.c_v2
 
         # Remove PREV without RREV in a remote, the client has to fail
-        command = "remove {} -p {}#{} -f -r default".format(self.ref, pref2.id, pref2.revision)
+        command = "remove {} -p {}#{} -f -r default".format(self.ref, pref2.package_id,
+                                                            pref2.revision)
         remover_client.run(command, assert_error=True)
         self.assertIn("Specify a recipe revision if you specify a package revision",
                       remover_client.out)
 
         # Remove package with RREV and PREV
-        command = "remove {} -p {}#{} -f -r default".format(pref2.ref.full_str(),
-                                                            pref2.id, pref2.revision)
+        command = "remove {} -p {}#{} -f -r default".format(repr(pref2.ref),
+                                                            pref2.package_id, pref2.revision)
         remover_client.run(command)
         self.assertTrue(self.server.recipe_exists(pref1.ref))
         self.assertTrue(self.server.recipe_exists(pref2.ref))
@@ -440,12 +444,12 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.assertFalse(self.server.package_exists(pref2))
 
         # Try to remove a missing revision
-        command = "remove {} -p {}#fakerev -f -r default".format(pref2.ref.full_str(),
-                                                                 pref2.id)
+        command = "remove {} -p {}#fakerev -f -r default".format(repr(pref2.ref),
+                                                                 pref2.package_id)
         remover_client.run(command, assert_error=True)
-        fakeref = pref2.copy_with_revs(pref2.ref.revision, "fakerev")
-        self.assertIn("Binary package not found: '{}'".format(fakeref.full_str()),
-                      remover_client.out)
+        fakeref = copy.copy(pref2)
+        fakeref.revision = "fakerev"
+        self.assertIn("Binary package not found: '{}'".format(repr(fakeref)), remover_client.out)
 
 
 class SearchingPackagesWithRevisions(unittest.TestCase):
@@ -490,7 +494,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         client = self.c_v2
 
-        data = client.search(revision_ref.full_str(), remote="all")
+        data = client.search(repr(revision_ref), remote="all")
         oss_r1 = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
         oss_r2 = [p["settings"]["os"] for p in data["results"][1]["items"][0]["packages"]]
         self.assertEqual(["Windows"], oss_r1)
@@ -594,7 +598,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         client = self.c_v2
         client.remove_all()
-        data = client.search(pref.ref.full_str(), remote="default")
+        data = client.search(repr(pref.ref), remote="default")
         items = data["results"][0]["items"][0]["packages"]
         self.assertEqual(1, len(items))
         oss = items[0]["settings"]["os"]
@@ -696,18 +700,18 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         client = self.c_v2
 
-        data = client.search("{}*".format(pref2_lib.ref.full_str()), remote="default")
+        data = client.search("{}*".format(repr(pref2_lib.ref)), remote="default")
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
-        data = client.search("{}".format(pref2_lib.ref.full_str()).replace("1.0", "*"),
+        data = client.search("{}".format(repr(pref2_lib.ref)).replace("1.0", "*"),
                              remote="default")
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
-        data = client.search("*{}".format(pref2_lib.ref.full_str()).replace("1.0", "*"),
+        data = client.search("*{}".format(repr(pref2_lib.ref)).replace("1.0", "*"),
                              remote="default")
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
@@ -727,9 +731,10 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         c_v2 = TurboTestClient(servers=servers)
         pref = c_v2.create(self.ref)
         c_v2.upload_all(self.ref)
-        pref_rev = pref.copy_with_revs(pref.ref.revision, None)
+        pref_rev = copy.copy(pref)
+        pref_rev.revision = None
 
-        c_v2.run("search {} --revisions -r default".format(pref_rev.full_str()))
+        c_v2.run("search {} --revisions -r default".format(repr(pref_rev)))
         # I don't want to mock here because I want to run this test against Artifactory
         self.assertIn("cf924fbb5ed463b8bb960cf3a4ad4f3a (", c_v2.out)
         self.assertIn(" UTC)", c_v2.out)
@@ -936,7 +941,8 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.assertEqual(pref2.ref.revision, pref3.ref.revision)
         self.assertEqual(pref3.ref.revision, server_pref3.revision)
 
-        pref = pref1.copy_clear_prev()
+        pref = copy.copy(pref1)
+        pref.revision = None
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref3.revision, pref2.revision, pref1.revision])
@@ -944,8 +950,8 @@ class ServerRevisionsIndexes(unittest.TestCase):
                          pref3.revision)
 
         # Delete the latest from the server
-        self.c_v2.run("remove {} -p {}#{} -r default -f".format(pref3.ref.full_str(),
-                                                                pref3.id, pref3.revision))
+        self.c_v2.run("remove {} -p {}#{} -r default -f".format(repr(pref3.ref),
+                                                                pref3.package_id, pref3.revision))
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref2.revision, pref1.revision])
@@ -994,7 +1000,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.upload_all(self.ref)
 
         # Delete the package revisions (all of them have the same ref#rev and id)
-        command = "remove {} -p {}#{{}} -r default -f".format(pref3.ref.full_str(), pref3.id)
+        command = "remove {} -p {}#{{}} -r default -f".format(repr(pref3.ref), pref3.package_id)
         self.c_v2.run(command.format(pref3.revision))
         self.c_v2.run(command.format(pref2.revision))
         self.c_v2.run(command.format(pref1.revision))
@@ -1003,7 +1009,8 @@ class ServerRevisionsIndexes(unittest.TestCase):
             pref4 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
 
-        pref = pref1.copy_clear_prev()
+        pref = copy.copy(pref1)
+        pref.revision = None
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref4.revision])

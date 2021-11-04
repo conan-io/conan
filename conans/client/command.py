@@ -20,7 +20,8 @@ from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.conf import DEFAULT_CONFIGURATION
-from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference, get_reference_fields, \
     check_valid_ref
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
@@ -338,7 +339,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            pref = PackageReference.loads(args.reference, validate=True)
+            pref = PkgReference.loads(args.reference)
         except ConanException:
             reference = args.reference
             packages_list = args.package
@@ -354,7 +355,8 @@ class Command(object):
                     reference = "%s/%s@#%s" % (pref.ref.name, pref.ref.version, pref.ref.revision)
                 else:
                     reference += "@"
-            pkgref = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
+            pkgref = "{}#{}".format(pref.package_id, pref.revision) \
+                if pref.revision else pref.package_id
             packages_list = [pkgref]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -1041,8 +1043,8 @@ class Command(object):
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
         try:
-            pref = PackageReference.loads(args.pattern_or_reference, validate=True)
-            packages = [pref.id]
+            pref = PkgReference.loads(args.pattern_or_reference)
+            packages = [pref.package_id]
             pattern_or_reference = repr(pref.ref)
         except ConanException:
             pref = None
@@ -1101,7 +1103,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            pref = PackageReference.loads(args.pattern_or_reference, validate=True)
+            pref = PkgReference.loads(args.pattern_or_reference)
         except ConanException:
             reference = args.pattern_or_reference
             package_id = args.package
@@ -1115,7 +1117,8 @@ class Command(object):
                 raise ConanException("'--query' argument cannot be used together with '--package'")
         else:
             reference = repr(pref.ref)
-            package_id = "{}#{}".format(pref.id, pref.revision) if pref.revision else pref.id
+            package_id = "{}#{}".format(pref.package_id, pref.revision) \
+                if pref.revision else pref.package_id
 
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -1247,7 +1250,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            pref = PackageReference.loads(args.reference, validate=True)
+            pref = PkgReference.loads(args.reference)
         except ConanException:
             reference = args.reference
             package_id = args.package
@@ -1258,7 +1261,7 @@ class Command(object):
                                "`conan get [...] {}:{}`".format(reference, package_id))
         else:
             reference = repr(pref.ref)
-            package_id = pref.id
+            package_id = pref.package_id
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
@@ -1436,44 +1439,9 @@ class Command(object):
         self._out.info("")
 
     def _warn_python_version(self):
-        import textwrap
-
-        width = 70
         version = sys.version_info
-        if version.major == 2:
-            self._out.info("*"*width, fg=Color.BRIGHT_RED)
-            msg = textwrap.fill("Python 2 is deprecated as of 01/01/2020 and Conan has"
-                                " stopped supporting it officially. We strongly recommend"
-                                " you to use Python >= 3.5. Conan will completely stop"
-                                " working with Python 2 in the following releases", width)
-            self._out.info(msg, fg=Color.BRIGHT_RED)
-            self._out.info("*"*width, fg=Color.BRIGHT_RED)
-            if os.environ.get('USE_UNSUPPORTED_CONAN_WITH_PYTHON_2', 0):
-                # IMPORTANT: This environment variable is not a silver buller. Python 2 is currently
-                # deprecated and some libraries we use as dependencies have stopped supporting it.
-                # Conan might fail to run and we are no longer fixing errors related to Python 2.
-                self._out.info(textwrap.fill("Python 2 deprecation notice has been bypassed"
-                                             " by envvar 'USE_UNSUPPORTED_CONAN_WITH_PYTHON_2'",
-                                             width))
-            else:
-                msg = textwrap.fill("If you really need to run Conan with Python 2 in your"
-                                    " CI without this interactive input, please contact us"
-                                    " at info@conan.io", width)
-                self._out.info(msg, fg=Color.BRIGHT_RED)
-                self._out.info("*" * width, fg=Color.BRIGHT_RED)
-                _msg = textwrap.fill("Understood the risk, keep going [y/N]: ", width,
-                                     drop_whitespace=False)
-                self._out.write(_msg, fg=Color.BRIGHT_RED)
-                ret = input().lower()
-                if ret not in ["yes", "ye", "y"]:
-                    self._out.info(textwrap.fill("Wise choice. Stopping here!", width))
-                    sys.exit(0)
-        elif version.minor == 4:
-            self._out.info("*"*width, fg=Color.BRIGHT_RED)
-            self._out.info(textwrap.fill("Python 3.4 support has been dropped. It is strongly "
-                                            "recommended to use Python >= 3.5 with Conan", width),
-                              fg=Color.BRIGHT_RED)
-            self._out.info("*"*width, fg=Color.BRIGHT_RED)
+        if version.major == 2 or  version.minor < 6:
+            raise ConanException("Conan needs Python >= 3.6")
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class

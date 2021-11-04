@@ -1,3 +1,4 @@
+import copy
 import os
 import platform
 import shutil
@@ -48,8 +49,10 @@ def temp_folder(path_with_spaces=True, create_dir=True):
 
 def uncompress_packaged_files(paths, pref):
     rev = paths.get_last_revision(pref.ref).revision
-    prev = paths.get_last_package_revision(pref.copy_with_revs(rev, None)).revision
-    pref = pref.copy_with_revs(rev, prev)
+    _tmp = copy.copy(pref)
+    _tmp.revision = None
+    prev = paths.get_last_package_revision(_tmp).revision
+    pref.revision = prev
 
     package_path = paths.package(pref)
     if not(os.path.exists(os.path.join(package_path, PACKAGE_TGZ_NAME))):

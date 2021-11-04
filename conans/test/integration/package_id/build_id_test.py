@@ -4,7 +4,8 @@ import unittest
 
 from parameterized.parameterized import parameterized
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -60,7 +61,7 @@ class BuildIdTest(unittest.TestCase):
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
         latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("Pkg/0.1@user/channel"))
-        pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
+        pref_debug = PkgReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                             f"{package_id_windows_debug}")
         prev_debug = client.cache.get_latest_prev(pref_debug)
         layout = client.cache.pkg_layout(prev_debug)
@@ -69,7 +70,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
-        pref_release = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
+        pref_release = PkgReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                               f"{package_id_windows_release}")
         prev_release = client.cache.get_latest_prev(pref_release)
         layout = client.cache.pkg_layout(prev_release)
@@ -78,7 +79,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
 
-        pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
+        pref_debug = PkgReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                             f"{package_id_linux_debug}")
         prev_debug = client.cache.get_latest_prev(pref_debug)
         layout = client.cache.pkg_layout(prev_debug)
@@ -87,7 +88,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
-        pref_release = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
+        pref_release = PkgReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                               f"{package_id_linux_release}")
         prev_release = client.cache.get_latest_prev(pref_release)
         layout = client.cache.pkg_layout(prev_release)
@@ -225,7 +226,7 @@ class BuildIdTest(unittest.TestCase):
 
         def _check_builds():
             latest_rrev = client.cache.get_latest_rrev(ref)
-            pkg_ids = client.cache.get_package_ids(latest_rrev)
+            pkg_ids = client.cache.get_package_references(latest_rrev)
             prevs = []
             for pkg_id in pkg_ids:
                 prevs.extend(client.cache.get_package_revisions(pkg_id))

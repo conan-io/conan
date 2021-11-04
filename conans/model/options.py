@@ -57,9 +57,6 @@ class _PackageOption:
         self._check_valid_value(other)
         return other == self.__str__()
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     @property
     def value(self):
         return self._value

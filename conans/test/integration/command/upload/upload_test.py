@@ -13,7 +13,8 @@ from mock import patch
 from conans import REVISIONS
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
@@ -277,7 +278,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         latest_rrev = client.cache.get_latest_rrev(ref)
-        pkg_ids = client.cache.get_package_ids(latest_rrev)
+        pkg_ids = client.cache.get_package_references(latest_rrev)
         latest_prev = client.cache.get_latest_prev(pkg_ids[0])
         package_folder = client.cache.pkg_layout(latest_prev).package()
         save(os.path.join(package_folder, "added.txt"), "")
@@ -370,7 +371,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conaninfo.txt", client2.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#37545dd5551161db93addff8b6bd2aea:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#c73d3a760d6d606d6444e9a951cdaf78"
+                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
                       " already in server, skipping upload", client2.out)
 
         # first client tries to upload again
@@ -384,7 +385,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conaninfo.txt", client.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#37545dd5551161db93addff8b6bd2aea:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#c73d3a760d6d606d6444e9a951cdaf78"
+                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
                       " already in server, skipping upload", client2.out)
 
     def test_upload_no_overwrite_all(self):
@@ -419,7 +420,7 @@ class MyPkg(ConanFile):
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already "
                       "in server, skipping upload", client.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#aeca26eec4b6ee246b964fcb00fe03e4"
+                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
                       " already in server, skipping upload", client.out)
         self.assertNotIn("Forbidden overwrite", client.out)
 
@@ -430,7 +431,7 @@ class MyPkg(ConanFile):
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already "
                       "in server, skipping upload", client.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#aeca26eec4b6ee246b964fcb00fe03e4"
+                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
                       " already in server, skipping upload", client.out)
         self.assertNotIn("Forbidden overwrite", client.out)
 
@@ -483,7 +484,7 @@ class MyPkg(ConanFile):
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already "
                       "in server, skipping upload", client.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#aeca26eec4b6ee246b964fcb00fe03e4"
+                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
                       " already in server, skipping upload", client.out)
         self.assertNotIn("Forbidden overwrite", client.out)
 
@@ -494,7 +495,7 @@ class MyPkg(ConanFile):
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already in "
                       "server, skipping upload", client.out)
         self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#aeca26eec4b6ee246b964fcb00fe03e4"
+                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
                       " already in server, skipping upload", client.out)
         self.assertNotIn("Forbidden overwrite", client.out)
 
@@ -719,7 +720,7 @@ class MyPkg(ConanFile):
         assert "Uploading lib/1.0 to remote" in client.out
 
         # Verify that in the remote it is stored as "_"
-        pref = PackageReference.loads("lib/1.0@#0:{}#0".format(NO_SETTINGS_PACKAGE_ID))
+        pref = PkgReference.loads("lib/1.0@#0:{}#0".format(NO_SETTINGS_PACKAGE_ID))
         path = server.server_store.export(pref.ref)
         self.assertIn("/lib/1.0/_/_/0/export", path.replace("\\", "/"))
 
@@ -800,18 +801,21 @@ class MyPkg(ConanFile):
         client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@user/channel#{}:{}#fakeprev --confirm".format(pref.ref.revision,
-                                                                                 pref.id),
+                                                                                 pref.package_id),
                    assert_error=True)
         self.assertIn(
-            "ERROR: Binary package pkg/1.0@user/channel:{}#fakeprev not found".format(pref.id),
+            "ERROR: Binary package pkg/1.0@user/channel:{}"
+            "#fakeprev not found".format(pref.package_id),
             client.out)
 
         client.run(
-            "upload pkg/1.0@user/channel#{}:{}#{} --confirm".format(pref.ref.revision, pref.id,
+            "upload pkg/1.0@user/channel#{}:{}#{} --confirm".format(pref.ref.revision,
+                                                                    pref.package_id,
                                                                     pref.revision))
         search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
         search_result = client.search(
-            "pkg/1.0@user/channel#{}:{} --revisions  -r default".format(pref.ref.revision, pref.id))[
+            "pkg/1.0@user/channel#{}:{} --revisions  -r default".format(pref.ref.revision,
+                                                                        pref.package_id))[
             0]
         self.assertIn(pref.revision, search_result["revision"])

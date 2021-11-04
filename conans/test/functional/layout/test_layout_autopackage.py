@@ -1,14 +1,15 @@
 import os
 import re
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
 def get_latest_prev(cache, ref, pkgid):
     latest_rrev = cache.get_latest_rrev(ref)
-    pref = PackageReference(latest_rrev, pkgid)
+    pref = PkgReference(latest_rrev, pkgid)
     prevs = cache.get_package_revisions(pref, only_latest_prev=True)
     return prevs[0]
 

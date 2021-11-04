@@ -58,8 +58,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
     recipe_layout = cache.create_export_recipe_layout(ref)
 
-    _check_settings_for_warnings(conanfile)
-
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref)
     logger.debug("EXPORT: %s" % conanfile_path)
@@ -129,28 +127,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
         graph_lock.update_lock_export_ref(ref)
 
     return ref
-
-
-def _check_settings_for_warnings(conanfile):
-    output = ConanOutput()
-    if not conanfile.settings:
-        return
-    try:
-        if 'os_build' not in conanfile.settings:
-            return
-        if 'os' not in conanfile.settings:
-            return
-
-        output.info("*" * 60, fg=Color.BRIGHT_RED)
-        output.info("  This package defines both 'os' and 'os_build' ",
-                       fg=Color.BRIGHT_RED)
-        output.info("  Please use 'os' for libraries and 'os_build'",
-                       fg=Color.BRIGHT_RED)
-        output.info("  only for build-requires used for cross-building",
-                       fg=Color.BRIGHT_RED)
-        output.info("*" * 60, fg=Color.BRIGHT_RED)
-    except ConanException:
-        pass
 
 
 def _capture_scm_auto_fields(conanfile, conanfile_dir, recipe_layout, ignore_dirty):

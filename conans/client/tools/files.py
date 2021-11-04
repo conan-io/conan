@@ -2,6 +2,7 @@ import gzip
 import logging
 import os
 import platform
+import shutil
 import stat
 import subprocess
 import sys
@@ -362,37 +363,7 @@ def collect_libs(conanfile, folder=None):
 
 def which(filename):
     """ same affect as posix which command or shutil.which from python3 """
-    # FIXME: Replace with shutil.which in Conan 2.0
-    def verify(file_abspath):
-        return os.path.isfile(file_abspath) and os.access(file_abspath, os.X_OK)
-
-    def _get_possible_filenames(fname):
-        if platform.system() != "Windows":
-            extensions = [".sh", ""]
-        else:
-            if "." in filename:  # File comes with extension already
-                extensions = [""]
-            else:
-                pathext = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
-                extensions = [extension.lower() for extension in pathext]
-                extensions.insert(1, "")  # No extension
-        return ["%s%s" % (fname, extension) for extension in extensions]
-
-    possible_names = _get_possible_filenames(filename)
-    for path in os.environ["PATH"].split(os.pathsep):
-        for name in possible_names:
-            filepath = os.path.abspath(os.path.join(path, name))
-            if verify(filepath):
-                return filepath
-            if platform.system() == "Windows":
-                filepath = filepath.lower()
-                if "system32" in filepath:
-                    # python return False for os.path.exists of exes in System32 but with SysNative
-                    trick_path = filepath.replace("system32", "sysnative")
-                    if verify(trick_path):
-                        return trick_path
-
-    return None
+    return shutil.which(filename)
 
 
 def _replace_with_separator(filepath, sep):

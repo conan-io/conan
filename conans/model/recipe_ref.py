@@ -1,7 +1,5 @@
-import re
 from functools import total_ordering
 
-from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.util.dates import from_timestamp_to_iso8601
 
@@ -12,13 +10,44 @@ class Version:
     This is NOT an implementation of semver, as users may use any pattern in their versions.
     It is just a helper to parse "." or "-" and compare taking into account integers when possible
     """
-    # FIXME: parse also +
-    version_pattern = re.compile('[.-]')
-
     def __init__(self, value):
         assert isinstance(value, str)
         self._value = value
         self._items = None  # elements of the version
+        self._pre = None
+        self._build = None
+
+    @property
+    def pre(self):
+        if self._items is None:  # the indicator parse is needed is empty items
+            self._parse()
+        return self._pre
+
+    @property
+    def build(self):
+        if self._items is None:  # the indicator parse is needed is empty items
+            self._parse()
+        return self._build
+
+    @property
+    def main(self):
+        if self._items is None:
+            self._parse()
+        return self._items
+
+    @property
+    def major(self):
+        try:
+            return self.main[0]
+        except IndexError:
+            return None
+
+    @property
+    def minor(self):
+        try:
+            return self.main[1]
+        except IndexError:
+            return None
 
     def __str__(self):
         return self._value
@@ -34,15 +63,40 @@ class Version:
     def __lt__(self, other):
         if not isinstance(other, Version):
             other = Version(other)
-        # FIXME: this comparison is not enough
-        return self._tokens() < other._tokens()
+        if self.pre:
+            if other.pre:  # both are pre-releases
+                return (self.main, self.pre, self.build) < (other.main, other.pre, other.build)
+            else:  # Left hand is pre-release, right side is regular
+                if self.main == other.main:  # Problem only happens if both are equal
+                    return True
+                else:
+                    return self.main < other.main
+        else:
+            if other.pre:  # Left hand is regular, right side is pre-release
+                if self.main == other.main:  # Problem only happens if both are equal
+                    return False
+                else:
+                    return self.main < other.main
+            else:  # None of them is pre-release
+                return (self.main, self.build) < (other.main, other.build)
 
-    def _tokens(self):
-        if self._items is None:
-            items = self.version_pattern.split(self._value)
-            items = [int(item) if item.isdigit() else item for item in items]
-            self._items = items
-        return self._items
+    def _parse(self):
+        items = self._value.rsplit("+", 1)  # split for build
+        if len(items) == 2:
+            value, build = items
+            self._build = Version(build)  # This is a nested version by itself
+        else:
+            value = items[0]
+
+        items = value.rsplit("-", 1)  # split for pre-release
+        if len(items) == 2:
+            value, pre = items
+            self._pre = Version(pre)  # This is a nested version by itself
+        else:
+            value = items[0]
+        items = value.split(".")
+        items = [int(item) if item.isdigit() else item for item in items]
+        self._items = items
 
 
 @total_ordering
@@ -144,6 +198,7 @@ class RecipeReference:
                 user = channel = None
             return RecipeReference(name, version, user, channel, revision, timestamp)
         except Exception:
+            from conans.errors import ConanException
             raise ConanException(
                 f"{text} is not a valid recipe reference, provide a reference"
                 f" in the form name/version[@user/channel]")

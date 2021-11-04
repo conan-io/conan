@@ -236,15 +236,15 @@ class RecipeNotFoundException(NotFoundException):
 class PackageNotFoundException(NotFoundException):
 
     def __init__(self, pref, remote=None):
-        from conans.model.ref import PackageReference
-        assert isinstance(pref, PackageReference), "PackageNotFoundException requires a " \
-                                                   "PackageReference"
+        from conans.model.package_ref import PkgReference
+        assert isinstance(pref, PkgReference), "PackageNotFoundException requires a " \
+                                                   "PkgReference"
         self.pref = pref
 
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.pref.full_str()
+        tmp = repr(self.pref)
         return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
 
 

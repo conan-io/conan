@@ -1,18 +1,11 @@
 import os
 import textwrap
 import time
-from collections import OrderedDict
 from time import sleep
 
-import pytest
-from mock import patch
-
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONAN_MANIFEST
-from conans.server.revision_list import RevisionList
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
-    TurboTestClient, GenConanfile
-from conans.util.files import load, save
+from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.files import load
 
 
 def test_update_binaries():

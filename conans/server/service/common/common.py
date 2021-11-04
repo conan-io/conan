@@ -1,18 +1,22 @@
+import copy
+
 from conans import DEFAULT_REVISION_V1
-from conans.model.ref import PackageReference
+from conans.model.package_ref import PkgReference
 
 
 class CommonService(object):
 
     def _get_latest_pref(self, pref):
         ref = self._get_latest_ref(pref.ref)
-        pref = PackageReference(ref, pref.id)
+        pref = PkgReference(ref, pref.package_id)
         tmp = self._server_store.get_last_package_revision(pref)
         if not tmp:
             prev = DEFAULT_REVISION_V1
         else:
             prev = tmp.revision
-        return pref.copy_with_revs(ref.revision, prev)
+        tmp = copy.copy(pref)
+        tmp.revision = prev
+        return tmp
 
     def _get_latest_ref(self, ref):
         tmp = self._server_store.get_last_revision(ref)
@@ -30,7 +34,7 @@ class CommonService(object):
         """If the revision is not specified it will remove the packages from all the recipes
         (v1 compatibility)"""
         for package_id in package_ids_filter:
-            pref = PackageReference(ref, package_id)
+            pref = PkgReference(ref, package_id)
             self._authorizer.check_delete_package(self._auth_user, pref)
         if not package_ids_filter:  # Remove all packages, check that we can remove conanfile
             self._authorizer.check_delete_conan(self._auth_user, ref)
@@ -43,9 +47,12 @@ class CommonService(object):
         self._authorizer.check_delete_package(self._auth_user, pref)
 
         for rrev in self._server_store.get_recipe_revisions(pref.ref):
-            new_pref = pref.copy_with_revs(rrev.revision, pref.revision)
+            new_ref = pref.ref.copy_with_rev(rrev.revision)
+            # FIXME: Just assign rrev when introduce RecipeReference
+            new_pref = PkgReference(new_ref, pref.package_id, pref.revision)
             for prev in self._server_store.get_package_revisions(new_pref):
-                full_pref = new_pref.copy_with_revs(rrev.revision, prev.revision)
+                full_pref = copy.copy(new_pref)
+                full_pref.revision = prev.revision
                 self._server_store.remove_package(full_pref)
 
     def remove_all_packages(self, ref):

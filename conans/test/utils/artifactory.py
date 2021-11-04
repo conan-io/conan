@@ -34,7 +34,7 @@ class _ArtifactoryServerStore(object):
     @staticmethod
     def _pref_index(pref):
         tmp = _ArtifactoryServerStore._root_recipe(pref.ref)
-        return "{}/{}/package/{}/index.json".format(tmp, pref.ref.revision, pref.id)
+        return "{}/{}/package/{}/index.json".format(tmp, pref.ref.revision, pref.package_id)
 
     def get_recipe_revisions(self, ref):
         time.sleep(0.1)  # Index appears to not being updated immediately after a remove

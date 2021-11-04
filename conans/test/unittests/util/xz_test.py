@@ -2,11 +2,9 @@ import os
 import tarfile
 from unittest import TestCase
 
-from io import StringIO
-
-from conans.cli.output import ConanOutput
 from conans.client.tools.files import save, unzip
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
@@ -60,9 +58,9 @@ class Pkg(ConanFile):
 """
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1"})
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, "mypackagerev")
-        server.server_store.update_last_package_revision(pref.copy_with_revs("myreciperev",
-                                                                             "mypackagerev"))
+        pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "mypackagerev")
+        pref.revision = "mypackagerev"
+        server.server_store.update_last_package_revision(pref)
 
         package = server.server_store.package(pref)
         save_files(package, {"conaninfo.txt": "#",

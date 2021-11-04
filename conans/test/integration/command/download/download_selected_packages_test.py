@@ -20,8 +20,8 @@ def setup():
     client.run("install {} -s os=Linux -s arch=x86 --build missing".format(ref))
     client.run("upload {} --all -r default".format(ref))
     latest_rrev = client.cache.get_latest_rrev(ref)
-    packages = client.cache.get_package_ids(latest_rrev)
-    package_ids = [package.id for package in packages]
+    packages = client.cache.get_package_references(latest_rrev)
+    package_ids = [package.package_id for package in packages]
     return client, ref, package_ids, str(conanfile)
 
 
@@ -31,8 +31,8 @@ def test_download_all(setup):
     # Should retrieve the three packages
     new_client.run("download Hello0/0.1@lasote/stable")
     latest_rrev = new_client.cache.get_latest_rrev(ref)
-    packages = new_client.cache.get_package_ids(latest_rrev)
-    new_package_ids = [package.id for package in packages]
+    packages = new_client.cache.get_package_references(latest_rrev)
+    new_package_ids = [package.package_id for package in packages]
     assert set(new_package_ids) == set(package_ids)
 
 
@@ -45,15 +45,15 @@ def test_download_some_reference(setup):
 
     # try to re-download the package we have just installed, will skip download
     latest_prev = new_client.get_latest_prev("Hello0/0.1@lasote/stable")
-    new_client.run(f"download {latest_prev.full_str()}")
-    assert f"Skip {latest_prev.full_str()} download, already in cache" in new_client.out
+    new_client.run(f"download {str(latest_prev)}")
+    assert f"Skip {str(latest_prev)} download, already in cache" in new_client.out
 
     new_client.run("download Hello0/0.1@lasote/stable -p %s -p %s" % (package_ids[0],
                                                                       package_ids[1]))
-    assert f"Skip {latest_prev.full_str()} download, already in cache" in new_client.out
+    assert f"Skip {str(latest_prev)} download, already in cache" in new_client.out
     latest_rrev = new_client.cache.get_latest_rrev(ref)
-    packages = new_client.cache.get_package_ids(latest_rrev)
-    package_ids = [package.id for package in packages]
+    packages = new_client.cache.get_package_references(latest_rrev)
+    package_ids = [package.package_id for package in packages]
     assert len(package_ids) == 2
 
 

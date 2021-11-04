@@ -66,8 +66,8 @@ class CacheDatabase:
         for it in self._packages.get_package_revisions(ref, only_latest_prev):
             yield it
 
-    def get_package_ids(self, ref: ConanReference):
-        for it in self._packages.get_package_ids(ref):
+    def get_package_references(self, ref: ConanReference):
+        for it in self._packages.get_package_references(ref):
             yield it
 
     def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):

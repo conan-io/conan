@@ -167,9 +167,6 @@ class _ConfigOrigin(object):
                 self.args == other.args and self.source_folder == other.source_folder
                 and self.target_folder == other.target_folder)
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def json(self):
         return {"type": self.type,
                 "uri": self.uri,
