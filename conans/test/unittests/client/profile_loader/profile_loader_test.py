@@ -127,7 +127,7 @@ def test_profiles_includes():
     profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
     profile = profile_loader.load_profile("./profile4.txt", tmp)
 
-    assert profile.settings == {"os": "1"}
+    assert profile._settings_values == {"os": "1"}
     assert profile.options["zlib"].aoption == 1
     assert profile.options["zlib"].otheroption == 12
     assert profile.build_requires == {"*": [ConanFileReference.loads("one/1.5@lasote/stable"),
@@ -149,7 +149,7 @@ def test_profile_include_order():
     profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
     profile = profile_loader.load_profile("./profile2.txt", tmp)
 
-    assert profile.settings["os"] == "fromProfile2"
+    assert profile._settings_values["os"] == "fromProfile2"
 
 
 def test_profile_load_absolute_path():
@@ -163,7 +163,7 @@ def test_profile_load_absolute_path():
 
     profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
     profile = profile_loader.load_profile(current_profile_path)
-    assert "Windows" == profile.settings["os"]
+    assert "Windows" == profile._settings_values["os"]
 
 
 def test_profile_load_relative_path_dot():
@@ -177,7 +177,7 @@ def test_profile_load_relative_path_dot():
 
     profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
     profile = profile_loader.load_profile("./profiles/default", current_profile_folder)
-    assert "Windows" == profile.settings["os"]
+    assert "Windows" == profile._settings_values["os"]
 
 
 def test_profile_load_relative_path_pardir():
@@ -192,7 +192,7 @@ def test_profile_load_relative_path_pardir():
 
     profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
     profile = profile_loader.load_profile("../profiles/default", cwd)
-    assert "Windows" == profile.settings["os"]
+    assert "Windows" == profile._settings_values["os"]
 
 
 def test_profile_buildenv():

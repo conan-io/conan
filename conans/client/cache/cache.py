@@ -273,6 +273,8 @@ class ClientCache(object):
                 self._settings_yaml = yaml.safe_load(content) or {}
             except (yaml.YAMLError, AttributeError) as ye:
                 raise ConanException("Invalid settings.yml format: {}".format(ye))
+            if not isinstance(self._settings_yaml, dict):
+                raise ConanException("Invalid settings.yml format: yaml is not a dict")
         return self._settings_yaml
 
     @property

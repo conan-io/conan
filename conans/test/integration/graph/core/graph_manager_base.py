@@ -138,9 +138,9 @@ class GraphManagerTest(unittest.TestCase):
     def build_consumer(self, path, profile_build_requires=None, ref=None, create_ref=None,
                        install=True, options_build=None):
         profile_host = Profile()
-        profile_host.settings["os"] = "Linux"
+        profile_host._settings_values["os"] = "Linux"
         profile_build = Profile()
-        profile_build.settings["os"] = "Windows"
+        profile_build._settings_values["os"] = "Windows"
         if profile_build_requires:
             profile_host.build_requires = profile_build_requires
         if options_build:

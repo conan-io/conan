@@ -12,10 +12,10 @@ class ProfileTest(unittest.TestCase):
         new_profile.update_settings(OrderedDict([("os", "Windows")]))
 
         new_profile.update_settings(OrderedDict([("OTHER", "2")]))
-        self.assertEqual(new_profile.settings, OrderedDict([("os", "Windows"), ("OTHER", "2")]))
+        self.assertEqual(new_profile._settings_values, OrderedDict([("os", "Windows"), ("OTHER", "2")]))
 
         new_profile.update_settings(OrderedDict([("compiler", "2"), ("compiler.version", "3")]))
-        self.assertEqual(new_profile.settings,
+        self.assertEqual(new_profile._settings_values,
                          OrderedDict([("os", "Windows"), ("OTHER", "2"),
                                       ("compiler", "2"), ("compiler.version", "3")]))
 
@@ -26,7 +26,7 @@ class ProfileTest(unittest.TestCase):
                                                 ("compiler.runtime", "MT")]))
 
         new_profile.update_settings(OrderedDict([("compiler", "gcc")]))
-        self.assertEqual(dict(new_profile.settings), {"compiler": "gcc", "os": "Windows"})
+        self.assertEqual(dict(new_profile._settings_values), {"compiler": "gcc", "os": "Windows"})
 
         new_profile = Profile()
         new_profile.update_settings(OrderedDict([("os", "Windows"),
@@ -37,7 +37,7 @@ class ProfileTest(unittest.TestCase):
                                                  ("compiler.subsetting", "3"),
                                                  ("other", "value")]))
 
-        self.assertEqual(dict(new_profile.settings), {"compiler": "Visual Studio",
+        self.assertEqual(dict(new_profile._settings_values), {"compiler": "Visual Studio",
                                                       "os": "Windows",
                                                       "compiler.runtime": "MT",
                                                       "compiler.subsetting": "3",
@@ -61,9 +61,9 @@ class ProfileTest(unittest.TestCase):
         # Settings
         profile = Profile()
         profile.package_settings["zlib"] = {"compiler": "gcc"}
-        profile.settings["arch"] = "x86_64"
-        profile.settings["compiler"] = "Visual Studio"
-        profile.settings["compiler.version"] = "12"
+        profile._settings_values["arch"] = "x86_64"
+        profile._settings_values["compiler"] = "Visual Studio"
+        profile._settings_values["compiler.version"] = "12"
         profile.build_requires["*"] = ["zlib/1.2.8@lasote/testing"]
         profile.build_requires["zlib/*"] = ["aaaa/1.2.3@lasote/testing", "bb/1.2@lasote/testing"]
         self.assertEqual("""[settings]
@@ -80,9 +80,9 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
     def test_apply(self):
         # Settings
         profile = Profile()
-        profile.settings["arch"] = "x86_64"
-        profile.settings["compiler"] = "Visual Studio"
-        profile.settings["compiler.version"] = "12"
+        profile._settings_values["arch"] = "x86_64"
+        profile._settings_values["compiler"] = "Visual Studio"
+        profile._settings_values["compiler.version"] = "12"
 
         profile.update_settings(OrderedDict([("compiler.version", "14")]))
 

@@ -28,7 +28,7 @@ class TestConanLib(ConanFile):
 '''
         client = TestClient()
         settings_path = client.cache.settings_path
-        client.cache.settings
+        client.cache.settings_yaml_definition
         settings = load(settings_path)
         settings += "\nproduct: [onion, potato]"
         save(settings_path, settings)
