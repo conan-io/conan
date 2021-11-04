@@ -38,8 +38,8 @@ class RevisionsController(object):
             package_reference = get_package_ref(name, version, username, channel, package_id,
                                                 revision, p_revision=None)
             conan_service = ConanServiceV2(app.authorizer, app.server_store)
-            revs = conan_service.get_package_revisions(package_reference, auth_user)
-            return _format_revs_return(revs)
+            prefs = conan_service.get_package_revisions(package_reference, auth_user)
+            return _format_prefs_return(prefs)
 
         @app.route(r.package_revision_latest, method="GET")
         def get_latest_package_revision(name, version, username, channel, package_id, auth_user,
@@ -49,14 +49,22 @@ class RevisionsController(object):
             package_reference = get_package_ref(name, version, username, channel, package_id,
                                                 revision, p_revision=None)
             conan_service = ConanServiceV2(app.authorizer, app.server_store)
-            rev = conan_service.get_latest_package_revision(package_reference, auth_user)
-            return _format_rev_return(rev)
+            pref = conan_service.get_latest_package_revision(package_reference, auth_user)
+            return _format_pref_return(pref)
 
 
 def _format_rev_return(rev):
-    return {"revision": rev[0],
-            "time": rev[1]}
+    # FIXME: fix this when RecipeReference
+    return {"revision": rev[0], "time": rev[1]}
 
 
 def _format_revs_return(revs):
-    return {"revisions": [_format_rev_return(rev)for rev in revs]}
+    return {"revisions": [_format_rev_return(rev) for rev in revs]}
+
+
+def _format_pref_return(pref):
+    return {"revision": pref.revision, "time": pref.timestamp}
+
+
+def _format_prefs_return(revs):
+    return {"revisions": [_format_pref_return(rev)for rev in revs]}

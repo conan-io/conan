@@ -121,6 +121,6 @@ class ListAPI:
             packages_props = search_packages(package_layouts, None)
 
         return {
-            "reference": repr(rrev),
+            "reference": rrev,
             "results": packages_props
         }

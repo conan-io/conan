@@ -2,6 +2,7 @@ import os
 import shutil
 import time
 import traceback
+from typing import List
 
 from requests.exceptions import ConnectionError
 
@@ -158,8 +159,7 @@ class RemoteManager(object):
     def _get_package(self, layout, pref, remote, scoped_output, info):
         t1 = time.time()
         try:
-            headers = _headers_for_info(info)
-            pref = self._resolve_latest_pref(pref, remote, headers=headers)
+            pref = self._resolve_latest_pref(pref, remote, info=info)
 
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
@@ -223,31 +223,22 @@ class RemoteManager(object):
     def get_recipe_revisions(self, ref, remote):
         return self._call_remote(remote, "get_recipe_revisions", ref)
 
-    def get_package_revisions(self, pref, remote, headers=None):
-        revisions = self._call_remote(remote, "get_package_revisions", pref, headers=headers)
-        return revisions
+    def get_package_revisions(self, pref, remote, headers=None) -> List[PkgReference]:
+        return self._call_remote(remote, "get_package_revisions", pref, headers=headers)
 
     def get_latest_recipe_revision(self, ref, remote):
         revision, rev_time = self._call_remote(remote, "get_latest_recipe_revision", ref)
+        # FIXME: return a RecipeReference when ready
         return revision, rev_time
 
-    def get_latest_package_revision(self, pref, remote, headers=None):
+    def get_latest_package_revision(self, pref, remote, info=None) -> PkgReference:
+        headers = _headers_for_info(info) if info else None
         return self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)
-
-    # FIXME: this method returns the latest package revision with the time or if a prev is specified
-    #  it returns that prev if it exists in the server with the time
-    def get_latest_package_revision_with_time(self, pref, remote, info=None):
-        headers = _headers_for_info(info)
-        revisions = self._call_remote(remote, "get_package_revisions", pref, headers=headers)
-        timestamp = revisions[0].get("time")
-        ref = PkgReference(pref.ref, pref.package_id, revisions[0].get("revision"),
-                           timestamp=timestamp)
-        return ref
-
 
     # FIXME: this method returns the latest recipe revision with the time or if a rrev is specified
     #  it returns that rrev if it exists in the server with the time
     def get_latest_recipe_revision_with_time(self, ref, remote):
+        # FIXME: Remove this method when RecipeReference contanins the timestamp
         revisions = self._call_remote(remote, "get_recipe_revisions", ref)
         return ref.copy_with_rev(revisions[0].get("revision")), revisions[0].get("time")
 
@@ -256,9 +247,9 @@ class RemoteManager(object):
             ref, _ = self.get_latest_recipe_revision(ref, remote)
         return ref
 
-    def _resolve_latest_pref(self, pref, remote, headers):
+    def _resolve_latest_pref(self, pref, remote, info):
         if pref.revision is None:
-            pref = self.get_latest_package_revision(pref, remote, headers=headers)
+            pref = self.get_latest_package_revision(pref, remote, info=info)
         return pref
 
     def _call_remote(self, remote, method, *args, **kwargs):

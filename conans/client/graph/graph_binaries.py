@@ -57,8 +57,7 @@ class GraphBinariesAnalyzer(object):
         if remote:
             try:
                 info = node.conanfile.info
-                pref_rev = self._remote_manager.get_latest_package_revision_with_time(pref, remote,
-                                                                                      info=info)
+                pref_rev = self._remote_manager.get_latest_package_revision(pref, remote, info=info)
                 pref.revision = pref_rev.revision
                 pref.timestamp = pref_rev.timestamp
                 return remote
@@ -80,7 +79,7 @@ class GraphBinariesAnalyzer(object):
             node.conanfile.output.warning("Can't update, there are no remotes configured or enabled")
 
         if len(results) > 0:
-            remotes_results = sorted(results, key=lambda k: k['time'], reverse=True)
+            remotes_results = sorted(results, key=lambda k: k['pref'].timestamp, reverse=True)
             result = remotes_results[0]
             pref.revision = result.get("pref").revision
             pref.timestamp = result.get("pref").timestamp

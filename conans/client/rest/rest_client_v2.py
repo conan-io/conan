@@ -243,8 +243,7 @@ class RestV2Methods(RestCommonMethods):
                     pid, revision = _tmp
                     pref = PkgReference(ref, pid, revision=revision)
                     if not revision:
-                        revisions = self.get_package_revisions(pref)
-                        prefs = [PkgReference(ref, pid, rev["revision"]) for rev in revisions]
+                        prefs = self.get_package_revisions(pref)
                     else:
                         prefs = [pref]
                     for pref in prefs:
@@ -284,7 +283,7 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe_revisions(self, ref):
         url = self.router.recipe_revisions(ref)
         tmp = self.get_json(url)["revisions"]
-        # FIXME: the server API is returning an iso date, we have to convert to timestamp
+        # FIXME: return RecipeReference's when ready
         tmp = [{"revision": item.get("revision"),
                 "time": from_iso8601_to_timestamp(item.get("time"))} for item in tmp]
         if ref.revision:
@@ -294,24 +293,24 @@ class RestV2Methods(RestCommonMethods):
             raise RecipeNotFoundException(ref)
         return tmp
 
-    def get_package_revisions(self, pref, headers=None):
-        url = self.router.package_revisions(pref)
-        tmp = self.get_json(url, headers=headers)["revisions"]
-        # FIXME: the server API is returning an iso date, we have to convert to timestamp
-        tmp = [{"revision": item.get("revision"),
-                "time": from_iso8601_to_timestamp(item.get("time"))} for item in tmp]
-        if pref.revision:
-            for r in tmp:
-                if r["revision"] == pref.revision:
-                    return [r]
-            raise PackageNotFoundException(pref)
-        return tmp
-
     def get_latest_recipe_revision(self, ref):
         url = self.router.recipe_latest(ref)
         data = self.get_json(url)
         # FIXME: the server API is returning an iso date, we have to convert to timestamp
         return ref.copy_with_rev(data.get("revision")), from_iso8601_to_timestamp(data.get("time"))
+
+    def get_package_revisions(self, pref, headers=None):
+        url = self.router.package_revisions(pref)
+        tmp = self.get_json(url, headers=headers)["revisions"]
+        prefs = [PkgReference(pref.ref, pref.package_id, item.get("revision"),
+                              from_iso8601_to_timestamp(item.get("time"))) for item in tmp]
+
+        if pref.revision:  # FIXME: This is a bit messy
+            for _pref in prefs:
+                if _pref.revision == pref.revision:
+                    return [_pref]
+            raise PackageNotFoundException(pref)
+        return prefs
 
     def get_latest_package_revision(self, pref: PkgReference, headers):
         url = self.router.package_latest(pref)

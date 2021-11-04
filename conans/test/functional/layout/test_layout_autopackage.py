@@ -10,8 +10,8 @@ from conans.test.utils.tools import TestClient
 def get_latest_prev(cache, ref, pkgid):
     latest_rrev = cache.get_latest_rrev(ref)
     pref = PkgReference(latest_rrev, pkgid)
-    prevs = cache.get_package_revisions(pref, only_latest_prev=True)
-    return prevs[0]
+    prefs = cache.get_package_revisions(pref, only_latest_prev=True)
+    return prefs[0]
 
 
 def test_auto_package_no_components():

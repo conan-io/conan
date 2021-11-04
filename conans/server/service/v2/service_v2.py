@@ -69,10 +69,10 @@ class ConanServiceV2(CommonService):
 
     def get_latest_package_revision(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)
-        tmp = self._server_store.get_last_package_revision(pref)
-        if not tmp:
+        _pref = self._server_store.get_last_package_revision(pref)
+        if not _pref:
             raise PackageNotFoundException(pref)
-        return tmp
+        return _pref
 
     # PACKAGE METHODS
     def get_package_file_list(self, pref, auth_user):

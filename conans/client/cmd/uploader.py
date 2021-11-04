@@ -522,7 +522,7 @@ class CmdUpload(object):
         try:
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
             server_revisions = self._remote_manager.get_package_revisions(pref, remote)
-            assert pref.revision == server_revisions[0]["revision"]
+            assert pref.revision == server_revisions[0].revision
             assert len(server_revisions) == 1
         except NotFoundException:
             pass

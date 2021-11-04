@@ -241,7 +241,10 @@ class ServerStore(object):
     def get_last_package_revision(self, pref):
         assert(isinstance(pref, PkgReference))
         rev_file_path = self._package_revisions_file(pref)
-        return self._get_latest_revision(rev_file_path)
+        rev = self._get_latest_revision(rev_file_path)
+        if rev:
+            return PkgReference(pref.ref, pref.package_id, rev.revision, rev.time)
+        return None
 
     def update_last_revision(self, ref):
         assert(isinstance(ref, ConanFileReference))
@@ -272,13 +275,14 @@ class ServerStore(object):
         if pref.revision:
             tmp = RevisionList()
             tmp.add_revision(pref.revision)
-            return tmp.as_list()
+            return [PkgReference(pref.ref, pref.package_id, rev.revision, rev.time)
+                    for rev in tmp.as_list()]
 
         tmp = self._package_revisions_file(pref)
         ret = self._get_revisions_list(tmp).as_list()
         if not ret:
             raise PackageNotFoundException(pref)
-        return ret
+        return [PkgReference(pref.ref, pref.package_id, rev.revision, rev.time) for rev in ret]
 
     def _get_revisions_list(self, rev_file_path):
         if self._storage_adapter.path_exists(rev_file_path):

@@ -54,10 +54,9 @@ def _list_revisions_cli_formatter(results, ref_type):
             cli_out_write(f"There are no matching {ref_type}", indentation=2)
         else:
             reference = result["reference"]
-            for revisions in result["results"]:
-                rev = revisions["revision"]
-                date = from_timestamp_to_iso8601(revisions["time"])
-                cli_out_write(f"{reference}#{rev} ({date})", fg=recipe_color, indentation=2)
+            for pref in result["results"]:
+                date = from_timestamp_to_iso8601(pref.timestamp)
+                cli_out_write(f"{reference}#{pref.revision} ({date})", fg=recipe_color, indentation=2)
 
 
 def list_recipe_revisions_cli_formatter(results):
@@ -285,23 +284,23 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         remotes = get_remote_selection(conan_api, args.remote)
         for remote in remotes:
             error = None
+            prefs = []
             try:
-                result = conan_api.list.get_package_revisions(pref, remote=remote)
+                prefs = conan_api.list.get_package_revisions(pref, remote=remote)
             except (NotFoundException, PackageNotFoundException):
                 # This exception must be caught manually due to a server inconsistency:
                 # Artifactory API returns an empty result if the recipe doesn't exist, but
                 # Conan Server returns a 404. This probably should be fixed server side,
                 # but in the meantime we must handle it here
-                result = []
+                pass
             except Exception as e:
                 error = str(e)
-                result = []
 
             results.append({
                 "reference": repr(pref),
                 "remote": remote.name,
                 "error": error,
-                "results": result
+                "results": prefs
             })
 
     return results

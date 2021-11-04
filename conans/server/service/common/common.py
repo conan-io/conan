@@ -50,10 +50,8 @@ class CommonService(object):
             new_ref = pref.ref.copy_with_rev(rrev.revision)
             # FIXME: Just assign rrev when introduce RecipeReference
             new_pref = PkgReference(new_ref, pref.package_id, pref.revision)
-            for prev in self._server_store.get_package_revisions(new_pref):
-                full_pref = copy.copy(new_pref)
-                full_pref.revision = prev.revision
-                self._server_store.remove_package(full_pref)
+            for _pref in self._server_store.get_package_revisions(new_pref):
+                self._server_store.remove_package(_pref)
 
     def remove_all_packages(self, ref):
         for rrev in self._server_store.get_recipe_revisions(ref):
