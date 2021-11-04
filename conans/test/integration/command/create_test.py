@@ -293,15 +293,14 @@ class MyPkg(ConanFile):
             class MyPkg(ConanFile):
 
                 def build(self):
-                    raise ConanException("Build error")
+                    raise Exception("Build error")
             """)
         client.save({"conanfile.py": conanfile})
         ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
         client.run("create . %s" % ref.full_str(), assert_error=True)
-        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertIn("Build error", client.out)
-        package_folder = client.get_latest_pkg_layout(pref).package()
-        self.assertFalse(os.path.exists(package_folder))
+        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
+        assert pref is None
 
     def test_create_with_name_and_version(self):
         client = TestClient()
