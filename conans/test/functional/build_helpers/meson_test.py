@@ -30,4 +30,5 @@ class MesonTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile_vcvars})
         client.run('create . pkg/1.0@ -e PATH="MyCustomPath"')
-        self.assertIn("pkg/1.0: PATH ENV VAR: MyCustomPath;", client.out)
+        self.assertIn("pkg/1.0: PATH ENV VAR: ", client.out)
+        self.assertIn("MyCustomPath;", client.out)
