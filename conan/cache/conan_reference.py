@@ -85,10 +85,12 @@ class ConanReference:
 
     @property
     def full_reference(self):
-        if self.prev:
-            return f'{self.reference}#{self.rrev}:{self.pkgid}#{self.prev}'
-        else:
-            return f'{self.reference}#{self.rrev}'
+        result = f'{self.reference}#{self.rrev}'
+        if self.pkgid:
+            result += f":{self.pkgid}"
+            if self.prev:
+                result += f'#{self.prev}'
+        return result
 
     @property
     def recipe_reference(self):

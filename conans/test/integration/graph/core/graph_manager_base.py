@@ -1,7 +1,7 @@
 import os
 import textwrap
 import unittest
-from collections import namedtuple, Counter
+from collections import Counter
 
 from mock import Mock
 
@@ -150,7 +150,6 @@ class GraphManagerTest(unittest.TestCase):
         build_mode = []  # Means build all
         ref = ref or RecipeReference(None, None, None, None, validate=False)
         app = self._get_app()
-
 
         deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
                                                   None, ref, build_mode)

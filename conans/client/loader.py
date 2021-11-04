@@ -7,6 +7,7 @@ import uuid
 
 import yaml
 
+from conans.client import settings_preprocessor
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
@@ -188,9 +189,12 @@ class ConanFileLoader(object):
                 for pattern, settings in package_settings_values.items():
                     if fnmatch.fnmatchcase(ref_str, pattern):
                         pkg_settings = settings
+                        # TODO: Conan 2.0 won't stop at first match
                         break
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
+                # if the global settings are composed with per-package settings, need to preprocess
+                settings_preprocessor.preprocess(tmp_settings)
 
         conanfile.initialize(tmp_settings, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)

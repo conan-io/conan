@@ -103,6 +103,11 @@ class RecipeLayout(LayoutBase):
 
 
 class PackageLayout(LayoutBase):
+
+    def __init__(self, ref, base_folder):
+        super().__init__(ref, base_folder)
+        self.build_id = None
+
     @property
     def reference(self):
         return self._ref.as_package_reference()
