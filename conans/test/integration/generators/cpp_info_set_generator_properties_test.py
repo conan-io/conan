@@ -289,6 +289,38 @@ def test_cmake_find_package_new_properties():
     assert find_package_contents_old == find_package_contents
 
 
+def test_legacy_cmake_is_not_affected_by_set_property_usage():
+    """
+    "set_property" will have no effect on "cmake" legacy generator
+
+    Originally posted: https://github.com/conan-io/conan-center-index/issues/7925
+    """
+
+    client = TestClient()
+
+    greetings = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            settings = "build_type"
+            name = "greetings"
+            version = "1.0"
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_file_name", "MyChat")
+                self.cpp_info.set_property("cmake_target_name", "MyChat")
+                self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MySay")
+        """)
+    client.save({"greetings.py": greetings})
+    client.run("create greetings.py greetings/1.0@")
+    client.run("install greetings/1.0@ -g cmake")
+    conanbuildinfo = client.load("conanbuildinfo.cmake")
+    # Let's check
+    assert "set_property(TARGET CONAN_PKG::greetings" in conanbuildinfo
+    assert "add_library(CONAN_PKG::greetings" in conanbuildinfo
+    assert "set(CONAN_TARGETS CONAN_PKG::greetings)" in conanbuildinfo
+
+
 def test_pkg_config_names(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""

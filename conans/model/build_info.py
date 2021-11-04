@@ -220,7 +220,8 @@ class _CppInfo(object):
         property_name = None
         if generator == "cmake_find_package" and self.get_property("cmake_module_target_name", generator):
             property_name = "cmake_module_target_name"
-        elif "cmake" in generator:
+        # set_property will have no effect on "cmake" legacy generator
+        elif "cmake" in generator and "cmake" != generator:
             property_name = "cmake_target_name"
         elif "pkg_config" in generator:
             property_name = "pkg_config_name"
