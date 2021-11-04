@@ -57,21 +57,21 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile()
         profile_loader = ProfileLoader(self.cache)
         r = profile_loader.from_cli_args(["default"], None, None, None, None, None)
-        self.assertNotIn("compiler.cppstd", r.settings)
+        self.assertNotIn("compiler.cppstd", r._settings_values)
 
     def test_value_none(self):
         self._save_profile(compiler_cppstd="None")
         profile_loader = ProfileLoader(self.cache)
         r = profile_loader.from_cli_args(["default"], None, None, None, None, None)
-        self.assertEqual(r.settings["compiler.cppstd"], "None")
-        self.assertNotIn("cppstd", r.settings)
+        self.assertEqual(r._settings_values["compiler.cppstd"], "None")
+        self.assertNotIn("cppstd", r._settings_values)
 
     def test_value_valid(self):
         self._save_profile(compiler_cppstd="11")
         profile_loader = ProfileLoader(self.cache)
         r = profile_loader.from_cli_args(["default"], None, None, None, None, None)
-        self.assertEqual(r.settings["compiler.cppstd"], "11")
-        self.assertNotIn("cppstd", r.settings)
+        self.assertEqual(r._settings_values["compiler.cppstd"], "11")
+        self.assertNotIn("cppstd", r._settings_values)
 
     def test_value_invalid(self):
         self._save_profile(compiler_cppstd="13")

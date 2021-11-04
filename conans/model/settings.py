@@ -203,18 +203,6 @@ class Settings(object):
                     attr = getattr(attr, setting)
                 setattr(attr, list_settings[-1], str(value))
 
-    def update_values(self, vals):
-        """ receives a list of tuples (compiler.version, value)
-        This is more an updated than a setter
-        """
-        assert isinstance(vals, list), vals
-        for (name, value) in vals:
-            list_settings = name.split(".")
-            attr = self
-            for setting in list_settings[:1]:
-                attr = getattr(attr, setting)
-            setattr(attr, list_settings[-1], str(value))
-
     def get_safe(self, name, default=None):
         try:
             tmp = self
@@ -305,6 +293,18 @@ class Settings(object):
 
     def items(self):
         return self.values_list
+
+    def update_values(self, vals):
+        """ receives a list of tuples (compiler.version, value)
+        This is more an updated than a setter
+        """
+        assert isinstance(vals, list), vals
+        for (name, value) in vals:
+            list_settings = name.split(".")
+            attr = self
+            for setting in list_settings[:-1]:
+                attr = getattr(attr, setting)
+            setattr(attr, list_settings[-1], str(value))
 
     def constraint(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
