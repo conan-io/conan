@@ -158,7 +158,7 @@ class XcodeDeps(object):
         content_multi = self._all_xconfig
 
         for req, dep in deps.items():
-            dep_name = dep.ref.name.replace(".", "_")
+            dep_name = dep.ref.name.replace(".", "_").replace("-", "_")
             content_multi = content_multi + '\n#include "conan_{}.xcconfig"\n'.format(dep_name)
         return content_multi
 
@@ -169,10 +169,10 @@ class XcodeDeps(object):
 
         for dep in self._conanfile.dependencies.host.values():
             dep_name = dep.ref.name
-            dep_name = dep_name.replace(".", "_")
+            dep_name = dep_name.replace(".", "_").replace("-", "_")
             cpp_info = dep.cpp_info.copy()
             cpp_info.aggregate_components()
-            public_deps = [d.ref.name.replace(".", "_")
+            public_deps = [d.ref.name.replace(".", "_").replace("-", "_")
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
 
             # One file per configuration, with just the variables
