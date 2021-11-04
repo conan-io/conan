@@ -70,6 +70,10 @@ class XcodeDeps(object):
         self._conanfile = conanfile
         self.configuration = conanfile.settings.get_safe("build_type")
         self.architecture = conanfile.settings.get_safe("arch")
+
+        if self.architecture == "armv8":
+            self.architecture = "arm64" # Xcode uses arm64 instead of armv8
+
         # TODO: check if it makes sense to add a subsetting for sdk version
         #  related to: https://github.com/conan-io/conan/issues/9608
         self.os_version = conanfile.settings.get_safe("os.version")
