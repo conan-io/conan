@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -371,3 +372,21 @@ def test_frameworks():
                        "-configuration Release -arch x86_64".format(project_name))
     client.run_command("./build/Release/{}".format(project_name))
     assert "Hello!" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_xcodedeps_dashes_names():
+    client = TestClient(path_with_spaces=False)
+    client.save({"conanfile.py": GenConanfile().with_name("hello-dashes").with_version("0.1")})
+    client.run("export .")
+    main = textwrap.dedent("""
+        #include <iostream>
+        int main(int argc, char *argv[]) {
+        }
+        """)
+    project_name = "app"
+    client.save({"conanfile.txt": "[requires]\nhello-dashes/0.1\n"}, clean_first=True)
+    create_xcode_project(client, project_name, main)
+    client.run("install . -s arch=armv8 --build=missing -g XcodeDeps")
+    assert os.path.exists(os.path.join(client.current_folder, "conan_hello_dashes_vars_release_arm64.xcconfig"))
+    client.run_command("xcodebuild -project app.xcodeproj -xcconfig conandeps.xcconfig -arch arm64")
