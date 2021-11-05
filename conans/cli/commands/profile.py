@@ -1,6 +1,9 @@
+import os
+
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter
 from conans.cli.output import cli_out_write
+from conans.errors import ConanException
 
 
 def profiles_cli_output(profiles):
@@ -96,7 +99,7 @@ def profile_path(conan_api, parser, subparser, *args):
     add_profiles_args(subparser)
     subparser.add_argument("name", help="Profile name")
     args = parser.parse_args(*args)
-    result = conan_api.profiles.profile_path(args.name)
+    result = conan_api.profiles.get_path(args.name)
     return result
 
 
@@ -109,7 +112,14 @@ def profile_detect(conan_api, parser, subparser, *args):
     subparser.add_argument("--force", action='store_true', help="Overwrite if exists")
     args = parser.parse_args(*args)
 
-    result = conan_api.profiles.detect_profile(args.name, args.force)
+    profile_name = args.name or "default"
+    profile_pathname = conan_api.profiles.get_path(args.name)
+    if not args.force and os.path.exists(profile_pathname):
+        raise ConanException(f"Profile '{profile_pathname} already exists")
+
+    profile = conan_api.profiles.detect(args.name, args.force)
+    contents = profile.dumps()
+    save(profile_pathname, contents)
     return result
 
 

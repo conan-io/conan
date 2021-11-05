@@ -21,7 +21,7 @@ class ProfilesAPI:
         profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd, build_profile)
         return profile
 
-    def profile_path(self, profile, cwd=None):
+    def get_path(self, profile, cwd=None):
         cache = ClientCache(self.conan_api.cache_folder)
         loader = ProfileLoader(cache)
         profile = loader.get_profile_path(profile, cwd, exists=True)
@@ -41,20 +41,17 @@ class ProfilesAPI:
         profiles.sort()
         return profiles
 
-    def detect_profile(self, profile_name=None, force=False):
+    def detect(self, profile_name=None, force=False):
         profile_name = profile_name or "default"
         cache = ClientCache(self.conan_api.cache_folder)
         loader = ProfileLoader(cache)
         # TODO: Improve this interface here, os.getcwd() should never be necessary here
         profile_path = loader.get_profile_path(profile_name, cwd=os.getcwd(), exists=False)
-        if not force and os.path.exists(profile_path):
-            raise ConanException(f"Profile '{profile_name} already exists")
+
 
         profile = Profile()
         settings = detect_defaults_settings(profile_path)
         for name, value in settings:
             profile.settings[name] = value
 
-        contents = profile.dumps()
-        save(profile_path, contents)
         return profile
