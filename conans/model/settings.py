@@ -84,10 +84,9 @@ class SettingsItem(object):
         """ This is necessary to remove libcxx subsetting from compiler in config()
            del self.settings.compiler.stdlib
         """
-        try:
-            self._get_child(self._value).remove(item)
-        except Exception:
-            pass
+        child_setting = self._get_child(self._value)
+        delattr(child_setting, item)
+
 
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
