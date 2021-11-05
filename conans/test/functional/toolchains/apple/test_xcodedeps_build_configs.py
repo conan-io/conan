@@ -375,15 +375,12 @@ def test_frameworks():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-def test_xcodedeps_dashes_names():
+def test_xcodedeps_dashes_names_and_arch():
+    # https://github.com/conan-io/conan/issues/9949
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.py": GenConanfile().with_name("hello-dashes").with_version("0.1")})
     client.run("export .")
-    main = textwrap.dedent("""
-        #include <iostream>
-        int main(int argc, char *argv[]) {
-        }
-        """)
+    main = "int main(int argc, char *argv[]) { return 0; }"
     project_name = "app"
     client.save({"conanfile.txt": "[requires]\nhello-dashes/0.1\n"}, clean_first=True)
     create_xcode_project(client, project_name, main)
