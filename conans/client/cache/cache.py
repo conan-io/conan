@@ -283,13 +283,6 @@ class ClientCache(object):
                     generators.append(generator)
         return generators
 
-    def remove_locks(self):
-        folders = list_folder_subdirs(self._store_folder, 4)
-        for folder in folders:
-            conan_folder = os.path.join(self._store_folder, folder)
-            Lock.clean(conan_folder)
-            shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
-
     def get_template(self, template_name, user_overrides=False):
         # TODO: It can be initialized only once together with the Conan app
         loaders = [dict_loader]

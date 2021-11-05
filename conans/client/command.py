@@ -10,7 +10,6 @@ from conans.assets import templates
 from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION, \
     ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans.cli.output import Color, ConanOutput
-from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import ConanAPIV1, _make_abs_path, ProfileData
 from conans.client.conan_command_output import CommandOutputer
@@ -1022,13 +1021,7 @@ class Command(object):
         if args.builds is not None and args.query:
             raise ConanException("'-q' and '-b' parameters can't be used at the same time")
 
-        if args.locks:
-            if args.pattern_or_reference:
-                raise ConanException("Specifying a pattern is not supported when removing locks")
-            self._conan_api.remove_locks()
-            self._out.info("Cache locks removed")
-            return
-        elif args.system_reqs:
+        if args.system_reqs:
             if args.packages:
                 raise ConanException("'-t' and '-p' parameters can't be used at the same time")
             if not args.pattern_or_reference:
@@ -1333,12 +1326,6 @@ class Command(object):
             for k, v in self._conan_api.editable_list().items():
                 self._out.info("%s" % k)
                 self._out.info("    Path: %s" % v["path"])
-
-    def frogarian(self, *args):
-        """
-        Conan The Frogarian
-        """
-        cmd_frogarian(self._out)
 
     def lock(self, *args):
         """
