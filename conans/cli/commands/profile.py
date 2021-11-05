@@ -2,8 +2,9 @@ import os
 
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter
-from conans.cli.output import cli_out_write
+from conans.cli.output import cli_out_write, ConanOutput
 from conans.errors import ConanException
+from conans.util.files import save
 
 
 def profiles_cli_output(profiles):
@@ -70,14 +71,14 @@ def add_profiles_args(parser):
 
 def get_profiles_from_args(args, conan_api):
     # TODO: Do we want a ProfilesAPI.get_profiles() to return both profiles from args?
-    profile_build = conan_api.profiles.get_profile(profiles=args.profile_build,
-                                                   settings=args.settings_build,
-                                                   options=args.options_build,
-                                                   conf=args.conf_build, build_profile=True)
-    profile_host = conan_api.profiles.get_profile(profiles=args.profile_host,
-                                                  settings=args.settings_host,
-                                                  options=args.options_host,
-                                                  conf=args.conf_host)
+    profiles = conan_api.profiles
+    build = [profiles.get_default_build()] if not args.profile_build else args.profile_build
+    host = [profiles.get_default_host()] if not args.profile_host else args.profile_host
+
+    profile_build = profiles.get_profile(profiles=build, settings=args.settings_build,
+                                         options=args.options_build, conf=args.conf_build)
+    profile_host = profiles.get_profile(profiles=host, settings=args.settings_host,
+                                        options=args.options_host, conf=args.conf_host)
     return profile_host, profile_build
 
 
@@ -91,7 +92,7 @@ def profile_show(conan_api, parser, subparser, *args):
     return get_profiles_from_args(args, conan_api)
 
 
-@conan_subcommand(formatters={"cli": profiles_cli_output})
+@conan_subcommand(formatters={"cli": cli_out_write, "json": json_formatter})
 def profile_path(conan_api, parser, subparser, *args):
     """
     Show profile path location
@@ -113,14 +114,15 @@ def profile_detect(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     profile_name = args.name or "default"
-    profile_pathname = conan_api.profiles.get_path(args.name)
+    profile_pathname = conan_api.profiles.get_path(profile_name, os.getcwd(), exists=False)
     if not args.force and os.path.exists(profile_pathname):
         raise ConanException(f"Profile '{profile_pathname} already exists")
 
-    profile = conan_api.profiles.detect(args.name, args.force)
-    contents = profile.dumps()
+    detected_profile = conan_api.profiles.detect()
+    contents = detected_profile.dumps()
+    ConanOutput().info(f"Saving detected profile to {profile_pathname}")
     save(profile_pathname, contents)
-    return result
+    return detected_profile
 
 
 @conan_subcommand(formatters={"cli": profiles_list_cli_output, "json": json_formatter})

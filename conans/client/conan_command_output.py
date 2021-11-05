@@ -22,13 +22,6 @@ class CommandOutputer(object):
     def __init__(self):
         self._output = ConanOutput()
 
-    def print_profile(self, profile, profile_text):
-        Printer(self._output).print_profile(profile, profile_text)
-
-    def profile_list(self, profiles):
-        for p in sorted(profiles):
-            self._output.info(p)
-
     def remote_list(self, remotes, raw):
         for r in remotes:
             if raw:

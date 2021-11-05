@@ -3,34 +3,57 @@ import os
 from conans.client.cache.cache import ClientCache
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.profile_loader import ProfileLoader
-from conans.errors import ConanException
 from conans.model.profile import Profile
-from conans.util.files import save
 
 
 class ProfilesAPI:
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._cache = ClientCache(conan_api.cache_folder)
 
-    def get_profile(self, profiles=None, settings=None, options=None, conf=None,
-                    cwd=None, build_profile=False):
-        cache = ClientCache(self.conan_api.cache_folder)
-        loader = ProfileLoader(cache)
+    def get_default_host(self):
+        """
+        @return: the path to the default "host" profile, either in the cache or as defined by
+        the user in configuration
+        """
+        loader = ProfileLoader(self._cache)
+        return loader.get_default_host()
+
+    def get_default_build(self):
+        """
+        @return: the path to the default "build" profile, either in the cache or as defined by
+        the user in configuration
+        """
+        loader = ProfileLoader(self._cache)
+        return loader.get_default_build()
+
+    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
+        """ Computes a Profile as the result of aggregating all the user arguments, first
+        it loads the "profiles", composing them in order (last profile has priority), and finally
+        adding the individual settings, options (priority over the profiles)
+        """
+        assert profiles and isinstance(profiles, list), "Please provide at least 1 profile"
+        loader = ProfileLoader(self._cache)
         env = None  # TODO: Not handling environment
-        profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd, build_profile)
+        profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd)
         return profile
 
-    def get_path(self, profile, cwd=None):
-        cache = ClientCache(self.conan_api.cache_folder)
-        loader = ProfileLoader(cache)
-        profile = loader.get_profile_path(profile, cwd, exists=True)
-        return profile
+    def get_path(self, profile, cwd=None, exists=True):
+        """
+        @return: the resolved path of the given profile name, that could be in the cache, or
+        local, depending on the "cwd"
+        """
+        loader = ProfileLoader(self._cache)
+        profile_path = loader.get_profile_path(profile, cwd, exists=exists)
+        return profile_path
 
     def list(self):
-        cache = ClientCache(self.conan_api.cache_folder)
+        """
+        list all the profiles file sin the cache
+        @return: an alphabetically ordered list of profile files in the default cache location
+        """
         profiles = []
-        profiles_path = cache.profiles_path
+        profiles_path = self._cache.profiles_path
         if os.path.exists(profiles_path):
             for current_directory, _, files in os.walk(profiles_path, followlinks=True):
                 for filename in files:
@@ -41,17 +64,14 @@ class ProfilesAPI:
         profiles.sort()
         return profiles
 
-    def detect(self, profile_name=None, force=False):
-        profile_name = profile_name or "default"
-        cache = ClientCache(self.conan_api.cache_folder)
-        loader = ProfileLoader(cache)
-        # TODO: Improve this interface here, os.getcwd() should never be necessary here
-        profile_path = loader.get_profile_path(profile_name, cwd=os.getcwd(), exists=False)
-
-
+    def detect(self):
+        """
+        @return: an automatically detected Profile, with a "best guess" of the system settings
+        """
         profile = Profile()
-        settings = detect_defaults_settings(profile_path)
+        settings = detect_defaults_settings()
         for name, value in settings:
             profile.settings[name] = value
-
+        # TODO: This profile is very incomplete, it doesn't have the processed_settings
+        #  good enough at the moment for designing the API interface, but to improve
         return profile

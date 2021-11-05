@@ -183,23 +183,6 @@ class Printer(object):
                                 self._print_colored_line(key, indent=3)
                 self._out.writeln("")
 
-    def print_profile(self, name, profile):
-        self._out.info("Configuration for profile %s:\n" % name)
-        self._print_profile_section("settings", profile.settings.items(), separator="=")
-        self._out.writeln("[options]\n"+profile.options.dumps())
-        self._print_profile_section("conf", profile.conf.as_list(), separator="=")
-        self._print_profile_section("build_requires", [(key, ", ".join(str(val) for val in values))
-                                                       for key, values in
-                                                       profile.build_requires.items()])
-
-        envs = profile.buildenv.dumps()
-        self._print_profile_section("env", envs, separator='=')
-
-    def _print_profile_section(self, name, items, indent=0, separator=": "):
-        self._print_colored_line("[%s]" % name, indent=indent, color=Color.BRIGHT_RED)
-        for key, value in items:
-            self._print_colored_line(key, value=str(value), indent=0, separator=separator)
-
     def _print_colored_line(self, text, value=None, indent=0, separator=": ", color=None):
         """ Print a colored line depending on its indentation level
             Attributes:

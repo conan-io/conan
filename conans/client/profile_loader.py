@@ -20,34 +20,42 @@ class ProfileLoader:
     def __init__(self, cache):
         self._cache = cache
 
-    def from_cli_args(self, profiles, settings, options, env, conf, cwd, build_profile=False):
+    def get_default_host(self):
+        cache = self._cache
+
+        default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
+        if default_profile is None:
+            default_profile = cache.new_config["core:default_profile"] or DEFAULT_PROFILE_NAME
+
+        default_profile = os.path.join(cache.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default profile file doesn't exist:\n"
+                   "{}\n"
+                   "You need to create a default profile or specify your own profile")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
+
+    def get_default_build(self):
+        cache = self._cache
+        default_profile = cache.new_config["core:default_build_profile"] or DEFAULT_PROFILE_NAME
+        default_profile = os.path.join(cache.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default profile file doesn't exist:\n"
+                   "{}\n"
+                   "You need to create a default profile or specify your own profile")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
+
+    def from_cli_args(self, profiles, settings, options, env, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
-        cache = self._cache
-        if profiles is None:
-            if build_profile:
-                default_profile = cache.new_config[
-                                      "core:default_build_profile"] or DEFAULT_PROFILE_NAME
-            else:
-                default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
-                if default_profile is None:
-                    default_profile = cache.new_config[
-                                          "core:default_profile"] or DEFAULT_PROFILE_NAME
-
-            default_profile = os.path.join(cache.profiles_path, default_profile)
-            if not os.path.exists(default_profile):
-                msg = ("The default profile file doesn't exist:\n"
-                       "{}\n"
-                       "You need to create a default profile or specify your own profile")
-                # TODO: Add detailed instructions when cli is improved
-                raise ConanException(msg.format(default_profile))
-            result = self.load_profile(default_profile, cwd)
-        else:
-            result = Profile()
-            for p in profiles:
-                tmp = self.load_profile(p, cwd)
-                result.compose_profile(tmp)
+        result = Profile()
+        for p in profiles:
+            tmp = self.load_profile(p, cwd)
+            result.compose_profile(tmp)
 
         args_profile = _profile_parse_args(settings, options, env, conf)
         result.compose_profile(args_profile)
