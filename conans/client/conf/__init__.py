@@ -12,7 +12,7 @@ from conans.util.dates import timedelta_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
-_t_default_settings_yml = Template(textwrap.dedent("""
+_t_default_settings_yml = textwrap.dedent("""
     os:
         Windows:
             subsystem: [None, cygwin, msys, msys2, wsl]
@@ -131,11 +131,11 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                     exceptions: [None]
 
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
-    """))
+    """)
 
 
 def get_default_settings_yml():
-    return _t_default_settings_yml.render()
+    return _t_default_settings_yml
 
 
 _t_default_client_conf = Template(textwrap.dedent("""
@@ -158,7 +158,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
     # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
     # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
-    # cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
 
     # non_interactive = False             # environment CONAN_NON_INTERACTIVE
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
@@ -218,7 +217,6 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_COMPRESSION_LEVEL", "compression_level", 9),
             ("CONAN_NON_INTERACTIVE", "non_interactive", False),
             ("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "skip_broken_symlinks_check", False),
-            ("CONAN_CACHE_NO_LOCKS", "cache_no_locks", False),
             ("CONAN_SYSREQUIRES_SUDO", "sysrequires_sudo", False),
             ("CONAN_SYSREQUIRES_MODE", "sysrequires_mode", None),
             ("CONAN_REQUEST_TIMEOUT", "request_timeout", None),
@@ -339,13 +337,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return self.items(varname)
         except NoSectionError:
             raise ConanException("Invalid configuration, missing %s" % varname)
-
-    @property
-    def cache_no_locks(self):
-        try:
-            return get_env("CONAN_CACHE_NO_LOCKS", False)
-        except ConanException:
-            return False
 
     @property
     def request_timeout(self):

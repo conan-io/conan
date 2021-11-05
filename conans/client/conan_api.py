@@ -851,14 +851,18 @@ class ConanAPIV1(object):
             graph_lock= Lockfile.load(lockfile)
 
         profile_loader = ProfileLoader(app.cache)
-        phost = profile_loader.from_cli_args(profile_host.profiles, profile_host.settings,
+        profiles = [profile_loader.get_default_host()] if not profile_host.profiles \
+            else profile_host.profiles
+        phost = profile_loader.from_cli_args(profiles, profile_host.settings,
                                              profile_host.options, profile_host.env,
                                              profile_host.conf, cwd)
 
         # Only work on the profile_build if something is provided
-        pbuild = profile_loader.from_cli_args(profile_build.profiles, profile_build.settings,
+        profiles = [profile_loader.get_default_build()] if not profile_build.profiles \
+            else profile_build.profiles
+        pbuild = profile_loader.from_cli_args(profiles, profile_build.settings,
                                               profile_build.options, profile_build.env,
-                                              profile_build.conf, cwd,  build_profile=True)
+                                              profile_build.conf, cwd)
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
 
