@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 
 import pytest
@@ -101,6 +102,7 @@ def test_layout_with_local_methods(conanfile, layout_helper_name, build_type, ar
            "" in client.out
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Removing msvc compiler")
 def test_error_no_msvc():
     # https://github.com/conan-io/conan/issues/9953
     conanfile = textwrap.dedent("""
@@ -139,19 +141,8 @@ def test_error_no_build_type():
             def layout(self):
                 cmake_layout(self)
         """)
-    settings_yml = textwrap.dedent("""
-        os: [Windows]
-        os_build: [Windows]
-        arch_build: [x86_64]
-        compiler:
-            gcc:
-                version: ["8"]
-        build_type: [Release]
-        arch: [x86_64]
-        """)
+
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    save(client.cache.settings_path, settings_yml)
-    client.run('install . -s os=Windows -s arch=x86_64 -s compiler=gcc -s compiler.version=8',
-               assert_error=True)
+    client.run('install .',  assert_error=True)
     assert " 'build_type' setting not defined, it is necessary for cmake_layout()" in client.out
