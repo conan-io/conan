@@ -11,7 +11,7 @@ def bad_value_msg(name, value, value_range):
               '#error-invalid-setting"'
 
     return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s%s"
-            % (value, name, value_range, tip))
+            % (value, name, sorted(value_range), tip))
 
 
 def undefined_field(name, field, fields=None, value=None):
@@ -55,15 +55,11 @@ class SettingsItem(object):
         """
         result = SettingsItem({}, name=self._name)
         result._value = self._value
-        if self.is_final:
+        if not isinstance(self._definition, dict):
             result._definition = self._definition[:]
         else:
             result._definition = {k: v.copy() for k, v in self._definition.items()}
         return result
-
-    @property
-    def is_final(self):
-        return not isinstance(self._definition, dict)
 
     def __bool__(self):
         if not self._value:
@@ -93,22 +89,6 @@ class SettingsItem(object):
         except Exception:
             pass
 
-    def remove(self, values):
-        if not isinstance(values, (list, tuple, set)):
-            values = [values]
-        for v in values:
-            v = str(v)
-            if isinstance(self._definition, dict):
-                self._definition.pop(v, None)
-            elif self._definition == "ANY":
-                if v == "ANY":
-                    self._definition = []
-            elif v in self._definition:
-                self._definition.remove(v)
-
-        if self._value is not None and self._value not in self._definition and self._not_any():
-            raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
-
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
             raise undefined_field(self._name, item, None, self._value)
@@ -129,13 +109,6 @@ class SettingsItem(object):
         sub_config_dict = self._get_child(item)
         return setattr(sub_config_dict, item, value)
 
-    def __getitem__(self, value):
-        value = str(value)
-        try:
-            return self._definition[value]
-        except Exception:
-            raise ConanException(bad_value_msg(self._name, value, self.values_range))
-
     @property
     def value(self):
         return self._value
@@ -149,10 +122,8 @@ class SettingsItem(object):
 
     @property
     def values_range(self):
-        try:
-            return sorted(list(self._definition.keys()))
-        except Exception:
-            return self._definition
+        # This needs to support 2 operations: "in" and iteration. Beware it can return "ANY"
+        return self._definition
 
     @property
     def values_list(self):
@@ -219,13 +190,6 @@ class Settings(object):
     @property
     def fields(self):
         return sorted(list(self._data.keys()))
-
-    def remove(self, item):
-        if not isinstance(item, (list, tuple, set)):
-            item = [item]
-        for it in item:
-            it = str(it)
-            self._data.pop(it, None)
 
     def clear(self):
         self._data = {}

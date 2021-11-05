@@ -16,21 +16,6 @@ from conans.util.files import load, save
 
 class ExportSettingsTest(unittest.TestCase):
 
-    def test_basic(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class TestConan(ConanFile):
-                name = "Hello"
-                version = "1.2"
-                settings = "os"
-            """)
-        client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/stable")
-        client.run("install Hello/1.2@lasote/stable -s os=Windows", assert_error=True)
-        self.assertIn("'Windows' is not a valid 'settings.os' value", client.out)
-        self.assertIn("Possible values are ['Linux']", client.out)
-
     def test_export_without_full_reference(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
