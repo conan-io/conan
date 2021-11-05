@@ -52,7 +52,7 @@ class PkgConfigDeps(object):
         """Build a composed name for all the components and its package root name"""
         return "%s-%s" % (pkg_name, comp_name)
 
-    def _get_requires_names(self, name, cpp_info):
+    def _get_component_requires_names(self, dep_name, cpp_info):
         """
         Get all the pkg-config valid names from the requires ones given a dependency and
         a CppInfo object.
@@ -60,23 +60,37 @@ class PkgConfigDeps(object):
         Note: CppInfo could be coming from one Component object instead of the dependency
         """
         ret = []
-        if cpp_info.requires:
-            for req in cpp_info.requires:
-                pkg_name, comp_name = req.split("::") if "::" in req else (name, req)
-                # FIXME: it could allow defining requires to not direct dependencies
-                req_conanfile = self._conanfile.dependencies.host[pkg_name]
-                comp_alias_name = get_component_name(req_conanfile, comp_name)
-                ret.append(self._get_pc_name(pkg_name, comp_alias_name))
-        else:
-            # Let's try to get all the requires for the given package name
-            try:
-                dep_conanfile = self._conanfile.dependencies.host[name]
-            except KeyError:
-                pass
-            else:
-                ret = [get_package_name(req)
-                       for req in dep_conanfile.dependencies.direct_host.values()]
+        for req in cpp_info.requires:
+            pkg_name, comp_name = req.split("::") if "::" in req else (dep_name, req)
+            # FIXME: it could allow defining requires to not direct dependencies
+            req_conanfile = self._conanfile.dependencies.host[pkg_name]
+            comp_alias_name = get_component_name(req_conanfile, comp_name)
+            ret.append(self._get_pc_name(pkg_name, comp_alias_name))
         return ret
+
+    def _get_requires_names(self, dep):
+        """
+        Get all the dependency's requirements (public dependencies and components)
+        """
+        # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
+        #        Remove it for Conan 2.0
+        dep_name = str(dep.ref.name)
+        # At first, let's check if we have defined some component requires, e.g., "pkg::cmp1"
+        requires = self._get_component_requires_names(dep_name, dep.cpp_info)
+        # If we have found some component requires it would be enough
+        if requires:
+            return requires
+        try:
+            # If no requires were found, let's try to get all the direct
+            # dependencies, e.g., requires = "other_pkg/1.0"
+            dep_conanfile = self._conanfile.dependencies.host[dep_name]
+        except KeyError:
+            # Don't raise any exception, returns default value
+            return []
+        else:
+            requires = [get_package_name(req)
+                        for req in dep_conanfile.dependencies.direct_host.values()]
+            return requires
 
     def get_components_files_and_content(self, dep):
         """Get all the *.pc files content for the dependency and each of its components"""
@@ -90,7 +104,7 @@ class PkgConfigDeps(object):
             comp_names.append(comp_name)
             # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
             #        Remove it for Conan 2.0
-            comp_requires_names = self._get_requires_names(str(dep.ref.name), comp_cpp_info)
+            comp_requires_names = self._get_component_requires_names(str(dep.ref.name), comp_cpp_info)
             # Get the *.pc file content for each component
             pkg_comp_name = self._get_pc_name(pkg_name, comp_name)
             pc_files.update(pc_gen.get_pc_filename_and_content(comp_requires_names,
@@ -111,9 +125,7 @@ class PkgConfigDeps(object):
                 pc_files.update(self.get_components_files_and_content(dep))
             else:  # Content for package without components
                 pc_gen = _PCFilesTemplate(self._conanfile, dep)
-                # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
-                #        Remove it for Conan 2.0
-                requires = self._get_requires_names(str(dep.ref.name), dep.cpp_info)
+                requires = self._get_requires_names(dep)
                 pc_files.update(pc_gen.get_pc_filename_and_content(requires))
         return pc_files
 
