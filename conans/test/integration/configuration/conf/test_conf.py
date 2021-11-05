@@ -110,7 +110,6 @@ def test_new_config_file(client):
         tools.microsoft.msbuild:verbosity=Minimal
         user.mycompany.myhelper:myconfig=myvalue
         *:tools.cmake.cmake:generator=X
-        cache:no_locks=True
         cache:read_only=True
         """)
     save(client.cache.new_config_path, conf)
@@ -118,7 +117,6 @@ def test_new_config_file(client):
     assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
     assert "user.mycompany.myhelper:myconfig$myvalue" in client.out
     assert "tools.cmake.cmake:generator$X" in client.out
-    assert "no_locks" not in client.out
     assert "read_only" not in client.out
 
 
