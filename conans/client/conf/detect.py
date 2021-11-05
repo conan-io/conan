@@ -7,12 +7,11 @@ import textwrap
 from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
 from conans.cli.output import Color, ConanOutput
 from conans.client.conf.detect_vs import latest_visual_studio_version_installed
-from conans.client.tools import detected_architecture
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import save
-from conans.util.runners import detect_runner
+from conans.util.runners import detect_runner, check_output_runner
 
 
 def _get_compiler_and_version(compiler_exe):
@@ -170,29 +169,11 @@ def _get_profile_compiler_version(compiler, version):
     return version
 
 
-def _detect_gcc_libcxx(executable, version, profile_name, profile_path):
+def _detect_gcc_libcxx(version):
     output = ConanOutput()
     # Assumes a working g++ executable
     new_abi_available = Version(version) >= Version("5.1")
     if not new_abi_available:
-        return "libstdc++"
-
-    if not get_env(CONAN_V2_MODE_ENVVAR, False):
-        msg = textwrap.dedent("""
-            Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
-            'libstdc++' for backwards compatibility.
-            Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
-
-            If you want Conan to use the new ABI for the {profile} profile, run:
-
-                $ conan profile update settings.compiler.libcxx=libstdc++11 {profile}
-
-            Or edit '{profile_path}' and set compiler.libcxx=libstdc++11
-            """.format(profile=profile_name, profile_path=profile_path))
-        output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
-                       "***********************\n %s\n************************************"
-                       "************************************************\n\n\n" % msg,
-                       Color.BRIGHT_RED)
         return "libstdc++"
 
     main = textwrap.dedent("""
@@ -208,6 +189,7 @@ def _detect_gcc_libcxx(executable, version, profile_name, profile_path):
     old_path = os.getcwd()
     os.chdir(t)
     try:
+        executable = "g++"
         error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
         if error:
             if "using libstdc++" in out_str:
@@ -223,7 +205,7 @@ def _detect_gcc_libcxx(executable, version, profile_name, profile_path):
         os.chdir(old_path)
 
 
-def _detect_compiler_version(result, profile_path):
+def _detect_compiler_version(result):
     try:
         compiler, version = _get_default_compiler()
     except Exception:
@@ -246,8 +228,7 @@ def _detect_compiler_version(result, profile_path):
     if compiler == "apple-clang":
         result.append(("compiler.libcxx", "libc++"))
     elif compiler == "gcc":
-        profile_name = os.path.basename(profile_path)
-        libcxx = _detect_gcc_libcxx("g++", version, profile_name, profile_path)
+        libcxx = _detect_gcc_libcxx(version)
         result.append(("compiler.libcxx", libcxx))
     elif compiler == "cc":
         if platform.system() == "SunOS":
@@ -273,6 +254,105 @@ def _detect_compiler_version(result, profile_path):
             result.append(("compiler.base.version", "4.4"))
 
 
+def _get_solaris_architecture():
+    # under intel solaris, platform.machine()=='i86pc' so we need to handle
+    # it early to suport 64-bit
+    processor = platform.processor()
+    kernel_bitness, elf = platform.architecture()
+    if "sparc" in processor:
+        return "sparcv9" if kernel_bitness == "64bit" else "sparc"
+    elif "i386" in processor:
+        return "x86_64" if kernel_bitness == "64bit" else "x86"
+
+
+def _get_aix_conf(options=None):
+    options = " %s" % options if options else ""
+    try:
+        ret = check_output_runner("getconf%s" % options).strip()
+        return ret
+    except Exception:
+        return None
+
+
+def _get_aix_architecture():
+    processor = platform.processor()
+    if "powerpc" in processor:
+        kernel_bitness = _get_aix_conf("KERNEL_BITMODE")
+        if kernel_bitness:
+            return "ppc64" if kernel_bitness == "64" else "ppc32"
+    elif "rs6000" in processor:
+        return "ppc32"
+
+
+def _get_e2k_architecture():
+    return {
+        "E1C+": "e2k-v4",  # Elbrus 1C+ and Elbrus 1CK
+        "E2C+": "e2k-v2",  # Elbrus 2CM
+        "E2C+DSP": "e2k-v2",  # Elbrus 2C+
+        "E2C3": "e2k-v6",  # Elbrus 2C3
+        "E2S": "e2k-v3",  # Elbrus 2S (aka Elbrus 4C)
+        "E8C": "e2k-v4",  # Elbrus 8C and Elbrus 8C1
+        "E8C2": "e2k-v5",  # Elbrus 8C2 (aka Elbrus 8CB)
+        "E12C": "e2k-v6",  # Elbrus 12C
+        "E16C": "e2k-v6",  # Elbrus 16C
+        "E32C": "e2k-v7",  # Elbrus 32C
+    }.get(platform.processor())
+
+
+def _detected_architecture():
+    # FIXME: Very weak check but not very common to run conan in other architectures
+    machine = platform.machine()
+    arch = None
+    system = platform.system()
+
+    # special detectors
+    if system == "SunOS":
+        arch = _get_solaris_architecture()
+    elif system == "AIX":
+        arch = _get_aix_architecture()
+    if arch:
+        return arch
+
+    if "ppc64le" in machine:
+        return "ppc64le"
+    elif "ppc64" in machine:
+        return "ppc64"
+    elif "ppc" in machine:
+        return "ppc32"
+    elif "mips64" in machine:
+        return "mips64"
+    elif "mips" in machine:
+        return "mips"
+    elif "sparc64" in machine:
+        return "sparcv9"
+    elif "sparc" in machine:
+        return "sparc"
+    elif "aarch64" in machine:
+        return "armv8"
+    elif "arm64" in machine:
+        return "armv8"
+    elif "64" in machine:
+        return "x86_64"
+    elif "86" in machine:
+        return "x86"
+    elif "armv8" in machine:
+        return "armv8"
+    elif "armv7" in machine:
+        return "armv7"
+    elif "arm" in machine:
+        return "armv6"
+    elif "s390x" in machine:
+        return "s390x"
+    elif "s390" in machine:
+        return "s390"
+    elif "sun4v" in machine:
+        return "sparc"
+    elif "e2k" in machine:
+        return _get_e2k_architecture()
+
+    return None
+
+
 def _detect_os_arch(result):
     from conans.client.conf import get_default_settings_yml
     from conans.model.settings import Settings
@@ -282,7 +362,7 @@ def _detect_os_arch(result):
         the_os = "Macos"
     result.append(("os", the_os))
 
-    arch = detected_architecture()
+    arch = _detected_architecture()
 
     if arch:
         if arch.startswith('arm'):
@@ -302,14 +382,13 @@ def _detect_os_arch(result):
         result.append(("arch", arch))
 
 
-def detect_defaults_settings(profile_path):
+def detect_defaults_settings():
     """ try to deduce current machine values without any constraints at all
-    :param profile_path: Conan profile file path
     :return: A list with default settings
     """
     result = []
     _detect_os_arch(result)
-    _detect_compiler_version(result, profile_path)
+    _detect_compiler_version(result)
     result.append(("build_type", "Release"))
 
     return result
