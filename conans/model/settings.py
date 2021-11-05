@@ -55,7 +55,7 @@ class SettingsItem(object):
         """
         result = SettingsItem({}, name=self._name)
         result._value = self._value
-        if self.is_final:
+        if not isinstance(self._definition, dict):
             result._definition = self._definition[:]
         else:
             result._definition = {k: v.copy() for k, v in self._definition.items()}
@@ -67,15 +67,11 @@ class SettingsItem(object):
 
         result = SettingsItem({}, name=self._name)
         result._value = self._value
-        if self.is_final:
+        if not isinstance(self._definition, dict):
             result._definition = self._definition[:]
         else:
             result._definition = {k: v.copy_values() for k, v in self._definition.items()}
         return result
-
-    @property
-    def is_final(self):
-        return not isinstance(self._definition, dict)
 
     def __bool__(self):
         if not self._value:
