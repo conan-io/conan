@@ -139,7 +139,7 @@ class ConanFile:
         self.options = Options(self.options or {}, self.default_options)
         self._conan_buildenv = buildenv
         try:
-            settings.constraint(self.settings or [])
+            settings.constrained(self.settings)
         except Exception as e:
             raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
                 self.display_name, str(e)))
