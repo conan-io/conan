@@ -897,14 +897,18 @@ def get_graph_info(profile_host, profile_build, cwd, cache,
         ConanOutput().info("Using lockfile: '{}'".format(lockfile))
 
     profile_loader = ProfileLoader(cache)
-    phost = profile_loader.from_cli_args(profile_host.profiles, profile_host.settings,
+    profiles = [profile_loader.get_default_host()] if not profile_host.profiles \
+        else profile_host.profiles
+    phost = profile_loader.from_cli_args(profiles, profile_host.settings,
                                          profile_host.options, profile_host.env,
                                          profile_host.conf, cwd)
 
+    profiles = [profile_loader.get_default_build()] if not profile_build.profiles \
+        else profile_build.profiles
     # Only work on the profile_build if something is provided
-    pbuild = profile_loader.from_cli_args(profile_build.profiles, profile_build.settings,
+    pbuild = profile_loader.from_cli_args(profiles, profile_build.settings,
                                           profile_build.options, profile_build.env,
-                                          profile_build.conf, cwd, build_profile=True)
+                                          profile_build.conf, cwd)
 
     # Apply the new_config to the profiles the global one, so recipes get it too
     # TODO: This means lockfiles contain whole copy of the config here?
