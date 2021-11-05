@@ -375,6 +375,8 @@ def test_frameworks():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.xfail(reason="The xcconfig syntax needs at leats Xcode 13 because of "
+                          "support for macros in overriding parameters with condition sets")
 def test_xcodedeps_dashes_names_and_arch():
     # https://github.com/conan-io/conan/issues/9949
     client = TestClient(path_with_spaces=False)
