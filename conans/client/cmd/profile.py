@@ -43,7 +43,7 @@ def cmd_profile_create(profile_name, cache, detect=False, force=False):
 
     profile = Profile()
     if detect:
-        settings = detect_defaults_settings(profile_path)
+        settings = detect_defaults_settings()
         for name, value in settings:
             profile.settings[name] = value
 

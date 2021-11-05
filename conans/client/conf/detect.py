@@ -170,60 +170,16 @@ def _get_profile_compiler_version(compiler, version):
     return version
 
 
-def _detect_gcc_libcxx(executable, version, profile_name, profile_path):
-    output = ConanOutput()
-    # Assumes a working g++ executable
+def _detect_gcc_libcxx(version):
+    # Lets keep it very simple, will not be guaranteed to be stable or correct, not hidden now
     new_abi_available = Version(version) >= Version("5.1")
     if not new_abi_available:
         return "libstdc++"
-
-    if not get_env(CONAN_V2_MODE_ENVVAR, False):
-        msg = textwrap.dedent("""
-            Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
-            'libstdc++' for backwards compatibility.
-            Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
-
-            If you want Conan to use the new ABI for the {profile} profile, run:
-
-                $ conan profile update settings.compiler.libcxx=libstdc++11 {profile}
-
-            Or edit '{profile_path}' and set compiler.libcxx=libstdc++11
-            """.format(profile=profile_name, profile_path=profile_path))
-        output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
-                       "***********************\n %s\n************************************"
-                       "************************************************\n\n\n" % msg,
-                       Color.BRIGHT_RED)
-        return "libstdc++"
-
-    main = textwrap.dedent("""
-        #include <string>
-
-        using namespace std;
-        static_assert(sizeof(std::string) != sizeof(void*), "using libstdc++");
-        int main(){}
-        """)
-    t = tempfile.mkdtemp()
-    filename = os.path.join(t, "main.cpp")
-    save(filename, main)
-    old_path = os.getcwd()
-    os.chdir(t)
-    try:
-        error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
-        if error:
-            if "using libstdc++" in out_str:
-                output.info("gcc C++ standard library: libstdc++")
-                return "libstdc++"
-            # Other error, but can't know, lets keep libstdc++11
-            output.warning("compiler.libcxx check error: %s" % out_str)
-            output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
-        else:
-            output.info("gcc C++ standard library: libstdc++11")
-        return "libstdc++11"
-    finally:
-        os.chdir(old_path)
+    # This assumption will be wrong in gcc>=5 in older distros. User responsibility
+    return "libstdc++11"
 
 
-def _detect_compiler_version(result, profile_path):
+def _detect_compiler_version(result):
     try:
         compiler, version = _get_default_compiler()
     except Exception:
@@ -246,8 +202,7 @@ def _detect_compiler_version(result, profile_path):
     if compiler == "apple-clang":
         result.append(("compiler.libcxx", "libc++"))
     elif compiler == "gcc":
-        profile_name = os.path.basename(profile_path)
-        libcxx = _detect_gcc_libcxx("g++", version, profile_name, profile_path)
+        libcxx = _detect_gcc_libcxx(version)
         result.append(("compiler.libcxx", libcxx))
     elif compiler == "cc":
         if platform.system() == "SunOS":
@@ -302,14 +257,13 @@ def _detect_os_arch(result):
         result.append(("arch", arch))
 
 
-def detect_defaults_settings(profile_path):
+def detect_defaults_settings():
     """ try to deduce current machine values without any constraints at all
-    :param profile_path: Conan profile file path
     :return: A list with default settings
     """
     result = []
     _detect_os_arch(result)
-    _detect_compiler_version(result, profile_path)
+    _detect_compiler_version(result)
     result.append(("build_type", "Release"))
 
     return result
