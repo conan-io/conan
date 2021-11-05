@@ -44,7 +44,6 @@ class ClientCache(object):
         self._output = ConanOutput()
 
         # Caching
-        self._no_lock = None
         self._config = None
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
@@ -175,11 +174,6 @@ class ClientCache(object):
     @property
     def remotes_registry(self) -> RemoteRegistry:
         return RemoteRegistry(self)
-
-    def _no_locks(self):
-        if self._no_lock is None:
-            self._no_lock = self.config.cache_no_locks
-        return self._no_lock
 
     @property
     def artifacts_properties_path(self):
