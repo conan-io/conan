@@ -221,7 +221,7 @@ def _receive_conf(conanfile):
     # Conf only for first level build_requires
     for build_require in conanfile.dependencies.direct_build.values():
         if build_require.conf_info:
-            conanfile.conf.compose(build_require.conf_info)
+            conanfile.conf.compose_conf(build_require.conf_info)
 
 
 def write_toolchain(conanfile, path, output):
