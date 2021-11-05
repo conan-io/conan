@@ -23,7 +23,7 @@ class ExportSettingsTest(unittest.TestCase):
             class TestConan(ConanFile):
                 name = "Hello"
                 version = "1.2"
-                settings = {"os": ["Linux"]}
+                settings = "os"
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")

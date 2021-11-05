@@ -124,7 +124,7 @@ cppstd=11""", client.out)
         # https://github.com/conan-io/conan/issues/3022
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
-    settings = {"os": "Linux"}
+    settings = "os"
     def build(self):
         self.output.info("OS!!: %s" % self.settings.os)
     """
@@ -181,7 +181,7 @@ from conans import ConanFile
 class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
-    settings = {"os": ["Windows"], "arch": ["x86", "x86_64", "sparc", "sparcv9"]}
+    settings = {"os", "arch"}
 """
         client = TestClient()
         client.save({CONANFILE: content})
@@ -198,8 +198,7 @@ from conans import ConanFile
 class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
-    settings = {"os": ["Windows", "Linux", "Macos", "FreeBSD", "SunOS"],
-                "compiler": ["Visual Studio"]}
+    settings = {"os": "compiler"}
 """
         client = TestClient()
         client.save({CONANFILE: content})
@@ -216,7 +215,7 @@ from conans import ConanFile
 class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
-    settings = {"os": None, "compiler": ["Visual Studio"]}
+    settings = {"os", "compiler"}
 """
         client = TestClient()
         client.save({CONANFILE: content})

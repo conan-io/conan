@@ -315,7 +315,7 @@ class UploadTest(unittest.TestCase):
             class TestConan(ConanFile):
                 name = "Hello"
                 version = "1.2"
-                settings = {"os": ["Windows"]}
+                settings = "os"
             """)
         self.client.save({CONANFILE: conanfile})
         self.client.run("export . lasote/stable")

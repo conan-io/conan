@@ -305,8 +305,8 @@ os: [Windows, Linux]
         self.assertEqual(self.sut.compiler.arch.speed, "A")
 
     def test_constraint(self):
-        s2 = {"os": None}
-        self.sut.constraint(s2)
+        s2 = ["os"]
+        self.sut.constrained(s2)
         with self.assertRaises(ConanException) as cm:
             self.sut.compiler
         self.assertEqual(str(cm.exception), str(undefined_field("settings", "compiler", ["os"])))
@@ -314,66 +314,23 @@ os: [Windows, Linux]
         self.sut.os = "Linux"
 
     def test_constraint2(self):
-        s2 = {"os2": None}
+        s2 = ["os2"]
         with self.assertRaises(ConanException) as cm:
-            self.sut.constraint(s2)
+            self.sut.constrained(s2)
         self.assertEqual(str(cm.exception),
                          str(undefined_field("settings", "os2", ["compiler", "os"])))
 
-    def test_constraint3(self):
-        s2 = {"os": ["Win"]}
-        with self.assertRaises(ConanException) as cm:
-            self.sut.constraint(s2)
-        self.assertEqual(str(cm.exception),
-                         bad_value_msg("os", "Win", ["Windows", "Linux"]))
-
-    def test_constraint4(self):
-        s2 = {"os": ["Windows"]}
-        self.sut.constraint(s2)
-        with self.assertRaises(ConanException) as cm:
-            self.sut.os = "Linux"
-        self.assertEqual(str(cm.exception), bad_value_msg("settings.os", "Linux", ["Windows"]))
-
-        self.sut.os = "Windows"
-
-    def test_constraint5(self):
-        s2 = {"os": None,
-              "compiler": {"Visual Studio": {"version2": None}}}
-
-        with self.assertRaises(ConanException) as cm:
-            self.sut.constraint(s2)
-        self.assertEqual(str(cm.exception), str(undefined_field("settings.compiler", "version2",
-                                                                ['runtime', 'version'])))
-        self.sut.os = "Windows"
-
     def test_constraint6(self):
-        s2 = {"os": None,
-              "compiler": {"Visual Studio": {"version": None}}}
-        self.sut.constraint(s2)
+        s2 = {"os", "compiler"}
+        self.sut.constrained(s2)
         self.sut.compiler = "Visual Studio"
         with self.assertRaises(ConanException) as cm:
             self.sut.compiler.arch
         self.assertEqual(str(cm.exception), str(undefined_field("settings.compiler", "arch",
-                                                                ['version'], "Visual Studio")))
+                                                                ['runtime', 'version'], "Visual Studio")))
         self.sut.os = "Windows"
         self.sut.compiler.version = "11"
         self.sut.compiler.version = "12"
-
-    def test_constraint7(self):
-        s2 = {"os": None,
-              "compiler": {"Visual Studio": {"version": ("11", "10")},
-                           "gcc": None}}
-
-        self.sut.constraint(s2)
-        self.sut.compiler = "Visual Studio"
-        with self.assertRaises(ConanException) as cm:
-            self.sut.compiler.version = "12"
-        self.assertEqual(str(cm.exception),
-                         bad_value_msg("settings.compiler.version", "12", ["10", "11"]))
-        self.sut.compiler.version = "10"
-        self.sut.compiler.version = "11"
-        self.sut.os = "Windows"
-        self.sut.compiler = "gcc"
 
     def test_validate(self):
         with self.assertRaisesRegex(ConanException, str(undefined_value("settings.compiler"))):
