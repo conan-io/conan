@@ -658,11 +658,6 @@ class ConanAPIV1(object):
             self.remove_system_reqs(repr(ref))
 
     @api_method
-    def remove_locks(self):
-        app = ConanApp(self.cache_folder)
-        app.cache.remove_locks()
-
-    @api_method
     def get_path(self, reference, package_id=None, path=None, remote_name=None):
         app = ConanApp(self.cache_folder)
         def get_path(cache, ref, path, package_id):
@@ -700,7 +695,7 @@ class ConanAPIV1(object):
         if not remote_name:
             return get_path(app.cache, ref, path, package_id), path
         else:
-            remote = self.get_remote_by_name(remote_name)
+            remote = app.cache.remotes_registry.read(remote_name)
             if not ref.revision:
                 ref, _ = app.remote_manager.get_latest_recipe_revision(ref, remote)
             if package_id:
@@ -732,51 +727,6 @@ class ConanAPIV1(object):
                                          "creating and alias with the same name".format(ref))
 
         return export_alias(ref, target_ref, app.cache)
-
-    @api_method
-    def get_default_remote(self):
-        app = ConanApp(self.cache_folder)
-        return app.cache.remotes_registry.default
-
-    @api_method
-    def get_remote_by_name(self, remote_name):
-        app = ConanApp(self.cache_folder)
-        return app.cache.remotes_registry.read(remote_name)
-
-    @api_method
-    def get_package_revisions(self, reference, remote_name=None):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-        pref = PkgReference.loads(reference)
-        if not pref.ref.revision:
-            raise ConanException("Specify a recipe reference with revision")
-        if pref.revision:
-            raise ConanException("Cannot list the revisions of a specific package revision")
-
-        # TODO: cache2.0 we get the latest package revision for the recipe revision and package id
-        pkg_revs = app.cache.get_package_revisions(pref, only_latest_prev=True)
-        pkg_rev = pkg_revs[0] if pkg_revs else None
-        if not remote_name:
-            if not pkg_rev:
-                raise PackageNotFoundException(pref)
-
-            rev_time = None
-            if app.selected_remote:
-                try:
-                    revisions = app.remote_manager.get_package_revisions(pref, app.selected_remote)
-                except RecipeNotFoundException:
-                    pass
-                except NotFoundException:
-                    rev_time = None
-                else:
-                    tmp = {r["revision"]: r["time"] for r in revisions}
-                    rev_time = tmp.get(pkg_rev.revision)
-
-            return [{"revision": pkg_rev.revision, "time": rev_time}]
-        else:
-            remote = self.get_remote_by_name(remote_name)
-            return app.remote_manager.get_package_revisions(pref, remote=remote)
 
     @api_method
     def editable_add(self, path, reference, cwd):
