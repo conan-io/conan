@@ -51,7 +51,6 @@ level = 10                  # environment CONAN_LOGGING_LEVEL
 [general]
 compression_level = 6                 # environment CONAN_COMPRESSION_LEVEL
 cpu_count = 1             # environment CONAN_CPU_COUNT
-default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
 
 [proxies]
 # Empty (or missing) section will try to use system proxies.
@@ -187,8 +186,6 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
         self.assertEqual(conan_conf.get_item("log.level"), "10")
         self.assertEqual(conan_conf.get_item("general.compression_level"), "6")
-        self.assertEqual(conan_conf.get_item("general.default_package_id_mode"),
-                         "full_package_mode")
         self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with self.assertRaisesRegex(ConanException, "'config_install' doesn't exist"):
@@ -210,21 +207,6 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.client.cache_folder, "hooks",
                                                      ".git")))
         self.assertFalse(os.path.exists(os.path.join(self.client.cache_folder, ".git")))
-
-    def test_reuse_python(self):
-        zippath = self._create_zip()
-        self.client.run('config install "%s"' % zippath)
-        conanfile = """from conans import ConanFile
-from myfuncs import mycooladd
-a = mycooladd(1, 2)
-assert a == 3
-class Pkg(ConanFile):
-    def build(self):
-        self.output.info("A is %s" % a)
-"""
-        self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("A is 3", self.client.out)
 
     def test_install_file(self):
         """ should install from a file in current dir

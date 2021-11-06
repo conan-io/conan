@@ -81,7 +81,7 @@ class Conf(object):
         """
         self._values.update(other._values)
 
-    def compose(self, other):
+    def compose_conf(self, other):
         """
         :param other: other has less priority than current one
         :type other: Conf
@@ -107,8 +107,6 @@ class ConfDefinition(object):
 
     def __repr__(self):
         return "ConfDefinition: " + repr(self._pattern_confs)
-
-    __nonzero__ = __bool__
 
     def __getitem__(self, module_name):
         """ if a module name is requested for this, always goes to the None-Global config

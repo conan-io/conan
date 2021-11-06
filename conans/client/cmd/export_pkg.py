@@ -8,7 +8,7 @@ from conans.client.conanfile.package import run_package_method
 
 from conans.client.graph.graph import BINARY_INVALID
 from conans.errors import ConanException, ConanInvalidConfiguration
-from conans.model.ref import PackageReference
+from conans.model.package_ref import PkgReference
 
 
 def export_pkg(app, ref, source_folder, build_folder, package_folder,
@@ -40,10 +40,10 @@ def export_pkg(app, ref, source_folder, build_folder, package_folder,
 
     package_id = pkg_node.package_id
     ConanOutput().info("Packaging to %s" % package_id)
-    pref = PackageReference(ref, package_id)
-    pkg_ids = cache.get_package_ids(ref)
+    pref = PkgReference(ref, package_id)
+    pkg_refs = cache.get_package_references(ref)
 
-    existing_id = any(pkg_id.id == package_id for pkg_id in pkg_ids)
+    existing_id = any(pref.package_id == package_id for pref in pkg_refs)
     if existing_id and not force:
         raise ConanException("Package already exists. Please use --force, -f to overwrite it")
 
@@ -72,7 +72,8 @@ def export_pkg(app, ref, source_folder, build_folder, package_folder,
         else:
             prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
 
-    pref = PackageReference(pref.ref, pref.id, prev)
-    cache.assign_prev(pkg_layout, ConanReference(pref))
+    pref = PkgReference(pref.ref, pref.package_id, prev)
+    pkg_layout.reference = ConanReference(pref)
+    cache.assign_prev(pkg_layout)
     # Make sure folder is updated
     conanfile.folders.set_base_package(pkg_layout.package())

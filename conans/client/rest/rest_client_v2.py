@@ -1,3 +1,4 @@
+import copy
 import os
 import time
 
@@ -9,7 +10,8 @@ from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
-from conans.model.ref import PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.files import decode_text
@@ -150,7 +152,7 @@ class RestV2Methods(RestCommonMethods):
         urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
                 for fn in files_to_upload}
 
-        short_pref_name = "%s:%s" % (pref.ref, pref.id[0:4])
+        short_pref_name = "%s:%s" % (pref.ref, pref.package_id[0:4])
         self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=short_pref_name)
 
     def _upload_files(self, files, urls, retry, retry_wait, display_name=None):
@@ -205,6 +207,8 @@ class RestV2Methods(RestCommonMethods):
 
     def remove_packages(self, ref, package_ids):
         """ Remove any packages specified by package_ids"""
+        # FIXME: package_ids containing the revisions is a mess, why not passing prefs directly
+        #        and separate the methods to not do many different things???
         self.check_credentials()
 
         if ref.revision is None:
@@ -234,11 +238,15 @@ class RestV2Methods(RestCommonMethods):
                     response.charset = "utf-8"
                     raise get_exception_from_error(response.status_code)(response.text)
             else:
-                for pid in package_ids:
-                    pref = PackageReference(ref, pid)
-                    revisions = self.get_package_revisions(pref)
-                    prefs = [pref.copy_with_revs(ref.revision, rev["revision"])
-                             for rev in revisions]
+                for mix_pid in package_ids:
+                    _tmp = mix_pid.split("#") if "#" in mix_pid else (mix_pid, None)
+                    pid, revision = _tmp
+                    pref = PkgReference(ref, pid, revision=revision)
+                    if not revision:
+                        revisions = self.get_package_revisions(pref)
+                        prefs = [PkgReference(ref, pid, rev["revision"]) for rev in revisions]
+                    else:
+                        prefs = [pref]
                     for pref in prefs:
                         url = self.router.remove_package(pref)
                         response = self.requester.delete(url, auth=self.auth,
@@ -308,5 +316,6 @@ class RestV2Methods(RestCommonMethods):
     def get_latest_package_revision(self, pref, headers):
         url = self.router.package_latest(pref)
         data = self.get_json(url, headers=headers)
-        return (pref.copy_with_revs(pref.ref.revision, data.get("revision")),
-                from_iso8601_to_timestamp(data.get("time")))
+        full_pref = copy.copy(pref)
+        full_pref.revision = data.get("revision")
+        return full_pref, from_iso8601_to_timestamp(data.get("time"))

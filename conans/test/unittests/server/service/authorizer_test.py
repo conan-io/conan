@@ -1,7 +1,8 @@
 import unittest
 
 from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.server.service.authorize import BasicAuthorizer
 
 
@@ -10,9 +11,9 @@ class AuthorizerTest(unittest.TestCase):
     def setUp(self):
         unittest.TestCase.setUp(self)
         self.openssl_ref = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
-        self.openssl_pref = PackageReference(self.openssl_ref, "123123123")
+        self.openssl_pref = PkgReference(self.openssl_ref, "123123123")
         self.openssl_ref2 = ConanFileReference.loads("openssl/2.0.2@lasote/testing")
-        self.openssl_pref2 = PackageReference(self.openssl_ref2, "123123123")
+        self.openssl_pref2 = PkgReference(self.openssl_ref2, "123123123")
 
     def test_invalid_rule(self):
         """Invalid rule input"""

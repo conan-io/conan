@@ -5,8 +5,8 @@ from conans.client.graph.graph import BINARY_INVALID
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
-from conans.model.options import OptionsValues
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.options import Options
+from conans.model.ref import ConanFileReference
 from conans.model.values import Values
 from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
@@ -28,7 +28,7 @@ class RequirementInfo(object):
         self.full_user = pref.ref.user
         self.full_channel = pref.ref.channel
         self.full_recipe_revision = pref.ref.revision
-        self.full_package_id = pref.id
+        self.full_package_id = pref.package_id
         self.full_package_revision = pref.revision
         self._indirect = indirect
 
@@ -171,6 +171,9 @@ class RequirementsInfo(UserRequirementsDict):
         # For build_id() implementation
         data = {pref: req_info.copy() for pref, req_info in self._data.items()}
         return RequirementsInfo(data)
+
+    def serialize(self):
+        return [str(r) for r in sorted(self._data.values())]
 
     def __bool__(self):
         return bool(self._data)
@@ -342,9 +345,6 @@ class PythonRequiresInfo(object):
     def __bool__(self):
         return bool(self._refs)
 
-    def __nonzero__(self):
-        return self.__bool__()
-
     def clear(self):
         self._refs = None
 
@@ -392,12 +392,6 @@ class _PackageReferenceList(list):
         return _PackageReferenceList([PackageReference.loads(package_reference)
                                      for package_reference in text.splitlines()])
 
-    def dumps(self):
-        return "\n".join(self.serialize())
-
-    def serialize(self):
-        return [str(r) for r in sorted(self)]
-
 
 class ConanInfo(object):
 
@@ -407,7 +401,7 @@ class ConanInfo(object):
         result = ConanInfo()
         result.invalid = self.invalid
         result.settings = self.settings.copy()
-        result.options = self.options.copy()
+        result.options = self.options.copy_conaninfo_options()
         result.requires = self.requires.copy()
         result.build_requires = self.build_requires.copy()
         result.python_requires = self.python_requires.copy()
@@ -420,9 +414,7 @@ class ConanInfo(object):
         result.invalid = None
         result.full_settings = settings
         result.settings = settings.copy()
-        result.full_options = options
-        result.options = options.copy()
-        result.options.clear_indirect()
+        result.options = options.copy_conaninfo_options()
         result.requires = reqs_info
         result.build_requires = build_requires_info
         result.full_requires = _PackageReferenceList()
@@ -434,16 +426,14 @@ class ConanInfo(object):
     @staticmethod
     def loads(text):
         # This is used for search functionality, search prints info from this file
-        parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
+        parser = ConfigParser(text, ["settings", "full_settings", "options",
                                      "requires", "full_requires", "env"],
                               raise_unexpected_field=False)
         result = ConanInfo()
         result.invalid = None
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
-        result.options = OptionsValues.loads(parser.options)
-        result.full_options = OptionsValues.loads(parser.full_options)
-        result.full_requires = _PackageReferenceList.loads(parser.full_requires)
+        result.options = Options.loads(parser.options)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
         # FIXME: remove this uglyness
         result.requires = RequirementsInfo({})
@@ -464,30 +454,17 @@ class ConanInfo(object):
         result.append(indent(self.requires.dumps()))
         result.append("\n[options]")
         result.append(indent(self.options.dumps()))
-        result.append("\n[full_settings]")
-        result.append(indent(self.full_settings.dumps()))
-        result.append("\n[full_requires]")
-        result.append(indent(self.full_requires.dumps()))
-        result.append("\n[full_options]")
-        result.append(indent(self.full_options.dumps()))
-        result.append("\n[env]\n")
-
         return '\n'.join(result) + "\n"
 
     def clone(self):
         q = self.copy()
         q.full_settings = self.full_settings.copy()
-        q.full_options = self.full_options.copy()
-        q.full_requires = _PackageReferenceList.loads(self.full_requires.dumps())
         return q
 
     def __eq__(self, other):
         """ currently just for testing purposes
         """
         return self.dumps() == other.dumps()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     @staticmethod
     def load_file(conan_info_path):
@@ -526,7 +503,7 @@ class ConanInfo(object):
             result.append(self.conf.sha)
         result.append("")  # Append endline so file ends with LF
         text = '\n'.join(result)
-        #print("HASING ", text)
+        # print("HASING ", text)
         package_id = sha1(text.encode())
         return package_id
 
@@ -534,9 +511,10 @@ class ConanInfo(object):
         """
         This info will be shown in search results.
         """
+        # Lets keep returning the legacy "full_requires" just in case some client uses it
         conan_info_json = {"settings": dict(self.settings.serialize()),
-                           "options": dict(self.options.serialize()["options"]),
-                           "full_requires": self.full_requires.serialize()
+                           "options": dict(self.options.serialize())["options"],
+                           "requires": self.requires.serialize()
                            }
         return conan_info_json
 

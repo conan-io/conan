@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import platform
@@ -37,8 +38,10 @@ from conans.client.tools import environment_append
 from conans.client.tools.files import replace_in_file
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
+from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
@@ -65,7 +68,6 @@ def inc_recipe_manifest_timestamp(cache, reference, inc_time):
 
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
-    pref = PackageReference.loads(package_reference)
     path = cache.get_latest_prev(package_reference).package()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
@@ -319,7 +321,9 @@ class TestServer(object):
         if not pref.ref.revision:
             raise Exception("Pass a pref with .rev.revision (Testing framework)")
         prev = self.test_server.server_store.get_last_package_revision(pref)
-        return pref.copy_with_revs(pref.ref.revision, prev)
+        _tmp = copy.copy(prev)
+        _tmp.revision = prev
+        return _tmp
 
     def package_revision_time(self, pref):
         if not pref:
@@ -646,21 +650,21 @@ class TestClient(object):
         else:
             return self._create_scm_info(dict())
 
-    def get_latest_prev(self, ref: ConanReference or str, package_id=None) -> PackageReference:
-        """Get the latest PackageReference given a ConanReference"""
+    def get_latest_prev(self, ref: ConanReference or str, package_id=None) -> PkgReference:
+        """Get the latest PkgReference given a ConanReference"""
         ref_ = ConanFileReference.loads(ref) if isinstance(ref, str) else ref
         latest_rrev = self.cache.get_latest_rrev(ref_)
         if package_id:
-            pref = PackageReference(latest_rrev, package_id)
+            pref = PkgReference(latest_rrev, package_id)
         else:
-            package_ids = self.cache.get_package_ids(latest_rrev)
+            package_ids = self.cache.get_package_references(latest_rrev)
             # Let's check if there are several packages because we don't want random behaviours
             assert len(package_ids) == 1, f"There are several packages for {latest_rrev}, please, " \
                                           f"provide a single package_id instead"
             pref = package_ids[0]
         return self.cache.get_latest_prev(pref)
 
-    def get_latest_pkg_layout(self, pref: PackageReference) -> PackageLayout:
+    def get_latest_pkg_layout(self, pref: PkgReference) -> PackageLayout:
         """Get the latest PackageLayout given a file reference"""
         # Let's make it easier for all the test clients
         latest_prev = self.cache.get_latest_prev(pref)
@@ -692,7 +696,7 @@ class TurboTestClient(TestClient):
             return None
 
         package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
-        package_ref = PackageReference(ref, package_id)
+        package_ref = PkgReference(ref, package_id)
         prevs = self.cache.get_package_revisions(package_ref, only_latest_prev=True)
         prev = prevs[0]
 
@@ -700,10 +704,14 @@ class TurboTestClient(TestClient):
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(ref.full_str(), remote, args or ""),
+        self.run("upload {} -c --all -r {} {}".format(str(ref), remote, args or ""),
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
+            # FIXME: remove this when ConanFileReference disappears
+            if isinstance(ref, RecipeReference):
+                ref.revision = remote_rrev
+                return ref
             return ref.copy_with_rev(remote_rrev)
         return
 
@@ -717,9 +725,11 @@ class TurboTestClient(TestClient):
         if assert_error:
             return None
         package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
-        package_ref = PackageReference(ref, package_id)
+        package_ref = PkgReference(ref, package_id)
         prev = self.cache.get_latest_prev(package_ref)
-        return package_ref.copy_with_revs(rrev, prev)
+        _tmp = copy.copy(package_ref)
+        _tmp.revision = prev
+        return _tmp
 
     def recipe_exists(self, ref):
         rrev = self.cache.get_recipe_revisions(ref)

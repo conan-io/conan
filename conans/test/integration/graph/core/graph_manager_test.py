@@ -8,7 +8,8 @@ from conans.test.utils.tools import GenConanfile
 def _check_transitive(node, transitive_deps):
     values = list(node.transitive_deps.values())
 
-    assert len(values) == len(transitive_deps)
+    assert len(values) == len(transitive_deps), \
+        "Number of deps don't match \n{}!=\n{}".format(values, transitive_deps)
 
     for v1, v2 in zip(values, transitive_deps):
         assert v1.node is v2[0]

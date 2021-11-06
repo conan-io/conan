@@ -7,13 +7,14 @@ import uuid
 
 import yaml
 
+from conans.client import settings_preprocessor
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
 from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration, \
     conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
-from conans.model.options import OptionsValues
+from conans.model.options import Options
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import DATA_YML
@@ -189,9 +190,12 @@ class ConanFileLoader(object):
                 for pattern, settings in package_settings_values.items():
                     if fnmatch.fnmatchcase(ref_str, pattern):
                         pkg_settings = settings
+                        # TODO: Conan 2.0 won't stop at first match
                         break
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
+                # if the global settings are composed with per-package settings, need to preprocess
+                settings_preprocessor.preprocess(tmp_settings)
 
         conanfile.initialize(tmp_settings, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
@@ -213,12 +217,6 @@ class ConanFileLoader(object):
         try:
             conanfile.develop = True
             self._initialize_conanfile(conanfile, profile_host)
-
-            # The consumer specific
-            profile_host.user_options.descope_options(conanfile.name)
-            conanfile.options.initialize_upstream(profile_host.user_options,
-                                                  name=conanfile.name)
-            profile_host.user_options.clear_unscoped_options()
 
             if require_overrides is not None:
                 for req_override in require_overrides:
@@ -274,12 +272,9 @@ class ConanFileLoader(object):
             pkg_settings = package_settings_values.get("&")
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
-        conanfile.initialize(Settings(), profile.buildenv)
+        tmp_settings._unconstrained = True
+        conanfile.initialize(tmp_settings, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(None)
-        # It is necessary to copy the settings, because the above is only a constraint of
-        # conanfile settings, and a txt doesn't define settings. Necessary for generators,
-        # as cmake_multi, that check build_type.
-        conanfile.settings = tmp_settings.copy_values()
 
         try:
             parser = ConanFileTextLoader(contents)
@@ -294,25 +289,24 @@ class ConanFileLoader(object):
         conanfile.generators = parser.generators
 
         try:
-            options = OptionsValues.loads(parser.options)
+            values = Options.loads(parser.options)
+            conanfile.options.update_options(values)
         except Exception:
             raise ConanException("Error while parsing [options] in conanfile\n"
                                  "Options should be specified as 'pkg:option=value'")
-        conanfile.options.values = options
-        conanfile.options.initialize_upstream(profile.user_options)
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)
         return conanfile
 
-    def load_virtual(self, references, profile_host, scope_options=True,
-                     build_requires_options=None, is_build_require=False, require_overrides=None):
+    def load_virtual(self, references, profile_host, is_build_require=False, require_overrides=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._runner, display_name="virtual")
-        conanfile.initialize(profile_host.processed_settings.copy(), profile_host.buildenv)
+        tmp_settings = profile_host.processed_settings.copy()
+        tmp_settings._unconstrained = True
+        conanfile.initialize(tmp_settings, profile_host.buildenv)
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
-        conanfile.settings = profile_host.processed_settings.copy_values()
 
         if is_build_require:
             for reference in references:
@@ -325,16 +319,6 @@ class ConanFileLoader(object):
             for req_override in require_overrides:
                 req_override = ConanFileReference.loads(req_override)
                 conanfile.requires.override(req_override)
-
-        # Allows options without package namespace in conan install commands:
-        #   conan install zlib/1.2.8@lasote/stable -o shared=True
-        if scope_options:
-            assert len(references) == 1
-            profile_host.user_options.scope_options(references[0].name)
-        if build_requires_options:
-            conanfile.options.initialize_upstream(build_requires_options)
-        else:
-            conanfile.options.initialize_upstream(profile_host.user_options)
 
         conanfile.generators = []  # remove the default txt generator
         return conanfile

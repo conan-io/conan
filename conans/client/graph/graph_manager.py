@@ -1,12 +1,14 @@
 
 import os
+import traceback
 
 from conans.cli.output import ConanOutput
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import Node, CONTEXT_HOST
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.profile_loader import profile_from_args
+from conans.client.profile_loader import ProfileLoader
+from conans.model.options import Options
 from conans.model.ref import ConanFileReference
 
 
@@ -25,8 +27,8 @@ class GraphManager(object):
         """
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
         # FIXME: Make "conan source" build the whole graph. Do it in another PR
-        profile_host = profile_from_args(None, None, None, None, None, os.getcwd(), self._cache)
-        profile_host.process_settings(self._cache)
+        profile_loader = ProfileLoader(self._cache)
+        profile_host = profile_loader.from_cli_args(None, None, None, None, None, os.getcwd())
 
         name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):
@@ -38,7 +40,8 @@ class GraphManager(object):
                                                    user=user, channel=channel,
                                                    graph_lock=None)
 
-            run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
+            run_configure_method(conanfile, down_options=Options(),
+                                 profile_options=profile_host.options,  ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
 
@@ -81,12 +84,16 @@ class GraphManager(object):
 
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
+            # options without scope like ``-o shared=True`` refer to this reference
+            profile_host.options.scope(reference.name)
+            # FIXME: Might need here the profile_build
             return self._load_root_direct_reference(reference, profile_host,
                                                     is_build_require,
                                                     require_overrides)
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
+            profile_host.options.scope(create_reference.name)
             return self._load_root_test_package(path, create_reference, graph_lock, profile_host,
                                                 require_overrides)
 
@@ -115,6 +122,8 @@ class GraphManager(object):
 
             ref = ConanFileReference(conanfile.name, conanfile.version,
                                      ref.user, ref.channel, validate=False)
+            if ref.name:
+                profile.options.scope(ref.name)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
         else:
             conanfile = self._loader.load_conanfile_txt(path, profile, ref=ref)

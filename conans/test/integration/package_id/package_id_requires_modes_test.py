@@ -102,7 +102,7 @@ class PackageIDTest(unittest.TestCase):
         # As we have changed Hello2, the binary is not valid anymore so it won't find it
         # but will look for the same package_id
         self.client.run("install .", assert_error=True)
-        self.assertIn("- Package ID: d5d0eee18cd94846c5c42773267949ca9c05e0de",
+        self.assertIn("- Package ID: 9a2fb5e0220e8f5e7f94cf8616c4217dbf05a16b",
                       self.client.out)
 
         # Now change the Hello version and build it, if we install out requires is
@@ -325,16 +325,14 @@ class PackageIDTest(unittest.TestCase):
         self._export("libd", "0.1.0", channel=channel, package_id_text=None,
                      requires=["libc/0.1.0@user/testing"])
         self.client.run("create . libd/0.1.0@user/testing", assert_error=True)
-        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:d4d0d064f89ab22de34fe7d99476736a87c1e254
+        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:6bc65b4894592ca5f492d000cf2cc793b904c14e
 
 libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
 - Settings:%s
 - Options: an_option=off
 - Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
 - Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
-- Package ID: d4d0d064f89ab22de34fe7d99476736a87c1e254
-
-ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""" % " ", self.client.out)
+- Package ID: 6bc65b4894592ca5f492d000cf2cc793b904c14e""" % " ", self.client.out)
 
 
 class PackageIDErrorTest(unittest.TestCase):
@@ -480,15 +478,15 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         # If we only build pkg1, we get a new packageID for pkg3
         t.run("create package3.py pkg3/1.0@ --build=pkg1", assert_error=True)
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0: Updated ID: 734676dcb7c757f2d195f35a67e363ce850783df", t.out)
-        self.assertIn("ERROR: Missing binary: pkg3/1.0:734676dcb7c757f2d195f35a67e363ce850783df",
+        self.assertIn("pkg3/1.0: Updated ID: f6770ce9c022ba560312e0efb75c278426f71cbf", t.out)
+        self.assertIn("ERROR: Missing binary: pkg3/1.0:f6770ce9c022ba560312e0efb75c278426f71cbf",
                       t.out)
 
         # If we build both, we get the new package
         t.run("create package3.py pkg3/1.0@ --build=pkg1 --build=pkg3")
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0: Updated ID: 734676dcb7c757f2d195f35a67e363ce850783df", t.out)
-        self.assertIn("pkg3/1.0: Package '734676dcb7c757f2d195f35a67e363ce850783df' created", t.out)
+        self.assertIn("pkg3/1.0: Updated ID: f6770ce9c022ba560312e0efb75c278426f71cbf", t.out)
+        self.assertIn("pkg3/1.0: Package 'f6770ce9c022ba560312e0efb75c278426f71cbf' created", t.out)
 
     def test_package_revision_mode_download(self):
         t = TestClient(default_server_user=True)
@@ -514,7 +512,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         self.assertIn("pkg2/1.0:Package_ID_unknown - Unknown", t.out)
         self.assertIn("pkg3/1.0:ad2a3c63a3adc6721aeaac45b34f80f0e1b72827 - Download", t.out)
         self.assertIn("pkg2/1.0: Unknown binary for pkg2/1.0, computing updated ID", t.out)
-        self.assertIn("pkg2/1.0: Updated ID: ffaddbda5ec0ebae68de80c88ab23b40ed72912b", t.out)
+        pkg_id = "f1aefa3648a2e2defd70c3ed8c3915061e6c12eb"
+        self.assertIn(f"pkg2/1.0: Updated ID: {pkg_id}", t.out)
         self.assertIn("pkg2/1.0: Binary for updated ID from: Download", t.out)
-        self.assertIn("pkg2/1.0: Retrieving package ffaddbda5ec0ebae68de80c88ab23b40ed72912b "
-                      "from remote 'default'", t.out)
+        self.assertIn(f"pkg2/1.0: Retrieving package {pkg_id} from remote 'default'", t.out)

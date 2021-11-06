@@ -89,7 +89,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching recipe references
+          There are no packages
         """)
 
         self.client.run(f"list package-ids {self._get_fake_recipe_refence('whatever/0.1')}")
@@ -101,11 +101,11 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching recipe references
+          There are no packages
         remote1:
-          There are no matching recipe references
+          There are no packages
         remote2:
-          There are no matching recipe references
+          There are no packages
         """)
 
         rrev = self._get_fake_recipe_refence('whatever/0.1')
@@ -139,7 +139,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
             self.client.run(f'list package-ids {rrev} -r="*" -c')
         expected_output = textwrap.dedent(f"""\
         Local Cache:
-          There are no matching recipe references
+          There are no packages
         remote1:
           {output}
         remote2:
@@ -159,7 +159,7 @@ class TestRemotes(TestListPackageIdsBase):
         self.client.run(f"list package-ids {repr(rrev)}")
         expected_output = textwrap.dedent(f"""\
         Local Cache:
-          There are no matching recipe references
+          There are no packages
         """)
         assert expected_output == str(self.client.out)
 
@@ -274,7 +274,7 @@ class TestRemotes(TestListPackageIdsBase):
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
         remote2:
-          There are no matching recipe references
+          There are no packages
         """ % {"rrev": repr(rrev)})
         assert bool(re.match(expected_output, output, re.MULTILINE))
 

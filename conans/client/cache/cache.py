@@ -17,7 +17,8 @@ from conans.client.conf import ConanClientConfigParser, get_default_client_conf,
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
@@ -43,7 +44,6 @@ class ClientCache(object):
         self._output = ConanOutput()
 
         # Caching
-        self._no_lock = None
         self._config = None
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
@@ -57,37 +57,27 @@ class ClientCache(object):
     def closedb(self):
         self._data_cache.closedb()
 
-    def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_timestamp=None, new_build_id=None):
-        new_ref = ConanReference(new_ref) if new_ref else None
-        return self._data_cache.update_reference(ConanReference(old_ref), new_ref, new_path,
-                                                 new_timestamp, new_build_id)
-
     def dump(self):
         out = StringIO()
         self._data_cache.dump(out)
         return out.getvalue()
 
-    def assign_rrev(self, layout: RecipeLayout, ref: ConanReference):
-        return self._data_cache.assign_rrev(layout, ref)
+    def assign_rrev(self, layout: RecipeLayout):
+        return self._data_cache.assign_rrev(layout)
 
-    def assign_prev(self, layout: PackageLayout, ref: ConanReference):
-        return self._data_cache.assign_prev(layout, ref)
+    def assign_prev(self, layout: PackageLayout):
+        return self._data_cache.assign_prev(layout)
 
     def ref_layout(self, ref):
+        # It must exists
+        assert ref.revision is not None
         return self._data_cache.get_reference_layout(ConanReference(ref))
 
     def pkg_layout(self, ref):
         return self._data_cache.get_package_layout(ConanReference(ref))
 
-    def create_ref_layout(self, ref):
-        return self._data_cache.create_reference_layout(ConanReference(ref))
-
-    def create_pkg_layout(self, ref):
-        return self._data_cache.create_package_layout(ConanReference(ref))
-
-    def create_temp_ref_layout(self, ref):
-        return self._data_cache.create_tmp_reference_layout(ConanReference(ref))
+    def create_export_recipe_layout(self, ref):
+        return self._data_cache.create_export_recipe_layout(ConanReference(ref))
 
     def create_temp_pkg_layout(self, ref):
         return self._data_cache.create_tmp_package_layout(ConanReference(ref))
@@ -98,15 +88,25 @@ class ClientCache(object):
     def get_or_create_pkg_layout(self, ref: ConanReference):
         return self._data_cache.get_or_create_package_layout(ConanReference(ref))
 
-    def remove_layout(self, layout):
+    def remove_recipe_layout(self, layout):
         layout.remove()
-        self._data_cache.remove(ConanReference(layout.reference))
+        self._data_cache.remove_recipe(ConanReference(layout.reference))
 
-    def get_timestamp(self, ref):
-        return self._data_cache.get_timestamp(ConanReference(ref))
+    def remove_package_layout(self, layout):
+        layout.remove()
+        self._data_cache.remove_package(ConanReference(layout.reference))
 
-    def set_timestamp(self, ref, timestamp):
-        return self._data_cache.update_reference(ConanReference(ref), new_timestamp=timestamp)
+    def get_recipe_timestamp(self, ref):
+        return self._data_cache.get_recipe_timestamp(ConanReference(ref))
+
+    def get_package_timestamp(self, ref):
+        return self._data_cache.get_package_timestamp(ConanReference(ref))
+
+    def set_recipe_timestamp(self, ref, timestamp):
+        return self._data_cache.update_recipe_timestamp(ConanReference(ref), new_timestamp=timestamp)
+
+    def set_package_timestamp(self, ref, timestamp):
+        return self._data_cache.update_package_timestamp(ConanReference(ref), new_timestamp=timestamp)
 
     def all_refs(self, only_latest_rrev=False):
         # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
@@ -125,15 +125,14 @@ class ClientCache(object):
 
     def get_package_revisions(self, ref, only_latest_prev=False):
         return [
-            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
-                                   validate=False) for pref in
+            PkgReference.loads(f'{pref["reference"]}#{pref["rrev"]}:'
+                               f'{pref["pkgid"]}#{pref["prev"]}') for pref in
             self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
 
-    def get_package_ids(self, ref: ConanReference) -> List[PackageReference]:
+    def get_package_references(self, ref: ConanReference) -> List[PkgReference]:
         return [
-            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}',
-                                   validate=False) for pref in
-            self._data_cache.get_package_ids(ConanReference(ref))]
+            PkgReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}') for pref in
+            self._data_cache.get_package_references(ConanReference(ref))]
 
     def get_build_id(self, ref):
         return self._data_cache.get_build_id(ConanReference(ref))
@@ -175,11 +174,6 @@ class ClientCache(object):
     @property
     def remotes_registry(self) -> RemoteRegistry:
         return RemoteRegistry(self)
-
-    def _no_locks(self):
-        if self._no_lock is None:
-            self._no_lock = self.config.cache_no_locks
-        return self._no_lock
 
     @property
     def artifacts_properties_path(self):
@@ -288,13 +282,6 @@ class ClientCache(object):
                 if os.path.isfile(generator) and generator.endswith(".py"):
                     generators.append(generator)
         return generators
-
-    def remove_locks(self):
-        folders = list_folder_subdirs(self._store_folder, 4)
-        for folder in folders:
-            conan_folder = os.path.join(self._store_folder, folder)
-            Lock.clean(conan_folder)
-            shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
     def get_template(self, template_name, user_overrides=False):
         # TODO: It can be initialized only once together with the Conan app

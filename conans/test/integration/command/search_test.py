@@ -11,7 +11,8 @@ import pytest
 from mock import patch
 
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
@@ -544,7 +545,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
-                pref = PackageReference(ref, package, "mypackagerev")
+                pref = PkgReference(ref, package, "mypackagerev")
                 origin_path = self.client.get_latest_pkg_layout(pref).package()
                 dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)

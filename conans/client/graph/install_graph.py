@@ -29,12 +29,12 @@ class _InstallPackageReference:
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
-        result.package_id = node.pref.id
+        result.package_id = node.pref.package_id
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        # FIXME: The aggregation of the upstream options is not correct here
-        result.options = node.conanfile.options.values.as_list()
+        # self_options are the minimum to reproduce state
+        result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
         return result
 
@@ -251,9 +251,9 @@ def raise_missing(missing, out):
     # TODO: Remove out argument
     # TODO: A bit dirty access to .pref
     missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
-    missing_prefs = list(sorted(missing_prefs))
-    for pref in missing_prefs:
-        out.error("Missing binary: %s" % str(pref))
+    missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
+    for pref_str in missing_prefs_str:
+        out.error("Missing binary: %s" % pref_str)
     out.writeln("")
 
     # Report details just the first one
@@ -264,7 +264,7 @@ def raise_missing(missing, out):
     dependencies = [str(dep.dst) for dep in node.dependencies]
 
     settings_text = ", ".join(conanfile.info.full_settings.dumps().splitlines())
-    options_text = ", ".join(conanfile.info.full_options.dumps().splitlines())
+    options_text = ", ".join(conanfile.info.options.dumps().splitlines())
     dependencies_text = ', '.join(dependencies)
     requires_text = ", ".join(conanfile.info.requires.dumps().splitlines())
 
@@ -277,11 +277,11 @@ def raise_missing(missing, out):
        - Package ID: %s
        ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
     conanfile.output.warning(msg)
-    missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
+    missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
     if len(missing_prefs) >= 5:
         build_str = "--build=missing"
     else:
-        build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
+        build_str = " ".join(list(sorted(["--build=%s" % pref.ref.name for pref in missing_prefs])))
 
     raise ConanException(textwrap.dedent('''\
        Missing prebuilt package for '%s'

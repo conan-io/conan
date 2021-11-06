@@ -44,8 +44,7 @@ def test_recipe_modes():
         _assert_recipe_mode(ref, package_id)
 
     for package_id_mode, ref, package_id in configs:
-        with environment_append({"CONAN_DEFAULT_PACKAGE_ID_MODE": package_id_mode}):
-            _assert_recipe_mode(ref, package_id)
+        _assert_recipe_mode(ref, package_id)
 
 
 @pytest.mark.xfail(reason="package id computation has changed")

@@ -114,13 +114,13 @@ def test_install_transitive_pattern(client):
     client.run(" install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
     assert "Pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    # Prevalence of alphabetical pattern, opposite order
+    # Prevalence of last match, even first pattern match
     client.run("create . Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
     assert "Pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     client.run(" install Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
     assert "Pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Prevalence and override of alphabetical pattern
     client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
     assert "Pkg/0.1@user/testing: PKG OPTION: header" in client.out

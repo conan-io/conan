@@ -2,17 +2,15 @@ import json
 import os
 from collections import OrderedDict
 
+from conans import __version__ as client_version
 from conans.cli.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.search.binary_html_table import html_binary_graph
-from conans.util.dates import iso8601_to_str
+from conans.model.ref import ConanFileReference
 from conans.util.files import save
-from conans import __version__ as client_version
 from conans.util.misc import make_tuple
 
 
@@ -27,29 +25,6 @@ class CommandOutputer(object):
     def profile_list(self, profiles):
         for p in sorted(profiles):
             self._output.info(p)
-
-    def remote_list(self, remotes, raw):
-        for r in remotes:
-            if raw:
-                disabled_str = " True" if r.disabled else ""
-                self._output.info(
-                    "%s %s %s %s" %
-                    (r.name, r.url, r.verify_ssl, disabled_str))
-            else:
-                disabled_str = ", Disabled: True" if r.disabled else ""
-                self._output.info(
-                    "%s: %s [Verify SSL: %s%s]" %
-                    (r.name, r.url, r.verify_ssl, disabled_str))
-
-    def remote_ref_list(self, refs):
-        for reference, remote_name in refs.items():
-            ref = ConanFileReference.loads(reference)
-            self._output.info("%s: %s" % (ref.full_str(), remote_name))
-
-    def remote_pref_list(self, package_references):
-        for package_reference, remote_name in package_references.items():
-            pref = PackageReference.loads(package_reference)
-            self._output.info("%s: %s" % (pref.full_str(), remote_name))
 
     def json_output(self, info, json_output, cwd):
         cwd = os.path.abspath(cwd or os.getcwd())
@@ -224,27 +199,6 @@ class CommandOutputer(object):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         self._handle_json_output(data, json_output, cwd)
 
-    def print_search_references(self, search_info, pattern, raw, all_remotes_search):
-        printer = Printer(self._output)
-        printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
-
-    def print_search_packages(self, search_info, reference, packages_query, table, raw,
-                              template):
-        if table:
-            html_binary_graph(search_info, reference, table, template)
-        else:
-            printer = Printer(self._output)
-            printer.print_search_packages(search_info, reference, packages_query, raw)
-
-    def print_revisions(self, reference, revisions, raw, remote_name=None):
-        remote_test = " at remote '%s'" % remote_name if remote_name else ""
-        if not raw:
-            self._output.info("Revisions for '%s'%s:" % (reference, remote_test))
-        lines = ["%s (%s)" % (r["revision"],
-                              iso8601_to_str(r["time"]) if r["time"] else "No time")
-                 for r in revisions]
-        self._output.info("\n".join(lines))
-
     def print_dir_list(self, list_files, path, raw):
         if not raw:
             self._output.info("Listing directory '%s':" % path)
@@ -269,24 +223,3 @@ class CommandOutputer(object):
             lexer = TextLexer()
 
         self._output.info(highlight(contents, lexer, TerminalFormatter()))
-
-    def print_user_list(self, info):
-        for remote in info["remotes"]:
-            authenticated = " [authenticated]" if remote["authenticated"] else ""
-            anonymous = " (anonymous)" if not remote["user_name"] else ""
-            self._output.info("Current user of remote '%s' set to: '%s'%s%s" %
-                              (remote["name"], str(remote["user_name"]), anonymous, authenticated))
-
-    def print_user_set(self, remote_name, prev_user, user):
-        previous_username = prev_user or "None"
-        previous_anonymous = " (anonymous)" if not prev_user else ""
-        username = user or "None"
-        anonymous = " (anonymous)" if not user else ""
-
-        if prev_user == user:
-            self._output.info("User of remote '%s' is already '%s'%s" %
-                              (remote_name, previous_username, previous_anonymous))
-        else:
-            self._output.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
-                              (remote_name, previous_username, previous_anonymous, username,
-                               anonymous))

@@ -130,7 +130,7 @@ class Pkg(ConanFile):
         client.run("download pkg/0.1:{}".format(NO_SETTINGS_PACKAGE_ID))
 
         rrev = client.cache.get_latest_rrev(ref)
-        pkgids = client.cache.get_package_ids(rrev)
+        pkgids = client.cache.get_package_references(rrev)
         prev = client.cache.get_latest_prev(pkgids[0])
         package_folder = client.cache.pkg_layout(prev).package()
 
@@ -167,7 +167,7 @@ class Pkg(ConanFile):
         client.run("download pkg/0.1@lasote/stable -p {}".format(NO_SETTINGS_PACKAGE_ID))
 
         rrev = client.cache.get_latest_rrev(ref)
-        pkgids = client.cache.get_package_ids(rrev)
+        pkgids = client.cache.get_package_references(rrev)
         prev = client.cache.get_latest_prev(pkgids[0])
         package_folder = client.cache.pkg_layout(prev).package()
 

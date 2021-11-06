@@ -33,14 +33,6 @@ info_text = '''[settings]
     bzip2/1.0.6@lasote/stable:c6c01ee5ea2cf4af63e7b83b722b0a2d90640641
     zlib/1.2.8@lasote/stable:2dec3996ef8de7edb0304eaf4efdd96a0477d3a3
 
-[full_options]
-    fPIC=True
-    header_only=False
-    shared=False
-    bzip2:fPIC=True
-    bzip2:shared=False
-    zlib:shared=False
-
 [env]
 
 '''

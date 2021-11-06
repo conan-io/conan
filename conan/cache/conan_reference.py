@@ -1,6 +1,7 @@
 from conans.errors import ConanException
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 
 
 class ConanReference:
@@ -14,14 +15,14 @@ class ConanReference:
             self._rrev = ref.revision
             self._pkgid = None
             self._prev = None
-        elif isinstance(args[0], PackageReference):
+        elif isinstance(args[0], PkgReference):
             ref = args[0]
             self._name = ref.ref.name
             self._version = ref.ref.version
             self._user = ref.ref.user
             self._channel = ref.ref.channel
             self._rrev = ref.ref.revision
-            self._pkgid = ref.id
+            self._pkgid = ref.package_id
             self._prev = ref.revision
         elif isinstance(args[0], RecipeReference):
             ref = args[0]
@@ -72,7 +73,7 @@ class ConanReference:
         return self._prev
 
     def as_package_reference(self):
-        return PackageReference.loads(self.full_reference, validate=False)
+        return PkgReference.loads(self.full_reference)
 
     def as_conanfile_reference(self):
         return ConanFileReference.loads(self.full_reference, validate=False)
@@ -85,10 +86,12 @@ class ConanReference:
 
     @property
     def full_reference(self):
-        if self.prev:
-            return f'{self.reference}#{self.rrev}:{self.pkgid}#{self.prev}'
-        else:
-            return f'{self.reference}#{self.rrev}'
+        result = f'{self.reference}#{self.rrev}'
+        if self.pkgid:
+            result += f":{self.pkgid}"
+            if self.prev:
+                result += f'#{self.prev}'
+        return result
 
     @property
     def recipe_reference(self):

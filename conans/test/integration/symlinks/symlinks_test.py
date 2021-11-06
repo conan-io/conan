@@ -5,7 +5,8 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
 from conans.util.files import load, mkdir, save
 
@@ -78,7 +79,7 @@ class SymLinksTest(unittest.TestCase):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, pref)
 
@@ -108,7 +109,7 @@ class TestConan(ConanFile):
         os.symlink("version1", latest)
         os.symlink("latest", edge)
         client.run("export-pkg ./recipe Hello/0.1@lasote/stable")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, pref, build=False)
 
@@ -128,7 +129,7 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
 
         pkg_layout = client.get_latest_pkg_layout(pref)
         ref_layout = client.get_latest_ref_layout(ref)
@@ -156,7 +157,7 @@ class TestConan(ConanFile):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         client.run("upload Hello/0.1@lasote/stable --all -r default")
         client.run('remove "*" -f')
@@ -225,7 +226,7 @@ class ConanSymlink(ConanFile):
         cache_other_dir = os.path.join(client.get_latest_ref_layout(ref).export_sources(),
                                        "another_other_directory")
         self.assertTrue(os.path.exists(cache_other_dir))
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
         package_file = os.path.join(client.get_latest_pkg_layout(pref).package(),
                                     "another_directory", "not_to_copy.txt")
         self.assertFalse(os.path.exists(package_file))

@@ -56,9 +56,6 @@ class _Remotes(object):
     def __bool__(self):
         return bool(self._remotes)
 
-    def __nonzero__(self):
-        return self.__bool__()
-
     def rename(self, remote, new_remote_name):
         if self.get_by_name(new_remote_name):
             raise ConanException("Remote '%s' already exists" % new_remote_name)

@@ -2,7 +2,7 @@ import os
 import textwrap
 
 from conans.util.files import load
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 

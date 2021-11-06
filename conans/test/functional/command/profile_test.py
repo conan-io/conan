@@ -6,10 +6,8 @@ import unittest
 
 import pytest
 
-from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
-from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.profiles import create_profile
 from conans.test.utils.tools import TestClient, redirect_output
@@ -75,7 +73,7 @@ class ProfileTest(unittest.TestCase):
     def test_show(self):
         client = TestClient()
         create_profile(client.cache.profiles_path, "profile1", settings={"os": "Windows"},
-                       options=[("MyOption", "32")])
+                       options={"MyOption": "32"})
         create_profile(client.cache.profiles_path, "profile3",
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")],
@@ -270,7 +268,7 @@ class DetectCompilersTest(unittest.TestCase):
             "Windows": "Visual Studio"
         }
 
-        result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
+        result = detect_defaults_settings()
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         platform_compiler = platform_default_compilers.get(platform.system(), None)
@@ -294,7 +292,7 @@ class DetectCompilersTest(unittest.TestCase):
         output = RedirectedTestOutput()  # Initialize each command
         with redirect_output(output):
             with tools.environment_append({"CC": "gcc"}):
-                result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
+                result = detect_defaults_settings()
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         # No compiler should be detected

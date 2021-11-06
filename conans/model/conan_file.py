@@ -136,10 +136,10 @@ class ConanFile:
     def initialize(self, settings, buildenv=None):
         # If we move this to constructor, the python_require inheritance in init fails
         # and "conan inspect" also breaks
-        self.options = Options.create_options(self.options, self.default_options)
+        self.options = Options(self.options or {}, self.default_options)
         self._conan_buildenv = buildenv
         try:
-            settings.constraint(self.settings or [])
+            settings.constrained(self.settings)
         except Exception as e:
             raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
                 self.display_name, str(e)))
@@ -242,22 +242,16 @@ class ConanFile:
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, with_login=True, env=None):
+    def run(self, command, output=True, cwd=None, ignore_errors=False, env=None):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
-
-        def _run(cmd, _env):
-            # FIXME: run in windows bash is not using output
-            if platform.system() == "Windows":
-                if self.win_bash:  # New, Conan 2.0
-                    from conan.tools.microsoft.subsystems import run_in_windows_bash
-                    return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
-            if _env is None:
-                _env = "conanbuild"
-            wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
-            return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
-
-        retcode = _run(command, env)
+        if platform.system() == "Windows":
+            if self.win_bash:  # New, Conan 2.0
+                from conan.tools.microsoft.subsystems import run_in_windows_bash
+                return run_in_windows_bash(self, command=command, cwd=cwd, env=env)
+        if env is None:
+            env = "conanbuild"
+        wrapped_cmd = environment_wrap_command(env, command, cwd=self.generators_folder)
+        retcode = self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))

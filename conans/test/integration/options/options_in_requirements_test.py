@@ -6,9 +6,6 @@ from conans.test.utils.tools import TestClient
 
 
 class ChangeOptionsInRequirementsTest(unittest.TestCase):
-    """ This test serves to check that the requirements() method can also define
-    options for its dependencies, just in case they were just added
-    """
 
     def test_basic(self):
         client = TestClient()
@@ -36,15 +33,17 @@ class BoostConan(ConanFile):
     options = {"shared": [True, False]}
     default_options ={"shared": False}
 
+    def configure(self):
+        self.options["zlib"].shared = self.options.shared
+
     def requirements(self):
         self.requires("zlib/0.1@lasote/testing")
-        self.options["zlib"].shared = self.options.shared
 """
         files = {"conanfile.py": boost}
         client.save(files, clean_first=True)
         client.run("create . lasote/testing -o BoostDbg:shared=True --build=missing")
-        ref = ConanFileReference.loads("BoostDbg/1.0@lasote/testing")
+        ref = ConanFileReference.loads("zlib/0.1@lasote/testing")
         pref = client.get_latest_prev(ref)
         pkg_folder = client.get_latest_pkg_layout(pref).package()
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
-        self.assertIn("zlib:shared=True", conaninfo)
+        self.assertIn("shared=True", conaninfo)

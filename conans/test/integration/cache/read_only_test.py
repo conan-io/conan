@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import save
 

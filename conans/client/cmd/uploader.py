@@ -227,7 +227,7 @@ class _PackagePreparator(object):
         if layout.package_is_dirty():
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'"
-                                 % (pref, pref.ref, pref.id))
+                                 % (pref, pref.ref, pref.package_id))
 
         download_pkg_folder = layout.download_package()
         package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
@@ -398,7 +398,7 @@ class CmdUpload(object):
                 index, pref = index_pref
                 try:
                     up_msg = "\rUploading package %d/%d: %s to '%s'" % (index + 1, total,
-                                                                        str(pref.id),
+                                                                        str(pref.package_id),
                                                                         remote.name)
                     self._progress_output.info(left_justify_message(up_msg))
                     self._upload_package(pref, remote, retry, retry_wait, integrity_check, policy)
@@ -491,7 +491,7 @@ class CmdUpload(object):
         conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,
-                                   package_id=pref.id,
+                                   package_id=pref.package_id,
                                    remote=remote)
 
         t1 = time.time()
@@ -506,7 +506,7 @@ class CmdUpload(object):
         duration = time.time() - t1
         log_package_upload(pref, duration, cache_files, remote)
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.id, remote=remote)
+                                   reference=pref.ref, package_id=pref.package_id, remote=remote)
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
 

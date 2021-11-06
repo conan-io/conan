@@ -1,18 +1,11 @@
 import os
 import textwrap
 import time
-from collections import OrderedDict
 from time import sleep
 
-import pytest
-from mock import patch
-
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONAN_MANIFEST
-from conans.server.revision_list import RevisionList
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
-    TurboTestClient, GenConanfile
-from conans.util.files import load, save
+from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.files import load
 
 
 def test_update_binaries():
@@ -78,8 +71,8 @@ def test_update_not_date():
 
     ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
 
-    initial_recipe_timestamp = client.cache.get_timestamp(client.cache.get_latest_rrev(ref))
-    initial_package_timestamp = client.cache.get_timestamp(prev)
+    initial_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_rrev(ref))
+    initial_package_timestamp = client.cache.get_package_timestamp(prev)
 
     time.sleep(1)
 
@@ -88,8 +81,8 @@ def test_update_not_date():
     client.run("export . lasote/stable")
     client.run("install Hello0/1.0@lasote/stable --build")
 
-    rebuild_recipe_timestamp = client.cache.get_timestamp(client.cache.get_latest_rrev(ref))
-    rebuild_package_timestamp = client.cache.get_timestamp(client.get_latest_prev(ref))
+    rebuild_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_rrev(ref))
+    rebuild_package_timestamp = client.cache.get_package_timestamp(client.get_latest_prev(ref))
 
     assert rebuild_recipe_timestamp != initial_recipe_timestamp
     assert rebuild_package_timestamp != initial_package_timestamp
@@ -103,8 +96,8 @@ def test_update_not_date():
 
     assert "Hello0/1.0@lasote/stable from local cache - Newer" in client.out
 
-    failed_update_recipe_timestamp = client.cache.get_timestamp(client.cache.get_latest_rrev(ref))
-    failed_update_package_timestamp = client.cache.get_timestamp(client.get_latest_prev(ref))
+    failed_update_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_rrev(ref))
+    failed_update_package_timestamp = client.cache.get_package_timestamp(client.get_latest_prev(ref))
 
     assert rebuild_recipe_timestamp == failed_update_recipe_timestamp
     assert rebuild_package_timestamp == failed_update_package_timestamp

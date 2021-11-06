@@ -5,6 +5,7 @@ from fnmatch import translate
 
 from conans.errors import ConanException
 from conans.model.info import ConanInfo
+from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
@@ -57,7 +58,7 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
 
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
-    properties = ["os", "os_build", "compiler", "arch", "arch_build", "build_type"]
+    properties = ["os", "compiler", "arch", "build_type"]
 
     def starts_with_common_settings(_prop_name):
         return any(_prop_name.startswith(setting + '.') for setting in properties)
@@ -71,7 +72,7 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
 def search_recipes(cache, pattern=None, ignorecase=True):
     # Conan references in main storage
     if pattern:
-        if isinstance(pattern, ConanFileReference):
+        if isinstance(pattern, (ConanFileReference, RecipeReference)):
             pattern = repr(pattern)
         pattern = translate(pattern)
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
@@ -133,6 +134,6 @@ def _get_local_infos_min(packages_layouts):
         conan_vars_info = info.serialize_min()
         # TODO: cache2.0 use the full ref or package rev as key
         # FIXME: cache2.0 there will be several prevs with same package id
-        result[pkg_layout.reference.id] = conan_vars_info
+        result[pkg_layout.reference.package_id] = conan_vars_info
 
     return result

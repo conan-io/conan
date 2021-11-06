@@ -7,6 +7,7 @@ from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain import Block, GenericSystemBlock
 from conans import ConanFile
 from conans.model.conf import Conf
+from conans.model.options import Options
 from conans.model.settings import Settings
 
 
@@ -137,7 +138,7 @@ def test_user_toolchain(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks["user_toolchain"].user_toolchain = "myowntoolchain.cmake"
     content = toolchain.content
-    assert 'include(myowntoolchain.cmake)' in content
+    assert 'include("myowntoolchain.cmake")' in content
 
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content

@@ -133,9 +133,6 @@ class FileTreeManifest(object):
         """
         return self.file_sums == other.file_sums
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def difference(self, other):
         result = {}
         for f, h in self.file_sums.items():

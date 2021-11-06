@@ -427,10 +427,9 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn(f"pkg/0.1@user/stable:{package_id} - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        self.assertIn("consumer/0.1@user/stable:900b52aa593ce7dfb8e479cf16b3ce2d3f3f1f86 - Build",
-                      client.out)
-        self.assertIn("consumer/0.1@user/stable: Package '900b52aa593ce7dfb8e479cf16b3ce2d3f3f1f86'"
-                      " created", client.out)
+        consumer_id = "fdd83a0f601bb72cc84b64ca6451f18b158b1100"
+        self.assertIn(f"consumer/0.1@user/stable:{consumer_id} - Build", client.out)
+        self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
         # Create package with gcc 4.9
         client.save({"conanfile.py": conanfile})
@@ -445,10 +444,9 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:c6715d73365c2dd62f68836b2dee8359a312ff12 - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        self.assertIn("consumer/0.1@user/stable:965938ea54cfe7635212f25a8c4cd6fb069c73e1 - Build",
-                      client.out)
-        self.assertIn("consumer/0.1@user/stable: Package '965938ea54cfe7635212f25a8c4cd6fb069c73e1'"
-                      " created", client.out)
+        consumer_id = "8ad16e61b38b9b8ea3c4059d391d0c3267607f59"
+        self.assertIn(f"consumer/0.1@user/stable:{consumer_id} - Build", client.out)
+        self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
     def test_build_missing(self):
         # https://github.com/conan-io/conan/issues/6133

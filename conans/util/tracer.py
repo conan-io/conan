@@ -7,7 +7,8 @@ from os.path import isdir
 import fasteners
 
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.ref import ConanFileReference
 from conans.util.files import md5sum, sha1sum
 from conans.util.log import logger
 
@@ -85,7 +86,9 @@ def log_package_upload(pref, duration, files_uploaded, remote):
     """files_uploaded is a dict with relative path as keys and abs path as values"""
     files_uploaded = files_uploaded or {}
     files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
-    _append_action("UPLOADED_PACKAGE", {"_id": repr(pref),
+    tmp = copy.copy(pref)
+    tmp.revision = None
+    _append_action("UPLOADED_PACKAGE", {"_id": repr(tmp),
                                         "duration": duration,
                                         "files": files_uploaded,
                                         "remote": remote.name})
@@ -114,7 +117,9 @@ def log_recipe_sources_download(ref, duration, remote_name, files_downloaded):
 def log_package_download(pref, duration, remote, files_downloaded):
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
-    _append_action("DOWNLOADED_PACKAGE", {"_id": repr(pref.copy_clear_revs()),
+    tmp = copy.copy(pref)
+    tmp.revision = None
+    _append_action("DOWNLOADED_PACKAGE", {"_id": repr(tmp),
                                           "duration": duration,
                                           "remote": remote.name,
                                           "files": files_downloaded})
@@ -126,14 +131,20 @@ def log_recipe_got_from_local_cache(ref):
 
 
 def log_package_got_from_local_cache(pref):
-    assert(isinstance(pref, PackageReference))
-    _append_action("GOT_PACKAGE_FROM_LOCAL_CACHE", {"_id": repr(pref.copy_clear_revs())})
+    assert(isinstance(pref, PkgReference))
+    tmp = copy.copy(pref)
+    tmp.revision = None
+    tmp.ref = tmp.ref.copy_clear_rev()
+    _append_action("GOT_PACKAGE_FROM_LOCAL_CACHE", {"_id": repr(tmp)})
 
 
 def log_package_built(pref, duration, log_run=None):
-    assert(isinstance(pref, PackageReference))
+    assert(isinstance(pref, PkgReference))
+    tmp = copy.copy(pref)
+    tmp.revision = None
+    tmp.ref = tmp.ref.copy_clear_rev()
     _append_action("PACKAGE_BUILT_FROM_SOURCES",
-                   {"_id": repr(pref.copy_clear_revs()), "duration": duration, "log": log_run})
+                   {"_id": repr(tmp), "duration": duration, "log": log_run})
 
 
 def log_client_rest_api_call(url, method, duration, headers):

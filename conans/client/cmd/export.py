@@ -28,7 +28,7 @@ class AliasConanfile(ConanFile):
     revision_mode = "%s"
 """ % (target_ref.full_str(), revision_mode)
 
-    alias_layout = cache.create_temp_ref_layout(alias_ref)
+    alias_layout = cache.create_export_recipe_layout(alias_ref)
 
     save(alias_layout.conanfile(), conanfile)
     manifest = FileTreeManifest.create(alias_layout.export())
@@ -38,7 +38,8 @@ class AliasConanfile(ConanFile):
                          path=None, manifest=manifest, revision_mode=revision_mode)
 
     ref_with_rrev = alias_ref.copy_with_rev(rrev)
-    cache.assign_rrev(alias_layout, ConanReference(ref_with_rrev))
+    alias_layout.reference = ConanReference(ref_with_rrev)
+    cache.assign_rrev(alias_layout)
 
 
 def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None,
@@ -55,9 +56,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
 
-    recipe_layout = cache.create_temp_ref_layout(ref)
-
-    _check_settings_for_warnings(conanfile)
+    recipe_layout = cache.create_export_recipe_layout(ref)
 
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref)
@@ -102,7 +101,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
                              revision_mode=conanfile.revision_mode)
 
     ref = ref.copy_with_rev(revision=revision)
-    cache.assign_rrev(recipe_layout, ConanReference(ref))
+    recipe_layout.reference = ConanReference(ref)
+    cache.assign_rrev(recipe_layout)
     # TODO: cache2.0 check if this is the message we want to output
     scoped_output.success('A new %s version was exported' % CONANFILE)
     scoped_output.info('Folder: %s' % recipe_layout.export())
@@ -127,28 +127,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
         graph_lock.update_lock_export_ref(ref)
 
     return ref
-
-
-def _check_settings_for_warnings(conanfile):
-    output = ConanOutput()
-    if not conanfile.settings:
-        return
-    try:
-        if 'os_build' not in conanfile.settings:
-            return
-        if 'os' not in conanfile.settings:
-            return
-
-        output.info("*" * 60, fg=Color.BRIGHT_RED)
-        output.info("  This package defines both 'os' and 'os_build' ",
-                       fg=Color.BRIGHT_RED)
-        output.info("  Please use 'os' for libraries and 'os_build'",
-                       fg=Color.BRIGHT_RED)
-        output.info("  only for build-requires used for cross-building",
-                       fg=Color.BRIGHT_RED)
-        output.info("*" * 60, fg=Color.BRIGHT_RED)
-    except ConanException:
-        pass
 
 
 def _capture_scm_auto_fields(conanfile, conanfile_dir, recipe_layout, ignore_dirty):

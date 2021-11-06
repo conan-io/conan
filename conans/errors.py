@@ -37,8 +37,12 @@ def conanfile_exception_formatter(conanfile_name, func_name):
 
     try:
         yield
+    # TODO: Move ConanInvalidSystemRequirements, ConanInvalidConfiguration from here?
+    except ConanInvalidSystemRequirements as exc:
+        msg = "{}: Invalid system requirements: {}".format(conanfile_name, exc)
+        raise ConanInvalidSystemRequirements(msg)
     except ConanInvalidConfiguration as exc:
-        msg = "{}: Invalid configuration: {}".format(conanfile_name, exc)  # TODO: Move from here?
+        msg = "{}: Invalid configuration: {}".format(conanfile_name, exc)
         raise ConanInvalidConfiguration(msg)
     except AttributeError as exc:
         list_methods = [m for m in dir(list) if not m.startswith('__')]
@@ -154,6 +158,10 @@ class ConanExceptionInUserConanfileMethod(ConanException):
     pass
 
 
+class ConanInvalidSystemRequirements(ConanException):
+    pass
+
+
 class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
     """
     This binary, for the requested configuration and package-id cannot be built
@@ -225,6 +233,8 @@ class RecipeNotFoundException(NotFoundException):
 class PackageNotFoundException(NotFoundException):
 
     def __init__(self, pref, remote=None):
+        from conans.model.package_ref import PkgReference
+        assert isinstance(pref, PkgReference), "PackageNotFoundException requires a PkgReference"
         self.pref = pref
         super(PackageNotFoundException, self).__init__(remote=remote)
 

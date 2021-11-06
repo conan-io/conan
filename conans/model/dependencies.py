@@ -25,8 +25,6 @@ class UserRequirementsDict(object):
     def __bool__(self):
         return bool(self._data)
 
-    __nonzero__ = __bool__
-
     def _get_require(self, ref, **kwargs):
         assert isinstance(ref, str)
         if "/" in ref:
