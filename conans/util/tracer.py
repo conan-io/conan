@@ -76,7 +76,7 @@ def _file_document(name, path):
 def log_recipe_upload(ref, duration, files_uploaded, remote_name):
     files_uploaded = files_uploaded or {}
     files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
-    _append_action("UPLOADED_RECIPE", {"_id": repr(ref),
+    _append_action("UPLOADED_RECIPE", {"_id": repr(ref.copy_clear_rev()),
                                        "duration": duration,
                                        "files": files_uploaded,
                                        "remote": remote_name})

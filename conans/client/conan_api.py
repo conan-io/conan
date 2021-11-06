@@ -1,6 +1,5 @@
 import json
 import os
-import traceback
 
 from collections import OrderedDict
 from collections import namedtuple
@@ -640,12 +639,9 @@ class ConanAPIV1(object):
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)])
         uploader = CmdUpload(app)
-        try:
-            uploader.upload(pattern, all_packages, confirm,
-                            retry, retry_wait, integrity_check, policy, parallel_upload=parallel_upload)
-        except Exception as e:
-            print(traceback.format_exc())
-            raise
+        uploader.upload(pattern, package, all_packages, confirm,
+                        retry, retry_wait, integrity_check, policy, query=query,
+                        parallel_upload=parallel_upload)
 
     @api_method
     def remove_system_reqs(self, reference):

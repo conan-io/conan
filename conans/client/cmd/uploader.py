@@ -9,6 +9,7 @@ from conans.cli.output import ConanOutput
 from conans.client.userio import UserInput
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import ConanFileReference
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
@@ -165,18 +166,7 @@ class _PackagePreparator(object):
         files_to_upload, deleted = self._recipe_files_to_upload(ref, cache_files, remote, force)
         return files_to_upload, deleted, cache_files, conanfile_path, t1, recipe_layout
 
-    def _recipe_files_to_upload(self, ref, files, remote, force):
-        # TODO: Check this weird place to check credentials
-        self._remote_manager.check_credentials(remote)
-        if not force:
-            return files, set()
-        # only check difference if it is a force upload
-        remote_snapshot = self._remote_manager.get_recipe_snapshot(ref, remote)
-        if not remote_snapshot:
-            return files, set()
 
-        deleted = set(remote_snapshot).difference(files)
-        return files, deleted
 
     def _compress_recipe_files(self, layout, ref):
         download_export_folder = layout.download_export()
@@ -335,6 +325,19 @@ class CmdUpload(object):
         self._preparator = _PackagePreparator(app.cache, app.remote_manager, app.hook_manager)
         self._user_input = UserInput(self._cache.config.non_interactive)
 
+    def _recipe_files_to_upload(self, ref, files, remote, force):
+        # TODO: Check this weird place to check credentials
+        self._remote_manager.check_credentials(remote)
+        if not force:
+            return files, set()
+        # only check difference if it is a force upload
+        remote_snapshot = self._remote_manager.get_recipe_snapshot(ref, remote)
+        if not remote_snapshot:
+            return files, set()
+
+        deleted = set(remote_snapshot).difference(files)
+        return files, deleted
+
     def upload(self, reference_or_pattern,
                all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
                policy=None, parallel_upload=False):
@@ -357,7 +360,6 @@ class CmdUpload(object):
                                  integrity_check, policy)
             except BaseException as base_exception:
                 base_trace = traceback.format_exc()
-                print(base_trace)
                 self._exceptions_list.append((base_exception, _ref, base_trace, remote))
 
         self._upload_thread_pool.map(upload_ref, refs_to_upload)
@@ -366,7 +368,7 @@ class CmdUpload(object):
 
         if len(self._exceptions_list) > 0:
             for exc, ref, trace, remote in self._exceptions_list:
-                t = "recipe" if isinstance(ref, RecipeReference) else "package"
+                t = "recipe" if isinstance(ref, ConanFileReference) else "package"
                 msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
                 if get_env("CONAN_VERBOSE_TRACEBACK", False):
                     msg += trace
@@ -499,8 +501,7 @@ class CmdUpload(object):
         if policy == UPLOAD_POLICY_SKIP:
             return None
 
-        upload_pref = PkgReference.from_conanref(pref)
-        self._remote_manager.upload_package(upload_pref, cache_files, remote, retry, retry_wait)
+        self._remote_manager.upload_package(pref, cache_files, remote, retry, retry_wait)
         logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
 
         duration = time.time() - t1

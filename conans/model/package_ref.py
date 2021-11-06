@@ -10,11 +10,6 @@ class PkgReference:
         self.revision = revision
         self.timestamp = timestamp  # TODO: Which format? int timestamp?
 
-    @property
-    def id(self):
-        # This is temporary helper to migrate without tons of changes, can be removed later
-        return self.package_id
-
     @staticmethod
     def from_conanref(pref, timestamp=None):
         return PkgReference(pref.ref, pref.id, pref.revision, timestamp)

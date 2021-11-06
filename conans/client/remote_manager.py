@@ -15,7 +15,8 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_N
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, rmdir
+from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
+    rmdir
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -67,7 +68,6 @@ class RemoteManager(object):
                           retry, retry_wait)
 
     def upload_package(self, pref, files_to_upload, remote, retry, retry_wait):
-        assert isinstance(pref, PkgReference)
         assert pref.ref.revision, "upload_package requires RREV"
         assert pref.revision, "upload_package requires PREV"
         self._call_remote(remote, "upload_package", pref, files_to_upload, retry, retry_wait)
@@ -280,6 +280,11 @@ class RemoteManager(object):
         except Exception as exc:
             logger.error(traceback.format_exc())
             raise ConanException(exc, remote=remote)
+
+
+def calc_files_checksum(files):
+    return {file_name: {"md5": md5sum(path), "sha1": sha1sum(path)}
+            for file_name, path in files.items()}
 
 
 def check_compressed_files(tgz_name, files):
