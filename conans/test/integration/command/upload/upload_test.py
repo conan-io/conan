@@ -165,6 +165,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/*@user/testing --confirm --all -r default")
+        print(client.out)
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conan_package.tgz", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
