@@ -287,7 +287,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan_Hello1.props" />
+    <Import Project="..\conan_hello1.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -452,7 +452,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run_command(r"x64\Release\MyApp.exe")
         self.assertIn("MyApp: Release!", client.out)
         self.assertIn("hello0: Release!", client.out)
-        self.assertIn("Hello1: Release!", client.out)
+        self.assertIn("hello1: Release!", client.out)
 
     def test_install_reference(self):
         client = TestClient()
@@ -588,7 +588,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
                  "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_hello3.props",
                                                                           "conandeps.props"),
                  "MyProject/MyProject.cpp": myproject_cpp,
-                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_Hello1.props",
+                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_hello1.props",
                                                               "conandeps.props"),
                  "MyApp/MyApp.cpp": myapp_cpp,
                  "conanfile.py": conanfile}

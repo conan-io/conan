@@ -214,7 +214,7 @@ def _validate_link_order(libs):
 
     if platform.system() == "Darwin":
        assert libs.index('liblibz.a') < libs.index('Carbon')
-       assert libs.index('libz2.a') < libs.index('Carbon')
+       assert libs.index('libZ2.a') < libs.index('Carbon')
 
 
 def _get_link_order_from_cmake(content):
