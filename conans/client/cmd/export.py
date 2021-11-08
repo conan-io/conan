@@ -52,6 +52,9 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock)
 
     ref = ConanFileReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
+    if str(ref) != str(ref).lower():
+        raise ConanException(f"Conan packages names '{ref}' must be all lowercase")
+
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output

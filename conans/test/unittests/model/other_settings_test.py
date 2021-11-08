@@ -130,15 +130,15 @@ class Test(ConanFile):
     """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@user/testing -s os=Linux")
-        self.assertIn("Pkg/0.1@user/testing: OS!!: Linux", client.out)
+        client.run("create . pkg/0.1@user/testing -s os=Linux")
+        self.assertIn("pkg/0.1@user/testing: OS!!: Linux", client.out)
 
     def test_settings_as_a_str(self):
         content = """
 from conans import ConanFile
 
 class SayConan(ConanFile):
-    name = "Say"
+    name = "say"
     version = "0.1"
     settings = "os"
 """
@@ -146,13 +146,13 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("create . -s os=Windows --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
-        conan_info = self._get_conaninfo("Say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1@", client)
         self.assertEqual(conan_info.settings.os, "Windows")
 
         client.run("remove Say/0.1 -f")
         client.run("create . -s os=Linux --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
-        conan_info = self._get_conaninfo("Say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1@", client)
         self.assertEqual(conan_info.settings.os, "Linux")
 
     def test_settings_as_a_list_conanfile(self):
@@ -161,14 +161,14 @@ class SayConan(ConanFile):
 from conans import ConanFile
 
 class SayConan(ConanFile):
-    name = "Say"
+    name = "say"
     version = "0.1"
     settings = "os", "arch"
 """
         client = TestClient()
         client.save({CONANFILE: content})
         client.run("create . -s os=Windows --build missing")
-        conan_info = self._get_conaninfo("Say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1@", client)
         self.assertEqual(conan_info.settings.os,  "Windows")
         self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
@@ -179,14 +179,14 @@ class SayConan(ConanFile):
 from conans import ConanFile
 
 class SayConan(ConanFile):
-    name = "Say"
+    name = "say"
     version = "0.1"
     settings = {"os", "arch"}
 """
         client = TestClient()
         client.save({CONANFILE: content})
         client.run("create . -s os=Windows --build missing")
-        conan_info = self._get_conaninfo("Say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1@", client)
         self.assertEqual(conan_info.settings.os,  "Windows")
         self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
@@ -211,7 +211,7 @@ class SayConan(ConanFile):
 from conans import ConanFile
 
 class SayConan(ConanFile):
-    name = "Say"
+    name = "say"
     version = "0.1"
     settings = "os"
 """
@@ -237,15 +237,15 @@ class SayConan(ConanFile):
 from conans import ConanFile
 
 class SayConan(ConanFile):
-    name = "Say"
+    name = "say"
     version = "0.1"
     settings = None
 """
         client.save({CONANFILE: content})
-        client.run("remove Say/0.1@ -f")
+        client.run("remove say/0.1@ -f")
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
-        conan_info = self._get_conaninfo("Say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1@", client)
         self.assertEqual(conan_info.settings.dumps(), "")
 
         # Settings is {}
@@ -253,15 +253,15 @@ class SayConan(ConanFile):
 from conans import ConanFile
 
 class SayConan(ConanFile):
-    name = "Say"
+    name = "say"
     version = "0.1"
     settings = {}
 """
         client.save({CONANFILE: content})
-        client.run("remove Say/0.1@ -f")
+        client.run("remove say/0.1@ -f")
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
 
-        conan_info = self._get_conaninfo("Say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1@", client)
 
         self.assertEqual(conan_info.settings.dumps(), "")

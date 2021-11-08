@@ -15,7 +15,7 @@ from conans import ConanFile
 from conans.util.files import save
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     build_policy = "missing"
 
@@ -76,7 +76,7 @@ from conans import ConanFile
 class ConanLib(ConanFile):
     name = "Say"
     version = "0.1"
-    requires = "Hello/0.1@lasote/stable"
+    requires = "hello/0.1@lasote/stable"
 
     def imports(self):
         self.copy("file*.txt", dst="%s")
@@ -97,7 +97,7 @@ from conans import ConanFile
 import os
 
 class ConanLib(ConanFile):
-    requires = "Hello/0.1@lasote/stable"
+    requires = "hello/0.1@lasote/stable"
 
     def imports(self):
         self.copy("file*.txt", dst=os.environ["MY_IMPORT_PATH"])

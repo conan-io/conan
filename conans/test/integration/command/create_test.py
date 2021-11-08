@@ -128,7 +128,7 @@ class MyPkg(ConanFile):
 
     def test_error_create_name_version(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("1.2")})
+        client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("1.2")})
         client.run("create . Hello/1.2@lasote/stable")
         client.run("create ./ Pkg/1.2@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with name Pkg!=Hello", client.out)
@@ -239,7 +239,7 @@ class MyPkg(ConanFile):
         self.assertIn("Bar/0.1@user/stable: Forced build from source", client.out)
 
     def test_build_folder_handling(self):
-        conanfile = GenConanfile().with_name("Hello").with_version("0.1")
+        conanfile = GenConanfile().with_name("hello").with_version("0.1")
         test_conanfile = GenConanfile().with_test("pass")
         client = TestClient()
         default_build_dir = os.path.join(client.current_folder, "test_package", "build")
@@ -341,7 +341,7 @@ class MyPkg(ConanFile):
 
     def test_conaninfo_contents_without_user_channel(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
+        client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.1")})
         client.run("create .")
         client.save({"conanfile.py": GenConanfile().with_name("Bye").with_version("0.1")
                                                    .with_require("Hello/0.1")})
