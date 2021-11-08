@@ -30,7 +30,7 @@ class MyPkg(ConanFile):
 """
         self.client.save({"conanfile.py": conanfile,
                      "myheader.h": "my header"})
-        self.client.run("create . Pkg/0.1@lasote/channel")
+        self.client.run("create . pkg/0.1@lasote/channel")
 
     def test_basic(self):
         pref = self.client.get_latest_prev(ConanFileReference.loads("pkg/0.1@lasote/channel"),
@@ -59,7 +59,7 @@ class MyPkg(ConanFile):
         client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
 
         client.run("install pkg/0.1@lasote/channel")
-        pref = self.client.get_latest_prev(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
+        pref = self.client.get_latest_prev(ConanFileReference.loads("pkg/0.1@lasote/channel"),
                                            NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(client.get_latest_pkg_layout(pref).package(), "myheader.h")
         with self.assertRaises(IOError):

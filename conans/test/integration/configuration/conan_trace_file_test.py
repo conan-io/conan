@@ -80,7 +80,7 @@ class ConanTraceTest(unittest.TestCase):
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-            client.save({"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
+            client.save({"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
                          "file.txt": "content"})
             client.run("remote login default lasote -p mypass")
             client.run("export . lasote/stable")

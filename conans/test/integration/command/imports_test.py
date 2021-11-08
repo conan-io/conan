@@ -29,7 +29,7 @@ class HelloConan(ConanFile):
 """
 
 test1 = """[requires]
-Hello/0.1@lasote/stable
+hello/0.1@lasote/stable
 
 [imports]
 ., file* -> .
@@ -40,7 +40,7 @@ from conans import ConanFile
 from conans.util.files import save
 
 class HelloReuseConan(ConanFile):
-    requires = "Hello/0.1@lasote/stable"
+    requires = "hello/0.1@lasote/stable"
 
     def imports(self):
         self.copy("*1.txt")
@@ -51,7 +51,7 @@ from conans import ConanFile
 from conans.util.files import save
 
 class HelloReuseConan(ConanFile):
-    requires = "Hello/0.1@lasote/stable"
+    requires = "hello/0.1@lasote/stable"
 
     def imports(self):
         self.copy("*2.txt")

@@ -18,7 +18,7 @@ from conans import ConanFile
 import platform
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "1.2.1"
     files = '*'
 

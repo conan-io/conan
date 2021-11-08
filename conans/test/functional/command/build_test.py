@@ -31,7 +31,7 @@ from conans import ConanFile
 from conans.tools import mkdir
 
 class AConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 
     def package(self):
@@ -151,13 +151,13 @@ class AConan(ConanFile):
     pass
 """
         client.save({CONANFILE: conanfile_dep})
-        client.run("create . Hello.Pkg/0.1@lasote/testing")
+        client.run("create . Hello.pkg/0.1@lasote/testing")
         client.run("create . Hello-Tools/0.1@lasote/testing")
         conanfile_scope_env = """
 from conans import ConanFile
 
 class AConan(ConanFile):
-    requires = "Hello.Pkg/0.1@lasote/testing", "Hello-Tools/0.1@lasote/testing"
+    requires = "Hello.pkg/0.1@lasote/testing", "Hello-Tools/0.1@lasote/testing"
 
     def build(self):
         self.output.info("HELLO ROOT PATH: %s" %

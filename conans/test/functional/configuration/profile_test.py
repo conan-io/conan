@@ -339,7 +339,7 @@ class ProfileTest(unittest.TestCase):
                        options={"Hello0:language": 1,
                                 "Hello0:static": False})
 
-        self.client.save({"conanfile.py": GenConanfile("Hello0", "1").with_option("language", [1, 2])
+        self.client.save({"conanfile.py": GenConanfile("hello0", "1").with_option("language", [1, 2])
                           .with_option("static", [True, False])})
         self.client.run("install . --build missing -pr vs_12_86")
         info = self.client.out
@@ -460,7 +460,7 @@ class WinRequireDefaultNameConan(ConanFile):
 import os
 
 class DefaultNameConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     settings = "os", "compiler", "arch", "build_type"
 
@@ -478,7 +478,7 @@ class DefaultNameConan(ConanFile):
                        settings={"os": "Linux"})
 
         # Install with the previous profile
-        self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
+        self.client.run("info hello/0.1@lasote/stable --profile scopes_env")
         self.assertNotIn('''Requires:
                 WinRequire/0.1@lasote/stable''', self.client.out)
 
@@ -487,7 +487,7 @@ class DefaultNameConan(ConanFile):
                        settings={"os": "Windows"})
 
         # Install with the previous profile
-        self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
+        self.client.run("info hello/0.1@lasote/stable --profile scopes_env")
         self.assertIn('''Requires:
         WinRequire/0.1@lasote/stable''', self.client.out)
 

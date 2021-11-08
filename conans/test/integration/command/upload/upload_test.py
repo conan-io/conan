@@ -36,7 +36,7 @@ class UploadTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0 will remove -p make sense for 2.0?")
     def test_upload_dirty(self):
         client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
+        client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("create . lasote/testing")
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
 
@@ -548,12 +548,12 @@ class MyPkg(ConanFile):
     def test_upload_without_sources(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
         client.run("upload * --all --confirm -r default")
         client2 = TestClient(servers=client.servers, inputs=["admin", "password",
                                                              "lasote", "mypass"])
 
-        client2.run("install Pkg/0.1@user/testing")
+        client2.run("install pkg/0.1@user/testing")
         client2.run("remote remove default")
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                              users={"lasote": "mypass"})

@@ -36,7 +36,7 @@ class Pkg(ConanFile):
     settings = "os", "compiler"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
+        client.run("create . pkg/0.1@lasote/testing", assert_error=True)
         self.assertIn("ERROR: settings.yml: None setting can't have subsettings", client.out)
 
     @pytest.mark.xfail(reason="Working in the PackageID broke this")
@@ -59,13 +59,13 @@ class Pkg(ConanFile):
     settings = "compiler", "cppstd"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@lasote/testing")
+        client.run("create . pkg/0.1@lasote/testing")
         self.assertIn("""Configuration (profile_host):
 [settings]
 compiler=mycomp
 compiler.version=2.3
 cppstd=11""", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Package "
+        self.assertIn("pkg/0.1@lasote/testing: Package "
                       "'c2f0c2641722089d9b11cd646c47d239af044b5a' created",
                       client.out)
 
@@ -84,18 +84,18 @@ cppstd=11""", client.out)
         save(client.cache.default_profile_path, "")
 
         client.save({"conanfile.py": GenConanfile().with_settings("os", "compiler")})
-        client.run("create . Pkg/0.1@lasote/testing -s compiler=gcc")
+        client.run("create . pkg/0.1@lasote/testing -s compiler=gcc")
         self.assertIn("544c1d8c53e9d269737e68e00ec66716171d2704", client.out)
-        client.run("search Pkg/0.1@lasote/testing")
+        client.run("search pkg/0.1@lasote/testing")
         self.assertNotIn("os: None", client.out)
-        pref = PkgReference.loads("Pkg/0.1@lasote/testing:544c1d8c53e9d269737e68e00ec66716171d2704")
+        pref = PkgReference.loads("pkg/0.1@lasote/testing:544c1d8c53e9d269737e68e00ec66716171d2704")
         info_path = os.path.join(client.get_latest_pkg_layout(pref).package(), CONANINFO)
         info = load(info_path)
         self.assertNotIn("os", info)
         # Explicitly specifying None, put it in the conaninfo.txt, but does not affect the hash
-        client.run("create . Pkg/0.1@lasote/testing -s compiler=gcc -s os=None")
+        client.run("create . pkg/0.1@lasote/testing -s compiler=gcc -s os=None")
         self.assertIn("544c1d8c53e9d269737e68e00ec66716171d2704", client.out)
-        client.run("search Pkg/0.1@lasote/testing")
+        client.run("search pkg/0.1@lasote/testing")
         self.assertIn("os: None", client.out)
         info = load(info_path)
         self.assertIn("os", info)

@@ -58,16 +58,16 @@ class Pkg(ConanFile):
         self.copy_deps("*.dll", dst="%s")
 """ % dll_folder.replace("\\", "/")
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
         self.assertNotIn("deploy()", client.out)
 
         def test_install_in(folder):
             client.current_folder = temp_folder()
-            client.run("install Pkg/0.1@user/testing --install-folder=%s" % folder)
+            client.run("install pkg/0.1@user/testing --install-folder=%s" % folder)
 
-            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.dll' file: mylib.dll",
+            self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.dll' file: mylib.dll",
                           client.out)
-            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.exe' file: myapp.exe",
+            self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.exe' file: myapp.exe",
                           client.out)
             deploy_manifest = FileTreeManifest.loads(
                     client.load(os.path.join(folder, "deploy_manifest.txt")))

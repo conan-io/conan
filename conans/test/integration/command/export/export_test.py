@@ -40,7 +40,7 @@ class ExportSettingsTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class TestConan(ConanFile):
-                name = "Hello"
+                name = "hello"
                 version = "1.2"
                 exports = "file1.txt"
                 exports_sources = "file2.txt"
@@ -104,7 +104,7 @@ class ExportSettingsTest(unittest.TestCase):
         base = """
 from conans import ConanFile
 class TestConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "1.2"
     exports = "../*.txt"
 """
@@ -126,7 +126,7 @@ class TestConan(ConanFile):
         conanfile = """
 from conans import ConanFile
 class TestConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "1.2"
     exports = "../sibling/*.txt"
 """
@@ -147,7 +147,7 @@ class TestConan(ConanFile):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class TestConan(ConanFile):
-                name = "Hello"
+                name = "hello"
                 version = "1.2"
                 exports_sources = "../test/src/*", "../cpp/*", "../include/*"
             """)
@@ -166,7 +166,7 @@ class TestConan(ConanFile):
     @parameterized.expand([("myconanfile.py", ), ("Conanfile.py", )])
     def test_filename(self, filename):
         client = TestClient()
-        client.save({filename: GenConanfile("Hello", "1.2")})
+        client.save({filename: GenConanfile("hello", "1.2")})
         client.run("export %s user/stable" % filename)
         self.assertIn("Hello/1.2@user/stable: A new conanfile.py version was exported", client.out)
         ref = ConanFileReference("Hello", "1.2", "user", "stable")
@@ -182,7 +182,7 @@ class TestConan(ConanFile):
         conanfile = """
 from conans import ConanFile
 class TestConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "1.2"
     exports = "*.txt", "!*file1.txt"
     exports_sources = "*.cpp", "!*temp.cpp"
@@ -208,7 +208,7 @@ class TestConan(ConanFile):
         conanfile = """
 from conans import ConanFile
 class TestConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "1.2"
     exports = "*.txt", "!*/temp/*"
 """
@@ -230,7 +230,7 @@ class ExportTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
-        self.files = {"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
+        self.files = {"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
                       "main.cpp": "MyMain",
                       "CMakeLists.txt": "MyCmake",
                       "executable": "myexe"}
@@ -307,7 +307,7 @@ class OpenSSLConan(ConanFile):
         # Export the same conans
         # Do not adjust cpu_count, it is reusing a cache
         client2 = TestClient(self.client.cache_folder, cpu_count=False)
-        files2 = {"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
+        files2 = {"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
                   "main.cpp": "MyMain",
                   "CMakeLists.txt": "MyCmake",
                   "executable": "myexe"}
@@ -345,7 +345,7 @@ class OpenSSLConan(ConanFile):
         # Do not adjust cpu_count, it is reusing a cache
         client2 = TestClient(self.client.cache_folder, cpu_count=False)
         files2 = {"conanfile.py": "# insert comment\n" +
-                                  str(GenConanfile("Hello0", "0.1").with_exports("*")),
+                                  str(GenConanfile("hello0", "0.1").with_exports("*")),
                   "main.cpp": "MyMain",
                   "CMakeLists.txt": "MyCmake",
                   "executable": "myexe"}

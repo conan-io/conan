@@ -14,7 +14,7 @@ class PutPropertiesTest(unittest.TestCase):
 
     def test_create_empty_property_file(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
+        client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("export . lasote/stable")
         props_file = client.cache.artifacts_properties_path
         self.assertTrue(os.path.exists(props_file))
@@ -50,7 +50,7 @@ class PutPropertiesTest(unittest.TestCase):
                             servers=servers, inputs=["admin", "password"])
         _create_property_files(client, wanted_vars)
 
-        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
+        client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("upload Hello0/0.1@lasote/stable -c -r default")
 
@@ -90,7 +90,7 @@ class PutPropertiesTest(unittest.TestCase):
                             servers=servers, inputs=["admin", "password"])
         _create_property_files(client, wanted_vars)
 
-        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
+        client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("upload Hello0/0.1@lasote/stable -c -r default")
 

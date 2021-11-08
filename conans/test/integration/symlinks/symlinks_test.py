@@ -16,7 +16,7 @@ from conans.util.files import save
 import os
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports = "*"
 
@@ -36,7 +36,7 @@ class HelloConan(ConanFile):
 """
 
 test_conanfile = """[requires]
-Hello/0.1@lasote/stable
+hello/0.1@lasote/stable
 
 [imports]
 ., * -> .
@@ -79,7 +79,7 @@ class SymLinksTest(unittest.TestCase):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        pref = PkgReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, pref)
 
@@ -91,7 +91,7 @@ class SymLinksTest(unittest.TestCase):
         conanfile = """
 from conans import ConanFile
 class TestConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 
     def package(self):
@@ -108,8 +108,8 @@ class TestConan(ConanFile):
         save(file2, "Hello2")
         os.symlink("version1", latest)
         os.symlink("latest", edge)
-        client.run("export-pkg ./recipe Hello/0.1@lasote/stable")
-        pref = PkgReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        client.run("export-pkg ./recipe hello/0.1@lasote/stable")
+        pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, pref, build=False)
 
@@ -128,7 +128,7 @@ class TestConan(ConanFile):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        ref = ConanFileReference.loads("hello/0.1@lasote/stable")
         pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
 
         pkg_layout = client.get_latest_pkg_layout(pref)
@@ -157,9 +157,9 @@ class TestConan(ConanFile):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        pref = PkgReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
-        client.run("upload Hello/0.1@lasote/stable --all -r default")
+        client.run("upload hello/0.1@lasote/stable --all -r default")
         client.run('remove "*" -f')
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
         client.run("install conanfile.txt")

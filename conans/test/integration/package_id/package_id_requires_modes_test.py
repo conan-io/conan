@@ -32,9 +32,9 @@ class PackageIDTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_version_semver_schema(self):
-        self._export("Hello", "1.2.0")
+        self._export("hello", "1.2.0")
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].semver()',
+                     package_id_text='self.info.requires["hello"].semver()',
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
@@ -44,10 +44,10 @@ class PackageIDTest(unittest.TestCase):
 
         # Now change the Hello version and build it, if we install out requires should not be
         # needed the --build needed because Hello2 don't need to be rebuilt
-        self._export("Hello", "1.5.0", package_id_text=None, requires=None)
+        self._export("hello", "1.5.0", package_id_text=None, requires=None)
         self.client.run("install Hello/1.5.0@lasote/stable --build missing")
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].semver()',
+                     package_id_text='self.info.requires["hello"].semver()',
                      requires=["Hello/1.5.0@lasote/stable"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
@@ -64,11 +64,11 @@ class PackageIDTest(unittest.TestCase):
                       self.client.out)
 
         # Try to change user and channel too, should be the same, not rebuilt needed
-        self._export("Hello", "1.5.0", package_id_text=None, requires=None,
+        self._export("hello", "1.5.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
         self.client.run("install Hello/1.5.0@memsharded/testing --build missing")
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].semver()',
+                     package_id_text='self.info.requires["hello"].semver()',
                      requires=["Hello/1.5.0@memsharded/testing"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
@@ -79,9 +79,9 @@ class PackageIDTest(unittest.TestCase):
                       self.client.out)
 
     def test_version_full_version_schema(self):
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None)
+        self._export("hello", "1.2.0", package_id_text=None, requires=None)
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].full_version_mode()',
+                     package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
@@ -90,11 +90,11 @@ class PackageIDTest(unittest.TestCase):
         self.client.run("install . --build missing")
 
         # If we change the user and channel should not be needed to rebuild
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None,
+        self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
         self.client.run("install Hello/1.2.0@memsharded/testing --build missing")
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].full_version_mode()',
+                     package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["Hello/1.2.0@memsharded/testing"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
@@ -107,10 +107,10 @@ class PackageIDTest(unittest.TestCase):
 
         # Now change the Hello version and build it, if we install out requires is
         # needed the --build needed because Hello2 needs to be build
-        self._export("Hello", "1.5.0", package_id_text=None, requires=None)
+        self._export("hello", "1.5.0", package_id_text=None, requires=None)
         self.client.run("install Hello/1.5.0@lasote/stable --build missing")
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].full_version_mode()',
+                     package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["Hello/1.5.0@lasote/stable"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
@@ -121,9 +121,9 @@ class PackageIDTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_version_full_recipe_schema(self):
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None)
+        self._export("hello", "1.2.0", package_id_text=None, requires=None)
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].full_recipe_mode()',
+                     package_id_text='self.info.requires["hello"].full_recipe_mode()',
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
@@ -136,11 +136,11 @@ class PackageIDTest(unittest.TestCase):
                       self.client.out)
 
         # If we change the user and channel should be needed to rebuild
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None,
+        self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
         self.client.run("install Hello/1.2.0@memsharded/testing --build missing")
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].full_recipe_mode()',
+                     package_id_text='self.info.requires["hello"].full_recipe_mode()',
                      requires=["Hello/1.2.0@memsharded/testing"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
@@ -151,11 +151,11 @@ class PackageIDTest(unittest.TestCase):
 
         # If we change only the package ID from hello (one more defaulted option
         #  to True) should not affect
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None,
+        self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      default_option_value='"on"')
         self.client.run("install Hello/1.2.0@lasote/stable --build missing")
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].full_recipe_mode()',
+                     package_id_text='self.info.requires["hello"].full_recipe_mode()',
                      requires=["Hello/1.2.0@lasote/stable"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
@@ -165,9 +165,9 @@ class PackageIDTest(unittest.TestCase):
         self.assertIn("Hello2/2.3.8@lasote/stable:{}".format(pkg_id), self.client.out)
 
     def test_version_full_package_schema(self):
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None)
+        self._export("hello", "1.2.0", package_id_text=None, requires=None)
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].full_package_mode()',
+                     package_id_text='self.info.requires["hello"].full_package_mode()',
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
@@ -177,7 +177,7 @@ class PackageIDTest(unittest.TestCase):
 
         # If we change only the package ID from hello (one more defaulted option
         #  to True) should affect
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None,
+        self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      default_option_value='"on"')
         self.client.run("install Hello/1.2.0@lasote/stable --build missing")
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
@@ -189,9 +189,9 @@ class PackageIDTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_nameless_mode(self):
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None)
+        self._export("hello", "1.2.0", package_id_text=None, requires=None)
         self._export("Hello2", "2.3.8",
-                     package_id_text='self.info.requires["Hello"].unrelated_mode()',
+                     package_id_text='self.info.requires["hello"].unrelated_mode()',
                      requires=["Hello/1.2.0@lasote/stable"])
 
         # Build the dependencies with --build missing
@@ -222,7 +222,7 @@ class PackageIDTest(unittest.TestCase):
     def test_toolset_visual_compatibility(self):
         # By default is the same to build with native visual or the toolchain
         for package_id in [None, "self.info.vs_toolset_compatible()"]:
-            self._export("Hello", "1.2.0", package_id_text=package_id,
+            self._export("hello", "1.2.0", package_id_text=package_id,
                          channel="user/testing",
                          settings=["compiler", ])
             self.client.run('install Hello/1.2.0@user/testing '
@@ -250,7 +250,7 @@ class PackageIDTest(unittest.TestCase):
 
     def test_toolset_visual_incompatibility(self):
         # By default is the same to build with native visual or the toolchain
-        self._export("Hello", "1.2.0", package_id_text="self.info.vs_toolset_incompatible()",
+        self._export("hello", "1.2.0", package_id_text="self.info.vs_toolset_incompatible()",
                      channel="user/testing",
                      settings=["compiler", ],
                      )
@@ -266,7 +266,7 @@ class PackageIDTest(unittest.TestCase):
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
     def test_std_non_matching_with_compiler_cppstd(self):
-        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
+        self._export("hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
                      channel="user/testing",
                      settings=["compiler", ]
                      )
@@ -280,7 +280,7 @@ class PackageIDTest(unittest.TestCase):
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
     def test_std_matching_with_compiler_cppstd(self):
-        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_matching()",
+        self._export("hello", "1.2.0", package_id_text="self.info.default_std_matching()",
                      channel="user/testing",
                      settings=["compiler", ]
                      )

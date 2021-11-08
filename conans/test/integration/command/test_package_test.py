@@ -15,37 +15,37 @@ class TestPackageTest(unittest.TestCase):
 
     def test_basic(self):
         client = TestClient()
-        client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("0.1"),
+        client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . lasote/stable")
-        self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.out)
-        self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Configuring sources", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
     def test_test_only(self):
         test_conanfile = GenConanfile().with_test("pass")
         client = TestClient()
-        client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("0.1"),
+        client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . lasote/stable")
-        client.run("test test_package Hello/0.1@lasote/stable")
+        client.run("test test_package hello/0.1@lasote/stable")
 
         self.assertNotIn("Exporting package recipe", client.out)
         self.assertNotIn("Forced build from source", client.out)
         self.assertNotIn("Package '%s' created" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertNotIn("Forced build from source", client.out)
-        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
 
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        client.run("test test_package Hello/0.1@lasote/stable")
-        self.assertNotIn("Hello/0.1@lasote/stable: Configuring sources", client.out)
-        self.assertNotIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
-        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
-        self.assertIn("Hello/0.1@lasote/stable (test package): Running test()", client.out)
+        client.run("test test_package hello/0.1@lasote/stable")
+        self.assertNotIn("hello/0.1@lasote/stable: Configuring sources", client.out)
+        self.assertNotIn("hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
+        self.assertIn("hello/0.1@lasote/stable (test package): Running test()", client.out)
 
     def test_wrong_version(self):
         test_conanfile = GenConanfile().with_test("pass").with_require("Hello/0.2@user/cc")
         client = TestClient()
-        client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("0.1"),
+        client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . user/channel", assert_error=True)
         assert "ERROR: Duplicated requirement: Hello/0.1@user/channel" in client.out
@@ -58,7 +58,7 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: other_conanfile})
         client.run("export . user2/channel2")
         client.run("install other/0.2@user2/channel2 --build")
-        client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("0.1"),
+        client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . user/channel")
         self.assertIn("Hello/0.1@user/channel: Configuring sources", client.out)
@@ -66,8 +66,8 @@ class TestPackageTest(unittest.TestCase):
 
         # explicit override of user/channel works
         client.run("create . lasote/stable")
-        self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.out)
-        self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Configuring sources", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
     def test_test_with_path_errors(self):
         client = TestClient()
@@ -90,26 +90,26 @@ class TestPackageTest(unittest.TestCase):
         test_conanfile = GenConanfile().with_test("pass")
         # Create a package which can be tested afterwards.
         client = TestClient()
-        client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("0.1")},
+        client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1")},
                     clean_first=True)
         client.run("create . lasote/stable")
 
         # Test the default behavior.
         default_build_dir = os.path.join(client.current_folder, "test_package", "build")
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        client.run("test test_package Hello/0.1@lasote/stable")
+        client.run("test test_package hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(default_build_dir))
 
         # Test if the specified build folder is respected.
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        client.run("test -tbf=build_folder test_package Hello/0.1@lasote/stable")
+        client.run("test -tbf=build_folder test_package hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
 
         # Test if using a temporary test folder can be enabled via the environment variable.
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
         with tools.environment_append({"CONAN_TEMP_TEST_FOLDER": "True"}):
-            client.run("test test_package Hello/0.1@lasote/stable")
+            client.run("test test_package hello/0.1@lasote/stable")
         self.assertFalse(os.path.exists(default_build_dir))
 
         # Test if using a temporary test folder can be enabled via the config file.
@@ -120,12 +120,12 @@ class TestPackageTest(unittest.TestCase):
                                     temp_test_folder=True
                                 """)
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-        client.run("test test_package Hello/0.1@lasote/stable")
+        client.run("test test_package hello/0.1@lasote/stable")
         self.assertFalse(os.path.exists(default_build_dir))
 
         # Test if the specified build folder is respected also when the use of
         # temporary test folders is enabled in the config file.
-        client.run("test -tbf=test_package/build_folder test_package Hello/0.1@lasote/stable")
+        client.run("test -tbf=test_package/build_folder test_package hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package",
                                                     "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
@@ -168,7 +168,7 @@ class ConanTestTest(unittest.TestCase):
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 '''
         client = TestClient()
@@ -198,7 +198,7 @@ class HelloTestConan(ConanFile):
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     def package_info(self):
         self.buildenv_info.define("MYVAR", "new/pythonpath/value")
@@ -234,7 +234,7 @@ class HelloTestConan(ConanFile):
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports = "*"
 
@@ -253,7 +253,7 @@ class HelloReuseConan(ConanFile):
                      "FindXXX.cmake": "Hello FindCmake",
                      "test/conanfile.py": test_conanfile})
         client.run("create . lasote/stable")
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        ref = ConanFileReference.loads("hello/0.1@lasote/stable")
         client.run(f"test test {str(ref)}")
         pref = client.get_latest_prev(ref,
                                       NO_SETTINGS_PACKAGE_ID)

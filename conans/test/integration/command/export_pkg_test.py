@@ -24,7 +24,7 @@ class ExportPkgTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("install .")
-        client.run("export-pkg . Pkg/0.1@user/testing")
+        client.run("export-pkg . pkg/0.1@user/testing")
 
     @pytest.mark.xfail(reason="Build-requires are expanded now, so this is expected to fail atm")
     def test_dont_touch_server_build_require(self):
@@ -36,7 +36,7 @@ class ExportPkgTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": GenConanfile(),
                      "myprofile": profile})
-        client.run("export-pkg . Pkg/0.1@user/testing -pr=myprofile")
+        client.run("export-pkg . pkg/0.1@user/testing -pr=myprofile")
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
@@ -49,19 +49,19 @@ class PkgB(ConanFile):
     requires = "PkgC/0.1@user/testing"
 """
         client.save({CONANFILE: conanfile})
-        client.run("create . PkgB/0.1@user/testing")
+        client.run("create . pkgb/0.1@user/testing")
         conanfile = """from conans import ConanFile
 class PkgA(ConanFile):
-    requires = "PkgB/0.1@user/testing"
+    requires = "pkgb/0.1@user/testing"
     def build(self):
         self.output.info("BUILDING PKGA")
 """
         client.save({CONANFILE: conanfile})
         client.run("install . -if=build")
         client.run("build . -bf=build")
-        client.run("export-pkg . PkgA/0.1@user/testing -bf=build -pr=default")
+        client.run("export-pkg . pkga/0.1@user/testing -bf=build -pr=default")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        self.assertIn(f"PkgA/0.1@user/testing: Package '{package_id}' created", client.out)
+        self.assertIn(f"pkga/0.1@user/testing: Package '{package_id}' created", client.out)
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
@@ -194,7 +194,7 @@ class TestConan(ConanFile):
 
         self.assertIn("Packaged 1 '.a' file: libmycoollib.a", client.out)
         self._consume(client, settings + " . -g CMakeDeps")
-        cmakeinfo = client.load("Hello-release-data.cmake")
+        cmakeinfo = client.load("hello-release-data.cmake")
         self.assertIn("set(Hello_LIBS_RELEASE mycoollib)", cmakeinfo)
 
     def test_build_folders(self):
@@ -323,7 +323,7 @@ class TestConan(ConanFile):
     def test_with_deps(self):
         hello_ref = ConanFileReference.loads("hello/0.1@lasote/stable")
         client = TestClient()
-        conanfile = GenConanfile().with_name("Hello").with_version("0.1")
+        conanfile = GenConanfile().with_name("hello").with_version("0.1")
         client.save({"conanfile.py": str(conanfile)})
         client.run("export . lasote/stable")
         client.run("install hello/0.1@lasote/stable --build")

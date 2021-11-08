@@ -34,12 +34,12 @@ class MyPkg(ConanFile):
             client.save({"conanfile.py": conanfile,
                          self.file_name: "my header"})
             os.chmod(os.path.join(client.current_folder, self.file_name), 0o444 if ro_file else 0o644)
-            client.run("create . Pkg/0.1@lasote/channel")
+            client.run("create . pkg/0.1@lasote/channel")
         return client
 
     def _import(self, client):
         conanfile = """[requires]
-Pkg/0.1@lasote/channel
+pkg/0.1@lasote/channel
 
 [imports]
 ., *.h -> .
@@ -50,7 +50,7 @@ Pkg/0.1@lasote/channel
 
     def _deploy(self, client):
         with client.chdir('deploy'):
-            client.run('install Pkg/0.1@lasote/channel')
+            client.run('install pkg/0.1@lasote/channel')
 
     def _is_file_writable(self, client, folder):
         return bool(os.stat(os.path.join(client.current_folder, folder, self.file_name)).st_mode & stat.S_IWRITE)

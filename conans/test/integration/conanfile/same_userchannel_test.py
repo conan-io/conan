@@ -55,7 +55,7 @@ class SayConan(ConanFile):
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     build_policy = "missing"
 
@@ -74,7 +74,7 @@ class HelloConan(ConanFile):
     def test_create(self):
         self.client.run("create . lasote/stable")
         self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.out)
-        self.assertIn("Hello/0.1@lasote/stable: Building lasote/stable", self.client.out)
+        self.assertIn("hello/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertNotIn("other/testing", self.client.out)
 
         self.client.save({"conanfile.py": self.conanfile,

@@ -67,7 +67,7 @@ conaninfo = '''
 class RemoveTest(unittest.TestCase):
 
     def setUp(self):
-        test_conanfile_contents = str(GenConanfile("Hello", "0.1"))
+        test_conanfile_contents = str(GenConanfile("hello", "0.1"))
         hello_files = {"conanfile.py": test_conanfile_contents}
 
         self.server_folder = temp_folder()

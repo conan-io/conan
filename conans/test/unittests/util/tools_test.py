@@ -214,7 +214,7 @@ class ToolsTest(unittest.TestCase):
         conanfile = """from conans import ConanFile, tools
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 
     def build(self):
@@ -235,7 +235,7 @@ class HelloConan(ConanFile):
 from conans import ConanFile, tools
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 
     def build(self):

@@ -71,7 +71,7 @@ class Pkg(ConanFile):
         self.assertIn("PATCH: this is my patch", client.out)
         client.run("source . -sf=mysrc")
         self.assertIn("PATCH: this is my patch", client.out)
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
         self.assertIn("PATCH: this is my patch", client.out)
 
     def test_source_warning_os_build(self):
@@ -107,7 +107,7 @@ import os
 from conans import ConanFile
 
 class ConanLib(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 
     def source(self):
@@ -128,7 +128,7 @@ class ConanLib(ConanFile):
 import os
 from conans import ConanFile
 class ConanLib(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 '''
         client = TestClient()

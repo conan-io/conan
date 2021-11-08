@@ -192,7 +192,7 @@ class MultiRemoteTest(unittest.TestCase):
     def test_install_from_remotes(self):
         for i in range(3):
             ref = ConanFileReference.loads("Hello%d/0.1@lasote/stable" % i)
-            self.client.save({"conanfile.py": GenConanfile("Hello%d" % i, "0.1")})
+            self.client.save({"conanfile.py": GenConanfile("hello%d" % i, "0.1")})
             self.client.run("export . lasote/stable")
             self.client.run("upload %s -r=remote%d" % (str(ref), i))
 
@@ -200,7 +200,7 @@ class MultiRemoteTest(unittest.TestCase):
         client2 = TestClient(servers=self.servers)
 
         refs = ["Hello0/0.1@lasote/stable", "Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable"]
-        client2.save({"conanfile.py": GenConanfile("HelloX", "0.1").with_requires(*refs)})
+        client2.save({"conanfile.py": GenConanfile("helloX", "0.1").with_requires(*refs)})
         client2.run("install . --build=missing")
         self.assertIn("Hello0/0.1@lasote/stable from 'remote0'", client2.out)
         self.assertIn("Hello1/0.1@lasote/stable from 'remote1'", client2.out)

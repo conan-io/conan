@@ -51,11 +51,11 @@ class TestConan(ConanFile):
         self.copy("*")
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing --build=missing")
-        package_id = re.search(r"Pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
-        self.assertIn("Pkg/0.1@user/testing package(): Packaged 1 '.md' file: LICENSE.md",
+        client.run("create . pkg/0.1@user/testing --build=missing")
+        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.md' file: LICENSE.md",
                       client.out)
-        pref = client.get_latest_prev(ConanFileReference.loads("Pkg/0.1@user/testing"), package_id)
+        pref = client.get_latest_prev(ConanFileReference.loads("pkg/0.1@user/testing"), package_id)
         pkg_folder = client.get_latest_pkg_layout(pref).package()
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibA/LICENSE.txt")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibB/LICENSE.md")))
@@ -144,11 +144,11 @@ LibC/0.1@lasote/testing
                      "a.dll": "",
                      "Foo/b.dll": "",
                      "Baz/b.dll": ""})
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
 
         consumer = textwrap.dedent("""
             [requires]
-            Pkg/0.1@user/testing
+            pkg/0.1@user/testing
             [imports]
             bin, *.dll ->  @ excludes=Foo/*.dll Baz/*.dll
             """)

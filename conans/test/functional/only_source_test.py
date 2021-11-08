@@ -12,14 +12,14 @@ class OnlySourceTest(unittest.TestCase):
     def test_conan_test(self):
         # Checks --build in test command
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile("Hello0", "0.0")})
+        client.save({"conanfile.py": GenConanfile("hello0", "0.0")})
         client.run("export . lasote/stable")
-        client.save({"conanfile.py": GenConanfile("Hello1", "1.1").
+        client.save({"conanfile.py": GenConanfile("hello1", "1.1").
                     with_require("Hello0/0.0@lasote/stable")})
         client.run("export . lasote/stable")
 
         # Now test out Hello2
-        client.save({"conanfile.py": GenConanfile("Hello2", "2.2").
+        client.save({"conanfile.py": GenConanfile("hello2", "2.2").
                     with_require("Hello1/1.1@lasote/stable"),
                      "test/conanfile.py": GenConanfile().with_test("pass")})
 
@@ -79,7 +79,7 @@ class MyPackage(ConanFile):
 
     def test_build_policies_in_conanfile(self):
         client = TestClient(default_server_user=True)
-        base = GenConanfile("Hello0", "1.0").with_exports("*")
+        base = GenConanfile("hello0", "1.0").with_exports("*")
         conanfile = str(base) + "\n    build_policy = 'missing'"
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
@@ -119,7 +119,7 @@ class MyPackage(ConanFile):
     def test_reuse(self):
         client = TestClient(default_server_user=True)
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
+        client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("install %s --build missing" % str(ref))
         pref = client.get_latest_prev(ref)

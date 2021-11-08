@@ -43,9 +43,9 @@ class InfoOptionsTest(unittest.TestCase):
                 default_options = {{"option{0}1": 1, "option{0}2": 2}}
             """)
         client.save({"conanfile.py": conanfile.format("A")})
-        client.run("create . PkgA/0.1@user/testing")
+        client.run("create . pkga/0.1@user/testing")
         client.save({"conanfile.py": conanfile.format("B")})
         client.run("install .")
-        client.run("info PkgA/0.1@user/testing")
-        self.assertIn("PkgA/0.1@user/testing", client.out)
+        client.run("info pkga/0.1@user/testing")
+        self.assertIn("pkga/0.1@user/testing", client.out)
         self.assertIn("BuildID: None", client.out)

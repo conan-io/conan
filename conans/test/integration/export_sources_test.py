@@ -18,7 +18,7 @@ conanfile_py = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports = "*.h", "*.cpp", "*.lic"
     def package(self):
@@ -30,7 +30,7 @@ combined_conanfile = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "*.h", "*.cpp"
     exports = "*.txt", "*.lic"
@@ -44,7 +44,7 @@ nested_conanfile = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "src/*.h", "src/*.cpp"
     exports = "src/*.txt", "src/*.lic"

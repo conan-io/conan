@@ -346,7 +346,7 @@ class Pkg(ConanFile):
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=["admin", "password"])
         for i in (1, 2):
-            client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.%s" % i)})
+            client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.%s" % i)})
             client.run("export . lasote/channel")
 
         client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")

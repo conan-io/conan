@@ -33,7 +33,7 @@ class DevelopTest(unittest.TestCase):
         else:
             client.save({"conanfile.py": conanfile,
                          "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
         self.assertIn("Develop True configure!", client.out)
         self.assertIn("Develop True requirements!", client.out)
         self.assertIn("Develop True source!", client.out)
@@ -42,10 +42,10 @@ class DevelopTest(unittest.TestCase):
         self.assertIn("Develop True package_info!", client.out)
         self.assertIn("Develop True package_id!", client.out)
 
-        client.run("install Pkg/0.1@user/testing --build")
+        client.run("install pkg/0.1@user/testing --build")
         self.assertNotIn("Develop True", client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require("Pkg/0.1@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("create . Other/1.0@user/testing")
         self.assertNotIn("Develop True", client.out)
 

@@ -146,7 +146,7 @@ class InfoTest(unittest.TestCase):
         # Checking that "Required by: virtual" doesnt appear in the output
         self.client = TestClient()
         self._create("Hello", "0.1")
-        self.client.run("info Hello/0.1@lasote/stable")
+        self.client.run("info hello/0.1@lasote/stable")
         self.assertNotIn("virtual", self.client.out)
         self.assertNotIn("Required", self.client.out)
 

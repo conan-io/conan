@@ -167,7 +167,7 @@ nonexistingpattern*: sometool/1.2@user/channel
 
     def test_build_requires_options(self):
         client = TestClient()
-        client.save({CONANFILE: GenConanfile("Mytool", "0.1")})
+        client.save({CONANFILE: GenConanfile("mytool", "0.1")})
         client.run("export . lasote/stable")
 
         conanfile = """
@@ -176,19 +176,19 @@ from conans import ConanFile, tools
 class mylib(ConanFile):
     name = "mylib"
     version = "0.1"
-    build_requires = "Mytool/0.1@lasote/stable"
+    build_requires = "mytool/0.1@lasote/stable"
     options = {"coverage": [True, False]}
     def build(self):
         self.output.info("Coverage %s" % self.options.coverage)
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . -o mylib:coverage=True --build missing")
-        self.assertIn("Mytool/0.1@lasote/stable from local cache", client.out)
-        self.assertIn("Mytool/0.1@lasote/stable: Calling build()", client.out)
+        self.assertIn("mytool/0.1@lasote/stable from local cache", client.out)
+        self.assertIn("mytool/0.1@lasote/stable: Calling build()", client.out)
         self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)
 
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . -o coverage=True")
-        self.assertIn("Mytool/0.1@lasote/stable from local cache", client.out)
-        self.assertIn("Mytool/0.1@lasote/stable: Already installed!", client.out)
+        self.assertIn("mytool/0.1@lasote/stable from local cache", client.out)
+        self.assertIn("mytool/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)

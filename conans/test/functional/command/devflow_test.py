@@ -58,9 +58,9 @@ class DevInSourceFlowTest(unittest.TestCase):
 
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=../build")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = ConanFileReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_prev(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -77,9 +77,9 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("build .")
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=.")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = ConanFileReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_prev(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -98,9 +98,9 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("build ..")
 
         client.current_folder = build_folder
-        client.run("export-pkg .. Pkg/0.1@lasote/testing --source-folder=.. ")
+        client.run("export-pkg .. pkg/0.1@lasote/testing --source-folder=.. ")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = ConanFileReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_prev(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -156,9 +156,9 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("build ../recipe --source-folder=../src")
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build -sf=../src")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=../build -sf=../src")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = ConanFileReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_prev(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -176,9 +176,9 @@ class DevOutSourceFlowTest(unittest.TestCase):
 
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=.")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = ConanFileReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_prev(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -198,9 +198,9 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("build .. --source-folder=.")
         client.current_folder = repo_folder
 
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./build")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=./build")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = ConanFileReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_prev(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)

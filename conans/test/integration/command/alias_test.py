@@ -29,15 +29,15 @@ class ConanAliasTest(unittest.TestCase):
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     python_requires = 'test-python-requires/0.1@user/testing'"""})
-        client.run("create . Pkg/0.1@user/testing")
-        client.run("alias Pkg/0.1@user/testing Pkg/0.2@user/testing", assert_error=True)
-        self.assertIn("ERROR: Reference 'Pkg/0.1@user/testing' is already a package",
+        client.run("create . pkg/0.1@user/testing")
+        client.run("alias pkg/0.1@user/testing Pkg/0.2@user/testing", assert_error=True)
+        self.assertIn("ERROR: Reference 'pkg/0.1@user/testing' is already a package",
                       client.out)
 
     def test_basic(self):
         client = TestClient(default_server_user=True)
         for i in (1, 2):
-            client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.%s" % i)})
+            client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.%s" % i)})
             client.run("export . lasote/channel")
 
         client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")
@@ -91,7 +91,7 @@ class Pkg(ConanFile):
             """)
 
         # Create two packages
-        reference1 = "PkgA/0.1@user/testing"
+        reference1 = "pkga/0.1@user/testing"
         t.save({"conanfile.py": conanfile.format(reference1)})
         t.run("export . {}".format(reference1))
 
