@@ -95,77 +95,44 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . Hello/0.1@lasote/testing")
-        client.run("upload Hello/0.1@lasote/testing -p=123 -r default", assert_error=True)
-        self.assertIn("ERROR: Binary package Hello/0.1@lasote/testing:123 not found", client.out)
+        client.run("upload Hello/0.1@lasote/testing:123 -r default", assert_error=True)
+        self.assertIn("There is not package binary matching Hello/0.1@lasote/testing:123",
+                      client.out)
 
     def test_not_existing_error(self):
         """ Trying to upload with pattern not matched must raise an Error
         """
         client = TestClient(default_server_user=True)
         client.run("upload some_nonsense -r default", assert_error=True)
-        self.assertIn("ERROR: No packages found matching pattern 'some_nonsense'",
-                      client.out)
-
-    def test_invalid_reference_error(self):
-        """ Trying to upload an invalid reference must raise an Error
-        """
-        client = TestClient(default_server_user=True)
-        client.run("upload some_nonsense -p hash1 -r default", assert_error=True)
-        self.assertIn("ERROR: -p parameter only allowed with a valid recipe reference",
-                      client.out)
+        self.assertIn("No recipes found matching pattern 'some_nonsense'", client.out)
 
     def test_non_existing_recipe_error(self):
         """ Trying to upload a non-existing recipe must raise an Error
         """
         client = TestClient(default_server_user=True)
         client.run("upload Pkg/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("Recipe not found: 'Pkg/0.1@user/channel'", client.out)
+        self.assertIn("No recipes found matching pattern 'Pkg/0.1@user/channel'", client.out)
 
     def test_non_existing_package_error(self):
         """ Trying to upload a non-existing package must raise an Error
         """
         client = TestClient(default_server_user=True)
-        client.run("upload Pkg/0.1@user/channel -p hash1 -r default", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'Pkg/0.1@user/channel'", client.out)
-
-    def test_deprecated_p_arg(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
-        client.run("upload Hello0/1.2.1@user/testing -p {} -c -r default".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("WARN: Usage of `--package` argument is deprecated. "
-                      "Use a full reference instead: `conan upload [...] "
-                      "Hello0/1.2.1@user/testing:{}`".format(NO_SETTINGS_PACKAGE_ID), client.out)
+        client.run("upload Pkg/0.1@user/channel -r default", assert_error=True)
+        self.assertIn("No recipes found matching pattern 'Pkg/0.1@user/channel'", client.out)
 
     def test_upload_with_pref(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/1.2.1@user/testing:{} -c -r default".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertNotIn("WARN: Usage of `--package` argument is deprecated. "
-                         "Use a full reference instead: `conan upload [...] "
-                         "Hello0/1.2.1@user/testing:{}`".format(NO_SETTINGS_PACKAGE_ID),
-                         client.out)
-        self.assertIn("Uploading package 1/1: {} to 'default'".format(NO_SETTINGS_PACKAGE_ID),
+        self.assertIn("Uploading Hello0/1.2.1@user/testing:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                       client.out)
-
-    def test_upload_with_pref_and_p(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
-        client.run("upload Hello0/1.2.1@user/testing:{} -c -p {} -r default".format(NO_SETTINGS_PACKAGE_ID,
-                                                                         NO_SETTINGS_PACKAGE_ID),
-                   assert_error=True)
-
-        self.assertIn("Use a full package reference (preferred) or the "
-                      "`--package` command argument, but not both.", client.out)
 
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/*@user/testing --confirm --all -r default")
-        print(client.out)
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conan_package.tgz", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
@@ -224,8 +191,7 @@ class UploadTest(unittest.TestCase):
             raise ConanException("Error gzopen %s" % name)
         with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm -r default", assert_error=True)
-            self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
-                          "Error gzopen conan_sources.tgz", client.out)
+            self.assertIn("Error gzopen conan_sources.tgz", client.out)
 
             latest_rrev = client.cache.get_latest_rrev(ref)
             export_download_folder = client.cache.ref_layout(latest_rrev).download_export()
@@ -255,9 +221,7 @@ class UploadTest(unittest.TestCase):
             return gzopen_without_timestamps(name, mode, fileobj, **kwargs)
         with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm --all -r default", assert_error=True)
-            self.assertIn(f"ERROR: Hello0/1.2.1@user/testing:{NO_SETTINGS_PACKAGE_ID}: "
-                          "Upload package to 'default' failed: Error gzopen conan_package.tgz",
-                          client.out)
+            self.assertIn("Error gzopen conan_package.tgz", client.out)
 
             download_folder = client.get_latest_pkg_layout(pref).download_package()
             tgz = os.path.join(download_folder, PACKAGE_TGZ_NAME)
@@ -287,9 +251,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello0/1.2.1@frodo/stable --all --check -r default", assert_error=True)
         self.assertIn("WARN: Mismatched checksum 'added.txt'", client.out)
         self.assertIn("WARN: Mismatched checksum 'include/hello.h'", client.out)
-        self.assertIn(f"ERROR: Hello0/1.2.1@frodo/stable:{NO_SETTINGS_PACKAGE_ID}: "
-                      "Upload package to 'default' failed: Cannot upload corrupted package",
-                      client.out)
+        self.assertIn("Cannot upload corrupted package", client.out)
 
     def test_upload_modified_recipe(self):
         client = TestClient(default_server_user=True)
@@ -299,7 +261,7 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable -r default")
         self.assertIn("Uploading conanmanifest.txt", client.out)
-        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client.out
+        assert "Uploading Hello0/1.2.1@frodo/stable" in client.out
 
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile + "\r\n#end",
@@ -312,7 +274,7 @@ class UploadTest(unittest.TestCase):
         manifest.save(client2.cache.ref_layout(latest_rrev).export())
         client2.run("upload Hello0/1.2.1@frodo/stable -r default")
         self.assertIn("Uploading conanmanifest.txt", client2.out)
-        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client2.out
+        assert "Uploading Hello0/1.2.1@frodo/stable" in client2.out
 
         # first client tries to upload again
         # The client tries to upload exactly the same revision already uploaded, so no changes
@@ -327,7 +289,7 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable -r default")
         self.assertIn("Uploading conanmanifest.txt", client.out)
-        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client.out
+        assert "Uploading Hello0/1.2.1@frodo/stable" in client.out
 
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save(files)
@@ -339,14 +301,12 @@ class UploadTest(unittest.TestCase):
         manifest.save(client2.cache.ref_layout(rrev).export())
         client2.run("upload Hello0/1.2.1@frodo/stable -r default")
         self.assertNotIn("Uploading conanmanifest.txt", client2.out)
-        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client2.out
         self.assertIn("Hello0/1.2.1@frodo/stable#90e049fdc1330bfb8b1f82d311f46f50 already "
                       "in server, skipping upload", client2.out)
 
         # first client tries to upload again
         client.run("upload Hello0/1.2.1@frodo/stable -r default")
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
-        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client.out
         self.assertIn("Hello0/1.2.1@frodo/stable#90e049fdc1330bfb8b1f82d311f46f50 "
                       "already in server, skipping upload", client.out)
 
@@ -582,8 +542,7 @@ class MyPkg(ConanFile):
         client.run("remote logout '*'")
         client.run("upload Hello0/1.2.1@user/testing -r default", assert_error=True)
 
-        self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
-                      "Conan interactive mode disabled", client.out)
+        self.assertIn("Conan interactive mode disabled", client.out)
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
@@ -604,8 +563,7 @@ class MyPkg(ConanFile):
         client.run("remote logout '*'")
         client.run("remote set-user default lasote")
         client.run("upload Hello0/1.2.1@user/testing -r default", assert_error=True)
-        self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
-                      "Conan interactive mode disabled", client.out)
+        self.assertIn("Conan interactive mode disabled", client.out)
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
@@ -702,11 +660,11 @@ class MyPkg(ConanFile):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
-        client.run("upload Hello0/1.2.1@user/testing -p {} "
+        client.run("upload Hello0/1.2.1@user/testing:{} "
                    "-q 'os=Windows or os=Macos' -r default".format(NO_SETTINGS_PACKAGE_ID),
                    assert_error=True)
 
-        self.assertIn("'--query' argument cannot be used together with '--package'", client.out)
+        self.assertIn("'--query' argument cannot be used together with full reference", client.out)
 
     def test_upload_without_user_channel(self):
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
@@ -718,7 +676,7 @@ class MyPkg(ConanFile):
         client.run('create . lib/1.0@')
         self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
         client.run('upload lib/1.0 -c --all -r default')
-        assert "Uploading lib/1.0 to remote" in client.out
+        assert "Uploading lib/1.0" in client.out
 
         # Verify that in the remote it is stored as "_"
         pref = PkgReference.loads("lib/1.0@#0:{}#0".format(NO_SETTINGS_PACKAGE_ID))
@@ -730,8 +688,7 @@ class MyPkg(ConanFile):
 
         # Should be possible with explicit package
         client.run(f'upload lib/1.0:{NO_SETTINGS_PACKAGE_ID} -r default')
-        self.assertIn(f"Uploading package 1/1: {NO_SETTINGS_PACKAGE_ID} to 'default'",
-                      client.out)
+        self.assertIn("Uploading artifacts", client.out)
 
     def test_upload_without_cleaned_user(self):
         """ When a user is not authenticated, uploads failed first time
@@ -781,7 +738,7 @@ class MyPkg(ConanFile):
         client.run("create . user/testing")
         client.run("remote logout '*'")
         client.run("upload Hello0/1.2.1@user/testing --all -r default")
-        assert "Uploading Hello0/1.2.1@user/testing to remote" in client.out
+        assert "Uploading Hello0/1.2.1@user/testing" in client.out
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_upload_with_recipe_revision(self):

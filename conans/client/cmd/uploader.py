@@ -1,31 +1,24 @@
-import json
 import os
 import stat
 import tarfile
 import time
 import traceback
-from multiprocessing.pool import ThreadPool
 
 from conans.cli.output import ConanOutput
-from conans.client.userio import UserInput
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference
-from conans.util import progress_bar
-from conans.util.env_reader import get_env
-from conans.util.progress_bar import left_justify_message
 from conans.client.source import retrieve_exports_sources
+from conans.client.userio import UserInput
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_recipes
+from conans.util import progress_bar
 from conans.util.files import (clean_dirty, is_dirty,
                                gzopen_without_timestamps, set_dirty_context_manager)
-from conans.util.log import logger
+from conans.util.progress_bar import left_justify_message
 from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
-from conans.tools import cpu_count
-
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -113,8 +106,6 @@ class _UploadCollecter:
         result = _UploadData()
         try:
             pref = PkgReference.loads(pattern)
-            complete_latest_rev(pref.ref)
-            result.add_prefs([pref])
         except ConanException:
             try:
                 ref = RecipeReference.loads(pattern)
@@ -124,7 +115,7 @@ class _UploadCollecter:
             except ConanException:
                 refs = search_recipes(self._cache, pattern)
                 if not refs:
-                    raise NotFoundException(f"No packages found matching pattern '{pattern}'")
+                    raise NotFoundException(f"No recipes found matching pattern '{pattern}'")
 
                 refs = [RecipeReference.from_conanref(r) for r in refs]
                 for r in refs:
@@ -139,6 +130,7 @@ class _UploadCollecter:
                         if upload:
                             confirmed_refs.append(ref)
                     refs = confirmed_refs
+            # Now check the binaries
             for r in refs:
                 if all_packages:
                     prefs = self._cache.get_package_references(r)
@@ -149,6 +141,13 @@ class _UploadCollecter:
                     result.add_prefs(prefs)
                 else:
                     result.add_ref(r)
+        else:
+            complete_latest_rev(pref.ref)
+            p2 = self._cache.get_latest_prev(pref)
+            if p2 is None:
+                raise ConanException(f"There is not package binary matching {pref}")
+            pref.revision = p2.revision
+            result.add_prefs([pref])
         return result
 
 
@@ -162,6 +161,7 @@ class _UploadChecker:
         self._output = output
 
     def check(self, upload_data, remote, policy):
+        self._output.info("Checking which revisions exist in the remote server")
         for recipe in upload_data.recipes:
             self.check_recipe(recipe, remote, policy)
             for package in recipe.packages:
@@ -172,7 +172,8 @@ class _UploadChecker:
         try:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._remote_manager.get_recipe_revisions(ref, remote)
+            server_revisions = self._remote_manager.get_recipe_revisions(ref.to_conanfileref(),
+                                                                         remote)
             assert ref.revision == server_revisions[0]["revision"]
             assert len(server_revisions) == 1
         except NotFoundException:
@@ -212,7 +213,7 @@ class _UploadChecker:
                 package.force = False
 
 
-class _PackagePreparator(object):
+class _PackagePreparator:
     def __init__(self, cache, remote_manager, hook_manager, loader):
         self._cache = cache
         self._remote_manager = remote_manager
@@ -221,6 +222,7 @@ class _PackagePreparator(object):
         self._loader = loader
 
     def prepare(self, upload_data, remotes, integrity_check):
+        self._output.info("Preparing artifacts to upload")
         for recipe in upload_data.recipes:
             layout = self._cache.ref_layout(recipe.ref)
             conanfile_path = layout.conanfile()
@@ -243,20 +245,23 @@ class _PackagePreparator(object):
         - check if the remote recipe is newer, raise
         - compare and decide which files need to be uploaded (and deleted from server)
         """
-        ref = recipe.ref
-        recipe_layout = self._cache.ref_layout(ref)
-        retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, ref, remotes)
-        cache_files = self._compress_recipe_files(recipe_layout, ref)
-        recipe.files = cache_files
+        try:
+            ref = recipe.ref
+            recipe_layout = self._cache.ref_layout(ref)
+            retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, ref, remotes)
+            cache_files = self._compress_recipe_files(recipe_layout, ref)
+            recipe.files = cache_files
 
-        # Check SCM data for auto fields
-        if hasattr(conanfile, "scm") and (
-                conanfile.scm.get("url") == "auto" or conanfile.scm.get("revision") == "auto" or
-                conanfile.scm.get("type") is None or conanfile.scm.get("url") is None or
-                conanfile.scm.get("revision") is None):
-            recipe.dirty = True
-        else:
-            recipe.dirty = False
+            # Check SCM data for auto fields
+            if hasattr(conanfile, "scm") and (
+                    conanfile.scm.get("url") == "auto" or conanfile.scm.get("revision") == "auto" or
+                    conanfile.scm.get("type") is None or conanfile.scm.get("url") is None or
+                    conanfile.scm.get("revision") is None):
+                recipe.dirty = True
+            else:
+                recipe.dirty = False
+        except Exception as e:
+            raise ConanException(f"{recipe.ref} Error while compressing: {e}")
 
     def _compress_recipe_files(self, layout, ref):
         download_export_folder = layout.download_export()
@@ -354,28 +359,7 @@ class _PackagePreparator(object):
 
 
 class CmdUpload(object):
-    """ This class is responsible for uploading packages to remotes. The flow is:
-    - Collect all the packages to be uploaded with the UploadCollecter
-    - Execute the upload. For every ref:
-        - Upload the recipe of the ref: "_upload_recipe"
-            - If not FORCE, check the date "_check_recipe_date", i.e. if there are
-              changes, do not allow uploading if the remote date is newer than the
-              local cache one
-            - Retrieve the sources (exports_sources), if they are not cached, and
-              uploading to a different remote. "retrieve_exports_sources"
-            - Gather files and create 2 .tgz (exports, exports_sources) with
-              "_compress_recipe_files"
-            - Decide which files have to be uploaded and deleted from the server
-              based on the different with the remote snapshot "_recipe_files_to_upload"
-              This can raise if upload policy is not overwrite
-            - Execute the real transfer "remote_manager.upload_recipe()"
-        - For every package_id of every ref: "_upload_package"
-            - Gather files and create package.tgz. "_compress_package_files"
-            - (Optional) Do the integrity check of the package
-            - Decide which files to upload and delete from server:
-              "_package_files_to_upload". Can raise if policy is NOT overwrite
-            - Do the actual upload
-
+    """
     All the REVISIONS are local defined, not retrieved from servers
 
     This requires calling to the remote API methods:
@@ -392,7 +376,7 @@ class CmdUpload(object):
         self._upload_thread_pool = None
         self._exceptions_list = []
 
-    def upload(self, reference_or_pattern, package=None,
+    def upload(self, reference_or_pattern,
                all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
                policy=None, query=None, parallel_upload=False):
         t1 = time.time()
@@ -407,26 +391,18 @@ class CmdUpload(object):
         preparator = _PackagePreparator(self._cache, self._remote_manager, self._hook_manager,
                                         self._loader)
         preparator.prepare(upload_data, self._app.load_remotes(), integrity_check)
-        print("PREPARED", json.dumps(upload_data.serialize(), indent=2))
+        # print("PREPARED", json.dumps(upload_data.serialize(), indent=2))
 
         if policy == UPLOAD_POLICY_SKIP:
             return None
 
         self._remote_manager.check_credentials(remote)
+        executor = _UploadExecutor(self._remote_manager, self._cache, self._hook_manager,
+                                   self._progress_output)
+        executor.upload(upload_data, retry, retry_wait, remote)
 
-        executor = _UploadExecutor(self._remote_manager, self._cache, self._hook_manager)
         '''
-        if dirty and policy != UPLOAD_POLICY_FORCE:
-            raise ConanException("The recipe contains invalid data in the 'scm' attribute"
-                                 " (some 'auto' values or missing fields 'type', 'url' or"
-                                 " 'revision'). Use '--force' to ignore this error or export"
-                                 " again the recipe ('conan export' or 'conan create') to"
-                                 " fix these issues.")
-
-        if parallel_upload:
-            self._cache.config.non_interactive = True
         self._upload_thread_pool = ThreadPool(cpu_count() if parallel_upload else 1)
-        self._progress_output.info("Uploading to remote '{}':".format(remote.name))
 
         def upload_ref(ref_conanfile_prefs):
             _ref, _conanfile, _prefs = ref_conanfile_prefs
@@ -492,16 +468,30 @@ class CmdUpload(object):
 
 
 class _UploadExecutor:
-    def __init__(self, remote_manager, cache, hook_manager):
+    def __init__(self, remote_manager, cache, hook_manager, output):
         self._remote_manager = remote_manager
         self._cache = cache
         self._hook_manager = hook_manager
+        self._output = output
 
     def upload(self, upload_data, retry, retry_wait, remote):
+        self._output.info("Uploading artifacts")
         for recipe in upload_data.recipes:
-            self.upload_recipe(recipe, remote, retry, retry_wait)
+            if recipe.dirty and not recipe.force:
+                raise ConanException("The recipe contains invalid data in the 'scm' attribute"
+                                     " (some 'auto' values or missing fields 'type', 'url' or"
+                                     " 'revision'). Use '--force' to ignore this error or export"
+                                     " again the recipe ('conan export' or 'conan create') to"
+                                     " fix these issues.")
+            if recipe.upload:
+                self.upload_recipe(recipe, remote, retry, retry_wait)
+            if recipe.build_always and recipe.packages:
+                # TODO: Maybe do not raise? Allow it with --force?
+                raise ConanException("Conanfile '%s' has build_policy='always', "
+                                     "no packages can be uploaded" % str(recipe.ref))
             for package in recipe.packages:
-                self.upload_package(package, remote, retry, retry_wait)
+                if package.upload:
+                    self.upload_package(package, remote, retry, retry_wait)
 
     def _recipe_files_to_upload(self, ref, files, remote, force):
         if not force:
@@ -515,6 +505,7 @@ class _UploadExecutor:
         return files, deleted
 
     def upload_recipe(self, recipe, remote, retry, retry_wait):
+        self._output.info(f"Uploading {recipe.ref}")
         t1 = time.time()
         ref = recipe.ref
         cache_files = recipe.files
@@ -530,12 +521,13 @@ class _UploadExecutor:
         self._remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote, retry,
                                            retry_wait)
         duration = time.time() - t1
-        log_recipe_upload(ref, duration, cache_files, remote.name)
+        log_recipe_upload(ref.to_conanfileref(), duration, cache_files, remote.name)
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
         return ref
 
     def upload_package(self, package, remote, retry=None, retry_wait=None):
+        self._output.info(f"Uploading {package.pref}")
         pref = package.pref
         cache_files = package.files
         assert (pref.revision is not None), "Cannot upload a package without PREV"
