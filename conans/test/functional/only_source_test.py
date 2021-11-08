@@ -27,17 +27,17 @@ class OnlySourceTest(unittest.TestCase):
         # Will Fail because hello0/0.0 and hello1/1.1 has not built packages
         # and by default no packages are built
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn("Try to build from sources with '--build=hello0 --build=Hello1'", client.out)
+        self.assertIn("Try to build from sources with '--build=hello0 --build=hello1'", client.out)
 
         # We generate the package for hello0/0.0
         client.run("install hello0/0.0@lasote/stable --build hello0")
 
         # Still missing hello1/1.1
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn("Try to build from sources with '--build=Hello1'", client.out)
+        self.assertIn("Try to build from sources with '--build=hello1'", client.out)
 
         # We generate the package for hello1/1.1
-        client.run("install hello1/1.1@lasote/stable --build Hello1")
+        client.run("install hello1/1.1@lasote/stable --build hello1")
 
         # Now Hello2 should be built and not fail
         client.run("create . lasote/stable")
@@ -153,11 +153,11 @@ class MyPackage(ConanFile):
 
         # Use another valid pattern and check that its not builded from source
         other_client = TestClient(servers=client.servers)
-        other_client.run("install %s --build HelloInvalid -b Hello" % str(ref))
+        other_client.run("install %s --build HelloInvalid -b hello" % str(ref))
         # self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
 
         # Now even if the package is in local store, check that's rebuilded
-        other_client.run("install %s -b Hello*" % str(ref))
+        other_client.run("install %s -b hello*" % str(ref))
         self.assertIn("Copying sources to build folder", other_client.out)
 
         other_client.run("install %s" % str(ref))

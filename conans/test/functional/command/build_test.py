@@ -258,11 +258,10 @@ class BarConan(ConanFile):
                     self.output.info("PACKAGE_INFO: %s BuildType=%s!"
                                      % (self.name, self.settings.build_type))
             """)
-        client.save({CONANFILE: conanfile.format(name="Dep", requires="")})
-        client.run("create . Dep/0.1@user/testing -s build_type=Release")
-        client.save({CONANFILE: conanfile.format(name="MyPkg",
-                                                 requires="requires = 'Dep/0.1@user/testing'")})
-        client.run("build . -s MyPkg:build_type=Debug -s build_type=Release")
-        self.assertIn("Dep/0.1@user/testing: PACKAGE_INFO: Dep BuildType=Release!", client.out)
-        self.assertIn("conanfile.py (Mypkg/None): BUILD: MyPkg BuildType=Debug!",
-                      client.out)
+        client.save({CONANFILE: conanfile.format(name="dep", requires="")})
+        client.run("create . dep/0.1@user/testing -s build_type=Release")
+        client.save({CONANFILE: conanfile.format(name="mypkg",
+                                                 requires="requires = 'dep/0.1@user/testing'")})
+        client.run("build . -s mypkg:build_type=Debug -s build_type=Release")
+        self.assertIn("dep/0.1@user/testing: PACKAGE_INFO: dep BuildType=Release!", client.out)
+        self.assertIn("conanfile.py (mypkg/None): BUILD: mypkg BuildType=Debug!", client.out)

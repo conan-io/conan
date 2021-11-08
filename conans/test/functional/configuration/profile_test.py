@@ -444,8 +444,8 @@ class DefaultNameConan(ConanFile):
         winreq_conanfile = '''
 from conans.model.conan_file import ConanFile
 
-class WinRequireDefaultNameConan(ConanFile):
-    name = "WinRequire"
+class winrequireDefaultNameConan(ConanFile):
+    name = "winrequire"
     version = "0.1"
     settings = "os", "compiler", "arch", "build_type"
 
@@ -466,7 +466,7 @@ class DefaultNameConan(ConanFile):
 
     def requirements(self):
         if self.settings.os == "Windows":
-            self.requires("WinRequire/0.1@lasote/stable")
+            self.requires("winrequire/0.1@lasote/stable")
 
 '''
         files = {"conanfile.py": conanfile}
@@ -480,7 +480,7 @@ class DefaultNameConan(ConanFile):
         # Install with the previous profile
         self.client.run("info hello/0.1@lasote/stable --profile scopes_env")
         self.assertNotIn('''Requires:
-                WinRequire/0.1@lasote/stable''', self.client.out)
+                winrequire/0.1@lasote/stable''', self.client.out)
 
         # Create a profile that activate the require
         create_profile(self.client.cache.profiles_path, "scopes_env",
@@ -489,7 +489,7 @@ class DefaultNameConan(ConanFile):
         # Install with the previous profile
         self.client.run("info hello/0.1@lasote/stable --profile scopes_env")
         self.assertIn('''Requires:
-        WinRequire/0.1@lasote/stable''', self.client.out)
+        winrequire/0.1@lasote/stable''', self.client.out)
 
 
 class ProfileAggregationTest(unittest.TestCase):
