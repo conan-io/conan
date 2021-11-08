@@ -112,7 +112,7 @@ class _UploadCollecter:
                 complete_latest_rev(ref)
                 # If it is a valid and existing reference, then add it
                 refs = [ref]
-            except ConanException:
+            except ConanException as e:
                 refs = search_recipes(self._cache, pattern)
                 if not refs:
                     raise NotFoundException(f"No recipes found matching pattern '{pattern}'")
