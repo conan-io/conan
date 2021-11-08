@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -51,5 +52,8 @@ class HelloConan(ConanFile):
     client.run("new hello/1.0 -m cmake_lib")
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    assert "hello link libraries: hello::hello" in client.out
-
+    t = os.path.join("test_package", "cmake-build-release", "conan", "hello-release-x86_64-data.cmake")
+    target_data_cmake_content = client.load(t)
+    assert 'set(hello_SHARED_LINK_FLAGS_RELEASE "-z now;-z relro")' in target_data_cmake_content
+    assert 'set(hello_EXE_LINK_FLAGS_RELEASE "-z now;-z relro")' in target_data_cmake_content
+    assert "hello/0.1: Hello World Release!" in client.out
