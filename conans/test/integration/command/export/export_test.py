@@ -175,7 +175,7 @@ class TestConan(ConanFile):
         conanfile = load(os.path.join(export_path, "conanfile.py"))
         self.assertIn("name = 'hello'", conanfile)
         manifest = load(os.path.join(export_path, "conanmanifest.txt"))
-        self.assertIn('conanfile.py: aa4e485651a4281b79d343af7d7b20e4', manifest)
+        self.assertIn('conanfile.py: c827eb50b27ef2bf3107bf4bf1e1896b', manifest)
 
     def test_exclude_basic(self):
         client = TestClient()

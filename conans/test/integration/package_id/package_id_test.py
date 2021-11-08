@@ -42,7 +42,7 @@ def test_remove_option_setting():
     client.run("create . pkg/0.1@user/testing -s os=Windows")
     assert "pkg/0.1@user/testing: OPTION OPT=False" in client.out
     assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
-    client.run("create . pkg/0.1@user/testing -s os=Linux -o Pkg:opt=True")
+    client.run("create . pkg/0.1@user/testing -s os=Linux -o pkg:opt=True")
     assert "pkg/0.1@user/testing: OPTION OPT=True" in client.out
     assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
 

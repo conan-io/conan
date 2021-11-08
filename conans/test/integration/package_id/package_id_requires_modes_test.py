@@ -33,7 +33,7 @@ class PackageIDTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_version_semver_schema(self):
         self._export("hello", "1.2.0")
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].semver()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -43,17 +43,17 @@ class PackageIDTest(unittest.TestCase):
         self.client.run("install . --build missing")
 
         # Now change the Hello version and build it, if we install out requires should not be
-        # needed the --build needed because Hello2 don't need to be rebuilt
+        # needed the --build needed because hello2 don't need to be rebuilt
         self._export("hello", "1.5.0", package_id_text=None, requires=None)
         self.client.run("install hello/1.5.0@lasote/stable --build missing")
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].semver()',
                      requires=["hello/1.5.0@lasote/stable"])
 
         self.client.save({"conanfile.txt": "[requires]\nhello2/2.3.8@lasote/stable"},
                          clean_first=True)
 
-        # As we have changed Hello2, the binary is not valid anymore so it won't find it
+        # As we have changed hello2, the binary is not valid anymore so it won't find it
         # but will look for the same package_id
         self.client.run("install .", assert_error=True)
         self.assertIn("WARN: The package hello2/2.3.8@lasote/stable:"
@@ -67,7 +67,7 @@ class PackageIDTest(unittest.TestCase):
         self._export("hello", "1.5.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
         self.client.run("install hello/1.5.0@memsharded/testing --build missing")
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].semver()',
                      requires=["hello/1.5.0@memsharded/testing"])
 
@@ -80,7 +80,7 @@ class PackageIDTest(unittest.TestCase):
 
     def test_version_full_version_schema(self):
         self._export("hello", "1.2.0", package_id_text=None, requires=None)
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -93,23 +93,23 @@ class PackageIDTest(unittest.TestCase):
         self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
         self.client.run("install hello/1.2.0@memsharded/testing --build missing")
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.2.0@memsharded/testing"])
 
         self.client.save({"conanfile.txt": "[requires]\nhello2/2.3.8@lasote/stable"},
                          clean_first=True)
-        # As we have changed Hello2, the binary is not valid anymore so it won't find it
+        # As we have changed hello2, the binary is not valid anymore so it won't find it
         # but will look for the same package_id
         self.client.run("install .", assert_error=True)
-        self.assertIn("- Package ID: 9a2fb5e0220e8f5e7f94cf8616c4217dbf05a16b",
+        self.assertIn("- Package ID: d63d347db2ab3bd76ef72e56a330887d35d658be",
                       self.client.out)
 
         # Now change the Hello version and build it, if we install out requires is
-        # needed the --build needed because Hello2 needs to be build
+        # needed the --build needed because hello2 needs to be build
         self._export("hello", "1.5.0", package_id_text=None, requires=None)
         self.client.run("install hello/1.5.0@lasote/stable --build missing")
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.5.0@lasote/stable"])
 
@@ -122,7 +122,7 @@ class PackageIDTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_version_full_recipe_schema(self):
         self._export("hello", "1.2.0", package_id_text=None, requires=None)
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_recipe_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -139,7 +139,7 @@ class PackageIDTest(unittest.TestCase):
         self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
         self.client.run("install hello/1.2.0@memsharded/testing --build missing")
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_recipe_mode()',
                      requires=["hello/1.2.0@memsharded/testing"])
 
@@ -154,7 +154,7 @@ class PackageIDTest(unittest.TestCase):
         self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      default_option_value='"on"')
         self.client.run("install hello/1.2.0@lasote/stable --build missing")
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_recipe_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -166,7 +166,7 @@ class PackageIDTest(unittest.TestCase):
 
     def test_version_full_package_schema(self):
         self._export("hello", "1.2.0", package_id_text=None, requires=None)
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_package_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -190,7 +190,7 @@ class PackageIDTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_nameless_mode(self):
         self._export("hello", "1.2.0", package_id_text=None, requires=None)
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].unrelated_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -202,13 +202,13 @@ class PackageIDTest(unittest.TestCase):
         # If we change even the require, should not affect
         self._export("HelloNew", "1.2.0")
         self.client.run("install HelloNew/1.2.0@lasote/stable --build missing")
-        self._export("Hello2", "2.3.8",
+        self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["HelloNew"].unrelated_mode()',
                      requires=["HelloNew/1.2.0@lasote/stable"])
 
         self.client.save({"conanfile.txt": "[requires]\nhello2/2.3.8@lasote/stable"},
                          clean_first=True)
-        # Not needed to rebuild Hello2, it doesn't matter its requires
+        # Not needed to rebuild hello2, it doesn't matter its requires
         # We have changed hello2, so a new binary is required, but same id
         self.client.run("install .", assert_error=True)
         package_id = "cc0975391fddf13e161a63ef63999445df98fb0c"

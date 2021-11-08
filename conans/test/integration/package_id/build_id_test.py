@@ -12,7 +12,7 @@ from conans.util.files import load
 conanfile = """from conans import ConanFile
 from conans.util.files import save
 class MyTest(ConanFile):
-    name = "Pkg"
+    name = "pkg"
     version = "0.1"
     settings = "os", "build_type"
     build_policy = "missing"
@@ -39,7 +39,7 @@ pkg/0.1@user/channel
 
 consumer_py = """from conans import ConanFile
 class MyTest(ConanFile):
-    name = "MyTest"
+    name = "mytest"
     version = "0.1"
     settings = "os", "build_type"
     requires = "pkg/0.1@user/channel"
@@ -283,11 +283,11 @@ class BuildIdTest(unittest.TestCase):
 
         if python_consumer:
             client.run("export . user/channel")
-            client.run("info MyTest/0.1@user/channel -s os=Windows -s build_type=Debug")
+            client.run("info mytest/0.1@user/channel -s os=Windows -s build_type=Debug")
             _check()
             self.assertNotIn(f"ID: {package_id_windows_release}", client.out)
             self.assertIn(f"ID: {package_id_windows_debug}", client.out)
-            client.run("info MyTest/0.1@user/channel -s os=Windows -s build_type=Release")
+            client.run("info mytest/0.1@user/channel -s os=Windows -s build_type=Release")
             _check()
             self.assertIn(f"ID: {package_id_windows_release}", client.out)
             self.assertNotIn(f"ID: {package_id_windows_debug}", client.out)

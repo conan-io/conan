@@ -105,7 +105,7 @@ class FullRevisionModeTest(unittest.TestCase):
 
     def test_binary_id_recomputation_with_build_requires(self):
         clienta = TestClient()
-        clienta.save({"conanfile.py": GenConanfile().with_name("Tool").with_version("0.1")
+        clienta.save({"conanfile.py": GenConanfile().with_name("tool").with_version("0.1")
                                                     .with_package_info(cpp_info={"libs":
                                                                                  ["tool.lib"]},
                                                                        env_info={})})
@@ -116,7 +116,7 @@ class FullRevisionModeTest(unittest.TestCase):
             from conans.tools import save
             import uuid, os
             class Pkg(ConanFile):
-                build_requires = "Tool/0.1@user/testing"
+                build_requires = "tool/0.1@user/testing"
                 %s
                 def package(self):
                     save(os.path.join(self.package_folder, "file.txt"),
@@ -232,14 +232,14 @@ class PackageRevisionModeTest(unittest.TestCase):
             "log4qt/0.3.0": [],
             "mccapi/3.0.9": ["log4qt/0.3.0"],
             "util/0.3.5": ["mccapi/3.0.9"],
-            "Invent/1.0": ["util/0.3.5"]
+            "invent/1.0": ["util/0.3.5"]
         }
         self._generate_graph(dependencies)
 
-        self.client.run("install Invent.py --build missing")
-        mcapi_pkg_id = "c24c471b778d3c10903ca45f3193587c5f446fd6"
+        self.client.run("install invent.py --build missing")
+        mcapi_pkg_id = "6b115bc2428b925e8ee4fdb91c700520592e3b29"
         self.assertIn(f"mccapi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
-        util_pkg_id = "d175bcd86c51b7f773ddc37a1d46026dafb80fd4"
+        util_pkg_id = "88d63d5c29a361250e6eba12aae6037b5a4d1e15"
         self.assertIn(f"util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
 
     def test_triangle_dependency_graph(self):
@@ -252,9 +252,9 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install genericsu.py --build missing")
-        mcapi_pkg_id = "c24c471b778d3c10903ca45f3193587c5f446fd6"
+        mcapi_pkg_id = "6b115bc2428b925e8ee4fdb91c700520592e3b29"
         self.assertIn(f"mccapi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
-        util_pkg_id = "d175bcd86c51b7f773ddc37a1d46026dafb80fd4"
+        util_pkg_id = "88d63d5c29a361250e6eba12aae6037b5a4d1e15"
         self.assertIn(f"util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
 
     def test_diamond_dependency_graph(self):
@@ -267,7 +267,7 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install genericsu.py --build missing")
-        pkg_id = "c24c471b778d3c10903ca45f3193587c5f446fd6"
+        pkg_id = "6b115bc2428b925e8ee4fdb91c700520592e3b29"
         self.assertIn(f"mccapi/3.0.9: Package '{pkg_id}' created", self.client.out)
         self.assertIn(f"util/0.3.5: Package '{pkg_id}' created", self.client.out)
 

@@ -72,7 +72,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@lasote/testing -o Pkg:opt=1")
-        client.run("upload Pkg* --all -r=server1 --confirm")
+        client.run("upload pkg* --all -r=server1 --confirm")
         client.run("remove * -p -f")
         client.run("create . pkg/0.1@lasote/testing -o Pkg:opt=2")
         package_id2 = re.search(r"pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)

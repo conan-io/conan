@@ -125,7 +125,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("My cool build!")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . SourceBuild/1.0@user/channel")
+        client.run("export . sourcebuild/1.0@user/channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -136,13 +136,13 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("My cool package_info!")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . PackageInfo/1.0@user/channel")
+        client.run("export . packageinfo/1.0@user/channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class MyConanfileBase(ConanFile):
-                python_requires = "SourceBuild/1.0@user/channel", "PackageInfo/1.0@user/channel"
-                python_requires_extend = "SourceBuild.SourceBuild", "PackageInfo.PackageInfo"
+                python_requires = "sourcebuild/1.0@user/channel", "packageinfo/1.0@user/channel"
+                python_requires_extend = "sourcebuild.SourceBuild", "packageinfo.PackageInfo"
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/testing")
@@ -350,7 +350,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . pkg/0.1@user/testing")
-        self.assertIn("pkg/0.1@user/testing: My system_requirements Pkg being called!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My system_requirements pkg being called!", client.out)
 
     def test_overwrite_class_members(self):
         client = TestClient()
@@ -613,14 +613,14 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("Pkg1 package: %s:%s" % (self.name, self.version))
             """)
         client.save({"conanfile.py": conanfile,
-                     "name.txt": "MyPkg",
-                     "version.txt": "MyVersion"})
+                     "name.txt": "mypkg",
+                     "version.txt": "myversion"})
         client.run("export .")
-        self.assertIn("Mypkg/MyVersion: A new conanfile.py version was exported", client.out)
+        self.assertIn("mypkg/myversion: A new conanfile.py version was exported", client.out)
         client.run("create .")
-        self.assertIn("Mypkg/MyVersion: Pkg1 source: MyPkg:MyVersion", client.out)
-        self.assertIn("Mypkg/MyVersion: Pkg1 build: MyPkg:MyVersion", client.out)
-        self.assertIn("Mypkg/MyVersion: Pkg1 package: MyPkg:MyVersion", client.out)
+        self.assertIn("mypkg/myversion: Pkg1 source: mypkg:myversion", client.out)
+        self.assertIn("mypkg/myversion: Pkg1 build: mypkg:myversion", client.out)
+        self.assertIn("mypkg/myversion: Pkg1 package: mypkg:myversion", client.out)
 
     @parameterized.expand([(False, False), (True, False), (True, True), ])
     def test_python_requires_with_alias(self, use_alias, use_alias_of_alias):

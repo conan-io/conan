@@ -258,27 +258,27 @@ class InfoTest(unittest.TestCase):
 
     def test_json_info_outputs(self):
         self.client = TestClient()
-        self._create("LibA", "0.1")
-        self._create("LibE", "0.1")
-        self._create("LibF", "0.1")
+        self._create("liba", "0.1")
+        self._create("libe", "0.1")
+        self._create("libf", "0.1")
 
-        self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
-        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
+        self._create("libb", "0.1", ["liba/0.1@lasote/stable", "libe/0.1@lasote/stable"])
+        self._create("libc", "0.1", ["liba/0.1@lasote/stable", "libf/0.1@lasote/stable"])
 
-        self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
+        self._create("libd", "0.1", ["libb/0.1@lasote/stable", "libc/0.1@lasote/stable"],
                      export=False)
 
         self.client.run("info . -u --json=output.json")
 
         # Check a couple of values in the generated JSON
         content = json.loads(self.client.load("output.json"))
-        self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
+        self.assertEqual(content[0]["reference"], "liba/0.1@lasote/stable")
         self.assertEqual(content[0]["license"][0], "MIT")
         self.assertEqual(content[0]["description"], "blah")
-        self.assertEqual(content[0]["revision"], "33574249dee63395e86d2caee3f6c638")
+        self.assertEqual(content[0]["revision"], "6a53a80661c5369e15f23d918f5d2e95")
         self.assertEqual(content[0]["package_revision"], None)
         self.assertEqual(content[1]["url"], "myurl")
-        self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
+        self.assertEqual(content[1]["required_by"][0], "conanfile.py (libd/0.1)")
 
 
 class InfoTest2(unittest.TestCase):
