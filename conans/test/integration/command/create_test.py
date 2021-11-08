@@ -301,7 +301,7 @@ class MyPkg(ConanFile):
         client.run("create . %s" % repr(ref), assert_error=True)
 
         self.assertIn("Build error", client.out)
-        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         assert pref is None
 
     def test_create_with_name_and_version(self):
@@ -351,9 +351,9 @@ class MyPkg(ConanFile):
 
         ref = RecipeReference.loads("Bye/0.1")
 
-        refs = client.cache.get_latest_rrev(ref)
+        refs = client.cache.get_latest_recipe_reference(ref)
         pkgs = client.cache.get_package_references(refs)
-        prev = client.cache.get_latest_prev(pkgs[0])
+        prev = client.cache.get_latest_package_reference(pkgs[0])
         package_folder = client.cache.pkg_layout(prev).package()
 
         conaninfo = load(os.path.join(package_folder, "conaninfo.txt"))

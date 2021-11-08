@@ -100,7 +100,7 @@ class HelloPythonConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
         self.assertNotIn("No files in this package!", client.out)
         ref = RecipeReference.loads("Hello/0.1@lasote/stable")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         latest_package = client.get_latest_pkg_layout(pref).package()
         conaninfo = load(os.path.join(latest_package, "conaninfo.txt"))
         self.assertEqual(1, conaninfo.count("os=Windows"))

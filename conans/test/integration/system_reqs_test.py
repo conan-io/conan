@@ -38,7 +38,7 @@ class SystemReqsTest(unittest.TestCase):
         client.run("install Test/0.1@user/channel")
         self.assertNotIn("*+Running system requirements+*", client.out)
         ref = RecipeReference.loads("Test/0.1@user/channel")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         reqs_file = client.get_latest_pkg_layout(pref).system_reqs_package()
         os.unlink(reqs_file)
         client.run("install Test/0.1@user/channel")
@@ -169,7 +169,7 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(pref).system_reqs())
 
         # create package to populate system_reqs folder
@@ -196,7 +196,7 @@ class SystemReqsTest(unittest.TestCase):
 
         # Wildcard system_reqs removal
         ref_other = RecipeReference.loads("Test/0.1@user/channel_other")
-        pref_other = client.get_latest_prev(ref_other)
+        pref_other = client.get_latest_package_reference(ref_other)
         system_reqs_path_other = os.path.dirname(client.get_latest_pkg_layout(pref_other).system_reqs())
 
         client.run("create . user/channel_other")
@@ -251,7 +251,7 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(pref).system_reqs())
 
         # create package to populate system_reqs folder
@@ -277,7 +277,7 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(pref).system_reqs())
 
         # create package to populate system_reqs folder

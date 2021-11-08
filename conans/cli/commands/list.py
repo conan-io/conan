@@ -80,6 +80,9 @@ def list_package_ids_cli_formatter(results):
             cli_out_write("There are no packages", indentation=2)
         else:
             reference = result["reference"]
+            reference.timestamp = None
+            reference = repr(reference)
+
             for pkg_id, props in result["results"].items():
                 cli_out_write(f"{reference}:{pkg_id}",
                               fg=reference_color, indentation=2)

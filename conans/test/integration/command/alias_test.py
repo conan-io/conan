@@ -57,7 +57,7 @@ class Pkg(ConanFile):
         self.assertNotIn("Hello/0.X@lasote/channel", client.out)
 
         ref = RecipeReference.loads("Chat/1.0@lasote/channel")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         pkg_folder = client.get_latest_pkg_layout(pref).package()
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
 

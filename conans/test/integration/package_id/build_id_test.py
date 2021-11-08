@@ -60,10 +60,10 @@ class BuildIdTest(unittest.TestCase):
 
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
-        latest_rrev = client.cache.get_latest_rrev(RecipeReference.loads("Pkg/0.1@user/channel"))
+        latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("Pkg/0.1@user/channel"))
         pref_debug = PkgReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                             f"{package_id_windows_debug}")
-        prev_debug = client.cache.get_latest_prev(pref_debug)
+        prev_debug = client.cache.get_latest_package_reference(pref_debug)
         layout = client.cache.pkg_layout(prev_debug)
         conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
@@ -72,7 +72,7 @@ class BuildIdTest(unittest.TestCase):
 
         pref_release = PkgReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                               f"{package_id_windows_release}")
-        prev_release = client.cache.get_latest_prev(pref_release)
+        prev_release = client.cache.get_latest_package_reference(pref_release)
         layout = client.cache.pkg_layout(prev_release)
         conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
@@ -81,7 +81,7 @@ class BuildIdTest(unittest.TestCase):
 
         pref_debug = PkgReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                             f"{package_id_linux_debug}")
-        prev_debug = client.cache.get_latest_prev(pref_debug)
+        prev_debug = client.cache.get_latest_package_reference(pref_debug)
         layout = client.cache.pkg_layout(prev_debug)
         conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
@@ -90,7 +90,7 @@ class BuildIdTest(unittest.TestCase):
 
         pref_release = PkgReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                               f"{package_id_linux_release}")
-        prev_release = client.cache.get_latest_prev(pref_release)
+        prev_release = client.cache.get_latest_package_reference(pref_release)
         layout = client.cache.pkg_layout(prev_release)
         conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
@@ -225,7 +225,7 @@ class BuildIdTest(unittest.TestCase):
         ref = RecipeReference.loads("Pkg/0.1@user/channel")
 
         def _check_builds():
-            latest_rrev = client.cache.get_latest_rrev(ref)
+            latest_rrev = client.cache.get_latest_recipe_reference(ref)
             pkg_ids = client.cache.get_package_references(latest_rrev)
             prevs = []
             for pkg_id in pkg_ids:

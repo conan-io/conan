@@ -23,7 +23,7 @@ def test_basic(relative_path):
 
     # The result should be the same in both cases
     ref = RecipeReference("hello", "0.1", "lasote", "stable")
-    latest_rrev = client.cache.get_latest_rrev(ref)
+    latest_rrev = client.cache.get_latest_recipe_reference(ref)
     ref_layoyt = client.cache.ref_layout(latest_rrev)
     reg_path = ref_layoyt.export()
     manif = FileTreeManifest.load(reg_path)
@@ -54,7 +54,7 @@ def test_path(relative_path):
             client.run("export . hello/0.1@lasote/stable")
 
     ref = RecipeReference("hello", "0.1", "lasote", "stable")
-    latest_rrev = client.cache.get_latest_rrev(ref)
+    latest_rrev = client.cache.get_latest_recipe_reference(ref)
     ref_layoyt = client.cache.ref_layout(latest_rrev)
     reg_path = ref_layoyt.export()
     manif = FileTreeManifest.load(reg_path)

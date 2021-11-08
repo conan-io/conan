@@ -123,7 +123,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                      "FindFindModule.cmake": find_module})
         client.run("create .")
         ref = RecipeReference("test", "1.0", None, None)
-        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         package_path = client.get_latest_pkg_layout(pref).package()
         modules_path = os.path.join(package_path, "share", "cmake")
         self.assertEqual(set(os.listdir(modules_path)),

@@ -24,7 +24,7 @@ class SynchronizeTest(unittest.TestCase):
 
         client.save(files)
         client.run("export . lasote/stable")
-        ref_with_rev = client.cache.get_latest_rrev(ref)
+        ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         # Upload conan file
         client.run("upload %s -r default" % str(ref))
 
@@ -38,7 +38,7 @@ class SynchronizeTest(unittest.TestCase):
         # Now delete local files export and upload and check that they are not in server
         os.remove(os.path.join(client.current_folder, "to_be_deleted.txt"))
         client.run("export . lasote/stable")
-        ref_with_rev = client.cache.get_latest_rrev(ref)
+        ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         client.run("upload %s -r default" % str(ref))
         server_conan_path = remote_paths.export(ref_with_rev)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
@@ -53,7 +53,7 @@ class SynchronizeTest(unittest.TestCase):
         del files["to_be_deleted.txt"]
         client.save(files)
         client.run("export . lasote/stable")
-        ref_with_rev = client.cache.get_latest_rrev(ref)
+        ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         client.run("upload %s -r default" % str(ref))
 
         server_conan_path = remote_paths.export(ref_with_rev)
@@ -72,9 +72,9 @@ class SynchronizeTest(unittest.TestCase):
 
         client.run("install %s --build missing" % str(ref))
         # Upload package
-        ref_with_rev = client.cache.get_latest_rrev(ref)
+        ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         pkg_ids = client.cache.get_package_references(ref_with_rev)
-        pref = client.cache.get_latest_prev(pkg_ids[0])
+        pref = client.cache.get_latest_package_reference(pkg_ids[0])
         client.run("upload %s -p %s -r default" % (str(ref), str(pkg_ids[0].package_id)))
 
         # Check that package exists on server

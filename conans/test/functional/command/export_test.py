@@ -25,6 +25,6 @@ class ExportMetadataTest(unittest.TestCase):
         ref = RecipeReference.loads("name/version@user/channel")
         t.run("export . {}".format(ref))
 
-        latest_rev = t.cache.get_latest_rrev(ref)
+        latest_rev = t.cache.get_latest_recipe_reference(ref)
 
         self.assertEqual(latest_rev.revision, commit)

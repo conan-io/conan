@@ -86,10 +86,15 @@ class SearchService(object):
 
     def _search_recipes(self, pattern=None, ignorecase=True):
         subdirs = list_folder_subdirs(basedir=self._server_store.store, level=5)
+
+        def underscore_to_none(field):
+            return field if field != "_" else None
+
         if not pattern:
             ret = []
             for folder in subdirs:
-                r = RecipeReference(*folder.split("/"))
+                fields_dir = [underscore_to_none(d) for d in folder.split("/")]
+                r = RecipeReference(*fields_dir)
                 r.revision = None
                 ret.append(r)
             return sorted(ret)
@@ -100,7 +105,8 @@ class SearchService(object):
             b_pattern = re.compile(b_pattern, re.IGNORECASE) if ignorecase else re.compile(b_pattern)
             ret = set()
             for subdir in subdirs:
-                new_ref = RecipeReference(*subdir.split("/"))
+                fields_dir = [underscore_to_none(d) for d in subdir.split("/")]
+                new_ref = RecipeReference(*fields_dir)
                 new_ref.revision = None
                 if _partial_match(b_pattern, repr(new_ref)):
                     ret.add(new_ref)

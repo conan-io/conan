@@ -85,14 +85,14 @@ def test_upper_option(client):
     package_id = re.search(r"Hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     package_id2 = re.search(r"Hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
-    pref = client.get_latest_prev(ref, package_id)
+    pref = client.get_latest_package_reference(ref, package_id)
     hello0 = client.get_latest_pkg_layout(pref).package()
 
     hello0_info = os.path.join(hello0, CONANINFO)
     hello0_conan_info = ConanInfo.load_file(hello0_info)
     assert 1 == hello0_conan_info.options.language
 
-    pref1 = client.get_latest_prev(RecipeReference.loads("Hello1/0.1@lasote/stable"), package_id2)
+    pref1 = client.get_latest_package_reference(RecipeReference.loads("Hello1/0.1@lasote/stable"), package_id2)
     hello1 = client.get_latest_pkg_layout(pref1).package()
     hello1_info = os.path.join(hello1, CONANINFO)
     hello1_conan_info = ConanInfo.load_file(hello1_info)
@@ -104,14 +104,14 @@ def test_inverse_upper_option(client):
     package_id = re.search(r"Hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     package_id2 = re.search(r"Hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
-    pref = client.get_latest_prev(ref, package_id)
+    pref = client.get_latest_package_reference(ref, package_id)
     hello0 = client.get_latest_pkg_layout(pref).package()
 
     hello0_info = os.path.join(hello0, CONANINFO)
     hello0_conan_info = ConanInfo.load_file(hello0_info)
     assert "language=0" == hello0_conan_info.options.dumps()
 
-    pref1 = client.get_latest_prev(RecipeReference.loads("Hello1/0.1@lasote/stable"), package_id2)
+    pref1 = client.get_latest_package_reference(RecipeReference.loads("Hello1/0.1@lasote/stable"), package_id2)
     hello1 = client.get_latest_pkg_layout(pref1).package()
     hello1_info = os.path.join(hello1, CONANINFO)
     hello1_conan_info = ConanInfo.load_file(hello1_info)
@@ -132,13 +132,13 @@ def test_upper_option_txt(client):
     package_id = re.search(r"Hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     package_id2 = re.search(r"Hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
-    pref = client.get_latest_prev(ref, package_id)
+    pref = client.get_latest_package_reference(ref, package_id)
     hello0 = client.get_latest_pkg_layout(pref).package()
     hello0_info = os.path.join(hello0, CONANINFO)
     hello0_conan_info = ConanInfo.load_file(hello0_info)
     assert 1 == hello0_conan_info.options.language
 
-    pref1 = client.get_latest_prev(RecipeReference.loads("Hello1/0.1@lasote/stable"), package_id2)
+    pref1 = client.get_latest_package_reference(RecipeReference.loads("Hello1/0.1@lasote/stable"), package_id2)
     hello1 = client.get_latest_pkg_layout(pref1).package()
     hello1_info = os.path.join(hello1, CONANINFO)
     hello1_conan_info = ConanInfo.load_file(hello1_info)

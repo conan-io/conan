@@ -16,9 +16,9 @@ def test_cmake_lib_template():
     client.run("export-pkg . hello/0.1@")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("hello/0.1")
-    ref = client.cache.get_latest_rrev(ref)
+    ref = client.cache.get_latest_recipe_reference(ref)
     pref = PkgReference(ref, package_id)
-    pref = client.cache.get_latest_prev(pref)
+    pref = client.cache.get_latest_package_reference(pref)
     package_folder = client.get_latest_pkg_layout(pref).package()
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 

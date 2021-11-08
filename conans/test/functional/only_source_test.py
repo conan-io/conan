@@ -122,7 +122,7 @@ class MyPackage(ConanFile):
         client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("install %s --build missing" % str(ref))
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).package()))
 
@@ -132,14 +132,14 @@ class MyPackage(ConanFile):
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
         other_client.run("install %s --build missing" % str(ref))
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         self.assertFalse(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
         other_client.run("install %s --build" % str(ref))
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))
 
@@ -147,7 +147,7 @@ class MyPackage(ConanFile):
         other_client = TestClient(servers=client.servers)
         other_client.run("install %s --build HelloInvalid" % str(ref))
 
-        # pref = client.get_latest_prev(ref)
+        # pref = client.get_latest_package_reference(ref)
         # self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
         # self.assertFalse(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
 

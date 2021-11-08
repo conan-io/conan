@@ -127,7 +127,7 @@ class Lockfile(object):
                        r.channel == ref.channel]
             for m in matches:
                 if range_satisfies(version_range, str(m.version)):
-                    require.ref = m.to_conanfileref()
+                    require.ref = m
                     break
             else:
                 if self.strict:
@@ -149,7 +149,7 @@ class Lockfile(object):
                        r.channel == ref.channel]
             for m in matches:
                 if range_satisfies(version_range, str(m.version)):
-                    require.ref = m.to_conanfileref()
+                    require.ref = m
                     break
             else:
                 if self.strict:

@@ -80,8 +80,8 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         t.run("create . user/channel")
 
         # Check if the metadata travels through the Conan commands
-        pref = t.get_latest_prev(RecipeReference.loads("lib/version@user/channel"),
-                                 NO_SETTINGS_PACKAGE_ID)
+        pref = t.get_latest_package_reference(RecipeReference.loads("lib/version@user/channel"),
+                                              NO_SETTINGS_PACKAGE_ID)
         pkg_folder = t.get_latest_pkg_layout(pref).package()
 
         # 1) When copied to the package folder, the metadata is lost

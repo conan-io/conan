@@ -81,7 +81,8 @@ class FixSymlinksTestCase(unittest.TestCase):
                       " the package, it's been removed.", t.out)
 
         # Check the work is done
-        pkg_ref = t.get_latest_prev(self.name_ref, '99efc6979ac688ef4d6962ebf14fdb47034b4dcb')
+        pkg_ref = t.get_latest_package_reference(self.name_ref,
+                                                 '99efc6979ac688ef4d6962ebf14fdb47034b4dcb')
         assert pkg_ref is not None
         package_folder = t.get_latest_pkg_layout(pkg_ref).package()
 

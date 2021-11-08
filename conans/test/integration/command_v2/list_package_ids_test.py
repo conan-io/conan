@@ -1,3 +1,4 @@
+import copy
 import re
 import textwrap
 from unittest.mock import Mock, patch
@@ -45,15 +46,17 @@ class TestListPackageIdsBase:
         return f"{recipe_name}#fca0383e6a43348f7989f11ab8f0a92d"
 
     def _get_lastest_recipe_ref(self, recipe_name):
-        return self.client.cache.get_latest_rrev(RecipeReference.loads(recipe_name))
+        tmp = self.client.cache.get_latest_recipe_reference(RecipeReference.loads(recipe_name))
+        ret = copy.copy(tmp)
+        ret.timestamp = None
+        return ret
 
 
 class TestParams(TestListPackageIdsBase):
 
     @pytest.mark.parametrize("ref", [
         "whatever",
-        "whatever/",
-        "whatever/1"
+        "whatever/"
     ])
     def test_fail_if_reference_is_not_correct(self, ref):
         self.client.run(f"list package-ids {ref}", assert_error=True)

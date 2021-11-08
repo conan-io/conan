@@ -54,7 +54,7 @@ def test_try_upload_bad_recipe():
     client.save({"conanfile.py": GenConanfile("Hello0", "1.2.1")})
     client.run("export . frodo/stable")
     ref = RecipeReference.loads("Hello0/1.2.1@frodo/stable")
-    latest_rrev = client.cache.get_latest_rrev(ref)
+    latest_rrev = client.cache.get_latest_recipe_reference(ref)
     os.unlink(os.path.join(client.cache.ref_layout(latest_rrev).export(), CONAN_MANIFEST))
     client.run("upload %s -r default" % str(ref), assert_error=True)
     assert "Cannot upload corrupted recipe" in client.out
@@ -388,8 +388,8 @@ class UploadTest(unittest.TestCase):
                                  "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable:myfa",
                                  ])
 
-        rev = self.client.cache.get_latest_rrev(self.ref).revision
-        prev = self.client.cache.get_latest_prev(self.ref).revision
+        rev = self.client.cache.get_latest_recipe_reference(self.ref).revision
+        prev = self.client.cache.get_latest_package_reference(self.ref).revision
         self.ref.revision = rev
 
         self.pref.revision = prev
@@ -404,8 +404,8 @@ class UploadTest(unittest.TestCase):
         # Upload all recipes and packages
         self.client.run('upload %s --all -r default' % str(self.ref))
 
-        rev = self.client.cache.get_latest_rrev(self.ref).revision
-        prev = self.client.cache.get_latest_prev(self.ref).revision
+        rev = self.client.cache.get_latest_recipe_reference(self.ref).revision
+        prev = self.client.cache.get_latest_package_reference(self.ref).revision
         self.ref.revision = rev
         self.pref.revision = prev
 

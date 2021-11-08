@@ -87,7 +87,7 @@ class Pkg(ConanFile):
         client.remove_all()
 
         client.run("download pkg/0.1@lasote/stable")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         ref_layout = client.get_latest_ref_layout(ref)
         pkg_layout = client.get_latest_pkg_layout(pref)
 
@@ -129,9 +129,9 @@ class Pkg(ConanFile):
 
         client.run("download pkg/0.1:{}".format(NO_SETTINGS_PACKAGE_ID))
 
-        rrev = client.cache.get_latest_rrev(ref)
+        rrev = client.cache.get_latest_recipe_reference(ref)
         pkgids = client.cache.get_package_references(rrev)
-        prev = client.cache.get_latest_prev(pkgids[0])
+        prev = client.cache.get_latest_package_reference(pkgids[0])
         package_folder = client.cache.pkg_layout(prev).package()
 
         # Check not 'No remote binary packages found' warning
@@ -166,9 +166,9 @@ class Pkg(ConanFile):
 
         client.run("download pkg/0.1@lasote/stable -p {}".format(NO_SETTINGS_PACKAGE_ID))
 
-        rrev = client.cache.get_latest_rrev(ref)
+        rrev = client.cache.get_latest_recipe_reference(ref)
         pkgids = client.cache.get_package_references(rrev)
-        prev = client.cache.get_latest_prev(pkgids[0])
+        prev = client.cache.get_latest_package_reference(pkgids[0])
         package_folder = client.cache.pkg_layout(prev).package()
 
         # Check not 'No remote binary packages found' warning

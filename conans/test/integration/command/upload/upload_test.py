@@ -40,8 +40,8 @@ class UploadTest(unittest.TestCase):
         client.run("create . lasote/testing")
         ref = RecipeReference.loads("Hello/0.1@lasote/testing")
 
-        rrev = client.cache.get_latest_rrev(ref)
-        prev = client.cache.get_latest_prev(rrev)
+        rrev = client.cache.get_latest_recipe_reference(ref)
+        prev = client.cache.get_latest_package_reference(rrev)
         pkg_folder = client.cache.pkg_layout(prev).package()
         set_dirty(pkg_folder)
 
@@ -226,7 +226,7 @@ class UploadTest(unittest.TestCase):
             self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
                           "Error gzopen conan_sources.tgz", client.out)
 
-            latest_rrev = client.cache.get_latest_rrev(ref)
+            latest_rrev = client.cache.get_latest_recipe_reference(ref)
             export_download_folder = client.cache.ref_layout(latest_rrev).download_export()
 
             tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
@@ -245,8 +245,8 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
-        pref = client.get_latest_prev(RecipeReference.loads("Hello0/1.2.1@user/testing"),
-                                      NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_package_reference(RecipeReference.loads("Hello0/1.2.1@user/testing"),
+                                                   NO_SETTINGS_PACKAGE_ID)
 
         def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             if name == PACKAGE_TGZ_NAME:
@@ -277,9 +277,9 @@ class UploadTest(unittest.TestCase):
                      "include/hello.h": ""})
         client.run("create . frodo/stable")
         ref = RecipeReference.loads("Hello0/1.2.1@frodo/stable")
-        latest_rrev = client.cache.get_latest_rrev(ref)
+        latest_rrev = client.cache.get_latest_recipe_reference(ref)
         pkg_ids = client.cache.get_package_references(latest_rrev)
-        latest_prev = client.cache.get_latest_prev(pkg_ids[0])
+        latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
         package_folder = client.cache.pkg_layout(latest_prev).package()
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
@@ -305,7 +305,7 @@ class UploadTest(unittest.TestCase):
                       "hello.cpp": "int i=1"})
         client2.run("export . frodo/stable")
         ref = RecipeReference.loads("Hello0/1.2.1@frodo/stable")
-        latest_rrev = client2.cache.get_latest_rrev(ref)
+        latest_rrev = client2.cache.get_latest_recipe_reference(ref)
         manifest = client2.cache.ref_layout(latest_rrev).recipe_manifest()
         manifest.time += 10
         manifest.save(client2.cache.ref_layout(latest_rrev).export())
@@ -332,7 +332,7 @@ class UploadTest(unittest.TestCase):
         client2.save(files)
         client2.run("export . frodo/stable")
         ref = RecipeReference.loads("Hello0/1.2.1@frodo/stable")
-        rrev = client2.cache.get_latest_rrev(ref)
+        rrev = client2.cache.get_latest_recipe_reference(ref)
         manifest = client2.cache.ref_layout(rrev).recipe_manifest()
         manifest.time += 10
         manifest.save(client2.cache.ref_layout(rrev).export())

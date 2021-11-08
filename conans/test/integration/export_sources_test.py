@@ -82,13 +82,13 @@ class ExportsSourcesTest(unittest.TestCase):
         self.pref = PkgReference(self.ref, NO_SETTINGS_PACKAGE_ID)
 
     def _get_folders(self):
-        latest_rrev = self.client.cache.get_latest_rrev(self.ref)
+        latest_rrev = self.client.cache.get_latest_recipe_reference(self.ref)
         ref_layout = self.client.cache.ref_layout(latest_rrev)
         self.source_folder = ref_layout.source()
         self.export_folder = ref_layout.export()
         self.export_sources_folder = ref_layout.export_sources()
 
-        latest_prev = self.client.cache.get_latest_prev(PkgReference(latest_rrev,
+        latest_prev = self.client.cache.get_latest_package_reference(PkgReference(latest_rrev,
                                                                      NO_SETTINGS_PACKAGE_ID))
         if latest_prev:
             pkg_layout = self.client.cache.pkg_layout(latest_prev)
@@ -356,7 +356,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
         ref = RecipeReference.loads('Hello/0.1@lasote/testing')
         self.client.run(f"remove Hello/0.1@lasote/testing"
-                        f"#{self.client.cache.get_latest_rrev(ref).revision} -f")
+                        f"#{self.client.cache.get_latest_recipe_reference(ref).revision} -f")
 
         self.client.run("install Hello/0.1@lasote/testing --update")
         self._get_folders()

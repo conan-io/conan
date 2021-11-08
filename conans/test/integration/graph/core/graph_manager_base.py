@@ -148,7 +148,7 @@ class GraphManagerTest(unittest.TestCase):
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
         build_mode = []  # Means build all
-        ref = ref or RecipeReference(None, None, None, None, validate=False)
+        ref = ref or RecipeReference(None, None, None, None)
         app = self._get_app()
 
         deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,

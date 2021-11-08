@@ -539,7 +539,7 @@ class CMakeInstallTest(unittest.TestCase):
         client.run("create . pkg/0.1@")
         self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
         ref = RecipeReference.loads("pkg/0.1")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         package_folder = client.get_latest_pkg_layout(pref).package()
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 

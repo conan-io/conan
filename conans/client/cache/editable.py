@@ -18,7 +18,7 @@ class EditablePackages(object):
         if os.path.exists(self._edited_file):
             edited = load(self._edited_file)
             edited_js = json.loads(edited)
-            self._edited_refs = {RecipeReference.loads(r, validate=False): d
+            self._edited_refs = {RecipeReference.loads(r): d
                                  for r, d in edited_js.items()}
         else:
             self._edited_refs = {}  # {ref: {"path": path, "layout": layout}}

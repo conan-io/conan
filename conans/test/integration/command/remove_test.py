@@ -159,7 +159,7 @@ class RemoveTest(unittest.TestCase):
                 ref = RecipeReference.loads(self.root_folder[k])
                 if isinstance(base_path, ServerStore):
                     try:
-                        rev = self.client.cache.get_latest_rrev(ref).revision
+                        rev = self.client.cache.get_latest_recipe_reference(ref).revision
                     except:
                         # This whole test is a crap, we cannot guess remote revision
                         # if the package is not in local anymore
@@ -174,7 +174,7 @@ class RemoveTest(unittest.TestCase):
                         if isinstance(base_path, ServerStore):
                             pref = PkgReference(ref, sha)
                             try:
-                                prev = self.client.cache.get_latest_prev(pref).revision
+                                prev = self.client.cache.get_latest_package_reference(pref).revision
                             except:
                                 # This whole test is a crap, we cannot guess remote revision
                                 # if the package is not in local anymore
@@ -410,10 +410,10 @@ class RemoveWithoutUserChannel(unittest.TestCase):
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@")
-        latest_rrev = self.client.cache.get_latest_rrev(RecipeReference.loads("lib/1.0"))
+        latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("lib/1.0"))
         ref_layout = self.client.cache.ref_layout(latest_rrev)
         pkg_ids = self.client.cache.get_package_references(latest_rrev)
-        latest_prev = self.client.cache.get_latest_prev(pkg_ids[0])
+        latest_prev = self.client.cache.get_latest_package_reference(pkg_ids[0])
         pkg_layout = self.client.cache.pkg_layout(latest_prev)
         self.client.run("remove lib/1.0 -f")
         self.assertFalse(os.path.exists(ref_layout.base_folder))

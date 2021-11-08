@@ -83,6 +83,7 @@ class ListAPI:
 
     @api_method
     def get_package_references(self, reference, remote=None):
+        # FIXME: This shouldn't resolve the latest if no revision is specified
         """
         Get all the Package IDs given a recipe revision from cache or remote.
 
@@ -109,11 +110,11 @@ class ListAPI:
                 app.remote_manager.get_latest_recipe_reference(reference, remote)
             packages_props = app.remote_manager.search_packages(remote, rrev, None)
         else:
-            rrev = reference if reference.revision else app.cache.get_latest_rrev(reference)
+            rrev = reference if reference.revision else app.cache.get_latest_recipe_reference(reference)
             package_ids = app.cache.get_package_references(rrev)
             package_layouts = []
             for pkg in package_ids:
-                latest_prev = app.cache.get_latest_prev(pkg)
+                latest_prev = app.cache.get_latest_package_reference(pkg)
                 package_layouts.append(app.cache.pkg_layout(latest_prev))
             packages_props = search_packages(package_layouts, None)
 

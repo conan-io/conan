@@ -37,9 +37,9 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Source files: myfile.h contents", client.out)
         ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
 
-        latest_rrev = client.cache.get_latest_rrev(ref)
+        latest_rrev = client.cache.get_latest_recipe_reference(ref)
         pkg_ids = client.cache.get_package_references(latest_rrev)
-        latest_prev = client.cache.get_latest_prev(pkg_ids[0])
+        latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
         layout = client.cache.pkg_layout(latest_prev)
         build_folder = layout.build()
         package_folder = layout.package()
@@ -71,8 +71,8 @@ class ConanFileToolsTest(ConanFile):
         client.run("create . lasote/testing --build")
         ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
 
-        latest_rrev = client.cache.get_latest_rrev(ref)
-        latest_prev = client.cache.get_latest_prev(latest_rrev)
+        latest_rrev = client.cache.get_latest_recipe_reference(ref)
+        latest_prev = client.cache.get_latest_package_reference(latest_rrev)
         layout = client.cache.pkg_layout(latest_prev)
         package_folder = layout.package()
 
@@ -83,8 +83,8 @@ class ConanFileToolsTest(ConanFile):
         client.run("create . lasote/testing --build")
         ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
 
-        latest_rrev = client.cache.get_latest_rrev(ref)
-        latest_prev = client.cache.get_latest_prev(latest_rrev)
+        latest_rrev = client.cache.get_latest_recipe_reference(ref)
+        latest_prev = client.cache.get_latest_package_reference(latest_rrev)
         layout = client.cache.pkg_layout(latest_prev)
         package_folder = layout.package()
 

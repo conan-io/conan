@@ -146,11 +146,11 @@ class ClientCache(object):
         return [RecipeReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
                 self._data_cache.get_recipe_revisions_references(ConanReference(ref), only_latest_rrev)]
 
-    def get_latest_rrev(self, ref):
+    def get_latest_recipe_reference(self, ref):
         rrevs = self.get_recipe_revisions_references(ref, True)
         return rrevs[0] if rrevs else None
 
-    def get_latest_prev(self, ref):
+    def get_latest_package_reference(self, ref):
         prevs = self.get_package_revisions_references(ref, True)
         return prevs[0] if prevs else None
 

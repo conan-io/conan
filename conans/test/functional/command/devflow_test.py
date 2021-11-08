@@ -58,7 +58,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build")
 
         ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
@@ -77,7 +77,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
 
         ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
@@ -98,7 +98,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("export-pkg .. Pkg/0.1@lasote/testing --source-folder=.. ")
 
         ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
@@ -156,7 +156,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build -sf=../src")
 
         ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
@@ -176,7 +176,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
 
         ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
@@ -198,6 +198,6 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./build")
 
         ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)

@@ -35,7 +35,7 @@ class TestListPackageRevisionsBase:
                f"3fb49604f9c2f729b85ba3115852006824e72cab"
 
     def _get_lastest_package_ref(self, recipe_name):
-        rref = self.client.cache.get_latest_rrev(RecipeReference.loads(recipe_name))
+        rref = self.client.cache.get_latest_recipe_reference(RecipeReference.loads(recipe_name))
         pref = PkgReference(rref, NO_SETTINGS_PACKAGE_ID)
         return pref
 

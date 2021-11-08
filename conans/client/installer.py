@@ -67,7 +67,7 @@ class _PackageBuilder(object):
             package_refs = self._cache.get_package_references(recipe_ref)
             build_prev = None
             for _pkg_ref in package_refs:
-                prev = self._cache.get_latest_prev(_pkg_ref)
+                prev = self._cache.get_latest_package_reference(_pkg_ref)
                 prev_build_id = self._cache.get_build_id(prev)
                 if prev_build_id == recipe_build_id:
                     build_prev = prev

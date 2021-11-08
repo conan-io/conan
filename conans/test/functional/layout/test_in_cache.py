@@ -287,7 +287,7 @@ def test_git_clone_with_source_layout():
         client.init_git_repo()
 
     client.run("create . hello/1.0@")
-    latest_rrev = client.cache.get_latest_rrev(RecipeReference.loads("hello/1.0@"))
+    latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/1.0@"))
     sf = client.cache.ref_layout(latest_rrev).source()
     assert os.path.exists(os.path.join(sf, "myfile.txt"))
     # The conanfile is cleared from the root before cloning

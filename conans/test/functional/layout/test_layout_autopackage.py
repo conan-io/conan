@@ -7,8 +7,8 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-def get_latest_prev(cache, ref, pkgid):
-    latest_rrev = cache.get_latest_rrev(ref)
+def get_latest_package_reference(cache, ref, pkgid):
+    latest_rrev = cache.get_latest_recipe_reference(ref)
     pref = PkgReference(latest_rrev, pkgid)
     prefs = cache.get_package_revisions_references(pref, only_latest_prev=True)
     return prefs[0]
@@ -94,7 +94,7 @@ def test_auto_package_no_components():
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
 
     ref = RecipeReference.loads("lib/1.0@")
-    prev = get_latest_prev(client.cache, ref, package_id)
+    prev = get_latest_package_reference(client.cache, ref, package_id)
 
     p_folder = client.cache.pkg_layout(prev).package()
 
@@ -187,7 +187,7 @@ def test_auto_package_with_components():
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
 
     ref = RecipeReference.loads("lib/1.0@")
-    pref = get_latest_prev(client.cache, ref, package_id)
+    pref = get_latest_package_reference(client.cache, ref, package_id)
     p_folder = client.cache.pkg_layout(pref).package()
 
     def p_path(path):
@@ -284,7 +284,7 @@ def test_auto_package_default_patterns():
     client.run("create . lib/1.0@")
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("lib/1.0@")
-    pref = get_latest_prev(client.cache, ref, package_id)
+    pref = get_latest_package_reference(client.cache, ref, package_id)
     p_folder = client.cache.pkg_layout(pref).package()
 
     assert set(os.listdir(os.path.join(p_folder, "lib"))) == {"mylib.a", "mylib.so", "mylib.so.0",

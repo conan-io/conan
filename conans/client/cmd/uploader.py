@@ -64,7 +64,7 @@ class _UploadCollecter(object):
         if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
             ref = RecipeReference.loads(reference_or_pattern)
-            rrev = self._cache.get_latest_rrev(ref)
+            rrev = self._cache.get_latest_recipe_reference(ref)
             if not rrev:
                 raise RecipeNotFoundException(ref)
             else:
@@ -111,7 +111,7 @@ class _UploadCollecter(object):
                     # TODO: cache2.0 Ignoring the query for the moment
                     packages_ids = []
                     for pkg_id in self._cache.get_package_references(ref):
-                        packages_ids.append(self._cache.get_latest_prev(pkg_id))
+                        packages_ids.append(self._cache.get_latest_package_reference(pkg_id))
 
                 elif package_id:
                     # TODO: cache2.0 if we specify a package id we could have multiple package revisions
@@ -124,7 +124,7 @@ class _UploadCollecter(object):
                     packages_ids = []
                     packages = [pref] if pref.revision else self._cache.get_package_references(pref)
                     for pkg_ref in packages:
-                        latest_prev = self._cache.get_latest_prev(pkg_ref) \
+                        latest_prev = self._cache.get_latest_package_reference(pkg_ref) \
                             if pkg_ref.package_id == package_id else None
                         if latest_prev:
                             packages_ids.append(latest_prev)
@@ -521,10 +521,13 @@ class CmdUpload(object):
 
         try:
             pref = self._remote_manager.get_package_revision_reference(pref, remote)
+            pref_msg = copy.copy(pref)
+            pref_msg.timestamp = None
+            pref_msg.ref.timestamp = None
             if policy == UPLOAD_POLICY_FORCE:
-                self._progress_output.info("{} already in server, forcing upload".format(repr(pref)))
+                self._progress_output.info("{} already in server, forcing upload".format(repr(pref_msg)))
             else:
-                self._progress_output.info("{} already in server, skipping upload".format(repr(pref)))
+                self._progress_output.info("{} already in server, skipping upload".format(repr(pref_msg)))
                 return
         except NotFoundException:
             pass

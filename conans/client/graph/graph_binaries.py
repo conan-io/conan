@@ -173,7 +173,7 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_build(node, build_mode):
             return
 
-        cache_latest_prev = self._cache.get_latest_prev(pref)
+        cache_latest_prev = self._cache.get_latest_package_reference(pref)
         output = node.conanfile.output
 
         if not cache_latest_prev:

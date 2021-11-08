@@ -707,12 +707,12 @@ class ConanAPIV1(object):
             """
             assert not os.path.isabs(path)
 
-            latest_rrev = cache.get_latest_rrev(ref)
+            latest_rrev = cache.get_latest_recipe_reference(ref)
 
             if package_id is None:  # Get the file in the exported files
                 folder = cache.ref_layout(latest_rrev).export()
             else:
-                latest_pref = cache.get_latest_prev(PkgReference(latest_rrev, package_id))
+                latest_pref = cache.get_latest_package_reference(PkgReference(latest_rrev, package_id))
                 folder = cache.get_pkg_layout(latest_pref).package()
 
             abs_path = os.path.join(folder, path)
@@ -755,7 +755,7 @@ class ConanAPIV1(object):
 
         # Do not allow to create an alias of a recipe that already has revisions
         # with that name
-        latest_rrev = app.cache.get_latest_rrev(ref)
+        latest_rrev = app.cache.get_latest_recipe_reference(ref)
         if latest_rrev:
             alias_conanfile_path = app.cache.ref_layout(latest_rrev).conanfile()
             if os.path.exists(alias_conanfile_path):
@@ -818,7 +818,7 @@ class ConanAPIV1(object):
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
         # Check the conanfile is there, and name/version matches
-        ref = RecipeReference.loads(reference, validate=True)
+        ref = RecipeReference.loads(reference)
         target_conanfile = app.loader.load_basic(target_path)
         if (target_conanfile.name and target_conanfile.name != ref.name) or \
                 (target_conanfile.version and target_conanfile.version != ref.version):

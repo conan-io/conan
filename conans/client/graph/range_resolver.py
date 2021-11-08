@@ -84,7 +84,7 @@ def satisfying(list_versions, versionexpr, result):
 def range_satisfies(version_range, version):
     from semver import satisfies
     rang, loose, include_prerelease = _parse_versionexpr(version_range, [])
-    return satisfies(version, rang, loose=loose, include_prerelease=include_prerelease)
+    return satisfies(str(version), rang, loose=loose, include_prerelease=include_prerelease)
 
 
 class RangeResolver(object):

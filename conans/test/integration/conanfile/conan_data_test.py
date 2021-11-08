@@ -141,7 +141,7 @@ sources:
         client.run("create . {}".format(ref))
         self.assertIn("OK!", client.out)
 
-        latest_rrev = client.cache.get_latest_rrev(ref)
+        latest_rrev = client.cache.get_latest_recipe_reference(ref)
         ref_layout = client.cache.ref_layout(latest_rrev)
         source_folder = ref_layout.source()
         downloaded_file = os.path.join(source_folder, "foo.txt")
