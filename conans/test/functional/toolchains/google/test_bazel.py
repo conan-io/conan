@@ -1,5 +1,6 @@
 import os
 import platform
+import sys
 import textwrap
 import time
 import unittest
@@ -162,6 +163,9 @@ class LinuxTest(Base):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Apple")
+@pytest.mark.skipif(sys.version_info.major != 3 or sys.version_info.minor != 6,
+                    reason="We are running this test for just one python version, "
+                           "running this in parallel is very problematic")
 class AppleTest(Base):
 
     @parameterized.expand(["Debug",])
