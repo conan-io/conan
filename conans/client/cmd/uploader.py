@@ -248,7 +248,8 @@ class _PackagePreparator:
         try:
             ref = recipe.ref
             recipe_layout = self._cache.ref_layout(ref)
-            retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, ref, remotes)
+            retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile,
+                                     ref.to_conanfileref(), remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)
             recipe.files = cache_files
 
@@ -261,6 +262,7 @@ class _PackagePreparator:
             else:
                 recipe.dirty = False
         except Exception as e:
+            print(traceback.format_exc())
             raise ConanException(f"{recipe.ref} Error while compressing: {e}")
 
     def _compress_recipe_files(self, layout, ref):
@@ -390,7 +392,7 @@ class CmdUpload(object):
 
         preparator = _PackagePreparator(self._cache, self._remote_manager, self._hook_manager,
                                         self._loader)
-        preparator.prepare(upload_data, self._app.load_remotes(), integrity_check)
+        preparator.prepare(upload_data, self._app.enabled_remotes, integrity_check)
         # print("PREPARED", json.dumps(upload_data.serialize(), indent=2))
 
         if policy == UPLOAD_POLICY_SKIP:
