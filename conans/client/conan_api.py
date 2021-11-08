@@ -14,8 +14,6 @@ from conans.client.cmd.create import create
 from conans.client.cmd.download import download
 from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
-from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
-                                       cmd_profile_list, cmd_profile_update)
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
@@ -659,38 +657,6 @@ class ConanAPIV1(object):
             self.remove_system_reqs(repr(ref))
 
     @api_method
-    def profile_list(self):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_list(app.cache.profiles_path)
-
-    @api_method
-    def create_profile(self, profile_name, detect=False, force=False):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_create(profile_name, app.cache, detect, force)
-
-    @api_method
-    def update_profile(self, profile_name, key, value):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_update(profile_name, key, value, app.cache)
-
-    @api_method
-    def get_profile_key(self, profile_name, key):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_get(profile_name, key, app.cache)
-
-    @api_method
-    def delete_profile_key(self, profile_name, key):
-        app = ConanApp(self.cache_folder)
-        return cmd_profile_delete_key(profile_name, key, app.cache)
-
-    @api_method
-    def read_profile(self, profile=None):
-        app = ConanApp(self.cache_folder)
-        profile_loader = ProfileLoader(app.cache)
-        profile = profile_loader.load_profile(profile, os.getcwd())
-        return profile
-
-    @api_method
     def get_path(self, reference, package_id=None, path=None, remote_name=None):
         app = ConanApp(self.cache_folder)
         def get_path(cache, ref, path, package_id):
@@ -835,14 +801,18 @@ class ConanAPIV1(object):
             graph_lock= Lockfile.load(lockfile)
 
         profile_loader = ProfileLoader(app.cache)
-        phost = profile_loader.from_cli_args(profile_host.profiles, profile_host.settings,
+        profiles = [profile_loader.get_default_host()] if not profile_host.profiles \
+            else profile_host.profiles
+        phost = profile_loader.from_cli_args(profiles, profile_host.settings,
                                              profile_host.options, profile_host.env,
                                              profile_host.conf, cwd)
 
         # Only work on the profile_build if something is provided
-        pbuild = profile_loader.from_cli_args(profile_build.profiles, profile_build.settings,
+        profiles = [profile_loader.get_default_build()] if not profile_build.profiles \
+            else profile_build.profiles
+        pbuild = profile_loader.from_cli_args(profiles, profile_build.settings,
                                               profile_build.options, profile_build.env,
-                                              profile_build.conf, cwd,  build_profile=True)
+                                              profile_build.conf, cwd)
 
         root_ref = RecipeReference(name, version, user, channel)
 
@@ -881,14 +851,18 @@ def get_graph_info(profile_host, profile_build, cwd, cache,
         ConanOutput().info("Using lockfile: '{}'".format(lockfile))
 
     profile_loader = ProfileLoader(cache)
-    phost = profile_loader.from_cli_args(profile_host.profiles, profile_host.settings,
+    profiles = [profile_loader.get_default_host()] if not profile_host.profiles \
+        else profile_host.profiles
+    phost = profile_loader.from_cli_args(profiles, profile_host.settings,
                                          profile_host.options, profile_host.env,
                                          profile_host.conf, cwd)
 
+    profiles = [profile_loader.get_default_build()] if not profile_build.profiles \
+        else profile_build.profiles
     # Only work on the profile_build if something is provided
-    pbuild = profile_loader.from_cli_args(profile_build.profiles, profile_build.settings,
+    pbuild = profile_loader.from_cli_args(profiles, profile_build.settings,
                                           profile_build.options, profile_build.env,
-                                          profile_build.conf, cwd, build_profile=True)
+                                          profile_build.conf, cwd)
 
     # Apply the new_config to the profiles the global one, so recipes get it too
     # TODO: This means lockfiles contain whole copy of the config here?
