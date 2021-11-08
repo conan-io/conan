@@ -989,13 +989,11 @@ class SCMBlockUploadTest(unittest.TestCase):
                       "Use --ignore-dirty to force it.", client.out)
         # The upload has to fail, no "auto" fields are allowed
         client.run("upload lib/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed:"
-                      " The recipe contains invalid data in the 'scm' attribute (some 'auto'"
-                      " values or missing fields 'type', 'url' or 'revision'). Use '--force'"
-                      " to ignore", client.out)
+        self.assertIn("The lib/0.1@user/channel recipe contains invalid data in the "
+                      "'scm' attribute ", client.out)
         # The upload with --force should work
         client.run("upload lib/0.1@user/channel -r default --force")
-        self.assertIn("Uploading lib/0.1@user/channel to remote", client.out)
+        self.assertIn("Uploading lib/0.1@user/channel", client.out)
 
     def test_export_blocking_type_none(self):
         client = TestClient(default_server_user=True)
@@ -1044,9 +1042,7 @@ class SCMBlockUploadTest(unittest.TestCase):
         create_local_git_repo(folder=client.current_folder)
         client.run("create . pkg/0.1@user/channel")
         client.run("upload pkg/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Upload recipe to 'default' failed: The recipe"
-                      " contains invalid data in the 'scm' attribute (some 'auto' values or"
-                      " missing fields 'type', 'url' or 'revision'). Use '--force' to ignore",
+        self.assertIn("The pkg/0.1@user/channel recipe contains invalid data in the 'scm' attribute",
                       client.out)
         client.run("upload pkg/0.1@user/channel -r default --force")
 

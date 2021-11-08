@@ -2,7 +2,7 @@ import os
 import stat
 import tarfile
 import time
-import traceback
+
 
 from conans.cli.output import ConanOutput
 from conans.client.source import retrieve_exports_sources
@@ -17,7 +17,6 @@ from conans.search.search import search_recipes
 from conans.util import progress_bar
 from conans.util.files import (clean_dirty, is_dirty,
                                gzopen_without_timestamps, set_dirty_context_manager)
-from conans.util.progress_bar import left_justify_message
 from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
 
 UPLOAD_POLICY_FORCE = "force-upload"
@@ -186,7 +185,7 @@ class _UploadChecker:
             if policy == UPLOAD_POLICY_FORCE:
                 self._output.info("{} already in server, forcing upload".format(repr(ref)))
                 recipe.upload = True
-                recipe.force = False
+                recipe.force = True
             else:
                 self._output.info("{} already in server, skipping upload".format(repr(ref)))
                 recipe.upload = False
@@ -265,7 +264,6 @@ class _PackagePreparator:
             else:
                 recipe.dirty = False
         except Exception as e:
-            print(traceback.format_exc())
             raise ConanException(f"{recipe.ref} Error while compressing: {e}")
 
     def _compress_recipe_files(self, layout, ref):
@@ -404,72 +402,8 @@ class CmdUpload(object):
         self._remote_manager.check_credentials(remote)
         executor = _UploadExecutor(self._remote_manager, self._cache, self._hook_manager,
                                    self._progress_output)
-        executor.upload(upload_data, retry, retry_wait, remote)
-
-        '''
-        self._upload_thread_pool = ThreadPool(cpu_count() if parallel_upload else 1)
-
-        def upload_ref(ref_conanfile_prefs):
-            _ref, _conanfile, _prefs = ref_conanfile_prefs
-            try:
-                self._upload_ref(_conanfile, _ref, _prefs, retry, retry_wait)
-            except BaseException as base_exception:
-                base_trace = traceback.format_exc()
-                self._exceptions_list.append((base_exception, _ref, base_trace, remote))
-
-        self._upload_thread_pool.map(upload_ref, refs_to_upload)
-        self._upload_thread_pool.close()
-        self._upload_thread_pool.join()
-
-        if len(self._exceptions_list) > 0:
-            for exc, ref, trace, remote in self._exceptions_list:
-                t = "recipe" if isinstance(ref, ConanFileReference) else "package"
-                msg = "%s: Upload %s to '%s' failed: %s\n" % (str(ref), t, remote.name, str(exc))
-                if get_env("CONAN_VERBOSE_TRACEBACK", False):
-                    msg += trace
-                self._progress_output.error(msg)
-
-            raise ConanException("Errors uploading some packages")
-        '''
-
-    def _upload_ref(self, conanfile, ref, prefs, retry, retry_wait):
-        """ Uploads the recipes and binaries identified by ref
-        """
-        assert (ref.revision is not None), "Cannot upload a recipe without RREV"
-        conanfile_path = self._cache.ref_layout(ref).conanfile()
-        # FIXME: I think it makes no sense to specify a remote to "pre_upload"
-        # FIXME: because the recipe can have one and the package a different one
-        remote = self._app.selected_remote
-        msg = "\rUploading %s to remote '%s'" % (str(ref), remote.name)
-        self._progress_output.info(left_justify_message(msg))
-        self._upload_recipe(ref, conanfile, retry, retry_wait, remote)
-
-        # Now the binaries
-        if prefs:
-            total = len(prefs)
-
-            def upload_package_index(index_pref):
-                index, pref = index_pref
-                try:
-                    up_msg = "\rUploading package %d/%d: %s to '%s'" % (index + 1, total,
-                                                                        str(pref.package_id),
-                                                                        remote.name)
-                    self._progress_output.info(left_justify_message(up_msg))
-                    self._upload_package(pref, remote, retry, retry_wait)
-                except BaseException as pkg_exc:
-                    trace = traceback.format_exc()
-                    return pkg_exc, pref, trace, remote
-
-            def upload_package_callback(ret):
-                package_exceptions = [r for r in ret if r is not None]
-                self._exceptions_list.extend(package_exceptions)
-
-            # This doesn't wait for the packages to end, so the function returns
-            # and the "pool entry" for the recipe is released
-            self._upload_thread_pool.map_async(upload_package_index,
-                                               [(index, pref) for index, pref
-                                                in enumerate(prefs)],
-                                               callback=upload_package_callback)
+        executor.upload(upload_data, retry, retry_wait, remote, policy)
+        # TODO: Implement concurrent upload
 
 
 class _UploadExecutor:
@@ -479,11 +413,12 @@ class _UploadExecutor:
         self._hook_manager = hook_manager
         self._output = output
 
-    def upload(self, upload_data, retry, retry_wait, remote):
+    def upload(self, upload_data, retry, retry_wait, remote, policy):
         self._output.info("Uploading artifacts")
         for recipe in upload_data.recipes:
-            if recipe.dirty and not recipe.force:
-                raise ConanException("The recipe contains invalid data in the 'scm' attribute"
+            # Recipe force can still be False so far if package not in server
+            if recipe.dirty and not (recipe.force or policy == UPLOAD_POLICY_FORCE):
+                raise ConanException(f"The {recipe.ref} recipe contains invalid data in the 'scm' attribute"
                                      " (some 'auto' values or missing fields 'type', 'url' or"
                                      " 'revision'). Use '--force' to ignore this error or export"
                                      " again the recipe ('conan export' or 'conan create') to"
