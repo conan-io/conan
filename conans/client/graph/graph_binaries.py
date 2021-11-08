@@ -57,7 +57,7 @@ class GraphBinariesAnalyzer(object):
         if remote:
             try:
                 info = node.conanfile.info
-                pref_rev = self._remote_manager.get_latest_package_revision(pref, remote, info=info)
+                pref_rev = self._remote_manager.get_latest_package_reference(pref, remote, info=info)
                 pref.revision = pref_rev.revision
                 pref.timestamp = pref_rev.timestamp
                 return remote
@@ -68,7 +68,7 @@ class GraphBinariesAnalyzer(object):
         results = []
         for r in self._app.enabled_remotes:
             try:
-                latest_pref = self._remote_manager.get_latest_package_revision(pref, r)
+                latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
                 results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not self._app.update:
                     break

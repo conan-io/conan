@@ -48,6 +48,13 @@ class Version:
         except IndexError:
             return None
 
+    @property
+    def patch(self):
+        try:
+            return self.main[2]
+        except IndexError:
+            return None
+
     def __str__(self):
         return self._value
 
@@ -181,7 +188,7 @@ class RecipeReference:
             name, version = tokens[0].split("/", 1)
             assert name and version
             # user and channel
-            if len(tokens) == 2:
+            if len(tokens) == 2 and tokens[1]:
                 tokens = tokens[1].split("/", 1)
                 user = tokens[0]
                 channel = tokens[1] if len(tokens) == 2 else None

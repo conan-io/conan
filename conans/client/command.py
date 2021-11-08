@@ -22,7 +22,7 @@ from conans.errors import ConanInvalidSystemRequirements
 from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import get_reference_fields, check_valid_ref
+from conans.model.ref import get_reference_fields, check_valid_ref, validate_recipe_reference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -144,6 +144,8 @@ class Command(object):
         defines = dict((n, v) for n, v in (d.split('=') for d in defines))
 
         self._warn_python_version()
+        ref = RecipeReference.loads(args.name)
+        validate_recipe_reference(ref)
         self._conan_api.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                             exports_sources=args.sources, bare=args.bare,
                             gitignore=args.gitignore, template=args.template,

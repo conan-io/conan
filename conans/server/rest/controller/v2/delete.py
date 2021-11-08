@@ -22,7 +22,7 @@ class DeleteControllerV2(object):
             """
             ref = RecipeReference(name, version, username, channel, revision)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            conan_service.remove_conanfile(ref)
+            conan_service.remove_recipe(ref)
 
         @app.route(r.package_recipe_revision, method=["DELETE"])
         @app.route(r.package_revision, method=["DELETE"])

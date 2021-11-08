@@ -11,7 +11,6 @@ from conans.client.rest.rest_client_common import RestCommonMethods, get_excepti
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.files import decode_text
@@ -74,7 +73,7 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe_sources(self, ref, dest_folder):
         # If revision not specified, check latest
         if not ref.revision:
-            ref, _ = self.get_latest_recipe_revision(ref)
+            ref, _ = self.get_latest_recipe_reference(ref)
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
@@ -100,7 +99,7 @@ class RestV2Methods(RestCommonMethods):
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
-    def get_recipe_path(self, ref, path):
+    def get_recipe_file(self, ref, path):
         url = self.router.recipe_snapshot(ref)
         files = self._get_file_list_json(url)
         if self._is_dir(path, files):
@@ -110,7 +109,7 @@ class RestV2Methods(RestCommonMethods):
             content = self._get_remote_file_contents(url, use_cache=True)
             return decode_text(content)
 
-    def get_package_path(self, pref, path):
+    def get_package_file(self, pref, path):
         """Gets a file content or a directory list"""
         url = self.router.package_snapshot(pref)
         files = self._get_file_list_json(url)
@@ -201,7 +200,7 @@ class RestV2Methods(RestCommonMethods):
                            retry_wait=retry_wait, download_cache=download_cache,
                            url=resource_url, file_path=abs_path, auth=self.auth)
 
-    def _remove_conanfile_files(self, ref, files):
+    def _remove_recipe_files(self, ref, files):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed
         return
 
@@ -213,7 +212,7 @@ class RestV2Methods(RestCommonMethods):
 
         if ref.revision is None:
             # Remove the packages from all the RREVs
-            revisions = self.get_recipe_revisions(ref)
+            revisions = self.get_recipe_revisions_references(ref)
             refs = []
             for rev in revisions:
                 _tmp = copy.copy(ref)
@@ -247,7 +246,7 @@ class RestV2Methods(RestCommonMethods):
                     pid, revision = _tmp
                     pref = PkgReference(ref, pid, revision=revision)
                     if not revision:
-                        prefs = self.get_package_revisions(pref)
+                        prefs = self.get_package_revisions_references(pref)
                     else:
                         prefs = [pref]
                     for pref in prefs:
@@ -262,12 +261,12 @@ class RestV2Methods(RestCommonMethods):
                             response.charset = "utf-8"
                             raise get_exception_from_error(response.status_code)(response.text)
 
-    def remove_conanfile(self, ref):
+    def remove_recipe(self, ref):
         """ Remove a recipe and packages """
         self.check_credentials()
         if ref.revision is None:
             # Remove all the RREVs
-            refs = self.get_recipe_revisions(ref)
+            refs = self.get_recipe_revisions_references(ref)
         else:
             refs = [ref]
 
@@ -283,7 +282,35 @@ class RestV2Methods(RestCommonMethods):
                 response.charset = "utf-8"
                 raise get_exception_from_error(response.status_code)(response.text)
 
-    def get_recipe_revisions(self, ref):
+    def get_recipe_revision_reference(self, ref):
+        # FIXME: implement this new endpoint in the remotes?
+        assert ref.revision, "recipe_exists has to be called with a complete reference"
+        ref_without_rev = copy.copy(ref)
+        ref_without_rev.revision = None
+        try:
+            remote_refs = self.get_recipe_revisions_references(ref_without_rev)
+        except NotFoundException:
+            raise RecipeNotFoundException(ref)
+        for r in remote_refs:
+            if r == ref:
+                return r
+        raise RecipeNotFoundException(ref)
+
+    def get_package_revision_reference(self, pref):
+        # FIXME: implement this endpoint in the remotes?
+        assert pref.revision, "get_package_revision_reference has to be called with a complete reference"
+        pref_without_rev = copy.copy(pref)
+        pref_without_rev.revision = None
+        try:
+            remote_prefs = self.get_package_revisions_references(pref_without_rev)
+        except NotFoundException:
+            raise PackageNotFoundException(pref)
+        for p in remote_prefs:
+            if p == pref:
+                return p
+        raise PackageNotFoundException(pref)
+
+    def get_recipe_revisions_references(self, ref):
         url = self.router.recipe_revisions(ref)
         tmp = self.get_json(url)["revisions"]
         remote_refs = []
@@ -294,13 +321,10 @@ class RestV2Methods(RestCommonMethods):
             remote_refs.append(_tmp)
 
         if ref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
-            for r in remote_refs:
-                if r.revision == ref.revision:
-                    return [r]
-            raise RecipeNotFoundException(ref)
-        return tmp
+            assert "This shoudln't be happening, get_recipe_revisions_references"
+        return remote_refs
 
-    def get_latest_recipe_revision(self, ref):
+    def get_latest_recipe_reference(self, ref):
         url = self.router.recipe_latest(ref)
         data = self.get_json(url)
         remote_ref = copy.copy(ref)
@@ -308,7 +332,7 @@ class RestV2Methods(RestCommonMethods):
         remote_ref.timestamp = from_iso8601_to_timestamp(data.get("time"))
         return remote_ref
 
-    def get_package_revisions(self, pref, headers=None):
+    def get_package_revisions_references(self, pref, headers=None):
         url = self.router.package_revisions(pref)
         tmp = self.get_json(url, headers=headers)["revisions"]
         remote_prefs = [PkgReference(pref.ref, pref.package_id, item.get("revision"),
@@ -321,7 +345,7 @@ class RestV2Methods(RestCommonMethods):
             raise PackageNotFoundException(pref)
         return remote_prefs
 
-    def get_latest_package_revision(self, pref: PkgReference, headers):
+    def get_latest_package_reference(self, pref: PkgReference, headers):
         url = self.router.package_latest(pref)
         data = self.get_json(url, headers=headers)
         remote_pref = copy.copy(pref)

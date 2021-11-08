@@ -6,7 +6,7 @@ import unittest
 import pytest
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import RecipeReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
 from conans.util.files import load, mkdir, save
 

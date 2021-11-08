@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 
@@ -36,9 +37,9 @@ class Lockfile(object):
             assert graph_node.conanfile is not None
 
             if graph_node.context == CONTEXT_BUILD:
-                build_requires.add(RecipeReference.from_conanref(graph_node.ref))
+                build_requires.add(graph_node.ref)
             else:
-                requires.add(RecipeReference.from_conanref(graph_node.ref))
+                requires.add(graph_node.ref)
 
         # Sorted, newer versions first, so first found is valid for version ranges
         # TODO: Need to impmlement same ordering for revisions, based on revision time
@@ -73,9 +74,9 @@ class Lockfile(object):
             assert graph_node.conanfile is not None
 
             if graph_node.context == CONTEXT_BUILD:
-                build_requires.add(RecipeReference.from_conanref(graph_node.ref))
+                build_requires.add(graph_node.ref)
             else:
-                requires.add(RecipeReference.from_conanref(graph_node.ref))
+                requires.add(graph_node.ref)
 
         requires.update(self.requires)
         self.requires = list(reversed(sorted(requires)))
@@ -162,7 +163,6 @@ class Lockfile(object):
         match the existing RREV
         """
         # Filter existing matching
-        ref = RecipeReference.from_conanref(ref)
         if ref not in self.requires:
             # It is inserted in the first position, because that will result in prioritization
             # That includes testing previous versions in a version range

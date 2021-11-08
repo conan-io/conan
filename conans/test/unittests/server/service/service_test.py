@@ -245,7 +245,7 @@ class ConanServiceTest(unittest.TestCase):
         self.server_store.update_last_package_revision(pref3)
 
         # Delete all the conans folder
-        self.service.remove_conanfile(self.ref)
+        self.service.remove_recipe(self.ref)
         conan_path = self.server_store.base_folder(self.ref)
         self.assertFalse(os.path.exists(conan_path))
 
@@ -257,5 +257,5 @@ class ConanServiceTest(unittest.TestCase):
 
         # Raise an exception
         self.assertRaises(NotFoundException,
-                          self.service.remove_conanfile,
+                          self.service.remove_recipe,
                           RecipeReference("Fake", "1.0", "lasote", "stable"))

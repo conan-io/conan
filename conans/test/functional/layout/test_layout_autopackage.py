@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 def get_latest_prev(cache, ref, pkgid):
     latest_rrev = cache.get_latest_rrev(ref)
     pref = PkgReference(latest_rrev, pkgid)
-    prefs = cache.get_package_revisions(pref, only_latest_prev=True)
+    prefs = cache.get_package_revisions_references(pref, only_latest_prev=True)
     return prefs[0]
 
 

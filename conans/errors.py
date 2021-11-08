@@ -8,6 +8,7 @@
     see return_plugin.py
 
 """
+import copy
 from contextlib import contextmanager
 from subprocess import CalledProcessError
 
@@ -244,7 +245,11 @@ class PackageNotFoundException(NotFoundException):
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = repr(self.pref)
+        pref = copy.copy(self.pref)
+        # FIXME: Should we do a method to repr without timestamp?
+        pref.timestamp = None
+        pref.ref.timestamp = None
+        tmp = repr(pref)
         return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
 
 

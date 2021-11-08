@@ -6,7 +6,7 @@ from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.options import Options
-from conans.model.recipe_ref import RecipeReference
+from conans.model.recipe_ref import RecipeReference, Version
 from conans.model.values import Values
 from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
@@ -17,6 +17,59 @@ PREV_UNKNOWN = "PREV unknown"
 RREV_UNKNOWN = "RREV unknown"
 PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
 PACKAGE_ID_INVALID = "INVALID"
+
+
+class _VersionRepr:
+    """Class to return strings like 1.Y.Z from a Version object"""
+
+    def __init__(self, version: Version):
+        self._version = version
+
+    def stable(self):
+        if self._version.major == 0:
+            return str(self._version)
+        else:
+            return self.major()
+
+    def major(self):
+        if not isinstance(self._version.major, int):
+            return str(self._version.major)
+        return ".".join([str(self._version.major), 'Y', 'Z'])
+
+    def minor(self, fill=True):
+        if not isinstance(self._version.major, int):
+            return str(self._version.major)
+
+        v0 = str(self._version.major)
+        v1 = str(self._version.minor) if self._version.minor is not None else "0"
+        if fill:
+            return ".".join([v0, v1, 'Z'])
+        return ".".join([v0, v1])
+
+    def patch(self):
+        if not isinstance(self._version.major, int):
+            return str(self._version.major)
+
+        v0 = str(self._version.major)
+        v1 = str(self._version.minor) if self._version.minor is not None else "0"
+        v2 = str(self._version.patch) if self._version.patch is not None else "0"
+        return ".".join([v0, v1, v2])
+
+    def pre(self):
+        if not isinstance(self._version.major, int):
+            return str(self._version.major)
+
+        v0 = str(self._version.major)
+        v1 = str(self._version.minor) if self._version.minor is not None else "0"
+        v2 = str(self._version.patch) if self._version.patch is not None else "0"
+        v = ".".join([v0, v1, v2])
+        if self._version.pre is not None:
+            v += "-%s" % self._version.pre
+        return v
+
+    @property
+    def build(self):
+        return self._version.build if self._version.build is not None else ""
 
 
 class RequirementInfo(object):
@@ -93,7 +146,7 @@ class RequirementInfo(object):
 
     def semver_mode(self):
         self.name = self.full_name
-        self.version = self.full_version.stable()
+        self.version = _VersionRepr(self.full_version).stable()
         self.user = self.channel = self.package_id = None
         self.recipe_revision = self.package_revision = None
 
@@ -107,25 +160,25 @@ class RequirementInfo(object):
 
     def patch_mode(self):
         self.name = self.full_name
-        self.version = self.full_version.patch()
+        self.version = _VersionRepr(self.full_version).patch()
         self.user = self.channel = self.package_id = None
         self.recipe_revision = self.package_revision = None
 
     def base_mode(self):
         self.name = self.full_name
-        self.version = self.full_version.base
+        self.version = _VersionRepr(self.full_version).base
         self.user = self.channel = self.package_id = None
         self.recipe_revision = self.package_revision = None
 
     def minor_mode(self):
         self.name = self.full_name
-        self.version = self.full_version.minor()
+        self.version = _VersionRepr(self.full_version).minor()
         self.user = self.channel = self.package_id = None
         self.recipe_revision = self.package_revision = None
 
     def major_mode(self):
         self.name = self.full_name
-        self.version = self.full_version.major()
+        self.version = _VersionRepr(self.full_version).major()
         self.user = self.channel = self.package_id = None
         self.recipe_revision = self.package_revision = None
 
@@ -284,7 +337,7 @@ class PythonRequireInfo(object):
 
     def semver_mode(self):
         self._name = self._ref.name
-        self._version = self._ref.version.stable()
+        self._version = _VersionRepr(self._ref.version).stable()
         self._user = self._channel = None
         self._revision = None
 
@@ -296,19 +349,19 @@ class PythonRequireInfo(object):
 
     def patch_mode(self):
         self._name = self._ref.name
-        self._version = self._ref.version.patch()
+        self._version = _VersionRepr(self._ref.version).patch()
         self._user = self._channel = None
         self._revision = None
 
     def minor_mode(self):
         self._name = self._ref.name
-        self._version = self._ref.version.minor()
+        self._version = _VersionRepr(self._ref.version).minor()
         self._user = self._channel = None
         self._revision = None
 
     def major_mode(self):
         self._name = self._ref.name
-        self._version = self._ref.version.major()
+        self._version = _VersionRepr(self._ref.version).major()
         self._user = self._channel = None
         self._revision = None
 

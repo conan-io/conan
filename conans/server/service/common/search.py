@@ -17,7 +17,7 @@ from conans.util.log import logger
 def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
 
     result = {}
-    rrevs = server_store.get_recipe_revisions(ref) if look_in_all_rrevs else [None]
+    rrevs = server_store.get_recipe_revisions_references(ref) if look_in_all_rrevs else [None]
 
     for rrev in rrevs:
         new_ref = copy.copy(ref)

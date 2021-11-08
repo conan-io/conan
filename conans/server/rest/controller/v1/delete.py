@@ -25,7 +25,7 @@ class DeleteController(object):
             Will remove all revisions, packages and package revisions (parent folder)"""
             ref = RecipeReference(name, version, username, channel)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            conan_service.remove_conanfile(ref)
+            conan_service.remove_recipe(ref)
 
         @app.route('%s/delete' % r.packages, method="POST")
         def remove_packages(name, version, username, channel, auth_user):
@@ -45,4 +45,4 @@ class DeleteController(object):
             reader = codecs.getreader("utf-8")
             payload = json.load(reader(request.body))
             files = [os.path.normpath(filename) for filename in payload["files"]]
-            conan_service.remove_conanfile_files(ref, files)
+            conan_service.remove_recipe_files(ref, files)

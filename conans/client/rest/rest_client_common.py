@@ -211,7 +211,7 @@ class RestCommonMethods(object):
         if files_to_upload:
             self._upload_recipe(ref, files_to_upload, retry, retry_wait)
         if deleted:
-            self._remove_conanfile_files(ref, deleted)
+            self._remove_recipe_files(ref, deleted)
 
     def get_recipe_snapshot(self, ref):
         # this method is used only for UPLOADING, then it requires the credentials

@@ -116,7 +116,7 @@ class ConanRemover(object):
             _tmp = package_id.split("#") if "#" in package_id else (package_id, None)
             package_id, revision = _tmp
             _pref = PkgReference(ref, package_id, revision=revision)
-            prev = self._cache.get_package_revisions(_pref)
+            prev = self._cache.get_package_revisions_references(_pref)
             if not prev:
                 raise PackageNotFoundException(_pref)
             folders_to_remove.extend(prev)
@@ -133,7 +133,7 @@ class ConanRemover(object):
         pkg_ids = self._cache.get_package_references(ref)
         all_package_revisions = []
         for pkg_id in pkg_ids:
-            all_package_revisions.extend(self._cache.get_package_revisions(pkg_id))
+            all_package_revisions.extend(self._cache.get_package_revisions_references(pkg_id))
 
         prev_remove = []
         prev_remove_build = []
@@ -204,7 +204,7 @@ class ConanRemover(object):
                 #  remove all for the moment
                 # TODO: cache2.0 raising the not found exceptions here but we should refactor all
                 #  of this for conan 2.0 now that we only have revisions enabled
-                refs = self._cache.get_recipe_revisions(input_ref)
+                refs = self._cache.get_recipe_revisions_references(input_ref)
                 if not refs:
                     raise RecipeNotFoundException(input_ref)
                 for ref in refs:
@@ -229,7 +229,7 @@ class ConanRemover(object):
                     pkg_ids = self._cache.get_package_references(ref)
                     all_package_revs = []
                     for pkg in pkg_ids:
-                        all_package_revs.extend(self._cache.get_package_revisions(pkg))
+                        all_package_revs.extend(self._cache.get_package_revisions_references(pkg))
                     packages_layouts = [self._cache.pkg_layout(pref) for pref in all_package_revs]
                     packages = search_packages(packages_layouts, packages_query)
                 if package_ids_filter:

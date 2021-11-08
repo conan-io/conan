@@ -229,7 +229,7 @@ class BuildIdTest(unittest.TestCase):
             pkg_ids = client.cache.get_package_references(latest_rrev)
             prevs = []
             for pkg_id in pkg_ids:
-                prevs.extend(client.cache.get_package_revisions(pkg_id))
+                prevs.extend(client.cache.get_package_revisions_references(pkg_id))
             build_folders = []
             for prev in prevs:
                 if os.path.exists(client.cache.pkg_layout(prev).build()):

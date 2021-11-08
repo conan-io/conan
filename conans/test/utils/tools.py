@@ -698,7 +698,7 @@ class TurboTestClient(TestClient):
 
         package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
         package_ref = PkgReference(ref, package_id)
-        prevs = self.cache.get_package_revisions(package_ref, only_latest_prev=True)
+        prevs = self.cache.get_package_revisions_references(package_ref, only_latest_prev=True)
         prev = prevs[0]
 
         return prev
@@ -730,11 +730,11 @@ class TurboTestClient(TestClient):
         return _tmp
 
     def recipe_exists(self, ref):
-        rrev = self.cache.get_recipe_revisions(ref)
+        rrev = self.cache.get_recipe_revisions_references(ref)
         return True if rrev else False
 
     def package_exists(self, pref):
-        prev = self.cache.get_package_revisions(pref)
+        prev = self.cache.get_package_revisions_references(pref)
         return True if prev else False
 
     def recipe_revision(self, ref):

@@ -541,7 +541,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             dest_path = server_store.export(ref)
             shutil.copytree(origin_path, dest_path)
             server_store.update_last_revision(ref)
-            packages = cache.get_package_revisions(ref)
+            packages = cache.get_package_revisions_references(ref)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):

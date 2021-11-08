@@ -25,12 +25,10 @@ def download(app, ref, package_ids, recipe):
     hook_manager.execute("pre_download", reference=ref, remote=remote)
     try:
         if not ref.revision:
-            ref, _ = remote_manager.get_recipe(ref, remote)
+            ref = remote_manager.get_latest_recipe_reference(ref, remote)
+        remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref)
-    else:
-        if not cache.exists_rrev(ref):
-            ref = remote_manager.get_recipe(ref, remote)
 
     layout = cache.ref_layout(ref)
     conan_file_path = layout.conanfile()
@@ -61,7 +59,7 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
         pref = PkgReference(ref, package_id)
         try:
             if not pref.revision:
-                pref = remote_manager.get_latest_package_revision(pref, remote)
+                pref = remote_manager.get_latest_package_reference(pref, remote)
         except NotFoundException:
             raise PackageNotFoundException(pref)
         else:

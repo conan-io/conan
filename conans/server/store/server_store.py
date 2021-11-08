@@ -111,7 +111,7 @@ class ServerStore(object):
             ref_path = os.path.dirname(ref_path)
 
     # ######### DELETE (APIv1 and APIv2)
-    def remove_conanfile(self, ref):
+    def remove_recipe(self, ref):
         assert isinstance(ref, RecipeReference)
         if not ref.revision:
             self._storage_adapter.delete_folder(self.conan_revisions_root(ref))
@@ -149,7 +149,7 @@ class ServerStore(object):
         packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
 
-    def remove_conanfile_files(self, ref, files):
+    def remove_recipe_files(self, ref, files):
         subpath = self.export(ref)
         for filepath in files:
             path = join(subpath, filepath)
@@ -225,7 +225,7 @@ class ServerStore(object):
         rev_file_path = self._recipe_revisions_file(ref)
         return self._get_latest_revision(rev_file_path)
 
-    def get_recipe_revisions(self, ref):
+    def get_recipe_revisions_references(self, ref):
         """Returns a RevisionList"""
         if ref.revision:
             tmp = RevisionList()
@@ -268,9 +268,10 @@ class ServerStore(object):
         self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                          lock_file=rev_file_path + ".lock")
 
-    def get_package_revisions(self, pref):
+    def get_package_revisions_references(self, pref):
         """Returns a RevisionList"""
-        assert pref.ref.revision is not None, "BUG: server store needs PREV get_package_revisions"
+        assert pref.ref.revision is not None, \
+            "BUG: server store needs PREV get_package_revisions_references"
         if pref.revision:
             tmp = RevisionList()
             tmp.add_revision(pref.revision)

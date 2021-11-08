@@ -124,7 +124,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Remove all from c_v2 local
         self.c_v2.remove_all()
-        assert len(self.c_v2.cache.get_recipe_revisions(self.ref)) == 0
+        assert len(self.c_v2.cache.get_recipe_revisions_references(self.ref)) == 0
 
         self.c_v2.run("install {}".format(self.ref))
         local_rev = self.c_v2.recipe_revision(self.ref)
@@ -763,7 +763,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         client = self.c_v2
         pref = client.create(self.ref)
         client.upload_all(self.ref)
-        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
+        revs = [r.revision for r in self.server.server_store.get_recipe_revisions_references(self.ref)]
 
         self.assertEqual(revs, [pref.ref.revision])
 
@@ -910,14 +910,14 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                          ref3.revision)
 
-        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
+        revs = [r.revision for r in self.server.server_store.get_recipe_revisions_references(self.ref)]
         self.assertEqual(revs, [ref3.revision, ref2.revision, ref1.revision])
         self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                          ref3.revision)
 
         # Delete the latest from the server
         self.c_v2.run("remove {} -r default -f".format(repr(ref3)))
-        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
+        revs = [r.revision for r in self.server.server_store.get_recipe_revisions_references(self.ref)]
         self.assertEqual(revs, [ref2.revision, ref1.revision])
         self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                          ref2.revision)
@@ -953,7 +953,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         pref = copy.copy(pref1)
         pref.revision = None
         revs = [r.revision
-                for r in self.server.server_store.get_package_revisions(pref)]
+                for r in self.server.server_store.get_package_revisions_references(pref)]
         self.assertEqual(revs, [pref3.revision, pref2.revision, pref1.revision])
         self.assertEqual(self.server.server_store.get_last_package_revision(pref).revision,
                          pref3.revision)
@@ -962,7 +962,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.run("remove {} -p {}#{} -r default -f".format(repr(pref3.ref),
                                                                 pref3.package_id, pref3.revision))
         revs = [r.revision
-                for r in self.server.server_store.get_package_revisions(pref)]
+                for r in self.server.server_store.get_package_revisions_references(pref)]
         self.assertEqual(revs, [pref2.revision, pref1.revision])
         self.assertEqual(self.server.server_store.get_last_package_revision(pref).revision,
                          pref2.revision)
@@ -984,12 +984,12 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.run("remove {} -r default -f".format(repr(ref3)))
 
         self.assertRaises(RecipeNotFoundException,
-                          self.server.server_store.get_recipe_revisions, self.ref)
+                          self.server.server_store.get_recipe_revisions_references, self.ref)
 
         ref4 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev4"))
         self.c_v2.upload_all(ref4)
 
-        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
+        revs = [r.revision for r in self.server.server_store.get_recipe_revisions_references(self.ref)]
         self.assertEqual(revs, [ref4.revision])
 
     def test_deleting_all_prevs(self):
@@ -1021,7 +1021,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         pref = copy.copy(pref1)
         pref.revision = None
         revs = [r.revision
-                for r in self.server.server_store.get_package_revisions(pref)]
+                for r in self.server.server_store.get_package_revisions_references(pref)]
         self.assertEqual(revs, [pref4.revision])
 
 

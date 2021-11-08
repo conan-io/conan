@@ -1,3 +1,4 @@
+import copy
 import os
 import stat
 import tarfile
@@ -204,7 +205,7 @@ class _PackagePreparator(object):
                 contents = load(self._cache.ref_layout(ref).conanfile())
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
                 self._output.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
-                remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",
+                remote_contents = self._remote_manager.get_recipe_file(ref, path="conanfile.py",
                                                                        remote=remote)
                 endlines = "\\r\\n" if "\r\n" in remote_contents else "\\n"
                 self._output.info("Remote 'conanfile.py' using '%s' line-ends" % endlines)
@@ -475,21 +476,21 @@ class CmdUpload(object):
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote):
         force = False
+        assert ref.revision
         try:
-            assert ref.revision
-            # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._remote_manager.get_recipe_revisions(ref, remote)
-            assert ref.revision == server_revisions[0]["revision"]
-            assert len(server_revisions) == 1
-        except NotFoundException:
-            pass
-        else:
+            ref = self._remote_manager.get_recipe_revision_reference(ref, remote)
+            msg_ref = copy.copy(ref)
+            msg_ref.timestamp = None
             if policy == UPLOAD_POLICY_FORCE:
                 force = True
-                self._progress_output.info("{} already in server, forcing upload".format(repr(ref)))
+                self._progress_output.info(
+                    "{} already in server, forcing upload".format(repr(msg_ref)))
             else:
-                self._progress_output.info("{} already in server, skipping upload".format(repr(ref)))
+                self._progress_output.info(
+                    "{} already in server, skipping upload".format(repr(msg_ref)))
                 return
+        except NotFoundException:
+            pass
 
         remotes = self._app.enabled_remotes
         prep = self._preparator.prepare_recipe(ref, conanfile, remote, remotes, policy, force)
@@ -499,8 +500,7 @@ class CmdUpload(object):
 
         files_to_upload, deleted, cache_files, conanfile_path, t1, layout = prep
         if files_to_upload or deleted:
-            upload_ref = RecipeReference.from_conanref(ref)
-            self._remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote, retry,
+            self._remote_manager.upload_recipe(ref, files_to_upload, deleted, remote, retry,
                                                retry_wait)
             msg = "\rUploaded conan recipe '%s' to '%s': %s" % (str(ref), remote.name, remote.url)
             self._progress_output.info(left_justify_message(msg))
@@ -520,18 +520,14 @@ class CmdUpload(object):
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
         try:
-            # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._remote_manager.get_package_revisions(pref, remote)
-            assert pref.revision == server_revisions[0].revision
-            assert len(server_revisions) == 1
-        except NotFoundException:
-            pass
-        else:
+            pref = self._remote_manager.get_package_revision_reference(pref, remote)
             if policy == UPLOAD_POLICY_FORCE:
                 self._progress_output.info("{} already in server, forcing upload".format(repr(pref)))
             else:
                 self._progress_output.info("{} already in server, skipping upload".format(repr(pref)))
                 return
+        except NotFoundException:
+            pass
 
         ref_layout = self._cache.ref_layout(pref.ref)
         conanfile_path = ref_layout.conanfile()

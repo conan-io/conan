@@ -195,11 +195,10 @@ class BasicAuthorizer(Authorizer):
 
         return False
 
-    def _check_ref_apply_for_rule(self, rule_ref, ref):
+    def _check_ref_apply_for_rule(self, rule_ref: RecipeReference, ref: RecipeReference):
         """Checks if a conans reference specified in config file applies to current conans
         reference"""
-        name, version, user, channel, _ = rule_ref
-        return not((name != "*" and name != ref.name) or
-                   (version != "*" and version != ref.version) or
-                   (user != "*" and user != ref.user) or
-                   (channel != "*" and channel != ref.channel))
+        return not((rule_ref.name != "*" and rule_ref.name != ref.name) or
+                   (rule_ref.version != "*" and rule_ref.version != ref.version) or
+                   (rule_ref.user != "*" and rule_ref.user != ref.user) or
+                   (rule_ref.channel != "*" and rule_ref.channel != ref.channel))

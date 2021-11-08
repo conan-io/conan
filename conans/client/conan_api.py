@@ -129,13 +129,12 @@ class ConanAPIV1(object):
             if app.selected_remote:
                 try:
                     if not ref.revision:
-                        ref, _ = app.remote_manager.get_latest_recipe_revision(ref,
-                                                                               app.selected_remote)
+                        ref = app.remote_manager.get_latest_recipe_reference(ref, app.selected_remote)
                 except NotFoundException:
                     raise RecipeNotFoundException(ref)
                 else:
                     if not app.cache.exists_rrev(ref):
-                        ref, _ = app.remote_manager.get_recipe(ref, app.selected_remote)
+                        app.remote_manager.get_recipe(ref, app.selected_remote)
 
             result = app.proxy.get_recipe(ref)
             conanfile_path, _, _, ref = result
@@ -736,14 +735,14 @@ class ConanAPIV1(object):
         else:
             remote = self.get_remote_by_name(remote_name)
             if not ref.revision:
-                ref, _ = app.remote_manager.get_latest_recipe_revision(ref, remote)
+                ref = app.remote_manager.get_latest_recipe_reference(ref, remote)
             if package_id:
                 pref = PkgReference(ref, package_id)
                 if not pref.revision:
-                    pref = app.remote_manager.get_latest_package_revision(pref, remote)
-                return app.remote_manager.get_package_path(pref, path, remote), path
+                    pref = app.remote_manager.get_latest_package_reference(pref, remote)
+                return app.remote_manager.get_package_file(pref, path, remote), path
             else:
-                return app.remote_manager.get_recipe_path(ref, path, remote), path
+                return app.remote_manager.get_recipe_file(ref, path, remote), path
 
     @api_method
     def export_alias(self, reference, target_reference):
@@ -778,7 +777,7 @@ class ConanAPIV1(object):
         return app.cache.remotes_registry.read(remote_name)
 
     @api_method
-    def get_package_revisions(self, reference, remote_name=None):
+    def get_package_revisions_references(self, reference, remote_name=None):
         app = ConanApp(self.cache_folder)
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)])
@@ -789,7 +788,7 @@ class ConanAPIV1(object):
             raise ConanException("Cannot list the revisions of a specific package revision")
 
         # TODO: cache2.0 we get the latest package revision for the recipe revision and package id
-        pkg_revs = app.cache.get_package_revisions(pref, only_latest_prev=True)
+        pkg_revs = app.cache.get_package_revisions_references(pref, only_latest_prev=True)
         pkg_rev = pkg_revs[0] if pkg_revs else None
         if not remote_name:
             if not pkg_rev:
@@ -798,7 +797,7 @@ class ConanAPIV1(object):
             rev_time = None
             if app.selected_remote:
                 try:
-                    revisions = app.remote_manager.get_package_revisions(pref, app.selected_remote)
+                    revisions = app.remote_manager.get_package_revisions_references(pref, app.selected_remote)
                 except RecipeNotFoundException:
                     pass
                 except NotFoundException:
@@ -810,7 +809,7 @@ class ConanAPIV1(object):
             return [{"revision": pkg_rev.revision, "time": rev_time}]
         else:
             remote = self.get_remote_by_name(remote_name)
-            return app.remote_manager.get_package_revisions(pref, remote=remote)
+            return app.remote_manager.get_package_revisions_references(pref, remote=remote)
 
     @api_method
     def editable_add(self, path, reference, cwd):

@@ -99,7 +99,7 @@ class PackagesDBTable(BaseDbTable):
         r = self._conn.execute(query)
         return r.lastrowid
 
-    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
+    def get_package_revisions_references(self, ref: ConanReference, only_latest_prev=False):
         assert ref.rrev, "To search for package revisions you must provide a recipe revision."
         assert ref.pkgid, "To search for package revisions you must provide a package id."
         check_prev = f'AND {self.columns.prev} = "{ref.prev}" ' if ref.prev else ''

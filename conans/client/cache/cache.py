@@ -104,11 +104,13 @@ class ClientCache(object):
     def get_package_timestamp(self, ref):
         return self._data_cache.get_package_timestamp(ConanReference(ref))
 
-    def set_recipe_timestamp(self, ref, timestamp):
-        return self._data_cache.update_recipe_timestamp(ConanReference(ref), new_timestamp=timestamp)
+    def set_recipe_timestamp(self, ref):
+        return self._data_cache.update_recipe_timestamp(ConanReference(ref),
+                                                        new_timestamp=ref.timestamp)
 
-    def set_package_timestamp(self, ref, timestamp):
-        return self._data_cache.update_package_timestamp(ConanReference(ref), new_timestamp=timestamp)
+    def set_package_timestamp(self, pref):
+        return self._data_cache.update_package_timestamp(ConanReference(pref),
+                                                         new_timestamp=pref.timestamp)
 
     def all_refs(self, only_latest_rrev=False):
         # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
@@ -119,18 +121,18 @@ class ClientCache(object):
                 self._data_cache.list_references(only_latest_rrev=only_latest_rrev)]
 
     def exists_rrev(self, ref):
-        matching_rrevs = self.get_recipe_revisions(ref)
+        matching_rrevs = self.get_recipe_revisions_references(ref)
         return len(matching_rrevs) > 0
 
     def exists_prev(self, ref):
-        matching_prevs = self.get_package_revisions(ref)
+        matching_prevs = self.get_package_revisions_references(ref)
         return len(matching_prevs) > 0
 
-    def get_package_revisions(self, ref, only_latest_prev=False):
+    def get_package_revisions_references(self, ref, only_latest_prev=False):
         return [
             PkgReference.loads(f'{pref["reference"]}#{pref["rrev"]}:'
                                f'{pref["pkgid"]}#{pref["prev"]}') for pref in
-            self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
+            self._data_cache.get_package_revisions_references(ConanReference(ref), only_latest_prev)]
 
     def get_package_references(self, ref: ConanReference) -> List[PkgReference]:
         return [
@@ -140,16 +142,16 @@ class ClientCache(object):
     def get_build_id(self, ref):
         return self._data_cache.get_build_id(ConanReference(ref))
 
-    def get_recipe_revisions(self, ref, only_latest_rrev=False):
+    def get_recipe_revisions_references(self, ref, only_latest_rrev=False):
         return [RecipeReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
-                self._data_cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev)]
+                self._data_cache.get_recipe_revisions_references(ConanReference(ref), only_latest_rrev)]
 
     def get_latest_rrev(self, ref):
-        rrevs = self.get_recipe_revisions(ref, True)
+        rrevs = self.get_recipe_revisions_references(ref, True)
         return rrevs[0] if rrevs else None
 
     def get_latest_prev(self, ref):
-        prevs = self.get_package_revisions(ref, True)
+        prevs = self.get_package_revisions_references(ref, True)
         return prevs[0] if prevs else None
 
     @property

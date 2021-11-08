@@ -133,7 +133,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         self._add_remote("remote1")
         self._add_remote("remote2")
         pref = self._get_fake_package_refence('whatever/0.1')
-        with patch.object(RemoteManager, "get_package_revisions",
+        with patch.object(RemoteManager, "get_package_revisions_references",
                           new=Mock(side_effect=exc)):
             self.client.run(f'list package-revisions {pref} -r="*" -c')
         expected_output = textwrap.dedent(f"""\

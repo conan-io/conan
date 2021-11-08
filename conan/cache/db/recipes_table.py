@@ -98,7 +98,7 @@ class RecipesDBTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
+    def get_recipe_revisions_references(self, ref: ConanReference, only_latest_rrev=False):
         check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
         if only_latest_rrev:
             query = f'SELECT {self.columns.reference}, ' \

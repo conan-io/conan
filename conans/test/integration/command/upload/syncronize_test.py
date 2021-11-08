@@ -3,6 +3,7 @@ import unittest
 
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_TGZ_NAME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder

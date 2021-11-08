@@ -1,6 +1,7 @@
 import re
 
 from conans.errors import ConanException, InvalidNameException
+from conans.model.recipe_ref import RecipeReference
 
 
 def _split_pair(pair, split_char):
@@ -64,6 +65,7 @@ def get_reference_fields(arg_reference, user_channel_input=False):
 
 
 def check_valid_ref(reference, strict_mode=True):
+    # FIXME: Check if this is still/how necessary when the new commands
     """
     :param reference: string to be analyzed if it is a reference or not
     :param strict_mode: Only if the reference contains the "@" is valid, used to disambiguate"""
@@ -75,14 +77,14 @@ def check_valid_ref(reference, strict_mode=True):
                 return False
             if "*" in reference:
                 ref = RecipeReference.loads(reference)
-                # FIXME: validate here the reference
+                validate_recipe_reference(ref)
                 if "*" in ref.name or "*" in ref.user or "*" in ref.channel:
                     return False
                 if str(ref.version).startswith("["):  # It is a version range
                     return True
                 return False
-        # FIXME: validate here the reference
-        RecipeReference.loads(reference)
+        ref = RecipeReference.loads(reference)
+        validate_recipe_reference(ref)
         return True
     except ConanException:
         return False
@@ -168,3 +170,21 @@ class ConanName(object):
                                        "and numbers with a length between 1 and "
                                        "%s" % ConanName._max_chars)
 
+
+def validate_recipe_reference(ref):
+    if ref.name is not None:
+        ConanName.validate_name(ref.name, reference_token="package name")
+    if ref.version is not None:
+        ConanName.validate_version(str(ref.version), ref.name)
+    if ref.user is not None:
+        ConanName.validate_name(ref.user, reference_token="user name")
+    if ref.channel is not None:
+        ConanName.validate_name(ref.channel, reference_token="channel")
+    if ref.revision is not None:
+        ConanName.validate_revision(ref.revision)
+
+    if not ref.name or not ref.version:
+        raise InvalidNameException("Specify the 'name' and the 'version'")
+
+    if (ref.user and not ref.channel) or (ref.channel and not ref.user):
+        raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
