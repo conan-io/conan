@@ -99,6 +99,9 @@ class RecipesDBTable(BaseDbTable):
             yield self._as_dict(self.row_type(*row))
 
     def get_recipe_revisions_references(self, ref: ConanReference, only_latest_rrev=False):
+        # FIXME: This is very fragile, we should disambiguate the function and check that revision
+        #        is always None if we want to check the revisions. Do another function to get the
+        #        time or check existence if needed
         check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
         if only_latest_rrev:
             query = f'SELECT {self.columns.reference}, ' \

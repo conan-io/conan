@@ -211,9 +211,9 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         pref = client.create(self.ref)
         ref2 = client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
         # Now we have two RREVs and a PREV corresponding to the first one
-        sot1 = pref.ref
+        sot1 = copy.copy(pref.ref)
         sot1.revision = None
-        sot2 = ref2
+        sot2 = copy.copy(ref2)
         sot2.revision = None
         self.assertEqual(sot1, sot2)
         self.assertNotEqual(pref.ref.revision, ref2.revision)

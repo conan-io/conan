@@ -245,12 +245,8 @@ class PackageNotFoundException(NotFoundException):
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        pref = copy.copy(self.pref)
-        # FIXME: Should we do a method to repr without timestamp?
-        pref.timestamp = None
-        pref.ref.timestamp = None
-        tmp = repr(pref)
-        return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
+        return "Binary package not found: '{}'{}".format(self.pref.repr_notime(),
+                                                         self.remote_message())
 
 
 class UserInterfaceErrorException(RequestErrorException):

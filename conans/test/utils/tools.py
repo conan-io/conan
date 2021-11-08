@@ -595,7 +595,9 @@ class TestClient(object):
         if conanfile:
             self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(repr(ref), args or ""))
-        rrev = self.cache.get_latest_recipe_reference(ref).revision
+        tmp = copy.copy(ref)
+        tmp.revision = None
+        rrev = self.cache.get_latest_recipe_reference(tmp).revision
         tmp = copy.copy(ref)
         tmp.revision = rrev
         return tmp
@@ -691,14 +693,18 @@ class TurboTestClient(TestClient):
         self.run("create . {} {}".format(full_str, args or ""),
                  assert_error=assert_error)
 
-        ref = self.cache.get_latest_recipe_reference(ref)
+        tmp = copy.copy(ref)
+        tmp.revision = None
+        ref = self.cache.get_latest_recipe_reference(tmp)
 
         if assert_error:
             return None
 
         package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
         package_ref = PkgReference(ref, package_id)
-        prevs = self.cache.get_package_revisions_references(package_ref, only_latest_prev=True)
+        tmp = copy.copy(package_ref)
+        tmp.revision = None
+        prevs = self.cache.get_package_revisions_references(tmp, only_latest_prev=True)
         prev = prevs[0]
 
         return prev
@@ -738,11 +744,15 @@ class TurboTestClient(TestClient):
         return True if prev else False
 
     def recipe_revision(self, ref):
-        latest_rrev = self.cache.get_latest_recipe_reference(ref)
+        tmp = copy.copy(ref)
+        tmp.revision = None
+        latest_rrev = self.cache.get_latest_recipe_reference(tmp)
         return latest_rrev.revision
 
     def package_revision(self, pref):
-        latest_prev = self.cache.get_latest_package_reference(pref)
+        tmp = copy.copy(pref)
+        tmp.revision = None
+        latest_prev = self.cache.get_latest_package_reference(tmp)
         return latest_prev.revision
 
     def search(self, pattern, remote=None, assert_error=False, args=None):

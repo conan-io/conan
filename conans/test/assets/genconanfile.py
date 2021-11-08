@@ -1,3 +1,5 @@
+import copy
+
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -111,7 +113,7 @@ class GenConanfile(object):
     @staticmethod
     def _get_full_ref_str(ref):
         if isinstance(ref, RecipeReference):
-            ref_str = repr(ref)
+            ref_str = ref.repr_notime()
         else:
             ref_str = ref
         return ref_str

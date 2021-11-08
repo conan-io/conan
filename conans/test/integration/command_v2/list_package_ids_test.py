@@ -46,10 +46,7 @@ class TestListPackageIdsBase:
         return f"{recipe_name}#fca0383e6a43348f7989f11ab8f0a92d"
 
     def _get_lastest_recipe_ref(self, recipe_name):
-        tmp = self.client.cache.get_latest_recipe_reference(RecipeReference.loads(recipe_name))
-        ret = copy.copy(tmp)
-        ret.timestamp = None
-        return ret
+        return self.client.cache.get_latest_recipe_reference(RecipeReference.loads(recipe_name))
 
 
 class TestParams(TestListPackageIdsBase):
@@ -159,7 +156,7 @@ class TestRemotes(TestListPackageIdsBase):
         })
         self.client.run("export . user/channel")
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
-        self.client.run(f"list package-ids {repr(rrev)}")
+        self.client.run(f"list package-ids {rrev.repr_notime()}")
         expected_output = textwrap.dedent(f"""\
         Local Cache:
           There are no packages
@@ -173,7 +170,7 @@ class TestRemotes(TestListPackageIdsBase):
         self._add_remote(remote_name)
         self._upload_full_recipe(remote_name, recipe_name)
         rrev = self._get_lastest_recipe_ref(recipe_name)
-        self.client.run(f"list package-ids -r remote1 {repr(rrev)}")
+        self.client.run(f"list package-ids -r remote1 {rrev.repr_notime()}")
 
         expected_output = textwrap.dedent("""\
         remote1:
@@ -186,7 +183,7 @@ class TestRemotes(TestListPackageIdsBase):
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        """ % repr(rrev))
+        """ % rrev.repr_notime())
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
     def test_search_with_full_reference_but_package_has_no_properties(self):
@@ -195,12 +192,12 @@ class TestRemotes(TestListPackageIdsBase):
         self._add_remote(remote_name)
         self._upload_recipe(remote_name, recipe_name)
         rrev = self._get_lastest_recipe_ref(recipe_name)
-        self.client.run(f"list package-ids -r remote1 {repr(rrev)}")
+        self.client.run(f"list package-ids -r remote1 {rrev.repr_notime()}")
 
         expected_output = textwrap.dedent("""\
         remote1:
           %s:.{40}
-        """ % repr(rrev))
+        """ % rrev.repr_notime())
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -234,7 +231,7 @@ class TestRemotes(TestListPackageIdsBase):
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        """ % {"rrev": repr(rrev)})
+        """ % {"rrev": rrev.repr_notime()})
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -253,7 +250,7 @@ class TestRemotes(TestListPackageIdsBase):
 
         # Getting the latest recipe ref
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
-        self.client.run(f'list package-ids -r="*" -c {repr(rrev)}')
+        self.client.run(f'list package-ids -r="*" -c {rrev.repr_notime()}')
         output = str(self.client.out)
         expected_output = textwrap.dedent("""\
         Local Cache:
@@ -278,7 +275,7 @@ class TestRemotes(TestListPackageIdsBase):
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
         remote2:
           There are no packages
-        """ % {"rrev": repr(rrev)})
+        """ % {"rrev": rrev.repr_notime()})
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):

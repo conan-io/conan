@@ -479,15 +479,13 @@ class CmdUpload(object):
         assert ref.revision
         try:
             ref = self._remote_manager.get_recipe_revision_reference(ref, remote)
-            msg_ref = copy.copy(ref)
-            msg_ref.timestamp = None
             if policy == UPLOAD_POLICY_FORCE:
                 force = True
                 self._progress_output.info(
-                    "{} already in server, forcing upload".format(repr(msg_ref)))
+                    "{} already in server, forcing upload".format(ref.repr_notime()))
             else:
                 self._progress_output.info(
-                    "{} already in server, skipping upload".format(repr(msg_ref)))
+                    "{} already in server, skipping upload".format(ref.repr_notime()))
                 return
         except NotFoundException:
             pass
@@ -521,13 +519,10 @@ class CmdUpload(object):
 
         try:
             pref = self._remote_manager.get_package_revision_reference(pref, remote)
-            pref_msg = copy.copy(pref)
-            pref_msg.timestamp = None
-            pref_msg.ref.timestamp = None
             if policy == UPLOAD_POLICY_FORCE:
-                self._progress_output.info("{} already in server, forcing upload".format(repr(pref_msg)))
+                self._progress_output.info("{} already in server, forcing upload".format(pref.repr_notime()))
             else:
-                self._progress_output.info("{} already in server, skipping upload".format(repr(pref_msg)))
+                self._progress_output.info("{} already in server, skipping upload".format(pref.repr_notime()))
                 return
         except NotFoundException:
             pass

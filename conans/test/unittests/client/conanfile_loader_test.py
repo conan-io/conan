@@ -121,8 +121,6 @@ OpenCV2:other_option=Cosa #
                'OpenCV3/2.4.10@phil/stable']
         self.assertEqual(parser.requirements, exp)
 
-    @pytest.mark.xfail(reason="The reference validation is not in the model anymore. Where to check "
-                              "now?")
     def test_revision_parsing(self):
         # Valid content
         file_content = '''[requires]
@@ -132,6 +130,8 @@ OpenCV/2.4.10@user/stable#RREV1 # My requirement for CV
         exp = ['OpenCV/2.4.10@user/stable#RREV1']
         self.assertEqual(parser.requirements, exp)
 
+    @pytest.mark.xfail(reason="The reference validation is not in the model anymore. Where to check "
+                              "now?")
     def test_load_conan_txt(self):
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable

@@ -212,12 +212,7 @@ class RestV2Methods(RestCommonMethods):
 
         if ref.revision is None:
             # Remove the packages from all the RREVs
-            revisions = self.get_recipe_revisions_references(ref)
-            refs = []
-            for rev in revisions:
-                _tmp = copy.copy(ref)
-                _tmp.revision = rev["revision"]
-                refs.append(_tmp)
+            refs = self.get_recipe_revisions_references(ref)
         else:
             refs = [ref]
 

@@ -146,9 +146,7 @@ class TestUpdateFlows:
         self.client.run("remove * -f")
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV2")})
         self.client.run("create .")
-        ref_remove = copy.copy(latest_rrev)
-        ref_remove.timestamp = None
-        self.client.run(f"remove {repr(ref_remove)} -f -r server2")
+        self.client.run(f"remove {latest_rrev.repr_notime()} -f -r server2")
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
         # |-------------|------------|------------|-----------|------------|

@@ -128,11 +128,15 @@ class RecipeReference:
 
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
+        result = self.repr_notime()
+        if self.timestamp is not None:
+            result += "%{}".format(self.timestamp)
+        return result
+
+    def repr_notime(self):
         result = self.__str__()
         if self.revision is not None:
             result += "#{}".format(self.revision)
-        if self.timestamp is not None:
-            result += "%{}".format(self.timestamp)
         return result
 
     def __str__(self):
