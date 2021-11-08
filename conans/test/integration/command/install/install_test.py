@@ -173,14 +173,12 @@ def test_install_with_profile(client):
         """)
 
     client.save({"conanfile.py": conanfile})
-    client.run("profile new myprofile")
-    client.run("profile update settings.os=Linux myprofile")
+    save(os.path.join(client.cache.profiles_path, "myprofile"), "[settings]\nos=Linux")
     client.run("install . -pr=myprofile --build")
     assert "PKGOS=Linux" in client.out
     mkdir(os.path.join(client.current_folder, "myprofile"))
     client.run("install . -pr=myprofile")
-    client.run("profile new myotherprofile")
-    client.run("profile update settings.os=FreeBSD myotherprofile")
+    save(os.path.join(client.cache.profiles_path, "myotherprofile"), "[settings]\nos=FreeBSD")
     client.run("install . -pr=myotherprofile")
     assert "PKGOS=FreeBSD" in client.out
     client.save({"myotherprofile": "Some garbage without sense [garbage]"})
