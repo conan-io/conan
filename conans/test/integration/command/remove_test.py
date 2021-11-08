@@ -7,7 +7,7 @@ from mock import patch
 
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import BUILD_FOLDER, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
 from conans.server.store.server_store import ServerStore
@@ -56,7 +56,7 @@ conaninfo = '''
 [options]
     use_Qt=True
 [full_requires]
-  Hello2/0.1@lasote/stable:11111
+  hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
 [recipe_revision]
@@ -78,15 +78,15 @@ class RemoveTest(unittest.TestCase):
         client = TestClient(servers=servers, inputs=["myuser", "mypass"])
 
         # Conans with and without packages created
-        self.root_folder = {"H1": 'Hello/1.4.10@myuser/testing',
-                            "H2": 'Hello/2.4.11@myuser/testing',
-                            "B": 'Bye/0.14@myuser/testing',
-                            "O": 'Other/1.2@myuser/testing'}
+        self.root_folder = {"H1": 'hello/1.4.10@myuser/testing',
+                            "H2": 'hello/2.4.11@myuser/testing',
+                            "B": 'bye/0.14@myuser/testing',
+                            "O": 'other/1.2@myuser/testing'}
 
         files = {}
         prefs = []
         for key, folder in self.root_folder.items():
-            ref = ConanFileReference.loads(folder)
+            ref = RecipeReference.loads(folder)
             folder = folder.replace("@", "/")
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
             files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = \
@@ -134,10 +134,10 @@ class RemoveTest(unittest.TestCase):
             root_folder = base_path.store
             for k, shas in folders.items():
                 folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
-                ref = ConanFileReference.loads(self.root_folder[k])
+                ref = RecipeReference.loads(self.root_folder[k])
                 if isinstance(base_path, ServerStore):
                     try:
-                        rev = self.client.cache.get_latest_rrev(ref).revision
+                        rev = self.client.cache.get_latest_recipe_reference(ref).revision
                     except:
                         # This whole test is a crap, we cannot guess remote revision
                         # if the package is not in local anymore
@@ -152,7 +152,7 @@ class RemoveTest(unittest.TestCase):
                         if isinstance(base_path, ServerStore):
                             pref = PkgReference(ref, sha)
                             try:
-                                prev = self.client.cache.get_latest_prev(pref).revision
+                                prev = self.client.cache.get_latest_package_reference(pref).revision
                             except:
                                 # This whole test is a crap, we cannot guess remote revision
                                 # if the package is not in local anymore
@@ -214,11 +214,11 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["build", "source", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/1.4.10/myuser/testing")))
+                                                     "hello/1.4.10/myuser/testing")))
         self.assertCountEqual(["build", "source", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/2.4.11/myuser/testing")))
+                                                     "hello/2.4.11/myuser/testing")))
 
     def _validate_remove_all_hello_packages(self):
         self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
@@ -229,15 +229,15 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["Other", "Bye"], folders)
 
     def test_remove_any_package_version(self):
-        self.client.run("remove Hello/*@myuser/testing -f")
+        self.client.run("remove hello/*@myuser/testing -f")
         self._validate_remove_all_hello_packages()
 
     def test_remove_any_package_version_user(self):
-        self.client.run("remove Hello/*@*/testing -f")
+        self.client.run("remove hello/*@*/testing -f")
         self._validate_remove_all_hello_packages()
 
     def test_remove_any_package_version_channel(self):
-        self.client.run("remove Hello/*@*/* -f")
+        self.client.run("remove hello/*@*/* -f")
         self._validate_remove_all_hello_packages()
 
     def _validate_remove_hello_1_4_10(self):
@@ -249,11 +249,11 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["Hello", "Other", "Bye"], folders)
 
     def test_remove_any_package_user(self):
-        self.client.run("remove Hello/1.4.10@*/testing -f")
+        self.client.run("remove hello/1.4.10@*/testing -f")
         self._validate_remove_hello_1_4_10()
 
     def test_remove_any_package_channel(self):
-        self.client.run("remove Hello/1.4.10@myuser/* -f")
+        self.client.run("remove hello/1.4.10@myuser/* -f")
         self._validate_remove_hello_1_4_10()
 
     def test_builds(self):
@@ -268,11 +268,11 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/1.4.10/myuser/testing")))
+                                                     "hello/1.4.10/myuser/testing")))
         self.assertCountEqual(["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/2.4.11/myuser/testing")))
+                                                     "hello/2.4.11/myuser/testing")))
 
     def test_src(self):
         with patch.object(sys.stdin, "readline", return_value="y"):
@@ -286,11 +286,11 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["package", "build", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/1.4.10/myuser/testing")))
+                                                     "hello/1.4.10/myuser/testing")))
         self.assertCountEqual(["package", "build", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/2.4.11/myuser/testing")))
+                                                     "hello/2.4.11/myuser/testing")))
 
     def test_reject_removal(self):
         with patch.object(sys.stdin, "readline", return_value="n"):
@@ -388,10 +388,10 @@ class RemoveWithoutUserChannel(unittest.TestCase):
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@")
-        latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("lib/1.0"))
+        latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("lib/1.0"))
         ref_layout = self.client.cache.ref_layout(latest_rrev)
         pkg_ids = self.client.cache.get_package_references(latest_rrev)
-        latest_prev = self.client.cache.get_latest_prev(pkg_ids[0])
+        latest_prev = self.client.cache.get_latest_package_reference(pkg_ids[0])
         pkg_layout = self.client.cache.pkg_layout(latest_prev)
         self.client.run("remove lib/1.0 -f")
         self.assertFalse(os.path.exists(ref_layout.base_folder))

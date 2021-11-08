@@ -1,3 +1,4 @@
+import copy
 import os
 import time
 import unittest
@@ -7,7 +8,7 @@ from mock import patch
 from parameterized.parameterized import parameterized
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
 from conans.server.revision_list import RevisionList
 from conans.test.utils.test_files import scan_folder
@@ -77,17 +78,17 @@ class ExportsSourcesTest(unittest.TestCase):
                                ("other", self.other_server)])
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
         self.client = client
-        self.ref = ConanFileReference.loads("hello/0.1@lasote/testing")
+        self.ref = RecipeReference.loads("hello/0.1@lasote/testing")
         self.pref = PkgReference(self.ref, NO_SETTINGS_PACKAGE_ID)
 
     def _get_folders(self):
-        latest_rrev = self.client.cache.get_latest_rrev(self.ref)
+        latest_rrev = self.client.cache.get_latest_recipe_reference(self.ref)
         ref_layout = self.client.cache.ref_layout(latest_rrev)
         self.source_folder = ref_layout.source()
         self.export_folder = ref_layout.export()
         self.export_sources_folder = ref_layout.export_sources()
 
-        latest_prev = self.client.cache.get_latest_prev(PkgReference(latest_rrev,
+        latest_prev = self.client.cache.get_latest_package_reference(PkgReference(latest_rrev,
                                                                      NO_SETTINGS_PACKAGE_ID))
         if latest_prev:
             pkg_layout = self.client.cache.pkg_layout(latest_prev)
@@ -129,7 +130,8 @@ class ExportsSourcesTest(unittest.TestCase):
 
         server = server or self.server
         rev, _ = server.server_store.get_last_revision(self.ref)
-        ref = self.ref.copy_with_rev(rev)
+        ref = copy.copy(self.ref)
+        ref.revision = rev
         self.assertEqual(scan_folder(server.server_store.export(ref)), expected_server)
 
     def _check_export_folder(self, mode, export_folder=None, export_src_folder=None):
@@ -352,9 +354,9 @@ class ExportsSourcesTest(unittest.TestCase):
         with patch.object(RevisionList, '_now', return_value=the_time):
             self.client.run("upload hello/0.1@lasote/testing --all -r default")
 
-        ref = ConanFileReference.loads('hello/0.1@lasote/testing')
+        ref = RecipeReference.loads('hello/0.1@lasote/testing')
         self.client.run(f"remove hello/0.1@lasote/testing"
-                        f"#{self.client.cache.get_latest_rrev(ref).revision} -f")
+                        f"#{self.client.cache.get_latest_recipe_reference(ref).revision} -f")
 
         self.client.run("install hello/0.1@lasote/testing --update")
         self._get_folders()

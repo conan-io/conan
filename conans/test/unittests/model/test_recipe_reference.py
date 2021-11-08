@@ -11,6 +11,15 @@ def test_recipe_reference():
     assert str(r) == "pkg/0.1"
     assert repr(r) == "pkg/0.1"
 
+    r = RecipeReference.loads("pkg/0.1@")
+    assert r.name == "pkg"
+    assert r.version == "0.1"
+    assert r.user is None
+    assert r.channel is None
+    assert r.revision is None
+    assert str(r) == "pkg/0.1"
+    assert repr(r) == "pkg/0.1"
+
     r = RecipeReference.loads("pkg/0.1@user")
     assert r.name == "pkg"
     assert r.version == "0.1"

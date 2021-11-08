@@ -5,7 +5,7 @@ import textwrap
 import pytest
 from jinja2 import Template
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 """
@@ -118,13 +118,13 @@ main_cpp = textwrap.dedent("""
 
 @pytest.fixture(scope="module")
 def client():
-    libZ_ref = ConanFileReference.loads("libZ/version")
-    libH2_ref = ConanFileReference.loads("header2/version")
-    libH_ref = ConanFileReference.loads("header/version")
-    libA_ref = ConanFileReference.loads("libA/version")
-    libB_ref = ConanFileReference.loads("libB/version")
-    libC_ref = ConanFileReference.loads("libC/version")
-    libD_ref = ConanFileReference.loads("libD/version")
+    libZ_ref = RecipeReference.loads("libZ/version")
+    libH2_ref = RecipeReference.loads("header2/version")
+    libH_ref = RecipeReference.loads("header/version")
+    libA_ref = RecipeReference.loads("liba/version")
+    libB_ref = RecipeReference.loads("libb/version")
+    libC_ref = RecipeReference.loads("libC/version")
+    libD_ref = RecipeReference.loads("libD/version")
 
     t = TestClient(path_with_spaces=False)
     t.save({
@@ -142,13 +142,13 @@ def client():
             requires=[libH2_ref, libZ_ref],
             system_libs=["header_system_lib"],
             frameworks=["CoreAudio"]),
-        'libA/conanfile.py': conanfile.render(
+        'liba/conanfile.py': conanfile.render(
             ref=libA_ref,
             requires=[libH_ref],
             libs_extra=["A2"],
             system_libs=["system_lib"],
             frameworks=["Carbon"]),
-        'libB/conanfile.py': conanfile.render(
+        'libb/conanfile.py': conanfile.render(
             ref=libB_ref,
             requires=[libA_ref],
             libs_extra=["B2"],

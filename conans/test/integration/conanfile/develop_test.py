@@ -46,7 +46,7 @@ class DevelopTest(unittest.TestCase):
         self.assertNotIn("Develop True", client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
-        client.run("create . Other/1.0@user/testing")
+        client.run("create . other/1.0@user/testing")
         self.assertNotIn("Develop True", client.out)
 
     def test_local_commands(self):

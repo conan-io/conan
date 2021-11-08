@@ -5,7 +5,7 @@ from time import sleep
 
 from mock import patch
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
@@ -67,53 +67,53 @@ class MultiRemotesTest(unittest.TestCase):
         client_a = TestClient(servers=self.servers, inputs=2*["admin", "password"])
         client_b = TestClient(servers=self.servers, inputs=2*["admin", "password"])
 
-        # Upload Hello0 to local and default from client_a
-        self._create(client_a, "Hello0", "0.0")
-        client_a.run("upload Hello0/0.0@lasote/stable -r local")
-        client_a.run("upload Hello0/0.0@lasote/stable -r default")
+        # Upload hello0 to local and default from client_a
+        self._create(client_a, "hello0", "0.0")
+        client_a.run("upload hello0/0.0@lasote/stable -r local")
+        client_a.run("upload hello0/0.0@lasote/stable -r default")
         sleep(1)  # For timestamp and updates checks
 
-        # Download Hello0 from local with client_b
-        client_b.run("install Hello0/0.0@lasote/stable -r local --build missing")
+        # Download hello0 from local with client_b
+        client_b.run("install hello0/0.0@lasote/stable -r local --build missing")
 
-        # Update Hello0 with client_a and reupload
-        self._create(client_a, "Hello0", "0.0", modifier="\n")
-        client_a.run("upload Hello0/0.0@lasote/stable -r local")
-        self.assertIn("Uploaded conan recipe 'Hello0/0.0@lasote/stable' to 'local'", client_a.out)
+        # Update hello0 with client_a and reupload
+        self._create(client_a, "hello0", "0.0", modifier="\n")
+        client_a.run("upload hello0/0.0@lasote/stable -r local")
+        self.assertIn("Uploaded conan recipe 'hello0/0.0@lasote/stable' to 'local'", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
-        client_b.run("info Hello0/0.0@lasote/stable -u")
+        client_b.run("info hello0/0.0@lasote/stable -u")
         self.assertIn("Recipe: Update available", client_b.out)
         self.assertIn("Binary: Cache", client_b.out)
 
         # Now try to update the package with install -u
-        client_b.run("install Hello0/0.0@lasote/stable -u --build")
-        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client_b.out)
+        client_b.run("install hello0/0.0@lasote/stable -u --build")
+        self.assertIn("hello0/0.0@lasote/stable from 'local' - Updated", client_b.out)
 
         # Upload a new version from client A, but only to the default server (not the ref-listed)
-        # Upload Hello0 to local and default from client_a
+        # Upload hello0 to local and default from client_a
         sleep(1)  # For timestamp and updates checks
-        self._create(client_a, "Hello0", "0.0", modifier="\n\n")
-        client_a.run("upload Hello0/0.0@lasote/stable -r default")
+        self._create(client_a, "hello0", "0.0", modifier="\n\n")
+        client_a.run("upload hello0/0.0@lasote/stable -r default")
 
         # Now client_b checks for updates without -r parameter
         # TODO: cache2.0 conan info not yet implemented with new cache
-        client_b.run("info Hello0/0.0@lasote/stable -u")
+        client_b.run("info hello0/0.0@lasote/stable -u")
         # self.assertIn("Remote: local", client_b.out)
         # self.assertIn("Recipe: Cache", client_b.out)
 
         # But if we connect to default, should tell us that there is an update IN DEFAULT!
         # TODO: cache2.0 conan info not yet implemented with new cache
-        client_b.run("info Hello0/0.0@lasote/stable -r default -u")
+        client_b.run("info hello0/0.0@lasote/stable -r default -u")
         # self.assertIn("Remote: local", client_b.out)
         self.assertIn("Recipe: Update available", client_b.out)
 
         # Well, now try to update the package with -r default -u
-        client_b.run("install Hello0/0.0@lasote/stable -r default -u --build")
-        self.assertIn("Hello0/0.0@lasote/stable: Calling build()",
+        client_b.run("install hello0/0.0@lasote/stable -r default -u --build")
+        self.assertIn("hello0/0.0@lasote/stable: Calling build()",
                       str(client_b.out))
         # TODO: cache2.0 conan info not yet implemented with new cache
-        client_b.run("info Hello0/0.0@lasote/stable -u")
+        client_b.run("info hello0/0.0@lasote/stable -u")
         self.assertIn("Recipe: Cache", client_b.out)
         self.assertIn("Binary: Cache", client_b.out)
 
@@ -123,32 +123,32 @@ class MultiRemotesTest(unittest.TestCase):
         """
         client = TestClient(servers=self.servers, inputs=2*["admin", "password"])
 
-        self._create(client, "Hello0", "0.0")
-        client.run("install Hello0/0.0@lasote/stable --build missing")
-        client.run("upload Hello0/0.0@lasote/stable --all -r default")
+        self._create(client, "hello0", "0.0")
+        client.run("install hello0/0.0@lasote/stable --build missing")
+        client.run("upload hello0/0.0@lasote/stable --all -r default")
         sleep(1)  # For timestamp and updates checks
-        self._create(client, "Hello0", "0.0", modifier=" ")
-        client.run("install Hello0/0.0@lasote/stable --build missing")
-        client.run("upload Hello0/0.0@lasote/stable --all -r local")
+        self._create(client, "hello0", "0.0", modifier=" ")
+        client.run("install hello0/0.0@lasote/stable --build missing")
+        client.run("upload hello0/0.0@lasote/stable --all -r local")
         client.run("remove '*' -f")
 
-        client.run("install Hello0/0.0@lasote/stable")
+        client.run("install hello0/0.0@lasote/stable")
         # If we don't set a remote we find between all remotes and get the first match
-        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Downloaded", client.out)
-        client.run("install Hello0/0.0@lasote/stable --update")
-        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
+        self.assertIn("hello0/0.0@lasote/stable from 'default' - Downloaded", client.out)
+        client.run("install hello0/0.0@lasote/stable --update")
+        self.assertIn("hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
-        client.run("install Hello0/0.0@lasote/stable --update -r default")
-        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Cache", client.out)
+        client.run("install hello0/0.0@lasote/stable --update -r default")
+        self.assertIn("hello0/0.0@lasote/stable from 'default' - Cache", client.out)
 
         sleep(1)  # For timestamp and updates checks
         # Check that it really updates in case of newer package uploaded to the associated remote
         client_b = TestClient(servers=self.servers, inputs=3*["admin", "password"])
-        self._create(client_b, "Hello0", "0.0", modifier="  ")
-        client_b.run("install Hello0/0.0@lasote/stable --build missing")
-        client_b.run("upload Hello0/0.0@lasote/stable --all -r local")
-        client.run("install Hello0/0.0@lasote/stable --update")
-        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
+        self._create(client_b, "hello0", "0.0", modifier="  ")
+        client_b.run("install hello0/0.0@lasote/stable --build missing")
+        client_b.run("upload hello0/0.0@lasote/stable --all -r local")
+        client.run("install hello0/0.0@lasote/stable --update")
+        self.assertIn("hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
 
 class MultiRemoteTest(unittest.TestCase):
@@ -191,7 +191,7 @@ class MultiRemoteTest(unittest.TestCase):
 
     def test_install_from_remotes(self):
         for i in range(3):
-            ref = ConanFileReference.loads("Hello%d/0.1@lasote/stable" % i)
+            ref = RecipeReference.loads("Hello%d/0.1@lasote/stable" % i)
             self.client.save({"conanfile.py": GenConanfile("hello%d" % i, "0.1")})
             self.client.run("export . lasote/stable")
             self.client.run("upload %s -r=remote%d" % (str(ref), i))
@@ -199,9 +199,9 @@ class MultiRemoteTest(unittest.TestCase):
         # Now install it in other machine from remote 0
         client2 = TestClient(servers=self.servers)
 
-        refs = ["Hello0/0.1@lasote/stable", "Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable"]
+        refs = ["hello0/0.1@lasote/stable", "hello1/0.1@lasote/stable", "hello2/0.1@lasote/stable"]
         client2.save({"conanfile.py": GenConanfile("helloX", "0.1").with_requires(*refs)})
         client2.run("install . --build=missing")
-        self.assertIn("Hello0/0.1@lasote/stable from 'remote0'", client2.out)
-        self.assertIn("Hello1/0.1@lasote/stable from 'remote1'", client2.out)
-        self.assertIn("Hello2/0.1@lasote/stable from 'remote2'", client2.out)
+        self.assertIn("hello0/0.1@lasote/stable from 'remote0'", client2.out)
+        self.assertIn("hello1/0.1@lasote/stable from 'remote1'", client2.out)
+        self.assertIn("hello2/0.1@lasote/stable from 'remote2'", client2.out)

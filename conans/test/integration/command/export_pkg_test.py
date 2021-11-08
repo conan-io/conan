@@ -9,7 +9,7 @@ from textwrap import dedent
 import pytest
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load, mkdir, is_dirty
@@ -22,7 +22,7 @@ class ExportPkgTest(unittest.TestCase):
         client = TestClient(servers={"default": None},
                             requester_class=None, inputs=["admin", "password"])
 
-        client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
+        client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
         client.run("install .")
         client.run("export-pkg . pkg/0.1@user/testing")
 
@@ -84,7 +84,7 @@ class PkgA(ConanFile):
     def test_package_folder(self):
         # https://github.com/conan-io/conan/issues/2350
         conanfile = """from conans import ConanFile
-class HelloPythonConan(ConanFile):
+class helloPythonConan(ConanFile):
     settings = "os"
     def package(self):
         self.output.info("PACKAGE NOT CALLED")
@@ -99,8 +99,8 @@ class HelloPythonConan(ConanFile):
         self.assertNotIn("PACKAGE NOT CALLED", client.out)
         self.assertIn("hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
         self.assertNotIn("No files in this package!", client.out)
-        ref = ConanFileReference.loads("hello/0.1@lasote/stable")
-        pref = client.get_latest_prev(ref)
+        ref = RecipeReference.loads("hello/0.1@lasote/stable")
+        pref = client.get_latest_package_reference(ref)
         latest_package = client.get_latest_pkg_layout(pref).package()
         conaninfo = load(os.path.join(latest_package, "conaninfo.txt"))
         self.assertEqual(1, conaninfo.count("os=Windows"))
@@ -111,7 +111,7 @@ class HelloPythonConan(ConanFile):
     def test_develop(self):
         # https://github.com/conan-io/conan/issues/2513
         conanfile = """from conans import ConanFile
-class HelloPythonConan(ConanFile):
+class helloPythonConan(ConanFile):
     def package(self):
         self.output.info("DEVELOP IS: %s!" % self.develop)
 """
@@ -124,7 +124,7 @@ class HelloPythonConan(ConanFile):
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
         conanfile = """from conans import ConanFile
-class HelloPythonConan(ConanFile):
+class helloPythonConan(ConanFile):
     name = "hello"
     options = { "optionOne": [True, False, 123] }
     default_options = "optionOne=True"
@@ -141,7 +141,7 @@ class HelloPythonConan(ConanFile):
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
         self.assertNotIn("optionOne: 123", client.out)
-        client.run("export-pkg . hello/0.1@lasote/stable -o Hello:optionOne=123")
+        client.run("export-pkg . hello/0.1@lasote/stable -o hello:optionOne=123")
         client.run("search hello/0.1@lasote/stable")
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
@@ -153,7 +153,7 @@ class HelloPythonConan(ConanFile):
             import os
             from conans import ConanFile
             from conan.tools.env import VirtualBuildEnv
-            class HelloPythonConan(ConanFile):
+            class helloPythonConan(ConanFile):
                 def package(self):
                     build_env = VirtualBuildEnv(self).vars()
                     with build_env.apply():
@@ -195,7 +195,7 @@ class TestConan(ConanFile):
         self.assertIn("Packaged 1 '.a' file: libmycoollib.a", client.out)
         self._consume(client, settings + " . -g CMakeDeps")
         cmakeinfo = client.load("hello-release-data.cmake")
-        self.assertIn("set(Hello_LIBS_RELEASE mycoollib)", cmakeinfo)
+        self.assertIn("set(hello_LIBS_RELEASE mycoollib)", cmakeinfo)
 
     def test_build_folders(self):
         client = TestClient()
@@ -301,9 +301,9 @@ class TestConan(ConanFile):
 
         # Specify different name or version is not working
         client.run("export-pkg . lib/1.0@conan/stable -f", assert_error=True)
-        self.assertIn("ERROR: Package recipe with name lib!=Hello", client.out)
+        self.assertIn("ERROR: Package recipe with name lib!=hello", client.out)
 
-        client.run("export-pkg . Hello/1.1@conan/stable -f", assert_error=True)
+        client.run("export-pkg . hello/1.1@conan/stable -f", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=0.1", client.out)
 
         conanfile = """
@@ -321,13 +321,13 @@ class TestConan(ConanFile):
                       client.out)
 
     def test_with_deps(self):
-        hello_ref = ConanFileReference.loads("hello/0.1@lasote/stable")
+        hello_ref = RecipeReference.loads("hello/0.1@lasote/stable")
         client = TestClient()
         conanfile = GenConanfile().with_name("hello").with_version("0.1")
         client.save({"conanfile.py": str(conanfile)})
         client.run("export . lasote/stable")
         client.run("install hello/0.1@lasote/stable --build")
-        conanfile = GenConanfile().with_name("Hello1").with_version("0.1")\
+        conanfile = GenConanfile().with_name("hello1").with_version("0.1")\
                                   .with_import("from conans import tools").with_require(hello_ref)
 
         conanfile = str(conanfile) + """\n    def package_info(self):
@@ -339,22 +339,22 @@ class TestConan(ConanFile):
         client.save({"Release_x86/lib/libmycoollib.a": ""})
         settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
                     '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("export-pkg . Hello1/0.1@lasote/stable %s -bf=Release_x86" % settings)
+        client.run("export-pkg . hello1/0.1@lasote/stable %s -bf=Release_x86" % settings)
 
         # consumer
         consumer = """
 from conans import ConanFile
 class TestConan(ConanFile):
-    requires = "Hello1/0.1@lasote/stable"
+    requires = "hello1/0.1@lasote/stable"
     settings = "os", "build_type"
 """
         client.save({CONANFILE: consumer}, clean_first=True)
         client.run("install conanfile.py -g CMakeDeps")
         self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
-        self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.out)
+        self.assertIn("hello1/0.1@lasote/stable: Already installed!", client.out)
 
-        cmakeinfo = client.load("Hello1-release-data.cmake")
-        self.assertIn("set(Hello1_LIBS_RELEASE mycoollib)", cmakeinfo)
+        cmakeinfo = client.load("hello1-release-data.cmake")
+        self.assertIn("set(hello1_LIBS_RELEASE mycoollib)", cmakeinfo)
 
     @pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
     def test_export_pkg_json(self):
@@ -374,7 +374,7 @@ class TestConan(ConanFile):
             json_content = load(json_path)
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
-            tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
+            tmp = RecipeReference.loads(output["installed"][0]["recipe"]["id"])
             self.assertIsNotNone(tmp.revision)
             self.assertEqual(str(tmp), "mypackage/0.1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
@@ -424,7 +424,7 @@ class MyConan(ConanFile):
             json_content = load(json_path)
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
-            tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
+            tmp = RecipeReference.loads(output["installed"][0]["recipe"]["id"])
             self.assertIsNotNone(tmp.revision)
             self.assertEqual(str(tmp), "pkg2/1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
@@ -435,7 +435,7 @@ class MyConan(ConanFile):
                 self.assertEqual(output["installed"][0]["packages"][0]["id"],
                                  "41e2f19ba15c770149de4cefcf9dd1d1f6ee19ce")
                 self.assertTrue(output["installed"][0]["packages"][0]["exported"])
-                tmp = ConanFileReference.loads(output["installed"][1]["recipe"]["id"])
+                tmp = RecipeReference.loads(output["installed"][1]["recipe"]["id"])
                 self.assertIsNotNone(tmp.revision)
                 self.assertEqual(str(tmp), "pkg1/1.0@danimtb/testing")
                 self.assertTrue(output["installed"][1]["recipe"]["dependency"])
@@ -492,7 +492,7 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@", assert_error=True)
         self.assertIn("Can't build while installing", client.out)
-        ref = ConanFileReference.loads("pkg/0.1")
+        ref = RecipeReference.loads("pkg/0.1")
         pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
         layout = client.get_latest_pkg_layout(pref)
         build_folder = layout.build()

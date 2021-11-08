@@ -1,14 +1,17 @@
 import unittest
 
+import pytest
+
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, \
+from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import ConanName, InvalidNameException, \
     check_valid_ref, get_reference_fields
 
 
 class RefTest(unittest.TestCase):
     def test_basic(self):
-        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
+        ref = RecipeReference.loads("opencv/2.4.10@lasote/testing")
         self.assertEqual(ref.name, "opencv")
         self.assertEqual(ref.version, "2.4.10")
         self.assertEqual(ref.user, "lasote")
@@ -16,7 +19,7 @@ class RefTest(unittest.TestCase):
         self.assertEqual(ref.revision, None)
         self.assertEqual(str(ref), "opencv/2.4.10@lasote/testing")
 
-        ref = ConanFileReference.loads("opencv_lite/2.4.10@phil_lewis/testing")
+        ref = RecipeReference.loads("opencv_lite/2.4.10@phil_lewis/testing")
         self.assertEqual(ref.name, "opencv_lite")
         self.assertEqual(ref.version, "2.4.10")
         self.assertEqual(ref.user, "phil_lewis")
@@ -24,7 +27,7 @@ class RefTest(unittest.TestCase):
         self.assertEqual(ref.revision, None)
         self.assertEqual(str(ref), "opencv_lite/2.4.10@phil_lewis/testing")
 
-        ref = ConanFileReference.loads("opencv/2.4.10@3rd-party/testing")
+        ref = RecipeReference.loads("opencv/2.4.10@3rd-party/testing")
         self.assertEqual(ref.name, "opencv")
         self.assertEqual(ref.version, "2.4.10")
         self.assertEqual(ref.user, "3rd-party")
@@ -32,47 +35,49 @@ class RefTest(unittest.TestCase):
         self.assertEqual(ref.revision, None)
         self.assertEqual(str(ref), "opencv/2.4.10@3rd-party/testing")
 
-        ref = ConanFileReference.loads("opencv/2.4.10@3rd-party/testing#rev1")
+        ref = RecipeReference.loads("opencv/2.4.10@3rd-party/testing#rev1")
         self.assertEqual(ref.revision, "rev1")
 
+    @pytest.mark.xfail(reason="The validation of the references shouldn't be done in the model "
+                              "anymore")
     def test_errors(self):
-        self.assertRaises(ConanException, ConanFileReference.loads, "")
-        self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).channel)
-        self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).user)
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10@lasote")
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv??/2.4.10@laso/testing")
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10 @ laso/testing")
-        self.assertRaises(ConanException, ConanFileReference.loads, "o/2.4.10@laso/testing")
-        self.assertRaises(ConanException, ConanFileReference.loads, ".opencv/2.4.10@lasote/testing")
-        self.assertRaises(ConanException, ConanFileReference.loads, "o/2.4.10 @ lasote/testing")
-        self.assertRaises(ConanException, ConanFileReference.loads, "lib/1.0@user&surname/channel")
-        self.assertRaises(ConanException, ConanFileReference.loads,
+        self.assertRaises(ConanException, RecipeReference.loads, "")
+        self.assertIsNone(RecipeReference.loads("opencv/2.4.10@", validate=False).channel)
+        self.assertIsNone(RecipeReference.loads("opencv/2.4.10@", validate=False).user)
+        self.assertRaises(ConanException, RecipeReference.loads, "opencv/2.4.10@lasote")
+        self.assertRaises(ConanException, RecipeReference.loads, "opencv??/2.4.10@laso/testing")
+        self.assertRaises(ConanException, RecipeReference.loads, "opencv/2.4.10 @ laso/testing")
+        self.assertRaises(ConanException, RecipeReference.loads, "o/2.4.10@laso/testing")
+        self.assertRaises(ConanException, RecipeReference.loads, ".opencv/2.4.10@lasote/testing")
+        self.assertRaises(ConanException, RecipeReference.loads, "o/2.4.10 @ lasote/testing")
+        self.assertRaises(ConanException, RecipeReference.loads, "lib/1.0@user&surname/channel")
+        self.assertRaises(ConanException, RecipeReference.loads,
                           "opencv%s/2.4.10@laso/testing" % "A" * 40)
-        self.assertRaises(ConanException, ConanFileReference.loads,
+        self.assertRaises(ConanException, RecipeReference.loads,
                           "opencv/2.4.10%s@laso/testing" % "A" * 40)
-        self.assertRaises(ConanException, ConanFileReference.loads,
+        self.assertRaises(ConanException, RecipeReference.loads,
                           "opencv/2.4.10@laso%s/testing" % "A" * 40)
-        self.assertRaises(ConanException, ConanFileReference.loads,
+        self.assertRaises(ConanException, RecipeReference.loads,
                           "opencv/2.4.10@laso/testing%s" % "A" * 40)
 
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10/laso/testing")
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10/laso/test#1")
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv@2.4.10/laso/test")
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10/laso@test")
+        self.assertRaises(ConanException, RecipeReference.loads, "opencv/2.4.10/laso/testing")
+        self.assertRaises(ConanException, RecipeReference.loads, "opencv/2.4.10/laso/test#1")
+        self.assertRaises(ConanException, RecipeReference.loads, "opencv@2.4.10/laso/test")
+        self.assertRaises(ConanException, RecipeReference.loads, "opencv/2.4.10/laso@test")
 
     def test_revisions(self):
-        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
+        ref = RecipeReference.loads("opencv/2.4.10@lasote/testing#23")
         self.assertEqual(ref.channel, "testing")
         self.assertEqual(ref.revision, "23")
 
-        ref = ConanFileReference.loads("opencv/2.4.10#23")
+        ref = RecipeReference.loads("opencv/2.4.10#23")
         self.assertIsNone(ref.channel)
         self.assertIsNone(ref.user)
         self.assertEqual(ref.name, "opencv")
         self.assertEqual(ref.version, "2.4.10")
         self.assertEqual(ref.revision, "23")
 
-        ref = ConanFileReference("opencv", "2.3", "lasote", "testing", "34")
+        ref = RecipeReference("opencv", "2.3", "lasote", "testing", "34")
         self.assertEqual(ref.revision, "34")
 
         pref = PkgReference.loads("opencv/2.4.10@lasote/testing#23:123123123#989")
@@ -83,26 +88,26 @@ class RefTest(unittest.TestCase):
         self.assertEqual(pref.ref.revision, "34")
 
     def test_equal(self):
-        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
-        ref2 = ConanFileReference.loads("opencv/2.4.10@lasote/testing#232")
+        ref = RecipeReference.loads("opencv/2.4.10@lasote/testing#23")
+        ref2 = RecipeReference.loads("opencv/2.4.10@lasote/testing#232")
         self.assertFalse(ref == ref2)
         self.assertTrue(ref != ref2)
 
-        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
-        ref2 = ConanFileReference.loads("opencv/2.4.10@lasote/testing#232")
+        ref = RecipeReference.loads("opencv/2.4.10@lasote/testing")
+        ref2 = RecipeReference.loads("opencv/2.4.10@lasote/testing#232")
 
         self.assertFalse(ref == ref2)
         self.assertTrue(ref != ref2)
         self.assertTrue(ref2 != ref)
 
-        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
-        ref2 = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
+        ref = RecipeReference.loads("opencv/2.4.10@lasote/testing")
+        ref2 = RecipeReference.loads("opencv/2.4.10@lasote/testing")
 
         self.assertTrue(ref == ref2)
         self.assertFalse(ref != ref2)
 
-        ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
-        ref2 = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
+        ref = RecipeReference.loads("opencv/2.4.10@lasote/testing#23")
+        ref2 = RecipeReference.loads("opencv/2.4.10@lasote/testing#23")
         self.assertTrue(ref == ref2)
         self.assertFalse(ref != ref2)
 
@@ -241,6 +246,6 @@ class GetReferenceFieldsTest(unittest.TestCase):
         tmp = get_reference_fields("/channel", user_channel_input=True)
         self.assertEqual(tmp, (None, None, None, "channel", None))
 
-        ref_pattern = ConanFileReference.loads("package/*@user/channel")
+        ref_pattern = RecipeReference.loads("package/*@user/channel")
         self.assertFalse(check_valid_ref(ref_pattern, strict_mode=False))
 

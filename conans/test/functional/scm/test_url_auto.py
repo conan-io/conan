@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 from conans.test.utils.scm import create_local_git_repo
 
@@ -21,7 +21,7 @@ class RemoveCredentials(unittest.TestCase):
     """)
 
     def setUp(self):
-        self.ref = ConanFileReference.loads("lib/1.0@lasote/testing")
+        self.ref = RecipeReference.loads("lib/1.0@lasote/testing")
         self.path, _ = create_local_git_repo({"conanfile.py": self.conanfile})
         self.client = TestClient()
         self.client.current_folder = self.path

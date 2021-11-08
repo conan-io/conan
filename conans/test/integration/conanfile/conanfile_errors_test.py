@@ -151,4 +151,4 @@ def test_notduplicate_requires_py():
     files = {"conanfile.py": conanfile}
     client.save(files)
     client.run("export .")
-    assert "Hello/0.1: Exported" in client.out
+    assert "hello/0.1: Exported" in client.out

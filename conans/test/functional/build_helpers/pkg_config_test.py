@@ -88,7 +88,7 @@ class PkgConfigTest(unittest.TestCase):
             class LibAConan(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
                 exports_sources = "*.cpp"
-                requires = "libB/1.0@conan/stable"
+                requires = "libb/1.0@conan/stable"
 
                 def build(self):
                     lib_b_path = self.deps_cpp_info["libB"].rootpath
@@ -115,7 +115,7 @@ class PkgConfigTest(unittest.TestCase):
             class LibAConan(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
                 exports_sources = "*.cpp"
-                requires = "libB/1.0@conan/stable"
+                requires = "libb/1.0@conan/stable"
 
                 def build(self):
                     args = ('--define-variable package_root_path_lib_b=%s'

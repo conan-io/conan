@@ -1,16 +1,17 @@
 from conans.cli.output import ScopedOutput, ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
 from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException, \
     ConanException
 from multiprocessing.pool import ThreadPool
+
+from conans.model.recipe_ref import RecipeReference
 
 
 def download(app, ref, package_ids, recipe):
     remote_manager, cache, loader = app.remote_manager, app.cache, app.loader
     hook_manager = app.hook_manager
-    assert(isinstance(ref, ConanFileReference))
+    assert(isinstance(ref, RecipeReference))
     scoped_output = ScopedOutput(str(ref), ConanOutput())
     remote = app.selected_remote
     if not remote:
@@ -24,12 +25,10 @@ def download(app, ref, package_ids, recipe):
     hook_manager.execute("pre_download", reference=ref, remote=remote)
     try:
         if not ref.revision:
-            ref, _ = remote_manager.get_recipe(ref, remote)
+            ref = remote_manager.get_latest_recipe_reference(ref, remote)
+        remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref)
-    else:
-        if not cache.exists_rrev(ref):
-            ref = remote_manager.get_recipe(ref, remote)
 
     layout = cache.ref_layout(ref)
     conan_file_path = layout.conanfile()
@@ -40,7 +39,7 @@ def download(app, ref, package_ids, recipe):
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
-            scoped_output.info("Getting the complete package list from '%s'..." % ref.full_str())
+            scoped_output.info("Getting the complete package list from '%s'..." % repr(ref))
             packages_props = remote_manager.search_packages(remote, ref, None)
             package_ids = list(packages_props.keys())
             if not package_ids:
@@ -60,7 +59,7 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
         pref = PkgReference(ref, package_id)
         try:
             if not pref.revision:
-                pref, _ = remote_manager.get_latest_package_revision(pref, remote)
+                pref = remote_manager.get_latest_package_reference(pref, remote)
         except NotFoundException:
             raise PackageNotFoundException(pref)
         else:

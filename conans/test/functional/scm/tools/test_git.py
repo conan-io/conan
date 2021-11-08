@@ -260,8 +260,8 @@ class HelloConan(ConanFile):
     version = get_version()
 
     def build(self):
-        assert("r3le_ase__" in self.version)
-        assert(len(self.version) == 50)
+        assert("r3le_ase__" in str(self.version))
+        assert(len(str(self.version)) == 50)
 """
         path, _ = create_local_git_repo({"conanfile.py": conanfile}, branch="r3le-ase-")
         client = TestClient()

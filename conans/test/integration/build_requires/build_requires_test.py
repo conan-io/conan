@@ -7,7 +7,7 @@ import pytest
 from parameterized.parameterized import parameterized
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient, GenConanfile
@@ -200,8 +200,8 @@ class BuildRequiresTest(unittest.TestCase):
 
     def test_consumer(self):
         # https://github.com/conan-io/conan/issues/5425
-        catch_ref = ConanFileReference.loads("catch/0.1@user/testing")
-        libA_ref = ConanFileReference.loads("LibA/0.1@user/testing")
+        catch_ref = RecipeReference.loads("catch/0.1@user/testing")
+        libA_ref = RecipeReference.loads("LibA/0.1@user/testing")
 
         t = TestClient()
         t.save({"conanfile.py":
@@ -221,15 +221,15 @@ class BuildRequiresTest(unittest.TestCase):
                       t.out)
 
     def test_build_requires_diamond(self):
-        libA_ref = ConanFileReference.loads("libA/0.1@user/testing")
-        libB_ref = ConanFileReference.loads("libB/0.1@user/testing")
+        libA_ref = RecipeReference.loads("liba/0.1@user/testing")
+        libB_ref = RecipeReference.loads("libb/0.1@user/testing")
 
         t = TestClient()
         t.save({"conanfile.py": GenConanfile()})
-        t.run("create . libA/0.1@user/testing")
+        t.run("create . liba/0.1@user/testing")
 
         t.save({"conanfile.py": GenConanfile().with_require(libA_ref)})
-        t.run("create . libB/0.1@user/testing")
+        t.run("create . libb/0.1@user/testing")
 
         t.save({"conanfile.py": GenConanfile().with_build_requires(libB_ref)
                                               .with_build_requires(libA_ref)})
@@ -319,11 +319,11 @@ class Other(ConanFile):
         self.env_info.PATH.append("myotherpath")
 """
         client.save({CONANFILE: other})
-        client.run("create . Other/1.0@user/channel")
+        client.run("create . other/1.0@user/channel")
         lib = """from conans import ConanFile
 import os
 class Lib(ConanFile):
-    build_requires = "Boost/1.0@user/channel", "Other/1.0@user/channel"
+    build_requires = "boost/1.0@user/channel", "other/1.0@user/channel"
     def build(self):
         self.output.info("LIB PATH FOR BUILD %s" % os.getenv("PATH"))
 """

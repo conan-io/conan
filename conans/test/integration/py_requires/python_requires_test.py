@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 
@@ -225,15 +225,15 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PKG2F : %s" % self.python_requires["pkg2"].module.myfunct())
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . Consumer/0.1@user/testing")
-        self.assertIn("Consumer/0.1@user/testing: PKG1 N: pkg1", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1 V: 1.0", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1 U: user", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1 C: channel", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1 : 123", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG2 : 234", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1F : 123", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG2F : 234", client.out)
+        client.run("create . consumer/0.1@user/testing")
+        self.assertIn("consumer/0.1@user/testing: PKG1 N: pkg1", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1 V: 1.0", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1 U: user", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1 C: channel", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1 : 123", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG2 : 234", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1F : 123", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG2F : 234", client.out)
 
     def test_local_import(self):
         client = TestClient(default_server_user=True)
@@ -327,7 +327,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: License! MyLicense", client.out)
         self.assertIn("pkg/0.1@user/testing: Author! author@company.com", client.out)
         self.assertIn("pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents", client.out)
-        ref = ConanFileReference.loads("pkg/0.1@user/testing")
+        ref = RecipeReference.loads("pkg/0.1@user/testing")
         self.assertTrue(os.path.exists(os.path.join(client.get_latest_ref_layout(ref).export(),
                                                     "other.txt")))
 
@@ -616,11 +616,11 @@ class PyRequiresExtendTest(unittest.TestCase):
                      "name.txt": "MyPkg",
                      "version.txt": "MyVersion"})
         client.run("export .")
-        self.assertIn("MyPkg/MyVersion: A new conanfile.py version was exported", client.out)
+        self.assertIn("Mypkg/MyVersion: A new conanfile.py version was exported", client.out)
         client.run("create .")
-        self.assertIn("MyPkg/MyVersion: Pkg1 source: MyPkg:MyVersion", client.out)
-        self.assertIn("MyPkg/MyVersion: Pkg1 build: MyPkg:MyVersion", client.out)
-        self.assertIn("MyPkg/MyVersion: Pkg1 package: MyPkg:MyVersion", client.out)
+        self.assertIn("Mypkg/MyVersion: Pkg1 source: MyPkg:MyVersion", client.out)
+        self.assertIn("Mypkg/MyVersion: Pkg1 build: MyPkg:MyVersion", client.out)
+        self.assertIn("Mypkg/MyVersion: Pkg1 package: MyPkg:MyVersion", client.out)
 
     @parameterized.expand([(False, False), (True, False), (True, True), ])
     def test_python_requires_with_alias(self, use_alias, use_alias_of_alias):

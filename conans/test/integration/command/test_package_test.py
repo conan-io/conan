@@ -2,10 +2,8 @@ import os
 import textwrap
 import unittest
 
-import pytest
-
 from conans.client import tools
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load
@@ -43,12 +41,12 @@ class TestPackageTest(unittest.TestCase):
         self.assertIn("hello/0.1@lasote/stable (test package): Running test()", client.out)
 
     def test_wrong_version(self):
-        test_conanfile = GenConanfile().with_test("pass").with_require("Hello/0.2@user/cc")
+        test_conanfile = GenConanfile().with_test("pass").with_require("hello/0.2@user/cc")
         client = TestClient()
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . user/channel", assert_error=True)
-        assert "ERROR: Duplicated requirement: Hello/0.1@user/channel" in client.out
+        assert "ERROR: Duplicated requirement: hello/0.1@user/channel" in client.out
 
     def test_other_requirements(self):
         test_conanfile = (GenConanfile().with_require("other/0.2@user2/channel2")
@@ -61,8 +59,8 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . user/channel")
-        self.assertIn("Hello/0.1@user/channel: Configuring sources", client.out)
-        self.assertIn("Hello/0.1@user/channel: Generated conaninfo.txt", client.out)
+        self.assertIn("hello/0.1@user/channel: Configuring sources", client.out)
+        self.assertIn("hello/0.1@user/channel: Generated conaninfo.txt", client.out)
 
         # explicit override of user/channel works
         client.run("create . lasote/stable")
@@ -189,7 +187,7 @@ from conans import ConanFile
 class HelloTestConan(ConanFile):
     def test(self):
         self.output.warning("Tested ok!")
-''', "Hello/0.1@conan/stable")
+''', "hello/0.1@conan/stable")
         self.assertIn("Tested ok!", client.out)
 
     def test_test_package_env(self):
@@ -226,7 +224,7 @@ class HelloTestConan(ConanFile):
 
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
         client.run("export . lasote/testing")
-        client.run("test test_package Hello/0.1@lasote/testing --build missing")
+        client.run("test test_package hello/0.1@lasote/testing --build missing")
 
     def test_fail_test_package(self):
         client = TestClient()
@@ -253,20 +251,17 @@ class HelloReuseConan(ConanFile):
                      "FindXXX.cmake": "Hello FindCmake",
                      "test/conanfile.py": test_conanfile})
         client.run("create . lasote/stable")
-        ref = ConanFileReference.loads("hello/0.1@lasote/stable")
+        ref = RecipeReference.loads("hello/0.1@lasote/stable")
         client.run(f"test test {str(ref)}")
-        pref = client.get_latest_prev(ref,
-                                      NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
         client.run(f"test test {str(ref)}")  # Test do not rebuild the package
-        pref = client.get_latest_prev(ref,
-                                      NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
         client.run("create . lasote/stable")  # create rebuild the package
-        pref = client.get_latest_prev(ref,
-                                      NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))

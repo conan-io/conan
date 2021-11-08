@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 from conans.util.files import mkdir, rmdir, save
@@ -27,7 +27,7 @@ def test_install_reference_txt(client):
 
 def test_install_reference_error(client):
     # Test to check the "conan install <path> <reference>" command argument
-    client.run("install Pkg/0.1@myuser/testing user/testing", assert_error=True)
+    client.run("install pkg/0.1@myuser/testing user/testing", assert_error=True)
     assert "ERROR: A full reference was provided as first argument" in client.out
 
 
@@ -158,7 +158,7 @@ def test_install_reference_not_conanbuildinfo(client):
     client.save({"conanfile.py": GenConanfile("hello", "0.1").with_setting("os")})
     client.run("create . conan/stable")
     client.save({}, clean_first=True)
-    client.run("install Hello/0.1@conan/stable")
+    client.run("install hello/0.1@conan/stable")
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt"))
 
 
@@ -209,7 +209,7 @@ def test_install_broken_reference(client):
     client.save({"conanfile.py": GenConanfile()})
     client.run("export . hello/0.1@lasote/stable")
     client.run("remote add_ref hello/0.1@lasote/stable default")
-    ref = ConanFileReference.loads("hello/0.1@lasote/stable")
+    ref = RecipeReference.loads("hello/0.1@lasote/stable")
     # Because the folder is removed, the metadata is removed and the
     # origin remote is lost
     rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
@@ -261,7 +261,7 @@ def test_install_argument_order(client):
 
 def test_install_anonymous(client):
     # https://github.com/conan-io/conan/issues/4871
-    client.save({"conanfile.py": GenConanfile("Pkg", "0.1")})
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     client.run("create . lasote/testing")
     client.run("upload * --confirm --all -r default")
 

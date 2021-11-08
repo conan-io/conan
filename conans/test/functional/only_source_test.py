@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -15,38 +15,38 @@ class OnlySourceTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("hello0", "0.0")})
         client.run("export . lasote/stable")
         client.save({"conanfile.py": GenConanfile("hello1", "1.1").
-                    with_require("Hello0/0.0@lasote/stable")})
+                    with_require("hello0/0.0@lasote/stable")})
         client.run("export . lasote/stable")
 
         # Now test out Hello2
         client.save({"conanfile.py": GenConanfile("hello2", "2.2").
-                    with_require("Hello1/1.1@lasote/stable"),
+                    with_require("hello1/1.1@lasote/stable"),
                      "test/conanfile.py": GenConanfile().with_test("pass")})
 
         # Should recognize the hello package
-        # Will Fail because Hello0/0.0 and Hello1/1.1 has not built packages
+        # Will Fail because hello0/0.0 and hello1/1.1 has not built packages
         # and by default no packages are built
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn("Try to build from sources with '--build=Hello0 --build=Hello1'", client.out)
+        self.assertIn("Try to build from sources with '--build=hello0 --build=Hello1'", client.out)
 
-        # We generate the package for Hello0/0.0
-        client.run("install Hello0/0.0@lasote/stable --build Hello0")
+        # We generate the package for hello0/0.0
+        client.run("install hello0/0.0@lasote/stable --build hello0")
 
-        # Still missing Hello1/1.1
+        # Still missing hello1/1.1
         client.run("create . lasote/stable", assert_error=True)
         self.assertIn("Try to build from sources with '--build=Hello1'", client.out)
 
-        # We generate the package for Hello1/1.1
-        client.run("install Hello1/1.1@lasote/stable --build Hello1")
+        # We generate the package for hello1/1.1
+        client.run("install hello1/1.1@lasote/stable --build Hello1")
 
         # Now Hello2 should be built and not fail
         client.run("create . lasote/stable")
-        self.assertNotIn("Can't find a 'Hello2/2.2@lasote/stable' package", client.out)
-        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source', client.out)
+        self.assertNotIn("Can't find a 'hello2/2.2@lasote/stable' package", client.out)
+        self.assertIn('hello2/2.2@lasote/stable: Forced build from source', client.out)
 
         # Now package is generated but should be built again
         client.run("create . lasote/stable")
-        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source', client.out)
+        self.assertIn('hello2/2.2@lasote/stable: Forced build from source', client.out)
 
     def test_build_policies_update(self):
         client = TestClient(default_server_user=True)
@@ -85,15 +85,15 @@ class MyPackage(ConanFile):
         client.run("export . lasote/stable")
 
         # Install, it will build automatically if missing (without the --build missing option)
-        client.run("install Hello0/1.0@lasote/stable")
+        client.run("install hello0/1.0@lasote/stable")
         self.assertIn("Building", client.out)
 
         # Try to do it again, now we have the package, so no build is done
-        client.run("install Hello0/1.0@lasote/stable")
+        client.run("install hello0/1.0@lasote/stable")
         self.assertNotIn("Building", client.out)
 
         # Try now to upload all packages, should not crash because of the "missing" build policy
-        client.run("upload Hello0/1.0@lasote/stable --all -r default")
+        client.run("upload hello0/1.0@lasote/stable --all -r default")
 
         #  --- Build policy to always ---
         conanfile = str(base) + "\n    build_policy = 'always'"
@@ -101,28 +101,28 @@ class MyPackage(ConanFile):
         client.run("export . lasote/stable")
 
         # Install, it will build automatically if missing (without the --build missing option)
-        client.run("install Hello0/1.0@lasote/stable")
+        client.run("install hello0/1.0@lasote/stable")
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
                       client.out)
         self.assertIn("Building", client.out)
 
         # Try to do it again, now we have the package, but we build again
-        client.run("install Hello0/1.0@lasote/stable")
+        client.run("install hello0/1.0@lasote/stable")
         self.assertIn("Building", client.out)
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
                       client.out)
 
         # Try now to upload all packages, should crash because of the "always" build policy
-        client.run("upload Hello0/1.0@lasote/stable --all -r default", assert_error=True)
+        client.run("upload hello0/1.0@lasote/stable --all -r default", assert_error=True)
         self.assertIn("no packages can be uploaded", client.out)
 
     def test_reuse(self):
         client = TestClient(default_server_user=True)
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = RecipeReference.loads("hello0/0.1@lasote/stable")
         client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("install %s --build missing" % str(ref))
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).package()))
 
@@ -132,14 +132,14 @@ class MyPackage(ConanFile):
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
         other_client.run("install %s --build missing" % str(ref))
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         self.assertFalse(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
         other_client.run("install %s --build" % str(ref))
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
         self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))
 
@@ -147,7 +147,7 @@ class MyPackage(ConanFile):
         other_client = TestClient(servers=client.servers)
         other_client.run("install %s --build HelloInvalid" % str(ref))
 
-        # pref = client.get_latest_prev(ref)
+        # pref = client.get_latest_package_reference(ref)
         # self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
         # self.assertFalse(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
 

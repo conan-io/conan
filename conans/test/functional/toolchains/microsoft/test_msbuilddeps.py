@@ -413,11 +413,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_msbuild_generator(self):
         client = TestClient()
-        client.save(pkg_cmake("Hello0", "1.0"))
+        client.save(pkg_cmake("hello0", "1.0"))
         client.run("create . ")
         client.save(pkg_cmake("Hello3", "1.0"), clean_first=True)
         client.run("create . ")
-        client.save(pkg_cmake("Hello1", "1.0", ["Hello0/1.0"]), clean_first=True)
+        client.save(pkg_cmake("hello1", "1.0", ["hello0/1.0"]), clean_first=True)
         client.run("create . ")
 
         conanfile = textwrap.dedent("""
@@ -425,14 +425,14 @@ class MSBuildGeneratorTest(unittest.TestCase):
             from conan.tools.microsoft import MSBuild
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
-                requires = "Hello1/1.0", "Hello3/1.0"
+                requires = "hello1/1.0", "Hello3/1.0"
                 generators = "MSBuildDeps", "MSBuildToolchain"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
             """)
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp",
-                                     includes=["Hello1"], calls=["Hello1"])
+                                     includes=["hello1"], calls=["hello1"])
         myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["Hello3"],
                                          calls=["Hello3"])
         files = {"MyProject.sln": sln_file,
@@ -451,7 +451,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertIn("Hello3: Release!", client.out)
         client.run_command(r"x64\Release\MyApp.exe")
         self.assertIn("MyApp: Release!", client.out)
-        self.assertIn("Hello0: Release!", client.out)
+        self.assertIn("hello0: Release!", client.out)
         self.assertIn("Hello1: Release!", client.out)
 
     def test_install_reference(self):

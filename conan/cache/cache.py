@@ -127,16 +127,16 @@ class DataCache:
         for it in self._db.list_references(only_latest_rrev):
             yield it
 
-    def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
-        for it in self._db.get_recipe_revisions(ref, only_latest_rrev):
+    def get_recipe_revisions_references(self, ref: ConanReference, only_latest_rrev=False):
+        for it in self._db.get_recipe_revisions_references(ref, only_latest_rrev):
             yield it
 
     def get_package_references(self, ref: ConanReference):
         for it in self._db.get_package_references(ref):
             yield it
 
-    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
-        for it in self._db.get_package_revisions(ref, only_latest_prev):
+    def get_package_revisions_references(self, ref: ConanReference, only_latest_prev=False):
+        for it in self._db.get_package_revisions_references(ref, only_latest_prev):
             yield it
 
     def get_build_id(self, ref):

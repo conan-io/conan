@@ -27,9 +27,9 @@ class SayConan(ConanFile):
 
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
-        client.run("create . Pkg/0.1@conan/testing")
-        self.assertIn("Pkg/0.1@conan/testing (test package): USER: conan!!", client.out)
-        self.assertIn("Pkg/0.1@conan/testing (test package): CHANNEL: testing!!", client.out)
+        client.run("create . pkg/0.1@conan/testing")
+        self.assertIn("pkg/0.1@conan/testing (test package): USER: conan!!", client.out)
+        self.assertIn("pkg/0.1@conan/testing (test package): CHANNEL: testing!!", client.out)
 
 
 class SameUserChannelTest(unittest.TestCase):
@@ -82,7 +82,7 @@ class HelloConan(ConanFile):
                                                                            "other/testing")})
         self.client.run("create . other/testing")
         self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.out)
-        self.assertIn("Hello/0.1@other/testing: Building other/testing", self.client.out)
+        self.assertIn("hello/0.1@other/testing: Building other/testing", self.client.out)
         self.assertNotIn("lasote/stable", self.client.out)
 
     def test_local_commands(self):

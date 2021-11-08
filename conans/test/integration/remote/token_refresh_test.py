@@ -8,7 +8,7 @@ from conans.client.cache.remote_registry import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.userio import UserInput
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import LocalDBMock
 
 common_headers = {"X-Conan-Server-Capabilities": "oauth_token,revisions",
@@ -88,7 +88,7 @@ class TestTokenRefresh(unittest.TestCase):
         cache.localdb = self.localdb
         self.auth_manager = ConanApiAuthManager(self.rest_client_factory, cache)
         self.remote = Remote("myremote", "myurl", True, True)
-        self.ref = ConanFileReference.loads("lib/1.0@conan/stable#myreciperev")
+        self.ref = RecipeReference.loads("lib/1.0@conan/stable#myreciperev")
 
     def test_auth_with_token(self):
         """Test that if the capability is there, then we use the new endpoint"""

@@ -117,14 +117,14 @@ equal:opt=a=b
                     self.output.info("shared=%s" % self.options.shared)
                 """)
         client.save({"conanfile.py": conanfile_liba})
-        client.run("create . libA/0.1@danimtb/testing -o *:shared=True")
-        self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+        client.run("create . liba/0.1@danimtb/testing -o *:shared=True")
+        self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
 
         conanfile_libb = textwrap.dedent("""
             from conans import ConanFile
             class LibB(ConanFile):
                 options = {"shared": [True, False]}
-                requires = "libA/0.1@danimtb/testing"
+                requires = "liba/0.1@danimtb/testing"
 
                 def configure(self):
                     self.options["*"].shared = self.options.shared
@@ -141,15 +141,15 @@ equal:opt=a=b
             # Test info
             client.run("info . -o *:shared=True")
             self.assertIn("conanfile.py: shared=True", client.out)
-            self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
             # Test create
-            client.run("create . libB/0.1@danimtb/testing -o *:shared=True")
-            self.assertIn("libB/0.1@danimtb/testing: shared=True", client.out)
-            self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+            client.run("create . libb/0.1@danimtb/testing -o *:shared=True")
+            self.assertIn("libb/0.1@danimtb/testing: shared=True", client.out)
+            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
             # Test install
             client.run("install . -o *:shared=True")
             self.assertIn("conanfile.py: shared=True", client.out)
-            self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
 
     @pytest.mark.xfail(reason="info.shared_library_package_id() to be removed")
     def test_overridable_shared_option(self):

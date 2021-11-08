@@ -15,7 +15,7 @@ from conans.errors import ConanException, NotFoundException, ConanInvalidConfigu
     conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
 from conans.paths import DATA_YML
 from conans.util.files import load
@@ -160,8 +160,7 @@ class ConanFileLoader(object):
         if not conanfile.version:
             raise ConanException("conanfile didn't specify version")
 
-        ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
-                                 conanfile.channel)
+        ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         conanfile.display_name = str(ref)
         conanfile.output.scope = conanfile.display_name
         return conanfile
@@ -207,7 +206,7 @@ class ConanFileLoader(object):
         conanfile = self.load_named(conanfile_path, name, version, user, channel,
                                     graph_lock)
 
-        ref = ConanFileReference(conanfile.name, conanfile.version, user, channel, validate=False)
+        ref = RecipeReference(conanfile.name, conanfile.version, user, channel)
         if str(ref):
             conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
         else:
@@ -220,7 +219,7 @@ class ConanFileLoader(object):
 
             if require_overrides is not None:
                 for req_override in require_overrides:
-                    req_override = ConanFileReference.loads(req_override)
+                    req_override = RecipeReference.loads(req_override)
                     conanfile.requires.override(req_override)
 
             return conanfile
@@ -317,7 +316,7 @@ class ConanFileLoader(object):
 
         if require_overrides is not None:
             for req_override in require_overrides:
-                req_override = ConanFileReference.loads(req_override)
+                req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
         conanfile.generators = []  # remove the default txt generator

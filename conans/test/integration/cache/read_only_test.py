@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import save
 
@@ -29,12 +29,12 @@ class MyPkg(ConanFile):
         self.copy("*")
 """
         self.client.save({"conanfile.py": conanfile,
-                     "myheader.h": "my header"})
+                          "myheader.h": "my header"})
         self.client.run("create . pkg/0.1@lasote/channel")
 
     def test_basic(self):
-        pref = self.client.get_latest_prev(ConanFileReference.loads("pkg/0.1@lasote/channel"),
-                                           NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@lasote/channel"),
+                                                        NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(self.client.get_latest_pkg_layout(pref).package(), "myheader.h")
         with self.assertRaises(IOError):
             save(path, "Bye World")
@@ -59,8 +59,8 @@ class MyPkg(ConanFile):
         client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
 
         client.run("install pkg/0.1@lasote/channel")
-        pref = self.client.get_latest_prev(ConanFileReference.loads("pkg/0.1@lasote/channel"),
-                                           NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@lasote/channel"),
+                                                        NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(client.get_latest_pkg_layout(pref).package(), "myheader.h")
         with self.assertRaises(IOError):
             save(path, "Bye World")

@@ -8,7 +8,7 @@ from mock import Mock
 from conans.client.conanfile.package import run_package_method
 from conans.client.loader import ConanFileLoader
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.utils.tools import TestClient, create_profile
 
@@ -43,7 +43,7 @@ class ExporterTest(unittest.TestCase):
     def test_complete(self):
         client = TestClient()
 
-        ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
+        ref = RecipeReference.loads("hello/1.2.1@frodo/stable")
         reg_folder = client.get_latest_ref_layout(ref).export()
 
         client.save({CONANFILE: myconan1,

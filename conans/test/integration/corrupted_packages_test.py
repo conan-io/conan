@@ -4,7 +4,7 @@ import unittest
 import pytest
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 
 
@@ -29,7 +29,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         rrev = "f3367e0e7d170aa12abccb175fee5f97"
         pref_str = "pkg/0.1@user/testing#%s" % rrev
         prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
-        self.pref = pref = PkgReference(ConanFileReference.loads(pref_str),
+        self.pref = pref = PkgReference(RecipeReference.loads(pref_str),
                                         NO_SETTINGS_PACKAGE_ID, prev)
         self.manifest_path = self.server.server_store.get_package_file_path(pref,
                                                                             "conanmanifest.txt")

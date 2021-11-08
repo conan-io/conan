@@ -5,7 +5,7 @@ from jinja2 import Template
 
 from conans import __version__ as client_version
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, get_reference_fields
+from conans.model.ref import get_reference_fields
 from conans.util.files import load
 
 
@@ -325,8 +325,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         raise ConanException("Bad parameter, please use full package name,"
                              "e.g.: MyLib/1.2.3@user/testing")
 
-    # Validate it is a valid reference
-    ConanFileReference(name, version, user, channel)
+    # TODO: Validate it is a valid reference
 
     if header and exports_sources:
         raise ConanException("'header' and 'sources' are incompatible options")

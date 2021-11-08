@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from conans.client.tools.files import save, unzip
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
@@ -15,22 +15,22 @@ class XZTest(TestCase):
 
     def test_error_xz(self):
         server = TestServer()
-        ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_rev("myreciperev")
+        ref = RecipeReference.loads("pkg/0.1@user/channel")
+        ref.revision = "myreciperev"
         export = server.server_store.export(ref)
         server.server_store.update_last_revision(ref)
         save_files(export, {"conanfile.py": str(GenConanfile()),
                             "conanmanifest.txt": "#",
                             "conan_export.txz": "#"})
         client = TestClient(servers={"default": server})
-        client.run("install Pkg/0.1@user/channel", assert_error=True)
+        client.run("install pkg/0.1@user/channel", assert_error=True)
         self.assertIn("This Conan version is not prepared to handle "
                       "'conan_export.txz' file format", client.out)
 
     def test_error_sources_xz(self):
         server = TestServer()
-        ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_rev("myreciperev")
+        ref = RecipeReference.loads("pkg/0.1@user/channel")
+        ref.revision = "myreciperev"
         client = TestClient(servers={"default": server})
         server.server_store.update_last_revision(ref)
         export = server.server_store.export(ref)
@@ -41,14 +41,14 @@ class Pkg(ConanFile):
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1",
                             "conan_sources.txz": "#"})
-        client.run("install Pkg/0.1@user/channel --build", assert_error=True)
+        client.run("install pkg/0.1@user/channel --build", assert_error=True)
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_sources.txz' file format", client.out)
 
     def test_error_package_xz(self):
         server = TestServer()
-        ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_rev("myreciperev")
+        ref = RecipeReference.loads("pkg/0.1@user/channel")
+        ref.revision = "myreciperev"
         client = TestClient(servers={"default": server})
         server.server_store.update_last_revision(ref)
         export = server.server_store.export(ref)  # *1 the path can't be known before upload a revision
@@ -66,7 +66,7 @@ class Pkg(ConanFile):
         save_files(package, {"conaninfo.txt": "#",
                              "conanmanifest.txt": "1",
                              "conan_package.txz": "#"})
-        client.run("install Pkg/0.1@user/channel", assert_error=True)
+        client.run("install pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_package.txz' file format", client.out)
 

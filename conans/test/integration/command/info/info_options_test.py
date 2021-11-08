@@ -14,7 +14,7 @@ class InfoOptionsTest(unittest.TestCase):
         # packages with dash
         client = TestClient()
         client.save({"conanfile.py":
-                         GenConanfile("My-Package", "1.3").with_option("shared", [True, False])
+                         GenConanfile("my-package", "1.3").with_option("shared", [True, False])
                                                           .with_default_option("shared", False)})
         # assert they are correct at least
         client.run("export . myuser/testing")
