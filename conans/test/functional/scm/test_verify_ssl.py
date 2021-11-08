@@ -4,7 +4,7 @@ import unittest
 import pytest
 from parameterized.parameterized import parameterized_class
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -38,7 +38,7 @@ class GitVerifySSLTestCase(unittest.TestCase):
 
     """)
 
-    ref = ConanFileReference.loads("name/version@user/channel")
+    ref = RecipeReference.loads("name/version@user/channel")
 
     def setUp(self):
         self.client = TestClient()

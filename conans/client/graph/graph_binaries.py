@@ -57,8 +57,7 @@ class GraphBinariesAnalyzer(object):
         if remote:
             try:
                 info = node.conanfile.info
-                pref_rev = self._remote_manager.get_latest_package_revision_with_time(pref, remote,
-                                                                                      info=info)
+                pref_rev = self._remote_manager.get_latest_package_reference(pref, remote, info=info)
                 pref.revision = pref_rev.revision
                 pref.timestamp = pref_rev.timestamp
                 return remote
@@ -69,8 +68,8 @@ class GraphBinariesAnalyzer(object):
         results = []
         for r in self._app.enabled_remotes:
             try:
-                latest_pref, latest_time = self._remote_manager.get_latest_package_revision(pref, r)
-                results.append({'pref': latest_pref, 'time': latest_time, 'remote': r})
+                latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
+                results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not self._app.update:
                     break
             except NotFoundException:
@@ -80,10 +79,10 @@ class GraphBinariesAnalyzer(object):
             node.conanfile.output.warning("Can't update, there are no remotes configured or enabled")
 
         if len(results) > 0:
-            remotes_results = sorted(results, key=lambda k: k['time'], reverse=True)
+            remotes_results = sorted(results, key=lambda k: k['pref'].timestamp, reverse=True)
             result = remotes_results[0]
             pref.revision = result.get("pref").revision
-            pref.timestamp = result.get("time")
+            pref.timestamp = result.get("pref").timestamp
             return result.get('remote')
         else:
             raise PackageNotFoundException(pref)
@@ -174,7 +173,7 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_build(node, build_mode):
             return
 
-        cache_latest_prev = self._cache.get_latest_prev(pref)
+        cache_latest_prev = self._cache.get_latest_package_reference(pref)
         output = node.conanfile.output
 
         if not cache_latest_prev:

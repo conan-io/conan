@@ -3,7 +3,7 @@ import os
 import pytest
 
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -22,8 +22,8 @@ def test_basic(relative_path):
         client.run("export source hello/0.1@lasote/stable")
 
     # The result should be the same in both cases
-    ref = ConanFileReference("hello", "0.1", "lasote", "stable")
-    latest_rrev = client.cache.get_latest_rrev(ref)
+    ref = RecipeReference("hello", "0.1", "lasote", "stable")
+    latest_rrev = client.cache.get_latest_recipe_reference(ref)
     ref_layoyt = client.cache.ref_layout(latest_rrev)
     reg_path = ref_layoyt.export()
     manif = FileTreeManifest.load(reg_path)
@@ -53,8 +53,8 @@ def test_path(relative_path):
         with client.chdir("current"):
             client.run("export . hello/0.1@lasote/stable")
 
-    ref = ConanFileReference("hello", "0.1", "lasote", "stable")
-    latest_rrev = client.cache.get_latest_rrev(ref)
+    ref = RecipeReference("hello", "0.1", "lasote", "stable")
+    latest_rrev = client.cache.get_latest_recipe_reference(ref)
     ref_layoyt = client.cache.ref_layout(latest_rrev)
     reg_path = ref_layoyt.export()
     manif = FileTreeManifest.load(reg_path)

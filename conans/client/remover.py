@@ -7,7 +7,8 @@ from conans.client.userio import UserInput
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference, check_valid_ref
+from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import check_valid_ref
 from conans.paths import SYSTEM_REQS
 from conans.search.search import search_packages, search_recipes
 from conans.util.files import rmdir
@@ -115,7 +116,7 @@ class ConanRemover(object):
             _tmp = package_id.split("#") if "#" in package_id else (package_id, None)
             package_id, revision = _tmp
             _pref = PkgReference(ref, package_id, revision=revision)
-            prev = self._cache.get_package_revisions(_pref)
+            prev = self._cache.get_package_revisions_references(_pref)
             if not prev:
                 raise PackageNotFoundException(_pref)
             folders_to_remove.extend(prev)
@@ -132,7 +133,7 @@ class ConanRemover(object):
         pkg_ids = self._cache.get_package_references(ref)
         all_package_revisions = []
         for pkg_id in pkg_ids:
-            all_package_revisions.extend(self._cache.get_package_revisions(pkg_id))
+            all_package_revisions.extend(self._cache.get_package_revisions_references(pkg_id))
 
         prev_remove = []
         prev_remove_build = []
@@ -169,7 +170,7 @@ class ConanRemover(object):
                force=False, packages_query=None):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
-        @param pattern: it could be OpenCV* or OpenCV or a ConanFileReference
+        @param pattern: it could be OpenCV* or OpenCV or a RecipeReference
         @param build_ids: Lists with ids or empty for all. (Its a filter)
         @param package_ids_filter: Lists with ids or empty for all. (Its a filter)
         @param force: if True, it will be deleted without requesting anything
@@ -179,8 +180,8 @@ class ConanRemover(object):
         if self._app.selected_remote and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
-        is_reference = check_valid_ref(pattern)
-        input_ref = ConanFileReference.loads(pattern) if is_reference else None
+        is_reference = check_valid_ref(pattern, strict_mode=False)
+        input_ref = RecipeReference.loads(pattern) if is_reference else None
 
         if not input_ref and packages_query is not None:
             raise ConanException("query parameter only allowed with a valid recipe "
@@ -203,7 +204,7 @@ class ConanRemover(object):
                 #  remove all for the moment
                 # TODO: cache2.0 raising the not found exceptions here but we should refactor all
                 #  of this for conan 2.0 now that we only have revisions enabled
-                refs = self._cache.get_recipe_revisions(input_ref)
+                refs = self._cache.get_recipe_revisions_references(input_ref)
                 if not refs:
                     raise RecipeNotFoundException(input_ref)
                 for ref in refs:
@@ -217,7 +218,7 @@ class ConanRemover(object):
 
         deleted_refs = []
         for ref in refs:
-            assert isinstance(ref, ConanFileReference)
+            assert isinstance(ref, RecipeReference)
             package_ids = package_ids_filter
             if packages_query:
                 # search packages
@@ -228,7 +229,7 @@ class ConanRemover(object):
                     pkg_ids = self._cache.get_package_references(ref)
                     all_package_revs = []
                     for pkg in pkg_ids:
-                        all_package_revs.extend(self._cache.get_package_revisions(pkg))
+                        all_package_revs.extend(self._cache.get_package_revisions_references(pkg))
                     packages_layouts = [self._cache.pkg_layout(pref) for pref in all_package_revs]
                     packages = search_packages(packages_layouts, packages_query)
                 if package_ids_filter:
@@ -237,7 +238,7 @@ class ConanRemover(object):
                     package_ids = packages
                 if not package_ids:
                     ConanOutput().warning("No matching packages to remove for %s"
-                                              % ref.full_str())
+                                              % repr(ref))
                     continue
 
             if self._ask_permission(ref, src, build_ids, package_ids, force):

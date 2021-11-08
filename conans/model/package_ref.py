@@ -27,6 +27,16 @@ class PkgReference:
             result += "%{}".format(self.timestamp)
         return result
 
+    def repr_notime(self):
+        if self.ref is None:
+            return ""
+        result = self.ref.repr_notime()
+        if self.package_id:
+            result += ":{}".format(self.package_id)
+        if self.revision is not None:
+            result += "#{}".format(self.revision)
+        return result
+
     def __str__(self):
         """ shorter representation, excluding the revision and timestamp """
         if self.ref is None:

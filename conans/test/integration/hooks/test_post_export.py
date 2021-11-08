@@ -8,7 +8,7 @@ from mock import patch
 
 from conans.client.hook_manager import HookManager
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONAN_MANIFEST
 from conans.test.utils.tools import TestClient
 
@@ -19,7 +19,7 @@ def test_called_before_digest(self):
         exported folders
     """
 
-    ref = ConanFileReference.loads("name/version@user/channel")
+    ref = RecipeReference.loads("name/version@user/channel")
     conanfile = textwrap.dedent("""\
         from conans import ConanFile
 

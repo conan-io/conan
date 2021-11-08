@@ -12,11 +12,11 @@ class ListAPI:
         """
         Get all the recipe/package revisions given a reference from cache or remote.
 
-        :param ref: `PkgReference` or `ConanFileReference` without the revisions
+        :param ref: `PkgReference` or `RecipeReference` without the revisions
         :param getter_name: `string` method that should be called by either app.remote_manager
                             or app.cache (remote or local search) to get all the revisions, e.g.:
-                                >> app.remote_manager.get_package_revisions(ref, remote=remote)
-                                >> app.cache.get_package_revisions(ref)
+                                >> app.remote_manager.get_package_revisions_references(ref, remote=remote)
+                                >> app.cache.get_package_revisions_references(ref)
         :param remote: `Remote` object
         :return: `list` of `dict` with all the results, e.g.,
                     [
@@ -32,22 +32,19 @@ class ListAPI:
             results = getattr(app.remote_manager, getter_name)(ref, remote=remote)
         else:
             # Let's get the revisions from the local cache
-            revs = getattr(app.cache, getter_name)(ref)
+            prefs = getattr(app.cache, getter_name)(ref)
             results = []
-            for revision in revs:
-                if getter_name == "get_recipe_revisions":
-                    timestamp = app.cache.get_recipe_timestamp(revision)
+            for pref in prefs:
+                if getter_name == "get_recipe_revisions_references":
+                    timestamp = app.cache.get_recipe_timestamp(pref)
                 else:
-                    timestamp = app.cache.get_package_timestamp(revision)
-                result = {
-                    "revision": revision.revision,
-                    "time": timestamp
-                }
-                results.append(result)
+                    timestamp = app.cache.get_package_timestamp(pref)
+                pref.timestamp = timestamp
+                results.append(pref)
         return results
 
     @api_method
-    def get_package_revisions(self, reference, remote=None):
+    def get_package_revisions_references(self, reference, remote=None):
         """
         Get all the package revisions given a reference from cache or remote.
 
@@ -62,15 +59,15 @@ class ListAPI:
                     ]
         """
         # Method name to get remotely/locally the revisions
-        getter_name = 'get_package_revisions'
+        getter_name = 'get_package_revisions_references'
         return self._get_revisions(reference, getter_name, remote=remote)
 
     @api_method
-    def get_recipe_revisions(self, reference, remote=None):
+    def get_recipe_revisions_references(self, reference, remote=None):
         """
         Get all the recipe revisions given a reference from cache or remote.
 
-        :param reference: `ConanFileReference` without the revision
+        :param reference: `RecipeReference` without the revision
         :param remote: `Remote` object
         :return: `list` of `dict` with all the results, e.g.,
                   [
@@ -81,18 +78,19 @@ class ListAPI:
                   ]
         """
         # Method name to get remotely/locally the revisions
-        getter_name = 'get_recipe_revisions'
+        getter_name = 'get_recipe_revisions_references'
         return self._get_revisions(reference, getter_name, remote=remote)
 
     @api_method
     def get_package_references(self, reference, remote=None):
+        # FIXME: This shouldn't resolve the latest if no revision is specified
         """
         Get all the Package IDs given a recipe revision from cache or remote.
 
         Note: if reference does not have the revision, we'll return the Package IDs for
         the latest recipe revision by default
 
-        :param reference: `ConanFileReference` with/without revision
+        :param reference: `RecipeReference` with/without revision
         :param remote: `Remote` object
         :return: `dict` with the reference revision and the results with the package_id as keys, e.g.
                   {
@@ -109,18 +107,18 @@ class ListAPI:
         app = ConanApp(self.conan_api.cache_folder)
         if remote:
             rrev, _ = reference, None if reference.revision else \
-                app.remote_manager.get_latest_recipe_revision(reference, remote)
+                app.remote_manager.get_latest_recipe_reference(reference, remote)
             packages_props = app.remote_manager.search_packages(remote, rrev, None)
         else:
-            rrev = reference if reference.revision else app.cache.get_latest_rrev(reference)
+            rrev = reference if reference.revision else app.cache.get_latest_recipe_reference(reference)
             package_ids = app.cache.get_package_references(rrev)
             package_layouts = []
             for pkg in package_ids:
-                latest_prev = app.cache.get_latest_prev(pkg)
+                latest_prev = app.cache.get_latest_package_reference(pkg)
                 package_layouts.append(app.cache.pkg_layout(latest_prev))
             packages_props = search_packages(package_layouts, None)
 
         return {
-            "reference": repr(rrev),
+            "reference": rrev,
             "results": packages_props
         }

@@ -5,7 +5,7 @@ import textwrap
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.scm import SVNLocalRepoTestCase
 from conans.test.utils.tools import TestClient, load
 
@@ -42,7 +42,7 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
 
     def test_auto_tag(self):
         t = TestClient()
-        ref = ConanFileReference.loads("lib/version@issue/testing")
+        ref = RecipeReference.loads("lib/version@issue/testing")
 
         # Clone the tag to local folder
         url = os.path.join(self.project_url, "tags/release-1.0/level1").replace('\\', '/')

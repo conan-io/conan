@@ -5,7 +5,6 @@ from conans import DEFAULT_REVISION_V1
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference
 from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 
@@ -70,7 +69,7 @@ class ServerStore(object):
     # ############ SNAPSHOTS (APIv1)
     def get_recipe_snapshot(self, ref):
         """Returns a {filepath: md5} """
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         return self._get_snapshot_of_files(self.export(ref))
 
     def _get_snapshot_of_files(self, relative_path):
@@ -81,7 +80,7 @@ class ServerStore(object):
     # ############ ONLY FILE LIST SNAPSHOTS (APIv2)
     def get_recipe_file_list(self, ref):
         """Returns a {filepath: md5} """
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         return self._get_file_list(self.export(ref))
 
     def get_package_file_list(self, pref):
@@ -112,8 +111,8 @@ class ServerStore(object):
             ref_path = os.path.dirname(ref_path)
 
     # ######### DELETE (APIv1 and APIv2)
-    def remove_conanfile(self, ref):
-        assert isinstance(ref, ConanFileReference)
+    def remove_recipe(self, ref):
+        assert isinstance(ref, RecipeReference)
         if not ref.revision:
             self._storage_adapter.delete_folder(self.conan_revisions_root(ref))
         else:
@@ -122,7 +121,7 @@ class ServerStore(object):
         self._delete_empty_dirs(ref)
 
     def remove_packages(self, ref, package_ids_filter):
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         assert isinstance(package_ids_filter, list)
 
         if not package_ids_filter:  # Remove all packages
@@ -146,11 +145,11 @@ class ServerStore(object):
 
     def remove_all_packages(self, ref):
         assert ref.revision is not None, "BUG: server store needs RREV remove_all_packages"
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
 
-    def remove_conanfile_files(self, ref, files):
+    def remove_recipe_files(self, ref, files):
         subpath = self.export(ref)
         for filepath in files:
             path = join(subpath, filepath)
@@ -166,7 +165,7 @@ class ServerStore(object):
     # ############ DOWNLOAD URLS
     def get_download_conanfile_urls(self, ref, files_subset=None, user=None):
         """Returns a {filepath: url} """
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         return self._get_download_urls(self.export(ref), files_subset, user)
 
     def get_download_package_urls(self, pref, files_subset=None, user=None):
@@ -177,10 +176,10 @@ class ServerStore(object):
     # ############ UPLOAD URLS
     def get_upload_conanfile_urls(self, ref, filesizes, user):
         """
-        :param ref: ConanFileReference
+        :param ref: RecipeReference
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
-        assert isinstance(ref, ConanFileReference)
+        assert isinstance(ref, RecipeReference)
         assert isinstance(filesizes, dict)
         return self._get_upload_urls(self.export(ref), filesizes, user)
 
@@ -222,11 +221,11 @@ class ServerStore(object):
 
     # Methods to manage revisions
     def get_last_revision(self, ref):
-        assert(isinstance(ref, (ConanFileReference, RecipeReference)))
+        assert(isinstance(ref, RecipeReference))
         rev_file_path = self._recipe_revisions_file(ref)
         return self._get_latest_revision(rev_file_path)
 
-    def get_recipe_revisions(self, ref):
+    def get_recipe_revisions_references(self, ref):
         """Returns a RevisionList"""
         if ref.revision:
             tmp = RevisionList()
@@ -241,10 +240,13 @@ class ServerStore(object):
     def get_last_package_revision(self, pref):
         assert(isinstance(pref, PkgReference))
         rev_file_path = self._package_revisions_file(pref)
-        return self._get_latest_revision(rev_file_path)
+        rev = self._get_latest_revision(rev_file_path)
+        if rev:
+            return PkgReference(pref.ref, pref.package_id, rev.revision, rev.time)
+        return None
 
     def update_last_revision(self, ref):
-        assert(isinstance(ref, ConanFileReference))
+        assert(isinstance(ref, RecipeReference))
         rev_file_path = self._recipe_revisions_file(ref)
         self._update_last_revision(rev_file_path, ref)
 
@@ -261,24 +263,26 @@ class ServerStore(object):
         else:
             rev_list = RevisionList()
         if ref.revision is None:
-            raise ConanException("Invalid revision for: %s" % ref.full_str())
+            raise ConanException("Invalid revision for: %s" % repr(ref))
         rev_list.add_revision(ref.revision)
         self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                          lock_file=rev_file_path + ".lock")
 
-    def get_package_revisions(self, pref):
+    def get_package_revisions_references(self, pref):
         """Returns a RevisionList"""
-        assert pref.ref.revision is not None, "BUG: server store needs PREV get_package_revisions"
+        assert pref.ref.revision is not None, \
+            "BUG: server store needs PREV get_package_revisions_references"
         if pref.revision:
             tmp = RevisionList()
             tmp.add_revision(pref.revision)
-            return tmp.as_list()
+            return [PkgReference(pref.ref, pref.package_id, rev.revision, rev.time)
+                    for rev in tmp.as_list()]
 
         tmp = self._package_revisions_file(pref)
         ret = self._get_revisions_list(tmp).as_list()
         if not ret:
             raise PackageNotFoundException(pref)
-        return ret
+        return [PkgReference(pref.ref, pref.package_id, rev.revision, rev.time) for rev in ret]
 
     def _get_revisions_list(self, rev_file_path):
         if self._storage_adapter.path_exists(rev_file_path):

@@ -5,11 +5,10 @@ import unittest
 
 import pytest
 import yaml
-from mock import Mock
 
 from conans.client.loader import ConanFileLoader
 from conans.client.tools.env import environment_append
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import DATA_YML
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -17,7 +16,7 @@ from conans.util.files import save_files
 
 
 class SCMDataToConanDataTestCase(unittest.TestCase):
-    ref = ConanFileReference.loads("name/version@")
+    ref = RecipeReference.loads("name/version@")
 
     def test_plain_recipe(self):
         conanfile = textwrap.dedent("""
@@ -203,7 +202,7 @@ def test_auto_can_be_automated():
 
     def _check(client):
         # Check exported files
-        ref = ConanFileReference.loads("pkg/1.0")
+        ref = RecipeReference.loads("pkg/1.0")
         ref_layout = client.get_latest_ref_layout(ref)
         assert load(ref_layout.conanfile()) == conanfile
         exported_conandata = load(ref_layout.conandata())

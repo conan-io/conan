@@ -1,11 +1,7 @@
 # coding=utf-8
 
-import textwrap
 import unittest
 
-import pytest
-
-from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
