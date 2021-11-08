@@ -4,6 +4,7 @@ import unittest
 
 import pytest
 
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.utils.tools import TestServer, TurboTestClient
 
