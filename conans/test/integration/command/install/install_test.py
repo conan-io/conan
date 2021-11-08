@@ -78,56 +78,56 @@ def test_install_transitive_pattern(client):
                 self.output.info("PKG2 OPTION: %s" % self.options.shared)
         """)})
 
-    client.run("create . Pkg2/0.1@user/testing -o *:shared=True")
+    client.run("create . pkg2/0.1@user/testing -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install Pkg2/0.1@user/testing -o *:shared=True")
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
+    client.run(" install pkg2/0.1@user/testing -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Priority of non-scoped options
-    client.run("create . Pkg2/0.1@user/testing -o shared=header -o *:shared=True")
+    client.run("create . pkg2/0.1@user/testing -o shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install Pkg2/0.1@user/testing -o shared=header -o *:shared=True")
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    client.run(" install pkg2/0.1@user/testing -o shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option
-    client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg2:shared=header")
+    client.run("create . pkg2/0.1@user/testing -o *:shared=True -o pkg2:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2:shared=header")
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    client.run(" install pkg2/0.1@user/testing -o *:shared=True -o pkg2:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option reverse
-    client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header "
+    client.run("create . pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header "
                "--build=missing")
     assert "pkg/0.1@user/testing: Calling build()" in client.out
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install Pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header")
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
+    client.run(" install pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Prevalence of alphabetical pattern
-    client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
+    client.run("create . pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    client.run(" install pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of last match, even first pattern match
-    client.run("create . Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+    client.run("create . pkg2/0.1@user/testing -o pkg2*:shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
+    client.run(" install pkg2/0.1@user/testing -o pkg2*:shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Prevalence and override of alphabetical pattern
-    client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
+    client.run("create . pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    client.run(" install pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
-    assert "Pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
 
 
 def test_install_package_folder(client):

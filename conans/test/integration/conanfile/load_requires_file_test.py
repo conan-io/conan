@@ -24,13 +24,13 @@ class Test(ConanFile):
         client.run("create . hello0/0.1@user/channel")
 
         for i in (0, 1, 2):
-            reqs = "Hello%s/0.1@user/channel" % i
+            reqs = "hello%s/0.1@user/channel" % i
             client.save({"conanfile.py": conanfile,
                          "reqs.txt": reqs})
-            client.run("create . Hello%s/0.1@user/channel" % (i + 1))
+            client.run("create . hello%s/0.1@user/channel" % (i + 1))
 
-        client.run("install Hello3/0.1@user/channel")
+        client.run("install hello3/0.1@user/channel")
         self.assertIn("hello0/0.1@user/channel from local", client.out)
         self.assertIn("hello1/0.1@user/channel from local", client.out)
         self.assertIn("hello2/0.1@user/channel from local", client.out)
-        self.assertIn("Hello3/0.1@user/channel from local", client.out)
+        self.assertIn("hello3/0.1@user/channel from local", client.out)

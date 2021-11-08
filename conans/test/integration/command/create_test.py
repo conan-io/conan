@@ -29,7 +29,7 @@ class CreateTest(unittest.TestCase):
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . -g MSBuildDeps -s build_type=Release -s arch=x86")
         conandeps = client.load("conandeps.props")
-        assert conandeps.find("pkgb") < conandeps.find("pkgb")
+        assert conandeps.find("pkgb") < conandeps.find("pkga")
 
     def test_transitive_same_name(self):
         # https://github.com/conan-io/conan/issues/1366
@@ -39,7 +39,7 @@ class CreateTest(unittest.TestCase):
         client.run("create . lasote/testing")
         self.assertIn("hellobar/0.1@lasote/testing: Forced build from source", client.out)
 
-        conanfile = GenConanfile("hello", "0.1").with_require("Hellobar/0.1@lasote/testing")
+        conanfile = GenConanfile("hello", "0.1").with_require("hellobar/0.1@lasote/testing")
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . lasote/stable")
@@ -124,14 +124,12 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("pkg/0.1@lasote/testing", client.out)
 
-
-
     def test_error_create_name_version(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("1.2")})
         client.run("create . hello/1.2@lasote/stable")
         client.run("create ./ pkg/1.2@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Package recipe with name Pkg!=Hello", client.out)
+        self.assertIn("ERROR: Package recipe with name pkg!=hello", client.out)
         client.run("create . hello/1.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=1.2", client.out)
 
@@ -217,11 +215,11 @@ class MyPkg(ConanFile):
                       "Requires: other/1.0@user/channel", client.out)
         self.assertIn("pkg/0.1@lasote/testing (test package): build() "
                       "Requires: pkg/0.1@lasote/testing", client.out)
-        self.assertIn("pkg/0.1@lasote/testing (test package): build() cpp_info dep: Other",
+        self.assertIn("pkg/0.1@lasote/testing (test package): build() cpp_info dep: other",
                       client.out)
-        self.assertIn("pkg/0.1@lasote/testing (test package): build() cpp_info dep: Dep",
+        self.assertIn("pkg/0.1@lasote/testing (test package): build() cpp_info dep: dep",
                       client.out)
-        self.assertIn("pkg/0.1@lasote/testing (test package): build() cpp_info dep: Pkg",
+        self.assertIn("pkg/0.1@lasote/testing (test package): build() cpp_info dep: pkg",
                       client.out)
 
     def test_build_policy(self):
@@ -326,19 +324,19 @@ class MyPkg(ConanFile):
             from conans import ConanFile
 
             class HelloConan(ConanFile):
-                name = "HelloBar"
+                name = "hellobar"
                 version = "0.1"
 
                 def package_info(self):
-                    self.output.warning("Hello, I'm HelloBar")
+                    self.output.warning("Hello, I'm hellobar")
             ''')
 
         client.save({"conanfile.py": conanfile})
         client.run("create .")
 
-        client.save({"conanfile.py": GenConanfile().with_require("HelloBar/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("hellobar/0.1")})
         client.run("create . consumer/1.0@")
-        self.assertIn("HelloBar/0.1: WARN: Hello, I'm HelloBar", client.out)
+        self.assertIn("hellobar/0.1: WARN: Hello, I'm hellobar", client.out)
         self.assertIn("consumer/1.0: Created package revision", client.out)
 
     def test_conaninfo_contents_without_user_channel(self):

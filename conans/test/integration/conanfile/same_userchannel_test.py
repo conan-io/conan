@@ -40,7 +40,7 @@ class SameUserChannelTest(unittest.TestCase):
 from conans import ConanFile
 
 class SayConan(ConanFile):
-    name = "Say"
+    name = "say"
     version = "0.1"
     build_policy = "missing"
 
@@ -61,7 +61,7 @@ class HelloConan(ConanFile):
 
     def requirements(self):
         user_channel = "{}/{}".format(self.user, self.channel) if self.user else ""
-        self.requires("Say/0.1@{}".format(user_channel))
+        self.requires("say/0.1@{}".format(user_channel))
 
     def build(self):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
@@ -73,7 +73,7 @@ class HelloConan(ConanFile):
 
     def test_create(self):
         self.client.run("create . lasote/stable")
-        self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.out)
+        self.assertIn("say/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertIn("hello/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertNotIn("other/testing", self.client.out)
 
@@ -81,21 +81,21 @@ class HelloConan(ConanFile):
                           "test/conanfile.py": self.test_conanfile.replace("lasote/stable",
                                                                            "other/testing")})
         self.client.run("create . other/testing")
-        self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.out)
+        self.assertIn("say/0.1@other/testing: Building other/testing", self.client.out)
         self.assertIn("hello/0.1@other/testing: Building other/testing", self.client.out)
         self.assertNotIn("lasote/stable", self.client.out)
 
     def test_local_commands(self):
         self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: Package 'Say/0.1' not resolved: No remote defined",
+        self.assertIn("ERROR: Package 'say/0.1' not resolved: No remote defined",
                       self.client.out)
 
         self.client.run("install . @lasote/stable")
-        self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.out)
+        self.assertIn("say/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertNotIn("other/testing", self.client.out)
 
         self.client.run("install . @other/testing")
-        self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.out)
+        self.assertIn("say/0.1@other/testing: Building other/testing", self.client.out)
         self.assertNotIn("lasote/stable", self.client.out)
 
         # Now use the default_ methods to declare user and channel
@@ -104,7 +104,7 @@ class HelloConan(ConanFile):
 from conans import ConanFile
 
 class SayConan(ConanFile):
-    name = "Say"
+    name = "say"
     version = "0.1"
     build_policy = "missing"
     user = "userfoo"

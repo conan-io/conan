@@ -16,7 +16,7 @@ class InfoTest(unittest.TestCase):
     def _create(self, name, version, deps=None, export=True):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            class Pkg(ConanFile):
+            class pkg(ConanFile):
                 name = "{name}"
                 version = "{version}"
                 license = {license}
@@ -39,17 +39,17 @@ class InfoTest(unittest.TestCase):
         self.client = TestClient()
 
         test_deps = {
-            "hello0": ["hello1", "Hello2", "Hello3"],
-            "hello1": ["Hello4"],
-            "Hello2": [],
-            "Hello3": ["Hello7"],
-            "Hello4": ["Hello5", "Hello6"],
-            "Hello5": [],
-            "Hello6": [],
-            "Hello7": ["Hello8"],
-            "Hello8": ["Hello9", "Hello10"],
-            "Hello9": [],
-            "Hello10": [],
+            "hello0": ["hello1", "hello2", "hello3"],
+            "hello1": ["hello4"],
+            "hello2": [],
+            "hello3": ["hello7"],
+            "hello4": ["hello5", "hello6"],
+            "hello5": [],
+            "hello6": [],
+            "hello7": ["hello8"],
+            "hello8": ["hello9", "hello10"],
+            "hello9": [],
+            "hello10": [],
         }
 
         def create_export(testdeps, name):
@@ -71,16 +71,16 @@ class InfoTest(unittest.TestCase):
         dot_file = os.path.join(self.client.current_folder, arg_filename)
         contents = load(dot_file)
         expected = textwrap.dedent("""
-            "Hello8/0.1@lasote/stable" -> "Hello9/0.1@lasote/stable"
-            "Hello8/0.1@lasote/stable" -> "Hello10/0.1@lasote/stable"
-            "Hello4/0.1@lasote/stable" -> "Hello5/0.1@lasote/stable"
-            "Hello4/0.1@lasote/stable" -> "Hello6/0.1@lasote/stable"
-            "Hello3/0.1@lasote/stable" -> "Hello7/0.1@lasote/stable"
-            "Hello7/0.1@lasote/stable" -> "Hello8/0.1@lasote/stable"
+            "hello8/0.1@lasote/stable" -> "hello9/0.1@lasote/stable"
+            "hello8/0.1@lasote/stable" -> "hello10/0.1@lasote/stable"
+            "hello4/0.1@lasote/stable" -> "hello5/0.1@lasote/stable"
+            "hello4/0.1@lasote/stable" -> "hello6/0.1@lasote/stable"
+            "hello3/0.1@lasote/stable" -> "hello7/0.1@lasote/stable"
+            "hello7/0.1@lasote/stable" -> "hello8/0.1@lasote/stable"
             "conanfile.py (hello0/0.1)" -> "hello1/0.1@lasote/stable"
             "conanfile.py (hello0/0.1)" -> "hello2/0.1@lasote/stable"
-            "conanfile.py (hello0/0.1)" -> "Hello3/0.1@lasote/stable"
-            "hello1/0.1@lasote/stable" -> "Hello4/0.1@lasote/stable"
+            "conanfile.py (hello0/0.1)" -> "hello3/0.1@lasote/stable"
+            "hello1/0.1@lasote/stable" -> "hello4/0.1@lasote/stable"
             """)
         for line in expected.splitlines():
             assert line in contents
@@ -120,7 +120,7 @@ class InfoTest(unittest.TestCase):
         self.client = TestClient()
         self._create("hello0", "0.1")
         self._create("hello1", "0.1", ["hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["hello1/0.1@lasote/stable"], export=False)
+        self._create("hello2", "0.1", ["hello1/0.1@lasote/stable"], export=False)
 
         self.client.run("info . --only None")
         self.assertEqual(["hello0/0.1@lasote/stable", "hello1/0.1@lasote/stable",
@@ -145,7 +145,7 @@ class InfoTest(unittest.TestCase):
     def test_info_virtual(self):
         # Checking that "Required by: virtual" doesnt appear in the output
         self.client = TestClient()
-        self._create("Hello", "0.1")
+        self._create("hello", "0.1")
         self.client.run("info hello/0.1@lasote/stable")
         self.assertNotIn("virtual", self.client.out)
         self.assertNotIn("Required", self.client.out)
@@ -155,7 +155,7 @@ class InfoTest(unittest.TestCase):
         self.client = TestClient()
         self._create("hello0", "0.1")
         self._create("hello1", "0.1", ["hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["hello1/0.1@lasote/stable"], export=False)
+        self._create("hello2", "0.1", ["hello1/0.1@lasote/stable"], export=False)
 
         self.client.run("info . -u")
 
@@ -180,7 +180,7 @@ class InfoTest(unittest.TestCase):
                 URL: myurl
                 License: MIT
                 Description: blah
-                Provides: Hello1
+                Provides: hello1
                 Recipe: No remote%s
                 Binary: Missing
                 Binary remote: None
@@ -192,7 +192,7 @@ class InfoTest(unittest.TestCase):
                 URL: myurl
                 License: MIT
                 Description: blah
-                Provides: Hello2
+                Provides: hello2
                 Requires:
                     hello1/0.1@lasote/stable""")
 
@@ -339,8 +339,8 @@ class InfoTest2(unittest.TestCase):
         conanfile = GenConanfile().with_require("dep/0.1@user/channel")
         client.save({"conanfile.py": conanfile})
         client.run("export . pkg/0.1@user/channel")
-        client.run("export . Pkg2/0.1@user/channel")
-        client.save({"conanfile.txt": "[requires]\npkg/0.1@user/channel\nPkg2/0.1@user/channel",
+        client.run("export . pkg2/0.1@user/channel")
+        client.save({"conanfile.txt": "[requires]\npkg/0.1@user/channel\npkg2/0.1@user/channel",
                      "myprofile": "[build_requires]\ntool/0.1@user/channel"}, clean_first=True)
         client.run("info . -pr=myprofile --build=missing")
         # Check that there is only 1 output for tool, not repeated many times
@@ -352,7 +352,7 @@ class InfoTest2(unittest.TestCase):
         self.assertIn("html", html)
         # To check that this node is not duplicated
         self.assertEqual(1, html.count("label: 'dep/0.1'"))
-        self.assertIn("label: 'Pkg2/0.1',\n                        "
+        self.assertIn("label: 'pkg2/0.1',\n                        "
                       "shape: 'box',\n                        "
                       "color: { background: 'Khaki'},", html)
         self.assertIn("label: 'pkg/0.1',\n                        "
@@ -406,7 +406,7 @@ class InfoTest2(unittest.TestCase):
             from conans import ConanFile
 
             class MyTest(ConanFile):
-                name = "Pkg"
+                name = "pkg"
                 version = "0.2"
                 settings = "build_type"
                 author = "John Doe"
@@ -448,7 +448,7 @@ class InfoTest2(unittest.TestCase):
             from conans import ConanFile
 
             class MyTest(ConanFile):
-                name = "Pkg"
+                name = "pkg"
                 version = "0.2"
                 topics = ("foo", "bar", "qux")
         """)
@@ -490,7 +490,7 @@ def test_scm_info():
     # https://github.com/conan-io/conan/issues/8377
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        class Pkg(ConanFile):
+        class pkg(ConanFile):
             scm = {"type": "git",
                    "url": "some-url/path",
                    "revision": "some commit hash"}
@@ -564,7 +564,7 @@ class TestInfoPythonRequires:
         client.run("export . tool/0.1@")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            class Pkg(ConanFile):
+            class pkg(ConanFile):
                 python_requires = "tool/0.1"
             """)
         client.save({"conanfile.py": conanfile})

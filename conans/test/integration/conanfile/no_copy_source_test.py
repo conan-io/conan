@@ -16,7 +16,7 @@ from conans.util.files import save, load
 import os
 
 class ConanFileToolsTest(ConanFile):
-    name = "Pkg"
+    name = "pkg"
     version = "0.1"
     exports_sources = "*"
     no_copy_source = True

@@ -32,7 +32,7 @@ class Lib(ConanFile):
         client.save({"conanfile.py": libconanfile,
                      "License.md": "lib license",
                      "otherfile": ""})
-        client.run("create . Lib/0.1@user/testing")
+        client.run("create . lib/0.1@user/testing")
         self.assertNotIn("Lib deploy()", client.out)
 
         if deploy_to_abs:
@@ -44,7 +44,7 @@ class Lib(ConanFile):
 from conans.tools import save
 
 class Pkg(ConanFile):
-    requires = "Lib/0.1@user/testing"
+    requires = "lib/0.1@user/testing"
 
     def build(self):
         save("myapp.exe", "myexe")

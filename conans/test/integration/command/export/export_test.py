@@ -96,7 +96,7 @@ class ExportSettingsTest(unittest.TestCase):
 
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
         self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
-        client.run("install hello/1.2@lasote/stable --build=Hello")
+        client.run("install hello/1.2@lasote/stable --build=hello")
         self.assertIn("hello/1.2@lasote/stable: Generating the package", client.out)
 
     def test_code_parent(self):
@@ -173,7 +173,7 @@ class TestConan(ConanFile):
         latest_rrev = client.cache.get_latest_recipe_reference(ref)
         export_path = client.cache.ref_layout(latest_rrev).export()
         conanfile = load(os.path.join(export_path, "conanfile.py"))
-        self.assertIn("name = 'Hello'", conanfile)
+        self.assertIn("name = 'hello'", conanfile)
         manifest = load(os.path.join(export_path, "conanmanifest.txt"))
         self.assertIn('conanfile.py: aa4e485651a4281b79d343af7d7b20e4', manifest)
 
@@ -252,7 +252,7 @@ class ExportTest(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(reg_path, name)))
 
         expected_sums = {'CMakeLists.txt': '3cf710785270c7e98a30d4a90ea66492',
-                         'conanfile.py': '73eb512b9f02ac18278823a217cfff79',
+                         'conanfile.py': '9a48d65e46c7a8f70604faf0be4d3359',
                          'executable': 'db299d5f0d82f113fad627a21f175e59',
                          'main.cpp': 'd9c03c934a4b3b1670775c17c26f39e9'}
         self.assertEqual(expected_sums, manif.file_sums)

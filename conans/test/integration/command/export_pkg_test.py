@@ -42,11 +42,11 @@ class ExportPkgTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/3367
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
-        client.run("create . PkgC/0.1@user/testing")
+        client.run("create . pkgc/0.1@user/testing")
         conanfile = """from conans import ConanFile
 class PkgB(ConanFile):
     settings = "arch"
-    requires = "PkgC/0.1@user/testing"
+    requires = "pkgc/0.1@user/testing"
 """
         client.save({CONANFILE: conanfile})
         client.run("create . pkgb/0.1@user/testing")
@@ -219,7 +219,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows --build-folder=.")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1@lasote/stable#f99320295379ced53f338446912a2cff:{package_id}#{prev}")
+        pref = PkgReference.loads(f"hello/0.1@lasote/stable#9583c5d0a62cd7afe4f83f821bf37be2:{package_id}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -472,7 +472,7 @@ class TestConan(ConanFile):
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1#7824a75809349a3700283a00e63086ee:{NO_SETTINGS_PACKAGE_ID}#{prev}")
+        pref = PkgReference.loads(f"hello/0.1#fa5edd1a46331a25cb2f4258cde84f9a:{NO_SETTINGS_PACKAGE_ID}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
