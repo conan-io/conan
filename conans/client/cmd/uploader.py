@@ -97,9 +97,9 @@ class _UploadCollecter:
         def complete_latest_rev(recipe_ref):
             # If the user input doesn't provide revision, assume latest
             if recipe_ref.revision is None:
-                latest = self._cache.get_latest_rrev(recipe_ref)
+                latest = self._cache.get_latest_recipe_reference(recipe_ref)
                 if not latest:
-                    raise RecipeNotFoundException(recipe_ref.to_conanfileref())
+                    raise RecipeNotFoundException(recipe_ref)
                 recipe_ref.revision = latest.revision
 
         result = _UploadData()
@@ -111,12 +111,11 @@ class _UploadCollecter:
                 complete_latest_rev(ref)
                 # If it is a valid and existing reference, then add it
                 refs = [ref]
-            except ConanException as e:
+            except ConanException:
                 refs = search_recipes(self._cache, pattern)
                 if not refs:
                     raise NotFoundException(f"No recipes found matching pattern '{pattern}'")
 
-                refs = [RecipeReference.from_conanref(r) for r in refs]
                 for r in refs:
                     assert r.revision is not None  # search should return with revision
 
@@ -134,7 +133,8 @@ class _UploadCollecter:
                 if all_packages:
                     prefs = self._cache.get_package_references(r)
                     for p in prefs:
-                        p2 = self._cache.get_latest_prev(p)
+                        assert p.revision is None
+                        p2 = self._cache.get_latest_package_reference(p)
                         p.revision = p2.revision
                         assert p.revision is not None
                     if prefs:
@@ -145,7 +145,7 @@ class _UploadCollecter:
                     result.add_ref(r)
         else:
             complete_latest_rev(pref.ref)
-            p2 = self._cache.get_latest_prev(pref)
+            p2 = self._cache.get_latest_package_reference(pref)
             if p2 is None:
                 raise ConanException(f"There is not package binary matching {pref}")
             pref.revision = p2.revision
@@ -174,10 +174,8 @@ class _UploadChecker:
         try:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._remote_manager.get_recipe_revisions(ref.to_conanfileref(),
-                                                                         remote)
-            assert ref.revision == server_revisions[0]["revision"]
-            assert len(server_revisions) == 1
+            server_ref = self._remote_manager.get_recipe_revision_reference(ref, remote)
+            assert server_ref
         except NotFoundException:
             recipe.upload = True
             recipe.force = False
@@ -198,9 +196,8 @@ class _UploadChecker:
 
         try:
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._remote_manager.get_package_revisions(pref, remote)
-            assert pref.revision == server_revisions[0]["revision"]
-            assert len(server_revisions) == 1
+            server_revisions = self._remote_manager.get_package_revision_reference(pref, remote)
+            assert server_revisions
         except NotFoundException:
             package.upload = True
             package.force = False
@@ -250,8 +247,7 @@ class _PackagePreparator:
         try:
             ref = recipe.ref
             recipe_layout = self._cache.ref_layout(ref)
-            retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile,
-                                     ref.to_conanfileref(), remotes)
+            retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, ref, remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)
             recipe.files = cache_files
 
@@ -460,8 +456,9 @@ class _UploadExecutor:
         upload_ref = ref
         self._remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote, retry,
                                            retry_wait)
+
         duration = time.time() - t1
-        log_recipe_upload(ref.to_conanfileref(), duration, cache_files, remote.name)
+        log_recipe_upload(ref, duration, cache_files, remote.name)
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
         return ref

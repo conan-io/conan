@@ -7,7 +7,7 @@ import pytest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.scm import Git, SVN
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.scm import SCMData
 from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.test_files import temp_folder
@@ -59,7 +59,7 @@ def _quoted(item):
 class GitSCMTest(unittest.TestCase):
 
     def setUp(self):
-        self.ref = ConanFileReference.loads("lib/0.1@user/channel")
+        self.ref = RecipeReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
 
     def _commit_contents(self):
@@ -176,7 +176,7 @@ class ConanLib(ConanFile):
         self.client.run_command('git remote add origin https://myrepo.com.git')
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
@@ -224,7 +224,7 @@ class ConanLib(ConanFile):
         self.client.run("create conan/ user/channel")
 
         # Check that the conanfile is on the source/conan
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         source_folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "conan", "conanfile.py")))
 
@@ -272,8 +272,8 @@ class ConanLib(ConanFile):
 
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
-        pref = self.client.get_latest_prev(ConanFileReference.loads("lib/0.1@user/channel"),
-                                           NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_package_reference(RecipeReference.loads("lib/0.1@user/channel"),
+                                                        NO_SETTINGS_PACKAGE_ID)
         bf = self.client.get_latest_pkg_layout(pref).build()
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
@@ -442,7 +442,7 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         submodule_path, _ = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
@@ -474,7 +474,7 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         submodule_path, subsubmodule_path = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
@@ -486,7 +486,7 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         submodule_path, subsubmodule_path = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
@@ -600,7 +600,7 @@ class ConanLib(ConanFile):
 class SVNSCMTest(SVNLocalRepoTestCase):
 
     def setUp(self):
-        self.ref = ConanFileReference.loads("lib/0.1@user/channel")
+        self.ref = RecipeReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
 
     def test_scm_other_type_ignored(self):
@@ -642,7 +642,7 @@ class ConanLib(ConanFile):
         conanfile = conanfile.replace('"onesubfolder"', '"othersubfolder"')
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         self.assertIn("othersubfolder", os.listdir(folder))
         self.assertTrue(os.path.exists(os.path.join(folder, "othersubfolder", "myfile")))
@@ -693,7 +693,7 @@ class ConanLib(ConanFile):
                                                                  path=self.client.current_folder))
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
@@ -708,7 +708,7 @@ class ConanLib(ConanFile):
         self.client.run("create conan/ user/channel")
 
         # Check that the conanfile is on the source/conan
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         source_folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "conan", "conanfile.py")))
 
@@ -732,8 +732,8 @@ class ConanLib(ConanFile):
 
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
-        pref = self.client.get_latest_prev(ConanFileReference.loads("lib/0.1@user/channel"),
-                                           NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_package_reference(RecipeReference.loads("lib/0.1@user/channel"),
+                                                        NO_SETTINGS_PACKAGE_ID)
         bf = self.client.get_latest_pkg_layout(pref).build()
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
@@ -905,7 +905,7 @@ class ConanLib(ConanFile):
                           "Use --ignore-dirty to force it.", self.client.out)
 
             # We confirm that the replacement hasn't been done
-            ref = ConanFileReference.loads("lib/0.1@")
+            ref = RecipeReference.loads("lib/0.1@")
             folder = self.client.get_latest_ref_layout(ref).export()
             conanfile_contents = load(os.path.join(folder, "conanfile.py"))
             self.assertIn('"revision": "auto"', conanfile_contents)
@@ -1068,9 +1068,9 @@ class TestConan(ConanFile):
         client.run("create . danimtb/testing")
         client.run("upload test/1.0@danimtb/testing -r upload_repo")
         self.assertIn("Uploading conan_sources.tgz", client.out)
-        ref = ConanFileReference("test", "1.0", "danimtb", "testing")
+        ref = RecipeReference("test", "1.0", "danimtb", "testing")
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
-        ref = ref.copy_with_rev(rev)
+        ref.revision = rev
         export_sources_path = os.path.join(servers["upload_repo"].server_store.export(ref),
                                            "conan_sources.tgz")
         self.assertTrue(os.path.exists(export_sources_path))
@@ -1092,7 +1092,7 @@ class TestConan(ConanFile):
         client.run("upload test/1.0@danimtb/testing -r upload_repo")
         self.assertNotIn("Uploading conan_sources.tgz", client.out)
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
-        ref = ref.copy_with_rev(rev)
+        ref.revision = rev
         export_sources_path = os.path.join(servers["upload_repo"].server_store.export(ref),
                                            "conan_sources.tgz")
         self.assertFalse(os.path.exists(export_sources_path))

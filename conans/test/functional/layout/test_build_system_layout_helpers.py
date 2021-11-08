@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
 
@@ -43,7 +43,7 @@ def test_layout_in_cache(conanfile, layout_helper_name, build_type, arch):
     """
     client = TurboTestClient()
 
-    ref = ConanFileReference.loads("lib/1.0")
+    ref = RecipeReference.loads("lib/1.0")
     pref = client.create(ref, args="-s arch={} -s build_type={}".format(arch, build_type),
                          conanfile=conanfile.format(ly=layout_helper_name))
     bf = client.cache.pkg_layout(pref).build()

@@ -20,8 +20,8 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference, get_reference_fields, \
-    check_valid_ref
+from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import get_reference_fields, check_valid_ref, validate_recipe_reference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -143,6 +143,8 @@ class Command(object):
         defines = dict((n, v) for n, v in (d.split('=') for d in defines))
 
         self._warn_python_version()
+        ref = RecipeReference.loads(args.name)
+        validate_recipe_reference(ref)
         self._conan_api.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                             exports_sources=args.sources, bare=args.bare,
                             gitignore=args.gitignore, template=args.template,
@@ -443,7 +445,7 @@ class Command(object):
                     raise ConanException("A full reference was provided as first argument, second "
                                          "argument not allowed")
 
-                ref = ConanFileReference.loads(args.path_or_reference, validate=False)
+                ref = RecipeReference.loads(args.path_or_reference)
                 info = self._conan_api.install_reference(ref,
                                                          settings=args.settings_host,
                                                          options=args.options_host,
@@ -721,7 +723,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            if "@" in args.path and ConanFileReference.loads(args.path):
+            if "@" in args.path and RecipeReference.loads(args.path):
                 raise ArgumentError(None,
                                     "'conan source' doesn't accept a reference anymore. "
                                     "If you were using it as a concurrency workaround, "
@@ -842,7 +844,7 @@ class Command(object):
             return self._conan_api.imports_undo(args.path)
 
         try:
-            if "@" in args.path and ConanFileReference.loads(args.path):
+            if "@" in args.path and RecipeReference.loads(args.path):
                 raise ArgumentError(None, "Parameter 'path' cannot be a reference. Use a folder "
                                           "containing a conanfile.py or conanfile.txt file.")
         except ConanException:

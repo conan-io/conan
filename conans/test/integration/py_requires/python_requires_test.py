@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 
@@ -327,7 +327,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: License! MyLicense", client.out)
         self.assertIn("Pkg/0.1@user/testing: Author! author@company.com", client.out)
         self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents", client.out)
-        ref = ConanFileReference.loads("Pkg/0.1@user/testing")
+        ref = RecipeReference.loads("Pkg/0.1@user/testing")
         self.assertTrue(os.path.exists(os.path.join(client.get_latest_ref_layout(ref).export(),
                                                     "other.txt")))
 

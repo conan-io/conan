@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -531,14 +531,14 @@ class TestComponentsCMakeGenerators:
         zlib = GenConanfile("zlib", "0.1").with_setting("build_type").with_generator("CMakeDeps")
         mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type").with_generator("CMakeDeps")
         final = GenConanfile("final", "0.1").with_setting("build_type").with_generator("CMakeDeps")\
-            .with_require(ConanFileReference("zlib", "0.1", None, None))\
-            .with_require(ConanFileReference("mypkg", "0.1", None, None))\
+            .with_require(RecipeReference("zlib", "0.1", None, None))\
+            .with_require(RecipeReference("mypkg", "0.1", None, None))\
             .with_package_info(cpp_info={"components": {"cmp": {"requires": ["mypkg::zlib",
                                                                              "zlib::zlib"]}}},
                                env_info={})
         consumer = GenConanfile("consumer", "0.1").with_setting("build_type")\
             .with_generator("CMakeDeps")\
-            .with_requirement(ConanFileReference("final", "0.1", None, None))
+            .with_requirement(RecipeReference("final", "0.1", None, None))
 
         consumer = textwrap.dedent("""
             from conans import ConanFile

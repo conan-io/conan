@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
 
@@ -168,7 +168,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
     def test_visual_package_compatible_with_intel(self):
         client = TestClient()
-        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -199,9 +199,9 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile visual_profile" % ref.full_str())
+        client.run("create . %s --profile visual_profile" % repr(ref))
         package_id = re.search(r"Bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
-        client.run("install %s -pr intel_profile" % ref.full_str())
+        client.run("install %s -pr intel_profile" % repr(ref))
         missing_id = "c1b60feb368929efd9e60fd47dbfa45969742332"
         self.assertIn(f"Bye/0.1@us/ch: Main binary package '{missing_id}'"
                       " missing. Using compatible package "
@@ -210,7 +210,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
     def test_wrong_base_compatible(self):
         client = TestClient()
-        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -230,12 +230,12 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile visual_profile" % ref.full_str(), assert_error=True)
+        client.run("create . %s --profile visual_profile" % repr(ref), assert_error=True)
         self.assertIn("The compiler 'Visual Studio' has no 'base' sub-setting", client.out)
 
     def test_intel_package_compatible_with_base(self):
         client = TestClient()
-        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -266,9 +266,9 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile intel_profile" % ref.full_str())
+        client.run("create . %s --profile intel_profile" % repr(ref))
         package_id = re.search(r"Bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
-        client.run("install %s -pr visual_profile" % ref.full_str())
+        client.run("install %s -pr visual_profile" % repr(ref))
         missing_id = "6e399d2c50620569974e4d894ee9651ee7861be9"
         self.assertIn("Bye/0.1@us/ch: Main binary package "
                       f"'{missing_id}' missing. Using compatible "
@@ -278,7 +278,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
     def test_no_valid_compiler_keyword_base(self):
         client = TestClient()
-        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -300,7 +300,7 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile visual_profile" % ref.full_str(), assert_error=True)
+        client.run("create . %s --profile visual_profile" % repr(ref), assert_error=True)
         self.assertIn("Specify 'compiler' as a keywork "
                       "argument. e.g: 'parent_compiler(compiler=\"intel\")'", client.out)
 
@@ -308,7 +308,7 @@ class CompatibleIDsTest(unittest.TestCase):
         """If I specify an invalid subsetting of my base compiler, it won't fail, but it won't
         file the available package_id"""
         client = TestClient()
-        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("Bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -338,8 +338,8 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile intel_profile" % ref.full_str())
-        client.run("install %s -pr visual_profile" % ref.full_str(), assert_error=True)
+        client.run("create . %s --profile intel_profile" % repr(ref))
+        client.run("install %s -pr visual_profile" % repr(ref), assert_error=True)
         self.assertIn("Missing prebuilt package for 'Bye/0.1@us/ch'", client.out)
 
     def test_additional_id_mode(self):

@@ -6,7 +6,7 @@ from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SK
     BINARY_MISSING, BINARY_INVALID, BINARY_ERROR
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 
 
@@ -137,9 +137,9 @@ class _InstallRecipeReference:
     @staticmethod
     def deserialize(data, filename):
         result = _InstallRecipeReference()
-        result.ref = ConanFileReference.loads(data["ref"])
+        result.ref = RecipeReference.loads(data["ref"])
         for d in data["depends"]:
-            result.depends.append(ConanFileReference.loads(d))
+            result.depends.append(RecipeReference.loads(d))
         for p in data["packages"]:
             install_node = _InstallPackageReference.deserialize(p, filename)
             result.packages.append(install_node)

@@ -10,7 +10,7 @@ from conans.model.conf import ConfDefinition
 from conans.model.env_info import unquote
 from conans.model.options import Options
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
@@ -257,7 +257,7 @@ class _ProfileValueParser(object):
                     pattern, req_list = "*", br_line
                 else:
                     pattern, req_list = tokens
-                refs = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
+                refs = [RecipeReference.loads(r.strip()) for r in req_list.split(",")]
                 result.setdefault(pattern, []).extend(refs)
         return result
 
