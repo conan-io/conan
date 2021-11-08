@@ -58,6 +58,9 @@ class Version:
     def __str__(self):
         return self._value
 
+    def __repr__(self):
+        return self._value
+
     def __eq__(self, other):
         if not isinstance(other, Version):
             return self._value == other  # Assume the other is string like
@@ -163,8 +166,10 @@ class RecipeReference:
     def __eq__(self, ref):
         # Timestamp doesn't affect equality.
         # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile
-        return (self.name, self.version, self.user, self.channel, self.revision) \
-               == (ref.name, ref.version, ref.user, ref.channel, ref.revision)
+        if ref is None:
+            return False
+        return (self.name, self.version, self.user, self.channel, self.revision) == \
+               (ref.name, ref.version, ref.user, ref.channel, ref.revision)
 
     def __hash__(self):
         # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile

@@ -193,6 +193,6 @@ class RangeResolver(object):
         return resolved_ref, remote_name
 
     def _resolve_version(self, version_range, refs_found):
-        versions = {ref.version: ref for ref in refs_found if ref}
+        versions = {repr(ref.version): ref for ref in refs_found if ref}
         result = satisfying(versions, version_range, self._result)
         return versions.get(result)
