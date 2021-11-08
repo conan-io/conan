@@ -17,7 +17,7 @@ from conans.client.loader import ConanFileLoader
 from conans.model.manifest import FileTreeManifest
 from conans.model.options import Options
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile
 from conans.util.files import save
@@ -62,7 +62,7 @@ class GraphManagerTest(unittest.TestCase):
         return app
 
     def recipe_cache(self, reference, requires=None, option_shared=None):
-        ref = ConanFileReference.loads(reference)
+        ref = RecipeReference.loads(reference)
         conanfile = GenConanfile()
         if requires:
             for r in requires:
@@ -74,11 +74,11 @@ class GraphManagerTest(unittest.TestCase):
         self._put_in_cache(ref, conanfile)
 
     def recipe_conanfile(self, reference, conanfile):
-        ref = ConanFileReference.loads(reference)
+        ref = RecipeReference.loads(reference)
         self._put_in_cache(ref, conanfile)
 
     def _put_in_cache(self, ref, conanfile):
-        ref = ConanFileReference.loads("{}#123".format(ref))
+        ref = RecipeReference.loads("{}#123".format(ref))
         layout = self.cache.get_or_create_ref_layout(ref)
         save(layout.conanfile(), str(conanfile))
         manifest = FileTreeManifest.create(layout.export())
@@ -86,16 +86,16 @@ class GraphManagerTest(unittest.TestCase):
 
     def _cache_recipe(self, ref, test_conanfile, revision=None):
         # FIXME: This seems duplicated
-        if not isinstance(ref, ConanFileReference):
-            ref = ConanFileReference.loads(ref)
-        ref = ConanFileReference.loads(repr(ref) + "#{}".format(revision or 123))  # FIXME: Make access
+        if not isinstance(ref, RecipeReference):
+            ref = RecipeReference.loads(ref)
+        ref = RecipeReference.loads(repr(ref) + "#{}".format(revision or 123))  # FIXME: Make access
         recipe_layout = self.cache.get_or_create_ref_layout(ref)
         save(recipe_layout.conanfile(), str(test_conanfile))
         manifest = FileTreeManifest.create(recipe_layout.export())
         manifest.save(recipe_layout.export())
 
     def alias_cache(self, alias, target):
-        ref = ConanFileReference.loads(alias)
+        ref = RecipeReference.loads(alias)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Alias(ConanFile):
@@ -109,7 +109,7 @@ class GraphManagerTest(unittest.TestCase):
         path = os.path.join(path, "conanfile.py")
         conanfile = GenConanfile()
         if reference:
-            ref = ConanFileReference.loads(reference)
+            ref = RecipeReference.loads(reference)
             conanfile.with_name(ref.name).with_version(ref.version)
         if requires:
             for r in requires:
@@ -148,7 +148,7 @@ class GraphManagerTest(unittest.TestCase):
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
         build_mode = []  # Means build all
-        ref = ref or ConanFileReference(None, None, None, None, validate=False)
+        ref = ref or RecipeReference(None, None, None, None)
         app = self._get_app()
 
         deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
@@ -166,7 +166,7 @@ class GraphManagerTest(unittest.TestCase):
         deps = deps or []
 
         conanfile = node.conanfile
-        ref = ConanFileReference.loads(str(ref))
+        ref = RecipeReference.loads(str(ref))
         self.assertEqual(repr(node.ref), repr(ref))
         if conanfile:
             self.assertEqual(conanfile.name, ref.name)

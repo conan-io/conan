@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -16,8 +16,8 @@ from conans.test.utils.tools import TestClient
 class InfoCommandTest(unittest.TestCase):
 
     def setUp(self):
-        self.ref = ConanFileReference.loads('lib/version@user/name')
-        self.ref_child = ConanFileReference.loads('child/version@user/name')
+        self.ref = RecipeReference.loads('lib/version@user/name')
+        self.ref_child = RecipeReference.loads('child/version@user/name')
 
         self.t = TestClient(path_with_spaces=False)
         self.t.save({'conanfile.py': GenConanfile()})

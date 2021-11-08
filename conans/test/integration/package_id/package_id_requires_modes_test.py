@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -25,7 +25,7 @@ class PackageIDTest(unittest.TestCase):
 
         if requires:
             for require in requires:
-                conanfile = conanfile.with_require(ConanFileReference.loads(require))
+                conanfile = conanfile.with_require(RecipeReference.loads(require))
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         self.client.run("export . %s" % (channel or "lasote/stable"))

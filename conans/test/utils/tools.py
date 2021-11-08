@@ -41,7 +41,6 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
@@ -60,15 +59,15 @@ NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
-    ref = ConanFileReference.loads(reference)
-    path = cache.get_latest_rrev(ref).export()
+    ref = RecipeReference.loads(reference)
+    path = cache.get_latest_recipe_reference(ref).export()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
 
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
-    path = cache.get_latest_prev(package_reference).package()
+    path = cache.get_latest_package_reference(package_reference).package()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -309,8 +308,8 @@ class TestServer(object):
             return False
 
     def latest_recipe(self, ref):
-        rev, _ = self.test_server.server_store.get_last_revision(ref)
-        return ref.copy_with_rev(rev)
+        ref = self.test_server.server_store.get_last_revision(ref)
+        return ref
 
     def recipe_revision_time(self, ref):
         if not ref.revision:
@@ -595,9 +594,13 @@ class TestClient(object):
         """
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(ref.full_str(), args or ""))
-        rrev = self.cache.get_latest_rrev(ref).revision
-        return ref.copy_with_rev(rrev)
+        self.run("export . {} {}".format(repr(ref), args or ""))
+        tmp = copy.copy(ref)
+        tmp.revision = None
+        rrev = self.cache.get_latest_recipe_reference(tmp).revision
+        tmp = copy.copy(ref)
+        tmp.revision = rrev
+        return tmp
 
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
         if folder is not None:
@@ -640,8 +643,8 @@ class TestClient(object):
     def scm_info_cache(self, reference):
         import yaml
 
-        if not isinstance(reference, ConanFileReference):
-            reference = ConanFileReference.loads(reference)
+        if not isinstance(reference, RecipeReference):
+            reference = RecipeReference.loads(reference)
         layout = self.get_latest_ref_layout(reference)
         content = load(layout.conandata())
         data = yaml.safe_load(content)
@@ -650,10 +653,10 @@ class TestClient(object):
         else:
             return self._create_scm_info(dict())
 
-    def get_latest_prev(self, ref: ConanReference or str, package_id=None) -> PkgReference:
+    def get_latest_package_reference(self, ref: ConanReference or str, package_id=None) -> PkgReference:
         """Get the latest PkgReference given a ConanReference"""
-        ref_ = ConanFileReference.loads(ref) if isinstance(ref, str) else ref
-        latest_rrev = self.cache.get_latest_rrev(ref_)
+        ref_ = RecipeReference.loads(ref) if isinstance(ref, str) else ref
+        latest_rrev = self.cache.get_latest_recipe_reference(ref_)
         if package_id:
             pref = PkgReference(latest_rrev, package_id)
         else:
@@ -662,18 +665,18 @@ class TestClient(object):
             assert len(package_ids) == 1, f"There are several packages for {latest_rrev}, please, " \
                                           f"provide a single package_id instead"
             pref = package_ids[0]
-        return self.cache.get_latest_prev(pref)
+        return self.cache.get_latest_package_reference(pref)
 
     def get_latest_pkg_layout(self, pref: PkgReference) -> PackageLayout:
         """Get the latest PackageLayout given a file reference"""
         # Let's make it easier for all the test clients
-        latest_prev = self.cache.get_latest_prev(pref)
+        latest_prev = self.cache.get_latest_package_reference(pref)
         pkg_layout = self.cache.pkg_layout(latest_prev)
         return pkg_layout
 
     def get_latest_ref_layout(self, ref: ConanReference) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
-        latest_rrev = self.cache.get_latest_rrev(ref)
+        latest_rrev = self.cache.get_latest_recipe_reference(ref)
         ref_layout = self.cache.ref_layout(latest_rrev)
         return ref_layout
 
@@ -686,18 +689,22 @@ class TurboTestClient(TestClient):
     def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        full_str = "{}@".format(ref.full_str()) if not ref.user else ref.full_str()
+        full_str = "{}@".format(repr(ref)) if not ref.user else repr(ref)
         self.run("create . {} {}".format(full_str, args or ""),
                  assert_error=assert_error)
 
-        ref = self.cache.get_latest_rrev(ref)
+        tmp = copy.copy(ref)
+        tmp.revision = None
+        ref = self.cache.get_latest_recipe_reference(tmp)
 
         if assert_error:
             return None
 
         package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
         package_ref = PkgReference(ref, package_id)
-        prevs = self.cache.get_package_revisions(package_ref, only_latest_prev=True)
+        tmp = copy.copy(package_ref)
+        tmp.revision = None
+        prevs = self.cache.get_package_revisions_references(tmp, only_latest_prev=True)
         prev = prevs[0]
 
         return prev
@@ -708,43 +715,44 @@ class TurboTestClient(TestClient):
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
-            # FIXME: remove this when ConanFileReference disappears
-            if isinstance(ref, RecipeReference):
-                ref.revision = remote_rrev
-                return ref
-            return ref.copy_with_rev(remote_rrev)
-        return
+            ref.revision = remote_rrev
+            return ref
 
     def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("export-pkg . {} {}".format(ref.full_str(),  args or ""),
+        self.run("export-pkg . {} {}".format(repr(ref),  args or ""),
                  assert_error=assert_error)
-        rrev = self.cache.get_latest_rrev(ref)
+        # FIXME: What is this line? rrev is not used, is it checking existance or something?
+        rrev = self.cache.get_latest_recipe_reference(ref)
 
         if assert_error:
             return None
         package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
         package_ref = PkgReference(ref, package_id)
-        prev = self.cache.get_latest_prev(package_ref)
+        prev = self.cache.get_latest_package_reference(package_ref)
         _tmp = copy.copy(package_ref)
         _tmp.revision = prev
         return _tmp
 
     def recipe_exists(self, ref):
-        rrev = self.cache.get_recipe_revisions(ref)
+        rrev = self.cache.get_recipe_revisions_references(ref)
         return True if rrev else False
 
     def package_exists(self, pref):
-        prev = self.cache.get_package_revisions(pref)
+        prev = self.cache.get_package_revisions_references(pref)
         return True if prev else False
 
     def recipe_revision(self, ref):
-        latest_rrev = self.cache.get_latest_rrev(ref)
+        tmp = copy.copy(ref)
+        tmp.revision = None
+        latest_rrev = self.cache.get_latest_recipe_reference(tmp)
         return latest_rrev.revision
 
     def package_revision(self, pref):
-        latest_prev = self.cache.get_latest_prev(pref)
+        tmp = copy.copy(pref)
+        tmp.revision = None
+        latest_prev = self.cache.get_latest_package_reference(tmp)
         return latest_prev.revision
 
     def search(self, pattern, remote=None, assert_error=False, args=None):

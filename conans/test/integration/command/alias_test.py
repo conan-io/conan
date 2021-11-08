@@ -2,8 +2,7 @@ import os
 import textwrap
 import unittest
 
-
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -57,8 +56,8 @@ class Pkg(ConanFile):
         self.assertIn("Hello/0.1@lasote/channel from local", client.out)
         self.assertNotIn("Hello/0.X@lasote/channel", client.out)
 
-        ref = ConanFileReference.loads("Chat/1.0@lasote/channel")
-        pref = client.get_latest_prev(ref)
+        ref = RecipeReference.loads("Chat/1.0@lasote/channel")
+        pref = client.get_latest_package_reference(ref)
         pkg_folder = client.get_latest_pkg_layout(pref).package()
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
 

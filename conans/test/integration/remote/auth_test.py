@@ -1,3 +1,4 @@
+import copy
 import os
 import textwrap
 import unittest
@@ -6,9 +7,9 @@ from requests.models import Response
 
 from conans.client import tools
 from conans.errors import AuthenticationException
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestRequester
+from conans.test.utils.tools import TestRequester
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -29,7 +30,7 @@ class AuthorizeTest(unittest.TestCase):
 
     def setUp(self):
         self.servers = {}
-        self.ref = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
+        self.ref = RecipeReference.loads("openssl/2.0.1@lasote/testing")
         # Create a default remote. R/W is not authorized for ref,
         # just for pepe, nacho and owner
         self.test_server = TestServer([(str(self.ref), "pepe,nacho@gmail.com")],  # read permissions
@@ -51,7 +52,8 @@ class AuthorizeTest(unittest.TestCase):
         self.assertFalse(errors)
         # Check that upload was granted
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
-        ref = self.ref.copy_with_rev(rev)
+        ref = copy.copy(self.ref)
+        ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
         self.assertIn('Please enter a password for "bad"', self.conan.out)
         self.assertIn('Please enter a password for "bad2"', self.conan.out)
@@ -122,7 +124,8 @@ class AuthorizeTest(unittest.TestCase):
 
         # Check that upload was granted
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
-        ref = self.ref.copy_with_rev(rev)
+        ref = copy.copy(self.ref)
+        ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
         self.assertIn('Please enter a password for "some_random.special!characters"', client.out)
 

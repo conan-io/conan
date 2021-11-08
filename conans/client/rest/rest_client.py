@@ -80,11 +80,11 @@ class RestApiClient(object):
     def get_package(self, pref, dest_folder):
         return self._get_api().get_package(pref, dest_folder)
 
-    def get_recipe_path(self, ref, path):
-        return self._get_api().get_recipe_path(ref, path)
+    def get_recipe_file(self, ref, path):
+        return self._get_api().get_recipe_file(ref, path)
 
-    def get_package_path(self, pref, path):
-        return self._get_api().get_package_path(pref, path)
+    def get_package_file(self, pref, path):
+        return self._get_api().get_package_file(pref, path)
 
     def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
         return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
@@ -127,7 +127,7 @@ class RestApiClient(object):
         return filter_packages(query, package_infos)
 
     def remove_recipe(self, ref):
-        return self._get_api().remove_conanfile(ref)
+        return self._get_api().remove_recipe(ref)
 
     def remove_packages(self, ref, package_ids=None):
         # FIXME: This interface is a mess, the package_ids containing the revision.
@@ -136,14 +136,20 @@ class RestApiClient(object):
     def server_capabilities(self):
         return self._get_api().server_capabilities()
 
-    def get_recipe_revisions(self, ref):
-        return self._get_api().get_recipe_revisions(ref)
+    def get_recipe_revisions_references(self, ref):
+        return self._get_api().get_recipe_revisions_references(ref)
 
-    def get_package_revisions(self, pref, headers=None):
-        return self._get_api().get_package_revisions(pref, headers=headers)
+    def get_package_revisions_references(self, pref, headers=None):
+        return self._get_api().get_package_revisions_references(pref, headers=headers)
 
-    def get_latest_recipe_revision(self, ref):
-        return self._get_api().get_latest_recipe_revision(ref)
+    def get_latest_recipe_reference(self, ref):
+        return self._get_api().get_latest_recipe_reference(ref)
 
-    def get_latest_package_revision(self, pref, headers):
-        return self._get_api().get_latest_package_revision(pref, headers=headers)
+    def get_latest_package_reference(self, pref, headers):
+        return self._get_api().get_latest_package_reference(pref, headers=headers)
+
+    def get_recipe_revision_reference(self, ref):
+        return self._get_api().get_recipe_revision_reference(ref)
+
+    def get_package_revision_reference(self, pref):
+        return self._get_api().get_package_revision_reference(pref)

@@ -1,3 +1,4 @@
+import copy
 import os
 import shutil
 
@@ -10,7 +11,7 @@ from conans.client.file_copier import FileCopier
 from conans.client.tools import chdir
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, mkdir, \
@@ -26,7 +27,7 @@ from conans import ConanFile
 class AliasConanfile(ConanFile):
     alias = "%s"
     revision_mode = "%s"
-""" % (target_ref.full_str(), revision_mode)
+""" % (repr(target_ref), revision_mode)
 
     alias_layout = cache.create_export_recipe_layout(alias_ref)
 
@@ -36,8 +37,8 @@ class AliasConanfile(ConanFile):
 
     rrev = calc_revision(scoped_output=ConanOutput(),
                          path=None, manifest=manifest, revision_mode=revision_mode)
-
-    ref_with_rrev = alias_ref.copy_with_rev(rrev)
+    ref_with_rrev = copy.copy(alias_ref)
+    ref_with_rrev.revision = rrev
     alias_layout.reference = ConanReference(ref_with_rrev)
     cache.assign_rrev(alias_layout)
 
@@ -51,7 +52,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     loader, cache, hook_manager = app.loader, app.cache, app.hook_manager
     conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock)
 
-    ref = ConanFileReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
+    ref = RecipeReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
@@ -100,7 +101,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
                              manifest=manifest,
                              revision_mode=conanfile.revision_mode)
 
-    ref = ref.copy_with_rev(revision=revision)
+    ref.revision = revision
     recipe_layout.reference = ConanReference(ref)
     cache.assign_rrev(recipe_layout)
     # TODO: cache2.0 check if this is the message we want to output
