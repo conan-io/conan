@@ -81,11 +81,6 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
         self.assertListEqual(sorted(str(self.t.out).splitlines()),
                              sorted(["lib/version@user/name", "parent/version@user/name"]))
 
-    def test_paths(self):
-        self.t.run('info {} --paths'.format(self.ref), assert_error=True)
-        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
-        # TODO: Cannot show paths for a linked/editable package... what to do here?
-
 
 def test_info_paths():
     # https://github.com/conan-io/conan/issues/7054
