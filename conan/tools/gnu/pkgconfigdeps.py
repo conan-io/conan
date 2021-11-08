@@ -78,19 +78,11 @@ class PkgConfigDeps(object):
         # At first, let's check if we have defined some component requires, e.g., "pkg::cmp1"
         requires = self._get_component_requires_names(dep_name, dep.cpp_info)
         # If we have found some component requires it would be enough
-        if requires:
-            return requires
-        try:
-            # If no requires were found, let's try to get all the direct
-            # dependencies, e.g., requires = "other_pkg/1.0"
-            dep_conanfile = self._conanfile.dependencies.host[dep_name]
-        except KeyError:
-            # Don't raise any exception, returns default value
-            return []
-        else:
-            requires = [get_package_name(req)
-                        for req in dep_conanfile.dependencies.direct_host.values()]
-            return requires
+        if not requires:
+            # If no requires were found, let's try to get all the direct dependencies,
+            # e.g., requires = "other_pkg/1.0"
+            requires = [get_package_name(req) for req in dep.dependencies.direct_host.values()]
+        return requires
 
     def get_components_files_and_content(self, dep):
         """Get all the *.pc files content for the dependency and each of its components"""
