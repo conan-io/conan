@@ -56,4 +56,4 @@ class HelloConan(ConanFile):
     target_data_cmake_content = client.load(t)
     assert 'set(hello_SHARED_LINK_FLAGS_RELEASE "-z now;-z relro")' in target_data_cmake_content
     assert 'set(hello_EXE_LINK_FLAGS_RELEASE "-z now;-z relro")' in target_data_cmake_content
-    assert "hello/0.1: Hello World Release!" in client.out
+    assert "hello/1.0: Hello World Release!" in client.out
