@@ -38,12 +38,12 @@ class RefTest(unittest.TestCase):
         ref = RecipeReference.loads("opencv/2.4.10@3rd-party/testing#rev1")
         self.assertEqual(ref.revision, "rev1")
 
-    @pytest.xfail(reason="FIXME: The validation of the references shouldn't be done in the model "
-                         "anymore")
+    @pytest.mark.xfail(reason="The validation of the references shouldn't be done in the model "
+                              "anymore")
     def test_errors(self):
         self.assertRaises(ConanException, RecipeReference.loads, "")
-        self.assertIsNone(RecipeReference.loads("opencv/2.4.10@").channel)
-        self.assertIsNone(RecipeReference.loads("opencv/2.4.10@").user)
+        self.assertIsNone(RecipeReference.loads("opencv/2.4.10@", validate=False).channel)
+        self.assertIsNone(RecipeReference.loads("opencv/2.4.10@", validate=False).user)
         self.assertRaises(ConanException, RecipeReference.loads, "opencv/2.4.10@lasote")
         self.assertRaises(ConanException, RecipeReference.loads, "opencv??/2.4.10@laso/testing")
         self.assertRaises(ConanException, RecipeReference.loads, "opencv/2.4.10 @ laso/testing")
