@@ -138,7 +138,10 @@ class _UploadCollecter:
                         p2 = self._cache.get_latest_prev(p)
                         p.revision = p2.revision
                         assert p.revision is not None
-                    result.add_prefs(prefs)
+                    if prefs:
+                        result.add_prefs(prefs)
+                    else:
+                        result.add_ref(r)
                 else:
                     result.add_ref(r)
         else:
