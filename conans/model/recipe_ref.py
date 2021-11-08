@@ -199,7 +199,7 @@ class RecipeReference:
             # user and channel
             if len(tokens) == 2 and tokens[1]:
                 tokens = tokens[1].split("/", 1)
-                user = tokens[0]
+                user = tokens[0] if tokens[0] else None
                 channel = tokens[1] if len(tokens) == 2 else None
             else:
                 user = channel = None

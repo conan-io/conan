@@ -15,28 +15,6 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 
 
-@pytest.mark.xfail(reason="cache2.0: TODO: FIX for new locking system")
-class RemoveLocksTest(unittest.TestCase):
-    def test_remove_locks(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
-        client.run("create . lasote/testing")
-        self.assertNotIn('does not contain a number!', client.out)
-        ref = RecipeReference.loads("Hello/0.1@lasote/testing")
-        conan_folder = client.get_latest_ref_layout(ref).base_folder()
-        self.assertIn("locks", os.listdir(conan_folder))
-        self.assertTrue(os.path.exists(conan_folder + ".count"))
-        self.assertTrue(os.path.exists(conan_folder + ".count.lock"))
-        client.run("remove * --locks", assert_error=True)
-        self.assertIn("ERROR: Specifying a pattern is not supported", client.out)
-        client.run("remove", assert_error=True)
-        self.assertIn('ERROR: Please specify a pattern to be removed ("*" for all)', client.out)
-        client.run("remove --locks")
-        self.assertNotIn("locks", os.listdir(conan_folder))
-        self.assertFalse(os.path.exists(conan_folder + ".count"))
-        self.assertFalse(os.path.exists(conan_folder + ".count.lock"))
-
-
 class RemoveOutdatedTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")

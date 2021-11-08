@@ -288,7 +288,8 @@ def uncompress_file(src_path, dest_folder):
                                                 "%s" % os.path.basename(src_path)) as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
-        error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
+        error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
+                    % (src_path, dest_folder, str(e))
         # try to remove the files
         try:
             if os.path.exists(dest_folder):

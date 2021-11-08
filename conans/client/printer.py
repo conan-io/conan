@@ -1,8 +1,6 @@
 import fnmatch
-from collections import OrderedDict
 
 from conans.cli.output import Color
-from conans.model.recipe_ref import RecipeReference
 
 
 class Printer(object):
@@ -115,73 +113,6 @@ class Printer(object):
                     self._out.writeln("    Build Requires:", Color.BRIGHT_GREEN)
                     for d in it["build_requires"]:
                         self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
-
-    def print_search_recipes(self, search_info, pattern, raw, all_remotes_search):
-        """ Print all the exported conans information
-        param pattern: wildcards, e.g., "opencv/*"
-        """
-        if not search_info and not raw:
-            warn_msg = "There are no packages"
-            pattern_msg = " matching the '%s' pattern" % pattern
-            self._out.info(warn_msg + pattern_msg if pattern else warn_msg)
-            return
-
-        if not raw:
-            self._out.info("Existing package recipes:\n")
-            for remote_info in search_info:
-                if all_remotes_search:
-                    self._out.highlight("Remote '%s':" % str(remote_info["remote"]))
-                for conan_item in remote_info["items"]:
-                    reference = conan_item["recipe"]["id"]
-                    ref = RecipeReference.loads(reference)
-                    self._print_colored_line(repr(ref), indent=0)
-        else:
-            for remote_info in search_info:
-                if all_remotes_search:
-                    self._out.writeln("Remote '%s':" % str(remote_info["remote"]))
-                for conan_item in remote_info["items"]:
-                    reference = conan_item["recipe"]["id"]
-                    ref = RecipeReference.loads(reference)
-                    self._out.writeln(repr(ref))
-
-    def print_search_packages(self, search_info, ref, packages_query, raw):
-        assert(isinstance(ref, RecipeReference))
-        if not raw:
-            self._out.info("Existing packages for recipe %s:\n" % str(ref))
-        for remote_info in search_info:
-            if remote_info["remote"] and not raw:
-                self._out.info("Existing recipe in remote '%s':\n" % remote_info["remote"])
-
-            if not remote_info["items"][0]["packages"]:
-                if packages_query:
-                    warn_msg = "There are no packages for reference '%s' matching the query '%s'" \
-                               % (str(ref), packages_query)
-                elif remote_info["items"][0]["recipe"]:
-                    warn_msg = "There are no packages for reference '%s', but package recipe " \
-                               "found." % (str(ref))
-                if not raw:
-                    self._out.info(warn_msg)
-                continue
-
-            ref = remote_info["items"][0]["recipe"]["id"]
-            packages = remote_info["items"][0]["packages"]
-
-            # Each package
-            for package in packages:
-                package_id = package["id"]
-                self._print_colored_line("Package_ID", package_id, 1)
-                for section in ("options", "settings", "requires"):
-                    attr = package[section]
-                    if attr:
-                        self._print_colored_line("[%s]" % section, indent=2)
-                        if isinstance(attr, dict):  # options, settings
-                            attr = OrderedDict(sorted(attr.items()))
-                            for key, value in attr.items():
-                                self._print_colored_line(key, value=value, indent=3)
-                        elif isinstance(attr, list):  # full requires
-                            for key in sorted(attr):
-                                self._print_colored_line(key, indent=3)
-                self._out.writeln("")
 
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)

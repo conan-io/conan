@@ -45,7 +45,6 @@ class ClientCache(object):
         self._output = ConanOutput()
 
         # Caching
-        self._no_lock = None
         self._config = None
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
@@ -184,11 +183,6 @@ class ClientCache(object):
     def remotes_registry(self) -> RemoteRegistry:
         return RemoteRegistry(self)
 
-    def _no_locks(self):
-        if self._no_lock is None:
-            self._no_lock = self.config.cache_no_locks
-        return self._no_lock
-
     @property
     def artifacts_properties_path(self):
         return os.path.join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
@@ -296,13 +290,6 @@ class ClientCache(object):
                 if os.path.isfile(generator) and generator.endswith(".py"):
                     generators.append(generator)
         return generators
-
-    def remove_locks(self):
-        folders = list_folder_subdirs(self._store_folder, 4)
-        for folder in folders:
-            conan_folder = os.path.join(self._store_folder, folder)
-            Lock.clean(conan_folder)
-            shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
     def get_template(self, template_name, user_overrides=False):
         # TODO: It can be initialized only once together with the Conan app

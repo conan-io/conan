@@ -17,7 +17,7 @@ def test_cross_build_test_package():
         os=Macos
         arch=x86_64
         compiler=apple-clang
-        compiler.version=12.0
+        compiler.version=13.0
         compiler.libcxx=libc++
         build_type=Release
     """)
@@ -25,10 +25,10 @@ def test_cross_build_test_package():
     profile_host = textwrap.dedent("""
         [settings]
         os=iOS
-        os.version=12.0
+        os.version=13.0
         arch=x86_64
         compiler=apple-clang
-        compiler.version=12.0
+        compiler.version=13.0
         compiler.libcxx=libc++
         build_type=Release
     """)

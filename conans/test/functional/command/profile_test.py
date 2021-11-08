@@ -8,7 +8,6 @@ import pytest
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
-from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.profiles import create_profile
 from conans.test.utils.tools import TestClient, redirect_output
@@ -269,7 +268,7 @@ class DetectCompilersTest(unittest.TestCase):
             "Windows": "Visual Studio"
         }
 
-        result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
+        result = detect_defaults_settings()
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         platform_compiler = platform_default_compilers.get(platform.system(), None)
@@ -293,7 +292,7 @@ class DetectCompilersTest(unittest.TestCase):
         output = RedirectedTestOutput()  # Initialize each command
         with redirect_output(output):
             with tools.environment_append({"CC": "gcc"}):
-                result = detect_defaults_settings(profile_path=DEFAULT_PROFILE_NAME)
+                result = detect_defaults_settings()
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         # No compiler should be detected
