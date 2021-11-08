@@ -29,7 +29,7 @@ class OptionsTest(unittest.TestCase):
                      "test_package/conanfile.py": test})
         client.run("create . pkg/0.1@user/testing -o *:shared=1")
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
-        client.run("create . pkg/0.1@user/testing -o Pkg:shared=2")
+        client.run("create . pkg/0.1@user/testing -o pkg:shared=2")
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
         client.run("create . pkg/0.1@user/testing -o shared=1")
         self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)

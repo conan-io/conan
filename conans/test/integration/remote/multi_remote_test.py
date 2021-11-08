@@ -174,24 +174,24 @@ class MultiRemoteTest(unittest.TestCase):
         servers["s2"] = TestServer()
 
         client = TestClient(servers=servers)
-        client.save({"conanfile.py": GenConanfile("MyLib", "0.1")})
+        client.save({"conanfile.py": GenConanfile("mylib", "0.1")})
         client.run("create . lasote/testing")
         client.run("remote login s1 admin -p password")
-        client.run("upload MyLib* -r s1 -c")
+        client.run("upload mylib* -r s1 -c")
 
         servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd.com"  # Do not exist
         client2 = TestClient(servers=servers)
-        err = client2.run("install MyLib/0.1@conan/testing --build=missing", assert_error=True)
+        err = client2.run("install mylib/0.1@conan/testing --build=missing", assert_error=True)
         self.assertTrue(err)
-        self.assertIn("MyLib/0.1@conan/testing: Checking remote: s0", client2.out)
-        self.assertIn("MyLib/0.1@conan/testing: Checking remote: s1", client2.out)
+        self.assertIn("mylib/0.1@conan/testing: Checking remote: s0", client2.out)
+        self.assertIn("mylib/0.1@conan/testing: Checking remote: s1", client2.out)
         self.assertIn("Unable to connect to s1=http://asdlhaljksdhlajkshdljakhsd.com", client2.out)
         # s2 is not even tried
-        self.assertNotIn("MyLib/0.1@conan/testing: Trying with 's2'...", client2.out)
+        self.assertNotIn("mylib/0.1@conan/testing: Trying with 's2'...", client2.out)
 
     def test_install_from_remotes(self):
         for i in range(3):
-            ref = RecipeReference.loads("Hello%d/0.1@lasote/stable" % i)
+            ref = RecipeReference.loads("hello%d/0.1@lasote/stable" % i)
             self.client.save({"conanfile.py": GenConanfile("hello%d" % i, "0.1")})
             self.client.run("export . lasote/stable")
             self.client.run("upload %s -r=remote%d" % (str(ref), i))
