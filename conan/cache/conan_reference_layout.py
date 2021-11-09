@@ -135,7 +135,7 @@ class PackageLayout(LayoutBase):
 
     def system_reqs_package(self):
         return os.path.join(self.base_folder, SYSTEM_REQS_FOLDER,
-                            self._ref.pkgid, SYSTEM_REQS)
+                            self._ref.package_id, SYSTEM_REQS)
 
     def remove_system_reqs(self):
         system_reqs_folder = os.path.join(self.base_folder, SYSTEM_REQS_FOLDER)

@@ -122,7 +122,7 @@ class _UploadCollecter(object):
                     pref = PkgReference(ref, package_id, prev)
                     # FIXME: The name is package_ids but we pass the latest prev for each package id
                     packages_ids = []
-                    packages = [pref] if pref.revision else self._cache.get_package_references(pref)
+                    packages = [pref] if pref.revision else self._cache.get_package_references(pref.ref)
                     for pkg_ref in packages:
                         latest_prev = self._cache.get_latest_package_reference(pkg_ref) \
                             if pkg_ref.package_id == package_id else None
