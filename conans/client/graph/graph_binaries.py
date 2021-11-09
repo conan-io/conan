@@ -185,6 +185,7 @@ class GraphBinariesAnalyzer(object):
             else:
                 node.binary = BINARY_DOWNLOAD
                 node.prev = pref.revision
+                node.pref_timestamp = pref.timestamp
                 node.binary_remote = remote
         else:  # This binary already exists in the cache
             package_layout = self._cache.pkg_layout(cache_latest_prev)

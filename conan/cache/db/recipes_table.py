@@ -10,7 +10,7 @@ class RecipesDBTable(BaseDbTable):
     columns_description = [('reference', str),
                            ('rrev', str),
                            ('path', str, False, None, True),
-                           ('timestamp', float)]
+                           ('timestamp', int)]
     unique_together = ('reference', 'rrev')
 
     @staticmethod
@@ -59,10 +59,11 @@ class RecipesDBTable(BaseDbTable):
         assert ref.revision is not None
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         try:
-            r = self._conn.execute(f'INSERT INTO {self.table_name} '
-                                   f'VALUES ({placeholders})',
-                                   [str(ref), ref.revision, path, ref.timestamp])
-        except sqlite3.IntegrityError:
+            self._conn.execute(f'INSERT INTO {self.table_name} '
+                               f'VALUES ({placeholders})',
+                               [str(ref), ref.revision, path, ref.timestamp])
+        except sqlite3.IntegrityError as e:
+            print(e)
             raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
 
     def update_timestamp(self, ref: RecipeReference):
@@ -78,7 +79,7 @@ class RecipesDBTable(BaseDbTable):
         where_clause = self._where_clause(ref)
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE {where_clause};"
-        r = self._conn.execute(query)
+        self._conn.execute(query)
 
     # returns all different conan references (name/version@user/channel)
     def all_references(self):

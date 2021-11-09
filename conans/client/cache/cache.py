@@ -1,6 +1,5 @@
 import copy
 import os
-from io import StringIO
 from typing import List
 
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
@@ -55,11 +54,6 @@ class ClientCache(object):
 
     def closedb(self):
         self._data_cache.closedb()
-
-    def dump(self):
-        out = StringIO()
-        self._data_cache.dump(out)
-        return out.getvalue()
 
     def assign_rrev(self, layout: RecipeLayout):
         return self._data_cache.assign_rrev(layout)
@@ -129,10 +123,10 @@ class ClientCache(object):
         return self._data_cache.get_recipe_revisions_references(ref, only_latest_rrev)
 
     def get_latest_recipe_reference(self, ref):
-        return self._data_cache.get_recipe_revisions_references(ref)
+        return self._data_cache.get_latest_recipe_reference(ref)
 
-    def get_latest_package_reference(self, ref):
-        return self._data_cache.get_package_revisions_references(ref)
+    def get_latest_package_reference(self, pref):
+        return self._data_cache.get_latest_package_reference(pref)
 
     @property
     def store(self):

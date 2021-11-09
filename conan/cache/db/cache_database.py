@@ -1,5 +1,4 @@
 import sqlite3
-import time
 
 from conan.cache.db.packages_table import PackagesDBTable
 from conan.cache.db.recipes_table import RecipesDBTable
@@ -20,6 +19,31 @@ class CacheDatabase:
     def close(self):
         self._conn.close()
 
+    def exists_rrev(self, ref):
+        matching_rrevs = self.get_recipe_revisions_references(ref)
+        return len(matching_rrevs) > 0
+
+    def exists_prev(self, ref):
+        matching_prevs = self.get_package_revisions_references(ref)
+        return len(matching_prevs) > 0
+
+    def get_recipe_timestamp(self, ref):
+        # TODO: Remove this once the ref contains the timestamp
+        ref_data = self.try_get_recipe(ref)
+        return ref_data.get("timestamp")
+
+    def get_package_timestamp(self, ref):
+        ref_data = self.try_get_package(ref)
+        return ref_data.get("timestamp")
+
+    def get_latest_recipe_reference(self, ref):
+        rrevs = self.get_recipe_revisions_references(ref, True)
+        return rrevs[0] if rrevs else None
+
+    def get_latest_package_reference(self, ref):
+        prevs = self.get_package_revisions_references(ref, True)
+        return prevs[0] if prevs else None
+
     def update_recipe_timestamp(self, ref):
         self._recipes.update_timestamp(ref)
 
@@ -35,6 +59,10 @@ class CacheDatabase:
     def remove_package(self, ref: PkgReference):
         # Removing the recipe must remove all the package binaries too from DB
         self._packages.remove(ref)
+
+    def get_build_id(self, pref):
+        ref_data = self.try_get_package(pref)
+        return ref_data.get("build_id")
 
     def try_get_recipe(self, ref: RecipeReference):
         """ Returns the reference data as a dictionary (or fails) """

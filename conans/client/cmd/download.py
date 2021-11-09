@@ -70,6 +70,8 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
                 else f"Skip {str(pref)} download, already in cache"
             scoped_output.info(message)
 
+        if not pref.revision:
+            pref = remote_manager.get_latest_package_reference(pref, remote)
         if not skip_download:
             remote_manager.get_package(conanfile, pref, remote)
 

@@ -2,7 +2,6 @@ import copy
 import hashlib
 import os
 import shutil
-import time
 import uuid
 
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
@@ -14,6 +13,7 @@ from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNot
     ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.dates import timestamp_now
 from conans.util.files import rmdir
 
 
@@ -126,51 +126,37 @@ class DataCache:
         self._db.update_package_timestamp(ref)
 
     def list_references(self):
-        """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
-            can be used to filter and return only the latest recipe revision for each reference.
-        """
         return self._db.list_references()
 
     def exists_rrev(self, ref):
-        matching_rrevs = self.get_recipe_revisions_references(ref)
-        return len(matching_rrevs) > 0
+        return self._db.exists_rrev(ref)
 
-    def exists_prev(self, ref):
-        matching_prevs = self.get_package_revisions_references(ref)
-        return len(matching_prevs) > 0
+    def exists_prev(self, pref):
+        return self._db.exists_prev(pref)
 
     def get_latest_recipe_reference(self, ref):
-        rrevs = self._db.get_recipe_revisions_references(ref, True)
-        return rrevs[0] if rrevs else None
+        return self._db.get_latest_recipe_reference(ref)
 
-    def get_latest_package_reference(self, ref):
-        prevs = self._db.get_package_revisions_references(ref, True)
-        return prevs[0] if prevs else None
+    def get_latest_package_reference(self, pref):
+        return self._db.get_latest_package_reference(pref)
 
     def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
-        for it in self._db.get_recipe_revisions_references(ref, only_latest_rrev):
-            yield it
+        return self._db.get_recipe_revisions_references(ref, only_latest_rrev)
 
     def get_package_references(self, ref: RecipeReference):
-        for it in self._db.get_package_references(ref):
-            yield it
+        return self._db.get_package_references(ref)
 
     def get_package_revisions_references(self, ref: PkgReference, only_latest_prev=False):
-        for it in self._db.get_package_revisions_references(ref, only_latest_prev):
-            yield it
+        return self._db.get_package_revisions_references(ref, only_latest_prev)
 
-    def get_build_id(self, ref):
-        ref_data = self._db.try_get_package(ref)
-        return ref_data.get("build_id")
+    def get_build_id(self, pref):
+        return self._db.get_build_id(pref)
 
     def get_recipe_timestamp(self, ref):
-        # TODO: Remove this once the ref contains the timestamp
-        ref_data = self._db.try_get_recipe(ref)
-        return ref_data.get("timestamp")
+        return self._db.get_recipe_timestamp(ref)
 
-    def get_package_timestamp(self, ref):
-        ref_data = self._db.try_get_package(ref)
-        return ref_data.get("timestamp")
+    def get_package_timestamp(self, pref):
+        return self._db.get_package_timestamp(pref)
 
     def remove_recipe(self, layout: RecipeLayout):
         layout.remove()
@@ -195,12 +181,12 @@ class DataCache:
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
         build_id = layout.build_id
+        pref.timestamp = timestamp_now()
         # Wait until it finish to really update the DB
         try:
             self._db.create_package(new_path, pref, build_id)
         except ConanReferenceAlreadyExistsInDB:
             # This was exported before, making it latest again, update timestamp
-            pref.timestamp = time.time()
             self._db.update_package_timestamp(pref)
 
         return new_path
@@ -228,11 +214,13 @@ class DataCache:
         shutil.move(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
+        self._db._recipes.dump()
+        ref.timestamp = timestamp_now()
         # Wait until it finish to really update the DB
         try:
             self._db.create_recipe(new_path, ref)
         except ConanReferenceAlreadyExistsInDB:
             # This was exported before, making it latest again, update timestamp
             ref = layout.reference
-            ref.timestamp = time.time()
             self._db.update_recipe_timestamp(ref)
+        self._db._recipes.dump()

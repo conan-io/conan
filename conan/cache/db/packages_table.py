@@ -71,10 +71,10 @@ class PackagesDBTable(BaseDbTable):
         # not yet built packages for search and so on
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         try:
-            r = self._conn.execute(f'INSERT INTO {self.table_name} '
-                                   f'VALUES ({placeholders})',
-                                   [str(pref.ref), pref.ref.revision, pref.package_id, pref.revision,
-                                    path, pref.timestamp, build_id])
+            self._conn.execute(f'INSERT INTO {self.table_name} '
+                               f'VALUES ({placeholders})',
+                               [str(pref.ref), pref.ref.revision, pref.package_id, pref.revision,
+                                path, pref.timestamp, build_id])
         except sqlite3.IntegrityError:
             raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
@@ -87,7 +87,7 @@ class PackagesDBTable(BaseDbTable):
                 f"SET {set_clause} " \
                 f"WHERE {where_clause};"
         try:
-            r = self._conn.execute(query)
+            self._conn.execute(query)
         except sqlite3.IntegrityError:
             raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
@@ -95,7 +95,7 @@ class PackagesDBTable(BaseDbTable):
         where_clause = self._where_clause(pref)
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE {where_clause};"
-        r = self._conn.execute(query)
+        self._conn.execute(query)
 
     def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
         assert pref.ref.revision, "To search package revisions you must provide a recipe revision."
@@ -129,7 +129,7 @@ class PackagesDBTable(BaseDbTable):
             yield self._as_dict(self.row_type(*row))
 
     def get_package_references(self, ref: RecipeReference):
-        assert ref.rrev, "To search for package id's you must provide a recipe revision."
+        assert ref.revision, "To search for package id's you must provide a recipe revision."
         # we select the latest prev for each package_id
         query = f'SELECT {self.columns.reference}, ' \
                 f'{self.columns.rrev}, ' \
@@ -139,8 +139,8 @@ class PackagesDBTable(BaseDbTable):
                 f'{self.columns.timestamp}, ' \
                 f'{self.columns.build_id} ' \
                 f'FROM {self.table_name} ' \
-                f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
-                f'AND {self.columns.reference} = "{ref.reference}" ' \
+                f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
+                f'AND {self.columns.reference} = "{str(ref)}" ' \
                 f'AND {self.columns.pkgid} IS NOT NULL ' \
                 f'GROUP BY {self.columns.pkgid} ' \
                 f'ORDER BY {self.columns.timestamp} DESC'
