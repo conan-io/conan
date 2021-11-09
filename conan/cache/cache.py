@@ -1,10 +1,10 @@
+import copy
 import hashlib
 import os
 import shutil
 import time
 import uuid
 
-from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
@@ -12,6 +12,7 @@ from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conan.cache.db.cache_database import CacheDatabase
 from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB, \
     ConanException
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import rmdir
 
@@ -58,58 +59,59 @@ class DataCache:
         return os.path.join("tmp", h)
 
     @staticmethod
-    def _get_path(ref: ConanReference):
-        value = ref.full_reference
-        return DataCache._short_hash_path(value)
+    def _get_path(ref):
+        t = copy.copy(ref)
+        t.timestamp = None
+        return DataCache._short_hash_path(repr(t))
 
-    def create_export_recipe_layout(self, ref: ConanReference):
+    def create_export_recipe_layout(self, ref: RecipeReference):
         # This is a temporary layout, because the revision is not computed yet, until it is
         # The entry is not added to DB, just a temp folder is created
-        assert not ref.rrev, "Recipe revision should be None"
+        assert not ref.revision, "Recipe revision should be None"
         reference_path = self._get_tmp_path()
         self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
-    def create_tmp_package_layout(self, pref: ConanReference):
+    def create_tmp_package_layout(self, pref: PkgReference):
         # Temporary layout to build a new package
-        assert pref.rrev, "Recipe revision must be known to get or create the package layout"
-        assert pref.pkgid, "Package id must be known to get or create the package layout"
-        assert not pref.prev, "Package revision should be unknown"
+        assert pref.ref.revision, "Recipe revision must be known to get or create the package layout"
+        assert pref.package_id, "Package id must be known to get or create the package layout"
+        assert not pref.revision, "Package revision should be unknown"
         package_path = self._get_tmp_path()
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
-    def get_reference_layout(self, ref: ConanReference):
-        assert ref.rrev, "Recipe revision must be known to get the reference layout"
+    def get_reference_layout(self, ref: RecipeReference):
+        assert ref.revision, "Recipe revision must be known to get the reference layout"
         ref_data = self._db.try_get_recipe(ref)
         ref_path = ref_data.get("path")
         return RecipeLayout(ref, os.path.join(self.base_folder, ref_path))
 
-    def get_package_layout(self, pref: ConanReference):
-        assert pref.rrev, "Recipe revision must be known to get the package layout"
-        assert pref.pkgid, "Package id must be known to get the package layout"
-        assert pref.prev, "Package revision must be known to get the package layout"
+    def get_package_layout(self, pref: PkgReference):
+        assert pref.ref.revision, "Recipe revision must be known to get the package layout"
+        assert pref.package_id, "Package id must be known to get the package layout"
+        assert pref.revision, "Package revision must be known to get the package layout"
         pref_data = self._db.try_get_package(pref)
         pref_path = pref_data.get("path")
         return PackageLayout(pref, os.path.join(self.base_folder, pref_path))
 
-    def get_or_create_reference_layout(self, ref: ConanReference):
+    def get_or_create_ref_layout(self, ref: RecipeReference):
         try:
             return self.get_reference_layout(ref)
         except ConanReferenceDoesNotExistInDB:
-            assert ref.rrev, "Recipe revision must be known to create the package layout"
+            assert ref.revision, "Recipe revision must be known to create the package layout"
             reference_path = self._get_path(ref)
             self._db.create_recipe(reference_path, ref)
             self._create_path(reference_path, remove_contents=False)
             return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
-    def get_or_create_package_layout(self, pref: ConanReference):
+    def get_or_create_pkg_layout(self, pref: PkgReference):
         try:
             return self.get_package_layout(pref)
         except ConanReferenceDoesNotExistInDB:
-            assert pref.rrev, "Recipe revision must be known to create the package layout"
-            assert pref.pkgid, "Package id must be known to create the package layout"
-            assert pref.prev, "Package revision should be known to create the package layout"
+            assert pref.ref.revision, "Recipe revision must be known to create the package layout"
+            assert pref.package_id, "Package id must be known to create the package layout"
+            assert pref.revision, "Package revision should be known to create the package layout"
             package_path = self._get_path(pref)
             self._db.create_package(package_path, pref, None)
             self._create_path(package_path, remove_contents=False)
@@ -120,25 +122,40 @@ class DataCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def update_package_timestamp(self, ref: ConanReference, new_timestamp):
-        self._db.update_package_timestamp(ref, new_timestamp)
+    def update_package_timestamp(self, ref: PkgReference):
+        self._db.update_package_timestamp(ref)
 
-    def list_references(self, only_latest_rrev=False):
+    def list_references(self):
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
             can be used to filter and return only the latest recipe revision for each reference.
         """
-        for it in self._db.list_references(only_latest_rrev):
-            yield it
+        return self._db.list_references()
 
-    def get_recipe_revisions_references(self, ref: ConanReference, only_latest_rrev=False):
+    def exists_rrev(self, ref):
+        matching_rrevs = self.get_recipe_revisions_references(ref)
+        return len(matching_rrevs) > 0
+
+    def exists_prev(self, ref):
+        matching_prevs = self.get_package_revisions_references(ref)
+        return len(matching_prevs) > 0
+
+    def get_latest_recipe_reference(self, ref):
+        rrevs = self._db.get_recipe_revisions_references(ref, True)
+        return rrevs[0] if rrevs else None
+
+    def get_latest_package_reference(self, ref):
+        prevs = self._db.get_package_revisions_references(ref, True)
+        return prevs[0] if prevs else None
+
+    def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
         for it in self._db.get_recipe_revisions_references(ref, only_latest_rrev):
             yield it
 
-    def get_package_references(self, ref: ConanReference):
+    def get_package_references(self, ref: RecipeReference):
         for it in self._db.get_package_references(ref):
             yield it
 
-    def get_package_revisions_references(self, ref: ConanReference, only_latest_prev=False):
+    def get_package_revisions_references(self, ref: PkgReference, only_latest_prev=False):
         for it in self._db.get_package_revisions_references(ref, only_latest_prev):
             yield it
 
@@ -155,14 +172,16 @@ class DataCache:
         ref_data = self._db.try_get_package(ref)
         return ref_data.get("timestamp")
 
-    def remove_recipe(self, ref: ConanReference):
-        self._db.remove_recipe(ref)
+    def remove_recipe(self, layout: RecipeLayout):
+        layout.remove()
+        self._db.remove_recipe(layout.reference)
 
-    def remove_package(self, ref: ConanReference):
-        self._db.remove_package(ref)
+    def remove_package(self, layout: RecipeLayout):
+        layout.remove()
+        self._db.remove_package(layout.reference)
 
     def assign_prev(self, layout: PackageLayout):
-        pref = ConanReference(layout.reference)
+        pref = layout.reference
 
         new_path = self._get_path(pref)
 
@@ -181,16 +200,15 @@ class DataCache:
             self._db.create_package(new_path, pref, build_id)
         except ConanReferenceAlreadyExistsInDB:
             # This was exported before, making it latest again, update timestamp
-            self._db.update_package_timestamp(pref, time.time())
+            pref.timestamp = time.time()
+            self._db.update_package_timestamp(pref)
 
         return new_path
 
     def assign_rrev(self, layout: RecipeLayout):
         # This is the entry point for a new exported recipe revision
-        ref = ConanReference(layout.reference)
-        assert ref.rrev, "It only makes sense to change if you are providing a revision"
-        assert not ref.prev, "The reference for the recipe should not have package revision"
-        assert not ref.pkgid, "The reference for the recipe should not have package id"
+        ref = layout.reference
+        assert ref.revision, "It only makes sense to change if you are providing a revision"
 
         # TODO: here maybe we should block the recipe and all the packages too
         new_path = self._get_path(ref)

@@ -124,13 +124,22 @@ class RecipeReference:
         self.user = user
         self.channel = channel
         self.revision = revision
-        self.timestamp = timestamp  # integer, seconds from 0 in UTC
+        # integer, seconds from 0 in UTC
+        self._timestamp = int(timestamp) if timestamp is not None else None
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, value):
+        self._timestamp = int(value) if value is not None else None
 
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
         result = self.repr_notime()
-        if self.timestamp is not None:
-            result += "%{}".format(self.timestamp)
+        if self._timestamp is not None:
+            result += "%{}".format(self._timestamp)
         return result
 
     def repr_notime(self):
@@ -156,15 +165,15 @@ class RecipeReference:
         result = self.__str__()
         if self.revision is not None:
             result += "#{}".format(self.revision)
-        if self.timestamp is not None:
+        if self._timestamp is not None:
             # TODO: Improve the time format
-            result += "({})".format(from_timestamp_to_iso8601(self.timestamp))
+            result += "({})".format(from_timestamp_to_iso8601(self._timestamp))
         return result
 
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
         # In theory this is enough for sorting
-        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp, self.revision) \
+        return (self.name, self.version, self.user or "", self.channel or "", self._timestamp, self.revision) \
                < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp, ref.revision)
 
     def __eq__(self, ref):
@@ -180,10 +189,10 @@ class RecipeReference:
         return hash((self.name, self.version, self.user, self.channel, self.revision))
 
     @staticmethod
-    def loads(text):  # TODO: change this default to validate only on end points
+    def loads(rref):  # TODO: change this default to validate only on end points
         try:
             # timestamp
-            tokens = text.rsplit("%", 1)
+            tokens = rref.rsplit("%", 1)
             text = tokens[0]
             timestamp = int(tokens[1]) if len(tokens) == 2 else None
 
@@ -207,5 +216,5 @@ class RecipeReference:
         except Exception:
             from conans.errors import ConanException
             raise ConanException(
-                f"{text} is not a valid recipe reference, provide a reference"
+                f"{rref} is not a valid recipe reference, provide a reference"
                 f" in the form name/version[@user/channel]")

@@ -1,6 +1,5 @@
 import os
 
-from conan.cache.conan_reference import ConanReference
 from conans.cli.output import ConanOutput
 from conans.client import packager
 from conans.client.conanfile.package import run_package_method
@@ -73,7 +72,7 @@ def export_pkg(app, ref, source_folder, build_folder, package_folder,
             prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
 
     pref = PkgReference(pref.ref, pref.package_id, prev)
-    pkg_layout.reference = ConanReference(pref)
+    pkg_layout.reference = pref
     cache.assign_prev(pkg_layout)
     # Make sure folder is updated
     conanfile.folders.set_base_package(pkg_layout.package())

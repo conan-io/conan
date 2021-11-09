@@ -1,13 +1,11 @@
 import copy
 import os
-import shutil
 from io import StringIO
 from typing import List
 
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
-from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conans.assets.templates import dict_loader
 from conans.cli.output import ConanOutput
@@ -22,8 +20,8 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
-from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
-from conans.util.locks import Lock
+from conans.util.files import load, normalize, save, remove, mkdir
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -69,39 +67,37 @@ class ClientCache(object):
     def assign_prev(self, layout: PackageLayout):
         return self._data_cache.assign_prev(layout)
 
-    def ref_layout(self, ref):
+    def ref_layout(self, ref: RecipeReference):
         # It must exists
         assert ref.revision is not None
-        return self._data_cache.get_reference_layout(ConanReference(ref))
+        return self._data_cache.get_reference_layout(ref)
 
-    def pkg_layout(self, ref):
-        return self._data_cache.get_package_layout(ConanReference(ref))
+    def pkg_layout(self, ref: PkgReference):
+        return self._data_cache.get_package_layout(ref)
 
-    def create_export_recipe_layout(self, ref):
-        return self._data_cache.create_export_recipe_layout(ConanReference(ref))
+    def create_export_recipe_layout(self, ref: RecipeReference):
+        return self._data_cache.create_export_recipe_layout(ref)
 
     def create_temp_pkg_layout(self, ref):
-        return self._data_cache.create_tmp_package_layout(ConanReference(ref))
+        return self._data_cache.create_tmp_package_layout(ref)
 
-    def get_or_create_ref_layout(self, ref: ConanReference):
-        return self._data_cache.get_or_create_reference_layout(ConanReference(ref))
+    def get_or_create_ref_layout(self, ref: RecipeReference):
+        return self._data_cache.get_or_create_ref_layout(ref)
 
-    def get_or_create_pkg_layout(self, ref: ConanReference):
-        return self._data_cache.get_or_create_package_layout(ConanReference(ref))
+    def get_or_create_pkg_layout(self, ref: PkgReference):
+        return self._data_cache.get_or_create_pkg_layout(ref)
 
     def remove_recipe_layout(self, layout):
-        layout.remove()
-        self._data_cache.remove_recipe(ConanReference(layout.reference))
+        self._data_cache.remove_recipe(layout)
 
     def remove_package_layout(self, layout):
-        layout.remove()
-        self._data_cache.remove_package(ConanReference(layout.reference))
+        self._data_cache.remove_package(layout)
 
     def get_recipe_timestamp(self, ref):
-        return self._data_cache.get_recipe_timestamp(ConanReference(ref))
+        return self._data_cache.get_recipe_timestamp(ref)
 
     def get_package_timestamp(self, ref):
-        return self._data_cache.get_package_timestamp(ConanReference(ref))
+        return self._data_cache.get_package_timestamp(ref)
 
     def update_recipe_timestamp(self, ref):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
@@ -109,50 +105,34 @@ class ClientCache(object):
         return self._data_cache.update_recipe_timestamp(ref)
 
     def set_package_timestamp(self, pref):
-        return self._data_cache.update_package_timestamp(ConanReference(pref),
-                                                         new_timestamp=pref.timestamp)
+        return self._data_cache.update_package_timestamp(pref)
 
-    def all_refs(self, only_latest_rrev=False):
-        # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
-        #  this part in the future
-        #  check that we are returning not only the latest ref but all of them
-        # FIXME:
-        return [RecipeReference.loads(f"{ref['reference']}#{ref['rrev']}") for ref in
-                self._data_cache.list_references(only_latest_rrev=only_latest_rrev)]
+    def all_refs(self):
+        return self._data_cache.list_references()
 
     def exists_rrev(self, ref):
-        matching_rrevs = self.get_recipe_revisions_references(ref)
-        return len(matching_rrevs) > 0
+        return self._data_cache.exists_rrev(ref)
 
-    def exists_prev(self, ref):
-        matching_prevs = self.get_package_revisions_references(ref)
-        return len(matching_prevs) > 0
+    def exists_prev(self, pref):
+        return self._data_cache.exists_prev(pref)
 
     def get_package_revisions_references(self, ref, only_latest_prev=False):
-        return [
-            PkgReference.loads(f'{pref["reference"]}#{pref["rrev"]}:'
-                               f'{pref["pkgid"]}#{pref["prev"]}') for pref in
-            self._data_cache.get_package_revisions_references(ConanReference(ref), only_latest_prev)]
+        return self._data_cache.get_package_revisions_references(ref, only_latest_prev)
 
-    def get_package_references(self, ref: ConanReference) -> List[PkgReference]:
-        return [
-            PkgReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}') for pref in
-            self._data_cache.get_package_references(ConanReference(ref))]
+    def get_package_references(self, ref: RecipeReference) -> List[PkgReference]:
+        return self._data_cache.get_package_references(ref)
 
     def get_build_id(self, ref):
-        return self._data_cache.get_build_id(ConanReference(ref))
+        return self._data_cache.get_build_id(ref)
 
     def get_recipe_revisions_references(self, ref, only_latest_rrev=False):
-        return [RecipeReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
-                self._data_cache.get_recipe_revisions_references(ConanReference(ref), only_latest_rrev)]
+        return self._data_cache.get_recipe_revisions_references(ref, only_latest_rrev)
 
     def get_latest_recipe_reference(self, ref):
-        rrevs = self.get_recipe_revisions_references(ref, True)
-        return rrevs[0] if rrevs else None
+        return self._data_cache.get_recipe_revisions_references(ref)
 
     def get_latest_package_reference(self, ref):
-        prevs = self.get_package_revisions_references(ref, True)
-        return prevs[0] if prevs else None
+        return self._data_cache.get_package_revisions_references(ref)
 
     @property
     def store(self):

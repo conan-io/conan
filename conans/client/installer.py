@@ -3,7 +3,6 @@ import shutil
 import time
 from multiprocessing.pool import ThreadPool
 
-from conan.cache.conan_reference import ConanReference
 from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
@@ -21,7 +20,6 @@ from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
@@ -63,7 +61,7 @@ class _PackageBuilder(object):
         if recipe_build_id is not None and pref.package_id != recipe_build_id:
             package_layout.build_id = recipe_build_id
             # check if we already have a package with the calculated build_id
-            recipe_ref = RecipeReference.loads(ConanReference(pref).recipe_reference)
+            recipe_ref = pref.ref
             package_refs = self._cache.get_package_references(recipe_ref)
             build_prev = None
             for _pkg_ref in package_refs:
@@ -442,7 +440,7 @@ class BinaryInstaller(object):
             assert node.pref.revision, "Node PREF revision shouldn't be empty"
             assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
             # at this point the package reference should be complete
-            pkg_layout.reference = ConanReference(pref)
+            pkg_layout.reference = pref
             self._cache.assign_prev(pkg_layout)
             # Make sure the current conanfile.folders is updated (it is later in package_info(),
             # but better make sure here, and be able to report the actual folder in case
