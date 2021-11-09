@@ -19,8 +19,8 @@ class CacheDatabase:
     def close(self):
         self._conn.close()
 
-    def update_recipe_timestamp(self, ref: ConanReference, new_timestamp=None):
-        self._recipes.update_timestamp(ref, new_timestamp)
+    def update_recipe_timestamp(self, ref):
+        self._recipes.update_timestamp(ref)
 
     def update_package_timestamp(self, ref: ConanReference, new_timestamp=None):
         self._packages.update_timestamp(ref,  new_timestamp)

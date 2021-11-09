@@ -174,9 +174,8 @@ class GraphBinariesAnalyzer(object):
             return
 
         cache_latest_prev = self._cache.get_latest_package_reference(pref)
-        output = node.conanfile.output
 
-        if not cache_latest_prev:
+        if not cache_latest_prev:  # This binary does NOT exist in the cache
             try:
                 remote = self._get_package_from_remotes(node, pref)
             except NotFoundException:
@@ -187,10 +186,11 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_DOWNLOAD
                 node.prev = pref.revision
                 node.binary_remote = remote
-        else:
+        else:  # This binary already exists in the cache
             package_layout = self._cache.pkg_layout(cache_latest_prev)
             self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
             if self._app.update:
+                output = node.conanfile.output
                 try:
                     remote = self._get_package_from_remotes(node, pref)
                 except NotFoundException:
