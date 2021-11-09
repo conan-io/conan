@@ -214,7 +214,6 @@ class DataCache:
         shutil.move(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
-        self._db._recipes.dump()
         ref.timestamp = timestamp_now()
         # Wait until it finish to really update the DB
         try:
@@ -223,4 +222,3 @@ class DataCache:
             # This was exported before, making it latest again, update timestamp
             ref = layout.reference
             self._db.update_recipe_timestamp(ref)
-        self._db._recipes.dump()

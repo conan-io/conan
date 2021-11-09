@@ -84,13 +84,14 @@ class RecipesDBTable(BaseDbTable):
     # returns all different conan references (name/version@user/channel)
     def all_references(self):
         query = f'SELECT DISTINCT {self.columns.reference}, ' \
-                f'{self.columns.rrev}, ' \
-                f'MAX({self.columns.timestamp}) ' \
-                f'{self.columns.path}, ' \
-                f'FROM {self.table_name} ' \
-                f'GROUP BY {self.columns.reference} '  # OTHERWISE IT FAILS THE MAX()
+                    f'{self.columns.rrev}, ' \
+                    f'{self.columns.path} ,' \
+                    f'{self.columns.timestamp} ' \
+                    f'FROM {self.table_name} ' \
+                    f'ORDER BY {self.columns.timestamp} DESC'
         r = self._conn.execute(query)
-        return [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
+        result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
+        return result
 
     def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
         # FIXME: This is very fragile, we should disambiguate the function and check that revision

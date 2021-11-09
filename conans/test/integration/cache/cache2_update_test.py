@@ -101,6 +101,7 @@ class TestUpdateFlows:
 
         latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("liba/1.0.0@"))
         # check that we have stored REV1 in client with the same date from the server0
+        assert latest_rrev.timestamp == self.server_times["server0"]
         assert self.client.cache.get_recipe_timestamp(latest_rrev) == self.server_times["server0"]
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
