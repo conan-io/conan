@@ -19,11 +19,11 @@ def test_dependencies_visit():
 
             def generate(self):
                 dep = self.dependencies["openssl"]
-                self.output.info("DefRef: {}!!!".format(repr(dep.ref)))
-                self.output.info("DefPRef: {}!!!".format(repr(dep.pref)))
+                self.output.info("DefRef: {}!!!".format(dep.ref.repr_notime()))
+                self.output.info("DefPRef: {}!!!".format(dep.pref.repr_notime()))
                 dep = self.dependencies.build["openssl"]
-                self.output.info("DefRefBuild: {}!!!".format(repr(dep.ref)))
-                self.output.info("DefPRefBuild: {}!!!".format(repr(dep.pref)))
+                self.output.info("DefRefBuild: {}!!!".format(dep.ref.repr_notime()))
+                self.output.info("DefPRefBuild: {}!!!".format(dep.pref.repr_notime()))
                 for r, d in self.dependencies.build.items():
                     self.output.info("DIRECTBUILD {}: {}".format(r.direct, d))
         """)

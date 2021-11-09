@@ -8,7 +8,16 @@ class PkgReference:
         self.ref = ref
         self.package_id = package_id
         self.revision = revision
-        self.timestamp = timestamp  # TODO: Which format? int timestamp?
+        # integer, seconds from 0 in UTC
+        self._timestamp = int(timestamp) if timestamp is not None else None
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, value):
+        self._timestamp = int(value) if value is not None else None
 
     @staticmethod
     def from_conanref(pref, timestamp=None):
@@ -23,8 +32,8 @@ class PkgReference:
             result += ":{}".format(self.package_id)
         if self.revision is not None:
             result += "#{}".format(self.revision)
-        if self.timestamp is not None:
-            result += "%{}".format(self.timestamp)
+        if self._timestamp is not None:
+            result += "%{}".format(self._timestamp)
         return result
 
     def repr_notime(self):
@@ -49,8 +58,8 @@ class PkgReference:
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
         raise Exception("WHO IS COMPARING PACKAGE REFERENCES?")
-        # return (self.name, self.version, self.user, self.channel, self.timestamp, self.revision) \
-        #       < (ref.name, ref.version, ref.user, ref.channel, ref.timestamp, ref.revision)
+        # return (self.name, self.version, self.user, self.channel, self._timestamp, self.revision) \
+        #       < (ref.name, ref.version, ref.user, ref.channel, ref._timestamp, ref.revision)
 
     def __eq__(self, other):
         # TODO: In case of equality, should it use the revision and timestamp?
