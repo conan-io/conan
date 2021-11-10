@@ -5,7 +5,7 @@ import os
 from bottle import request
 
 from conans import DEFAULT_REVISION_V1
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.service.v1.service import ConanService
 
@@ -23,13 +23,13 @@ class DeleteController(object):
         def remove_recipe(name, version, username, channel, auth_user):
             """ Remove any existing recipes or its packages created.
             Will remove all revisions, packages and package revisions (parent folder)"""
-            ref = ConanFileReference(name, version, username, channel)
+            ref = RecipeReference(name, version, username, channel)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            conan_service.remove_conanfile(ref)
+            conan_service.remove_recipe(ref)
 
         @app.route('%s/delete' % r.packages, method="POST")
         def remove_packages(name, version, username, channel, auth_user):
-            ref = ConanFileReference(name, version, username, channel)
+            ref = RecipeReference(name, version, username, channel)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reader = codecs.getreader("utf-8")
             payload = json.load(reader(request.body))
@@ -40,9 +40,9 @@ class DeleteController(object):
             # The remove files is a part of the upload process, where the revision in v1 will
             # always be DEFAULT_REVISION_V1
             revision = DEFAULT_REVISION_V1
-            ref = ConanFileReference(name, version, username, channel, revision)
+            ref = RecipeReference(name, version, username, channel, revision)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             reader = codecs.getreader("utf-8")
             payload = json.load(reader(request.body))
             files = [os.path.normpath(filename) for filename in payload["files"]]
-            conan_service.remove_conanfile_files(ref, files)
+            conan_service.remove_recipe_files(ref, files)

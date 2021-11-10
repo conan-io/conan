@@ -1,3 +1,4 @@
+import copy
 import os
 
 from bottle import FileUpload, static_file
@@ -44,20 +45,24 @@ class ConanServiceV2(CommonService):
         # If the upload was ok, update the pointer to the latest
         self._server_store.update_last_revision(reference)
 
-    def get_recipe_revisions(self, ref, auth_user):
+    def get_recipe_revisions_references(self, ref, auth_user):
         self._authorizer.check_read_conan(auth_user, ref)
-        root = self._server_store.conan_revisions_root(ref.copy_clear_rev())
+        ref_norev = copy.copy(ref)
+        ref_norev.revision = None
+        root = self._server_store.conan_revisions_root(ref_norev)
         if not self._server_store.path_exists(root):
             raise RecipeNotFoundException(ref)
-        return self._server_store.get_recipe_revisions(ref)
+        return self._server_store.get_recipe_revisions_references(ref)
 
-    def get_package_revisions(self, pref, auth_user):
+    def get_package_revisions_references(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)
-        root = self._server_store.conan_revisions_root(pref.ref.copy_clear_rev())
+        ref_norev = copy.copy(pref.ref)
+        ref_norev.revision = None
+        root = self._server_store.conan_revisions_root(ref_norev)
         if not self._server_store.path_exists(root):
             raise RecipeNotFoundException(pref.ref)
 
-        ret = self._server_store.get_package_revisions(pref)
+        ret = self._server_store.get_package_revisions_references(pref)
         return ret
 
     def get_latest_revision(self, ref, auth_user):
@@ -67,12 +72,12 @@ class ConanServiceV2(CommonService):
             raise RecipeNotFoundException(ref)
         return tmp
 
-    def get_latest_package_revision(self, pref, auth_user):
+    def get_latest_package_reference(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)
-        tmp = self._server_store.get_last_package_revision(pref)
-        if not tmp:
+        _pref = self._server_store.get_last_package_revision(pref)
+        if not _pref:
             raise PackageNotFoundException(pref)
-        return tmp
+        return _pref
 
     # PACKAGE METHODS
     def get_package_file_list(self, pref, auth_user):

@@ -5,7 +5,7 @@ from time import sleep
 
 from mock import patch
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
@@ -38,7 +38,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client2.run("install pkg/0.1@user/testing")
         client2.run("remove * -r=default -f")
         client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/testing: Upload recipe to 'new_server' failed:",
+        self.assertIn("pkg/0.1@user/testing Error while compressing: The 'pkg/0.1@user/testing' ",
                       client2.out)
         self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
                       "not found in local cache.", client2.out)
@@ -79,7 +79,7 @@ class MultiRemotesTest(unittest.TestCase):
         # Update Hello0 with client_a and reupload
         self._create(client_a, "Hello0", "0.0", modifier="\n")
         client_a.run("upload Hello0/0.0@lasote/stable -r local")
-        self.assertIn("Uploaded conan recipe 'Hello0/0.0@lasote/stable' to 'local'", client_a.out)
+        self.assertIn("Uploading Hello0/0.0@lasote/stable", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
         client_b.run("info Hello0/0.0@lasote/stable -u")
@@ -191,7 +191,7 @@ class MultiRemoteTest(unittest.TestCase):
 
     def test_install_from_remotes(self):
         for i in range(3):
-            ref = ConanFileReference.loads("Hello%d/0.1@lasote/stable" % i)
+            ref = RecipeReference.loads("Hello%d/0.1@lasote/stable" % i)
             self.client.save({"conanfile.py": GenConanfile("Hello%d" % i, "0.1")})
             self.client.run("export . lasote/stable")
             self.client.run("upload %s -r=remote%d" % (str(ref), i))

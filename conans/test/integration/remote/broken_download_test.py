@@ -4,7 +4,7 @@ import unittest
 
 from requests.exceptions import ConnectionError
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestRequester, TestServer
 from conans.util.files import save
@@ -18,7 +18,7 @@ class BrokenDownloadTest(unittest.TestCase):
         client = TestClient(servers=servers, inputs=["admin", "password"])
         client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
         client.run("export . lasote/stable")
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        ref = RecipeReference.loads("Hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).export()))
         client.run("upload Hello/0.1@lasote/stable -r default")
         export_folder = client.get_latest_ref_layout(ref).export()
@@ -26,7 +26,7 @@ class BrokenDownloadTest(unittest.TestCase):
         self.assertFalse(os.path.exists(export_folder))
 
         rev = server.server_store.get_last_revision(ref).revision
-        ref = ref.copy_with_rev(rev)
+        ref.revision = rev
         path = server.test_server.server_store.export(ref)
         tgz = os.path.join(path, "conan_export.tgz")
         save(tgz, "contents")  # dummy content to break it, so the download decompress will fail

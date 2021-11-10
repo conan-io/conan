@@ -3,6 +3,7 @@ import sqlite3
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.table import BaseDbTable
 from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
+from conans.model.recipe_ref import RecipeReference
 
 
 class RecipesDBTable(BaseDbTable):
@@ -23,11 +24,18 @@ class RecipesDBTable(BaseDbTable):
             "timestamp": row.timestamp
         }
 
-    def _where_clause(self, ref: ConanReference):
-        where_dict = {
-            self.columns.reference: ref.reference,
-            self.columns.rrev: ref.rrev,
-        }
+    def _where_clause(self, ref):
+        if isinstance(ref, ConanReference):
+            where_dict = {
+                self.columns.reference: ref.reference,
+                self.columns.rrev: ref.rrev,
+            }
+        else:
+            assert isinstance(ref, RecipeReference)
+            where_dict = {
+                self.columns.reference: str(ref),
+                self.columns.rrev: ref.revision,
+            }
         where_expr = ' AND '.join(
             [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
@@ -65,13 +73,12 @@ class RecipesDBTable(BaseDbTable):
             raise ConanReferenceAlreadyExistsInDB(f"Reference '{ref.full_reference}' already exists")
         return r.lastrowid
 
-    def update_timestamp(self, ref: ConanReference, new_timestamp=None):
-        assert ref is not None
-        assert ref.reference is not None
-        assert ref.rrev is not None
+    def update_timestamp(self, ref: RecipeReference):
+        assert ref.revision is not None
+        assert ref.timestamp is not None
         where_clause = self._where_clause(ref)
         query = f"UPDATE {self.table_name} " \
-                f'SET {self.columns.timestamp} = "{new_timestamp}" ' \
+                f'SET {self.columns.timestamp} = "{ref.timestamp}" ' \
                 f"WHERE {where_clause};"
         r = self._conn.execute(query)
         return r.lastrowid
@@ -98,7 +105,10 @@ class RecipesDBTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
+    def get_recipe_revisions_references(self, ref: ConanReference, only_latest_rrev=False):
+        # FIXME: This is very fragile, we should disambiguate the function and check that revision
+        #        is always None if we want to check the revisions. Do another function to get the
+        #        time or check existence if needed
         check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
         if only_latest_rrev:
             query = f'SELECT {self.columns.reference}, ' \

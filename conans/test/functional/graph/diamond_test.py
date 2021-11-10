@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
@@ -36,7 +36,7 @@ class DiamondTest(unittest.TestCase):
     def _check_individual_deps(self):
         self.assertIn("INCLUDE [", self.client.out)
         output = str(self.client.out)
-        latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("Hello0/0.1@lasote/stable"))
+        latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("Hello0/0.1@lasote/stable"))
         ref_layout = self.client.cache.ref_layout(latest_rrev)
         self.assertIn(ref_layout.base_folder, output)
         cmakebuildinfo = load(os.path.join(self.client.current_folder, BUILD_INFO_CMAKE))

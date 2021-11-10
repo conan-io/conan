@@ -5,8 +5,8 @@ import unittest
 import pytest
 
 from parameterized import parameterized
-from conans.client.tools.env import environment_append
-from conans.model.ref import ConanFileReference
+
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -14,7 +14,7 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool_cmake
 class CMakeAppleFrameworksTestCase(unittest.TestCase):
-    lib_ref = ConanFileReference.loads("lib/version")
+    lib_ref = RecipeReference.loads("lib/version")
     lib_conanfile = textwrap.dedent("""
         from conans import ConanFile
 

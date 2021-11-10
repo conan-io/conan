@@ -4,7 +4,7 @@ from textwrap import dedent
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import save
 
@@ -12,8 +12,8 @@ from conans.util.files import save
 class FullRevisionModeTest(unittest.TestCase):
 
     def test_recipe_revision_mode(self):
-        liba_ref = ConanFileReference.loads("liba/0.1@user/testing")
-        libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
+        liba_ref = RecipeReference.loads("liba/0.1@user/testing")
+        libb_ref = RecipeReference.loads("libb/0.1@user/testing")
 
         clienta = TestClient()
         save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
@@ -219,10 +219,10 @@ class PackageRevisionModeTest(unittest.TestCase):
 
     def _generate_graph(self, dependencies):
         for ref, deps in dependencies.items():
-            ref = ConanFileReference.loads(ref)
+            ref = RecipeReference.loads(ref)
             conanfile = GenConanfile().with_name(ref.name).with_version(ref.version)
             for dep in deps:
-                conanfile.with_require(ConanFileReference.loads(dep))
+                conanfile.with_require(RecipeReference.loads(dep))
             filename = "%s.py" % ref.name
             self.client.save({filename: conanfile})
             self.client.run("export %s %s@" % (filename, ref))

@@ -1,3 +1,4 @@
+import copy
 import os
 import shutil
 from io import StringIO
@@ -18,7 +19,7 @@ from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
@@ -102,32 +103,36 @@ class ClientCache(object):
     def get_package_timestamp(self, ref):
         return self._data_cache.get_package_timestamp(ConanReference(ref))
 
-    def set_recipe_timestamp(self, ref, timestamp):
-        return self._data_cache.update_recipe_timestamp(ConanReference(ref), new_timestamp=timestamp)
+    def update_recipe_timestamp(self, ref):
+        """ when the recipe already exists in cache, but we get a new timestamp from a server
+        that would affect its order in our cache """
+        return self._data_cache.update_recipe_timestamp(ref)
 
-    def set_package_timestamp(self, ref, timestamp):
-        return self._data_cache.update_package_timestamp(ConanReference(ref), new_timestamp=timestamp)
+    def set_package_timestamp(self, pref):
+        return self._data_cache.update_package_timestamp(ConanReference(pref),
+                                                         new_timestamp=pref.timestamp)
 
     def all_refs(self, only_latest_rrev=False):
         # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
         #  this part in the future
         #  check that we are returning not only the latest ref but all of them
-        return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}", validate=False) for ref in
+        # FIXME:
+        return [RecipeReference.loads(f"{ref['reference']}#{ref['rrev']}") for ref in
                 self._data_cache.list_references(only_latest_rrev=only_latest_rrev)]
 
     def exists_rrev(self, ref):
-        matching_rrevs = self.get_recipe_revisions(ref)
+        matching_rrevs = self.get_recipe_revisions_references(ref)
         return len(matching_rrevs) > 0
 
     def exists_prev(self, ref):
-        matching_prevs = self.get_package_revisions(ref)
+        matching_prevs = self.get_package_revisions_references(ref)
         return len(matching_prevs) > 0
 
-    def get_package_revisions(self, ref, only_latest_prev=False):
+    def get_package_revisions_references(self, ref, only_latest_prev=False):
         return [
             PkgReference.loads(f'{pref["reference"]}#{pref["rrev"]}:'
                                f'{pref["pkgid"]}#{pref["prev"]}') for pref in
-            self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
+            self._data_cache.get_package_revisions_references(ConanReference(ref), only_latest_prev)]
 
     def get_package_references(self, ref: ConanReference) -> List[PkgReference]:
         return [
@@ -137,16 +142,16 @@ class ClientCache(object):
     def get_build_id(self, ref):
         return self._data_cache.get_build_id(ConanReference(ref))
 
-    def get_recipe_revisions(self, ref, only_latest_rrev=False):
-        return [ConanFileReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
-                self._data_cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev)]
+    def get_recipe_revisions_references(self, ref, only_latest_rrev=False):
+        return [RecipeReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
+                self._data_cache.get_recipe_revisions_references(ConanReference(ref), only_latest_rrev)]
 
-    def get_latest_rrev(self, ref):
-        rrevs = self.get_recipe_revisions(ref, True)
+    def get_latest_recipe_reference(self, ref):
+        rrevs = self.get_recipe_revisions_references(ref, True)
         return rrevs[0] if rrevs else None
 
-    def get_latest_prev(self, ref):
-        prevs = self.get_package_revisions(ref, True)
+    def get_latest_package_reference(self, ref):
+        prevs = self.get_package_revisions_references(ref, True)
         return prevs[0] if prevs else None
 
     @property
@@ -154,13 +159,17 @@ class ClientCache(object):
         return self._store_folder
 
     def editable_path(self, ref):
-        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
+        _tmp = copy.copy(ref)
+        _tmp.revision = None
+        edited_ref = self.editable_packages.get(_tmp)
         if edited_ref:
             conanfile_path = edited_ref["path"]
             return conanfile_path
 
     def installed_as_editable(self, ref):
-        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
+        _tmp = copy.copy(ref)
+        _tmp.revision = None
+        edited_ref = self.editable_packages.get(_tmp)
         return bool(edited_ref)
 
     @property
@@ -282,13 +291,6 @@ class ClientCache(object):
                 if os.path.isfile(generator) and generator.endswith(".py"):
                     generators.append(generator)
         return generators
-
-    def remove_locks(self):
-        folders = list_folder_subdirs(self._store_folder, 4)
-        for folder in folders:
-            conan_folder = os.path.join(self._store_folder, folder)
-            Lock.clean(conan_folder)
-            shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
     def get_template(self, template_name, user_overrides=False):
         # TODO: It can be initialized only once together with the Conan app

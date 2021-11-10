@@ -11,7 +11,7 @@ from requests import ConnectionError
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
@@ -53,8 +53,8 @@ def test_try_upload_bad_recipe():
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile("Hello0", "1.2.1")})
     client.run("export . frodo/stable")
-    ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-    latest_rrev = client.cache.get_latest_rrev(ref)
+    ref = RecipeReference.loads("Hello0/1.2.1@frodo/stable")
+    latest_rrev = client.cache.get_latest_recipe_reference(ref)
     os.unlink(os.path.join(client.cache.ref_layout(latest_rrev).export(), CONAN_MANIFEST))
     client.run("upload %s -r default" % str(ref), assert_error=True)
     assert "Cannot upload corrupted recipe" in client.out
@@ -71,19 +71,10 @@ def test_upload_with_pattern():
         assert "Uploading hello%s/1.2.1@frodo/stable" % num in client.out
 
     client.run("upload hello0* --confirm -r default")
-    assert "Uploading hello0/1.2.1@frodo/stable" in client.out
     assert "hello0/1.2.1@frodo/stable#e895a89b63c4eb2055704f63e6a0d06f "\
            "already in server, skipping upload" in client.out
     assert "hello1" not in client.out
     assert "hello2" not in client.out
-
-
-def test_upload_with_pattern_and_package_error():
-    client = TestClient(default_server_user=True)
-    client.save({"conanfile.py": GenConanfile("Hello1", "1.2.1")})
-    client.run("export . frodo/stable")
-    client.run("upload Hello* --confirm -p 234234234 -r default", assert_error=True)
-    assert "-p parameter only allowed with a valid recipe reference" in client.out
 
 
 def test_check_upload_confirm_question():
@@ -118,7 +109,7 @@ class UploadTest(unittest.TestCase):
 
     def setUp(self):
         self.client = self._get_client()
-        self.ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#myreciperev")
+        self.ref = RecipeReference.loads("Hello/1.2.1@frodo/stable#myreciperev")
         self.pref = PkgReference(self.ref, "myfakeid", "mypackagerev")
         reg_folder = self.client.get_latest_ref_layout(self.ref).export()
 
@@ -388,9 +379,9 @@ class UploadTest(unittest.TestCase):
                                  "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable:myfa",
                                  ])
 
-        rev = self.client.cache.get_latest_rrev(self.ref).revision
-        prev = self.client.cache.get_latest_prev(self.ref).revision
-        self.ref = self.ref.copy_with_rev(rev)
+        rev = self.client.cache.get_latest_recipe_reference(self.ref).revision
+        prev = self.client.cache.get_latest_package_reference(self.ref).revision
+        self.ref.revision = rev
 
         self.pref.revision = prev
         server_reg_folder = self.test_server.server_store.export(self.ref)
@@ -404,10 +395,9 @@ class UploadTest(unittest.TestCase):
         # Upload all recipes and packages
         self.client.run('upload %s --all -r default' % str(self.ref))
 
-        rev = self.client.cache.get_latest_rrev(self.ref).revision
-        prev = self.client.cache.get_latest_prev(self.ref).revision
-        self.ref = self.ref.copy_with_rev(rev)
-
+        rev = self.client.cache.get_latest_recipe_reference(self.ref).revision
+        prev = self.client.cache.get_latest_package_reference(self.ref).revision
+        self.ref.revision = rev
         self.pref.revision = prev
 
         self.server_reg_folder = self.test_server.server_store.export(self.ref)

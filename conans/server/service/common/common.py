@@ -24,11 +24,13 @@ class CommonService(object):
             rrev = DEFAULT_REVISION_V1
         else:
             rrev = tmp.revision
-        return ref.copy_with_rev(rrev)
+        ret = copy.copy(ref)
+        ret.revision = rrev
+        return ret
 
-    def remove_conanfile(self, ref):
+    def remove_recipe(self, ref):
         self._authorizer.check_delete_conan(self._auth_user, ref)
-        self._server_store.remove_conanfile(ref)
+        self._server_store.remove_recipe(ref)
 
     def remove_packages(self, ref, package_ids_filter):
         """If the revision is not specified it will remove the packages from all the recipes
@@ -39,29 +41,31 @@ class CommonService(object):
         if not package_ids_filter:  # Remove all packages, check that we can remove conanfile
             self._authorizer.check_delete_conan(self._auth_user, ref)
 
-        for rrev in self._server_store.get_recipe_revisions(ref):
-            self._server_store.remove_packages(ref.copy_with_rev(rrev.revision),
-                                               package_ids_filter)
+        for rrev in self._server_store.get_recipe_revisions_references(ref):
+            tmp = copy.copy(ref)
+            tmp.revision = rrev.revision
+            self._server_store.remove_packages(tmp, package_ids_filter)
 
     def remove_package(self, pref):
         self._authorizer.check_delete_package(self._auth_user, pref)
 
-        for rrev in self._server_store.get_recipe_revisions(pref.ref):
-            new_ref = pref.ref.copy_with_rev(rrev.revision)
+        for rrev in self._server_store.get_recipe_revisions_references(pref.ref):
+            new_ref = copy.copy(pref.ref)
+            new_ref.revision = rrev.revision
             # FIXME: Just assign rrev when introduce RecipeReference
             new_pref = PkgReference(new_ref, pref.package_id, pref.revision)
-            for prev in self._server_store.get_package_revisions(new_pref):
-                full_pref = copy.copy(new_pref)
-                full_pref.revision = prev.revision
-                self._server_store.remove_package(full_pref)
+            for _pref in self._server_store.get_package_revisions_references(new_pref):
+                self._server_store.remove_package(_pref)
 
     def remove_all_packages(self, ref):
-        for rrev in self._server_store.get_recipe_revisions(ref):
-            self._server_store.remove_all_packages(ref.copy_with_rev(rrev.revision))
+        for rrev in self._server_store.get_recipe_revisions_references(ref):
+            tmp = copy.copy(ref)
+            tmp.revision = rrev.revision
+            self._server_store.remove_all_packages(tmp)
 
-    def remove_conanfile_files(self, ref, files):
+    def remove_recipe_files(self, ref, files):
         self._authorizer.check_delete_conan(self._auth_user, ref)
-        self._server_store.remove_conanfile_files(ref, files)
+        self._server_store.remove_recipe_files(ref, files)
 
-    def remove_conanfile_file(self, ref, path):
-        self.remove_conanfile_files(ref, [path])
+    def remove_recipe_file(self, ref, path):
+        self.remove_recipe_files(ref, [path])

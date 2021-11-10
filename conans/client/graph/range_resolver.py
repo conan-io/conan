@@ -1,7 +1,7 @@
 import re
 
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.search.search import search_recipes
 
 re_param = re.compile(r"^(?P<function>include_prerelease|loose)\s*=\s*(?P<value>True|False)$")
@@ -84,7 +84,7 @@ def satisfying(list_versions, versionexpr, result):
 def range_satisfies(version_range, version):
     from semver import satisfies
     rang, loose, include_prerelease = _parse_versionexpr(version_range, [])
-    return satisfies(version, rang, loose=loose, include_prerelease=include_prerelease)
+    return satisfies(str(version), rang, loose=loose, include_prerelease=include_prerelease)
 
 
 class RangeResolver(object):
@@ -120,7 +120,7 @@ class RangeResolver(object):
 
         ref = require.ref
         # The search pattern must be a string
-        search_ref = ConanFileReference(ref.name, "*", ref.user, ref.channel)
+        search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
 
         remote_name = None
         remote_resolved_ref = None
@@ -187,10 +187,12 @@ class RangeResolver(object):
         # We don't want here to resolve the revision that should be done in the proxy
         # as any other regular flow
         # FIXME: refactor all this and update for 2.0
-        resolved_ref = resolved_ref.copy_clear_rev() if resolved_ref else None
-        return (resolved_ref, remote_name) if resolved_ref else (None, None)
+        if not resolved_ref:
+            return None, None
+        resolved_ref.revision = None
+        return resolved_ref, remote_name
 
     def _resolve_version(self, version_range, refs_found):
-        versions = {ref.version: ref for ref in refs_found if ref}
+        versions = {repr(ref.version): ref for ref in refs_found if ref}
         result = satisfying(versions, version_range, self._result)
         return versions.get(result)

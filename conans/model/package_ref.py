@@ -27,6 +27,16 @@ class PkgReference:
             result += "%{}".format(self.timestamp)
         return result
 
+    def repr_notime(self):
+        if self.ref is None:
+            return ""
+        result = self.ref.repr_notime()
+        if self.package_id:
+            result += ":{}".format(self.package_id)
+        if self.revision is not None:
+            result += "#{}".format(self.revision)
+        return result
+
     def __str__(self):
         """ shorter representation, excluding the revision and timestamp """
         if self.ref is None:
@@ -55,9 +65,9 @@ class PkgReference:
         return hash((self.ref, self.package_id, self.revision))
 
     @staticmethod
-    def loads(text):  # TODO: change this default to validate only on end points
+    def loads(pkg_ref):  # TODO: change this default to validate only on end points
         try:
-            tokens = text.split(":", 1)
+            tokens = pkg_ref.split(":", 1)
             assert len(tokens) == 2
             ref, pkg_id = tokens
 
@@ -76,5 +86,5 @@ class PkgReference:
             return PkgReference(ref, package_id, revision, timestamp)
         except Exception:
             raise ConanException(
-                f"{text} is not a valid package reference, provide a reference"
+                f"{pkg_ref} is not a valid package reference, provide a reference"
                 f" in the form name/version[@user/channel:package_id]")

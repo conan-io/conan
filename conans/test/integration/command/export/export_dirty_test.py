@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -27,7 +27,7 @@ class SourceDirtyTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/1.0@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/1.0@user/channel: Error in source() method, line 6", client.out)
-        ref = ConanFileReference.loads("pkg/1.0@user/channel")
+        ref = RecipeReference.loads("pkg/1.0@user/channel")
         # Check that we can debug and see the folder
         self.assertEqual(load(os.path.join(client.get_latest_ref_layout(ref).source(),
                                            "somefile.txt")),
@@ -56,7 +56,7 @@ class ExportDirtyTest(unittest.TestCase):
         self.client.save({"conanfile.py": GenConanfile().with_exports("main.cpp"),
                           "main.cpp": ""})
         self.client.run("create . pkg/0.1@user/stable")
-        ref = ConanFileReference.loads("pkg/0.1@user/stable")
+        ref = RecipeReference.loads("pkg/0.1@user/stable")
         source_path = self.client.get_latest_ref_layout(ref).source()
         file_open = os.path.join(source_path, "main.cpp")
 

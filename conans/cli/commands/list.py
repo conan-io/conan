@@ -7,7 +7,6 @@ from conans.errors import ConanException, InvalidNameException, PackageNotFoundE
     NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference
 from conans.util.dates import from_timestamp_to_iso8601
 
 remote_color = Color.BRIGHT_BLUE
@@ -54,10 +53,9 @@ def _list_revisions_cli_formatter(results, ref_type):
             cli_out_write(f"There are no matching {ref_type}", indentation=2)
         else:
             reference = result["reference"]
-            for revisions in result["results"]:
-                rev = revisions["revision"]
-                date = from_timestamp_to_iso8601(revisions["time"])
-                cli_out_write(f"{reference}#{rev} ({date})", fg=recipe_color, indentation=2)
+            for pref in result["results"]:
+                date = from_timestamp_to_iso8601(pref.timestamp)
+                cli_out_write(f"{reference}#{pref.revision} ({date})", fg=recipe_color, indentation=2)
 
 
 def list_recipe_revisions_cli_formatter(results):
@@ -81,7 +79,7 @@ def list_package_ids_cli_formatter(results):
         elif not result.get("results"):
             cli_out_write("There are no packages", indentation=2)
         else:
-            reference = result["reference"]
+            reference = result["reference"].repr_notime()
             for pkg_id, props in result["results"].items():
                 cli_out_write(f"{reference}:{pkg_id}",
                               fg=reference_color, indentation=2)
@@ -210,7 +208,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
     if args.cache or not args.remote:
         error = None
         try:
-            result = conan_api.list.get_recipe_revisions(ref)
+            result = conan_api.list.get_recipe_revisions_references(ref)
         except Exception as e:
             error = str(e)
             result = []
@@ -225,7 +223,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         for remote in remotes:
             error = None
             try:
-                result = conan_api.list.get_recipe_revisions(ref, remote=remote)
+                result = conan_api.list.get_recipe_revisions_references(ref, remote=remote)
             except (NotFoundException, PackageNotFoundException):
                 # This exception must be caught manually due to a server inconsistency:
                 # Artifactory API returns an empty result if the recipe doesn't exist, but
@@ -271,7 +269,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     if args.cache or not args.remote:
         error = None
         try:
-            result = conan_api.list.get_package_revisions(pref)
+            result = conan_api.list.get_package_revisions_references(pref)
         except Exception as e:
             error = str(e)
             result = []
@@ -285,30 +283,30 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         remotes = get_remote_selection(conan_api, args.remote)
         for remote in remotes:
             error = None
+            prefs = []
             try:
-                result = conan_api.list.get_package_revisions(pref, remote=remote)
+                prefs = conan_api.list.get_package_revisions_references(pref, remote=remote)
             except (NotFoundException, PackageNotFoundException):
                 # This exception must be caught manually due to a server inconsistency:
                 # Artifactory API returns an empty result if the recipe doesn't exist, but
                 # Conan Server returns a 404. This probably should be fixed server side,
                 # but in the meantime we must handle it here
-                result = []
+                pass
             except Exception as e:
                 error = str(e)
-                result = []
 
             results.append({
                 "reference": repr(pref),
                 "remote": remote.name,
                 "error": error,
-                "results": result
+                "results": prefs
             })
 
     return results
 
 
 @conan_subcommand(formatters=list_package_ids_formatters)
-def list_package_ids(conan_api, parser, subparser, *args):
+def list_packages(conan_api, parser, subparser, *args):
     """
     List all the package IDs for a given recipe reference. If the reference doesn't
     include the recipe revision, the command will retrieve all the package IDs for
@@ -320,7 +318,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     try:
-        ref = ConanFileReference.loads(args.reference)
+        ref = RecipeReference.loads(args.reference)
     except (ConanException, InvalidNameException):
         raise ConanException(f"{args.reference} is not a valid recipe reference, provide a reference"
                              f" in the form name/version[@user/channel][#RECIPE_REVISION]")

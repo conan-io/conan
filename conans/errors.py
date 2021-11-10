@@ -8,6 +8,7 @@
     see return_plugin.py
 
 """
+import copy
 from contextlib import contextmanager
 from subprocess import CalledProcessError
 
@@ -222,14 +223,14 @@ class NotFoundException(ConanException):  # 404
 class RecipeNotFoundException(NotFoundException):
 
     def __init__(self, ref, remote=None):
-        from conans.model.ref import ConanFileReference
-        assert isinstance(ref, ConanFileReference), "RecipeNotFoundException requires a " \
-                                                    "ConanFileReference"
+        from conans.model.recipe_ref import RecipeReference
+        assert isinstance(ref, RecipeReference), "RecipeNotFoundException requires a " \
+                                                    "RecipeReference"
         self.ref = ref
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.ref.full_str()
+        tmp = repr(self.ref)
         return "Recipe not found: '{}'".format(tmp, self.remote_message())
 
 
@@ -244,8 +245,8 @@ class PackageNotFoundException(NotFoundException):
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = repr(self.pref)
-        return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
+        return "Binary package not found: '{}'{}".format(self.pref.repr_notime(),
+                                                         self.remote_message())
 
 
 class UserInterfaceErrorException(RequestErrorException):
