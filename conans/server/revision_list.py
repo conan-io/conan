@@ -1,7 +1,7 @@
 import json
 from collections import namedtuple
 
-from conans.util.dates import timestamp_now
+from conans.util.dates import revision_timestamp_now
 
 _RevisionEntry = namedtuple("RevisionEntry", "revision time")
 
@@ -35,7 +35,7 @@ class RevisionList(object):
 
     @staticmethod
     def _now():
-        return timestamp_now()
+        return revision_timestamp_now()
 
     def latest_revision(self):
         if not self._data:

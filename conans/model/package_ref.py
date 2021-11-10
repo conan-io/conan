@@ -1,5 +1,6 @@
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
+from conans.util.dates import timestamp_to_str
 
 
 class PkgReference:
@@ -9,19 +10,7 @@ class PkgReference:
         self.package_id = package_id
         self.revision = revision
         # integer, seconds from 0 in UTC
-        self._timestamp = int(timestamp) if timestamp is not None else None
-
-    @property
-    def timestamp(self):
-        return self._timestamp
-
-    @timestamp.setter
-    def timestamp(self, value):
-        self._timestamp = int(value) if value is not None else None
-
-    @staticmethod
-    def from_conanref(pref, timestamp=None):
-        return PkgReference(pref.ref, pref.id, pref.revision, timestamp)
+        self.timestamp = timestamp
 
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
@@ -32,8 +21,8 @@ class PkgReference:
             result += ":{}".format(self.package_id)
         if self.revision is not None:
             result += "#{}".format(self.revision)
-        if self._timestamp is not None:
-            result += "%{}".format(self._timestamp)
+        if self.timestamp is not None:
+            result += "%{}".format(self.timestamp)
         return result
 
     def repr_notime(self):
@@ -44,6 +33,12 @@ class PkgReference:
             result += ":{}".format(self.package_id)
         if self.revision is not None:
             result += "#{}".format(self.revision)
+        return result
+
+    def repr_humantime(self):
+        result = self.repr_notime()
+        assert self.timestamp
+        result += " ({})".format(timestamp_to_str(self.timestamp))
         return result
 
     def __str__(self):
@@ -58,7 +53,7 @@ class PkgReference:
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
         raise Exception("WHO IS COMPARING PACKAGE REFERENCES?")
-        # return (self.name, self.version, self.user, self.channel, self._timestamp, self.revision) \
+        # return (self.name, self.version, self.user, self.channel, self.timestamp, self.revision) \
         #       < (ref.name, ref.version, ref.user, ref.channel, ref._timestamp, ref.revision)
 
     def __eq__(self, other):

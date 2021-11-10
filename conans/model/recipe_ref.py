@@ -1,6 +1,6 @@
 from functools import total_ordering
 
-from conans.util.dates import from_timestamp_to_iso8601
+from conans.util.dates import timestamp_to_str
 
 
 @total_ordering
@@ -124,28 +124,25 @@ class RecipeReference:
         self.user = user
         self.channel = channel
         self.revision = revision
-        # integer, seconds from 0 in UTC
-        self._timestamp = int(timestamp) if timestamp is not None else None
-
-    @property
-    def timestamp(self):
-        return self._timestamp
-
-    @timestamp.setter
-    def timestamp(self, value):
-        self._timestamp = int(value) if value is not None else None
+        self.timestamp = timestamp
 
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
         result = self.repr_notime()
-        if self._timestamp is not None:
-            result += "%{}".format(self._timestamp)
+        if self.timestamp is not None:
+            result += "%{}".format(self.timestamp)
         return result
 
     def repr_notime(self):
         result = self.__str__()
         if self.revision is not None:
             result += "#{}".format(self.revision)
+        return result
+
+    def repr_humantime(self):
+        result = self.repr_notime()
+        assert self.timestamp
+        result += " ({})".format(timestamp_to_str(self.timestamp))
         return result
 
     def __str__(self):
@@ -160,20 +157,10 @@ class RecipeReference:
             result += "/{}".format(self.channel)
         return result
 
-    def format_time(self):
-        """ same as repr(), but with human readable time """
-        result = self.__str__()
-        if self.revision is not None:
-            result += "#{}".format(self.revision)
-        if self._timestamp is not None:
-            # TODO: Improve the time format
-            result += "({})".format(from_timestamp_to_iso8601(self._timestamp))
-        return result
-
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
         # In theory this is enough for sorting
-        return (self.name, self.version, self.user or "", self.channel or "", self._timestamp, self.revision) \
+        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp, self.revision) \
                < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp, ref.revision)
 
     def __eq__(self, ref):

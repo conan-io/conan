@@ -60,7 +60,7 @@ def test_recipe_reference_timestamp():
     assert str(r) == "pkg/0.1"
     assert repr(r) == "pkg/0.1#r1%123"
     # TODO: Improve the time format
-    assert r.format_time() == "pkg/0.1#r1(1970-01-01T00:02:03Z)"
+    assert r.repr_humantime() == "pkg/0.1#r1 (1970-01-01 00:02:03 UTC)"
 
     r = RecipeReference.loads("pkg/0.1@user#r1%123")
     assert r.name == "pkg"
@@ -70,7 +70,7 @@ def test_recipe_reference_timestamp():
     assert r.revision == "r1"
     assert str(r) == "pkg/0.1@user"
     assert repr(r) == "pkg/0.1@user#r1%123"
-    assert r.format_time() == "pkg/0.1@user#r1(1970-01-01T00:02:03Z)"
+    assert r.repr_humantime() == "pkg/0.1@user#r1 (1970-01-01 00:02:03 UTC)"
 
 
 def test_recipe_reference_compare():
