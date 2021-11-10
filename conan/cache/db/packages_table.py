@@ -91,6 +91,13 @@ class PackagesDBTable(BaseDbTable):
         except sqlite3.IntegrityError:
             raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
+    def remove_recipe(self, ref: RecipeReference):
+        # can't use the _where_clause, because that is an exact match on the package_id, etc
+        query = f"DELETE FROM {self.table_name} " \
+                f'WHERE {self.columns.reference} = "{str(ref)}" ' \
+                f'AND {self.columns.rrev} = "{ref.revision}" '
+        self._conn.execute(query)
+
     def remove(self, pref: PkgReference):
         where_clause = self._where_clause(pref)
         query = f"DELETE FROM {self.table_name} " \

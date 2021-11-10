@@ -53,8 +53,7 @@ class CacheDatabase:
     def remove_recipe(self, ref: RecipeReference):
         # Removing the recipe must remove all the package binaries too from DB
         self._recipes.remove(ref)
-        pref = PkgReference(ref)
-        self._packages.remove(pref)
+        self._packages.remove_recipe(ref)
 
     def remove_package(self, ref: PkgReference):
         # Removing the recipe must remove all the package binaries too from DB
