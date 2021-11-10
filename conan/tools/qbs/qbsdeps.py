@@ -28,22 +28,7 @@ class QbsDeps(object):
         build_req = self._conanfile.dependencies.direct_build
         test_req = self._conanfile.dependencies.test
 
-        # Check if the same package is at host and build and the same time
-        activated_br = {r.ref.name for r in build_req.values()
-                        if r.ref.name in self.build_context_activated}
-        common_names = {r.ref.name for r in host_req.values()}.intersection(activated_br)
-        for common_name in common_names:
-            suffix = self.build_context_suffix.get(common_name)
-            if not suffix:
-                raise ConanException("The package '{}' exists both as 'require' and as "
-                                     "'build require'. You need to specify a suffix using the "
-                                     "'build_context_suffix' attribute at the QbsDeps "
-                                     "generator.".format(common_name))
-
-        def add_module(require, dep, comp_name):
-            qbs_module_template = QbsModuleTemplate(self, require, dep, comp_name)
-            file_content = qbs_module_template.render()
-            ret["modules/{}/module.qbs".format(qbs_module_template.filename)] = file_content
+        self._check_if_build_require_suffix_is_missing(host_req, build_req)
 
         requires = []
         dependencies = []
@@ -63,11 +48,40 @@ class QbsDeps(object):
 
             if dep.cpp_info.has_components:
                 for comp_name in dep.cpp_info.component_names:
-                    add_module(require, dep, comp_name)
+                    ret.update(self._get_module(require, dep, comp_name))
             else:
-                add_module(require, dep, None)
-        qbsConanModuleProviderInfoTemplate = QbsConanModuleProviderInfoTemplate(
-            self, requires, dependencies)
-        ret["qbs_conan-moduleprovider_info.json"] = qbsConanModuleProviderInfoTemplate.render()
+                ret.update(self._get_module(require, dep, None))
+        ret.update(self._get_conan_module_provider_info(requires, dependencies))
 
         return ret
+
+    def _activated_build_requires(self, build_requires):
+        return {r.ref.name for r in build_requires.values()
+                if r.ref.name in self.build_context_activated}
+
+    def _get_module(self, require, dep, comp_name):
+        qbs_module_template = self._create_module_template(require, dep, comp_name)
+        file_content = qbs_module_template.render()
+        return {"modules/{}/module.qbs".format(qbs_module_template.filename): file_content}
+
+    def _get_conan_module_provider_info(self, requires, dependencies):
+        qbsConanModuleProviderInfoTemplate = self._create_module_provider_info_template(
+            requires, dependencies)
+        return {"qbs_conan-moduleprovider_info.json": qbsConanModuleProviderInfoTemplate.render()}
+
+    def _create_module_template(self, require, dep, comp_name):
+        return QbsModuleTemplate(self, require, dep, comp_name)
+
+    def _create_module_provider_info_template(self, requires, dependencies):
+        return QbsConanModuleProviderInfoTemplate(self, requires, dependencies)
+
+    def _check_if_build_require_suffix_is_missing(self, host_requires, build_requires):
+        activated_br = self._activated_build_requires(build_requires)
+        common_names = {r.ref.name for r in host_requires.values()}.intersection(activated_br)
+        for common_name in common_names:
+            suffix = self.build_context_suffix.get(common_name)
+            if not suffix:
+                raise ConanException("The package '{}' exists both as 'require' and as "
+                                     "'build require'. You need to specify a suffix using the "
+                                     "'build_context_suffix' attribute at the QbsDeps "
+                                     "generator.".format(common_name))
