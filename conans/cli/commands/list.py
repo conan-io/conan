@@ -306,7 +306,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
 
 
 @conan_subcommand(formatters=list_package_ids_formatters)
-def list_package_ids(conan_api, parser, subparser, *args):
+def list_packages(conan_api, parser, subparser, *args):
     """
     List all the package IDs for a given recipe reference. If the reference doesn't
     include the recipe revision, the command will retrieve all the package IDs for
