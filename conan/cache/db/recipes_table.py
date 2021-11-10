@@ -63,7 +63,6 @@ class RecipesDBTable(BaseDbTable):
                                f'VALUES ({placeholders})',
                                [str(ref), ref.revision, path, ref.timestamp])
         except sqlite3.IntegrityError as e:
-            print(e)
             raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
 
     def update_timestamp(self, ref: RecipeReference):

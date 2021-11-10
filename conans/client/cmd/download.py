@@ -24,8 +24,10 @@ def download(app, ref, package_ids, recipe):
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
     try:
-        if not ref.revision:
+        if ref.revision is None:
             ref = remote_manager.get_latest_recipe_reference(ref, remote)
+        else:  # to make sure it exists in the server, the get_recipe() is only for valid things
+            ref = remote_manager.get_recipe_revision_reference(ref, remote)
         remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref)
