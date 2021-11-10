@@ -80,7 +80,7 @@ class PkgReference:
             # timestamp
             tokens = pkg_id.rsplit("%", 1)
             text = tokens[0]
-            timestamp = int(tokens[1]) if len(tokens) == 2 else None
+            timestamp = float(tokens[1]) if len(tokens) == 2 else None
 
             # revision
             tokens = text.split("#", 1)
