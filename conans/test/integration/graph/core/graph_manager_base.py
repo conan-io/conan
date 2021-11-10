@@ -20,7 +20,7 @@ from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile
-from conans.util.dates import timestamp_now
+from conans.util.dates import revision_timestamp_now
 from conans.util.files import save
 
 
@@ -80,7 +80,7 @@ class GraphManagerTest(unittest.TestCase):
 
     def _put_in_cache(self, ref, conanfile):
         ref = RecipeReference.loads("{}#123".format(ref))
-        ref.timestamp = timestamp_now()
+        ref.timestamp = revision_timestamp_now()
         layout = self.cache.get_or_create_ref_layout(ref)
         save(layout.conanfile(), str(conanfile))
         manifest = FileTreeManifest.create(layout.export())
@@ -91,7 +91,7 @@ class GraphManagerTest(unittest.TestCase):
         if not isinstance(ref, RecipeReference):
             ref = RecipeReference.loads(ref)
         ref = RecipeReference.loads(repr(ref) + "#{}".format(revision or 123))  # FIXME: Make access
-        ref.timestamp = timestamp_now()
+        ref.timestamp = revision_timestamp_now()
         recipe_layout = self.cache.get_or_create_ref_layout(ref)
         save(recipe_layout.conanfile(), str(test_conanfile))
         manifest = FileTreeManifest.create(recipe_layout.export())

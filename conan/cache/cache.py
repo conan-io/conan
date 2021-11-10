@@ -13,7 +13,7 @@ from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNot
     ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.util.dates import timestamp_now
+from conans.util.dates import revision_timestamp_now
 from conans.util.files import rmdir
 
 
@@ -181,7 +181,7 @@ class DataCache:
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
         build_id = layout.build_id
-        pref.timestamp = timestamp_now()
+        pref.timestamp = revision_timestamp_now()
         # Wait until it finish to really update the DB
         try:
             self._db.create_package(new_path, pref, build_id)
@@ -214,7 +214,7 @@ class DataCache:
         shutil.move(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
-        ref.timestamp = timestamp_now()
+        ref.timestamp = revision_timestamp_now()
         # Wait until it finish to really update the DB
         try:
             self._db.create_recipe(new_path, ref)
