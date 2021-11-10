@@ -60,9 +60,7 @@ class DataCache:
 
     @staticmethod
     def _get_path(ref):
-        t = copy.copy(ref)
-        t.timestamp = None
-        return DataCache._short_hash_path(repr(t))
+        return DataCache._short_hash_path(ref.repr_notime())
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         # This is a temporary layout, because the revision is not computed yet, until it is
