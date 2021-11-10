@@ -178,7 +178,7 @@ class DepsCppCmake(object):
             # Flags have to be escaped
             ret = separator.join(v.replace('\\', '\\\\').replace('$', '\\$').replace('"', '\\"')
                                  for v in values)
-            if as_string:
+            if ret and as_string is True:
                 ret = '"%s"' % ret
             return ret
 

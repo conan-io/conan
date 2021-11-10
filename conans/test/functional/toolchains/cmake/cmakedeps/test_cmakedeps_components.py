@@ -210,8 +210,8 @@ def test_components_system_libs():
     assert 'component libs: $<$<CONFIG:Release>:system_lib_component;>' in t.out
     assert ('component options: '
             '$<$<CONFIG:Release>:'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:"">;'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:"">;'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:"">>') in t.out
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>') in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>
