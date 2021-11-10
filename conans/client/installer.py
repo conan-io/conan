@@ -62,15 +62,7 @@ class _PackageBuilder(object):
             package_layout.build_id = recipe_build_id
             # check if we already have a package with the calculated build_id
             recipe_ref = pref.ref
-            package_refs = self._cache.get_package_references(recipe_ref)
-            build_prev = None
-            for _pkg_ref in package_refs:
-                prev = self._cache.get_latest_package_reference(_pkg_ref)
-                prev_build_id = self._cache.get_build_id(prev)
-                if prev_build_id == recipe_build_id:
-                    build_prev = prev
-                    break
-
+            build_prev = self._cache.get_matching_build_id(recipe_ref, recipe_build_id)
             build_prev = build_prev or pref
 
             # We are trying to build a package id different from the one that has the
@@ -361,7 +353,7 @@ class BinaryInstaller(object):
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
         if pref.revision is None:
             assert package.binary == BINARY_BUILD
-            package_layout = self._cache.create_temp_pkg_layout(pref)
+            package_layout = self._cache.create_build_pkg_layout(pref)
         else:
             package_layout = self._cache.get_or_create_pkg_layout(pref)
 

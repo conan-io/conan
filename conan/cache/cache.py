@@ -63,37 +63,45 @@ class DataCache:
         return DataCache._short_hash_path(ref.repr_notime())
 
     def create_export_recipe_layout(self, ref: RecipeReference):
-        # This is a temporary layout, because the revision is not computed yet, until it is
-        # The entry is not added to DB, just a temp folder is created
-        assert not ref.revision, "Recipe revision should be None"
+        # This is a temporary layout while exporting a new recipe, because the revision is not
+        # computed yet, until it is. The entry is not added to DB, just a temp folder is created
+        assert ref.revision is None, "Recipe revision should be None"
+        assert ref.timestamp is None
         reference_path = self._get_tmp_path()
         self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
-    def create_tmp_package_layout(self, pref: PkgReference):
-        # Temporary layout to build a new package
+    def create_build_pkg_layout(self, pref: PkgReference):
+        # Temporary layout to build a new package, when we don't know the package revision yet
         assert pref.ref.revision, "Recipe revision must be known to get or create the package layout"
         assert pref.package_id, "Package id must be known to get or create the package layout"
-        assert not pref.revision, "Package revision should be unknown"
+        assert pref.revision is None, "Package revision should be None"
+        assert pref.timestamp is None
         package_path = self._get_tmp_path()
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
     def get_reference_layout(self, ref: RecipeReference):
+        """ the revision must exists, the folder must exist
+        """
         assert ref.revision, "Recipe revision must be known to get the reference layout"
         ref_data = self._db.try_get_recipe(ref)
         ref_path = ref_data.get("path")
         return RecipeLayout(ref, os.path.join(self.base_folder, ref_path))
 
     def get_package_layout(self, pref: PkgReference):
+        """ the revision must exists, the folder must exist
+        """
         assert pref.ref.revision, "Recipe revision must be known to get the package layout"
         assert pref.package_id, "Package id must be known to get the package layout"
         assert pref.revision, "Package revision must be known to get the package layout"
         pref_data = self._db.try_get_package(pref)
-        pref_path = pref_data.get("path")
+        assert os.path.isdir(pref_path)
         return PackageLayout(pref, os.path.join(self.base_folder, pref_path))
 
     def get_or_create_ref_layout(self, ref: RecipeReference):
+        """ called by RemoteManager.get_recipe()
+        """
         try:
             return self.get_reference_layout(ref)
         except ConanReferenceDoesNotExistInDB:
@@ -104,6 +112,8 @@ class DataCache:
             return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
     def get_or_create_pkg_layout(self, pref: PkgReference):
+        """ called by RemoteManager.get_package() and  BinaryInstaller
+        """
         try:
             return self.get_package_layout(pref)
         except ConanReferenceDoesNotExistInDB:
@@ -147,8 +157,8 @@ class DataCache:
     def get_package_revisions_references(self, ref: PkgReference, only_latest_prev=False):
         return self._db.get_package_revisions_references(ref, only_latest_prev)
 
-    def get_build_id(self, pref):
-        return self._db.get_build_id(pref)
+    def get_matching_build_id(self, ref, build_id):
+        return self._db.get_matching_build_id(ref, build_id)
 
     def get_recipe_timestamp(self, ref):
         return self._db.get_recipe_timestamp(ref)
@@ -190,9 +200,12 @@ class DataCache:
         return new_path
 
     def assign_rrev(self, layout: RecipeLayout):
-        # This is the entry point for a new exported recipe revision
+        """ called at export, once the exported recipe revision has been computed, it
+        can register for the first time the new RecipeReference"""
         ref = layout.reference
-        assert ref.revision, "It only makes sense to change if you are providing a revision"
+        assert ref.revision is not None, "Revision must exist after export"
+        assert ref.timestamp is None, "Timestamp no defined yet"
+        ref.timestamp = revision_timestamp_now()
 
         # TODO: here maybe we should block the recipe and all the packages too
         new_path = self._get_path(ref)
@@ -212,7 +225,6 @@ class DataCache:
         shutil.move(self._full_path(layout.base_folder), full_path)
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
-        ref.timestamp = revision_timestamp_now()
         # Wait until it finish to really update the DB
         try:
             self._db.create_recipe(new_path, ref)

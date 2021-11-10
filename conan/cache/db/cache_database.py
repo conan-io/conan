@@ -20,10 +20,12 @@ class CacheDatabase:
         self._conn.close()
 
     def exists_rrev(self, ref):
+        # TODO: This logic could be done directly against DB
         matching_rrevs = self.get_recipe_revisions_references(ref)
         return len(matching_rrevs) > 0
 
     def exists_prev(self, ref):
+        # TODO: This logic could be done directly against DB
         matching_prevs = self.get_package_revisions_references(ref)
         return len(matching_prevs) > 0
 
@@ -37,6 +39,7 @@ class CacheDatabase:
         return ref_data["pref"].timestamp
 
     def get_latest_recipe_reference(self, ref):
+        # TODO: This logic could be done directly in DB
         rrevs = self.get_recipe_revisions_references(ref, True)
         return rrevs[0] if rrevs else None
 
@@ -59,9 +62,13 @@ class CacheDatabase:
         # Removing the recipe must remove all the package binaries too from DB
         self._packages.remove(ref)
 
-    def get_build_id(self, pref):
-        ref_data = self.try_get_package(pref)
-        return ref_data.get("build_id")
+    def get_matching_build_id(self, ref, build_id):
+        # TODO: This can also be done in a single query in DB
+        for d in self._packages.get_package_references(ref):
+            existing_build_id = d["build_id"]
+            if existing_build_id == build_id:
+                return d["pref"]
+        return None
 
     def try_get_recipe(self, ref: RecipeReference):
         """ Returns the reference data as a dictionary (or fails) """
