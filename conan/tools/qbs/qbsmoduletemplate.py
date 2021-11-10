@@ -1,4 +1,3 @@
-import os
 import jinja2
 from jinja2 import Template
 import textwrap
@@ -18,13 +17,6 @@ class QbsModuleTemplate(object):
         if not self.conanfile.is_build_context:
             return ""
         return self.qbsdeps.build_context_suffix.get(self.conanfile.ref.name, "")
-
-    @property
-    def build_modules_activated(self):
-        if self.conanfile.is_build_context:
-            return self.conanfile.ref.name in self.qbsdeps.build_context_build_modules
-        else:
-            return self.conanfile.ref.name not in self.qbsdeps.build_context_build_modules
 
     def render(self):
         context = self.context
@@ -144,17 +136,30 @@ class QbsModuleTemplate(object):
 
 class DepsCppQbs(object):
     def __init__(self, cpp_info, package_folder):
-        def prepent_package_folder(paths):
-            return utils.prepent_package_folder(paths, package_folder)
+        def prepend_package_folder(paths):
+            return utils.prepend_package_folder(paths, package_folder)
 
-        self.includedirs = prepent_package_folder(cpp_info.includedirs)
-        self.libdirs = prepent_package_folder(cpp_info.libdirs)
+        self.includedirs = prepend_package_folder(cpp_info.includedirs)
+        self.libdirs = prepend_package_folder(cpp_info.libdirs)
         self.system_libs = cpp_info.system_libs
         self.libs = cpp_info.libs
-        self.frameworkdirs = prepent_package_folder(cpp_info.frameworkdirs)
+        self.frameworkdirs = prepend_package_folder(cpp_info.frameworkdirs)
         self.frameworks = cpp_info.frameworks
         self.defines = cpp_info.defines
         self.cflags = cpp_info.cflags
         self.cxxflags = cpp_info.cxxflags
         self.sharedlinkflags = cpp_info.sharedlinkflags
         self.exelinkflags = cpp_info.exelinkflags
+
+    def __eq__(self, other):
+        return self.includedirs == other.includedirs and \
+            self.libdirs == other.libdirs and \
+            self.system_libs == other.system_libs and \
+            self.libs == other.libs and \
+            self.frameworkdirs == other.frameworkdirs and \
+            self.frameworks == other.frameworks and \
+            self.defines == other.defines and \
+            self.cflags == other.cflags and \
+            self.cxxflags == other.cxxflags and \
+            self.sharedlinkflags == other.sharedlinkflags and \
+            self.exelinkflags == other.exelinkflags
