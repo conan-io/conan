@@ -164,7 +164,11 @@ class Meson(object):
             build_type
         ])
         command = 'meson "%s" "%s" %s' % (source_dir, self.build_dir, arg_list)
-        with environment_append({"PKG_CONFIG_PATH": pc_paths}):
+        envs = {"PKG_CONFIG_PATH": pc_paths}
+        if self._append_vcvars and self.backend.startswith("vs"):
+            vcvars_dict = tools.vcvars_dict(self._settings, output=self._conanfile.output)
+            envs.update(vcvars_dict)
+        with environment_append(envs):
             self._run(command)
 
     @property
