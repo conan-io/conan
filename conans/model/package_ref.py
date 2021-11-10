@@ -9,8 +9,7 @@ class PkgReference:
         self.ref = ref
         self.package_id = package_id
         self.revision = revision
-        # integer, seconds from 0 in UTC
-        self.timestamp = timestamp
+        self.timestamp = timestamp  # float, Unix seconds UTC
 
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """

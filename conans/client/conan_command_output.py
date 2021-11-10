@@ -88,7 +88,7 @@ class CommandOutputer(object):
 
             python_requires = getattr(conanfile, "python_requires", None)
             if python_requires and not isinstance(python_requires, dict):  # no old python requires
-                item_data["python_requires"] = [repr(r)
+                item_data["python_requires"] = [r.repr_notime()
                                                 for r in conanfile.python_requires.all_refs()]
 
             # Paths

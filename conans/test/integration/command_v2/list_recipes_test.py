@@ -304,5 +304,4 @@ class TestRemotes(TestListRecipesBase):
 
         self.client.run('list recipes -r "*" -c test_*')
         output = str(self.client.out)
-        print(output)
         assert bool(re.match(expected_output, output, re.MULTILINE))

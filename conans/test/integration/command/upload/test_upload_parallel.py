@@ -26,7 +26,6 @@ def test_upload_parallel_error():
     for index in range(4):
         client.run('create . lib{}/1.0@user/channel'.format(index))
     client.run('upload lib* --parallel -c --all -r default --retry-wait=0', assert_error=True)
-    print(client.out)
     assert "Connection fails with lib2 and lib4 references!" in client.out
     assert "Execute upload again to retry upload the failed files" in client.out
 

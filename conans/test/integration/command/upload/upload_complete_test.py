@@ -71,7 +71,6 @@ def test_upload_with_pattern():
         assert "Uploading hello%s/1.2.1@frodo/stable" % num in client.out
 
     client.run("upload hello0* --confirm -r default")
-    print(client.out)
     assert "hello0/1.2.1@frodo/stable#e895a89b63c4eb2055704f63e6a0d06f "\
            "already in server, skipping upload" in client.out
     assert "hello1" not in client.out
