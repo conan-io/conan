@@ -1,3 +1,4 @@
+import copy
 import fnmatch
 
 from conans.cli.output import ConanOutput
@@ -49,8 +50,10 @@ class BuildMode(object):
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
         def pattern_match(pattern_):
+            ref_no_rev = copy.copy(ref)
+            ref_no_rev.revision = None
             return (fnmatch.fnmatchcase(ref.name, pattern_) or
-                    fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern_) or
+                    fnmatch.fnmatchcase(repr(ref_no_rev), pattern_) or
                     fnmatch.fnmatchcase(repr(ref), pattern_))
 
         for pattern in self._excluded_patterns:

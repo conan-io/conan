@@ -20,8 +20,8 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference, get_reference_fields, \
-    check_valid_ref
+from conans.model.recipe_ref import RecipeReference
+from conans.model.ref import get_reference_fields, check_valid_ref, validate_recipe_reference
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -143,6 +143,8 @@ class Command(object):
         defines = dict((n, v) for n, v in (d.split('=') for d in defines))
 
         self._warn_python_version()
+        ref = RecipeReference.loads(args.name)
+        validate_recipe_reference(ref)
         self._conan_api.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                             exports_sources=args.sources, bare=args.bare,
                             gitignore=args.gitignore, template=args.template,
@@ -443,7 +445,7 @@ class Command(object):
                     raise ConanException("A full reference was provided as first argument, second "
                                          "argument not allowed")
 
-                ref = ConanFileReference.loads(args.path_or_reference, validate=False)
+                ref = RecipeReference.loads(args.path_or_reference)
                 info = self._conan_api.install_reference(ref,
                                                          settings=args.settings_host,
                                                          options=args.options_host,
@@ -721,7 +723,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            if "@" in args.path and ConanFileReference.loads(args.path):
+            if "@" in args.path and RecipeReference.loads(args.path):
                 raise ArgumentError(None,
                                     "'conan source' doesn't accept a reference anymore. "
                                     "If you were using it as a concurrency workaround, "
@@ -842,7 +844,7 @@ class Command(object):
             return self._conan_api.imports_undo(args.path)
 
         try:
-            if "@" in args.path and ConanFileReference.loads(args.path):
+            if "@" in args.path and RecipeReference.loads(args.path):
                 raise ArgumentError(None, "Parameter 'path' cannot be a reference. Use a folder "
                                           "containing a conanfile.py or conanfile.txt file.")
         except ConanException:
@@ -1147,78 +1149,6 @@ class Command(object):
         finally:
             if args.json and info:
                 CommandOutputer().json_output(info, args.json, os.getcwd())
-
-    def profile(self, *args):
-        """
-        Lists profiles in the '.conan/profiles' folder, or shows profile details.
-
-        The 'list' subcommand will always use the default user 'conan/profiles' folder. But the
-        'show' subcommand can resolve absolute and relative paths, as well as to map names to
-        '.conan/profiles' folder, in the same way as the '--profile' install argument.
-        """
-        parser = argparse.ArgumentParser(description=self.profile.__doc__,
-                                         prog="conan profile",
-                                         formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        # create the parser for the "profile" command
-        parser_list = subparsers.add_parser('list', help='List current profiles')
-        parser_list.add_argument("-j", "--json", default=None, action=OnceArgument,
-                                 help='json file path where the profile list will be written to')
-        parser_show = subparsers.add_parser('show', help='Show the values defined for a profile')
-        parser_show.add_argument('profile', help="name of the profile in the '.conan/profiles' "
-                                                 "folder or path to a profile file")
-
-        parser_new = subparsers.add_parser('new', help='Creates a new empty profile')
-        parser_new.add_argument('profile', help="Name for the profile in the '.conan/profiles' "
-                                                "folder or path and name for a profile file")
-        parser_new.add_argument("--detect", action='store_true', default=False,
-                                help='Autodetect settings and fill [settings] section')
-        parser_new.add_argument("--force", action='store_true', default=False,
-                                help='Overwrite existing profile if existing')
-
-        parser_update = subparsers.add_parser('update', help='Update a profile with desired value')
-        parser_update.add_argument('item',
-                                   help="'item=value' to update. e.g., settings.compiler=gcc")
-        parser_update.add_argument('profile', help="Name of the profile in the '.conan/profiles' "
-                                                   "folder or path to a profile file")
-
-        parser_get = subparsers.add_parser('get', help='Get a profile key')
-        parser_get.add_argument('item', help='Key of the value to get, e.g.: settings.compiler')
-        parser_get.add_argument('profile', help="Name of the profile in the '.conan/profiles' "
-                                                "folder or path to a profile file")
-
-        parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
-        parser_remove.add_argument('item', help='key, e.g.: settings.compiler')
-        parser_remove.add_argument('profile', help="Name of the profile in the '.conan/profiles' "
-                                                   "folder or path to a profile file")
-
-        args = parser.parse_args(*args)
-
-        profile = args.profile if hasattr(args, 'profile') else None
-
-        if args.subcommand == "list":
-            profiles = self._conan_api.profile_list()
-            CommandOutputer().profile_list(profiles)
-            if args.json:
-                CommandOutputer().json_output(profiles, args.json, os.getcwd())
-        elif args.subcommand == "show":
-            profile_text = self._conan_api.read_profile(profile)
-            CommandOutputer().print_profile(profile, profile_text)
-        elif args.subcommand == "new":
-            self._conan_api.create_profile(profile, args.detect, args.force)
-        elif args.subcommand == "update":
-            try:
-                key, value = args.item.split("=", 1)
-            except ValueError:
-                raise ConanException("Please specify key=value")
-            self._conan_api.update_profile(profile, key, value)
-        elif args.subcommand == "get":
-            key = args.item
-            self._out.info(self._conan_api.get_profile_key(profile, key))
-        elif args.subcommand == "remove":
-            self._conan_api.delete_profile_key(profile, args.item)
 
     def get(self, *args):
         """

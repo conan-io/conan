@@ -1,6 +1,6 @@
 import os
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import uncompress_packaged_files
 from conans.test.utils.tools import TestClient
@@ -12,7 +12,7 @@ def test_reuse_uploaded_tgz():
     # and reupload them. Because they have not changed, the tgz is not created again
 
     # UPLOAD A PACKAGE
-    ref = ConanFileReference.loads("Hello0/0.1@user/stable")
+    ref = RecipeReference.loads("Hello0/0.1@user/stable")
     files = {"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
              "another_export_file.lib": "to compress"}
     client.save(files)
@@ -47,7 +47,7 @@ def test_reuse_downloaded_tgz():
 
 def test_upload_only_tgz_if_needed():
     client = TestClient(default_server_user=True)
-    ref = ConanFileReference.loads("Hello0/0.1@user/stable")
+    ref = RecipeReference.loads("Hello0/0.1@user/stable")
     conanfile = GenConanfile("Hello0", "0.1").with_exports("*").with_package_file("lib/file.lib",
                                                                                   "File")
     client.save({"conanfile.py": conanfile,
@@ -67,7 +67,7 @@ def test_upload_only_tgz_if_needed():
     conan_path = server_paths.conan_revisions_root(ref)
     assert os.path.exists(conan_path)
 
-    latest_rrev = client.cache.get_latest_rrev(ref)
+    latest_rrev = client.cache.get_latest_recipe_reference(ref)
     package_ids = client.cache.get_package_references(latest_rrev)
     pref = package_ids[0]
 

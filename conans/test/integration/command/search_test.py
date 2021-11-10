@@ -12,7 +12,7 @@ from mock import patch
 
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
@@ -534,14 +534,14 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def _copy_to_server(self, cache, server_store):
         subdirs = list_folder_subdirs(basedir=cache.store, level=4)
-        refs = [ConanFileReference(*folder.split("/"), revision="myreciperev")
+        refs = [RecipeReference(*folder.split("/"), revision="myreciperev")
                 for folder in subdirs]
         for ref in refs:
             origin_path = self.client.get_latest_ref_layout(ref).export()
             dest_path = server_store.export(ref)
             shutil.copytree(origin_path, dest_path)
             server_store.update_last_revision(ref)
-            packages = cache.get_package_revisions(ref)
+            packages = cache.get_package_revisions_references(ref)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):

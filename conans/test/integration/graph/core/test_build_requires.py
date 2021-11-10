@@ -2,7 +2,7 @@ import pytest
 from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphError
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID
 
@@ -30,7 +30,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
             profile_build_requires = None
             conanfile = GenConanfile("app", "0.1").with_build_requires("cmake/0.1")
         else:
-            profile_build_requires = {"*": [ConanFileReference.loads("cmake/0.1")]}
+            profile_build_requires = {"*": [RecipeReference.loads("cmake/0.1")]}
             conanfile = GenConanfile("app", "0.1")
 
         deps_graph = self.build_graph(conanfile, profile_build_requires=profile_build_requires,
@@ -139,9 +139,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
         # app -> lib -(br)-> gtest
         # profile \---(br)-> mingw
         # app -(br)-> mingw
-        mingw_ref = ConanFileReference.loads("mingw/0.1@user/testing")
-        gtest_ref = ConanFileReference.loads("gtest/0.1@user/testing")
-        lib_ref = ConanFileReference.loads("lib/0.1@user/testing")
+        mingw_ref = RecipeReference.loads("mingw/0.1@user/testing")
+        gtest_ref = RecipeReference.loads("gtest/0.1@user/testing")
+        lib_ref = RecipeReference.loads("lib/0.1@user/testing")
 
         self._cache_recipe(mingw_ref, GenConanfile().with_name("mingw").with_version("0.1"))
         self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1"))
@@ -171,10 +171,10 @@ class BuildRequiresGraphTest(GraphManagerTest):
     @pytest.mark.xfail(reason="Not updated yet")
     def test_not_conflict_transitive_build_requires(self):
         # Same as above, but gtest->(build_require)->zlib2
-        zlib_ref = ConanFileReference.loads("zlib/0.1@user/testing")
-        zlib_ref2 = ConanFileReference.loads("zlib/0.2@user/testing")
-        gtest_ref = ConanFileReference.loads("gtest/0.1@user/testing")
-        lib_ref = ConanFileReference.loads("lib/0.1@user/testing")
+        zlib_ref = RecipeReference.loads("zlib/0.1@user/testing")
+        zlib_ref2 = RecipeReference.loads("zlib/0.2@user/testing")
+        gtest_ref = RecipeReference.loads("gtest/0.1@user/testing")
+        lib_ref = RecipeReference.loads("lib/0.1@user/testing")
 
         self._cache_recipe(zlib_ref, GenConanfile().with_name("zlib").with_version("0.1"))
         self._cache_recipe(zlib_ref2, GenConanfile().with_name("zlib").with_version("0.2"))
@@ -203,9 +203,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
     @pytest.mark.xfail(reason="Not updated yet")
     def test_build_require_private(self):
         # app -> lib -(br)-> cmake -(private)-> zlib
-        zlib_ref = ConanFileReference.loads("zlib/0.1@user/testing")
-        cmake_ref = ConanFileReference.loads("cmake/0.1@user/testing")
-        lib_ref = ConanFileReference.loads("lib/0.1@user/testing")
+        zlib_ref = RecipeReference.loads("zlib/0.1@user/testing")
+        cmake_ref = RecipeReference.loads("cmake/0.1@user/testing")
+        lib_ref = RecipeReference.loads("lib/0.1@user/testing")
 
         self._cache_recipe(zlib_ref, GenConanfile().with_name("zlib").with_version("0.1"))
         self._cache_recipe(cmake_ref, GenConanfile()
@@ -297,9 +297,9 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         # https://github.com/conan-io/conan/issues/4931
         # cheetah -> gazelle -> grass/0.1
         #    \--(br)----------> grass/0.2
-        grass01_ref = ConanFileReference.loads("grass/0.1@user/testing")
-        grass02_ref = ConanFileReference.loads("grass/0.2@user/testing")
-        gazelle_ref = ConanFileReference.loads("gazelle/0.1@user/testing")
+        grass01_ref = RecipeReference.loads("grass/0.1@user/testing")
+        grass02_ref = RecipeReference.loads("grass/0.2@user/testing")
+        gazelle_ref = RecipeReference.loads("gazelle/0.1@user/testing")
 
         self._cache_recipe(grass01_ref, GenConanfile().with_name("grass").with_version("0.1"))
         self._cache_recipe(grass02_ref, GenConanfile().with_name("grass").with_version("0.2"))
@@ -332,8 +332,8 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         # https://github.com/conan-io/conan/issues/4931
         # cheetah -> gazelle -> grass
         #    \--(br)------------/
-        grass01_ref = ConanFileReference.loads("grass/0.1@user/testing")
-        gazelle_ref = ConanFileReference.loads("gazelle/0.1@user/testing")
+        grass01_ref = RecipeReference.loads("grass/0.1@user/testing")
+        gazelle_ref = RecipeReference.loads("gazelle/0.1@user/testing")
 
         self._cache_recipe(grass01_ref, GenConanfile().with_name("grass").with_version("0.1"))
         self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")

@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer, TurboTestClient
 
@@ -32,7 +32,7 @@ class HelloConan(ConanFile):
         os.unlink(os.path.join(self.package_folder, "file.txt"))
 
 """
-        ref = ConanFileReference.loads("lib/1.0@conan/stable")
+        ref = RecipeReference.loads("lib/1.0@conan/stable")
         # By default it is not allowed
         client.create(ref, conanfile=conanfile, assert_error=True)
         self.assertIn("The file is a broken symlink", client.out)

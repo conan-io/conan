@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 from collections import OrderedDict
@@ -9,7 +10,7 @@ from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import save
 from conans.util.misc import make_tuple
 
@@ -18,13 +19,6 @@ class CommandOutputer(object):
 
     def __init__(self):
         self._output = ConanOutput()
-
-    def print_profile(self, profile, profile_text):
-        Printer(self._output).print_profile(profile, profile_text)
-
-    def profile_list(self, profiles):
-        for p in sorted(profiles):
-            self._output.info(p)
 
     def json_output(self, info, json_output, cwd):
         cwd = os.path.abspath(cwd or os.getcwd())
@@ -86,7 +80,7 @@ class CommandOutputer(object):
                 item_data["revision"] = ref.revision
 
             item_data["reference"] = str(ref)
-            item_data["is_ref"] = isinstance(ref, ConanFileReference)
+            item_data["is_ref"] = isinstance(ref, RecipeReference)
             item_data["display_name"] = conanfile.display_name
             item_data["id"] = package_id
             item_data["build_id"] = build_id(conanfile)
@@ -98,7 +92,7 @@ class CommandOutputer(object):
                                                 for r in conanfile.python_requires.all_refs()]
 
             # Paths
-            if isinstance(ref, ConanFileReference) and grab_paths:
+            if isinstance(ref, RecipeReference) and grab_paths:
                 # ref already has the revision ID, not needed to get it again
                 # FIXME: Not access to the cache should be available here, this information
                 #        should be provided by the conan_api
@@ -107,8 +101,8 @@ class CommandOutputer(object):
                 # item_data["export_folder"] = ref_layout.export()
                 # item_data["source_folder"] = ref_layout.source()
                 # pref_build_id = build_id(conanfile) or package_id
-                # pref_build = self._cache.get_latest_prev(PackageReference(ref, pref_build_id))
-                # pref_package = self._cache.get_latest_prev(PackageReference(ref, package_id))
+                # pref_build = self._cache.get_latest_package_reference(PackageReference(ref, pref_build_id))
+                # pref_package = self._cache.get_latest_package_reference(PackageReference(ref, package_id))
                 # item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
                 # item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
 
@@ -135,7 +129,7 @@ class CommandOutputer(object):
             _add_if_exists("provides", as_list=True)
             _add_if_exists("scm")
 
-            if isinstance(ref, ConanFileReference):
+            if isinstance(ref, RecipeReference):
                 item_data["recipe"] = node.recipe
 
                 item_data["revision"] = node.ref.revision
@@ -149,7 +143,7 @@ class CommandOutputer(object):
             if node_times and node_times.get(ref, None):
                 item_data["creation_date"] = node_times.get(ref, None)
 
-            if isinstance(ref, ConanFileReference):
+            if isinstance(ref, RecipeReference):
                 dependants = [n for node in list_nodes for n in node.inverse_neighbors()]
                 required = [d.conanfile for d in dependants if d.recipe != RECIPE_VIRTUAL]
                 if required:
@@ -160,11 +154,18 @@ class CommandOutputer(object):
             build_requires = [d for d in depends if d in build_time_nodes]  # TODO: May use build_require_context information
 
             if requires:
-                item_data["requires"] = [repr(d.ref.copy_clear_rev()) for d in requires]
+                item_data["requires"] = []
+                for d in requires:
+                    _tmp = copy.copy(d.ref)
+                    _tmp.revision = None
+                    item_data["requires"].append(repr(_tmp))
 
             if build_requires:
-                item_data["build_requires"] = [repr(d.ref.copy_clear_rev())
-                                               for d in build_requires]
+                item_data["build_requires"] = []
+                for d in build_requires:
+                    _tmp = copy.copy(d.ref)
+                    _tmp.revision = None
+                    item_data["build_requires"].append(repr(_tmp))
 
             ret.append(item_data)
 

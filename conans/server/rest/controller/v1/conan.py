@@ -6,7 +6,7 @@ from bottle import request
 from conans import DEFAULT_REVISION_V1
 from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.service.v1.service import ConanService
 
@@ -26,7 +26,7 @@ class ConanController(object):
             Get a dictionary with all files and their each md5s
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            ref = ConanFileReference(name, version, username, channel)
+            ref = RecipeReference(name, version, username, channel)
             snapshot = conan_service.get_recipe_snapshot(ref)
             snapshot_norm = {filename.replace("\\", "/"): the_md5
                              for filename, the_md5 in snapshot.items()}
@@ -38,7 +38,7 @@ class ConanController(object):
             Get a dict with all files and the download url
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            ref = ConanFileReference(name, version, username, channel)
+            ref = RecipeReference(name, version, username, channel)
             try:
                 urls = conan_service.get_conanfile_download_urls(ref)
             except NotFoundException:
@@ -52,7 +52,7 @@ class ConanController(object):
             Get a dict with all packages files and the download url for each one
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            ref = ConanFileReference(name, version, username, channel)
+            ref = RecipeReference(name, version, username, channel)
             pref = PkgReference(ref, package_id)
             try:
                 urls = conan_service.get_package_download_urls(pref)
@@ -68,7 +68,7 @@ class ConanController(object):
             Get a dict with all files and the upload url
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            ref = ConanFileReference(name, version, username, channel, DEFAULT_REVISION_V1)
+            ref = RecipeReference(name, version, username, channel, DEFAULT_REVISION_V1)
             reader = codecs.getreader("utf-8")
             filesizes = json.load(reader(request.body))
             urls = conan_service.get_conanfile_upload_urls(ref, filesizes)
@@ -82,7 +82,7 @@ class ConanController(object):
             Get a dict with all files and the upload url
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            ref = ConanFileReference(name, version, username, channel, DEFAULT_REVISION_V1)
+            ref = RecipeReference(name, version, username, channel, DEFAULT_REVISION_V1)
             pref = PkgReference(ref, package_id, DEFAULT_REVISION_V1)
 
             reader = codecs.getreader("utf-8")

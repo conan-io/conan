@@ -5,7 +5,7 @@ import textwrap
 import pytest
 from jinja2 import Template
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 """
@@ -118,13 +118,13 @@ main_cpp = textwrap.dedent("""
 
 @pytest.fixture(scope="module")
 def client():
-    libZ_ref = ConanFileReference.loads("libZ/version")
-    libH2_ref = ConanFileReference.loads("header2/version")
-    libH_ref = ConanFileReference.loads("header/version")
-    libA_ref = ConanFileReference.loads("libA/version")
-    libB_ref = ConanFileReference.loads("libB/version")
-    libC_ref = ConanFileReference.loads("libC/version")
-    libD_ref = ConanFileReference.loads("libD/version")
+    libZ_ref = RecipeReference.loads("libZ/version")
+    libH2_ref = RecipeReference.loads("header2/version")
+    libH_ref = RecipeReference.loads("header/version")
+    libA_ref = RecipeReference.loads("libA/version")
+    libB_ref = RecipeReference.loads("libB/version")
+    libC_ref = RecipeReference.loads("libC/version")
+    libD_ref = RecipeReference.loads("libD/version")
 
     t = TestClient(path_with_spaces=False)
     t.save({

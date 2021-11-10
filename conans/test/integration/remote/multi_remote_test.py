@@ -5,7 +5,7 @@ from time import sleep
 
 from mock import patch
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
@@ -191,7 +191,7 @@ class MultiRemoteTest(unittest.TestCase):
 
     def test_install_from_remotes(self):
         for i in range(3):
-            ref = ConanFileReference.loads("Hello%d/0.1@lasote/stable" % i)
+            ref = RecipeReference.loads("Hello%d/0.1@lasote/stable" % i)
             self.client.save({"conanfile.py": GenConanfile("Hello%d" % i, "0.1")})
             self.client.run("export . lasote/stable")
             self.client.run("upload %s -r=remote%d" % (str(ref), i))

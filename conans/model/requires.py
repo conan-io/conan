@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from conans.errors import ConanException
 from conans.model.pkg_type import PackageType
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 
 
 class Requirement:
@@ -41,16 +41,16 @@ class Requirement:
         """ returns the version range expression, without brackets []
         or None if it is not an expression
         """
-        version = self.ref.version
+        version = repr(self.ref.version)
         if version.startswith("[") and version.endswith("]"):
             return version[1:-1]
 
     @property
     def alias(self):
-        version = self.ref.version
+        version = repr(self.ref.version)
         if version.startswith("(") and version.endswith(")"):
-            return ConanFileReference(self.ref.name, version[1:-1], self.ref.user, self.ref.channel,
-                                      self.ref.revision, validate=False)
+            return RecipeReference(self.ref.name, version[1:-1], self.ref.user, self.ref.channel,
+                                   self.ref.revision)
 
     def process_package_type(self, node):
         """ if the run=None, it means it can be deduced from the shared option of the dependency
@@ -226,7 +226,7 @@ class Requirements:
     # TODO: Plan the interface for smooth transition from 1.X
     def __call__(self, str_ref, **kwargs):
         assert isinstance(str_ref, str)
-        ref = ConanFileReference.loads(str_ref)
+        ref = RecipeReference.loads(str_ref)
         req = Requirement(ref, **kwargs)
         if self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
@@ -234,7 +234,7 @@ class Requirements:
 
     def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False):
         # FIXME: This raise_if_duplicated is ugly, possibly remove
-        ref = ConanFileReference.loads(ref)
+        ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=True, visible=visible,
                           package_id_mode=package_id_mode)
         if raise_if_duplicated and self._requires.get(req):
@@ -253,7 +253,7 @@ class Requirements:
             self._requires[req] = req
 
     def test_require(self, ref):
-        ref = ConanFileReference.loads(ref)
+        ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=True, libs=True, build=False, run=None, visible=False,
                           test=True, package_id_mode=None)
         if self._requires.get(req):

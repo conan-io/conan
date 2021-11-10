@@ -5,13 +5,13 @@ import pytest
 
 from conans.assets.templates import SEARCH_TABLE_HTML, INFO_GRAPH_DOT, INFO_GRAPH_HTML
 from conans.client.tools import save
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class UserOverridesTemplatesTestCase(unittest.TestCase):
-    lib_ref = ConanFileReference.loads("lib/version")
-    app_ref = ConanFileReference.loads("app/version")
+    lib_ref = RecipeReference.loads("lib/version")
+    app_ref = RecipeReference.loads("app/version")
 
     @classmethod
     def setUpClass(cls):

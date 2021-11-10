@@ -6,7 +6,7 @@ import unittest
 import pytest
 
 from conans.client import tools
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import load, save
 
@@ -296,10 +296,12 @@ class MyPkg(ConanFile):
                     raise Exception("Build error")
             """)
         client.save({"conanfile.py": conanfile})
-        ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
-        client.run("create . %s" % ref.full_str(), assert_error=True)
+
+        ref = RecipeReference("pkg", "0.1", "danimtb", "testing")
+        client.run("create . %s" % repr(ref), assert_error=True)
+
         self.assertIn("Build error", client.out)
-        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         assert pref is None
 
     def test_create_with_name_and_version(self):
@@ -347,11 +349,11 @@ class MyPkg(ConanFile):
                                                    .with_require("Hello/0.1")})
         client.run("create .")
 
-        ref = ConanFileReference.loads("Bye/0.1")
+        ref = RecipeReference.loads("Bye/0.1")
 
-        refs = client.cache.get_latest_rrev(ref)
+        refs = client.cache.get_latest_recipe_reference(ref)
         pkgs = client.cache.get_package_references(refs)
-        prev = client.cache.get_latest_prev(pkgs[0])
+        prev = client.cache.get_latest_package_reference(pkgs[0])
         package_folder = client.cache.pkg_layout(prev).package()
 
         conaninfo = load(os.path.join(package_folder, "conaninfo.txt"))
