@@ -129,6 +129,7 @@ class PackagesDBTable(BaseDbTable):
             yield self._as_dict(self.row_type(*row))
 
     def get_package_references(self, ref: RecipeReference):
+        # Return the latest revisions
         assert ref.revision, "To search for package id's you must provide a recipe revision."
         # we select the latest prev for each package_id
         query = f'SELECT {self.columns.reference}, ' \
@@ -136,14 +137,12 @@ class PackagesDBTable(BaseDbTable):
                 f'{self.columns.pkgid}, ' \
                 f'{self.columns.prev}, ' \
                 f'{self.columns.path}, ' \
-                f'{self.columns.timestamp}, ' \
+                f'MAX({self.columns.timestamp}), ' \
                 f'{self.columns.build_id} ' \
                 f'FROM {self.table_name} ' \
                 f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
                 f'AND {self.columns.reference} = "{str(ref)}" ' \
-                f'AND {self.columns.pkgid} IS NOT NULL ' \
-                f'GROUP BY {self.columns.pkgid} ' \
-                f'ORDER BY {self.columns.timestamp} DESC'
+                f'GROUP BY {self.columns.pkgid} '
         r = self._conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))

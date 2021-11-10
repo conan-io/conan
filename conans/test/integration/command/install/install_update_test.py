@@ -29,7 +29,7 @@ def test_update_binaries():
     value = load(os.path.join(client2.current_folder, "file.txt"))
 
     time.sleep(1)  # Make sure the new timestamp is later
-    client.run("create . Pkg/0.1@lasote/testing")
+    client.run("create . Pkg/0.1@lasote/testing")  # Because of random, this should be NEW prev
     client.run("upload Pkg/0.1@lasote/testing --all -r default")
 
     client2.run("install Pkg/0.1@lasote/testing")
