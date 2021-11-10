@@ -28,7 +28,8 @@ class GraphManager(object):
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
         # FIXME: Make "conan source" build the whole graph. Do it in another PR
         profile_loader = ProfileLoader(self._cache)
-        profile_host = profile_loader.from_cli_args(None, None, None, None, None, os.getcwd())
+        profiles = [profile_loader.get_default_host()]
+        profile_host = profile_loader.from_cli_args(profiles, None, None, None, None, os.getcwd())
 
         name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):

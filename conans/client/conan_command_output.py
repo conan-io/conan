@@ -20,13 +20,6 @@ class CommandOutputer(object):
     def __init__(self):
         self._output = ConanOutput()
 
-    def print_profile(self, profile, profile_text):
-        Printer(self._output).print_profile(profile, profile_text)
-
-    def profile_list(self, profiles):
-        for p in sorted(profiles):
-            self._output.info(p)
-
     def json_output(self, info, json_output, cwd):
         cwd = os.path.abspath(cwd or os.getcwd())
         if not os.path.isabs(json_output):

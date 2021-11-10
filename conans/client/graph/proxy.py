@@ -92,7 +92,7 @@ class ConanProxy(object):
                         status = RECIPE_INCACHE
                     else:
                         selected_remote = remote
-                        self._cache.set_recipe_timestamp(remote_ref)
+                        self._cache.update_recipe_timestamp(remote_ref)
                         status = RECIPE_INCACHE_DATE_UPDATED
                 return conanfile_path, status, selected_remote, ref
             else:
@@ -140,7 +140,7 @@ class ConanProxy(object):
             if not reference.revision:
                 reference = self._remote_manager.get_latest_recipe_reference(ref, remote)
             self._remote_manager.get_recipe(reference, the_remote)
-            self._cache.set_recipe_timestamp(reference)
+            self._cache.update_recipe_timestamp(reference)
             scoped_output.info("Downloaded recipe revision %s" % reference.revision)
             return reference
 
