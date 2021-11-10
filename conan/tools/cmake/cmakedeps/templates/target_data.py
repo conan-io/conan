@@ -64,8 +64,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_INCLUDE_DIRS{{ config_suffix }} {{ global_cpp.include_paths }})
               set({{ pkg_name }}_RES_DIRS{{ config_suffix }} {{ global_cpp.res_paths }})
               set({{ pkg_name }}_DEFINITIONS{{ config_suffix }} {{ global_cpp.defines }})
-              set({{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }} "{{ global_cpp.sharedlinkflags_list }}")
-              set({{ pkg_name }}_EXE_LINK_FLAGS{{ config_suffix }} "{{ global_cpp.exelinkflags_list }}")
+              set({{ pkg_name }}_SHARED_LINK_FLAGS{{ config_suffix }} {{ global_cpp.sharedlinkflags_list }})
+              set({{ pkg_name }}_EXE_LINK_FLAGS{{ config_suffix }} {{ global_cpp.exelinkflags_list }})
               set({{ pkg_name }}_OBJECTS{{ config_suffix }} {{ global_cpp.objects_list }})
               set({{ pkg_name }}_COMPILE_DEFINITIONS{{ config_suffix }} {{ global_cpp.compile_definitions }})
               set({{ pkg_name }}_COMPILE_OPTIONS_C{{ config_suffix }} {{ global_cpp.cflags_list }})
@@ -174,10 +174,13 @@ class DepsCppCmake(object):
                     ret.append('"${%s}/%s"' % (pfolder_var_name, norm_path))
             return "\n\t\t\t".join(ret)
 
-        def join_flags(separator, values):
+        def join_flags(separator, values, as_string=False):
             # Flags have to be escaped
-            return separator.join(v.replace('\\', '\\\\').replace('$', '\\$').replace('"', '\\"')
-                                  for v in values)
+            ret = separator.join(v.replace('\\', '\\\\').replace('$', '\\$').replace('"', '\\"')
+                                 for v in values)
+            if as_string:
+                ret = '"%s"' % ret
+            return ret
 
         def join_defines(values, prefix=""):
             # Defines have to be escaped, included spaces
@@ -215,8 +218,8 @@ class DepsCppCmake(object):
         # linker flags without magic: trying to mess with - and / =>
         # https://github.com/conan-io/conan/issues/8811
         # frameworks should be declared with cppinfo.frameworks not "-framework Foundation"
-        self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
-        self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
+        self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags, as_string=True)
+        self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags, as_string=True)
 
         self.objects_list = join_paths(cpp_info.objects)
 
