@@ -96,7 +96,7 @@ class DataCache:
         assert pref.package_id, "Package id must be known to get the package layout"
         assert pref.revision, "Package revision must be known to get the package layout"
         pref_data = self._db.try_get_package(pref)
-        assert os.path.isdir(pref_path)
+        pref_path = pref_data.get("path")
         return PackageLayout(pref, os.path.join(self.base_folder, pref_path))
 
     def get_or_create_ref_layout(self, ref: RecipeReference):
