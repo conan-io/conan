@@ -8,6 +8,7 @@ import pytest
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
+
 @pytest.mark.tool_meson
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 # for Linux, build for x86 will require a multilib compiler
@@ -46,7 +47,7 @@ def test_cross_x86():
         include(default)
         [settings]
         arch=x86
-        [env]
+        [buildenv]
         CC=cl
         CXX=cl
         """)
