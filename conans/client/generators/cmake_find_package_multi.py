@@ -166,14 +166,14 @@ endforeach()
     components_targets_tpl = Template(textwrap.dedent("""\
         {%- for comp_name, comp in components %}
 
-        if(NOT TARGET {{ pkg_namespace }}::{{ comp_name }})
-            add_library({{ pkg_namespace }}::{{ comp_name }} INTERFACE IMPORTED)
+        if(NOT TARGET {{ namespace }}::{{ comp_name }})
+            add_library({{ namespace }}::{{ comp_name }} INTERFACE IMPORTED)
         endif()
 
         {%- endfor %}
 
-        if(NOT TARGET {{ pkg_namespace }}::{{ pkg_name }})
-            add_library({{ pkg_namespace }}::{{ pkg_name }} INTERFACE IMPORTED)
+        if(NOT TARGET {{ namespace }}::{{ pkg_name }})
+            add_library({{ namespace }}::{{ pkg_name }} INTERFACE IMPORTED)
         endif()
 
         # Load the debug and release library finders
@@ -186,7 +186,7 @@ endforeach()
 
         if({{ pkg_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ pkg_namespace }}::${_FIND_COMPONENT}" _index)
+                list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ namespace }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 else()
@@ -237,20 +237,20 @@ endforeach()
 
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
 
-        set_property(TARGET {{ pkg_namespace }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config)}}
                         {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS_LIST', config)}}>
                      {%- endfor %})
-        set_property(TARGET {{ pkg_namespace }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config)}}>
                      {%- endfor %})
-        set_property(TARGET {{ pkg_namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', config)}}>
                      {%- endfor %})
-        set_property(TARGET {{ pkg_namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
+        set_property(TARGET {{ namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:
                          {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_C', config)}}
@@ -263,7 +263,7 @@ endforeach()
         ########## GLOBAL TARGET PROPERTIES #########################################################
 
         if(NOT {{ pkg_name }}_{{ pkg_name }}_TARGET_PROPERTIES)
-            set_property(TARGET {{ pkg_namespace }}::{{ pkg_name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+            set_property(TARGET {{ namespace }}::{{ pkg_name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
                          {%- for config in configs %}
                          $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
                          {%- endfor %})
@@ -366,7 +366,7 @@ endforeach()
                 ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = variables
                 targets = self.components_targets_tpl.render(
                     pkg_name=pkg_findname,
-                    pkg_namespace=pkg_namespace,
+                    namespace=pkg_namespace,
                     pkg_filename=pkg_filename,
                     components=components,
                     build_type=build_type
@@ -374,7 +374,7 @@ endforeach()
                 ret["{}Targets.cmake".format(pkg_filename)] = targets
                 target_config = self.components_config_tpl.render(
                     pkg_name=pkg_findname,
-                    pkg_namespace=pkg_namespace,
+                    namespace=pkg_namespace,
                     pkg_filename=pkg_filename,
                     components=components,
                     pkg_public_deps=pkg_public_deps_filenames,

@@ -76,7 +76,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
         if({{ pkg_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_name }}_COMPONENTS "{{ pkg_namespace }}::${_FIND_COMPONENT}" _index)
+                list(FIND {{ pkg_name }}_COMPONENTS "{{ namespace }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 else()
@@ -172,17 +172,17 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
             # Target approach
-            if(NOT TARGET {{ pkg_namespace }}::{{ comp_name }})
-                add_library({{ pkg_namespace }}::{{ comp_name }} INTERFACE IMPORTED)
-                set_target_properties({{ pkg_namespace }}::{{ comp_name }} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+            if(NOT TARGET {{ namespace }}::{{ comp_name }})
+                add_library({{ namespace }}::{{ comp_name }} INTERFACE IMPORTED)
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
                                       "{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS}' }}")
-                set_target_properties({{ pkg_namespace }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_DIRECTORIES
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_DIRECTORIES
                                       "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS}' }}")
-                set_target_properties({{ pkg_namespace }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
                                       "{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS}' }};{{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST}' }}")
-                set_target_properties({{ pkg_namespace }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
                                       "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS}' }}")
-                set_target_properties({{ pkg_namespace }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
                                       "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C}' }};{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX}' }}")
             endif()
         endif()
@@ -192,10 +192,10 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         ########## GLOBAL TARGET ####################################################################
 
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
-            if(NOT TARGET {{ pkg_namespace }}::{{ pkg_name }})
-                add_library({{ pkg_namespace }}::{{ pkg_name }} INTERFACE IMPORTED)
+            if(NOT TARGET {{ namespace }}::{{ pkg_name }})
+                add_library({{ namespace }}::{{ pkg_name }} INTERFACE IMPORTED)
             endif()
-            set_property(TARGET {{ pkg_namespace }}::{{ pkg_name }} APPEND PROPERTY
+            set_property(TARGET {{ namespace }}::{{ pkg_name }} APPEND PROPERTY
                          INTERFACE_LINK_LIBRARIES "{{ '${'+pkg_name+'_COMPONENTS}' }}")
         endif()
 
@@ -273,7 +273,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                                                              deps_names=deps_names)
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
-                pkg_namespace=pkg_namespace,
+                namespace=pkg_namespace,
                 pkg_filename=pkg_filename,
                 pkg_version=pkg_version,
                 pkg_components=pkg_components,
