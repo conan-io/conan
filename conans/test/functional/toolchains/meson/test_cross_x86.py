@@ -58,8 +58,7 @@ def test_cross_x86():
                  "main.cpp": main_cpp,
                  "x86": profile_x86})
     profile_str = "--profile:build=default --profile:host=x86"
-    client.run("install . %s" % profile_str)
-    client.run("build .")
+    client.run("build . %s" % profile_str)
     client.run_command(os.path.join("build", "demo"))
 
     assert "main _M_IX86 defined" in client.out
