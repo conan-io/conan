@@ -6,7 +6,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
 from conans.client.build.cppstd_flags import cppstd_from_settings
-from conans.client.tools.oss import cross_building, get_cross_building_settings
+from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conans.util.files import save
 
 
