@@ -228,6 +228,13 @@ class _CppInfo(object):
         return self.get_property(property_name, generator) \
                or self.names.get(generator, self._name if default_name else None)
 
+    # To provide compatibility for legacy generators with cmake_target_namespace
+    # and make migration easier
+    def get_namespace(self, generator):
+        if generator == "cmake_find_package" or "cmake_find_package_multi":
+            namespace = self.get_property("cmake_target_namespace", generator)
+            return namespace
+
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
     def get_filename(self, generator, default_name=True):
         if generator == "cmake_find_package" and self.get_property("cmake_module_file_name", generator):

@@ -227,10 +227,13 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
             pkg_filename = self._get_filename(cpp_info)
             pkg_findname = self._get_name(cpp_info)
+            pkg_namespace = self._get_namespace(cpp_info)
+            pkg_namespace = pkg_namespace or pkg_findname
             ret["Find%s.cmake" % pkg_filename] = self._find_for_dep(
                 pkg_name=pkg_name,
                 pkg_findname=pkg_findname,
                 pkg_filename=pkg_filename,
+                pkg_namespace=pkg_namespace,
                 cpp_info=cpp_info
             )
         return ret
@@ -245,7 +248,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
             ret.append((comp_genname, deps_cpp_cmake))
         return ret
 
-    def _find_for_dep(self, pkg_name, pkg_findname, pkg_filename, cpp_info):
+    def _find_for_dep(self, pkg_name, pkg_findname, pkg_filename, pkg_namespace, cpp_info):
         # return the content of the FindXXX.cmake file for the package "pkg_name"
         self._validate_components(cpp_info)
 
@@ -263,14 +266,15 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         if cpp_info.components:
             components = self._get_components(pkg_name, cpp_info)
             # Note these are in reversed order, from more dependent to less dependent
-            pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
+            pkg_components = " ".join(["{p}::{c}".format(p=pkg_namespace, c=comp_findname) for
                                        comp_findname, _ in reversed(components)])
             pkg_info = DepsCppCmake(cpp_info, self.name)
-            global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
-                                                             build_type_suffix="",
+            global_target_variables = target_template.format(name=pkg_findname, namespace=pkg_namespace,
+                                                             deps=pkg_info, build_type_suffix="",
                                                              deps_names=deps_names)
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
+                namespace=pkg_namespace,
                 pkg_filename=pkg_filename,
                 pkg_version=pkg_version,
                 pkg_components=pkg_components,
@@ -296,8 +300,8 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
             # The find_libraries_block, all variables for the package, and creation of targets
             deps = DepsCppCmake(dep_cpp_info, self.name)
-            find_libraries_block = target_template.format(name=pkg_findname, deps=deps,
-                                                          build_type_suffix="",
+            find_libraries_block = target_template.format(name=pkg_findname, namespace=pkg_namespace,
+                                                          deps=deps, build_type_suffix="",
                                                           deps_names=deps_names)
 
             # The find_transitive_dependencies block
@@ -309,7 +313,8 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                 find_dependencies_block = ''.join("        " + line if line.strip() else line
                                                   for line in f.splitlines(True))
 
-            return self.find_template.format(name=pkg_findname, version=pkg_version,
+            return self.find_template.format(name=pkg_findname, namespace=pkg_namespace,
+                                             version=pkg_version,
                                              filename=pkg_filename,
                                              find_libraries_block=find_libraries_block,
                                              find_dependencies_block=find_dependencies_block,

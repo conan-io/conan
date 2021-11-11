@@ -289,6 +289,62 @@ def test_cmake_find_package_new_properties():
     assert find_package_contents_old == find_package_contents
 
 
+def test_cmake_find_package_target_namespace():
+    # https://github.com/conan-io/conan/issues/9946
+
+    client = TestClient()
+
+    lib = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            settings = "build_type"
+            name = "lib"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_namespace", "lib_namespace")
+                self.cpp_info.set_property("cmake_target_name", "lib_name")
+                self.cpp_info.components["lib_component"].set_property("cmake_target_name", "MyLibComponent")
+        """)
+
+    pkg = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        class MyLib(ConanFile):
+            settings = "build_type"
+            name = "pkg"
+            version = "1.0"
+            def package_info(self):
+                # self.cpp_info.set_property("cmake_target_namespace", "pkg_namespace")
+                self.cpp_info.set_property("cmake_target_name", "pkg_name")
+                self.cpp_info.components["pkg_component"].set_property("cmake_target_name", "MyPkgComponent")
+        """)
+
+    greetings = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            settings = "build_type"
+            name = "greetings"
+            version = "1.0"
+            requires = "pkg/1.0", "lib/1.0"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_namespace", "greetings_namespace")
+                self.cpp_info.set_property("cmake_target_name", "greetings_name")
+                self.cpp_info.components["bye"].requires = ["lib::lib_component"]
+                self.cpp_info.components["hello"].requires = ["pkg::pkg_component"]
+        """)
+    client.save({"pkg.py": pkg, "lib.py": lib, "greetings.py": greetings})
+    client.run("create lib.py lib/1.0@")
+    client.run("create pkg.py pkg/1.0@")
+    client.run("create greetings.py greetings/1.0@")
+    client.run("install greetings/1.0@ -g cmake_find_package")
+    print("jandernauer")
+    # find_package_contents = client.load("FindMyChat.cmake")
+    # assert "add_library(MyChat::MyChat" in find_package_contents
+    # assert "set(MyChat_COMPONENTS MyChat::MySay MyChat::MySayBye)" in find_package_contents
+
+
 def test_legacy_cmake_is_not_affected_by_set_property_usage():
     """
     "set_property" will have no effect on "cmake" legacy generator
