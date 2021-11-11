@@ -241,3 +241,26 @@ def test_same_results_specific_generators(setup_client):
     old_approach_contents = get_files_contents(client, files_to_compare)
 
     assert new_approach_contents == old_approach_contents
+
+
+@pytest.mark.xfail(reason="This depends on GeneratorComponentsMixin, which is to be removed")
+def test_pkg_config_names(setup_client):
+    client = setup_client
+    mypkg = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            settings = "build_type"
+            name = "mypkg"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
+                self.cpp_info.components["mycomponent"].set_property("pkg_config_name", "mypkg-config-name")
+        """)
+
+    client.save({"mypkg.py": mypkg})
+    client.run("export mypkg.py")
+    client.run("install consumer.py --build missing")
+
+    with open(os.path.join(client.current_folder, "mypkg-config-name.pc")) as gen_file:
+        assert "mypkg-config-name" in gen_file.read()

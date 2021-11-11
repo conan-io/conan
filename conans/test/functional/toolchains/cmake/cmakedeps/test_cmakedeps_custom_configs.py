@@ -10,7 +10,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
-from conans.util.files import save, load
+from conans.util.files import save
 
 
 @pytest.mark.tool_cmake
@@ -25,7 +25,6 @@ class CustomConfigurationTest(unittest.TestCase):
 
             def generate(self):
                 cmake = CMakeDeps(self)
-                cmake.configurations.append("ReleaseShared")
                 if self.dependencies["hello"].options.shared:
                     cmake.configuration = "ReleaseShared"
                 cmake.generate()
