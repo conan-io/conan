@@ -1,4 +1,4 @@
-import copy
+import os
 import os
 import shutil
 import time
@@ -15,7 +15,6 @@ from conans.errors import ConanConnectionError, ConanException, NotFoundExceptio
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
