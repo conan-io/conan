@@ -301,7 +301,6 @@ def test_cmake_find_package_target_namespace():
             name = "hello"
             version = "1.0"
             def package_info(self):
-                self.cpp_info.set_property("cmake_target_name", "hello_target_name")
                 self.cpp_info.components["helloworld"].set_property("cmake_target_name", "HelloWorld")
                 {}
 
@@ -316,7 +315,6 @@ def test_cmake_find_package_target_namespace():
             version = "1.0"
             requires = "hello/1.0"
             def package_info(self):
-                self.cpp_info.set_property("cmake_target_name", "greetings_target_name")
                 self.cpp_info.components["greetingshello"].requires = ["hello::helloworld"]
                 {}
         """)
@@ -327,34 +325,32 @@ def test_cmake_find_package_target_namespace():
     client.run("create greetings.py greetings/1.0@")
     client.run("install greetings/1.0@ -g cmake_find_package")
     hello_contents = client.load("Findhello.cmake")
-    assert "set(hello_target_name_COMPONENTS hello_namespace::HelloWorld)" in hello_contents
+    assert "set(hello_COMPONENTS hello_namespace::HelloWorld)" in hello_contents
     assert "add_library(hello_namespace::HelloWorld INTERFACE IMPORTED)" in hello_contents
-    assert "add_library(hello_namespace::hello_target_name INTERFACE IMPORTED)" in hello_contents
+    assert "add_library(hello_namespace::hello INTERFACE IMPORTED)" in hello_contents
     greetings_contents = client.load("Findgreetings.cmake")
-    assert "set(greetings_target_name_COMPONENTS greetings_namespace::greetingshello)" in greetings_contents
+    assert "set(greetings_COMPONENTS greetings_namespace::greetingshello)" in greetings_contents
     assert "add_library(greetings_namespace::greetingshello INTERFACE IMPORTED)" in greetings_contents
-    assert "add_library(greetings_namespace::greetings_target_name INTERFACE IMPORTED)" in greetings_contents
+    assert "add_library(greetings_namespace::greetings INTERFACE IMPORTED)" in greetings_contents
 
     # check that the contents with the namespace that equals the default
     # generates exactly the same files
-    client.save({"1/hello.py": hello.format('self.cpp_info.set_property("cmake_target_namespace", "hello")'),
-                 "1/greetings.py": greetings.format('self.cpp_info.set_property("cmake_target_namespace", "greetings")')},
+    client.save({"hello.py": hello.format('self.cpp_info.set_property("cmake_target_namespace", "hello")'),
+                 "greetings.py": greetings.format('self.cpp_info.set_property("cmake_target_namespace", "greetings")')},
                 clean_first=True)
-    client.run("create 1/hello.py hello/1.0@")
-    client.run("create 1/greetings.py greetings/1.0@")
-    with client.chdir("1"):
-        client.run("install greetings/1.0@ -g cmake_find_package")
-    hello_namespace = client.load("1/Findhello.cmake")
-    greetings_namespace = client.load("1/Findgreetings.cmake")
+    client.run("create hello.py hello/1.0@")
+    client.run("create greetings.py greetings/1.0@")
+    client.run("install greetings/1.0@ -g cmake_find_package")
+    hello_namespace = client.load("Findhello.cmake")
+    greetings_namespace = client.load("Findgreetings.cmake")
 
-    client.save({"2/hello.py": hello.format(''),
-                 "2/greetings.py": greetings.format('')})
-    client.run("create 2/hello.py hello/1.0@")
-    client.run("create 2/greetings.py greetings/1.0@")
-    with client.chdir("2"):
-        client.run("install greetings/1.0@ -g cmake_find_package")
-    hello_no_namespace = client.load("2/Findhello.cmake")
-    greetings_no_namespace = client.load("2/Findgreetings.cmake")
+    client.save({"hello.py": hello.format(''),
+                 "greetings.py": greetings.format('')})
+    client.run("create hello.py hello/1.0@")
+    client.run("create greetings.py greetings/1.0@")
+    client.run("install greetings/1.0@ -g cmake_find_package")
+    hello_no_namespace = client.load("Findhello.cmake")
+    greetings_no_namespace = client.load("Findgreetings.cmake")
 
     assert hello_namespace == hello_no_namespace
     assert greetings_namespace == greetings_no_namespace
