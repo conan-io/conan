@@ -289,10 +289,9 @@ def test_cmake_find_package_new_properties():
     assert find_package_contents_old == find_package_contents
 
 
-#@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
-def test_cmake_find_package_target_namespace():
+@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
+def test_cmake_find_package_target_namespace(generator):
     # https://github.com/conan-io/conan/issues/9946
-    generator = "cmake_find_package_multi"
     client = TestClient()
     hello = textwrap.dedent("""
         import os
