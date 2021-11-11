@@ -92,7 +92,6 @@ args_to_string = tools_oss.args_to_string
 OSInfo = tools_oss.OSInfo
 cross_building = tools_oss.cross_building
 get_cross_building_settings = tools_oss.get_cross_building_settings
-get_gnu_triplet = tools_oss.get_gnu_triplet
 
 
 def cpu_count(*args, **kwargs):
