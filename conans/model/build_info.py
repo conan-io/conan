@@ -231,7 +231,7 @@ class _CppInfo(object):
     # To provide compatibility for legacy generators with cmake_target_namespace
     # and make migration easier
     def get_namespace(self, generator):
-        if generator == "cmake_find_package" or "cmake_find_package_multi":
+        if generator == "cmake_find_package" or generator == "cmake_find_package_multi":
             namespace = self.get_property("cmake_target_namespace", generator)
             return namespace
 
