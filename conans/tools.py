@@ -63,19 +63,14 @@ def save(path, content, append=False):
 
 # from conans.client.tools.files
 chdir = tools_files.chdir
-human_size = tools_files.human_size
 untargz = tools_files.untargz
 check_with_algorithm_sum = tools_files.check_with_algorithm_sum
 check_sha1 = tools_files.check_sha1
 check_md5 = tools_files.check_md5
 check_sha256 = tools_files.check_sha256
-patch = tools_files.patch
 replace_prefix_in_pc_file = tools_files.replace_prefix_in_pc_file
 collect_libs = tools_files.collect_libs
 which = tools_files.which
-unix2dos = tools_files.unix2dos
-dos2unix = tools_files.dos2unix
-rename = tools_files.rename
 fix_symlinks = tools_files.fix_symlinks
 remove_files_by_mask = tools_files.remove_files_by_mask
 

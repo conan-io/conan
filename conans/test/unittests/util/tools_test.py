@@ -411,27 +411,6 @@ class HelloConan(ConanFile):
             output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
             self.assertIn(payload, str(output))
 
-    def test_unix_to_dos_conanfile(self):
-        client = TestClient()
-        conanfile = """
-import os
-from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    exports_sources = "file.txt"
-
-    def build(self):
-        assert("\\r\\n" in tools.load("file.txt"))
-        tools.dos2unix("file.txt")
-        assert("\\r\\n" not in tools.load("file.txt"))
-        tools.unix2dos("file.txt")
-        assert("\\r\\n" in tools.load("file.txt"))
-"""
-        client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
-        client.run("create . user/channel")
-
 
 class CollectLibTestCase(unittest.TestCase):
 
