@@ -44,7 +44,7 @@ class QbsModuleTemplate(object):
         def create_module(conanfile, comp, comp_name):
             return {"{}.{}".format(utils.get_module_name(conanfile),
                                    utils.get_component_name(comp, comp_name)):
-                    self.conanfile.ref.version}
+                    conanfile.ref.version}
 
         cpp_info = self.conanfile.cpp_info.components[self.component_name]
         for req in cpp_info.requires:

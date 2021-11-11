@@ -63,26 +63,77 @@ class QbsModuleTemplateTest(unittest.TestCase):
     def test_filename(self):
         expected_module_name = "module-name"
         expected_component_name = "comp_name"
-        with mock.patch('conan.tools.qbs.qbsmoduletemplate.QbsModuleTemplate.suffix',
-                        new_callable=PropertyMock) as mock_suffix:
+        with mock.patch.object(QbsModuleTemplate, 'suffix',
+                               new_callable=PropertyMock) as mock_suffix:
             mock_suffix.return_value = "_build"
             template = QbsModuleTemplate(None, None, Mock(), None)
 
-            utils.get_module_name = MagicMock(return_value=expected_module_name)
-            template.conanfile.cpp_info.has_components = False
-            self.assertEqual(template.filename, "{}{}".format(
-                expected_module_name, mock_suffix.return_value))
+            with mock.patch.object(utils, 'get_module_name',
+                                   new_callable=MagicMock) as mock_module_name:
+                # utils.get_module_name = MagicMock(return_value=expected_module_name)
+                mock_module_name.return_value = expected_module_name
+                template.conanfile.cpp_info.has_components = False
+                self.assertEqual(template.filename, "{}{}".format(
+                    expected_module_name, mock_suffix.return_value))
 
-            template.component_name = expected_component_name
-            template.conanfile.cpp_info.has_components = True
-            self.assertEqual(template.filename,
-                             "{}{}/{}".format(expected_module_name,
-                                              mock_suffix.return_value,
-                                              expected_component_name))
+                template.component_name = expected_component_name
+                template.conanfile.cpp_info.has_components = True
+                self.assertEqual(template.filename,
+                                 "{}{}/{}".format(expected_module_name,
+                                                  mock_suffix.return_value,
+                                                  expected_component_name))
+
+    def test_get_direct_dependencies(self):
+        name = "foobar"
+        version = "1.2.3"
+
+        with mock.patch.object(utils, 'get_component_name',
+                               new_callable=MagicMock()) as mock_component_name:
+            def component_name(component, default):
+                del component
+                return default
+
+            mock_component_name.side_effect = component_name
+
+            template = QbsModuleTemplate(None, None, Mock(), None)
+            template.conanfile.ref.name = name
+            template.conanfile.ref.version = version
+
+            component = Mock()
+            template.conanfile.cpp_info.components = {template.component_name: component}
+
+            component.requires = ["comp1", "comp2"]
+            direct_dependencies = template.get_direct_dependencies()
+            self.assertEqual(direct_dependencies, {"{}.{}".format(
+                name, "comp1"): version, "{}.{}".format(name, "comp2"): version})
+
+            req_conanfile = Mock()
+            req_conanfile.ref.name = "lib"
+            req_conanfile.ref.version = "2.0.0"
+            component.requires = ["{0}::{0}".format(req_conanfile.ref.name)]
+            req_conanfile.cpp_info.has_components = False
+            template.conanfile.dependencies.direct_host = {req_conanfile.ref.name: req_conanfile}
+            direct_dependencies = template.get_direct_dependencies()
+            self.assertEqual(direct_dependencies, {
+                             req_conanfile.ref.name: req_conanfile.ref.version})
+
+            req_conanfile = Mock()
+            req_conanfile.ref.name = "lib2"
+            req_conanfile.ref.version = "9.8.7"
+            component.requires = ["{}::foo".format(
+                req_conanfile.ref.name), "{}::bar".format(req_conanfile.ref.name)]
+            req_conanfile.cpp_info.has_components = True
+            template.conanfile.dependencies.direct_host = {req_conanfile.ref.name: req_conanfile}
+            direct_dependencies = template.get_direct_dependencies()
+            self.assertEqual(direct_dependencies, {
+                             "{}.{}".format(req_conanfile.ref.name,
+                                            "foo"): req_conanfile.ref.version,
+                             "{}.{}".format(req_conanfile.ref.name,
+                                            "bar"): req_conanfile.ref.version})
 
     def test_render(self):
-        with mock.patch('conan.tools.qbs.qbsmoduletemplate.QbsModuleTemplate.context',
-                        new_callable=PropertyMock) as mock_context:
+        with mock.patch.object(QbsModuleTemplate, 'context',
+                               new_callable=PropertyMock) as mock_context:
             mock_context.return_value = None
             template = QbsModuleTemplate(None, None, None, None)
             template.render()
