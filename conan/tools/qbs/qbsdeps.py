@@ -65,9 +65,10 @@ class QbsDeps(object):
         return {"modules/{}/module.qbs".format(qbs_module_template.filename): file_content}
 
     def _get_conan_module_provider_info(self, requires, dependencies):
-        qbsConanModuleProviderInfoTemplate = self._create_module_provider_info_template(
+        qbs_conan_module_provider_info_template = self._create_module_provider_info_template(
             requires, dependencies)
-        return {"qbs_conan-moduleprovider_info.json": qbsConanModuleProviderInfoTemplate.render()}
+        return {"qbs_conan-moduleprovider_info.json":
+                qbs_conan_module_provider_info_template.render()}
 
     def _create_module_template(self, require, dep, comp_name):
         return QbsModuleTemplate(self, require, dep, comp_name)
