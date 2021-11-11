@@ -129,8 +129,8 @@ class _InstallRecipeReference:
                 self.depends.append(dep.dst.ref)
 
     def serialize(self):
-        return {"ref": repr(self.ref),
-                "depends": [repr(ref) for ref in self.depends],
+        return {"ref": self.ref.repr_notime(),
+                "depends": [ref.repr_notime() for ref in self.depends],
                 "packages": [p.serialize() for p in self.packages],
                 }
 

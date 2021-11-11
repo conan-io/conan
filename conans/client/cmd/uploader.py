@@ -133,9 +133,6 @@ class _UploadCollecter:
                 if all_packages:
                     prefs = self._cache.get_package_references(r)
                     for p in prefs:
-                        assert p.revision is None
-                        p2 = self._cache.get_latest_package_reference(p)
-                        p.revision = p2.revision
                         assert p.revision is not None
                     if prefs:
                         result.add_prefs(prefs)
@@ -181,11 +178,11 @@ class _UploadChecker:
             recipe.force = False
         else:
             if policy == UPLOAD_POLICY_FORCE:
-                self._output.info("{} already in server, forcing upload".format(repr(ref)))
+                self._output.info("{} already in server, forcing upload".format(ref.repr_notime()))
                 recipe.upload = True
                 recipe.force = True
             else:
-                self._output.info("{} already in server, skipping upload".format(repr(ref)))
+                self._output.info("{} already in server, skipping upload".format(ref.repr_notime()))
                 recipe.upload = False
                 recipe.force = False
 
@@ -203,11 +200,11 @@ class _UploadChecker:
             package.force = False
         else:
             if policy == UPLOAD_POLICY_FORCE:
-                self._output.info("{} already in server, forcing upload".format(repr(pref)))
+                self._output.info("{} already in server, forcing upload".format(pref.repr_notime()))
                 package.upload = True
                 package.force = True
             else:
-                self._output.info("{} already in server, skipping upload".format(repr(pref)))
+                self._output.info("{} already in server, skipping upload".format(pref.repr_notime()))
                 package.upload = False
                 package.force = False
 

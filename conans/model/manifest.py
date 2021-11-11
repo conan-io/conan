@@ -59,10 +59,6 @@ class FileTreeManifest(object):
         s.append("")
         return md5("\n".join(s))
 
-    @property
-    def time_str(self):
-        return timestamp_to_str(self.time)
-
     @staticmethod
     def loads(text):
         """ parses a string representation, generated with __repr__ of a

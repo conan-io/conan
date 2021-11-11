@@ -2,6 +2,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.rest.controller.v2 import get_package_ref
 from conans.server.service.v2.service_v2 import ConanServiceV2
+from conans.util.dates import from_timestamp_to_iso8601
 
 
 class RevisionsController(object):
@@ -55,7 +56,7 @@ class RevisionsController(object):
 
 def _format_rev_return(rev):
     # FIXME: fix this when RecipeReference
-    return {"revision": rev[0], "time": rev[1]}
+    return {"revision": rev[0], "time": from_timestamp_to_iso8601(rev[1])}
 
 
 def _format_revs_return(revs):
@@ -63,8 +64,8 @@ def _format_revs_return(revs):
 
 
 def _format_pref_return(pref):
-    return {"revision": pref.revision, "time": pref.timestamp}
+    return {"revision": pref.revision, "time": from_timestamp_to_iso8601(pref.timestamp)}
 
 
 def _format_prefs_return(revs):
-    return {"revisions": [_format_pref_return(rev)for rev in revs]}
+    return {"revisions": [_format_pref_return(rev) for rev in revs]}
