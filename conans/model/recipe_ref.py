@@ -1,5 +1,6 @@
 from functools import total_ordering
 
+from conans.errors import ConanException
 from conans.util.dates import from_timestamp_to_iso8601
 
 
@@ -15,6 +16,27 @@ class Version:
         self._items = None  # elements of the version
         self._pre = None
         self._build = None
+
+    def bump(self, index):
+        if self._items is None:  # the indicator parse is needed is empty items
+            self._parse()
+        items = self._items.copy()
+        try:
+            items[index] += 1
+        except TypeError:
+            raise ConanException("Cannot bump version index {index}, not an int")
+        for i in range(index+1, len(items)):
+            items[i] = 0
+        v = ".".join(str(i) for i in items)
+        if self._pre:
+            v += f"-{self._pre}"
+        if self._build:
+            v += f"+{self._build}"
+        result = Version(v)
+        result._items = items
+        result._pre = self._pre
+        result._build = self._build
+        return result
 
     @property
     def pre(self):

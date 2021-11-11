@@ -1,23 +1,38 @@
-import re
+from collections import namedtuple
 
+from conans.errors import ConanException
 from conans.model.recipe_ref import Version
 
 
-class _Condition:
-    def __init__(self, operator, version):
-        self.operator = operator
-        self.version = version
-
-    def __str__(self):
-        return f"{self.operator},{self.version}"
+_Condition = namedtuple("_Condition", ["operator", "version"])
 
 
 def _parse_expression(expression):
-    operator_regex = re.compile("(=|>|<|>=|<|<=)")
-    tokens = operator_regex.split(expression, 1)
-    tokens = tokens[1:]
-    operator, version = tokens
-    return [_Condition(operator, Version(version))]
+    operator = expression[0]
+    if operator not in (">", "<", "^", "~"):
+        raise ConanException(f"Invalid version range {expression}")
+    index = 1
+    if operator in (">", "<"):
+        if expression[1] == "=":
+            operator += "="
+            index = 2
+    version = expression[index:]
+    if operator == "~":  # tilde minor
+        v = Version(version)
+        return [_Condition(">=", v), _Condition("<", v.bump(1))]
+    elif operator == "^":  # caret major
+        v = Version(version)
+
+        def first_non_zero(main):
+            for i, m in enumerate(main):
+                if m != 0:
+                    return i
+            return len(main)
+
+        initial_index = first_non_zero(v.main)
+        return [_Condition(">=", v), _Condition("<", v.bump(initial_index))]
+    else:
+        return [_Condition(operator, Version(version))]
 
 
 class VersionRange:
@@ -36,5 +51,11 @@ class VersionRange:
                     return False
             elif condition.operator == "<":
                 if not version < condition.version:
+                    return False
+            elif condition.operator == ">=":
+                if not version >= condition.version:
+                    return False
+            elif condition.operator == "<=":
+                if not version <= condition.version:
                     return False
         return True
