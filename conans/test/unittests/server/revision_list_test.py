@@ -4,7 +4,6 @@ import time
 import unittest
 
 from conans.server.revision_list import RevisionList
-from conans.util.dates import from_timestamp_to_iso8601
 
 
 class RevisionListTest(unittest.TestCase):
@@ -35,7 +34,7 @@ class RevisionListTest(unittest.TestCase):
     def test_compatibility_with_timestamps(self):
         the_time = floor(time.time())
         old_contents = '{"revisions": [{"revision": "rev1", "time": %s}, ' \
-                       '{"revision": "rev2", "time": "%s"}]}' % (the_time, the_time)
+                       '{"revision": "rev2", "time": %s}]}' % (the_time, the_time)
         r_list = RevisionList.loads(old_contents)
         when = r_list.get_time("rev1")
         self.assertEqual(when, the_time)
