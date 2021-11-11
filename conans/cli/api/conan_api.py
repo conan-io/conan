@@ -3,6 +3,7 @@ import sys
 from conans import __version__ as client_version
 from conans.cli.api.subapi.list import ListAPI
 from conans.cli.api.subapi.profiles import ProfilesAPI
+from conans.cli.api.subapi.reference import ReferencesAPI
 from conans.cli.api.subapi.remotes import RemotesAPI
 from conans.cli.api.subapi.search import SearchAPI
 from conans.cli.output import ConanOutput
@@ -31,11 +32,11 @@ class ConanAPIV2(object):
         # Remotes management
         self.remotes = RemotesAPI(self)
 
-        # Search
+        # Search recipes by wildcard and packages filtering by configuracion
         self.search = SearchAPI(self)
 
-        # List management
-        self.list = ListAPI(self)
+        # Get latest refs and list refs of recipes and packages
+        self.references = ReferencesAPI(self)
 
         self.profiles = ProfilesAPI(self)
 

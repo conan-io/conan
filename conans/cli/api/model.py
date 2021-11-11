@@ -21,3 +21,10 @@ class Remote:
     def __str__(self):
         return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
                                                              not self.disabled)
+
+
+class PackageSearchInfo:
+
+    def __init__(self, data):
+        self.settings = data.get("settings", {})
+        self.options = data.get("options", {})

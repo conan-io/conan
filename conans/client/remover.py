@@ -10,7 +10,7 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import check_valid_ref
 from conans.paths import SYSTEM_REQS
-from conans.search.search import search_packages, search_recipes
+from conans.search.search import search_packages, search_recipes, filter_packages
 from conans.util.files import rmdir
 from conans.util.log import logger
 
@@ -223,8 +223,9 @@ class ConanRemover(object):
             if packages_query:
                 # search packages
                 if self._app.selected_remote:
-                    packages = self._remote_manager.search_packages(self._app.selected_remote,
-                                                                    ref, packages_query)
+                    infos = self._remote_manager.search_packages(self._app.selected_remote, ref)
+                    packages = filter_packages(packages_query, infos)
+                    return packages
                 else:
                     pkg_ids = self._cache.get_package_references(ref)
                     all_package_revs = []

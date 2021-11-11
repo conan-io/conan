@@ -3,6 +3,7 @@ import os
 import shutil
 import time
 import traceback
+from collections import OrderedDict
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -201,10 +202,14 @@ class RemoteManager(object):
 
         return self._call_remote(remote, "search", pattern)
 
-    def search_packages(self, remote, ref, query):
-        packages = self._call_remote(remote, "search_packages", ref, query)
-        packages = filter_packages(query, packages)
-        return packages
+    def search_packages(self, remote, ref):
+        infos = self._call_remote(remote, "search_packages", ref)
+        ret = OrderedDict()
+        for package_id, data in infos.items():
+            # FIXME: we don't have the package reference, it uses the latest, we could check
+            #        here doing N requests or improve the Artifactory API.
+            ret[PkgReference(ref, package_id)] = data
+        return ret
 
     def remove_recipe(self, ref, remote):
         return self._call_remote(remote, "remove_recipe", ref)

@@ -3,6 +3,7 @@ import re
 from collections import OrderedDict
 from fnmatch import translate
 
+from conans.cli.api.model import PackageSearchInfo
 from conans.errors import ConanException
 from conans.model.info import ConanInfo
 from conans.model.recipe_ref import RecipeReference
@@ -12,9 +13,9 @@ from conans.util.files import load
 from conans.util.log import logger
 
 
-def filter_packages(query, package_infos):
+def filter_packages(query, results):
     if query is None:
-        return package_infos
+        return results
     try:
         if "!" in query:
             raise ConanException("'!' character is not allowed")
@@ -22,17 +23,15 @@ def filter_packages(query, package_infos):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
         result = OrderedDict()
-        for package_id, info in package_infos.items():
-            if _evaluate_postfix_with_info(postfix, info):
-                # TODO: cache2.0 maybe it would be better to make the key the full reference
-                #  but the remote will return a dict with the pkgid as the key so maintain this
-                result[package_id] = info
+        for pref, data in results.items():
+            if _evaluate_postfix_with_info(postfix, data):
+                result[pref] = data
         return result
     except Exception as exc:
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def _evaluate_postfix_with_info(postfix, conan_vars_info):
+def _evaluate_postfix_with_info(postfix, conan_vars_info: PackageSearchInfo):
 
     # Evaluate conaninfo with the expression
 
@@ -46,7 +45,7 @@ def _evaluate_postfix_with_info(postfix, conan_vars_info):
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def _evaluate(prop_name, prop_value, conan_vars_info):
+def _evaluate(prop_name, prop_value, conan_vars_info: PackageSearchInfo):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -55,8 +54,8 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
     def compatible_prop(setting_value, _prop_value):
         return (_prop_value == setting_value) or (_prop_value == "None" and setting_value is None)
 
-    info_settings = conan_vars_info.get("settings", [])
-    info_options = conan_vars_info.get("options", [])
+    info_settings = conan_vars_info.settings
+    info_options = conan_vars_info.options
     properties = ["os", "compiler", "arch", "build_type"]
 
     def starts_with_common_settings(_prop_name):
