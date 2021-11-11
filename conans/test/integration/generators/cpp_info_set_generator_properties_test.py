@@ -289,9 +289,10 @@ def test_cmake_find_package_new_properties():
     assert find_package_contents_old == find_package_contents
 
 
+#@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
 def test_cmake_find_package_target_namespace():
     # https://github.com/conan-io/conan/issues/9946
-
+    generator = "cmake_find_package_multi"
     client = TestClient()
     hello = textwrap.dedent("""
         import os
@@ -323,15 +324,31 @@ def test_cmake_find_package_target_namespace():
                  "greetings.py": greetings.format('self.cpp_info.set_property("cmake_target_namespace", "greetings_namespace")')})
     client.run("create hello.py hello/1.0@")
     client.run("create greetings.py greetings/1.0@")
-    client.run("install greetings/1.0@ -g cmake_find_package")
-    hello_contents = client.load("Findhello.cmake")
-    assert "set(hello_COMPONENTS hello_namespace::HelloWorld)" in hello_contents
-    assert "add_library(hello_namespace::HelloWorld INTERFACE IMPORTED)" in hello_contents
-    assert "add_library(hello_namespace::hello INTERFACE IMPORTED)" in hello_contents
-    greetings_contents = client.load("Findgreetings.cmake")
-    assert "set(greetings_COMPONENTS greetings_namespace::greetingshello)" in greetings_contents
-    assert "add_library(greetings_namespace::greetingshello INTERFACE IMPORTED)" in greetings_contents
-    assert "add_library(greetings_namespace::greetings INTERFACE IMPORTED)" in greetings_contents
+    client.run("install greetings/1.0@ -g {}".format(generator))
+    if generator == "cmake_find_package_multi":
+        hello_config = client.load("hello-config.cmake")
+        assert "set_property(TARGET hello_namespace::HelloWorld" in hello_config
+        hello_targets_release = client.load("helloTarget-release.cmake")
+        assert "set(hello_COMPONENTS_RELEASE hello_namespace::HelloWorld)" in hello_targets_release
+        hello_target = client.load("helloTargets.cmake")
+        assert "add_library(hello_namespace::HelloWorld" in hello_target
+        assert "add_library(hello_namespace::hello" in hello_target
+        greetings_config = client.load("greetings-config.cmake")
+        assert "set_property(TARGET greetings_namespace::greetings" in greetings_config
+        greetings_targets_release = client.load("greetingsTarget-release.cmake")
+        assert "set(greetings_COMPONENTS_RELEASE greetings_namespace::greetingshello)" in greetings_targets_release
+        greetings_target = client.load("greetingsTargets.cmake")
+        assert "add_library(greetings_namespace::greetingshello INTERFACE IMPORTED)" in greetings_target
+        assert "add_library(greetings_namespace::greetings INTERFACE IMPORTED)" in greetings_target
+    else:
+        hello_contents = client.load("Findhello.cmake")
+        assert "set(hello_COMPONENTS hello_namespace::HelloWorld)" in hello_contents
+        assert "add_library(hello_namespace::HelloWorld INTERFACE IMPORTED)" in hello_contents
+        assert "add_library(hello_namespace::hello INTERFACE IMPORTED)" in hello_contents
+        greetings_contents = client.load("Findgreetings.cmake")
+        assert "set(greetings_COMPONENTS greetings_namespace::greetingshello)" in greetings_contents
+        assert "add_library(greetings_namespace::greetingshello INTERFACE IMPORTED)" in greetings_contents
+        assert "add_library(greetings_namespace::greetings INTERFACE IMPORTED)" in greetings_contents
 
     # check that the contents with the namespace that equals the default
     # generates exactly the same files
@@ -340,20 +357,39 @@ def test_cmake_find_package_target_namespace():
                 clean_first=True)
     client.run("create hello.py hello/1.0@")
     client.run("create greetings.py greetings/1.0@")
-    client.run("install greetings/1.0@ -g cmake_find_package")
-    hello_namespace = client.load("Findhello.cmake")
-    greetings_namespace = client.load("Findgreetings.cmake")
+    client.run("install greetings/1.0@ -g {}".format(generator))
+    files_namespace = []
+    files_no_namespace = []
+    if generator == "cmake_find_package_multi":
+        files_namespace.append(client.load("greetings-config.cmake"))
+        files_namespace.append(client.load("greetingsTarget-release.cmake"))
+        files_namespace.append(client.load("greetingsTargets.cmake"))
+        files_namespace.append(client.load("hello-config.cmake"))
+        files_namespace.append(client.load("helloTarget-release.cmake"))
+        files_namespace.append(client.load("helloTargets.cmake"))
+    else:
+        files_namespace.append(client.load("Findhello.cmake"))
+        files_namespace.append(client.load("Findgreetings.cmake"))
 
     client.save({"hello.py": hello.format(''),
-                 "greetings.py": greetings.format('')})
+                 "greetings.py": greetings.format('')},
+                clean_first=True)
     client.run("create hello.py hello/1.0@")
     client.run("create greetings.py greetings/1.0@")
-    client.run("install greetings/1.0@ -g cmake_find_package")
-    hello_no_namespace = client.load("Findhello.cmake")
-    greetings_no_namespace = client.load("Findgreetings.cmake")
+    client.run("install greetings/1.0@ -g {}".format(generator))
 
-    assert hello_namespace == hello_no_namespace
-    assert greetings_namespace == greetings_no_namespace
+    if generator == "cmake_find_package_multi":
+        files_no_namespace.append(client.load("greetings-config.cmake"))
+        files_no_namespace.append(client.load("greetingsTarget-release.cmake"))
+        files_no_namespace.append(client.load("greetingsTargets.cmake"))
+        files_no_namespace.append(client.load("hello-config.cmake"))
+        files_no_namespace.append(client.load("helloTarget-release.cmake"))
+        files_no_namespace.append(client.load("helloTargets.cmake"))
+    else:
+        files_no_namespace.append(client.load("Findhello.cmake"))
+        files_no_namespace.append(client.load("Findgreetings.cmake"))
+
+    assert files_namespace == files_no_namespace
 
 
 def test_legacy_cmake_is_not_affected_by_set_property_usage():
