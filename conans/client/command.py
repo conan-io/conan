@@ -1063,9 +1063,6 @@ class Command(object):
                                          prog="conan upload",
                                          formatter_class=SmartFormatter)
         parser.add_argument('pattern_or_reference', help=_PATTERN_REF_OR_PREF_HELP)
-        parser.add_argument("-p", "--package", default=None,
-                            help="Package ID [DEPRECATED: use full reference instead]",
-                            action=OnceArgument)
         parser.add_argument('-q', '--query', default=None, action=OnceArgument,
                             help="Only upload packages matching a specific query. " + _QUERY_HELP)
         # using required, we may want to pass this as a positional argument?
@@ -1101,23 +1098,8 @@ class Command(object):
             pref = PkgReference.loads(args.pattern_or_reference)
         except ConanException:
             reference = args.pattern_or_reference
-            package_id = args.package
-
-            if package_id:
-                self._out.warning("Usage of `--package` argument is deprecated."
-                               " Use a full reference instead: "
-                               "`conan upload [...] {}:{}`".format(reference, package_id))
-
-            if args.query and package_id:
-                raise ConanException("'--query' argument cannot be used together with '--package'")
         else:
-            reference = repr(pref.ref)
-            package_id = "{}#{}".format(pref.package_id, pref.revision) \
-                if pref.revision else pref.package_id
-
-            if args.package:
-                raise ConanException("Use a full package reference (preferred) or the `--package`"
-                                     " command argument, but not both.")
+            reference = repr(pref)
             if args.query:
                 raise ConanException("'--query' argument cannot be used together with "
                                      "full reference")
@@ -1136,7 +1118,7 @@ class Command(object):
 
         info = None
         try:
-            info = self._conan_api.upload(pattern=reference, package=package_id,
+            info = self._conan_api.upload(pattern=reference,
                                       query=args.query, remote_name=args.remote,
                                       all_packages=args.all, policy=policy,
                                       confirm=args.confirm, retry=args.retry,

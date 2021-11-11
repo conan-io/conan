@@ -103,9 +103,10 @@ class ClientCache(object):
     def get_package_timestamp(self, ref):
         return self._data_cache.get_package_timestamp(ConanReference(ref))
 
-    def set_recipe_timestamp(self, ref):
-        return self._data_cache.update_recipe_timestamp(ConanReference(ref),
-                                                        new_timestamp=ref.timestamp)
+    def update_recipe_timestamp(self, ref):
+        """ when the recipe already exists in cache, but we get a new timestamp from a server
+        that would affect its order in our cache """
+        return self._data_cache.update_recipe_timestamp(ref)
 
     def set_package_timestamp(self, pref):
         return self._data_cache.update_package_timestamp(ConanReference(pref),

@@ -627,7 +627,7 @@ class ConanAPIV1(object):
                        packages_query=query)
 
     @api_method
-    def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
+    def upload(self, pattern, remote_name=None, all_packages=False, confirm=False,
                retry=None, retry_wait=None, integrity_check=False, policy=None, query=None,
                parallel_upload=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
@@ -636,7 +636,7 @@ class ConanAPIV1(object):
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)])
         uploader = CmdUpload(app)
-        uploader.upload(pattern, package, all_packages, confirm,
+        uploader.upload(pattern, all_packages, confirm,
                         retry, retry_wait, integrity_check, policy, query=query,
                         parallel_upload=parallel_upload)
 

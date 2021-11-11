@@ -274,7 +274,7 @@ def test_install_without_ref(client):
     assert "lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
     client.run('upload lib/1.0 -c --all -r default')
-    assert "Uploaded conan recipe 'lib/1.0' to 'default'" in client.out
+    assert "Uploading lib/1.0" in client.out
 
     client.run('remove "*" -f')
 

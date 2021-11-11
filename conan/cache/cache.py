@@ -12,6 +12,7 @@ from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conan.cache.db.cache_database import CacheDatabase
 from conans.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB, \
     ConanException
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import rmdir
 
 
@@ -114,8 +115,10 @@ class DataCache:
             self._create_path(package_path, remove_contents=False)
             return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
-    def update_recipe_timestamp(self, ref: ConanReference, new_timestamp):
-        self._db.update_recipe_timestamp(ref, new_timestamp)
+    def update_recipe_timestamp(self, ref: RecipeReference):
+        assert ref.revision
+        assert ref.timestamp
+        self._db.update_recipe_timestamp(ref)
 
     def update_package_timestamp(self, ref: ConanReference, new_timestamp):
         self._db.update_package_timestamp(ref, new_timestamp)
@@ -212,4 +215,6 @@ class DataCache:
             self._db.create_recipe(new_path, ref)
         except ConanReferenceAlreadyExistsInDB:
             # This was exported before, making it latest again, update timestamp
-            self._db.update_recipe_timestamp(ref, time.time())
+            ref = layout.reference
+            ref.timestamp = time.time()
+            self._db.update_recipe_timestamp(ref)

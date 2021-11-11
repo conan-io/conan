@@ -71,19 +71,10 @@ def test_upload_with_pattern():
         assert "Uploading hello%s/1.2.1@frodo/stable" % num in client.out
 
     client.run("upload hello0* --confirm -r default")
-    assert "Uploading hello0/1.2.1@frodo/stable" in client.out
     assert "hello0/1.2.1@frodo/stable#e895a89b63c4eb2055704f63e6a0d06f "\
            "already in server, skipping upload" in client.out
     assert "hello1" not in client.out
     assert "hello2" not in client.out
-
-
-def test_upload_with_pattern_and_package_error():
-    client = TestClient(default_server_user=True)
-    client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
-    client.run("export . frodo/stable")
-    client.run("upload hello* --confirm -p 234234234 -r default", assert_error=True)
-    assert "-p parameter only allowed with a valid recipe reference" in client.out
 
 
 def test_check_upload_confirm_question():
