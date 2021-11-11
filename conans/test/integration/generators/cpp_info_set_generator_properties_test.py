@@ -357,18 +357,14 @@ def test_cmake_find_package_target_namespace(generator):
     client.run("create hello.py hello/1.0@")
     client.run("create greetings.py greetings/1.0@")
     client.run("install greetings/1.0@ -g {}".format(generator))
-    files_namespace = []
-    files_no_namespace = []
+
     if generator == "cmake_find_package_multi":
-        files_namespace.append(client.load("greetings-config.cmake"))
-        files_namespace.append(client.load("greetingsTarget-release.cmake"))
-        files_namespace.append(client.load("greetingsTargets.cmake"))
-        files_namespace.append(client.load("hello-config.cmake"))
-        files_namespace.append(client.load("helloTarget-release.cmake"))
-        files_namespace.append(client.load("helloTargets.cmake"))
+        files_to_compare = ["greetings-config.cmake", "greetingsTarget-release.cmake", "greetingsTargets.cmake",
+                            "hello-config.cmake", "helloTarget-release.cmake", "helloTargets.cmake"]
     else:
-        files_namespace.append(client.load("Findhello.cmake"))
-        files_namespace.append(client.load("Findgreetings.cmake"))
+        files_to_compare = ["Findhello.cmake", "Findgreetings.cmake"]
+
+    files_namespace = [client.load(file) for file in files_to_compare]
 
     client.save({"hello.py": hello.format(''),
                  "greetings.py": greetings.format('')},
@@ -377,16 +373,7 @@ def test_cmake_find_package_target_namespace(generator):
     client.run("create greetings.py greetings/1.0@")
     client.run("install greetings/1.0@ -g {}".format(generator))
 
-    if generator == "cmake_find_package_multi":
-        files_no_namespace.append(client.load("greetings-config.cmake"))
-        files_no_namespace.append(client.load("greetingsTarget-release.cmake"))
-        files_no_namespace.append(client.load("greetingsTargets.cmake"))
-        files_no_namespace.append(client.load("hello-config.cmake"))
-        files_no_namespace.append(client.load("helloTarget-release.cmake"))
-        files_no_namespace.append(client.load("helloTargets.cmake"))
-    else:
-        files_no_namespace.append(client.load("Findhello.cmake"))
-        files_no_namespace.append(client.load("Findgreetings.cmake"))
+    files_no_namespace = [client.load(file) for file in files_to_compare]
 
     assert files_namespace == files_no_namespace
 
