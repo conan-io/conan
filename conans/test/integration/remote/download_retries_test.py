@@ -2,6 +2,7 @@ import unittest
 
 from conans import REVISIONS
 from conans.paths import CONANFILE
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
 
 
@@ -24,11 +25,7 @@ class MyConanfile(ConanFile):
         test_server = TestServer()
         client = TestClient(servers={"default": test_server}, inputs=["admin", "password"])
 
-        conanfile = '''from conans import ConanFile
-class MyConanfile(ConanFile):
-    pass
-'''
-        client.save({CONANFILE: conanfile})
+        client.save({CONANFILE: GenConanfile()})
         client.run("create . Pkg/0.1@lasote/stable")
         client.run("upload '*' -c --all -r default")
 
