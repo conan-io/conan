@@ -293,31 +293,18 @@ def test_cmake_find_package_target_namespace():
     # https://github.com/conan-io/conan/issues/9946
 
     client = TestClient()
-
-    lib = textwrap.dedent("""
+    hello = textwrap.dedent("""
         import os
         from conans import ConanFile
-        class MyPkg(ConanFile):
+        class MyHello(ConanFile):
             settings = "build_type"
-            name = "lib"
+            name = "hello"
             version = "1.0"
             def package_info(self):
-                self.cpp_info.set_property("cmake_target_namespace", "lib_namespace")
-                self.cpp_info.set_property("cmake_target_name", "lib_name")
-                self.cpp_info.components["lib_component"].set_property("cmake_target_name", "MyLibComponent")
-        """)
+                self.cpp_info.set_property("cmake_target_name", "hello_target_name")
+                self.cpp_info.components["helloworld"].set_property("cmake_target_name", "HelloWorld")
+                {}
 
-    pkg = textwrap.dedent("""
-        import os
-        from conans import ConanFile
-        class MyLib(ConanFile):
-            settings = "build_type"
-            name = "pkg"
-            version = "1.0"
-            def package_info(self):
-                # self.cpp_info.set_property("cmake_target_namespace", "pkg_namespace")
-                self.cpp_info.set_property("cmake_target_name", "pkg_name")
-                self.cpp_info.components["pkg_component"].set_property("cmake_target_name", "MyPkgComponent")
         """)
 
     greetings = textwrap.dedent("""
@@ -327,22 +314,50 @@ def test_cmake_find_package_target_namespace():
             settings = "build_type"
             name = "greetings"
             version = "1.0"
-            requires = "pkg/1.0", "lib/1.0"
+            requires = "hello/1.0"
             def package_info(self):
-                self.cpp_info.set_property("cmake_target_namespace", "greetings_namespace")
-                self.cpp_info.set_property("cmake_target_name", "greetings_name")
-                self.cpp_info.components["bye"].requires = ["lib::lib_component"]
-                self.cpp_info.components["hello"].requires = ["pkg::pkg_component"]
+                self.cpp_info.set_property("cmake_target_name", "greetings_target_name")
+                self.cpp_info.components["greetingshello"].requires = ["hello::helloworld"]
+                {}
         """)
-    client.save({"pkg.py": pkg, "lib.py": lib, "greetings.py": greetings})
-    client.run("create lib.py lib/1.0@")
-    client.run("create pkg.py pkg/1.0@")
+
+    client.save({"hello.py": hello.format('self.cpp_info.set_property("cmake_target_namespace", "hello_namespace")'),
+                 "greetings.py": greetings.format('self.cpp_info.set_property("cmake_target_namespace", "greetings_namespace")')})
+    client.run("create hello.py hello/1.0@")
     client.run("create greetings.py greetings/1.0@")
     client.run("install greetings/1.0@ -g cmake_find_package")
-    print("jandernauer")
-    # find_package_contents = client.load("FindMyChat.cmake")
-    # assert "add_library(MyChat::MyChat" in find_package_contents
-    # assert "set(MyChat_COMPONENTS MyChat::MySay MyChat::MySayBye)" in find_package_contents
+    hello_contents = client.load("Findhello.cmake")
+    assert "set(hello_target_name_COMPONENTS hello_namespace::HelloWorld)" in hello_contents
+    assert "add_library(hello_namespace::HelloWorld INTERFACE IMPORTED)" in hello_contents
+    assert "add_library(hello_namespace::hello_target_name INTERFACE IMPORTED)" in hello_contents
+    greetings_contents = client.load("Findgreetings.cmake")
+    assert "set(greetings_target_name_COMPONENTS greetings_namespace::greetingshello)" in greetings_contents
+    assert "add_library(greetings_namespace::greetingshello INTERFACE IMPORTED)" in greetings_contents
+    assert "add_library(greetings_namespace::greetings_target_name INTERFACE IMPORTED)" in greetings_contents
+
+    # check that the contents with the namespace that equals the default
+    # generates exactly the same files
+    client.save({"1/hello.py": hello.format('self.cpp_info.set_property("cmake_target_namespace", "hello")'),
+                 "1/greetings.py": greetings.format('self.cpp_info.set_property("cmake_target_namespace", "greetings")')},
+                clean_first=True)
+    client.run("create 1/hello.py hello/1.0@")
+    client.run("create 1/greetings.py greetings/1.0@")
+    with client.chdir("1"):
+        client.run("install greetings/1.0@ -g cmake_find_package")
+    hello_namespace = client.load("1/Findhello.cmake")
+    greetings_namespace = client.load("1/Findgreetings.cmake")
+
+    client.save({"2/hello.py": hello.format(''),
+                 "2/greetings.py": greetings.format('')})
+    client.run("create 2/hello.py hello/1.0@")
+    client.run("create 2/greetings.py greetings/1.0@")
+    with client.chdir("2"):
+        client.run("install greetings/1.0@ -g cmake_find_package")
+    hello_no_namespace = client.load("2/Findhello.cmake")
+    greetings_no_namespace = client.load("2/Findgreetings.cmake")
+
+    assert hello_namespace == hello_no_namespace
+    assert greetings_namespace == greetings_no_namespace
 
 
 def test_legacy_cmake_is_not_affected_by_set_property_usage():
