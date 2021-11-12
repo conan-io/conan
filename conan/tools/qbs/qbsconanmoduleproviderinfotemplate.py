@@ -43,6 +43,6 @@ class QbsConanModuleProviderInfoTemplate(object):
     def create_component(self, dep, component, comp_name):
         comp = {}
         comp["name"] = None if comp_name is None else utils.get_component_name(component, comp_name)
-        comp["bindirs"] = utils.prepent_package_folder(
+        comp["bindirs"] = utils.prepend_package_folder(
             component.bindirs, dep.package_folder)
         return comp
