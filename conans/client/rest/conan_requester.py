@@ -26,16 +26,17 @@ class ConanRequester(object):
         # FIXME: Trick for testing when requests is mocked
         if hasattr(requests, "Session"):
             self._http_requester = requests.Session()
-            adapter = HTTPAdapter(max_retries=self._get_retries(config.retry))
+            adapter = HTTPAdapter(max_retries=self._get_retries(config["core.requests:max_retries"]))
 
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
 
-        self._timeout_seconds = config.request_timeout
-        self.proxies = config.proxies or {}
-        self._cacert_path = config.cacert_path
-        self._client_cert_path = config.client_cert_path
-        self._client_cert_key_path = config.client_cert_key_path
+        to = config["core.requests:timeout"]
+        self._timeout_seconds = float(to) if to is not None else None
+        self.proxies = config["core.network:proxies"] or {}  # FIXME: Broken as config dont do {}
+        self._cacert_path = config["core.network:cacert_path"]
+        self._client_cert_path = config["core.network:client_cert_path"]
+        self._client_cert_key_path = config["core.network:client_cert_key_path"]
 
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
@@ -48,14 +49,10 @@ class ConanRequester(object):
                           " Use proxies.no_proxy_match instead")
             os.environ["NO_PROXY"] = no_proxy
 
-        if not os.path.exists(self._cacert_path):
-            from conans.client.rest.cacert import cacert
-            save(self._cacert_path, cacert)
-
-        if not os.path.exists(self._client_cert_path):
+        if self._client_cert_path is None:
             self._client_certificates = None
         else:
-            if os.path.exists(self._client_cert_key_path):
+            if self._client_cert_key_path is not None:
                 # Requests can accept a tuple with cert and key, or just an string with a
                 # file having both
                 self._client_certificates = (self._client_cert_path,

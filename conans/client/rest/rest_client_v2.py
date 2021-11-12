@@ -40,8 +40,8 @@ class RestV2Methods(RestCommonMethods):
     def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
 
-        retry = self._config.retry
-        retry_wait = self._config.retry_wait
+        retry = self._config["core.download:retry"]
+        retry_wait = self._config["core.download:retry_wayt"]
         download_cache = False if not use_cache else self._config.download_cache
         contents = run_downloader(self.requester, self.verify_ssl, retry=retry,
                                   retry_wait=retry_wait, download_cache=download_cache, url=url,
@@ -188,9 +188,9 @@ class RestV2Methods(RestCommonMethods):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         output = ConanOutput()
-        retry = self._config.retry
-        retry_wait = self._config.retry_wait
-        download_cache = False if not use_cache else self._config.download_cache
+        retry = self._config["core.download:retry"]
+        retry_wait = self._config["core.download:retry_wait"]
+        download_cache = False if not use_cache else self._config["core.download:download_cache"]
         for filename in sorted(files, reverse=True):
             if output and not output.is_terminal:
                 output.info("Downloading %s" % filename)

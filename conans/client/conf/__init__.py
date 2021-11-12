@@ -219,8 +219,6 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_READ_ONLY_CACHE", "read_only_cache", None),
             ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
             ("CONAN_TEMP_TEST_FOLDER", "temp_test_folder", False),
-            ("CONAN_CACERT_PATH", "cacert_path", None),
-            # ("CONAN_DEFAULT_PROFILE_PATH", "default_profile", DEFAULT_PROFILE_NAME),
         ],
         "hooks": [
             ("CONAN_HOOKS", "", None),
@@ -332,20 +330,6 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("Invalid configuration, missing %s" % varname)
 
     @property
-    def request_timeout(self):
-        timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
-        if not timeout:
-            try:
-                timeout = self.get_item("general.request_timeout")
-            except ConanException:
-                return None
-
-        try:
-            return float(timeout) if timeout is not None else None
-        except ValueError:
-            raise ConanException("Specify a numeric parameter for 'request_timeout'")
-
-    @property
     def parallel_download(self):
         try:
             parallel = self.get_item("general.parallel_download")
@@ -356,14 +340,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return int(parallel) if parallel is not None else None
         except ValueError:
             raise ConanException("Specify a numeric parameter for 'parallel_download'")
-
-    @property
-    def download_cache(self):
-        try:
-            download_cache = self.get_item("storage.download_cache")
-            return download_cache
-        except ConanException:
-            return None
 
     @property
     def proxies(self):
@@ -387,51 +363,6 @@ class ConanClientConfigParser(ConfigParser, object):
                     elif proxy_value[0]:
                         result[scheme] = proxy_value[0]
         return result
-
-    @property
-    def cacert_path(self):
-        try:
-            cacert_path = get_env("CONAN_CACERT_PATH")
-            if not cacert_path:
-                cacert_path = self.get_item("general.cacert_path")
-        except ConanException:
-            cacert_path = os.path.join(os.path.dirname(self.filename), CACERT_FILE)
-        else:
-            # For explicit cacert files, the file should already exist
-            if not os.path.exists(cacert_path):
-                raise ConanException("Configured file for 'cacert_path'"
-                                     " doesn't exist: '{}'".format(cacert_path))
-        return cacert_path
-
-    @property
-    def client_cert_path(self):
-        cache_folder = os.path.dirname(self.filename)
-        try:
-            path = self.get_item("general.client_cert_path")
-        except ConanException:
-            path = os.path.join(cache_folder, "client.crt")
-        else:
-            # For explicit cacert files, the file should already exist
-            path = os.path.join(cache_folder, path)
-            if not os.path.exists(path):
-                raise ConanException("Configured file for 'client_cert_path'"
-                                     " doesn't exist: '{}'".format(path))
-        return os.path.normpath(path)
-
-    @property
-    def client_cert_key_path(self):
-        cache_folder = os.path.dirname(self.filename)
-        try:
-            path = self.get_item("general.client_cert_key_path")
-        except ConanException:
-            path = os.path.join(cache_folder, "client.key")
-        else:
-            # For explicit cacert files, the file should already exist
-            path = os.path.join(cache_folder, path)
-            if not os.path.exists(path):
-                raise ConanException("Configured file for 'client_cert_key_path'"
-                                     " doesn't exist: '{}'".format(path))
-        return os.path.normpath(path)
 
     @property
     def hooks(self):
