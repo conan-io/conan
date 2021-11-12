@@ -9,7 +9,7 @@ search_formatters = {
 }
 
 
-# FIXME: "conan search" == "conan list recipes --all" --> implement @conan_alias_command??
+# FIXME: "conan search" == "conan list recipes -r="*" -c" --> implement @conan_alias_command??
 @conan_command(group=COMMAND_GROUPS['consumer'], formatters=search_formatters)
 def search(conan_api: ConanAPIV2, parser, *args, **kwargs):
     """
@@ -27,7 +27,7 @@ def search(conan_api: ConanAPIV2, parser, *args, **kwargs):
     for remote in remotes:
         error = None
         try:
-            references = conan_api.search.search_remote_recipes(args.query, remote)
+            references = conan_api.search.recipes(args.query, remote)
             refs_docs = []
             for reference in references:
                 tmp = {

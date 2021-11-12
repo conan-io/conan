@@ -1,9 +1,8 @@
 import sys
 
 from conans import __version__ as client_version
-from conans.cli.api.subapi.list import ListAPI
 from conans.cli.api.subapi.profiles import ProfilesAPI
-from conans.cli.api.subapi.reference import ReferencesAPI
+from conans.cli.api.subapi.references import ReferencesAPI
 from conans.cli.api.subapi.remotes import RemotesAPI
 from conans.cli.api.subapi.search import SearchAPI
 from conans.cli.output import ConanOutput
