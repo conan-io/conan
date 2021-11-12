@@ -127,7 +127,7 @@ class QbsDepsTest(unittest.TestCase):
             dep.ref.version = version
             dep.is_build_context = build_context
             dep.cpp_info.get_property = MagicMock(return_value=skip)
-            dep.cpp_info.has_components = component_names == []
+            dep.cpp_info.has_components = component_names != []
             dep.cpp_info.component_names = component_names
             dep.skip = skip
             return dep
