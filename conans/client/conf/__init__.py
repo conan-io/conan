@@ -148,18 +148,15 @@ _t_default_client_conf = Template(textwrap.dedent("""
 
     [general]
     default_profile = {{default_profile}}
-    compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
     sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
     request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
 
-    # retry = 2                             # environment CONAN_RETRY
-    # retry_wait = 5                        # environment CONAN_RETRY_WAIT (seconds)
     # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
     # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
     # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
     # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
 
-    # non_interactive = False             # environment CONAN_NON_INTERACTIVE
+    # non_interactive = False
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
 
 
@@ -214,14 +211,10 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_PRINT_RUN_COMMANDS", "print_run_commands", False),
         ],
         "general": [
-            ("CONAN_COMPRESSION_LEVEL", "compression_level", 9),
-            ("CONAN_NON_INTERACTIVE", "non_interactive", False),
             ("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "skip_broken_symlinks_check", False),
             ("CONAN_SYSREQUIRES_SUDO", "sysrequires_sudo", False),
             ("CONAN_SYSREQUIRES_MODE", "sysrequires_mode", None),
             ("CONAN_REQUEST_TIMEOUT", "request_timeout", None),
-            ("CONAN_RETRY", "retry", None),
-            ("CONAN_RETRY_WAIT", "retry_wait", None),
             ("CONAN_CPU_COUNT", "cpu_count", None),
             ("CONAN_READ_ONLY_CACHE", "read_only_cache", None),
             ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
@@ -498,34 +491,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return print_commands_to_output.lower() in ("1", "true")
         except ConanException:
             return False
-
-    @property
-    def retry(self):
-        retry = os.getenv("CONAN_RETRY")
-        if not retry:
-            try:
-                retry = self.get_item("general.retry")
-            except ConanException:
-                return None
-
-        try:
-            return int(retry) if retry is not None else None
-        except ValueError:
-            raise ConanException("Specify a numeric parameter for 'retry'")
-
-    @property
-    def retry_wait(self):
-        retry_wait = os.getenv("CONAN_RETRY_WAIT")
-        if not retry_wait:
-            try:
-                retry_wait = self.get_item("general.retry_wait")
-            except ConanException:
-                return None
-
-        try:
-            return int(retry_wait) if retry_wait is not None else None
-        except ValueError:
-            raise ConanException("Specify a numeric parameter for 'retry_wait'")
 
     @property
     def generate_run_log_file(self):

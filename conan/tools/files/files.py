@@ -108,9 +108,9 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
     :param retry: Number of retries in case of failure. Default is overriden by general.retry in the
-                  conan.conf file or an env variable CONAN_RETRY
+                  conan.conf file
     :param retry_wait: Seconds to wait between download attempts. Default is overriden by
-                       general.retry_wait in the conan.conf file or an env variable CONAN_RETRY_WAIT
+                       general.retry_wait in the conan.conf file
     :param auth: A tuple of user and password to use HTTPBasic authentication
     :param headers: A dictionary with additional headers
     :param md5: MD5 hash code to check the downloaded file
