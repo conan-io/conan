@@ -2,7 +2,7 @@ import os
 
 import fasteners
 
-from conans.client.tools.env import no_op
+from conans.util.env import no_op
 from conans.errors import NotFoundException
 from conans.util.files import decode_text, md5sum, path_exists, relative_dirs, rmdir
 

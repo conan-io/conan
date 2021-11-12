@@ -4,7 +4,7 @@ import os
 import unittest
 import mock
 
-from conans.client.tools import env
+from conans.util import env
 
 
 class ToolsEnvTest(unittest.TestCase):
@@ -24,16 +24,6 @@ class ToolsEnvTest(unittest.TestCase):
         with mock.patch.dict('os.environ', {'env_var1': 'value'}),\
              env.environment_set({'env_var1': 'new_value'}):
             self.assertEqual(os.environ['env_var1'], 'new_value')
-
-    def test_environment_set_list(self):
-        with mock.patch.dict('os.environ', {}),\
-             env.environment_set({'env_var1': ['value1', 'value2']}):
-            self.assertEqual(os.environ['env_var1'], 'value1' + os.pathsep + 'value2')
-
-    def test_environment_repeated_list(self):
-        with mock.patch.dict('os.environ', {}),\
-             env.environment_set({'env_var1': ['value1', 'value2', 'value1']}):
-            self.assertEqual(os.environ['env_var1'], 'value1' + os.pathsep + 'value2')
 
     def test_environment_set_unsetting_some_variables(self):
         with mock.patch.dict('os.environ', {'env_var1': 'value'}),\

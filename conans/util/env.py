@@ -13,7 +13,11 @@ from contextlib import contextmanager
 @contextmanager
 def environment_set(env_vars):
     old_env = dict(os.environ)
-    os.environ.update(env_vars)
+    sets = {k: v for k, v in env_vars.items() if v is not None}
+    unsets = [k for k, v in env_vars.items() if v is None]
+    os.environ.update(sets)
+    for var in unsets:
+        os.environ.pop(var, None)
     try:
         yield
     finally:

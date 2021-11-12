@@ -7,7 +7,7 @@ from conans.client.conf import ConanClientConfigParser
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
-from conans.client.tools.oss import environment_set
+from conans.util.env import environment_set
 
 default_client_conf = '''[storage]
 path: ~/.conan/data
