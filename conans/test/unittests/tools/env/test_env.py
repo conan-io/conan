@@ -8,7 +8,7 @@ import pytest
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
 from conan.tools.microsoft.subsystems import WINDOWS
-from conans.client.tools import chdir, environment_append
+from conans.client.tools import chdir, environment_set
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
@@ -88,7 +88,7 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
         env2.unset("MyVar")
     env.compose_env(env2)
     env = env.vars(ConanFileMock())
-    with environment_append({"MyVar": "MyVar"}):
+    with environment_set({"MyVar": "MyVar"}):
         assert env.get("MyVar") == result
     assert env._values["MyVar"].get_str("{name}", None, None) == result
 
@@ -161,7 +161,7 @@ def test_profile():
     profile_env = ProfileEnvironment.loads(myprofile)
     env = profile_env.get_profile_env("")
     env = env.vars(ConanFileMock())
-    with environment_append({"MyVar1": "$MyVar1",
+    with environment_set({"MyVar1": "$MyVar1",
                              "MyVar2": "$MyVar2",
                              "MyVar3": "$MyVar3",
                              "MyVar4": "$MyVar4"}):

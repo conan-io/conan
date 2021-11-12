@@ -18,7 +18,7 @@ class ConfigTest(unittest.TestCase):
         self._cache_folder = os.path.join(user_home, DEFAULT_CONAN_USER_HOME)
         os.mkdir(self._cache_folder)
         save(os.path.join(self._cache_folder, CONAN_CONF), conf)
-        with tools.environment_append({"CONAN_USER_HOME": user_home}):
+        with tools.environment_set({"CONAN_USER_HOME": user_home}):
             self.api = conan_api.ConanAPIV1()
 
     def test_config_home(self):

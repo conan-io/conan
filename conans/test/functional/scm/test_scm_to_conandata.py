@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from conans.client.loader import ConanFileLoader
-from conans.client.tools.env import environment_append
+from conans.util.env import environment_set
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DATA_YML
 from conans.test.utils.tools import TestClient
@@ -46,7 +46,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("inspect name/version@ -a scm")
         self.assertIn("password: None", t.out)
         self.assertIn("username: myuser", t.out)
-        with environment_append({"SECRET": "42"}):
+        with environment_set({"SECRET": "42"}):
             t.run("inspect name/version@ -a scm")
             self.assertIn("password: 42", t.out)
             self.assertIn("username: myuser", t.out)
@@ -216,7 +216,7 @@ def test_auto_can_be_automated():
     # Now try from another folder, doing a copy and using the env-vars
     t = TestClient(default_server_user=True)
     t.save({"conanfile.py": conanfile})
-    with environment_append({"USER_EXTERNAL_URL": "https://myrepo.com.git",
+    with environment_set({"USER_EXTERNAL_URL": "https://myrepo.com.git",
                              "USER_EXTERNAL_COMMIT": commit}):
         t.run("export . pkg/1.0@")
     _check(t)
@@ -226,7 +226,7 @@ def test_auto_can_be_automated():
     t.run("install pkg/1.0@ --build", assert_error=True)
     assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out
 
-    with environment_append({"USER_EXTERNAL_URL": "https://other.different.url",
+    with environment_set({"USER_EXTERNAL_URL": "https://other.different.url",
                              "USER_EXTERNAL_COMMIT": "invalid commit"}):
         t.run("install pkg/1.0@ --build", assert_error=True)
         assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out

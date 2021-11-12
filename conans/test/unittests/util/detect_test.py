@@ -51,7 +51,7 @@ class DetectTest(unittest.TestCase):
     def test_detect_clang_gcc_toolchain(self, _):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            with tools.environment_append({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
+            with tools.environment_set({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
                 detect_defaults_settings()
                 self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
 

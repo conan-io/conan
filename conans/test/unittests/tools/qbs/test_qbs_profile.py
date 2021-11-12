@@ -109,7 +109,7 @@ class QbsGenericTest(unittest.TestCase):
             'compiler': 'gcc'}))
 
         sysroot = '/path/to/sysroot/foo/bar'
-        with tools.environment_append({'SYSROOT': sysroot}):
+        with tools.environment_set({'SYSROOT': sysroot}):
             qbs_toolchain = qbs.QbsProfile(conanfile)
         self.assertEqual(qbs_toolchain._sysroot, sysroot)
 
@@ -263,7 +263,7 @@ class QbsGenericTest(unittest.TestCase):
         compiler = 'compiler_from_env'
         for settings in self._settings_to_test_against():
             conanfile = MockConanfileWithFolders(MockSettings(settings), runner=RunnerMock())
-            with tools.environment_append({'CC': compiler}):
+            with tools.environment_set({'CC': compiler}):
                 qbs._setup_toolchains(conanfile)
             self.assertEqual(len(conanfile.runner.command_called), 1)
             self.assertEqual(
@@ -315,7 +315,7 @@ class QbsGenericTest(unittest.TestCase):
             'CXXFLAGS': cxx['env'],
             'LDFLAGS': '%s %s' % (wl['env'], ld['env'])
         }
-        with tools.environment_append(env):
+        with tools.environment_set(env):
             flags_from_env = qbs._flags_from_env()
 
         expected_flags = {
@@ -425,7 +425,7 @@ class QbsGenericTest(unittest.TestCase):
                         output=self._generate_qbs_config_output()),
                 ]))
 
-        with tools.environment_append({'SYSROOT': '/foo/bar/path'}):
+        with tools.environment_set({'SYSROOT': '/foo/bar/path'}):
             qbs_toolchain = qbs.QbsProfile(conanfile)
 
         self.assertEqual(qbs_toolchain.content, expected_content)
@@ -519,7 +519,7 @@ class QbsGenericTest(unittest.TestCase):
                         output=self._generate_qbs_config_output_msvc()),
                 ]))
 
-        with tools.environment_append({'SYSROOT': '/foo/bar/path'}):
+        with tools.environment_set({'SYSROOT': '/foo/bar/path'}):
             qbs_toolchain = qbs.QbsProfile(conanfile)
 
         self.assertEqual(qbs_toolchain.content, expected_content)

@@ -11,7 +11,7 @@ from conans.cli.output import ConanOutput
 from conans.client.cache.cache import ClientCache
 from conans.client.conf import get_default_client_conf, ConanClientConfigParser
 from conans.client.rest.conan_requester import ConanRequester
-from conans.client.tools import environment_append
+from conans.util.env import environment_set
 from conans.client.tools.files import replace_in_file, save
 from conans.errors import ConanException
 from conans.paths import CACERT_FILE
@@ -50,7 +50,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
     def test_env_variable(self):
         file_path = os.path.join(temp_folder(), "whatever_cacert")
         save(file_path, "dummy content")
-        with environment_append({"CONAN_CACERT_PATH": file_path}):
+        with environment_set({"CONAN_CACERT_PATH": file_path}):
             requester, mocked_requester, _ = self._create_requesters()
             with mock.patch("conans.client.rest.conan_requester.requests", mocked_requester):
                 requester.get(url="aaa", verify=True)
@@ -73,7 +73,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
     def test_non_existing_file(self):
         file_path = os.path.join(temp_folder(), "whatever_cacert")
         self.assertFalse(os.path.exists(file_path))
-        with environment_append({"CONAN_CACERT_PATH": file_path}):
+        with environment_set({"CONAN_CACERT_PATH": file_path}):
             with self.assertRaisesRegex(ConanException, "Configured file for 'cacert_path'"
                                                              " doesn't exist"):
                 self._create_requesters()

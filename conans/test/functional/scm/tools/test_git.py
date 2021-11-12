@@ -408,6 +408,6 @@ class GitToolsTests(unittest.TestCase):
         folder = temp_folder()
         save(os.path.join(folder, "file"), "some contents")
         git = Git(folder)
-        with tools.environment_append({"PATH": ""}):
+        with tools.environment_set({"PATH": ""}):
             excluded = git.excluded_files()
             self.assertEqual(excluded, [])

@@ -13,7 +13,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.rest.rest_client_v1 import complete_url
-from conans.client.tools import environment_append
+from conans.util.env import environment_set
 from conans.client.userio import UserInput
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -67,7 +67,7 @@ class RestApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not cls.server:
-            with environment_append({"CONAN_SERVER_PORT": str(get_free_port())}):
+            with environment_set({"CONAN_SERVER_PORT": str(get_free_port())}):
                 cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
                 cls.server.start()
 

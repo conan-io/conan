@@ -78,7 +78,7 @@ class ConanTraceTest(unittest.TestCase):
     def test_trace_actions(self):
         client = TestClient(servers=self.servers)
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
-        with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
+        with tools.environment_set({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
             ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),

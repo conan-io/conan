@@ -7,6 +7,23 @@
 
 """
 import os
+from contextlib import contextmanager
+
+
+@contextmanager
+def environment_set(env_vars):
+    old_env = dict(os.environ)
+    os.environ.update(env_vars)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
+
+
+@contextmanager
+def no_op():
+    yield
 
 
 def get_env(env_key, default=None, environment=None):

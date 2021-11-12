@@ -38,7 +38,7 @@ request_timeout=2
 """
         save(client.cache.conan_conf_path, conf)
 
-        with tools.environment_append({"CONAN_REQUEST_TIMEOUT": "4.3"}):
+        with tools.environment_set({"CONAN_REQUEST_TIMEOUT": "4.3"}):
             client = TestClient(requester_class=MyRequester)
             client.save({"conanfile.py": conanfile})
             client.run("create . foo/1.0@")

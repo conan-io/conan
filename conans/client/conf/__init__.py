@@ -9,7 +9,7 @@ from conans.errors import ConanException
 from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, CACERT_FILE
 from conans.util.dates import timedelta_from_text
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import load
 
 _t_default_settings_yml = textwrap.dedent("""
