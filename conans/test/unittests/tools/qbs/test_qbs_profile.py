@@ -174,9 +174,8 @@ class QbsProfileTest(unittest.TestCase):
             with mock.patch.object(platform, 'system',
                                    new_callable=MagicMock) as mock_platform_system:
                 mock_platform_system.return_value = settings['os']
-                with mock.patch.object(microsoft, 'VCVars', new_callable=MagicMock) as mock_vcvars:
-                    mock_vcvars.generate = MagicMock()
-
+                with mock.patch.object(microsoft.VCVars, 'generate',
+                                       new_callable=MagicMock) as mock_vcvars_generate:
                     expected_run_cmd = 'qbs-setup-toolchains --settings-dir "{}" {} {}'.format(
                         qbs_profile._settings_dir.return_value, settings['qbs_compiler'],
                         qbs_profile._profile_name)
