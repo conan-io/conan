@@ -296,7 +296,10 @@ class QbsProfileTest(unittest.TestCase):
 
         def side_effect_conanfile_run(command, output):
             del command
-            output.write(self._generate_qbs_config_output())
+            if six.PY2:
+                output.write(self._generate_qbs_config_output().decode("utf-8"))
+            else:
+                output.write(self._generate_qbs_config_output())
 
         conanfile = Mock()
         conanfile.run = Mock(side_effect=side_effect_conanfile_run)
@@ -400,7 +403,10 @@ class QbsProfileTest(unittest.TestCase):
 
         def side_effect_conanfile_run(command, output):
             del command
-            output.write(self._generate_qbs_config_output_msvc())
+            if six.PY2:
+                output.write(self._generate_qbs_config_output_msvc().decode("utf-8"))
+            else:
+                output.write(self._generate_qbs_config_output_msvc())
 
         conanfile = Mock()
         conanfile.run = Mock(side_effect=side_effect_conanfile_run)
