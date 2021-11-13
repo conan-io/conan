@@ -114,47 +114,9 @@ class QbsProfile(object):
             Profile {
                 name: "conan_toolchain_profile"
 
-                /* detected via qbs-setup-toolchains */
                 {%- for key, value in _profile_values_from_setup.items() %}
                 {{ key }}: {{ value }}
                 {%- endfor %}
-
-                /* deduced from environment */
-                {%- for key, value in _profile_values_from_env.items() %}
-                {{ key }}: {{ value }}
-                {%- endfor %}
-                {%- if sysroot %}
-                qbs.sysroot: "{{ sysroot }}"
-                {%- endif %}
-
-                /* conan settings */
-                {%- if build_variant %}
-                qbs.buildVariant: "{{ build_variant }}"
-                {%- endif %}
-                {%- if architecture %}
-                qbs.architecture: "{{ architecture }}"
-                {%- endif %}
-                {%- if not _profile_values_from_setup["qbs.targetPlatform"] %}
-                {%- if target_platform %}
-                qbs.targetPlatform: "{{ target_platform }}"
-                {%- else %}
-                qbs.targetPlatform: undefined
-                {%- endif %}
-                {%- endif %}
-                {%- if optimization %}
-                qbs.optimization: "{{ optimization }}"
-                {%- endif %}
-                {%- if cxx_language_version %}
-                cpp.cxxLanguageVersion: "{{ cxx_language_version }}"
-                {%- endif %}
-                {%- if runtime_library %}
-                cpp.runtimeLibrary: "{{ runtime_library }}"
-                {%- endif %}
-
-                /* package options */
-                {%- if position_independent_code %}
-                cpp.positionIndependentCode: {{ position_independent_code }}
-                {%- endif %}
             }
         }
         ''')
@@ -169,17 +131,7 @@ class QbsProfile(object):
     @property
     def content(self):
         context = {
-            '_profile_values_from_setup': self._profile_values_from_setup,
-            '_profile_values_from_env': self._profile_values_from_env,
-            'build_variant': self._build_variant,
-            'architecture': self._architecture if not
-            self._profile_values_from_setup.get("qbs.architecture") else None,
-            'optimization': self._optimization,
-            'sysroot': self._sysroot,
-            'position_independent_code': self._position_independent_code,
-            'cxx_language_version': self._cxx_language_version,
-            'target_platform': self._target_platform,
-            'runtime_library': self._runtime_library,
+            '_profile_values_from_setup': self._profile_values_from_setup
         }
         t = Template(self._template_profile)
         content = t.render(**context)
@@ -190,29 +142,58 @@ class QbsProfile(object):
 
     def _init(self, conanfile):
         self._conanfile = conanfile
+        shutil.rmtree(self._settings_dir(), ignore_errors=True)
         self._check_for_compiler()
         build_env = self._get_build_env()
         self._setup_toolchains(build_env)
+
+        profile_values_from_env = self._flags_from_env(build_env)
+        for k, v in profile_values_from_env.items():
+            self._set_qbs_config_value(k, v)
+
+        architecture = self._architecture_map.get(
+            conanfile.settings.get_safe('arch'))
+        if architecture:
+            self._set_qbs_config_value("qbs.architecture", architecture)
+
+        build_variant = self._build_variant_map.get(
+            conanfile.settings.get_safe('build_type'))
+        if build_variant:
+            self._set_qbs_config_value("qbs.buildVariant", build_variant)
+
+        optimization = self._optimization_map.get(
+            conanfile.settings.get_safe('build_type'))
+        if optimization:
+            self._set_qbs_config_value("qbs.optimization", optimization)
+
+        cxx_language_version = self._cxx_language_version_map.get(
+            str(conanfile.settings.get_safe('compiler.cppstd')))
+        if cxx_language_version:
+            self._set_qbs_config_value("cpp.cxxLanguageVersion", cxx_language_version)
+
+        target_platform = self._target_platform_map.get(
+            conanfile.settings.get_safe('os'))
+        if not target_platform:
+            target_platform = "undefined"
+        self._set_qbs_config_value("qbs.targetPlatform", target_platform)
+
+        runtime_library = self._runtime_library_map.get(
+            conanfile.settings.get_safe('compiler.runtime'))
+        if runtime_library:
+            self._set_qbs_config_value("cpp.runtimeLibrary", runtime_library)
+
+        sysroot = build_env.get('SYSROOT')
+        if sysroot:
+            self._set_qbs_config_value("qbs.sysroot", sysroot)
+
+        position_independent_code = self._bool(
+            conanfile.options.get_safe('fPIC'))
+        if position_independent_code:
+            self._set_qbs_config_value("cpp.positionIndependentCode",
+                                       position_independent_code)
+
         self._profile_values_from_setup = (
             self._read_qbs_profile_from_config())
-        self._profile_values_from_env = self._flags_from_env(build_env)
-        shutil.rmtree(self._settings_dir())
-
-        self._architecture = self._architecture_map.get(
-            conanfile.settings.get_safe('arch'))
-        self._build_variant = self._build_variant_map.get(
-            conanfile.settings.get_safe('build_type'))
-        self._optimization = self._optimization_map.get(
-            conanfile.settings.get_safe('build_type'))
-        self._cxx_language_version = self._cxx_language_version_map.get(
-            str(conanfile.settings.get_safe('compiler.cppstd')))
-        self._target_platform = self._target_platform_map.get(
-            conanfile.settings.get_safe('os'))
-        self._runtime_library = self._runtime_library_map.get(
-            conanfile.settings.get_safe('compiler.runtime'))
-        self._sysroot = build_env.get('SYSROOT')
-        self._position_independent_code = self._bool(
-            conanfile.options.get_safe('fPIC'))
 
     def _get_build_env(self):
         virtual_build_env = VirtualBuildEnv(self._conanfile)
@@ -288,6 +269,11 @@ class QbsProfile(object):
                     config[key] = value
         return config
 
+    def _set_qbs_config_value(self, key, value):
+        cmd = 'qbs-config --settings-dir {} profiles.{}.{} "{}"'.format(
+            self._settings_dir(), self._profile_name, key, value)
+        self._conanfile.run(cmd)
+
     def _flags_from_env(self, build_env):
         flags_from_env = {}
         if build_env.get('ASFLAGS'):
@@ -307,4 +293,5 @@ class QbsProfile(object):
             flags_from_env['cpp.linkerFlags'] = str(parser.linker_flags)
             flags_from_env['cpp.driverLinkerFlags'] = str(
                 parser.driver_linker_flags)
+
         return flags_from_env

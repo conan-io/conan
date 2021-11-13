@@ -29,7 +29,7 @@ class QbsProfileTest(unittest.TestCase):
         def side_effect_settings_get_safe(setting):
             settings = {
                 "arch": "x86",
-                "build_type": "Debug",
+                "build_type": "MinSizeRel",
                 "compiler.cppstd": "17",
                 "os": "Linux",
                 "compiler.runtime": None,
@@ -54,41 +54,72 @@ class QbsProfileTest(unittest.TestCase):
             qbs_profile._get_build_env = MagicMock(return_value=expected_build_env)
             qbs_profile._setup_toolchains = MagicMock()
             qbs_profile._read_qbs_profile_from_config = MagicMock(return_value="test-profile")
-            qbs_profile._flags_from_env = MagicMock(return_value={"Flag1": "value1"})
+            qbs_profile._flags_from_env = MagicMock(
+                return_value={"Flag1": "value1", "Flag2": "value2"})
             expected_settings_dir = "settings_dir"
             qbs_profile._settings_dir = MagicMock(return_value=expected_settings_dir)
+            qbs_profile._set_qbs_config_value = MagicMock()
 
             conanfile.settings.get_safe = Mock(side_effect=side_effect_settings_get_safe)
             conanfile.options.get_safe = Mock(side_effect=side_effect_options_get_safe)
 
             with mock.patch.object(shutil, 'rmtree', new_callable=MagicMock) as mock_rmtree:
                 init(qbs_profile, conanfile)
+
+                qbs_profile._settings_dir.assert_called_once_with()
+                mock_rmtree.assert_called_once_with(expected_settings_dir, ignore_errors=True)
+
+                self.assertEqual(qbs_profile._set_qbs_config_value.call_count, 9)
+
                 qbs_profile._check_for_compiler.assert_called_once_with()
                 qbs_profile._get_build_env.assert_called_once_with()
                 qbs_profile._setup_toolchains.assert_called_once_with(
                     expected_build_env)
+
+                qbs_profile._flags_from_env.assert_called_once_with(expected_build_env)
+                qbs_profile._set_qbs_config_value.assert_any_call("Flag1", "value1")
+                qbs_profile._set_qbs_config_value.assert_any_call("Flag2", "value2")
+
+                conanfile.settings.get_safe.assert_any_call("arch")
+                qbs_profile._set_qbs_config_value.assert_any_call("qbs.architecture", "x86")
+
+                conanfile.settings.get_safe.assert_any_call("build_type")
+                qbs_profile._set_qbs_config_value.assert_any_call("qbs.buildVariant", "release")
+                qbs_profile._set_qbs_config_value.assert_any_call("qbs.optimization", "small")
+
+                conanfile.settings.get_safe.assert_any_call("compiler.cppstd")
+                qbs_profile._set_qbs_config_value.assert_any_call("cpp.cxxLanguageVersion", "c++17")
+
+                conanfile.settings.get_safe.assert_any_call("os")
+                qbs_profile._set_qbs_config_value.assert_any_call("qbs.targetPlatform", "linux")
+
+                conanfile.settings.get_safe.assert_any_call("compiler.runtime")
+
+                qbs_profile._set_qbs_config_value.assert_any_call(
+                    "qbs.sysroot", expected_build_env["SYSROOT"])
+
+                conanfile.options.get_safe.assert_any_call("fPIC")
+                qbs_profile._set_qbs_config_value.assert_any_call(
+                    "cpp.positionIndependentCode", "true")
+
                 qbs_profile._read_qbs_profile_from_config.assert_called_once_with()
                 self.assertEqual(qbs_profile._profile_values_from_setup,
                                  qbs_profile._read_qbs_profile_from_config.return_value)
-                qbs_profile._flags_from_env.assert_called_once_with(expected_build_env)
-                self.assertEqual(qbs_profile._profile_values_from_env,
-                                 qbs_profile._flags_from_env.return_value)
-                qbs_profile._settings_dir.assert_called_once_with()
-                mock_rmtree.assert_called_once_with(expected_settings_dir)
-                conanfile.settings.get_safe.assert_any_call("arch")
-                self.assertEqual(qbs_profile._architecture, "x86")
-                conanfile.settings.get_safe.assert_any_call("build_type")
-                self.assertEqual(qbs_profile._build_variant, "debug")
-                self.assertEqual(qbs_profile._optimization, None)
-                conanfile.settings.get_safe.assert_any_call("compiler.cppstd")
-                self.assertEqual(qbs_profile._cxx_language_version, "c++17")
-                conanfile.settings.get_safe.assert_any_call("os")
-                self.assertEqual(qbs_profile._target_platform, "linux")
-                conanfile.settings.get_safe.assert_any_call("compiler.runtime")
-                self.assertEqual(qbs_profile._runtime_library, None)
-                self.assertEqual(qbs_profile._sysroot, expected_build_env["SYSROOT"])
-                conanfile.options.get_safe.assert_any_call("fPIC")
-                self.assertEqual(qbs_profile._position_independent_code, "true")
+
+    def test_set_qbs_config_value(self):
+        conanfile = Mock()
+        qbs_profile = QbsProfileWithoutConstructor(conanfile)
+        expected_settings_dir = "settings_dir"
+        qbs_profile._settings_dir = MagicMock(return_value=expected_settings_dir)
+        conanfile.run = MagicMock()
+
+        expected_key = "Hello"
+        expected_value = "World"
+        qbs_profile._set_qbs_config_value(expected_key, expected_value)
+        conanfile.run.assert_called_once_with(
+            'qbs-config --settings-dir {} profiles.conan.{} "{}"'.format(expected_settings_dir,
+                                                                         expected_key,
+                                                                         expected_value))
 
     def test_split_env_var_into_list(self):
         with mock.patch.object(shlex, 'split', new_callable=MagicMock) as mock_split:
@@ -319,8 +350,6 @@ class QbsProfileTest(unittest.TestCase):
             Project {
                 Profile {
                     name: "conan_toolchain_profile"
-
-                    /* detected via qbs-setup-toolchains */
                     cpp.cCompilerName: "gcc"
                     cpp.compilerName: "g++"
                     cpp.cxxCompilerName: "g++"
@@ -332,18 +361,12 @@ class QbsProfileTest(unittest.TestCase):
                     qbs.someBoolProp: true
                     qbs.someIntProp: 13
                     qbs.toolchain: ["gcc"]
-
-                    /* deduced from environment */
                     qbs.sysroot: "/foo/bar/path"
-
-                    /* conan settings */
                     qbs.buildVariant: "release"
                     qbs.architecture: "x86_64"
                     qbs.targetPlatform: "linux"
                     qbs.optimization: "small"
                     cpp.cxxLanguageVersion: "c++17"
-
-                    /* package options */
                     cpp.positionIndependentCode: true
                 }
             }''')
@@ -360,17 +383,15 @@ class QbsProfileTest(unittest.TestCase):
             "cpp.toolchainPrefix": '"arm-none-eabi-"',
             "qbs.someBoolProp": "true",
             "qbs.someIntProp": 13,
-            "qbs.toolchain": '["gcc"]'
+            "qbs.toolchain": '["gcc"]',
+            "qbs.sysroot": '"/foo/bar/path"',
+            "qbs.buildVariant": '"release"',
+            "qbs.architecture": '"x86_64"',
+            "qbs.targetPlatform": '"linux"',
+            "qbs.optimization": '"small"',
+            "cpp.cxxLanguageVersion": '"c++17"',
+            "cpp.positionIndependentCode": 'true',
         }
-        qbs_profile._profile_values_from_env = {}
-        qbs_profile._build_variant = "release"
-        qbs_profile._architecture = "x86_64"
-        qbs_profile._optimization = "small"
-        qbs_profile._sysroot = "/foo/bar/path"
-        qbs_profile._position_independent_code = "true"
-        qbs_profile._cxx_language_version = "c++17"
-        qbs_profile._target_platform = "linux"
-        qbs_profile._runtime_library = None
         self.assertEqual(qbs_profile.content, expected_content)
 
     @staticmethod
@@ -426,8 +447,6 @@ class QbsProfileTest(unittest.TestCase):
             Project {
                 Profile {
                     name: "conan_toolchain_profile"
-
-                    /* detected via qbs-setup-toolchains */
                     cpp.compilerVersion: "19.28.29333"
                     cpp.toolchainInstallPath: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64"
                     qbs.architecture: "x86_64"
@@ -436,17 +455,6 @@ class QbsProfileTest(unittest.TestCase):
                     cpp.driverFlags: ["-march=armv7e-m", "-mtune=cortex-m4", "--specs=nosys.specs"]
                     qbs.someBoolProp: true
                     qbs.someIntProp: 13
-
-                    /* deduced from environment */
-                    qbs.sysroot: "/foo/bar/path"
-
-                    /* conan settings */
-                    qbs.buildVariant: "release"
-                    qbs.optimization: "small"
-                    cpp.runtimeLibrary: "dynamic"
-
-                    /* package options */
-                    cpp.positionIndependentCode: true
                 }
             }''')
 
