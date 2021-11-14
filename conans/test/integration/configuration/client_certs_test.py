@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from requests import Response
 
 from conans.client import tools
@@ -38,13 +39,16 @@ class MyHttpRequester(TestRequester):
 
 class ClientCertsTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated")
     def test_pic_client_certs(self):
-
+        # FIXME: We need a way to reference the current cache location in "global.conf"
+        # TODO: Discuss if dropping a "xxx.cert" file inthe cache would work as it is the default
         client = TestClient(requester_class=MyHttpRequester)
         client.save({"conanfile.py": conanfile})
         client.run("create . foo/1.0@")
 
         assert "KWARGS auth: None" in client.out
+
         config = client.cache.config
         tools.save(config.client_cert_path, "Fake cert")
         tools.save(config.client_cert_key_path, "Fake key")
@@ -65,16 +69,10 @@ class ClientCertsTest(unittest.TestCase):
 
         client = TestClient(requester_class=MyHttpRequester)
         conan_conf = textwrap.dedent("""
-                                    [storage]
-                                    path = ./data
-                                    [general]
-                                    client_cert_path={}
-                                    client_cert_key_path={}
+                                    core.network:client_cert_path={}
+                                    core.network:client_cert_key_path={}
                                 """.format(mycert_path, mykey_path))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": conanfile})
         client.run("create . foo/1.0@")
         assert "KWARGS cert: ('{}', '{}')".format(mycert_path, mykey_path).replace("\\", '\\\\') in client.out
-
-        # assert that the cacert file is created
-        self.assertTrue(os.path.exists(client.cache.config.cacert_path))

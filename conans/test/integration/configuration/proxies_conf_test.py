@@ -126,7 +126,7 @@ http=http://conan.url
 
         assert "My requester!" in client.out
 
-    def test_environ_removed(self):
+    def htest_environ_removed(self):
         conanfile = textwrap.dedent("""
                 from conans import ConanFile
                 from conan.tools.files import download

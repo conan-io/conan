@@ -3,10 +3,14 @@ import stat
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated")
 class DeployImportFilePermissionTest(unittest.TestCase):
+    # FIXME: CONAN_READ_ONLY to be revisited and reconsidered, depends on "install-folder" idea
 
     def setUp(self):
         self.file_name = 'myheader.h'
