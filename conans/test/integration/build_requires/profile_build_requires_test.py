@@ -58,7 +58,6 @@ class BuildRequiresTest(unittest.TestCase):
 
     def test_profile_requires(self):
         client = TestClient()
-        save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
         self._create(client)
 
         client.save({CONANFILE: lib_conanfile,
@@ -74,7 +73,6 @@ class BuildRequiresTest(unittest.TestCase):
 
     def test_profile_open_requires(self):
         client = TestClient()
-        save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
         self._create(client)
 
         client.save({CONANFILE: lib_conanfile,
@@ -104,7 +102,6 @@ class BuildRequiresTest(unittest.TestCase):
 
     def test_profile_test_requires(self):
         client = TestClient()
-        save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
         self._create(client)
 
         test_conanfile = """
@@ -129,7 +126,6 @@ class TestMyLib(ConanFile):
 
     def test_consumer_patterns(self):
         client = TestClient()
-        save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
         self._create(client)
 
         test_conanfile = """
