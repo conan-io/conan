@@ -3,16 +3,15 @@ import platform
 import unittest
 
 import pytest
-import requests
 from mock import Mock
 
 from conans import REVISIONS
-from conans.client.conf import ConanClientConfigParser
 from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.rest.rest_client_v1 import complete_url
+from conans.model.conf import ConfDefinition
 from conans.util.env import environment_set
 from conans.client.userio import UserInput
 from conans.model.info import ConanInfo
@@ -73,7 +72,7 @@ class RestApiTest(unittest.TestCase):
 
                 filename = os.path.join(temp_folder(), "conan.conf")
                 save(filename, "")
-                config = ConanClientConfigParser(filename)
+                config = ConfDefinition()
                 requester = ConanRequester(config)
                 client_factory = RestApiClientFactory(requester=requester,
                                                       config=config)

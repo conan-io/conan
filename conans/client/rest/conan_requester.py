@@ -3,14 +3,13 @@ import logging
 import os
 import platform
 import time
-import warnings
 
 import urllib3
 import requests
 from requests.adapters import HTTPAdapter
 
 from conans import __version__ as client_version
-from conans.util.files import save
+from conans.errors import ConanException
 from conans.util.tracer import log_client_rest_api_call
 
 # Capture SSL warnings as pointed out here:
@@ -19,10 +18,14 @@ from conans.util.tracer import log_client_rest_api_call
 logging.captureWarnings(True)
 
 
+DEFAULT_TIMEOUT = (30, 60)  # connect, read timeouts
+
+
 class ConanRequester(object):
 
     def __init__(self, config):
-
+        # TODO: Make all this lazy, to avoid fully configuring Requester, for every api call
+        #  even if it doesn't use it
         # FIXME: Trick for testing when requests is mocked
         if hasattr(requests, "Session"):
             self._http_requester = requests.Session()
@@ -32,7 +35,10 @@ class ConanRequester(object):
             self._http_requester.mount("https://", adapter)
 
         to = config["core.requests:timeout"]
-        self._timeout_seconds = float(to) if to is not None else None
+        try:
+            self._timeout_seconds = eval(to) if to is not None else DEFAULT_TIMEOUT
+        except Exception as e:
+            raise ConanException(f"Incorrect core.requests:timeout='{to}' value")
         self.proxies = config["core.network:proxies"] or {}  # FIXME: Broken as config dont do {}
         self._cacert_path = config["core.network:cacert_path"]
         self._client_cert_path = config["core.network:client_cert_path"]

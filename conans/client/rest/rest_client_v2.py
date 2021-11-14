@@ -41,7 +41,7 @@ class RestV2Methods(RestCommonMethods):
         # We don't want traces in output of these downloads, they are ugly in output
 
         retry = self._config["core.download:retry"]
-        retry_wait = self._config["core.download:retry_wayt"]
+        retry_wait = self._config["core.download:retry_wait"]
         download_cache = False if not use_cache else self._config.download_cache
         contents = run_downloader(self.requester, self.verify_ssl, retry=retry,
                                   retry_wait=retry_wait, download_cache=download_cache, url=url,

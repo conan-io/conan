@@ -214,11 +214,8 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "skip_broken_symlinks_check", False),
             ("CONAN_SYSREQUIRES_SUDO", "sysrequires_sudo", False),
             ("CONAN_SYSREQUIRES_MODE", "sysrequires_mode", None),
-            ("CONAN_REQUEST_TIMEOUT", "request_timeout", None),
             ("CONAN_CPU_COUNT", "cpu_count", None),
-            ("CONAN_READ_ONLY_CACHE", "read_only_cache", None),
             ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
-            ("CONAN_TEMP_TEST_FOLDER", "temp_test_folder", False),
         ],
         "hooks": [
             ("CONAN_HOOKS", "", None),
