@@ -12,7 +12,7 @@ import copy
 from contextlib import contextmanager
 from subprocess import CalledProcessError
 
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import decode_text
 
 

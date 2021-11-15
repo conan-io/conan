@@ -9,7 +9,9 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated")
 class ReadOnlyTest(unittest.TestCase):
+    # TODO: The Cache ReadOnly might be always true if the "install-folder" initiative moves forward
 
     def setUp(self):
         self.test_server = TestServer()

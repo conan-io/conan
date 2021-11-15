@@ -11,7 +11,7 @@ import requests
 from mock import patch
 
 from conans import REVISIONS
-from conans.client.tools.env import environment_append
+from conans.util.env import environment_update
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -350,124 +350,26 @@ class UploadTest(unittest.TestCase):
                       " already in server, skipping upload", client2.out)
 
     def test_upload_no_overwrite_all(self):
-        conanfile_new = """from conans import ConanFile, tools
-class MyPkg(ConanFile):
-    name = "Hello0"
-    version = "1.2.1"
-    exports_sources = "*"
-    options = {"shared": [True, False]}
-    default_options = {"shared": False}
+        conanfile_new = GenConanfile("hello", "1.0").\
+            with_exports_sources(["*"]).with_package("self.copy('*')")
 
-    def build(self):
-        if tools.get_env("MY_VAR", False):
-            open("file.h", 'w').close()
-
-    def package(self):
-        self.copy("*.h")
-"""
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile_new,
-                     "hello.h": "",
-                     "hello.cpp": ""})
+                     "hello.h": ""})
         client.run("create . frodo/stable")
 
         # First time upload
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
+        client.run("upload hello/1.0@frodo/stable --all -r default")
         self.assertNotIn("Forbidden overwrite", client.out)
-        self.assertIn("Uploading Hello0/1.2.1@frodo/stable", client.out)
+        self.assertIn("Uploading hello/1.0@frodo/stable", client.out)
 
         # CASE: Upload again
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already "
+        client.run("upload hello/1.0@frodo/stable --all -r default")
+        self.assertIn("hello/1.0@frodo/stable#66e74d8694b15fb8a7ed8fbc55c242a0 already "
                       "in server, skipping upload", client.out)
-        self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
+        self.assertIn("hello/1.0@frodo/stable#66e74d8694b15fb8a7ed8fbc55c242a0:"
+                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#a397cb03d51fb3b129c78d2968e2676f"
                       " already in server, skipping upload", client.out)
-        self.assertNotIn("Forbidden overwrite", client.out)
-
-        # CASE: Without changes
-        client.run("create . frodo/stable")
-        # upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already "
-                      "in server, skipping upload", client.out)
-        self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
-                      " already in server, skipping upload", client.out)
-        self.assertNotIn("Forbidden overwrite", client.out)
-
-        # CASE: When recipe and package changes
-        new_recipe = conanfile_new.replace("self.copy(\"*.h\")",
-                                           "self.copy(\"*.h\")\n        self.copy(\"*.cpp\")")
-        client.save({"conanfile.py": new_recipe})
-        client.run("create . frodo/stable")
-        # upload recipe and packages
-        # *1
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-
-        # CASE: When package changes
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        with environment_append({"MY_VAR": "True"}):
-            client.run("create . frodo/stable")
-        # upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        self.assertIn("Uploading artifacts", client.out)
-
-    def test_upload_no_overwrite_recipe(self):
-        conanfile_new = """from conans import ConanFile, tools
-class MyPkg(ConanFile):
-    name = "Hello0"
-    version = "1.2.1"
-    exports_sources = "*"
-    options = {"shared": [True, False]}
-    default_options = {"shared": False}
-
-    def build(self):
-        if tools.get_env("MY_VAR", False):
-            open("file.h", 'w').close()
-
-    def package(self):
-        self.copy("*.h")
-"""
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": conanfile_new,
-                     "hello.h": "",
-                     "hello.cpp": ""})
-        client.run("create . frodo/stable")
-
-        # First time upload
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        self.assertNotIn("Forbidden overwrite", client.out)
-        self.assertIn("Uploading Hello0/1.2.1@frodo/stable", client.out)
-
-        # Upload again
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already "
-                      "in server, skipping upload", client.out)
-        self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
-                      " already in server, skipping upload", client.out)
-        self.assertNotIn("Forbidden overwrite", client.out)
-
-        # Create without changes
-        # *1
-        client.run("create . frodo/stable")
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1 already in "
-                      "server, skipping upload", client.out)
-        self.assertIn("Hello0/1.2.1@frodo/stable#64111bb02374de41afe658628c4b9aa1:"
-                      "ce10536a7f7b9acce4e1f28ea4ee8e3973be0f6f#8d88cd7a53908e15c9241db4ed0b5808"
-                      " already in server, skipping upload", client.out)
-        self.assertNotIn("Forbidden overwrite", client.out)
-
-        # Create with recipe and package changes
-        new_recipe = conanfile_new.replace("self.copy(\"*.h\")",
-                                           "self.copy(\"*.h\")\n        self.copy(\"*.cpp\")")
-        client.save({"conanfile.py": new_recipe})
-        client.run("create . frodo/stable")
-        # upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        self.assertIn("Uploading conan_package.tgz", client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_skip_upload(self):

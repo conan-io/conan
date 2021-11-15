@@ -238,7 +238,10 @@ class MyPkg(ConanFile):
         client.run("create . pkg/0.1@user/stable")
         self.assertIn("Bar/0.1@user/stable: Forced build from source", client.out)
 
+    @pytest.mark.xfail(reason="Legacy conan.conf configuration deprecated")
     def test_build_folder_handling(self):
+        # FIXME: The "test_package" layout has changed, we need to discuss this redirection of
+        #  the TEMP_TEST_FOLDER
         conanfile = GenConanfile().with_name("Hello").with_version("0.1")
         test_conanfile = GenConanfile().with_test("pass")
         client = TestClient()
@@ -260,7 +263,7 @@ class MyPkg(ConanFile):
         # Test if using a temporary test folder can be enabled via the environment variable.
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile},
                     clean_first=True)
-        with tools.environment_append({"CONAN_TEMP_TEST_FOLDER": "True"}):
+        with tools.environment_update({"CONAN_TEMP_TEST_FOLDER": "True"}):
             client.run("create . lasote/stable")
         self.assertFalse(os.path.exists(default_build_dir))
 

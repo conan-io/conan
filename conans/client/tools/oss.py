@@ -4,10 +4,7 @@ import os
 import platform
 import subprocess
 import sys
-import warnings
-from collections import namedtuple
 
-from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import CalledProcessErrorWithStderr, ConanException
 from conans.model.version import Version
