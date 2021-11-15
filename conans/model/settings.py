@@ -162,6 +162,12 @@ class Settings(object):
                 setattr(attr, list_settings[-1], str(value))
         self._unconstrained = False
 
+    def dumps(self):
+        result = []
+        for name, value in self.values_list:
+            result.append("%s=%s" % (name, value))
+        return "\n".join(result)
+
     def get_safe(self, name, default=None):
         try:
             tmp = self
@@ -173,6 +179,13 @@ class Settings(object):
             return str(tmp)
         return default
 
+    @staticmethod
+    def loads(text):
+        try:
+            return Settings(yaml.safe_load(text) or {})
+        except (yaml.YAMLError, AttributeError) as ye:
+            raise ConanException("Invalid settings.yml format: {}".format(ye))
+
     def copy(self):
         """ deepcopy, recursive
         """
@@ -180,13 +193,6 @@ class Settings(object):
         for k, v in self._data.items():
             result._data[k] = v.copy()
         return result
-
-    @staticmethod
-    def loads(text):
-        try:
-            return Settings(yaml.safe_load(text) or {})
-        except (yaml.YAMLError, AttributeError) as ye:
-            raise ConanException("Invalid settings.yml format: {}".format(ye))
 
     def validate(self):
         for field in self.fields:

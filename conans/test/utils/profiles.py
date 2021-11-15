@@ -12,7 +12,7 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
     package_env = package_env or {}
 
     profile = Profile()
-    profile.settings = settings or {}
+    profile._settings_values = settings or {}
 
     if package_settings:
         profile.package_settings = package_settings

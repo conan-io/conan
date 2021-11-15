@@ -71,7 +71,7 @@ class ProfilesAPI:
         profile = Profile()
         settings = detect_defaults_settings()
         for name, value in settings:
-            profile.settings[name] = value
+            profile._settings_values[name] = value
         # TODO: This profile is very incomplete, it doesn't have the processed_settings
         #  good enough at the moment for designing the API interface, but to improve
         return profile
