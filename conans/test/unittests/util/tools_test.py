@@ -6,12 +6,8 @@ import unittest
 
 import pytest
 from mock.mock import mock_open, patch
-from parameterized import parameterized
 
-from conans.cli.api.conan_api import ConanAPIV2
 from conans.client import tools
-from conans.client.cache.cache import CONAN_CONF
-from conans.client.conf import get_default_client_conf
 from conans.cli.output import ConanOutput
 from conans.client.conf.detect_vs import vswhere
 from conans.client.tools.files import replace_in_file
@@ -20,6 +16,7 @@ from conans.model.layout import Infos
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, redirect_output
+from conans.util.env import get_env, environment_update
 from conans.util.files import load, md5, save
 from conans.util.runners import check_output_runner
 
@@ -131,9 +128,9 @@ class ToolsTest(unittest.TestCase):
         cpus = tools.cpu_count(output=output)
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
-        with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
+        with environment_update({"CONAN_CPU_COUNT": "34"}):
             self.assertEqual(tools.cpu_count(output=output), 34)
-        with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
+        with environment_update({"CONAN_CPU_COUNT": "null"}):
             with self.assertRaisesRegex(ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
@@ -149,117 +146,65 @@ class ToolsTest(unittest.TestCase):
 
     def test_get_env_unit(self):
         """
-        Unit tests tools.get_env
+        Unit tests get_env
         """
         # Test default
         self.assertIsNone(
-            tools.get_env("NOT_DEFINED", environment={}),
+            get_env("NOT_DEFINED", environment={}),
             None
         )
         # Test defined default
         self.assertEqual(
-            tools.get_env("NOT_DEFINED_KEY", default="random_default", environment={}),
+            get_env("NOT_DEFINED_KEY", default="random_default", environment={}),
             "random_default"
         )
         # Test return defined string
         self.assertEqual(
-            tools.get_env("FROM_STR", default="", environment={"FROM_STR": "test_string_value"}),
+            get_env("FROM_STR", default="", environment={"FROM_STR": "test_string_value"}),
             "test_string_value"
         )
         # Test boolean conversion
         self.assertEqual(
-            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "1"}),
+            get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "1"}),
             True
         )
         self.assertEqual(
-            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": "0"}),
+            get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": "0"}),
             False
         )
         self.assertEqual(
-            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "True"}),
+            get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "True"}),
             True
         )
         self.assertEqual(
-            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": ""}),
+            get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": ""}),
             False
         )
         # Test int conversion
         self.assertEqual(
-            tools.get_env("TO_INT", default=2, environment={"TO_INT": "1"}),
+            get_env("TO_INT", default=2, environment={"TO_INT": "1"}),
             1
         )
         # Test float conversion
         self.assertEqual(
-            tools.get_env("TO_FLOAT", default=2.0, environment={"TO_FLOAT": "1"}),
+            get_env("TO_FLOAT", default=2.0, environment={"TO_FLOAT": "1"}),
             1.0
         ),
         # Test list conversion
         self.assertEqual(
-            tools.get_env("TO_LIST", default=[], environment={"TO_LIST": "1,2,3"}),
+            get_env("TO_LIST", default=[], environment={"TO_LIST": "1,2,3"}),
             ["1", "2", "3"]
         )
         self.assertEqual(
-            tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED":
+            get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED":
                                                                           " 1 , 2 , 3 "}),
             ["1", "2", "3"]
         )
 
-
-    def test_get_env_in_conanfile(self):
-        """
-        Test get_env is available and working in conanfile
-        """
-        client = TestClient()
-
-        conanfile = """from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def build(self):
-        run_tests = tools.get_env("CONAN_RUN_TESTS", default=False)
-        print("test_get_env_in_conafile CONAN_RUN_TESTS=%r" % run_tests)
-        assert(run_tests == True)
-        """
-        client.save({"conanfile.py": conanfile})
-
-        with tools.environment_append({"CONAN_RUN_TESTS": "1"}):
-            client.run("install .")
-            client.run("build .")
-
-    def test_global_tools_overrided(self):
-        client = TestClient()
-
-        conanfile = """
-from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def build(self):
-        assert(tools._global_requester != None)
-        """
-        client.save({"conanfile.py": conanfile})
-
-        client.run("install .")
-        client.run("build .")
-
-        # Not test the real commmand get_command if it's setting the module global vars
-        tmp = temp_folder()
-        conf = get_default_client_conf().replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
-        save(os.path.join(tmp, CONAN_CONF), conf)
-        with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            conan_api = ConanAPIV2()
-        conan_api.remotes.list()
-        from conans.tools import _global_requester
-        self.assertEqual(_global_requester.proxies, {"http": "http://myproxy.com"})
-
     def test_environment_nested(self):
-        with tools.environment_append({"A": "1", "Z": "40"}):
-            with tools.environment_append({"A": "1", "B": "2"}):
-                with tools.environment_append({"A": "2", "B": "2"}):
+        with environment_update({"A": "1", "Z": "40"}):
+            with environment_update({"A": "1", "B": "2"}):
+                with environment_update({"A": "2", "B": "2"}):
                     self.assertEqual(os.getenv("A"), "2")
                     self.assertEqual(os.getenv("B"), "2")
                     self.assertEqual(os.getenv("Z"), "40")

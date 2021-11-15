@@ -8,6 +8,7 @@ from conans.client.cache.remote_registry import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.userio import UserInput
+from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import LocalDBMock
 
@@ -78,8 +79,7 @@ class TestTokenRefresh(unittest.TestCase):
 
     def setUp(self):
         requester = RequesterWithTokenMock()
-        config = namedtuple("ConfigMock", "revisions_enabled download_cache retry retry_wait")\
-            (False, None, None, None)
+        config = ConfDefinition()
         self.rest_client_factory = RestApiClientFactory(requester, config=config,
                                                         artifacts_properties=None)
         self.localdb = LocalDBMock()

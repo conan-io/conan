@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, load
 import json

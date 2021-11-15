@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 
@@ -17,6 +19,7 @@ class AConan(ConanFile):
 """
 
 
+@pytest.mark.xfail(reason="Legacy conan.conf configuration")
 class CPUCountTest(unittest.TestCase):
 
     def test_cpu_count_override(self):

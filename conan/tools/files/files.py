@@ -108,9 +108,9 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
     :param retry: Number of retries in case of failure. Default is overriden by general.retry in the
-                  conan.conf file or an env variable CONAN_RETRY
+                  conan.conf file
     :param retry_wait: Seconds to wait between download attempts. Default is overriden by
-                       general.retry_wait in the conan.conf file or an env variable CONAN_RETRY_WAIT
+                       general.retry_wait in the conan.conf file
     :param auth: A tuple of user and password to use HTTPBasic authentication
     :param headers: A dictionary with additional headers
     :param md5: MD5 hash code to check the downloaded file
@@ -124,15 +124,11 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     out = ConanOutput()
     overwrite = True
 
-    if config["tools.files.download:retry"]:
-        retry = int(config["tools.files.download:retry"])
-    elif retry is None:
-        retry = 1
-
-    if config["tools.files.download:retry_wait"]:
-        retry_wait = int(config["tools.files.download:retry_wait"])
-    elif retry_wait is None:
-        retry_wait = 5
+    config_retry = config.get("tools.files.download:retry", int, None)
+    retry = config_retry if config_retry is not None else retry if retry is not None else 2
+    config_retry_wait = config.get("tools.files.download:retry_wait", int, None)
+    retry_wait = config_retry_wait if config_retry_wait is not None \
+        else retry_wait if retry_wait is not None else 5
 
     checksum = sha256 or sha1 or md5
     download_cache = config["tools.files.download:download_cache"] if checksum else None
