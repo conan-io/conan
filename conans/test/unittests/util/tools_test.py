@@ -6,12 +6,8 @@ import unittest
 
 import pytest
 from mock.mock import mock_open, patch
-from parameterized import parameterized
 
-from conans.cli.api.conan_api import ConanAPIV2
 from conans.client import tools
-from conans.client.cache.cache import CONAN_CONF
-from conans.client.conf import get_default_client_conf
 from conans.cli.output import ConanOutput
 from conans.client.conf.detect_vs import vswhere
 from conans.client.tools.files import replace_in_file
@@ -20,7 +16,7 @@ from conans.model.layout import Infos
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, redirect_output
-from conans.util.env_reader import get_env
+from conans.util.env_reader import get_env, environment_append
 from conans.util.files import load, md5, save
 from conans.util.runners import check_output_runner
 
@@ -132,9 +128,9 @@ class ToolsTest(unittest.TestCase):
         cpus = tools.cpu_count(output=output)
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
-        with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
+        with environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEqual(tools.cpu_count(output=output), 34)
-        with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
+        with environment_append({"CONAN_CPU_COUNT": "null"}):
             with self.assertRaisesRegex(ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
@@ -206,9 +202,9 @@ class ToolsTest(unittest.TestCase):
         )
 
     def test_environment_nested(self):
-        with tools.environment_append({"A": "1", "Z": "40"}):
-            with tools.environment_append({"A": "1", "B": "2"}):
-                with tools.environment_append({"A": "2", "B": "2"}):
+        with environment_append({"A": "1", "Z": "40"}):
+            with environment_append({"A": "1", "B": "2"}):
+                with environment_append({"A": "2", "B": "2"}):
                     self.assertEqual(os.getenv("A"), "2")
                     self.assertEqual(os.getenv("B"), "2")
                     self.assertEqual(os.getenv("Z"), "40")
