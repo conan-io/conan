@@ -74,4 +74,6 @@ class ProfilesAPI:
             profile._settings_values[name] = value
         # TODO: This profile is very incomplete, it doesn't have the processed_settings
         #  good enough at the moment for designing the API interface, but to improve
+        # FIXME: This is wrongly adding the processsed MD to the profile
+        profile.process_settings(self._cache.settings_yaml_definition)
         return profile

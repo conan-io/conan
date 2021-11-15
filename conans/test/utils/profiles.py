@@ -1,6 +1,9 @@
 import os
 
+import yaml
+
 from conan.tools.env import Environment
+from conans.client.conf import get_default_settings_yml
 from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.util.files import save
@@ -34,4 +37,5 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
         profile._environments.set_default(None, Environment(conanfile=None)) \
             .define(var_name, value)"""
 
+    profile.process_settings(yaml.safe_load(get_default_settings_yml()))
     save(os.path.join(folder, name), profile.dumps())
