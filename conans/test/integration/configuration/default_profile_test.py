@@ -4,21 +4,19 @@ import unittest
 
 import pytest
 
-from conans.client import tools
 from conans.client.cache.cache import PROFILES_FOLDER
 from conans.paths import CONANFILE
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.util.env import environment_update
 from conans.util.files import save
 
 
 class DefaultProfileTest(unittest.TestCase):
 
     def test_conanfile_txt_incomplete_profile(self):
-        conanfile = '''from conans import ConanFile
-class MyConanfile(ConanFile):
-    pass
-'''
+        conanfile = GenConanfile()
 
         client = TestClient()
         save(client.cache.default_profile_path, "[env]\nValue1=A")
@@ -184,7 +182,7 @@ class MyConanfile(ConanFile):
         env_variable = "env_variable=profile_environment"
         default_profile_path = os.path.join(tmp, 'env_profile')
         save(default_profile_path, "[buildenv]\n" + env_variable)
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': default_profile_path}):
+        with environment_update({'CONAN_DEFAULT_PROFILE': default_profile_path}):
             client.run("create . name/version@user/channel")
             self.assertIn(">>> " + env_variable, client.out)
 
@@ -195,14 +193,14 @@ class MyConanfile(ConanFile):
         default_profile_path = os.path.join(client.cache_folder,
                                             PROFILES_FOLDER, rel_path)
         save(default_profile_path, "[buildenv]\n" + env_variable)
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': rel_path}):
+        with environment_update({'CONAN_DEFAULT_PROFILE': rel_path}):
             client.run("create . name/version@user/channel")
             self.assertIn(">>> " + env_variable, client.out)
 
         # Use non existing path
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': profile_path}):
+        with environment_update({'CONAN_DEFAULT_PROFILE': profile_path}):
             client.run("create . name/version@user/channel", assert_error=True)
             self.assertIn("The default profile file doesn't exist", client.out)
 

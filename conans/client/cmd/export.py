@@ -4,8 +4,7 @@ import shutil
 
 import yaml
 
-from conan.cache.conan_reference import ConanReference
-from conans.cli.output import Color, ConanOutput
+from conans.cli.output import ConanOutput
 from conans.cli.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 from conans.client.tools import chdir
@@ -39,7 +38,7 @@ class AliasConanfile(ConanFile):
                          path=None, manifest=manifest, revision_mode=revision_mode)
     ref_with_rrev = copy.copy(alias_ref)
     ref_with_rrev.revision = rrev
-    alias_layout.reference = ConanReference(ref_with_rrev)
+    alias_layout.reference = ref_with_rrev
     cache.assign_rrev(alias_layout)
 
 
@@ -105,7 +104,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
                              revision_mode=conanfile.revision_mode)
 
     ref.revision = revision
-    recipe_layout.reference = ConanReference(ref)
+    recipe_layout.reference = ref
     cache.assign_rrev(recipe_layout)
     # TODO: cache2.0 check if this is the message we want to output
     scoped_output.success('A new %s version was exported' % CONANFILE)

@@ -10,7 +10,8 @@ from conans.test.utils.tools import TestClient
 
 class TestPackageTestCase(unittest.TestCase):
     conanfile_tpl = Template(textwrap.dedent("""
-        from conans import ConanFile, tools
+        from conans import ConanFile
+        import os
         from conan.tools.env import VirtualBuildEnv
 
         class Recipe(ConanFile):
@@ -23,7 +24,7 @@ class TestPackageTestCase(unittest.TestCase):
                 self.output.info(">> settings_build.os: {}".format(self.settings_build.os))
                 build_env = VirtualBuildEnv(self).vars()
                 with build_env.apply():
-                    self.output.info(">> tools.get_env('INFO'): {}".format(tools.get_env("INFO")))
+                    self.output.info(">> tools.get_env('INFO'): {}".format(os.getenv("INFO")))
 
             def package_info(self):
                 self.buildenv_info.define("INFO", "{}-{}".format(self.name, self.settings.os))

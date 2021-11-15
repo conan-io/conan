@@ -63,9 +63,7 @@ def print_graph(deps_graph):
     if python_requires:
         out.info("Python requires", Color.BRIGHT_YELLOW)
         for p in python_requires:
-            p_norev = copy.copy(p)
-            p_norev.revision = None
-            out.info("    %s" % repr(p_norev), Color.BRIGHT_CYAN)
+            out.info("    %s" % str(p), Color.BRIGHT_CYAN)
     out.info("Packages", Color.BRIGHT_YELLOW)
 
     def _packages(nodes):

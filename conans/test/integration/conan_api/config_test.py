@@ -8,6 +8,7 @@ from conans.client.conf import get_default_client_conf
 from conans.paths import DEFAULT_CONAN_USER_HOME
 from conans.test.utils.test_files import temp_folder
 from conans.tools import save
+from conans.util.env import environment_update
 
 
 class ConfigTest(unittest.TestCase):
@@ -18,7 +19,7 @@ class ConfigTest(unittest.TestCase):
         self._cache_folder = os.path.join(user_home, DEFAULT_CONAN_USER_HOME)
         os.mkdir(self._cache_folder)
         save(os.path.join(self._cache_folder, CONAN_CONF), conf)
-        with tools.environment_append({"CONAN_USER_HOME": user_home}):
+        with environment_update({"CONAN_USER_HOME": user_home}):
             self.api = conan_api.ConanAPIV1()
 
     def test_config_home(self):

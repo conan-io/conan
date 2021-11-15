@@ -3,17 +3,16 @@ import platform
 import unittest
 
 import pytest
-import requests
 from mock import Mock
 
 from conans import REVISIONS
-from conans.client.conf import ConanClientConfigParser
 from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.rest.rest_client_v1 import complete_url
-from conans.client.tools import environment_append
+from conans.model.conf import ConfDefinition
+from conans.util.env import environment_update
 from conans.client.userio import UserInput
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -67,13 +66,13 @@ class RestApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not cls.server:
-            with environment_append({"CONAN_SERVER_PORT": str(get_free_port())}):
+            with environment_update({"CONAN_SERVER_PORT": str(get_free_port())}):
                 cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
                 cls.server.start()
 
                 filename = os.path.join(temp_folder(), "conan.conf")
                 save(filename, "")
-                config = ConanClientConfigParser(filename)
+                config = ConfDefinition()
                 requester = ConanRequester(config)
                 client_factory = RestApiClientFactory(requester=requester,
                                                       config=config)

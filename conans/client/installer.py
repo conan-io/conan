@@ -3,9 +3,7 @@ import shutil
 import time
 from multiprocessing.pool import ThreadPool
 
-from conan.cache.conan_reference import ConanReference
 from conans.cli.output import ConanOutput
-from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
@@ -21,11 +19,11 @@ from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
-from conans.util.env_reader import get_env
-from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
+from conans.util.env import get_env
+from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty, \
+    chdir
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -63,16 +61,8 @@ class _PackageBuilder(object):
         if recipe_build_id is not None and pref.package_id != recipe_build_id:
             package_layout.build_id = recipe_build_id
             # check if we already have a package with the calculated build_id
-            recipe_ref = RecipeReference.loads(ConanReference(pref).recipe_reference)
-            package_refs = self._cache.get_package_references(recipe_ref)
-            build_prev = None
-            for _pkg_ref in package_refs:
-                prev = self._cache.get_latest_package_reference(_pkg_ref)
-                prev_build_id = self._cache.get_build_id(prev)
-                if prev_build_id == recipe_build_id:
-                    build_prev = prev
-                    break
-
+            recipe_ref = pref.ref
+            build_prev = self._cache.get_matching_build_id(recipe_ref, recipe_build_id)
             build_prev = build_prev or pref
 
             # We are trying to build a package id different from the one that has the
@@ -140,7 +130,7 @@ class _PackageBuilder(object):
 
         try:
             mkdir(conanfile.build_folder)
-            with tools.chdir(conanfile.build_folder):
+            with chdir(conanfile.build_folder):
                 run_build_method(conanfile, self._hook_manager, reference=pref.ref,
                                  package_id=pref.package_id)
             conanfile.output.success("Package '%s' built" % pref.package_id)
@@ -202,7 +192,7 @@ class _PackageBuilder(object):
         # BUILD & PACKAGE
         # TODO: cache2.0 check locks
         # with package_layout.conanfile_read_lock(self._output):
-        with tools.chdir(base_build):
+        with chdir(base_build):
             conanfile.output.info('Building your package in %s' % base_build)
             try:
                 if getattr(conanfile, 'no_copy_source', False):
@@ -333,6 +323,7 @@ class BinaryInstaller(object):
     def _download_pkg(self, package):
         node = package.nodes[0]
         assert node.pref.revision is not None
+        assert node.pref.timestamp is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
     def _handle_package(self, package, install_reference, build_mode):
@@ -362,7 +353,7 @@ class BinaryInstaller(object):
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
         if pref.revision is None:
             assert package.binary == BINARY_BUILD
-            package_layout = self._cache.create_temp_pkg_layout(pref)
+            package_layout = self._cache.create_build_pkg_layout(pref)
         else:
             package_layout = self._cache.get_or_create_pkg_layout(pref)
 
@@ -442,7 +433,7 @@ class BinaryInstaller(object):
             assert node.pref.revision, "Node PREF revision shouldn't be empty"
             assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
             # at this point the package reference should be complete
-            pkg_layout.reference = ConanReference(pref)
+            pkg_layout.reference = pref
             self._cache.assign_prev(pkg_layout)
             # Make sure the current conanfile.folders is updated (it is later in package_info(),
             # but better make sure here, and be able to report the actual folder in case
@@ -463,7 +454,7 @@ class BinaryInstaller(object):
 
         conanfile.user_info = UserInfo()
 
-        with tools.chdir(package_folder):
+        with chdir(package_folder):
             with conanfile_exception_formatter(str(conanfile), "package_info"):
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                            reference=ref)

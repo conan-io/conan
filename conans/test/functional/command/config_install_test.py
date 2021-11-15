@@ -49,7 +49,6 @@ run_to_output = False       # environment CONAN_LOG_RUN_TO_OUTPUT
 level = 10                  # environment CONAN_LOGGING_LEVEL
 
 [general]
-compression_level = 6                 # environment CONAN_COMPRESSION_LEVEL
 cpu_count = 1             # environment CONAN_CPU_COUNT
 
 [proxies]
@@ -185,7 +184,6 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("log.run_to_output"), "False")
         self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
         self.assertEqual(conan_conf.get_item("log.level"), "10")
-        self.assertEqual(conan_conf.get_item("general.compression_level"), "6")
         self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with self.assertRaisesRegex(ConanException, "'config_install' doesn't exist"):

@@ -16,7 +16,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.search.search import filter_packages
 from conans.util import progress_bar
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
     rmdir
 from conans.util.log import logger
@@ -82,7 +82,6 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
 
         assert ref.revision, "get_recipe without revision specified"
-
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
 
         layout = self._cache.get_or_create_ref_layout(ref)
@@ -142,11 +141,10 @@ class RemoteManager(object):
 
         conanfile.output.info("Retrieving package %s from remote '%s' " % (pref.package_id,
                                                                            remote.name))
-        if not pref.revision:
-            pref = self.get_latest_package_reference(pref, remote)
+
+        assert pref.revision is not None
 
         pkg_layout = self._cache.get_or_create_pkg_layout(pref)
-
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)

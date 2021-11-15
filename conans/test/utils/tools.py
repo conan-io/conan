@@ -23,7 +23,6 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
-from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import load, REVISIONS
 from conans.cli.api.conan_api import ConanAPIV2
@@ -34,7 +33,7 @@ from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.client.tools.files import replace_in_file
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
@@ -52,7 +51,7 @@ from conans.test.utils.scm import create_local_git_repo, create_local_svn_checko
     create_remote_svn_repo
 from conans.test.utils.server_launcher import (TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import mkdir, save_files, save
 
 NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
@@ -526,7 +525,7 @@ class TestClient(object):
             tuple if required
         """
         from conans.test.utils.mocks import RedirectedTestOutput
-        with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
+        with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.out = RedirectedTestOutput()  # Initialize each command
             with redirect_output(self.out):
                 with redirect_input(self.user_inputs):
@@ -653,7 +652,7 @@ class TestClient(object):
         else:
             return self._create_scm_info(dict())
 
-    def get_latest_package_reference(self, ref: ConanReference or str, package_id=None) -> PkgReference:
+    def get_latest_package_reference(self, ref, package_id=None) -> PkgReference:
         """Get the latest PkgReference given a ConanReference"""
         ref_ = RecipeReference.loads(ref) if isinstance(ref, str) else ref
         latest_rrev = self.cache.get_latest_recipe_reference(ref_)
@@ -674,7 +673,7 @@ class TestClient(object):
         pkg_layout = self.cache.pkg_layout(latest_prev)
         return pkg_layout
 
-    def get_latest_ref_layout(self, ref: ConanReference) -> RecipeLayout:
+    def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
         latest_rrev = self.cache.get_latest_recipe_reference(ref)
         ref_layout = self.cache.ref_layout(latest_rrev)
@@ -784,7 +783,7 @@ class TurboTestClient(TestClient):
                 for k in range(num_prev):
                     args = " ".join(["-s {}={}".format(key, value)
                                      for key, value in settings.items()])
-                    with environment_append({"MY_VAR": str(k)}):
+                    with environment_update({"MY_VAR": str(k)}):
                         pref = self.create(ref, conanfile=conanfile_gen, args=args)
                         self.upload_all(ref, remote=remote)
                         tmp.append(pref)

@@ -198,49 +198,6 @@ def check_sha256(file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=None, fuzz=False):
-    """ Applies a diff from file (patch_file)  or string (patch_string)
-        in base_path directory or current dir if None
-    :param base_path: Base path where the patch should be applied.
-    :param patch_file: Patch file that should be applied.
-    :param patch_string: Patch string that should be applied.
-    :param strip: Number of folders to be stripped from the path.
-    :param output: Stream object.
-    :param fuzz: Should accept fuzzy patches.
-    """
-
-    class PatchLogHandler(logging.Handler):
-        def __init__(self):
-            logging.Handler.__init__(self, logging.DEBUG)
-            self.output = output or ConanOutput()
-            self.patchname = patch_file if patch_file else "patch_ng"
-
-        def emit(self, record):
-            logstr = self.format(record)
-            if record.levelno == logging.WARN:
-                self.output.warning("%s: %s" % (self.patchname, logstr))
-            else:
-                self.output.info("%s: %s" % (self.patchname, logstr))
-
-    patchlog = logging.getLogger("patch_ng")
-    if patchlog:
-        patchlog.handlers = []
-        patchlog.addHandler(PatchLogHandler())
-
-    if not patch_file and not patch_string:
-        return
-    if patch_file:
-        patchset = fromfile(patch_file)
-    else:
-        patchset = fromstring(patch_string.encode())
-
-    if not patchset:
-        raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
-
-    if not patchset.apply(root=base_path, strip=strip, fuzz=fuzz):
-        raise ConanException("Failed to apply patch: %s" % patch_file)
-
-
 def _manage_text_not_found(search, file_path, strict, function_name, output):
     message = "%s didn't find pattern '%s' in '%s' file." % (function_name, search, file_path)
     if strict:
@@ -364,49 +321,6 @@ def collect_libs(conanfile, folder=None):
 def which(filename):
     """ same affect as posix which command or shutil.which from python3 """
     return shutil.which(filename)
-
-
-def _replace_with_separator(filepath, sep):
-    tmp = load(filepath)
-    ret = sep.join(tmp.splitlines())
-    if tmp.endswith("\n"):
-        ret += sep
-    save(filepath, ret)
-
-
-def unix2dos(filepath):
-    _replace_with_separator(filepath, "\r\n")
-
-
-def dos2unix(filepath):
-    _replace_with_separator(filepath, "\n")
-
-
-def rename(src, dst):
-    # FIXME: Deprecated, use new interface from conan.tools
-    """
-    rename a file or folder to avoid "Access is denied" error on Windows
-    :param src: Source file or folder
-    :param dst: Destination file or folder
-    """
-    if os.path.exists(dst):
-        raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
-
-    if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
-        # /move Moves files and directories, and deletes them from the source after they are copied.
-        # /e Copies subdirectories. Note that this option includes empty directories.
-        # /ndl Specifies that directory names are not to be logged.
-        # /nfl Specifies that file names are not to be logged.
-        process = subprocess.Popen(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
-                                   stdout=subprocess.PIPE)
-        process.communicate()
-        if process.returncode > 7:  # https://ss64.com/nt/robocopy-exit.html
-            raise ConanException("rename {} to {} failed.".format(src, dst))
-    else:
-        try:
-            os.rename(src, dst)
-        except Exception as err:
-            raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
 
 
 def remove_files_by_mask(directory, pattern):

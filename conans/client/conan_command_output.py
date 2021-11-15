@@ -10,6 +10,7 @@ from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
+
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import save
 from conans.util.misc import make_tuple
@@ -88,7 +89,7 @@ class CommandOutputer(object):
 
             python_requires = getattr(conanfile, "python_requires", None)
             if python_requires and not isinstance(python_requires, dict):  # no old python requires
-                item_data["python_requires"] = [repr(r)
+                item_data["python_requires"] = [r.repr_notime()
                                                 for r in conanfile.python_requires.all_refs()]
 
             # Paths

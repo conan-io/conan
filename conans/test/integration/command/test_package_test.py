@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
@@ -84,7 +86,9 @@ class TestPackageTest(unittest.TestCase):
                       % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
                       client.out)
 
+    @pytest.mark.xfail(reason="conan.conf deprecation")
     def test_build_folder_handling(self):
+        # FIXME: Decide what to do with CONAN_TEMP_TEST_FOLDER
         test_conanfile = GenConanfile().with_test("pass")
         # Create a package which can be tested afterwards.
         client = TestClient()
@@ -106,7 +110,7 @@ class TestPackageTest(unittest.TestCase):
 
         # Test if using a temporary test folder can be enabled via the environment variable.
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        with tools.environment_append({"CONAN_TEMP_TEST_FOLDER": "True"}):
+        with tools.environment_update({"CONAN_TEMP_TEST_FOLDER": "True"}):
             client.run("test test_package hello/0.1@lasote/stable")
         self.assertFalse(os.path.exists(default_build_dir))
 
