@@ -7,14 +7,10 @@ import mock
 from mock import Mock, MagicMock
 
 from conans import __version__
-
 from conans.client.cache.cache import ClientCache
 from conans.client.rest.conan_requester import ConanRequester
-from conans.model.conf import ConfDefinition
-from conans.util.env_reader import environment_append
 from conans.client.tools.files import save
-from conans.errors import ConanException
-from conans.paths import CACERT_FILE
+from conans.model.conf import ConfDefinition
 from conans.test.utils.tools import temp_folder
 
 
@@ -44,13 +40,13 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
         requester, mocked_requester, cache = self._create_requesters()
         with mock.patch("conans.client.rest.conan_requester.requests", mocked_requester):
             requester.get(url="aaa", verify=True)
-            self.assertEqual(mocked_requester.verify, cache.new_config["core.network:cacert_path"])
+            self.assertEqual(mocked_requester.verify, True)
 
     def test_cache_config(self):
         file_path = os.path.join(temp_folder(), "whatever_cacert")
         save(file_path, "")
         config = ConfDefinition()
-        config.update("core.network:cacert_path", file_path)
+        config.update("core.net.http:cacert_path", file_path)
         mocked_requester = MockRequesterGet()
         with mock.patch("conans.client.rest.conan_requester.requests", mocked_requester):
             requester = ConanRequester(config)

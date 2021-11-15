@@ -68,10 +68,11 @@ class ConanRequester(object):
         return False
 
     def _add_kwargs(self, url, kwargs):
-        if kwargs.get("verify", None) is True:
-            kwargs["verify"] = self._cacert_path
-        else:
-            kwargs["verify"] = False
+        # verify is the kwargs that comes from caller, RestAPI, it is defined in
+        # Conan remote "verify_ssl"
+        if kwargs.get("verify", None) is not False:  # False means de-activate
+            if self._cacert_path is not None:
+                kwargs["verify"] = self._cacert_path
         kwargs["cert"] = self._client_certificates
         if self._proxies:
             if not self._should_skip_proxy(url):

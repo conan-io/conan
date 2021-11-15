@@ -62,17 +62,16 @@ class ClientCertsTest(unittest.TestCase):
 
     def test_pic_custom_path_client_certs(self):
         folder = temp_folder()
-        mycert_path = os.path.join(folder, "mycert.crt")
-        mykey_path = os.path.join(folder, "mycert.key")
+        mycert_path = os.path.join(folder, "mycert.crt").replace("\\", '/')
+        mykey_path = os.path.join(folder, "mycert.key").replace("\\", '/')
         save(mycert_path, "Fake Cert")
         save(mykey_path, "Fake Key")
 
         client = TestClient(requester_class=MyHttpRequester)
         conan_conf = textwrap.dedent("""
-                                    core.network:client_cert_path={}
-                                    core.network:client_cert_key_path={}
+                                    core.net.http:client_cert= ("{}", "{}")
                                 """.format(mycert_path, mykey_path))
         client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": conanfile})
         client.run("create . foo/1.0@")
-        assert "KWARGS cert: ('{}', '{}')".format(mycert_path, mykey_path).replace("\\", '\\\\') in client.out
+        assert "KWARGS cert: ('{}', '{}')".format(mycert_path, mykey_path) in client.out
