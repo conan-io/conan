@@ -87,6 +87,16 @@ def _detect_encoding(text):
     return None, 0
 
 
+@contextmanager
+def chdir(newdir):
+    old_path = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)
+
+
 def decode_text(text, encoding="auto"):
     bom_length = 0
     if encoding == "auto":

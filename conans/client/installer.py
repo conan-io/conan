@@ -4,7 +4,6 @@ import time
 from multiprocessing.pool import ThreadPool
 
 from conans.cli.output import ConanOutput
-from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
@@ -23,7 +22,8 @@ from conans.model.package_ref import PkgReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
-from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
+from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty, \
+    chdir
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -130,7 +130,7 @@ class _PackageBuilder(object):
 
         try:
             mkdir(conanfile.build_folder)
-            with tools.chdir(conanfile.build_folder):
+            with chdir(conanfile.build_folder):
                 run_build_method(conanfile, self._hook_manager, reference=pref.ref,
                                  package_id=pref.package_id)
             conanfile.output.success("Package '%s' built" % pref.package_id)
@@ -192,7 +192,7 @@ class _PackageBuilder(object):
         # BUILD & PACKAGE
         # TODO: cache2.0 check locks
         # with package_layout.conanfile_read_lock(self._output):
-        with tools.chdir(base_build):
+        with chdir(base_build):
             conanfile.output.info('Building your package in %s' % base_build)
             try:
                 if getattr(conanfile, 'no_copy_source', False):
@@ -454,7 +454,7 @@ class BinaryInstaller(object):
 
         conanfile.user_info = UserInfo()
 
-        with tools.chdir(package_folder):
+        with chdir(package_folder):
             with conanfile_exception_formatter(str(conanfile), "package_info"):
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                            reference=ref)

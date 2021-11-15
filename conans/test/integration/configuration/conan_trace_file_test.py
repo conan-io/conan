@@ -4,13 +4,13 @@ import textwrap
 import unittest
 
 
-from conans.client import tools
 from conans.model.recipe_ref import RecipeReference
 
 from conans.paths import RUN_LOG_NAME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.env_reader import environment_append
 from conans.util.files import load
 
 
@@ -78,7 +78,7 @@ class ConanTraceTest(unittest.TestCase):
     def test_trace_actions(self):
         client = TestClient(servers=self.servers)
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
-        with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
+        with environment_append({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
             ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
