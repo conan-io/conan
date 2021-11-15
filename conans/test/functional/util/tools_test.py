@@ -37,6 +37,6 @@ class VisualStudioToolsTest(unittest.TestCase):
         env = {"ProgramFiles": None, "ProgramFiles(x86)": None}
         if not which("vswhere") and vswhere_path:
             vswhere_folder = os.path.join(program_files, "Microsoft Visual Studio", "Installer")
-            env.update({"PATH": [vswhere_folder]})
+            env.update({"PATH": vswhere_folder})
         with environment_update(env):
             self.assertTrue(vswhere())
