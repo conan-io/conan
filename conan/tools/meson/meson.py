@@ -36,6 +36,7 @@ class Meson(object):
         cmd += ' "{}" "{}"'.format(self._build_dir, source)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
+        self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
     def build(self, target=None):
@@ -45,6 +46,7 @@ class Meson(object):
             cmd += " {}".format(njobs)
         if target:
             cmd += " {}".format(target)
+        self._conanfile.output.info("Meson build cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
     def install(self):

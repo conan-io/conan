@@ -185,6 +185,7 @@ class GraphBinariesAnalyzer(object):
             else:
                 node.binary = BINARY_DOWNLOAD
                 node.prev = pref.revision
+                node.pref_timestamp = pref.timestamp
                 node.binary_remote = remote
         else:  # This binary already exists in the cache
             package_layout = self._cache.pkg_layout(cache_latest_prev)
@@ -203,12 +204,14 @@ class GraphBinariesAnalyzer(object):
                     if cache_time < pref.timestamp and cache_latest_prev != pref:
                         node.binary = BINARY_UPDATE
                         node.prev = pref.revision
+                        node.pref_timestamp = pref.timestamp
                         node.binary_remote = remote
                         output.info("Current package revision is older than the remote one")
                     else:
                         node.binary = BINARY_CACHE
                         node.binary_remote = None
                         node.prev = cache_latest_prev.revision
+                        node.pref_timestamp = pref.timestamp
                         output.info("Current package revision is newer than the remote one")
 
             if not node.binary:
