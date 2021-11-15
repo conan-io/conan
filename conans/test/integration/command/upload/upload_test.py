@@ -11,7 +11,7 @@ import requests
 from mock import patch
 
 from conans import REVISIONS
-from conans.util.env_reader import environment_set
+from conans.util.env_reader import environment_append
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -407,7 +407,7 @@ class MyPkg(ConanFile):
 
         # CASE: When package changes
         client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        with environment_set({"MY_VAR": "True"}):
+        with environment_append({"MY_VAR": "True"}):
             client.run("create . frodo/stable")
         # upload recipe and packages
         client.run("upload Hello0/1.2.1@frodo/stable --all -r default")

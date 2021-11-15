@@ -31,12 +31,12 @@ class WhichTest(unittest.TestCase):
         fullname = os.path.join(tmp_dir, 'example%s' % ext)
         self._touch(fullname)
         self._add_executable_bit(fullname)
-        with tools.environment_set({'PATH': tmp_dir}):
+        with tools.environment_append({'PATH': tmp_dir}):
             self.assertEqual(tools.which('example').lower(), fullname.lower())
 
     def test_which_negative(self):
         tmp_dir = temp_folder()
-        with tools.environment_set({'PATH': tmp_dir}):
+        with tools.environment_append({'PATH': tmp_dir}):
             self.assertIsNone(tools.which('example.sh'))
 
     def test_which_non_executable(self):
@@ -46,7 +46,7 @@ class WhichTest(unittest.TestCase):
         tmp_dir = temp_folder()
         fullname = os.path.join(tmp_dir, 'example.sh')
         self._touch(fullname)
-        with tools.environment_set({'PATH': tmp_dir}):
+        with tools.environment_append({'PATH': tmp_dir}):
             self.assertIsNone(tools.which('example.sh'))
 
     def test_which_not_dir(self):
@@ -54,6 +54,6 @@ class WhichTest(unittest.TestCase):
         dev_dir = os.path.join(tmp_dir, "Dev")
         dev_git_dir = os.path.join(dev_dir, "Git")
         mkdir(dev_git_dir)
-        with tools.environment_set({'PATH': dev_dir}):
+        with tools.environment_append({'PATH': dev_dir}):
             self.assertEqual(dev_dir, tools.get_env("PATH"))
             self.assertIsNone(tools.which('git'))

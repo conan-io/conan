@@ -11,7 +11,7 @@ from conans import __version__
 from conans.client.cache.cache import ClientCache
 from conans.client.rest.conan_requester import ConanRequester
 from conans.model.conf import ConfDefinition
-from conans.util.env_reader import environment_set
+from conans.util.env_reader import environment_append
 from conans.client.tools.files import save
 from conans.errors import ConanException
 from conans.paths import CACERT_FILE

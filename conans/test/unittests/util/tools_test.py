@@ -131,9 +131,9 @@ class ToolsTest(unittest.TestCase):
         cpus = tools.cpu_count(output=output)
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
-        with tools.environment_set({"CONAN_CPU_COUNT": "34"}):
+        with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEqual(tools.cpu_count(output=output), 34)
-        with tools.environment_set({"CONAN_CPU_COUNT": "null"}):
+        with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
             with self.assertRaisesRegex(ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
@@ -205,9 +205,9 @@ class ToolsTest(unittest.TestCase):
         )
 
     def test_environment_nested(self):
-        with tools.environment_set({"A": "1", "Z": "40"}):
-            with tools.environment_set({"A": "1", "B": "2"}):
-                with tools.environment_set({"A": "2", "B": "2"}):
+        with tools.environment_append({"A": "1", "Z": "40"}):
+            with tools.environment_append({"A": "1", "B": "2"}):
+                with tools.environment_append({"A": "2", "B": "2"}):
                     self.assertEqual(os.getenv("A"), "2")
                     self.assertEqual(os.getenv("B"), "2")
                     self.assertEqual(os.getenv("Z"), "40")

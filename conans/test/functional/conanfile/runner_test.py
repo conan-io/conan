@@ -7,7 +7,7 @@ from io import StringIO
 import pytest
 
 from conans.client.runner import ConanRunner
-from conans.util.env_reader import environment_set
+from conans.util.env_reader import environment_append
 from conans.test.utils.tools import TestClient
 
 
@@ -270,7 +270,7 @@ class ConanFileToolsTest(ConanFile):
                         self.run("echo key: $CONAN_LOGIN_ENCRYPTION_KEY--")
                         self.run("echo var: $OTHER_VAR--")
         """)
-        with environment_set({'CONAN_LOGIN_ENCRYPTION_KEY': 'secret!', 'OTHER_VAR': 'other_var'}):
+        with environment_append({'CONAN_LOGIN_ENCRYPTION_KEY': 'secret!', 'OTHER_VAR': 'other_var'}):
             client = TestClient()
             client.save({"conanfile.py": conanfile})
             client.run("export . name/version@")

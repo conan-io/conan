@@ -10,7 +10,7 @@ from conans.cli.output import ConanOutput
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.util.env_reader import environment_set, no_op
+from conans.util.env_reader import environment_append, no_op
 from conans.util.files import decode_text, to_file_bytes, walk, mkdir
 from conans.util.runners import check_output_runner, version_runner, muted_runner, input_runner, \
     pyinstaller_bundle_env_cleaned
@@ -56,7 +56,7 @@ class SCMBase(object):
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
         with chdir(self.folder) if self.folder else no_op():
-            with environment_set({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
+            with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 with pyinstaller_bundle_env_cleaned():
                     if not self._runner:
                         return check_output_runner(command).strip()

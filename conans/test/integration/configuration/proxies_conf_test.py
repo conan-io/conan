@@ -121,7 +121,7 @@ http=http://conan.url
 
         client.save({"conanfile.py": conanfile})
 
-        with tools.environment_set({"HTTP_PROXY": "my_system_proxy"}):
+        with tools.environment_append({"HTTP_PROXY": "my_system_proxy"}):
             client.run("create . foo/1.0@")
 
         assert "My requester!" in client.out
@@ -157,10 +157,10 @@ no_proxy_match=MyExcludedUrl*
 """
         save(client.cache.conan_conf_path, conf)
 
-        with tools.environment_set({"http_proxy": "my_system_proxy"}):
+        with tools.environment_append({"http_proxy": "my_system_proxy"}):
             client.save({"conanfile.py": conanfile})
             client.run("create . foo/1.0@")
             assert "My requester!" in client.out
 
-        with tools.environment_set({"HTTP_PROXY": "my_system_proxy"}):
+        with tools.environment_append({"HTTP_PROXY": "my_system_proxy"}):
             self.assertEqual(os.environ["HTTP_PROXY"], "my_system_proxy")

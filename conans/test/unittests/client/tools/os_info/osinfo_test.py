@@ -4,7 +4,7 @@
 import mock
 import unittest
 
-from conans.client.tools import OSInfo, environment_set
+from conans.client.tools import OSInfo, environment_append
 
 
 class OSInfoTest(unittest.TestCase):

@@ -9,7 +9,7 @@ import pytest
 from mock import patch
 
 from conans import load
-from conans.util.env_reader import environment_set
+from conans.util.env_reader import environment_append
 from conans.errors import RecipeNotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
@@ -33,14 +33,14 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         second one with a PREV of the binary.
         If a client installs without specifying -r remote1, it will iterate remote2 also"""
         conanfile = GenConanfile().with_package_file("file.txt", env_var="MY_VAR")
-        with environment_set({"MY_VAR": "1"}):
+        with environment_append({"MY_VAR": "1"}):
             pref = self.c_v2.create(self.ref, conanfile=conanfile)
         the_time = time.time()
         with patch.object(RevisionList, '_now', return_value=the_time):
             self.c_v2.upload_all(self.ref, remote="default")
         self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.package_id))
         # Same RREV, different PREV
-        with environment_set({"MY_VAR": "2"}):
+        with environment_append({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
 
         the_time = the_time + 10.0
@@ -177,7 +177,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
 
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
-        with environment_set({"MY_VAR": "1"}):
+        with environment_append({"MY_VAR": "1"}):
             pref = client.create(self.ref, conanfile=conanfile)
 
         time.sleep(1)
@@ -185,7 +185,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         with patch.object(RevisionList, '_now', return_value=time.time()):
             client.upload_all(self.ref)
 
-        with environment_set({"MY_VAR": "2"}):
+        with environment_append({"MY_VAR": "2"}):
             pref2 = client2.create(self.ref, conanfile=conanfile)
 
         with patch.object(RevisionList, '_now', return_value=time.time() + 20.0):
@@ -418,11 +418,11 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         # Second RREV with two PREVS (exactly same conanfile, different package files)
         rev2_conanfile = GenConanfile().with_build_msg("RREV 2!")\
                                        .with_package_file("file", env_var="MY_VAR")
-        with environment_set({"MY_VAR": "1"}):
+        with environment_append({"MY_VAR": "1"}):
             pref2 = self.c_v2.create(self.ref, conanfile=rev2_conanfile)
             self.c_v2.upload_all(pref2.ref)
 
-        with environment_set({"MY_VAR": "2"}):
+        with environment_append({"MY_VAR": "2"}):
             pref2b = self.c_v2.create(self.ref, conanfile=rev2_conanfile)
             self.c_v2.upload_all(pref2b.ref)
 
@@ -792,11 +792,11 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         """
         client = self.c_v2
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
-        with environment_set({"MY_VAR": "1"}):
+        with environment_append({"MY_VAR": "1"}):
             pref = client.create(self.ref, conanfile=conanfile)
         client.upload_all(self.ref)
 
-        with environment_set({"MY_VAR": "2"}):
+        with environment_append({"MY_VAR": "2"}):
             pref2 = client.create(self.ref, conanfile=conanfile)
 
         self.assertNotEqual(pref.revision, pref2.revision)
@@ -931,17 +931,17 @@ class ServerRevisionsIndexes(unittest.TestCase):
         the first is now the latest
         """
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
-        with environment_set({"MY_VAR": "1"}):
+        with environment_append({"MY_VAR": "1"}):
             pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                          pref1.revision)
-        with environment_set({"MY_VAR": "2"}):
+        with environment_append({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                          pref2.revision)
-        with environment_set({"MY_VAR": "3"}):
+        with environment_append({"MY_VAR": "3"}):
             pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
         server_pref3 = self.c_v2.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
@@ -999,13 +999,13 @@ class ServerRevisionsIndexes(unittest.TestCase):
         If then a client uploads a RREV/PREV it is the latest
         """
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
-        with environment_set({"MY_VAR": "1"}):
+        with environment_append({"MY_VAR": "1"}):
             pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        with environment_set({"MY_VAR": "2"}):
+        with environment_append({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        with environment_set({"MY_VAR": "3"}):
+        with environment_append({"MY_VAR": "3"}):
             pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
 
@@ -1015,7 +1015,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.run(command.format(pref2.revision))
         self.c_v2.run(command.format(pref1.revision))
 
-        with environment_set({"MY_VAR": "4"}):
+        with environment_append({"MY_VAR": "4"}):
             pref4 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
 

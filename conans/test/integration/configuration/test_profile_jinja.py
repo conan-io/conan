@@ -1,7 +1,7 @@
 import platform
 import textwrap
 
-from conans.util.env_reader import environment_set
+from conans.util.env_reader import environment_append
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -15,7 +15,7 @@ def test_profile_template():
         """)
     client.save({"conanfile.py": GenConanfile(),
                  "profile1.jinja": tpl})
-    with environment_set({"MY_BUILD_TYPE": "Debug"}):
+    with environment_append({"MY_BUILD_TYPE": "Debug"}):
         client.run("install . -pr=profile1.jinja")
 
     current_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())

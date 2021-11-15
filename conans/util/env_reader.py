@@ -14,7 +14,7 @@ from contextlib import contextmanager
 
 
 @contextmanager
-def environment_set(env_vars):
+def environment_append(env_vars):
     old_env = dict(os.environ)
     sets = {k: v for k, v in env_vars.items() if v is not None}
     unsets = [k for k, v in env_vars.items() if v is None]

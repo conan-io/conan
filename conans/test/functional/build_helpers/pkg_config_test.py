@@ -96,7 +96,7 @@ class PkgConfigTest(unittest.TestCase):
                     # Patch copied file with the libB path
                     tools.replace_prefix_in_pc_file("libB.pc", lib_b_path)
 
-                    with tools.environment_set({"PKG_CONFIG_PATH": os.getcwd()}):
+                    with tools.environment_append({"PKG_CONFIG_PATH": os.getcwd()}):
                         # Windows is not able to catch the output, "$()" does not exist in cmd
                         self.run("pkg-config libB --libs --cflags > output.txt")
                         with open("output.txt") as f:
@@ -125,7 +125,7 @@ class PkgConfigTest(unittest.TestCase):
                     vars = {'PKG_CONFIG': pkgconfig_exec, # Used in autotools, not in gcc directly
                             'PKG_CONFIG_PATH': "%s" % self.deps_cpp_info["libB"].rootpath}
 
-                    with tools.environment_set(vars):
+                    with tools.environment_append(vars):
                         # Windows is not able to catch the output, "$()" does not exist in cmd
                         self.run("pkg-config %s libB --libs --cflags > output.txt" % args)
                         with open("output.txt") as f:

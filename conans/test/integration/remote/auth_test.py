@@ -65,7 +65,7 @@ class AuthorizeTest(unittest.TestCase):
             cli = TestClient(servers=self.servers)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
             cli.run("export . lasote/testing")
-            with tools.environment_set(credentials):
+            with tools.environment_append(credentials):
                 cli.run("upload %s -r default" % str(self.ref))
             return cli
 

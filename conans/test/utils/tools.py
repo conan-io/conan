@@ -33,7 +33,7 @@ from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
-from conans.util.env_reader import environment_set
+from conans.util.env_reader import environment_append
 from conans.client.tools.files import replace_in_file
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
@@ -525,7 +525,7 @@ class TestClient(object):
             tuple if required
         """
         from conans.test.utils.mocks import RedirectedTestOutput
-        with environment_set({"NO_COLOR": "1"}):  # Not initialize colorama in testing
+        with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.out = RedirectedTestOutput()  # Initialize each command
             with redirect_output(self.out):
                 with redirect_input(self.user_inputs):
@@ -783,7 +783,7 @@ class TurboTestClient(TestClient):
                 for k in range(num_prev):
                     args = " ".join(["-s {}={}".format(key, value)
                                      for key, value in settings.items()])
-                    with environment_set({"MY_VAR": str(k)}):
+                    with environment_append({"MY_VAR": str(k)}):
                         pref = self.create(ref, conanfile=conanfile_gen, args=args)
                         self.upload_all(ref, remote=remote)
                         tmp.append(pref)

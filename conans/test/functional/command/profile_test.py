@@ -111,7 +111,7 @@ class DetectCompilersTest(unittest.TestCase):
 
         output = RedirectedTestOutput()  # Initialize each command
         with redirect_output(output):
-            with tools.environment_set({"CC": "gcc"}):
+            with tools.environment_append({"CC": "gcc"}):
                 result = detect_defaults_settings()
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
