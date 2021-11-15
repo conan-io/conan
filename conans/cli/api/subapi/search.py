@@ -1,3 +1,4 @@
+import copy
 from typing import Dict
 
 from conans.cli.api.model import PackageSearchInfo, Remote
@@ -20,6 +21,13 @@ class SearchAPI:
             references = app.remote_manager.search_recipes(remote, query)
         else:
             references = search_recipes(app.cache, query)
+            # For consistency with the remote search, we return references without revisions
+            # user could use further the API to look for the revisions
+            ret = []
+            for r in references:
+                r.revision = None
+                if r not in ret:
+                    ret.append(r)
         return references
 
     @api_method
