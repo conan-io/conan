@@ -16,7 +16,6 @@ from conans.errors import ConanException, NotFoundException, ConanInvalidConfigu
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
 from conans.paths import DATA_YML
 from conans.util.files import load
 
@@ -302,7 +301,7 @@ class ConanFileLoader(object):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._runner, display_name="virtual")
-        tmp_settings = profile_host.processed_settings.copy()
+        tmp_settings = profile_host.settings.copy()
         tmp_settings._unconstrained = True
         conanfile.initialize(tmp_settings, profile_host.buildenv)
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
