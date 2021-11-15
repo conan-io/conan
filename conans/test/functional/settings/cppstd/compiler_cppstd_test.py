@@ -4,7 +4,7 @@ import unittest
 
 from parameterized.parameterized import parameterized_class
 
-from conans.util.env import environment_set, save
+from conans.util.env_reader import environment_set, save
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 

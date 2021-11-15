@@ -9,7 +9,7 @@ from conans.cli.output import Color, ConanOutput
 from conans.client.conf.detect_vs import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.env import get_env
+from conans.util.env_reader import get_env
 from conans.util.files import save
 from conans.util.runners import detect_runner, check_output_runner
 

@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.client.conf import get_default_settings_yml
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.test.utils.tools import TestClient
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.client.cache.cache import CONAN_SETTINGS

@@ -9,12 +9,12 @@ import pytest
 from mock import patch
 
 from conans import load
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.errors import RecipeNotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
-from conans.util.env import get_env
+from conans.util.env_reader import get_env
 
 
 @pytest.mark.artifactory_ready

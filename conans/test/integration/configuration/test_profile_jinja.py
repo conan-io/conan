@@ -1,7 +1,7 @@
 import platform
 import textwrap
 
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 

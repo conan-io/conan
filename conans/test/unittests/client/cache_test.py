@@ -5,7 +5,7 @@ import unittest
 import pytest
 
 from conans.client.cache.cache import ClientCache
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.test_files import temp_folder

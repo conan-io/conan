@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.client.tools.pkg_config import PkgConfig
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder

@@ -2,7 +2,7 @@ import sys
 from subprocess import PIPE, Popen, STDOUT
 
 from conans.errors import ConanException
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.util.files import decode_text
 from conans.util.runners import pyinstaller_bundle_env_cleaned
 

@@ -7,7 +7,7 @@ from io import StringIO
 import pytest
 
 from conans.client.runner import ConanRunner
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.test.utils.tools import TestClient
 
 

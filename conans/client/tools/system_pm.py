@@ -4,7 +4,7 @@ import sys
 from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
 from conans.client.tools.files import which
 from conans.errors import ConanException, ConanInvalidSystemRequirements
-from conans.util.env import get_env
+from conans.util.env_reader import get_env
 
 
 def _get_sudo_str():

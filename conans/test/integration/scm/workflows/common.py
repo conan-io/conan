@@ -3,7 +3,7 @@
 import os
 import textwrap
 
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 
 
 class TestWorkflow(object):

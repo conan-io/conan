@@ -8,7 +8,7 @@ from conans.client import tools
 from conans.client.conf.detect_vs import vswhere
 from conans.client.tools.files import which
 from conans.errors import ConanException
-from conans.util.env import get_env
+from conans.util.env_reader import get_env
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")

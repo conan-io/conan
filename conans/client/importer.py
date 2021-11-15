@@ -10,7 +10,7 @@ from conans.client.tools import no_op
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.util.dates import timestamp_now
-from conans.util.env import get_env
+from conans.util.env_reader import get_env
 from conans.util.files import load, md5sum, mkdir
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"

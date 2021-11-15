@@ -12,7 +12,7 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.rest.rest_client_v1 import complete_url
 from conans.model.conf import ConfDefinition
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.client.userio import UserInput
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest

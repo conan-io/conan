@@ -11,7 +11,7 @@ import requests
 from mock import patch
 
 from conans import REVISIONS
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference

@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from conans.client.loader import ConanFileLoader
-from conans.util.env import environment_set
+from conans.util.env_reader import environment_set
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import DATA_YML
 from conans.test.utils.tools import TestClient

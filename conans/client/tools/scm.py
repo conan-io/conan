@@ -10,7 +10,7 @@ from conans.cli.output import ConanOutput
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.util.env import environment_set, no_op
+from conans.util.env_reader import environment_set, no_op
 from conans.util.files import decode_text, to_file_bytes, walk, mkdir
 from conans.util.runners import check_output_runner, version_runner, muted_runner, input_runner, \
     pyinstaller_bundle_env_cleaned
