@@ -28,3 +28,4 @@ class PackageSearchInfo:
     def __init__(self, data):
         self.settings = data.get("settings", {})
         self.options = data.get("options", {})
+        self.requires = data.get("requires", [])

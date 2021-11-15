@@ -1,12 +1,8 @@
-import copy
-from typing import Dict
-
-from conans.cli.api.model import PackageSearchInfo, Remote
+from conans.cli.api.model import PackageSearchInfo
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.search.search import search_recipes, filter_packages, search_packages
+from conans.search.search import search_recipes, filter_packages, get_packages_search_info
 
 
 class SearchAPI:
@@ -18,7 +14,7 @@ class SearchAPI:
     def recipes(self, query: str, remote=None):
         app = ConanApp(self.conan_api.cache_folder)
         if remote:
-            references = app.remote_manager.search_recipes(remote, query)
+            return app.remote_manager.search_recipes(remote, query)
         else:
             references = search_recipes(app.cache, query)
             # For consistency with the remote search, we return references without revisions
@@ -26,9 +22,10 @@ class SearchAPI:
             ret = []
             for r in references:
                 r.revision = None
+                r.timestamp = None
                 if r not in ret:
                     ret.append(r)
-        return references
+            return ret
 
     @api_method
     def packages(self, ref: RecipeReference, query: str, remote=None):
@@ -36,23 +33,12 @@ class SearchAPI:
                                          "Check latest if needed."
         if not remote:
             app = ConanApp(self.conan_api.cache_folder)
-            package_ids = app.cache.get_package_references(ref)
-            package_layouts = []
-            for pkg in package_ids:
-                latest_prev = app.cache.get_latest_package_reference(pkg)
-                package_layouts.append(app.cache.pkg_layout(latest_prev))
-            packages = search_packages(package_layouts, None)
+            prefs = app.cache.get_package_references(ref)
+            packages = get_packages_search_info(app.cache, prefs)
             results = {pref: PackageSearchInfo(data) for pref, data in packages.items()}
-            return _filter_packages(results, query)
+            return filter_packages(query, results)
         else:
             app = ConanApp(self.conan_api.cache_folder)
             packages = app.remote_manager.search_packages(remote, ref)
             results = {pref: PackageSearchInfo(data) for pref, data in packages.items()}
-            return _filter_packages(results, query)
-
-
-def _filter_packages(results:  Dict[PkgReference, PackageSearchInfo],
-                     query: str) -> Dict[PkgReference, PackageSearchInfo]:
-    filtered = filter_packages(query, results)
-    return filtered
-
+            return filter_packages(query, results)

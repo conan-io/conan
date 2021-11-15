@@ -229,7 +229,16 @@ class RestCommonMethods(object):
         """
         url = self.router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
-        return [RecipeReference.loads(reference) for reference in response]
+        # We need to filter the "_/_" user and channel
+        ret = []
+        for reference in response:
+            ref = RecipeReference.loads(reference)
+            if ref.user == "_":
+                ref.user = None
+            if ref.channel == "_":
+                ref.channel = None
+            ret.append(ref)
+        return ret
 
     def search_packages(self, ref):
         """Client is filtering by the query"""

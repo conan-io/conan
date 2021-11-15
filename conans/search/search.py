@@ -2,10 +2,12 @@ import os
 import re
 from collections import OrderedDict
 from fnmatch import translate
+from typing import Dict
 
 from conans.cli.api.model import PackageSearchInfo
 from conans.errors import ConanException
 from conans.model.info import ConanInfo
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
@@ -13,7 +15,7 @@ from conans.util.files import load
 from conans.util.log import logger
 
 
-def filter_packages(query, results):
+def filter_packages(query, results: Dict[PkgReference, PackageSearchInfo]):
     if query is None:
         return results
     try:
@@ -102,25 +104,19 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-# TODO: cache2.0 for the moment we are passing here a list of layouts to later get the conaninfos
-#  we should refactor this to something better
-def search_packages(packages_layouts, packages_query):
-    """ Return a dict like this:
-
-            {package_ID: {name: "OpenCV",
-                           version: "2.14",
-                           settings: {os: Windows}}}
+def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PackageSearchInfo]:
+    """
     param package_layout: Layout for the given reference
     """
 
-    infos = _get_local_infos_min(packages_layouts)
-    return filter_packages(packages_query, infos)
-
-
-def _get_local_infos_min(packages_layouts):
     result = OrderedDict()
 
-    for pkg_layout in packages_layouts:
+    package_layouts = []
+    for pref in prefs:
+        latest_prev = cache.get_latest_package_reference(pref)
+        package_layouts.append(cache.pkg_layout(latest_prev))
+
+    for pkg_layout in package_layouts:
         # Read conaninfo
         info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
@@ -130,8 +126,6 @@ def _get_local_infos_min(packages_layouts):
 
         info = ConanInfo.loads(conan_info_content)
         conan_vars_info = info.serialize_min()
-        # TODO: cache2.0 use the full ref or package rev as key
-        # FIXME: cache2.0 there will be several prevs with same package id
-        result[pkg_layout.reference.package_id] = conan_vars_info
+        result[pkg_layout.reference] = conan_vars_info
 
     return result
