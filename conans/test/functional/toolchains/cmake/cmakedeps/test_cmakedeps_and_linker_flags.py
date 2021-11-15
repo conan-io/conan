@@ -16,36 +16,36 @@ def test_shared_link_flags():
     Issue: https://github.com/conan-io/conan/issues/9936
     """
     conanfile = textwrap.dedent("""
-from conans import ConanFile
-from conan.tools.cmake import CMake
-from conan.tools.layout import cmake_layout
+    from conans import ConanFile
+    from conan.tools.cmake import CMake
+    from conan.tools.layout import cmake_layout
 
 
-class HelloConan(ConanFile):
-    name = "hello"
-    version = "1.0"
-    settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False]}
-    default_options = {"shared": False}
-    exports_sources = "CMakeLists.txt", "src/*"
-    generators = "CMakeDeps", "CMakeToolchain"
+    class HelloConan(ConanFile):
+        name = "hello"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+        options = {"shared": [True, False]}
+        default_options = {"shared": False}
+        exports_sources = "CMakeLists.txt", "src/*"
+        generators = "CMakeDeps", "CMakeToolchain"
 
-    def layout(self):
-        cmake_layout(self)
+        def layout(self):
+            cmake_layout(self)
 
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-        cmake.build()
+        def build(self):
+            cmake = CMake(self)
+            cmake.configure()
+            cmake.build()
 
-    def package(self):
-        cmake = CMake(self)
-        cmake.install()
+        def package(self):
+            cmake = CMake(self)
+            cmake.install()
 
-    def package_info(self):
-        self.cpp_info.libs = ["hello"]
-        self.cpp_info.sharedlinkflags = ["-z now", "-z relro"]
-        self.cpp_info.exelinkflags = ["-z now", "-z relro"]
+        def package_info(self):
+            self.cpp_info.libs = ["hello"]
+            self.cpp_info.sharedlinkflags = ["-z now", "-z relro"]
+            self.cpp_info.exelinkflags = ["-z now", "-z relro"]
     """)
 
     client = TestClient()
