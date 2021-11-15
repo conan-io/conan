@@ -12,7 +12,6 @@
 
 import requests
 
-from conans.cli.output import ConanOutput
 # Tools from conans.client.tools
 from conans.client.tools import files as tools_files, oss as tools_oss, \
     system_pm as tools_system_pm
@@ -21,10 +20,8 @@ from conans.client.tools.scm import *  # pylint: disable=unused-import
 from conans.client.tools.settings import *  # pylint: disable=unused-import
 from conans.client.tools.apple import *
 # Tools form conans.util
-from conans.util.env import get_env
 from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \
     rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
-from conans.util.log import logger
 from conans.client.tools.version import Version
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
 
@@ -157,5 +154,4 @@ class ZypperTool(tools_system_pm.ZypperTool):
 try:
     os_info = OSInfo()
 except Exception as exc:
-    logger.error(exc)
     ConanOutput().error("Error detecting os_info")

@@ -47,6 +47,7 @@ class MockConanfileWithFolders(MockConanfile):
             self.runner(*args, **kwargs)
 
 
+@pytest.mark.xfail(reason="Qbs needs to be modernized")
 class QbsGenericTest(unittest.TestCase):
     def test_convert_bool(self):
         self.assertEqual(qbs._bool(True), 'true')

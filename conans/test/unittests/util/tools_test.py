@@ -204,30 +204,6 @@ class ToolsTest(unittest.TestCase):
             ["1", "2", "3"]
         )
 
-
-    def test_get_env_in_conanfile(self):
-        """
-        Test get_env is available and working in conanfile
-        """
-        client = TestClient()
-
-        conanfile = """from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def build(self):
-        run_tests = tools.get_env("CONAN_RUN_TESTS", default=False)
-        print("test_get_env_in_conafile CONAN_RUN_TESTS=%r" % run_tests)
-        assert(run_tests == True)
-        """
-        client.save({"conanfile.py": conanfile})
-
-        with tools.environment_set({"CONAN_RUN_TESTS": "1"}):
-            client.run("install .")
-            client.run("build .")
-
     def test_environment_nested(self):
         with tools.environment_set({"A": "1", "Z": "40"}):
             with tools.environment_set({"A": "1", "B": "2"}):
