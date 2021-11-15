@@ -24,8 +24,10 @@ def download(app, ref, package_ids, recipe):
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
     try:
-        if not ref.revision:
+        if ref.revision is None:
             ref = remote_manager.get_latest_recipe_reference(ref, remote)
+        else:  # to make sure it exists in the server, the get_recipe() is only for valid things
+            ref = remote_manager.get_recipe_revision_reference(ref, remote)
         remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref)
@@ -70,6 +72,8 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
                 else f"Skip {str(pref)} download, already in cache"
             scoped_output.info(message)
 
+        if not pref.revision:
+            pref = remote_manager.get_latest_package_reference(pref, remote)
         if not skip_download:
             remote_manager.get_package(conanfile, pref, remote)
 

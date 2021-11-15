@@ -150,7 +150,7 @@ def list_recipes(conan_api, parser, subparser, *args):
             for reference in references:
                 tmp = {
                     "name": reference.name,
-                    "id": repr(reference)
+                    "id": reference.repr_notime()
                 }
                 refs_docs.append(tmp)
             results = [{

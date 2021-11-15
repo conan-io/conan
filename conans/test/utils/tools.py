@@ -23,7 +23,6 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
-from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import load, REVISIONS
 from conans.cli.api.conan_api import ConanAPIV2
@@ -658,7 +657,7 @@ class TestClient(object):
         else:
             return self._create_scm_info(dict())
 
-    def get_latest_package_reference(self, ref: ConanReference or str, package_id=None) -> PkgReference:
+    def get_latest_package_reference(self, ref, package_id=None) -> PkgReference:
         """Get the latest PkgReference given a ConanReference"""
         ref_ = RecipeReference.loads(ref) if isinstance(ref, str) else ref
         latest_rrev = self.cache.get_latest_recipe_reference(ref_)
@@ -679,7 +678,7 @@ class TestClient(object):
         pkg_layout = self.cache.pkg_layout(latest_prev)
         return pkg_layout
 
-    def get_latest_ref_layout(self, ref: ConanReference) -> RecipeLayout:
+    def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
         latest_rrev = self.cache.get_latest_recipe_reference(ref)
         ref_layout = self.cache.ref_layout(latest_rrev)

@@ -1,5 +1,6 @@
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
+from conans.util.dates import timestamp_to_str
 
 
 class PkgReference:
@@ -8,11 +9,7 @@ class PkgReference:
         self.ref = ref
         self.package_id = package_id
         self.revision = revision
-        self.timestamp = timestamp  # TODO: Which format? int timestamp?
-
-    @staticmethod
-    def from_conanref(pref, timestamp=None):
-        return PkgReference(pref.ref, pref.id, pref.revision, timestamp)
+        self.timestamp = timestamp  # float, Unix seconds UTC
 
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
@@ -37,6 +34,12 @@ class PkgReference:
             result += "#{}".format(self.revision)
         return result
 
+    def repr_humantime(self):
+        result = self.repr_notime()
+        assert self.timestamp
+        result += " ({})".format(timestamp_to_str(self.timestamp))
+        return result
+
     def __str__(self):
         """ shorter representation, excluding the revision and timestamp """
         if self.ref is None:
@@ -50,7 +53,7 @@ class PkgReference:
         # The timestamp goes before the revision for ordering revisions chronologically
         raise Exception("WHO IS COMPARING PACKAGE REFERENCES?")
         # return (self.name, self.version, self.user, self.channel, self.timestamp, self.revision) \
-        #       < (ref.name, ref.version, ref.user, ref.channel, ref.timestamp, ref.revision)
+        #       < (ref.name, ref.version, ref.user, ref.channel, ref._timestamp, ref.revision)
 
     def __eq__(self, other):
         # TODO: In case of equality, should it use the revision and timestamp?
@@ -76,7 +79,7 @@ class PkgReference:
             # timestamp
             tokens = pkg_id.rsplit("%", 1)
             text = tokens[0]
-            timestamp = int(tokens[1]) if len(tokens) == 2 else None
+            timestamp = float(tokens[1]) if len(tokens) == 2 else None
 
             # revision
             tokens = text.split("#", 1)

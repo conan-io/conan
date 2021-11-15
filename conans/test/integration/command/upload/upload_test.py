@@ -411,7 +411,7 @@ class MyPkg(ConanFile):
             client.run("create . frodo/stable")
         # upload recipe and packages
         client.run("upload Hello0/1.2.1@frodo/stable --all -r default")
-        self.assertIn("Uploading conan_package.tgz", client.out)
+        self.assertIn("Uploading artifacts", client.out)
 
     def test_upload_no_overwrite_recipe(self):
         conanfile_new = """from conans import ConanFile, tools
