@@ -9,7 +9,6 @@ import requests
 from requests.adapters import HTTPAdapter
 
 from conans import __version__ as client_version
-from conans.errors import ConanException
 from conans.util.tracer import log_client_rest_api_call
 
 # Capture SSL warnings as pointed out here:
@@ -30,32 +29,20 @@ class ConanRequester(object):
         if hasattr(requests, "Session"):
             self._http_requester = requests.Session()
             adapter = HTTPAdapter(max_retries=self._get_retries(config))
-
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
 
-        self._timeout = config.get("core.requests:timeout", eval, DEFAULT_TIMEOUT)
-        self.proxies = config["core.network:proxies"] or {}  # FIXME: Broken as config dont do {}
-        self._cacert_path = config["core.network:cacert_path"]
-        self._client_cert_path = config["core.network:client_cert_path"]
-        self._client_cert_key_path = config["core.network:client_cert_key_path"]
+        self._timeout = config.get("core.net.http:timeout", eval, DEFAULT_TIMEOUT)
+        self._no_proxy_match = config.get("core.net.http:no_proxy_match", eval, None)
+        self._proxies = config.get("core.net.http:proxies", eval, None)
+        self._cacert_path = config["core.net.http:cacert_path"]
+        self._client_certificates = config.get("core.net.http:client_cert", eval, None)
+        self._no_proxy_match = config.get("core.net.http:no_proxy_match", eval, None)
+        self._clean_system_proxy = config.get("core.net.http:clean_system_proxy", eval, False)
 
-        self._no_proxy_match = [el.strip() for el in
-                                self.proxies.pop("no_proxy_match", "").split(",") if el]
-
-        if self._client_cert_path is None:
-            self._client_certificates = None
-        else:
-            if self._client_cert_key_path is not None:
-                # Requests can accept a tuple with cert and key, or just an string with a
-                # file having both
-                self._client_certificates = (self._client_cert_path,
-                                             self._client_cert_key_path)
-            else:
-                self._client_certificates = self._client_cert_path
-
-    def _get_retries(self, config):
-        retry = config.get("core.requests:max_retries", int, 2)
+    @staticmethod
+    def _get_retries(config):
+        retry = config.get("core.net.http:max_retries", int, 2)
         if retry == 0:
             return 0
         retry_status_code_set = {
@@ -77,7 +64,6 @@ class ConanRequester(object):
         for entry in self._no_proxy_match:
             if fnmatch.fnmatch(url, entry):
                 return True
-
         return False
 
     def _add_kwargs(self, url, kwargs):
@@ -86,9 +72,9 @@ class ConanRequester(object):
         else:
             kwargs["verify"] = False
         kwargs["cert"] = self._client_certificates
-        if self.proxies:
+        if self._proxies:
             if not self._should_skip_proxy(url):
-                kwargs["proxies"] = self.proxies
+                kwargs["proxies"] = self._proxies
         if self._timeout:
             kwargs["timeout"] = self._timeout
         if not kwargs.get("headers"):
@@ -119,7 +105,7 @@ class ConanRequester(object):
 
     def _call_method(self, method, url, **kwargs):
         popped = False
-        if self.proxies or self._no_proxy_match:
+        if self._clean_system_proxy:
             old_env = dict(os.environ)
             # Clean the proxies from the environ and use the conan specified proxies
             for var_name in ("http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy"):

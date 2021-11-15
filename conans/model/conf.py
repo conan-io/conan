@@ -12,8 +12,15 @@ DEFAULT_CONFIGURATION = {
     "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
     "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
-    "core.requests:max_retries": "Maximum number of connection retries (requests library)",
-    "core.requests:timeout": "Number of seconds without response to timeout (requests library)",
+    # General HTTP(python-requests) configuration
+    "core.net.http:max_retries": "Maximum number of connection retries (requests library)",
+    "core.net.http:timeout": "Number of seconds without response to timeout (requests library)",
+    "core.net.http:no_proxy_match": "List of urls to skip from proxies configuration",
+    "core.net.http:proxies": "Dictionary containing the proxy configuration",
+    "core.net.http:cacert_path": "Path containing a custom Cacert file",
+    "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
+    "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
+    # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
     "tools.build:processes": "Default jobs number",
@@ -66,7 +73,7 @@ class Conf(object):
                 try:
                     v = conf_type(v)
                 except Exception:
-                    raise ConanException(f"Conf '{conf_name} value '{v}' must be {conf_type}")
+                    raise ConanException(f"Conf '{conf_name}' value '{v}' must be {conf_type}")
         else:
             v = conf_default
         return v
