@@ -4,9 +4,10 @@ import unittest
 
 from parameterized.parameterized import parameterized_class
 
-from conans.util.env import environment_update, save
+from conans.util.env import environment_update
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @parameterized_class([{"recipe_cppstd": True}, {"recipe_cppstd": False}, ])
