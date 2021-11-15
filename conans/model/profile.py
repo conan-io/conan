@@ -5,9 +5,9 @@ from conan.tools.env.environment import ProfileEnvironment
 from conans.client import settings_preprocessor
 from conans.model.conf import ConfDefinition
 from conans.model.options import Options
-from conans.model.ref import ConanFileReference
+
 from conans.model.settings import Settings
-from conans.model.values import Values
+from conans.model.recipe_ref import RecipeReference
 
 
 class Profile:
@@ -83,13 +83,13 @@ class Profile:
             existing = OrderedDict()
             if existing_build_requires is not None:
                 for br in existing_build_requires:
-                    # TODO: Understand why sometimes they are str and other are ConanFileReference
-                    r = ConanFileReference.loads(br) \
-                         if not isinstance(br, ConanFileReference) else br
+                    # TODO: Understand why sometimes they are str and other are RecipeReference
+                    r = RecipeReference.loads(br) \
+                         if not isinstance(br, RecipeReference) else br
                     existing[r.name] = br
             for req in req_list:
-                r = ConanFileReference.loads(req) \
-                     if not isinstance(req, ConanFileReference) else req
+                r = RecipeReference.loads(req) \
+                     if not isinstance(req, RecipeReference) else req
                 existing[r.name] = req
             self.build_requires[pattern] = list(existing.values())
 

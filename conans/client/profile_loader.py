@@ -10,7 +10,7 @@ from conans.model.conf import ConfDefinition
 from conans.model.env_info import unquote
 from conans.model.options import Options
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
@@ -20,34 +20,42 @@ class ProfileLoader:
     def __init__(self, cache):
         self._cache = cache
 
-    def from_cli_args(self, profiles, settings, options, env, conf, cwd, build_profile=False):
+    def get_default_host(self):
+        cache = self._cache
+
+        default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
+        if default_profile is None:
+            default_profile = cache.new_config["core:default_profile"] or DEFAULT_PROFILE_NAME
+
+        default_profile = os.path.join(cache.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default profile file doesn't exist:\n"
+                   "{}\n"
+                   "You need to create a default profile or specify your own profile")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
+
+    def get_default_build(self):
+        cache = self._cache
+        default_profile = cache.new_config["core:default_build_profile"] or DEFAULT_PROFILE_NAME
+        default_profile = os.path.join(cache.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default profile file doesn't exist:\n"
+                   "{}\n"
+                   "You need to create a default profile or specify your own profile")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
+
+    def from_cli_args(self, profiles, settings, options, env, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
-        cache = self._cache
-        if profiles is None:
-            if build_profile:
-                default_profile = cache.new_config[
-                                      "core:default_build_profile"] or DEFAULT_PROFILE_NAME
-            else:
-                default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
-                if default_profile is None:
-                    default_profile = cache.new_config[
-                                          "core:default_profile"] or DEFAULT_PROFILE_NAME
-
-            default_profile = os.path.join(cache.profiles_path, default_profile)
-            if not os.path.exists(default_profile):
-                msg = ("The default profile file doesn't exist:\n"
-                       "{}\n"
-                       "You need to create a default profile or specify your own profile")
-                # TODO: Add detailed instructions when cli is improved
-                raise ConanException(msg.format(default_profile))
-            result = self.load_profile(default_profile, cwd)
-        else:
-            result = Profile()
-            for p in profiles:
-                tmp = self.load_profile(p, cwd)
-                result.compose_profile(tmp)
+        result = Profile()
+        for p in profiles:
+            tmp = self.load_profile(p, cwd)
+            result.compose_profile(tmp)
 
         args_profile = _profile_parse_args(settings, options, env, conf)
         result.compose_profile(args_profile)
@@ -56,6 +64,7 @@ class ProfileLoader:
         return result
 
     def load_profile(self, profile_name, cwd=None):
+        # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
         profile, _ = self._load_profile(profile_name, cwd)
         return profile
@@ -80,8 +89,6 @@ class ProfileLoader:
         try:
             return self._recurse_load_profile(text, profile_path)
         except ConanException as exc:
-            # import traceback
-            # print(traceback.format_exc())
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
     def _recurse_load_profile(self, text, profile_path):
@@ -259,7 +266,7 @@ class _ProfileValueParser(object):
                     pattern, req_list = "*", br_line
                 else:
                     pattern, req_list = tokens
-                refs = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
+                refs = [RecipeReference.loads(r.strip()) for r in req_list.split(",")]
                 result.setdefault(pattern, []).extend(refs)
         return result
 

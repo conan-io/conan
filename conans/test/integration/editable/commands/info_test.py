@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient
 class LinkedPackageAsProject(unittest.TestCase):
 
     def setUp(self):
-        self.ref = ConanFileReference.loads('lib/version@user/name')
+        self.ref = RecipeReference.loads('lib/version@user/name')
 
         self.t = TestClient()
         self.t.save({'conanfile.py': GenConanfile()})
@@ -87,7 +87,20 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
         self.assertListEqual(sorted(str(self.t.out).splitlines()),
                              sorted(["lib/version@user/name", "parent/version@user/name"]))
 
-    def test_paths(self):
-        self.t.run('info {} --paths'.format(self.ref), assert_error=True)
-        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
-        # TODO: Cannot show paths for a linked/editable package... what to do here?
+
+def test_info_paths():
+    # https://github.com/conan-io/conan/issues/7054
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            def layout(self):
+                self.folders.source = "."
+                self.folders.build = "."
+        """)
+    c.save({"pkg/conanfile.py": conanfile,
+            "consumer/conanfile.py": GenConanfile().with_require("pkg/0.1")})
+    c.run("editable add pkg pkg/0.1@")
+    c.run("info consumer --paths")
+    # TODO: Conan 2.0: see if it is possible to get the full actual values
+    assert "export_folder:" in c.out  # Important bit is it doesn't raise an error

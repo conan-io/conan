@@ -3,7 +3,6 @@ import shutil
 import time
 from multiprocessing.pool import ThreadPool
 
-from conan.cache.conan_reference import ConanReference
 from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
@@ -21,7 +20,6 @@ from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
@@ -63,16 +61,8 @@ class _PackageBuilder(object):
         if recipe_build_id is not None and pref.package_id != recipe_build_id:
             package_layout.build_id = recipe_build_id
             # check if we already have a package with the calculated build_id
-            recipe_ref = ConanFileReference.loads(ConanReference(pref).recipe_reference)
-            package_refs = self._cache.get_package_references(recipe_ref)
-            build_prev = None
-            for _pkg_ref in package_refs:
-                prev = self._cache.get_latest_prev(_pkg_ref)
-                prev_build_id = self._cache.get_build_id(prev)
-                if prev_build_id == recipe_build_id:
-                    build_prev = prev
-                    break
-
+            recipe_ref = pref.ref
+            build_prev = self._cache.get_matching_build_id(recipe_ref, recipe_build_id)
             build_prev = build_prev or pref
 
             # We are trying to build a package id different from the one that has the
@@ -333,6 +323,7 @@ class BinaryInstaller(object):
     def _download_pkg(self, package):
         node = package.nodes[0]
         assert node.pref.revision is not None
+        assert node.pref.timestamp is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
     def _handle_package(self, package, install_reference, build_mode):
@@ -362,7 +353,7 @@ class BinaryInstaller(object):
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
         if pref.revision is None:
             assert package.binary == BINARY_BUILD
-            package_layout = self._cache.create_temp_pkg_layout(pref)
+            package_layout = self._cache.create_build_pkg_layout(pref)
         else:
             package_layout = self._cache.get_or_create_pkg_layout(pref)
 
@@ -442,7 +433,7 @@ class BinaryInstaller(object):
             assert node.pref.revision, "Node PREF revision shouldn't be empty"
             assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
             # at this point the package reference should be complete
-            pkg_layout.reference = ConanReference(pref)
+            pkg_layout.reference = pref
             self._cache.assign_prev(pkg_layout)
             # Make sure the current conanfile.folders is updated (it is later in package_info(),
             # but better make sure here, and be able to report the actual folder in case

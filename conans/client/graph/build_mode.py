@@ -50,8 +50,8 @@ class BuildMode(object):
     def forced(self, conan_file, ref, with_deps_to_build=False):
         def pattern_match(pattern_):
             return (fnmatch.fnmatchcase(ref.name, pattern_) or
-                    fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern_) or
-                    fnmatch.fnmatchcase(repr(ref), pattern_))
+                    fnmatch.fnmatchcase(str(ref), pattern_) or
+                    fnmatch.fnmatchcase(ref.repr_notime(), pattern_))
 
         for pattern in self._excluded_patterns:
             if pattern_match(pattern):

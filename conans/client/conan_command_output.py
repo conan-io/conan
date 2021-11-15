@@ -1,19 +1,18 @@
+import copy
 import json
 import os
 from collections import OrderedDict
 
+from conans import __version__ as client_version
 from conans.cli.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
-from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
-from conans.search.binary_html_table import html_binary_graph
-from conans.util.dates import iso8601_to_str
+
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import save
-from conans import __version__ as client_version
 from conans.util.misc import make_tuple
 
 
@@ -21,36 +20,6 @@ class CommandOutputer(object):
 
     def __init__(self):
         self._output = ConanOutput()
-
-    def print_profile(self, profile, profile_text):
-        Printer(self._output).print_profile(profile, profile_text)
-
-    def profile_list(self, profiles):
-        for p in sorted(profiles):
-            self._output.info(p)
-
-    def remote_list(self, remotes, raw):
-        for r in remotes:
-            if raw:
-                disabled_str = " True" if r.disabled else ""
-                self._output.info(
-                    "%s %s %s %s" %
-                    (r.name, r.url, r.verify_ssl, disabled_str))
-            else:
-                disabled_str = ", Disabled: True" if r.disabled else ""
-                self._output.info(
-                    "%s: %s [Verify SSL: %s%s]" %
-                    (r.name, r.url, r.verify_ssl, disabled_str))
-
-    def remote_ref_list(self, refs):
-        for reference, remote_name in refs.items():
-            ref = ConanFileReference.loads(reference)
-            self._output.info("%s: %s" % (ref.full_str(), remote_name))
-
-    def remote_pref_list(self, package_references):
-        for package_reference, remote_name in package_references.items():
-            pref = PkgReference.loads(package_reference)
-            self._output.info("%s: %s" % (str(pref), remote_name))
 
     def json_output(self, info, json_output, cwd):
         cwd = os.path.abspath(cwd or os.getcwd())
@@ -112,7 +81,7 @@ class CommandOutputer(object):
                 item_data["revision"] = ref.revision
 
             item_data["reference"] = str(ref)
-            item_data["is_ref"] = isinstance(ref, ConanFileReference)
+            item_data["is_ref"] = isinstance(ref, RecipeReference)
             item_data["display_name"] = conanfile.display_name
             item_data["id"] = package_id
             item_data["build_id"] = build_id(conanfile)
@@ -120,11 +89,11 @@ class CommandOutputer(object):
 
             python_requires = getattr(conanfile, "python_requires", None)
             if python_requires and not isinstance(python_requires, dict):  # no old python requires
-                item_data["python_requires"] = [repr(r)
+                item_data["python_requires"] = [r.repr_notime()
                                                 for r in conanfile.python_requires.all_refs()]
 
             # Paths
-            if isinstance(ref, ConanFileReference) and grab_paths:
+            if isinstance(ref, RecipeReference) and grab_paths:
                 # ref already has the revision ID, not needed to get it again
                 # FIXME: Not access to the cache should be available here, this information
                 #        should be provided by the conan_api
@@ -133,8 +102,8 @@ class CommandOutputer(object):
                 # item_data["export_folder"] = ref_layout.export()
                 # item_data["source_folder"] = ref_layout.source()
                 # pref_build_id = build_id(conanfile) or package_id
-                # pref_build = self._cache.get_latest_prev(PackageReference(ref, pref_build_id))
-                # pref_package = self._cache.get_latest_prev(PackageReference(ref, package_id))
+                # pref_build = self._cache.get_latest_package_reference(PackageReference(ref, pref_build_id))
+                # pref_package = self._cache.get_latest_package_reference(PackageReference(ref, package_id))
                 # item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
                 # item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
 
@@ -161,7 +130,7 @@ class CommandOutputer(object):
             _add_if_exists("provides", as_list=True)
             _add_if_exists("scm")
 
-            if isinstance(ref, ConanFileReference):
+            if isinstance(ref, RecipeReference):
                 item_data["recipe"] = node.recipe
 
                 item_data["revision"] = node.ref.revision
@@ -175,7 +144,7 @@ class CommandOutputer(object):
             if node_times and node_times.get(ref, None):
                 item_data["creation_date"] = node_times.get(ref, None)
 
-            if isinstance(ref, ConanFileReference):
+            if isinstance(ref, RecipeReference):
                 dependants = [n for node in list_nodes for n in node.inverse_neighbors()]
                 required = [d.conanfile for d in dependants if d.recipe != RECIPE_VIRTUAL]
                 if required:
@@ -186,11 +155,18 @@ class CommandOutputer(object):
             build_requires = [d for d in depends if d in build_time_nodes]  # TODO: May use build_require_context information
 
             if requires:
-                item_data["requires"] = [repr(d.ref.copy_clear_rev()) for d in requires]
+                item_data["requires"] = []
+                for d in requires:
+                    _tmp = copy.copy(d.ref)
+                    _tmp.revision = None
+                    item_data["requires"].append(repr(_tmp))
 
             if build_requires:
-                item_data["build_requires"] = [repr(d.ref.copy_clear_rev())
-                                               for d in build_requires]
+                item_data["build_requires"] = []
+                for d in build_requires:
+                    _tmp = copy.copy(d.ref)
+                    _tmp.revision = None
+                    item_data["build_requires"].append(repr(_tmp))
 
             ret.append(item_data)
 
@@ -225,27 +201,6 @@ class CommandOutputer(object):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         self._handle_json_output(data, json_output, cwd)
 
-    def print_search_references(self, search_info, pattern, raw, all_remotes_search):
-        printer = Printer(self._output)
-        printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
-
-    def print_search_packages(self, search_info, reference, packages_query, table, raw,
-                              template):
-        if table:
-            html_binary_graph(search_info, reference, table, template)
-        else:
-            printer = Printer(self._output)
-            printer.print_search_packages(search_info, reference, packages_query, raw)
-
-    def print_revisions(self, reference, revisions, raw, remote_name=None):
-        remote_test = " at remote '%s'" % remote_name if remote_name else ""
-        if not raw:
-            self._output.info("Revisions for '%s'%s:" % (reference, remote_test))
-        lines = ["%s (%s)" % (r["revision"],
-                              iso8601_to_str(r["time"]) if r["time"] else "No time")
-                 for r in revisions]
-        self._output.info("\n".join(lines))
-
     def print_dir_list(self, list_files, path, raw):
         if not raw:
             self._output.info("Listing directory '%s':" % path)
@@ -270,24 +225,3 @@ class CommandOutputer(object):
             lexer = TextLexer()
 
         self._output.info(highlight(contents, lexer, TerminalFormatter()))
-
-    def print_user_list(self, info):
-        for remote in info["remotes"]:
-            authenticated = " [authenticated]" if remote["authenticated"] else ""
-            anonymous = " (anonymous)" if not remote["user_name"] else ""
-            self._output.info("Current user of remote '%s' set to: '%s'%s%s" %
-                              (remote["name"], str(remote["user_name"]), anonymous, authenticated))
-
-    def print_user_set(self, remote_name, prev_user, user):
-        previous_username = prev_user or "None"
-        previous_anonymous = " (anonymous)" if not prev_user else ""
-        username = user or "None"
-        anonymous = " (anonymous)" if not user else ""
-
-        if prev_user == user:
-            self._output.info("User of remote '%s' is already '%s'%s" %
-                              (remote_name, previous_username, previous_anonymous))
-        else:
-            self._output.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
-                              (remote_name, previous_username, previous_anonymous, username,
-                               anonymous))

@@ -8,7 +8,7 @@ import fasteners
 
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import md5sum, sha1sum
 from conans.util.log import logger
 
@@ -76,7 +76,9 @@ def _file_document(name, path):
 def log_recipe_upload(ref, duration, files_uploaded, remote_name):
     files_uploaded = files_uploaded or {}
     files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
-    _append_action("UPLOADED_RECIPE", {"_id": repr(ref.copy_clear_rev()),
+    ref_norev = copy.copy(ref)
+    ref_norev.revision = None
+    _append_action("UPLOADED_RECIPE", {"_id": repr(ref_norev),
                                        "duration": duration,
                                        "files": files_uploaded,
                                        "remote": remote_name})
@@ -95,20 +97,24 @@ def log_package_upload(pref, duration, files_uploaded, remote):
 
 
 def log_recipe_download(ref, duration, remote_name, files_downloaded):
-    assert(isinstance(ref, ConanFileReference))
+    assert(isinstance(ref, RecipeReference))
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
-    _append_action("DOWNLOADED_RECIPE", {"_id": repr(ref.copy_clear_rev()),
+    _tmp = copy.copy(ref)
+    _tmp.revision = None
+    _append_action("DOWNLOADED_RECIPE", {"_id": repr(_tmp),
                                          "duration": duration,
                                          "remote": remote_name,
                                          "files": files_downloaded})
 
 
 def log_recipe_sources_download(ref, duration, remote_name, files_downloaded):
-    assert(isinstance(ref, ConanFileReference))
+    assert(isinstance(ref, RecipeReference))
     files_downloaded = files_downloaded or {}
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
-    _append_action("DOWNLOADED_RECIPE_SOURCES", {"_id": repr(ref.copy_clear_rev()),
+    _tmp = copy.copy(ref)
+    _tmp.revision = None
+    _append_action("DOWNLOADED_RECIPE_SOURCES", {"_id": repr(_tmp),
                                                  "duration": duration,
                                                  "remote": remote_name,
                                                  "files": files_downloaded})
@@ -126,15 +132,16 @@ def log_package_download(pref, duration, remote, files_downloaded):
 
 
 def log_recipe_got_from_local_cache(ref):
-    assert(isinstance(ref, ConanFileReference))
-    _append_action("GOT_RECIPE_FROM_LOCAL_CACHE", {"_id": repr(ref.copy_clear_rev())})
+    assert(isinstance(ref, RecipeReference))
+    ref_norev = copy.copy(ref)
+    ref_norev.revision = None
+    _append_action("GOT_RECIPE_FROM_LOCAL_CACHE", {"_id": repr(ref_norev)})
 
 
 def log_package_got_from_local_cache(pref):
     assert(isinstance(pref, PkgReference))
     tmp = copy.copy(pref)
     tmp.revision = None
-    tmp.ref = tmp.ref.copy_clear_rev()
     _append_action("GOT_PACKAGE_FROM_LOCAL_CACHE", {"_id": repr(tmp)})
 
 
@@ -142,7 +149,6 @@ def log_package_built(pref, duration, log_run=None):
     assert(isinstance(pref, PkgReference))
     tmp = copy.copy(pref)
     tmp.revision = None
-    tmp.ref = tmp.ref.copy_clear_rev()
     _append_action("PACKAGE_BUILT_FROM_SOURCES",
                    {"_id": repr(tmp), "duration": duration, "log": log_run})
 

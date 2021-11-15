@@ -1,8 +1,8 @@
 from urllib.parse import quote, urlencode
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.rest_routes import RestRoutes
-from conans.paths import CONAN_MANIFEST, CONANINFO, ARTIFACTS_PROPERTIES_PUT_PREFIX
+from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 
 
 def _format_ref(url, ref, matrix_params=""):
@@ -49,7 +49,7 @@ class ClientCommonRouter(object):
         """URL search recipes"""
         query = ''
         if pattern:
-            if isinstance(pattern, ConanFileReference):
+            if isinstance(pattern, RecipeReference):
                 pattern = repr(pattern)
             params = {"q": pattern}
             if not ignorecase:

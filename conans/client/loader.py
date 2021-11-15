@@ -15,7 +15,7 @@ from conans.errors import ConanException, NotFoundException, ConanInvalidConfigu
     conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
 from conans.paths import DATA_YML
 from conans.util.files import load
@@ -160,8 +160,7 @@ class ConanFileLoader(object):
         if not conanfile.version:
             raise ConanException("conanfile didn't specify version")
 
-        ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
-                                 conanfile.channel)
+        ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         conanfile.display_name = str(ref)
         conanfile.output.scope = conanfile.display_name
         return conanfile
@@ -207,7 +206,7 @@ class ConanFileLoader(object):
         conanfile = self.load_named(conanfile_path, name, version, user, channel,
                                     graph_lock)
 
-        ref = ConanFileReference(conanfile.name, conanfile.version, user, channel, validate=False)
+        ref = RecipeReference(conanfile.name, conanfile.version, user, channel)
         if str(ref):
             conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
         else:
@@ -220,7 +219,7 @@ class ConanFileLoader(object):
 
             if require_overrides is not None:
                 for req_override in require_overrides:
-                    req_override = ConanFileReference.loads(req_override)
+                    req_override = RecipeReference.loads(req_override)
                     conanfile.requires.override(req_override)
 
             return conanfile
@@ -272,12 +271,9 @@ class ConanFileLoader(object):
             pkg_settings = package_settings_values.get("&")
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
-        conanfile.initialize(Settings(), profile.buildenv)
+        tmp_settings._unconstrained = True
+        conanfile.initialize(tmp_settings, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(None)
-        # It is necessary to copy the settings, because the above is only a constraint of
-        # conanfile settings, and a txt doesn't define settings. Necessary for generators,
-        # as cmake_multi, that check build_type.
-        conanfile.settings = tmp_settings.copy_values()
 
         try:
             parser = ConanFileTextLoader(contents)
@@ -306,9 +302,10 @@ class ConanFileLoader(object):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._runner, display_name="virtual")
-        conanfile.initialize(profile_host.settings.copy(), profile_host.buildenv)
+        tmp_settings = profile_host.processed_settings.copy()
+        tmp_settings._unconstrained = True
+        conanfile.initialize(tmp_settings, profile_host.buildenv)
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
-        conanfile.settings = profile_host.settings.copy_values()
 
         if is_build_require:
             for reference in references:
@@ -319,7 +316,7 @@ class ConanFileLoader(object):
 
         if require_overrides is not None:
             for req_override in require_overrides:
-                req_override = ConanFileReference.loads(req_override)
+                req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
         conanfile.generators = []  # remove the default txt generator

@@ -1,5 +1,5 @@
 from conans.client.graph.graph_error import GraphError
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 
 
 def check_graph_provides(dep_graph):
@@ -24,8 +24,8 @@ def check_graph_provides(dep_graph):
 
                 # Then, check if collides with other requirements
                 new_req = dep_require.copy_requirement()
-                new_req.ref = ConanFileReference(provide, new_req.ref.version, new_req.ref.user,
-                                                 new_req.ref.channel, validate=False)
+                new_req.ref = RecipeReference(provide, new_req.ref.version, new_req.ref.user,
+                                              new_req.ref.channel)
                 existing = node.transitive_deps.get(new_req)
                 if existing is not None:
                     raise GraphError.provides(existing.node, dep_node)

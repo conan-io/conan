@@ -6,7 +6,7 @@ import pytest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.files import replace_in_file
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
@@ -366,7 +366,7 @@ class Pkg(ConanFile):
         self.assertIn("Hello/0.1@lasote/channel from local", client.out)
         self.assertNotIn("Hello/0.X@lasote/channel", client.out)
 
-        ref = ConanFileReference.loads("Chat/1.0@lasote/channel")
+        ref = RecipeReference.loads("Chat/1.0@lasote/channel")
         pkg_folder = client.cache.package_layout(ref).packages()
         folders = os.listdir(pkg_folder)
         pkg_folder = os.path.join(pkg_folder, folders[0])

@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_SKIP
+from conans.model.recipe_ref import RecipeReference
 from conans.model.requires import Requirement
 from conans.model.conanfile_interface import ConanFileInterface
-from conans.model.ref import ConanFileReference
 
 
 class UserRequirementsDict(object):
@@ -28,9 +28,10 @@ class UserRequirementsDict(object):
     def _get_require(self, ref, **kwargs):
         assert isinstance(ref, str)
         if "/" in ref:
-            ref = ConanFileReference.loads(ref)
+            # FIXME: Validate reference
+            ref = RecipeReference.loads(ref)
         else:
-            ref = ConanFileReference(ref, "unknown", "unknown", "unknown", validate=False)
+            ref = RecipeReference(ref, "unknown", "unknown", "unknown")
 
         if self._require_filter:
             kwargs.update(self._require_filter)

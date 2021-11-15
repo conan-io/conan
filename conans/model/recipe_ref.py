@@ -1,7 +1,6 @@
 from functools import total_ordering
 
-from conans.model.ref import ConanFileReference
-from conans.util.dates import from_timestamp_to_iso8601
+from conans.util.dates import timestamp_to_str
 
 
 @total_ordering
@@ -49,7 +48,17 @@ class Version:
         except IndexError:
             return None
 
+    @property
+    def patch(self):
+        try:
+            return self.main[2]
+        except IndexError:
+            return None
+
     def __str__(self):
+        return self._value
+
+    def __repr__(self):
         return self._value
 
     def __eq__(self, other):
@@ -115,23 +124,25 @@ class RecipeReference:
         self.user = user
         self.channel = channel
         self.revision = revision
-        self.timestamp = timestamp  # integer, seconds from 0 in UTC
-
-    @staticmethod
-    def from_conanref(ref, timestamp=None):
-        return RecipeReference(ref.name, ref.version, ref.user, ref.channel, ref.revision, timestamp)
-
-    def to_conanfileref(self):
-        return ConanFileReference(self.name, str(self.version), self.user, self.channel,
-                                  self.revision)
+        self.timestamp = timestamp
 
     def __repr__(self):
         """ long repr like pkg/0.1@user/channel#rrev%timestamp """
+        result = self.repr_notime()
+        if self.timestamp is not None:
+            result += "%{}".format(self.timestamp)
+        return result
+
+    def repr_notime(self):
         result = self.__str__()
         if self.revision is not None:
             result += "#{}".format(self.revision)
-        if self.timestamp is not None:
-            result += "%{}".format(self.timestamp)
+        return result
+
+    def repr_humantime(self):
+        result = self.repr_notime()
+        assert self.timestamp
+        result += " ({})".format(timestamp_to_str(self.timestamp))
         return result
 
     def __str__(self):
@@ -146,39 +157,31 @@ class RecipeReference:
             result += "/{}".format(self.channel)
         return result
 
-    def format_time(self):
-        """ same as repr(), but with human readable time """
-        result = self.__str__()
-        if self.revision is not None:
-            result += "#{}".format(self.revision)
-        if self.timestamp is not None:
-            # TODO: Improve the time format
-            result += "({})".format(from_timestamp_to_iso8601(self.timestamp))
-        return result
-
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
         # In theory this is enough for sorting
-        return (self.name, self.version, self.user, self.channel, self.timestamp, self.revision) \
-               < (ref.name, ref.version, ref.user, ref.channel, ref.timestamp, ref.revision)
+        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp, self.revision) \
+               < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp, ref.revision)
 
     def __eq__(self, ref):
         # Timestamp doesn't affect equality.
         # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile
-        return (self.name, self.version, self.user, self.channel, self.revision) \
-               == (ref.name, ref.version, ref.user, ref.channel, ref.revision)
+        if ref is None:
+            return False
+        return (self.name, self.version, self.user, self.channel, self.revision) == \
+               (ref.name, ref.version, ref.user, ref.channel, ref.revision)
 
     def __hash__(self):
         # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile
         return hash((self.name, self.version, self.user, self.channel, self.revision))
 
     @staticmethod
-    def loads(text):  # TODO: change this default to validate only on end points
+    def loads(rref):  # TODO: change this default to validate only on end points
         try:
             # timestamp
-            tokens = text.rsplit("%", 1)
+            tokens = rref.rsplit("%", 1)
             text = tokens[0]
-            timestamp = int(tokens[1]) if len(tokens) == 2 else None
+            timestamp = float(tokens[1]) if len(tokens) == 2 else None
 
             # revision
             tokens = text.split("#", 1)
@@ -190,9 +193,9 @@ class RecipeReference:
             name, version = tokens[0].split("/", 1)
             assert name and version
             # user and channel
-            if len(tokens) == 2:
+            if len(tokens) == 2 and tokens[1]:
                 tokens = tokens[1].split("/", 1)
-                user = tokens[0]
+                user = tokens[0] if tokens[0] else None
                 channel = tokens[1] if len(tokens) == 2 else None
             else:
                 user = channel = None
@@ -200,5 +203,5 @@ class RecipeReference:
         except Exception:
             from conans.errors import ConanException
             raise ConanException(
-                f"{text} is not a valid recipe reference, provide a reference"
+                f"{rref} is not a valid recipe reference, provide a reference"
                 f" in the form name/version[@user/channel]")

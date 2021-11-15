@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 from conans.util.files import mkdir, rmdir, save
@@ -173,14 +173,12 @@ def test_install_with_profile(client):
         """)
 
     client.save({"conanfile.py": conanfile})
-    client.run("profile new myprofile")
-    client.run("profile update settings.os=Linux myprofile")
+    save(os.path.join(client.cache.profiles_path, "myprofile"), "[settings]\nos=Linux")
     client.run("install . -pr=myprofile --build")
     assert "PKGOS=Linux" in client.out
     mkdir(os.path.join(client.current_folder, "myprofile"))
     client.run("install . -pr=myprofile")
-    client.run("profile new myotherprofile")
-    client.run("profile update settings.os=FreeBSD myotherprofile")
+    save(os.path.join(client.cache.profiles_path, "myotherprofile"), "[settings]\nos=FreeBSD")
     client.run("install . -pr=myotherprofile")
     assert "PKGOS=FreeBSD" in client.out
     client.save({"myotherprofile": "Some garbage without sense [garbage]"})
@@ -209,7 +207,7 @@ def test_install_broken_reference(client):
     client.save({"conanfile.py": GenConanfile()})
     client.run("export . Hello/0.1@lasote/stable")
     client.run("remote add_ref Hello/0.1@lasote/stable default")
-    ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+    ref = RecipeReference.loads("Hello/0.1@lasote/stable")
     # Because the folder is removed, the metadata is removed and the
     # origin remote is lost
     rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
@@ -276,7 +274,7 @@ def test_install_without_ref(client):
     assert "lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
     client.run('upload lib/1.0 -c --all -r default')
-    assert "Uploaded conan recipe 'lib/1.0' to 'default'" in client.out
+    assert "Uploading lib/1.0" in client.out
 
     client.run('remove "*" -f')
 

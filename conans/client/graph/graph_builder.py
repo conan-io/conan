@@ -1,3 +1,4 @@
+import copy
 import fnmatch
 from collections import deque
 
@@ -9,7 +10,7 @@ from conans.client.graph.provides import check_graph_provides
 from conans.client.graph.range_resolver import range_satisfies
 from conans.errors import ConanException
 from conans.model.options import Options
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.requires import Requirement
 
 
@@ -113,7 +114,11 @@ class DepsGraphBuilder(object):
                 raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
         else:
             def _conflicting_refs(ref1, ref2):
-                if ref1.copy_clear_rev() != ref2.copy_clear_rev():
+                ref1_norev = copy.copy(ref1)
+                ref1_norev.revision = None
+                ref2_norev = copy.copy(ref2)
+                ref2_norev.revision = None
+                if ref2_norev != ref1_norev:
                     return True
                 # Computed node, if is Editable, has revision=None
                 # If new_ref.revision is None we cannot assume any conflict, user hasn't specified
@@ -201,7 +206,7 @@ class DepsGraphBuilder(object):
 
             dep_conanfile = self._loader.load_basic(conanfile_path)
             try:
-                pointed_ref = ConanFileReference.loads(dep_conanfile.alias)
+                pointed_ref = RecipeReference.loads(dep_conanfile.alias)
             except Exception as e:
                 raise ConanException(f"Alias definition error in {alias}: {str(e)}")
 

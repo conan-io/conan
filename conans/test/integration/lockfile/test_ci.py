@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 conanfile = textwrap.dedent("""
@@ -302,19 +303,16 @@ def test_single_config_decentralized(client_setup):
 
     for level in to_build:
         for elem in level:
-            ref = elem["ref"]
-            ref_without_rev = ref.split("#")[0]
-            if "@" not in ref:
-                ref = ref.replace("#", "@#")
+            ref = RecipeReference.loads(elem["ref"])
             for package in elem["packages"]:
                 binary = package["binary"]
                 package_id = package["package_id"]
                 if binary != "Build":
                     continue
                 # TODO: The options are completely missing
-                c.run("install %s --build=%s --lockfile=app1_b_changed.lock  -s os=Windows"
+                c.run("install %s@ --build=%s@ --lockfile=app1_b_changed.lock  -s os=Windows"
                       % (ref, ref))
-                assert "{}:{} - Build".format(ref_without_rev, package_id) in c.out
+                assert "{}:{} - Build".format(str(ref), package_id) in c.out
 
                 assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in c.out
                 assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in c.out

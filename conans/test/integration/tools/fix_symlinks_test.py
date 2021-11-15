@@ -5,13 +5,13 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.model.recipe_ref import RecipeReference
+from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="symlink need admin privileges")
 class FixSymlinksTestCase(unittest.TestCase):
-    name_ref = ConanFileReference.loads("name/version")
+    name_ref = RecipeReference.loads("name/version")
 
     conanfile = textwrap.dedent("""
         import os
@@ -81,7 +81,8 @@ class FixSymlinksTestCase(unittest.TestCase):
                       " the package, it's been removed.", t.out)
 
         # Check the work is done
-        pkg_ref = t.get_latest_prev(self.name_ref, '99efc6979ac688ef4d6962ebf14fdb47034b4dcb')
+        pkg_ref = t.get_latest_package_reference(self.name_ref,
+                                                 '99efc6979ac688ef4d6962ebf14fdb47034b4dcb')
         assert pkg_ref is not None
         package_folder = t.get_latest_pkg_layout(pkg_ref).package()
 

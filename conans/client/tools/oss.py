@@ -57,59 +57,6 @@ def cpu_count(output=None):
     return 1  # Safe guess
 
 
-def detected_architecture():
-    # FIXME: Very weak check but not very common to run conan in other architectures
-    machine = platform.machine()
-    os_info = OSInfo()
-    arch = None
-
-    if os_info.is_solaris:
-        arch = OSInfo.get_solaris_architecture()
-    elif os_info.is_aix:
-        arch = OSInfo.get_aix_architecture()
-
-    if arch:
-        return arch
-
-    if "ppc64le" in machine:
-        return "ppc64le"
-    elif "ppc64" in machine:
-        return "ppc64"
-    elif "ppc" in machine:
-        return "ppc32"
-    elif "mips64" in machine:
-        return "mips64"
-    elif "mips" in machine:
-        return "mips"
-    elif "sparc64" in machine:
-        return "sparcv9"
-    elif "sparc" in machine:
-        return "sparc"
-    elif "aarch64" in machine:
-        return "armv8"
-    elif "arm64" in machine:
-        return "armv8"
-    elif "64" in machine:
-        return "x86_64"
-    elif "86" in machine:
-        return "x86"
-    elif "armv8" in machine:
-        return "armv8"
-    elif "armv7" in machine:
-        return "armv7"
-    elif "arm" in machine:
-        return "armv6"
-    elif "s390x" in machine:
-        return "s390x"
-    elif "s390" in machine:
-        return "s390"
-    elif "sun4v" in machine:
-        return "sparc"
-    elif "e2k" in machine:
-        return OSInfo.get_e2k_architecture()
-
-    return None
-
 # DETECT OS, VERSION AND DISTRIBUTIONS
 
 
@@ -324,42 +271,6 @@ class OSInfo(object):
             return "Cheetha"
 
     @staticmethod
-    def get_aix_architecture():
-        processor = platform.processor()
-        if "powerpc" in processor:
-            kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
-            if kernel_bitness:
-                return "ppc64" if kernel_bitness == "64" else "ppc32"
-        elif "rs6000" in processor:
-            return "ppc32"
-
-    @staticmethod
-    def get_solaris_architecture():
-        # under intel solaris, platform.machine()=='i86pc' so we need to handle
-        # it early to suport 64-bit
-        processor = platform.processor()
-        kernel_bitness, elf = platform.architecture()
-        if "sparc" in processor:
-            return "sparcv9" if kernel_bitness == "64bit" else "sparc"
-        elif "i386" in processor:
-            return "x86_64" if kernel_bitness == "64bit" else "x86"
-
-    @staticmethod
-    def get_e2k_architecture():
-        return {
-            "E1C+": "e2k-v4",  # Elbrus 1C+ and Elbrus 1CK
-            "E2C+": "e2k-v2",  # Elbrus 2CM
-            "E2C+DSP": "e2k-v2",  # Elbrus 2C+
-            "E2C3": "e2k-v6",  # Elbrus 2C3
-            "E2S": "e2k-v3",  # Elbrus 2S (aka Elbrus 4C)
-            "E8C": "e2k-v4",  # Elbrus 8C and Elbrus 8C1
-            "E8C2": "e2k-v5",  # Elbrus 8C2 (aka Elbrus 8CB)
-            "E12C": "e2k-v6",  # Elbrus 12C
-            "E16C": "e2k-v6",  # Elbrus 16C
-            "E32C": "e2k-v7",  # Elbrus 32C
-        }.get(platform.processor())
-
-    @staticmethod
     def get_freebsd_version():
         return platform.release().split("-")[0]
 
@@ -379,18 +290,6 @@ class OSInfo(object):
             return Version(ret)
         except Exception:
             return Version("%s.%s" % (platform.version(), platform.release()))
-
-    @staticmethod
-    def get_aix_conf(options=None):
-        options = " %s" % options if options else ""
-        if not OSInfo().is_aix:
-            raise ConanException("Command only for AIX operating system")
-
-        try:
-            ret = check_output_runner("getconf%s" % options).strip()
-            return ret
-        except Exception:
-            return None
 
 
 def cross_building(conanfile, self_os=None, self_arch=None, skip_x64_x86=False):
@@ -420,104 +319,6 @@ def get_cross_building_settings(conanfile, self_os=None, self_arch=None):
     arch_host = conanfile.settings.get_safe("arch")
 
     return os_build, arch_build, os_host, arch_host
-
-
-def get_gnu_triplet(os_, arch, compiler=None):
-    """
-    Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
-
-    :param os_: os to be used to create the triplet
-    :param arch: arch to be used to create the triplet
-    :param compiler: compiler used to create the triplet (only needed fo windows)
-    """
-
-    if os_ == "Windows" and compiler is None:
-        raise ConanException("'compiler' parameter for 'get_gnu_triplet()' is not specified and "
-                             "needed for os=Windows")
-
-    # Calculate the arch
-    machine = {"x86": "i686" if os_ != "Linux" else "x86",
-               "x86_64": "x86_64",
-               "armv8": "aarch64",
-               "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
-               "armv8.3": "aarch64",
-               "asm.js": "asmjs",
-               "wasm": "wasm32",
-               }.get(arch, None)
-
-    if not machine:
-        # https://wiki.debian.org/Multiarch/Tuples
-        if os_ == "AIX":
-            if "ppc32" in arch:
-                machine = "rs6000"
-            elif "ppc64" in arch:
-                machine = "powerpc"
-        elif "arm" in arch:
-            machine = "arm"
-        elif "ppc32be" in arch:
-            machine = "powerpcbe"
-        elif "ppc64le" in arch:
-            machine = "powerpc64le"
-        elif "ppc64" in arch:
-            machine = "powerpc64"
-        elif "ppc32" in arch:
-            machine = "powerpc"
-        elif "mips64" in arch:
-            machine = "mips64"
-        elif "mips" in arch:
-            machine = "mips"
-        elif "sparcv9" in arch:
-            machine = "sparc64"
-        elif "sparc" in arch:
-            machine = "sparc"
-        elif "s390x" in arch:
-            machine = "s390x-ibm"
-        elif "s390" in arch:
-            machine = "s390-ibm"
-        elif "sh4" in arch:
-            machine = "sh4"
-        elif "e2k" in arch:
-            # https://lists.gnu.org/archive/html/config-patches/2015-03/msg00000.html
-            machine = "e2k-unknown"
-
-    if machine is None:
-        raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
-                             "translate it to the GNU triplet, please report at "
-                             " https://github.com/conan-io/conan/issues" % arch)
-
-    # Calculate the OS
-    if compiler == "gcc":
-        windows_op = "w64-mingw32"
-    elif compiler == "Visual Studio":
-        windows_op = "windows-msvc"
-    else:
-        windows_op = "windows"
-
-    op_system = {"Windows": windows_op,
-                 "Linux": "linux-gnu",
-                 "Darwin": "apple-darwin",
-                 "Android": "linux-android",
-                 "Macos": "apple-darwin",
-                 "iOS": "apple-ios",
-                 "watchOS": "apple-watchos",
-                 "tvOS": "apple-tvos",
-                 # NOTE: it technically must be "asmjs-unknown-emscripten" or
-                 # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
-                 "Emscripten": "local-emscripten",
-                 "AIX": "ibm-aix",
-                 "Neutrino": "nto-qnx"}.get(os_, os_.lower())
-
-    if os_ in ("Linux", "Android"):
-        if "arm" in arch and "armv8" not in arch:
-            op_system += "eabi"
-
-        if (arch == "armv5hf" or arch == "armv7hf") and os_ == "Linux":
-            op_system += "hf"
-
-        if arch == "armv8_32" and os_ == "Linux":
-            op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
-
-    return "%s-%s" % (machine, op_system)
 
 
 def get_build_os_arch(conanfile):

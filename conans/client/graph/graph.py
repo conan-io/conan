@@ -45,6 +45,7 @@ class Node(object):
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
+        self.pref_timestamp = None
         if conanfile is not None:
             conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
@@ -165,7 +166,7 @@ class Node(object):
     @property
     def pref(self):
         assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
-        return PkgReference(self.ref, self.package_id, self.prev)
+        return PkgReference(self.ref, self.package_id, self.prev, self.pref_timestamp)
 
     def add_edge(self, edge):
         if edge.src == self:

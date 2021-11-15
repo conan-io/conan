@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import mkdir
@@ -54,8 +54,8 @@ class ConanBuildTest(unittest.TestCase):
 
         client.save({"my_conanfile.py": conanfile_scope_env})
         client.run("build ./my_conanfile.py --build=missing")
-        pref = client.get_latest_prev(ConanFileReference.loads("Hello/0.1@lasote/testing"),
-                                      NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_package_reference(RecipeReference.loads("Hello/0.1@lasote/testing"),
+                                                   NO_SETTINGS_PACKAGE_ID)
         package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/")
         self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO ROOT PATH: %s" % package_folder, client.out)

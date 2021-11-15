@@ -6,7 +6,7 @@ import pytest
 
 from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import bad_value_msg
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.assets.genconanfile import GenConanfile
@@ -17,9 +17,9 @@ from conans.util.files import load, save
 class SettingsTest(unittest.TestCase):
 
     def _get_conaninfo(self, reference, client):
-        ref = client.cache.get_latest_rrev(ConanFileReference.loads(reference))
+        ref = client.cache.get_latest_recipe_reference(RecipeReference.loads(reference))
         pkg_ids = client.cache.get_package_references(ref)
-        pref = client.cache.get_latest_prev(pkg_ids[0])
+        pref = client.cache.get_latest_package_reference(pkg_ids[0])
         pkg_folder = client.cache.pkg_layout(pref).package()
         return ConanInfo.loads(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
 
@@ -124,7 +124,7 @@ cppstd=11""", client.out)
         # https://github.com/conan-io/conan/issues/3022
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
-    settings = {"os": "Linux"}
+    settings = "os"
     def build(self):
         self.output.info("OS!!: %s" % self.settings.os)
     """
@@ -181,7 +181,7 @@ from conans import ConanFile
 class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
-    settings = {"os": ["Windows"], "arch": ["x86", "x86_64", "sparc", "sparcv9"]}
+    settings = {"os", "arch"}
 """
         client = TestClient()
         client.save({CONANFILE: content})
@@ -190,52 +190,20 @@ class SayConan(ConanFile):
         self.assertEqual(conan_info.settings.os,  "Windows")
         self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
-    def test_invalid_settings2(self):
-        # MISSING A DEFAULT VALUE BECAUSE ITS RESTRICTED TO OTHER, SO ITS REQUIRED
-        content = """
-from conans import ConanFile
-
-class SayConan(ConanFile):
-    name = "Say"
-    version = "0.1"
-    settings = {"os": ["Windows", "Linux", "Macos", "FreeBSD", "SunOS"],
-                "compiler": ["Visual Studio"]}
-"""
-        client = TestClient()
-        client.save({CONANFILE: content})
-        client.run("install . -s compiler=gcc -s compiler.version=4.8 --build missing",
-                   assert_error=True)
-        self.assertIn(bad_value_msg("settings.compiler", "gcc", ["Visual Studio"]),
-                      str(client.out))
-
     def test_invalid_settings3(self):
-        # dict without options
-        content = """
-from conans import ConanFile
-
-class SayConan(ConanFile):
-    name = "Say"
-    version = "0.1"
-    settings = {"os": None, "compiler": ["Visual Studio"]}
-"""
         client = TestClient()
-        client.save({CONANFILE: content})
-        client.run("install . -s compiler=gcc -s compiler.version=4.8 --build missing",
-                   assert_error=True)
-        self.assertIn(bad_value_msg("settings.compiler", "gcc", ["Visual Studio"]),
-                      str(client.out))
 
         # Test wrong settings in conanfile
         content = textwrap.dedent("""
             from conans import ConanFile
 
             class SayConan(ConanFile):
-                settings = invalid
+                settings = "invalid"
             """)
 
         client.save({CONANFILE: content})
         client.run("install . --build missing", assert_error=True)
-        self.assertIn("invalid' is not defined", client.out)
+        self.assertIn("'settings.invalid' doesn't exist", client.out)
 
         # Test wrong values in conanfile
     def test_invalid_settings4(self):

@@ -31,8 +31,13 @@ def timestamp_now():
     return calendar.timegm(time.gmtime())
 
 
+def revision_timestamp_now():
+    return time.time()
+
+
 def timestamp_to_str(timestamp):
-    return datetime.datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S UTC')
+    assert timestamp is not None
+    return datetime.datetime.utcfromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
 def timedelta_from_text(interval):
