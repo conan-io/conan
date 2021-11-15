@@ -30,8 +30,6 @@ def api_method(f):
             # FIXME: Fix this hack if we want to keep the action recorder
             subapi_name = str(subapi.__class__.__name__).replace("API", "").lower()
             log_command("{}.{}".format(subapi_name, f.__name__), kwargs)
-            # FIXME: Not pretty to instance here a ClientCache
-            # FIXME: Remove this when everything is a subapi
             return f(subapi, *args, **kwargs)
         finally:
             if old_curdir:
