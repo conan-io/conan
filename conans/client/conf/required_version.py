@@ -20,7 +20,6 @@ def check_required_conan_version(cache_folder):
             When it doesn't match, an ConanException is raised
 
         :param cache_folder: Conan cache folder
-        :param out: Output stream
         :return: None
     """
     cache = ClientCache(cache_folder)
