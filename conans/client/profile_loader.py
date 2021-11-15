@@ -60,7 +60,7 @@ class ProfileLoader:
         args_profile = _profile_parse_args(settings, options, env, conf)
         result.compose_profile(args_profile)
         # Only after everything has been aggregated, try to complete missing settings
-        result.process_settings(self._cache)
+        result.process_settings(self._cache.settings_yaml_definition)
         return result
 
     def load_profile(self, profile_name, cwd=None):

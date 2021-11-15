@@ -39,9 +39,9 @@ class Profile:
                 self._package_settings_values[pkg] = list(settings.items())
         return self._package_settings_values
 
-    def process_settings(self, cache):
+    def process_settings(self, settings_yaml_definition):
         assert self.settings is None, "processed settings must be None"
-        self.settings = Settings(cache.settings_yaml_definition, values=self._settings_values)
+        self.settings = Settings(settings_yaml_definition, values=self._settings_values)
         settings_preprocessor.preprocess(self.settings)
         # Per-package settings cannot be processed here, until composed not possible
 

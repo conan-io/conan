@@ -148,8 +148,8 @@ class GraphManagerTest(unittest.TestCase):
             profile_host.build_requires = profile_build_requires
         if options_build:
             profile_build.options = Options(options_values=options_build)
-        profile_host.process_settings(self.cache)
-        profile_build.process_settings(self.cache)
+        profile_host.process_settings(self.cache.settings_yaml_definition)
+        profile_build.process_settings(self.cache.settings_yaml_definition)
         build_mode = []  # Means build all
         ref = ref or RecipeReference(None, None, None, None)
         app = self._get_app()

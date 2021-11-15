@@ -1,7 +1,9 @@
 import unittest
 from collections import OrderedDict
 
+import yaml
 
+from conans.client.conf import get_default_settings_yml
 from conans.model.profile import Profile
 
 
@@ -66,9 +68,11 @@ class ProfileTest(unittest.TestCase):
         profile._settings_values["compiler.version"] = "12"
         profile.build_requires["*"] = ["zlib/1.2.8@lasote/testing"]
         profile.build_requires["zlib/*"] = ["aaaa/1.2.3@lasote/testing", "bb/1.2@lasote/testing"]
+        profile.process_settings(settings_yaml_definition=yaml.safe_load(get_default_settings_yml()))
         self.assertEqual("""[settings]
 arch=x86_64
 compiler=Visual Studio
+compiler.runtime=MD
 compiler.version=12
 zlib:compiler=gcc
 [options]
@@ -85,8 +89,9 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
         profile._settings_values["compiler.version"] = "12"
 
         profile.update_settings(OrderedDict([("compiler.version", "14")]))
-
+        profile.process_settings(settings_yaml_definition=yaml.safe_load(get_default_settings_yml()))
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio'
+                         '\ncompiler.runtime=MD'
                          '\ncompiler.version=14\n'
                          '[options]\n'
                          '[build_requires]\n'
