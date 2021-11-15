@@ -33,13 +33,6 @@ os=Linux
 
 class ClientConfTest(unittest.TestCase):
 
-    def test_quotes(self):
-        tmp_dir = temp_folder()
-        save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf)
-        save(os.path.join(tmp_dir, DEFAULT_PROFILE_NAME), default_profile)
-        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
-        self.assertEqual(config.env_vars["CONAN_TRACE_FILE"], "Path/with/quotes")
-
     def test_proxies(self):
         tmp_dir = temp_folder()
         save(os.path.join(tmp_dir, CONAN_CONF), "")
