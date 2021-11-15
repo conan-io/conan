@@ -65,7 +65,7 @@ class Conf(object):
             if conf_type is not None:
                 try:
                     v = conf_type(v)
-                except ValueError:
+                except Exception:
                     raise ConanException(f"Conf '{conf_name} value '{v}' must be {conf_type}")
         else:
             v = conf_default

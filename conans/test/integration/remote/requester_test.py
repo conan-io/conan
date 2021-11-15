@@ -45,7 +45,7 @@ class TestRequester:
         client.save({"global.conf": "core.requests:timeout=invalid"}, path=client.cache.cache_folder)
         with pytest.raises(Exception) as e:
             client.run("install Lib/1.0@conan/stable")
-        assert "ERROR: Incorrect core.requests:timeout='invalid' value" in str(e.value)
+        assert "Conf 'core.requests:timeout value 'invalid' must be" in str(e.value)
 
     def test_no_request_timeout(self):
         # Test that not having timeout works
