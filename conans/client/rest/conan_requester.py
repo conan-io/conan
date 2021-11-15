@@ -29,16 +29,12 @@ class ConanRequester(object):
         # FIXME: Trick for testing when requests is mocked
         if hasattr(requests, "Session"):
             self._http_requester = requests.Session()
-            adapter = HTTPAdapter(max_retries=self._get_retries(config["core.requests:max_retries"]))
+            adapter = HTTPAdapter(max_retries=self._get_retries(config))
 
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
 
-        to = config["core.requests:timeout"]
-        try:
-            self._timeout_seconds = eval(to) if to is not None else DEFAULT_TIMEOUT
-        except Exception as e:
-            raise ConanException(f"Incorrect core.requests:timeout='{to}' value")
+        self._timeout = config.get("core.requests:timeout", eval, DEFAULT_TIMEOUT)
         self.proxies = config["core.network:proxies"] or {}  # FIXME: Broken as config dont do {}
         self._cacert_path = config["core.network:cacert_path"]
         self._client_cert_path = config["core.network:client_cert_path"]
@@ -58,8 +54,8 @@ class ConanRequester(object):
             else:
                 self._client_certificates = self._client_cert_path
 
-    def _get_retries(self, retry):
-        retry = retry if retry is not None else 2
+    def _get_retries(self, config):
+        retry = config.get("core.requests:max_retries", int, 2)
         if retry == 0:
             return 0
         retry_status_code_set = {
@@ -93,8 +89,8 @@ class ConanRequester(object):
         if self.proxies:
             if not self._should_skip_proxy(url):
                 kwargs["proxies"] = self.proxies
-        if self._timeout_seconds:
-            kwargs["timeout"] = self._timeout_seconds
+        if self._timeout:
+            kwargs["timeout"] = self._timeout
         if not kwargs.get("headers"):
             kwargs["headers"] = {}
 

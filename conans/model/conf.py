@@ -59,6 +59,18 @@ class Conf(object):
     def __getitem__(self, name):
         return self._values.get(name)
 
+    def get(self, conf_name, conf_type=None, conf_default=None):
+        v = self._values.get(conf_name)
+        if v is not None:
+            if conf_type is not None:
+                try:
+                    v = conf_type(v)
+                except ValueError:
+                    raise ConanException(f"Conf '{conf_name} value '{v}' must be {conf_type}")
+        else:
+            v = conf_default
+        return v
+
     def __setitem__(self, name, value):
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
@@ -123,6 +135,9 @@ class ConfDefinition(object):
         """ if a module name is requested for this, always goes to the None-Global config
         """
         del self._pattern_confs.get(None, Conf())[module_name]
+
+    def get(self, conf_name, conf_type=None, conf_default=None):
+        return self._pattern_confs.get(None, Conf()).get(conf_name, conf_type, conf_default)
 
     def get_conanfile_conf(self, ref_str):
         result = Conf()
