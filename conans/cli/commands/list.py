@@ -1,7 +1,6 @@
 import copy
-from typing import Dict, List
+from typing import List
 
-from conans.cli.api.model import PackageSearchInfo
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS, \
     get_remote_selection
 from conans.cli.commands import json_formatter, CommandResult

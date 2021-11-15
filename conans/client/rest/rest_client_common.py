@@ -229,7 +229,7 @@ class RestCommonMethods(object):
         """
         url = self.router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
-        # We need to filter the "_/_" user and channel
+        # We need to filter the "_/_" user and channel from Artifactory
         ret = []
         for reference in response:
             ref = RecipeReference.loads(reference)
