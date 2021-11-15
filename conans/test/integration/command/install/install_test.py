@@ -437,7 +437,7 @@ class TestCliOverride:
         client.save({"conanfile.txt": textwrap.dedent("""\
         [requires]
         zlib/1.0
-        """)})
+        """)}, clean_first=True)
         client.run("install . --require-override=zlib/2.0")
         assert "zlib/2.0: Already installed" in client.out
 
