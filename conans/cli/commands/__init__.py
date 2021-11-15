@@ -3,7 +3,7 @@ import json
 from json import JSONEncoder
 from typing import List
 
-from conans.cli.api.model import Remote, PackageSearchInfo
+from conans.cli.api.model import Remote, PackageConfiguration
 from conans.cli.output import cli_out_write
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -49,7 +49,7 @@ class ConanJSONEncoder(JSONEncoder):
             return repr(o)
         elif isinstance(o, Remote):
             return o.name
-        elif isinstance(o, PackageSearchInfo):
+        elif isinstance(o, PackageConfiguration):
             return {"settings": o.settings, "options": o.options, "requires": o.requires}
         raise TypeError("Don't know how to serialize a {} object".format(o.__class__))
 

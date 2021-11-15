@@ -1,5 +1,4 @@
 import os
-from io import StringIO
 
 from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote

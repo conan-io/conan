@@ -1,8 +1,6 @@
-from conans.cli.api.model import PackageSearchInfo
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.model.recipe_ref import RecipeReference
-from conans.search.search import search_recipes, filter_packages, get_packages_search_info
+from conans.search.search import search_recipes, filter_packages
 
 
 class SearchAPI:
@@ -28,17 +26,10 @@ class SearchAPI:
             return ret
 
     @api_method
-    def packages(self, ref: RecipeReference, query: str, remote=None):
-        assert ref.revision is not None, "packages: ref should have a revision. " \
-                                         "Check latest if needed."
-        if not remote:
-            app = ConanApp(self.conan_api.cache_folder)
-            prefs = app.cache.get_package_references(ref)
-            packages = get_packages_search_info(app.cache, prefs)
-            results = {pref: PackageSearchInfo(data) for pref, data in packages.items()}
-            return filter_packages(query, results)
-        else:
-            app = ConanApp(self.conan_api.cache_folder)
-            packages = app.remote_manager.search_packages(remote, ref)
-            results = {pref: PackageSearchInfo(data) for pref, data in packages.items()}
-            return filter_packages(query, results)
+    def filter_packages_configurations(self, pkg_configurations, query):
+        """
+        :param pkg_configurations: Dict[PkgReference, PackageConfiguration]
+        :param query: str like "os=Windows AND (arch=x86 OR compiler=gcc)"
+        :return: Dict[PkgReference, PackageConfiguration]
+        """
+        return filter_packages(query, pkg_configurations)

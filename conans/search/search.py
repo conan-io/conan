@@ -4,7 +4,7 @@ from collections import OrderedDict
 from fnmatch import translate
 from typing import Dict
 
-from conans.cli.api.model import PackageSearchInfo
+from conans.cli.api.model import PackageConfiguration
 from conans.errors import ConanException
 from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
@@ -15,7 +15,7 @@ from conans.util.files import load
 from conans.util.log import logger
 
 
-def filter_packages(query, results: Dict[PkgReference, PackageSearchInfo]):
+def filter_packages(query, results: Dict[PkgReference, PackageConfiguration]):
     if query is None:
         return results
     try:
@@ -33,7 +33,7 @@ def filter_packages(query, results: Dict[PkgReference, PackageSearchInfo]):
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def _evaluate_postfix_with_info(postfix, conan_vars_info: PackageSearchInfo):
+def _evaluate_postfix_with_info(postfix, conan_vars_info: PackageConfiguration):
 
     # Evaluate conaninfo with the expression
 
@@ -47,7 +47,7 @@ def _evaluate_postfix_with_info(postfix, conan_vars_info: PackageSearchInfo):
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def _evaluate(prop_name, prop_value, conan_vars_info: PackageSearchInfo):
+def _evaluate(prop_name, prop_value, conan_vars_info: PackageConfiguration):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -104,7 +104,7 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PackageSearchInfo]:
+def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PackageConfiguration]:
     """
     param package_layout: Layout for the given reference
     """
