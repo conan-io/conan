@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 
