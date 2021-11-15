@@ -14,7 +14,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer
-from conans.util.env_reader import environment_append
+from conans.util.env import environment_update
 from conans.util.files import save
 
 conan_content = """
@@ -66,7 +66,7 @@ class AuthorizeTest(unittest.TestCase):
             cli = TestClient(servers=self.servers)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
             cli.run("export . lasote/testing")
-            with environment_append(credentials):
+            with environment_update(credentials):
                 cli.run("upload %s -r default" % str(self.ref))
             return cli
 

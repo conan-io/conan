@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 
-from conans.util.env_reader import environment_append
+from conans.util.env import environment_update
 from conans.client.tools.pkg_config import PkgConfig
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
@@ -39,7 +39,7 @@ class PkgConfigTest(unittest.TestCase):
         filename = os.path.join(tmp_dir, 'libastral.pc')
         with open(filename, 'w') as f:
             f.write(libastral_pc)
-        with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
+        with environment_update({'PKG_CONFIG_PATH': tmp_dir}):
             pkg_config = PkgConfig("libastral")
 
             self.assertEqual(frozenset(pkg_config.cflags), frozenset(['-D_USE_LIBASTRAL', '-I/usr/local/include/libastral']))
@@ -62,7 +62,7 @@ class PkgConfigTest(unittest.TestCase):
         filename = os.path.join(tmp_dir, 'libastral.pc')
         with open(filename, 'w') as f:
             f.write(libastral_pc)
-        with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
+        with environment_update({'PKG_CONFIG_PATH': tmp_dir}):
             pkg_config = PkgConfig("libastral", variables={'prefix': '/home/conan'})
 
             self.assertEqual(frozenset(pkg_config.cflags),
@@ -97,7 +97,7 @@ Cflags: -I${includedir}"""
         filename = os.path.join(tmp_dir, 'MyLib.pc')
         with open(filename, 'w') as f:
             f.write(pc_content)
-        with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
+        with environment_update({'PKG_CONFIG_PATH': tmp_dir}):
             expected = ("-L/my_absoulte_path/fake/mylib/lib "
                         "-L/my_prefix/path/lib2 "
                         "-Wl,-rpath=/my_absoulte_path/fake/mylib/lib "

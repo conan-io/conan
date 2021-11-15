@@ -8,7 +8,7 @@ from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.env_reader import no_op
+from conans.util.env import no_op
 from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
                                merge_directories, clean_dirty)
 

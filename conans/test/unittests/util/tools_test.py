@@ -16,7 +16,7 @@ from conans.model.layout import Infos
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, redirect_output
-from conans.util.env_reader import get_env, environment_append
+from conans.util.env import get_env, environment_update
 from conans.util.files import load, md5, save
 from conans.util.runners import check_output_runner
 
@@ -128,9 +128,9 @@ class ToolsTest(unittest.TestCase):
         cpus = tools.cpu_count(output=output)
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
-        with environment_append({"CONAN_CPU_COUNT": "34"}):
+        with environment_update({"CONAN_CPU_COUNT": "34"}):
             self.assertEqual(tools.cpu_count(output=output), 34)
-        with environment_append({"CONAN_CPU_COUNT": "null"}):
+        with environment_update({"CONAN_CPU_COUNT": "null"}):
             with self.assertRaisesRegex(ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
@@ -202,9 +202,9 @@ class ToolsTest(unittest.TestCase):
         )
 
     def test_environment_nested(self):
-        with environment_append({"A": "1", "Z": "40"}):
-            with environment_append({"A": "1", "B": "2"}):
-                with environment_append({"A": "2", "B": "2"}):
+        with environment_update({"A": "1", "Z": "40"}):
+            with environment_update({"A": "1", "B": "2"}):
+                with environment_update({"A": "2", "B": "2"}):
                     self.assertEqual(os.getenv("A"), "2")
                     self.assertEqual(os.getenv("B"), "2")
                     self.assertEqual(os.getenv("Z"), "40")

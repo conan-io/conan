@@ -9,7 +9,7 @@ import pytest
 from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import TestClient, redirect_output
-from conans.util.env_reader import environment_append
+from conans.util.env import environment_update
 from conans.util.files import load, save
 from conans.util.runners import check_output_runner
 
@@ -111,7 +111,7 @@ class DetectCompilersTest(unittest.TestCase):
 
         output = RedirectedTestOutput()  # Initialize each command
         with redirect_output(output):
-            with environment_append({"CC": "gcc"}):
+            with environment_update({"CC": "gcc"}):
                 result = detect_defaults_settings()
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)

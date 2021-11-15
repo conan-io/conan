@@ -8,7 +8,7 @@ import unittest
 
 from conans import tools
 from conans.test.utils.test_files import temp_folder
-from conans.util.env_reader import environment_append, get_env
+from conans.util.env import environment_update, get_env
 from conans.util.files import mkdir
 
 
@@ -32,12 +32,12 @@ class WhichTest(unittest.TestCase):
         fullname = os.path.join(tmp_dir, 'example%s' % ext)
         self._touch(fullname)
         self._add_executable_bit(fullname)
-        with environment_append({'PATH': tmp_dir}):
+        with environment_update({'PATH': tmp_dir}):
             self.assertEqual(tools.which('example').lower(), fullname.lower())
 
     def test_which_negative(self):
         tmp_dir = temp_folder()
-        with environment_append({'PATH': tmp_dir}):
+        with environment_update({'PATH': tmp_dir}):
             self.assertIsNone(tools.which('example.sh'))
 
     def test_which_non_executable(self):
@@ -47,7 +47,7 @@ class WhichTest(unittest.TestCase):
         tmp_dir = temp_folder()
         fullname = os.path.join(tmp_dir, 'example.sh')
         self._touch(fullname)
-        with environment_append({'PATH': tmp_dir}):
+        with environment_update({'PATH': tmp_dir}):
             self.assertIsNone(tools.which('example.sh'))
 
     def test_which_not_dir(self):
@@ -55,6 +55,6 @@ class WhichTest(unittest.TestCase):
         dev_dir = os.path.join(tmp_dir, "Dev")
         dev_git_dir = os.path.join(dev_dir, "Git")
         mkdir(dev_git_dir)
-        with environment_append({'PATH': dev_dir}):
+        with environment_update({'PATH': dev_dir}):
             self.assertEqual(dev_dir, get_env("PATH"))
             self.assertIsNone(tools.which('git'))

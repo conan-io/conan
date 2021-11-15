@@ -8,7 +8,7 @@ from conans.client import tools
 from conans.client.conf.detect_vs import vswhere
 from conans.client.tools.files import which
 from conans.errors import ConanException
-from conans.util.env_reader import get_env, environment_append
+from conans.util.env import get_env, environment_update
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
@@ -20,7 +20,7 @@ class VisualStudioToolsTest(unittest.TestCase):
         Locate vswhere in PATH or in ProgramFiles
         """
         # vswhere not found
-        with environment_append({"ProgramFiles": None, "ProgramFiles(x86)": None, "PATH": ""}):
+        with environment_update({"ProgramFiles": None, "ProgramFiles(x86)": None, "PATH": ""}):
             with self.assertRaisesRegex(ConanException, "Cannot locate vswhere"):
                 vswhere()
         # vswhere in ProgramFiles but not in PATH
@@ -31,12 +31,12 @@ class VisualStudioToolsTest(unittest.TestCase):
                                          "vswhere.exe")
             if os.path.isfile(expected_path):
                 vswhere_path = expected_path
-                with environment_append({"PATH": ""}):
+                with environment_update({"PATH": ""}):
                     self.assertTrue(vswhere())
         # vswhere in PATH but not in ProgramFiles
         env = {"ProgramFiles": None, "ProgramFiles(x86)": None}
         if not which("vswhere") and vswhere_path:
             vswhere_folder = os.path.join(program_files, "Microsoft Visual Studio", "Installer")
             env.update({"PATH": [vswhere_folder]})
-        with environment_append(env):
+        with environment_update(env):
             self.assertTrue(vswhere())

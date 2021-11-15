@@ -3,7 +3,7 @@ import os
 from conans.client.conanfile.build import run_build_method
 from conans.client.tools import chdir
 from conans.errors import (ConanException, conanfile_exception_formatter)
-from conans.util.env_reader import no_op
+from conans.util.env import no_op
 from conans.util.files import mkdir
 from conans.util.log import logger
 

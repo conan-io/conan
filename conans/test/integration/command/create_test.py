@@ -263,7 +263,7 @@ class MyPkg(ConanFile):
         # Test if using a temporary test folder can be enabled via the environment variable.
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile},
                     clean_first=True)
-        with tools.environment_append({"CONAN_TEMP_TEST_FOLDER": "True"}):
+        with tools.environment_update({"CONAN_TEMP_TEST_FOLDER": "True"}):
             client.run("create . lasote/stable")
         self.assertFalse(os.path.exists(default_build_dir))
 

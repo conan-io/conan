@@ -6,7 +6,7 @@ from parameterized import parameterized
 from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
-from conans.util.env_reader import environment_append
+from conans.util.env import environment_update
 
 
 class DetectTest(unittest.TestCase):
@@ -51,7 +51,7 @@ class DetectTest(unittest.TestCase):
     def test_detect_clang_gcc_toolchain(self, _):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            with environment_append({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
+            with environment_update({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
                 detect_defaults_settings()
                 self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
 

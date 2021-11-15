@@ -4,7 +4,7 @@ import textwrap
 from requests import Response
 
 from conans.test.utils.tools import TestClient, TestRequester
-from conans.util.env_reader import environment_append
+from conans.util.env import environment_update
 from conans.util.files import save
 
 
@@ -98,7 +98,7 @@ class TestProxiesConfTest:
         client = TestClient(requester_class=MyHttpRequester)
         client.save({"conanfile.py": conanfile})
 
-        with environment_append({"HTTP_PROXY": "my_system_proxy"}):
+        with environment_update({"HTTP_PROXY": "my_system_proxy"}):
             client.run("create . foo/1.0@")
 
         assert "My requester!" in client.out
@@ -130,7 +130,7 @@ class TestProxiesConfTest:
         client = TestClient(requester_class=MyHttpRequester)
         save(client.cache.new_config_path, 'core.net.http:clean_system_proxy = True')
 
-        with environment_append({"http_proxy": "my_system_proxy"}):
+        with environment_update({"http_proxy": "my_system_proxy"}):
             client.save({"conanfile.py": conanfile})
             client.run("create . foo/1.0@")
             assert "My requester!" in client.out

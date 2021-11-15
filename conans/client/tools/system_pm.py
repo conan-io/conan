@@ -24,7 +24,7 @@ def _is_sudo_enabled():
             return False
         if os.name == 'nt':
             return False
-    from conans.util.env_reader import get_env
+    from conans.util.env import get_env
     return get_env("CONAN_SYSREQUIRES_SUDO", True)
 
 
@@ -62,7 +62,7 @@ class SystemPackageTool(object):
 
     def _get_sysrequire_mode(self):
         allowed_modes = ("enabled", "verify", "disabled")
-        from conans.util.env_reader import get_env
+        from conans.util.env import get_env
         mode = get_env("CONAN_SYSREQUIRES_MODE", self._default_mode)
         mode_lower = mode.lower()
         if mode_lower not in allowed_modes:

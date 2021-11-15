@@ -54,10 +54,10 @@ class SCMBase(object):
         self._scoped_output = scoped_output or ConanOutput()
 
     def run(self, command):
-        from conans.util.env_reader import environment_append, no_op
+        from conans.util.env import environment_update, no_op
         command = "%s %s" % (self.cmd_command, command)
         with chdir(self.folder) if self.folder else no_op():
-            with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
+            with environment_update({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 with pyinstaller_bundle_env_cleaned():
                     if not self._runner:
                         return check_output_runner(command).strip()
