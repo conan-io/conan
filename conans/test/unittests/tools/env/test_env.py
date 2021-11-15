@@ -8,9 +8,10 @@ import pytest
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
 from conan.tools.microsoft.subsystems import WINDOWS
-from conans.client.tools import chdir, environment_append
+from conans.client.tools import chdir
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
+from conans.util.env_reader import environment_append
 from conans.util.files import save
 
 

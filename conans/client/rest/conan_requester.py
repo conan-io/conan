@@ -61,9 +61,10 @@ class ConanRequester(object):
         )
 
     def _should_skip_proxy(self, url):
-        for entry in self._no_proxy_match:
-            if fnmatch.fnmatch(url, entry):
-                return True
+        if self._no_proxy_match:
+            for entry in self._no_proxy_match:
+                if fnmatch.fnmatch(url, entry):
+                    return True
         return False
 
     def _add_kwargs(self, url, kwargs):

@@ -1,7 +1,7 @@
-from conans.client.tools import no_op
 from conans.errors import conanfile_exception_formatter
 from conans.model.pkg_type import PackageType
 from conans.model.requires import BuildRequirements, TestRequirements
+from conans.util.env_reader import no_op
 
 
 def run_configure_method(conanfile, down_options, profile_options, ref):
