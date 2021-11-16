@@ -1,5 +1,6 @@
 from functools import total_ordering
 
+from conans.errors import ConanException
 from conans.util.dates import timestamp_to_str
 
 
@@ -15,6 +16,30 @@ class Version:
         self._items = None  # elements of the version
         self._pre = None
         self._build = None
+
+    def bump(self, index):
+        """
+           Increments by 1 the version field at the specified index, setting to 0 the fields on the right.
+           2.5 => bump(1) => 2.6
+           1.5.7 => bump(0) => 2.0.0
+        """
+        # this method is used to compute version ranges from tilde ~1.2 and caret ^1.2.1 ranges
+        # TODO: at this moment it only works for digits, cannot increment pre-release or builds
+        # better not make it public yet, keep it internal
+        if self._items is None:  # the indicator parse is needed is empty items
+            self._parse()
+        items = self._items.copy()
+        try:
+            items[index] += 1
+        except TypeError:
+            raise ConanException("Cannot bump version index {index}, not an int")
+        for i in range(index+1, len(items)):
+            items[i] = 0
+        v = ".".join(str(i) for i in items)
+        # prerelease and build are dropped while bumping digits
+        result = Version(v)
+        result._items = items
+        return result
 
     @property
     def pre(self):
@@ -160,8 +185,10 @@ class RecipeReference:
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
         # In theory this is enough for sorting
-        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp, self.revision) \
-               < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp, ref.revision)
+        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp,
+                self.revision) \
+               < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp,
+                  ref.revision)
 
     def __eq__(self, ref):
         # Timestamp doesn't affect equality.
