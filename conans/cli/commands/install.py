@@ -1,7 +1,7 @@
 import os
 
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
-from conans.cli.commands.common import _add_common_install_arguments, _help_build_policies
+from conans.cli.common import _add_common_install_arguments, _help_build_policies
 from conans.client.conan_api import ProfileData
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
