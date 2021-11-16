@@ -7,6 +7,13 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
+def get_requires_from_content(content):
+    for line in content.splitlines():
+        if "Requires:" in line:
+            return line
+    return ""
+
+
 # Without compiler, def rpath_flags(settings, os_build, lib_paths): doesn't append the -Wl...etc
 def test_pkg_config_dirs():
     # https://github.com/conan-io/conan/issues/2756
@@ -257,39 +264,55 @@ def test_custom_content_components():
 
 def test_pkg_with_component_requires():
     client = TestClient()
-    client.save({"conanfile.py": GenConanfile("other", "0.1").with_package_file("file.h", "0.1")})
+    client.save({"conanfile.py": GenConanfile("first", "0.1").with_package_file("file.h", "0.1")})
     client.run("create . user/channel")
+    client.save({"conanfile.py": GenConanfile("other", "0.1").with_package_file("file.h", "0.1")})
+    client.run("create .")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            requires = "other/0.1@user/channel"
+            requires = "first/0.1@user/channel"
 
             def package_info(self):
-                self.cpp_info.components["mycomponent"].requires.append("other::other")
-                self.cpp_info.components["myothercomp"].requires.append("mycomponent")
+                self.cpp_info.components["mycomponent"].requires.append("first::first")
+                self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
 
         """)
-    client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . second/0.1@")
+    client.save({"conanfile.py": GenConanfile("third", "0.1").with_package_file("file.h", "0.1")
+                                                             .with_require("second/0.1")
+                                                             .with_require("other/0.1")},
+                clean_first=True)
+    client.run("create .")
 
     client2 = TestClient(cache_folder=client.cache_folder)
     conanfile = textwrap.dedent("""
         [requires]
-        pkg/0.1
+        third/0.1
 
         [generators]
         PkgConfigDeps
         """)
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
-    pc_content = client2.load("pkg.pc")
-    assert "Requires: pkg-mycomponent" in pc_content
-    pc_content = client2.load("pkg-mycomponent.pc")
-    assert "Requires: other" in pc_content
-    pc_content = client2.load("pkg-myothercomp.pc")
-    assert "Requires: pkg-mycomponent" in pc_content
+    pc_content = client2.load("third.pc")
+    # Originally posted: https://github.com/conan-io/conan/issues/9939
+    assert "Requires: second other" == get_requires_from_content(pc_content)
+    pc_content = client2.load("second.pc")
+    assert "Requires: second-mycomponent second-myfirstcomp" == get_requires_from_content(pc_content)
+    pc_content = client2.load("second-mycomponent.pc")
+    # Note: the first-first.pc does not exist because first/0.1 is not defining any component but
+    # we're testing the "Requires" field is well defined and not the "first" recipe.
+    assert "Requires: first-first" == get_requires_from_content(pc_content)
+    pc_content = client2.load("second-myfirstcomp.pc")
+    assert "Requires: second-mycomponent" == get_requires_from_content(pc_content)
+    pc_content = client2.load("first.pc")
+    assert "" == get_requires_from_content(pc_content)
+    pc_content = client2.load("other.pc")
+    assert "" == get_requires_from_content(pc_content)
 
 
 def test_pkg_getting_public_requires():
@@ -331,10 +354,10 @@ def test_pkg_getting_public_requires():
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
     pc_content = client2.load("pkg.pc")
-    assert "Requires: other-cmp1" in pc_content
+    assert "Requires: other-cmp1" == get_requires_from_content(pc_content)
     pc_content = client2.load("other.pc")
-    assert "Requires: other-cmp1 other-cmp2 other-cmp3" in pc_content
+    assert "Requires: other-cmp1 other-cmp2 other-cmp3" == get_requires_from_content(pc_content)
     assert client2.load("other-cmp1.pc")
     assert client2.load("other-cmp2.pc")
     pc_content = client2.load("other-cmp3.pc")
-    assert "Requires: other-cmp1" in pc_content
+    assert "Requires: other-cmp1" == get_requires_from_content(pc_content)
