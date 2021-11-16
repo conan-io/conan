@@ -75,8 +75,8 @@ class Conf(object):
                 try:
                     v = conf_type(v)
                 except Exception:
-                    raise ConanException(f"Conf '{conf_name}' value '{v}' '"
-                                         f"'must be '{conf_type.__name__}'")
+                    raise ConanException(f"Conf '{conf_name}' value '{v}' "
+                                         f"must be '{conf_type.__name__}'")
         else:
             v = conf_default
         return v
