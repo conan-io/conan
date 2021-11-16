@@ -688,13 +688,8 @@ class ConfigInstallSchedTest(unittest.TestCase):
     def test_invalid_time_interval(self, internal):
         """ config_install_interval only accepts seconds, minutes, hours, days and weeks.
         """
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [general]
-                            config_install_interval={}
-                        """).format(internal)
-        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
+        self.client.save({"global.conf": f"core:config_install_interval={internal}"},
+                         path=self.client.cache.cache_folder)
         # Any conan invocation will fire the configuration error
         self.client.run('install .', assert_error=True)
         self.assertIn("ERROR: Incorrect definition of general.config_install_interval: {}. "
