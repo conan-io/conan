@@ -314,7 +314,11 @@ def is_config_install_scheduled(api):
     :return: True, if it should occur now. Otherwise, False.
     """
     cache = ClientCache(api.cache_folder)
-    interval = cache.new_config.get("core:config_install_interval", timedelta_from_text)
+    try:
+        interval = cache.new_config.get("core:config_install_interval", timedelta_from_text)
+    except ConanException as e:
+        ConanOutput().error(f"Ignoring core:config_install_interval: {str(e)}")
+        return False
     config_install_file = cache.config_install_file
     if interval is not None:
         if not os.path.exists(config_install_file):
