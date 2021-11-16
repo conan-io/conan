@@ -1,3 +1,5 @@
+import textwrap
+
 import six
 from parameterized import parameterized
 
@@ -399,3 +401,29 @@ class BuildRequiresGraphTest(GraphManagerTest):
                          dependents=[], closure=[gazelle, grass])
         self.assertListEqual(list(cheetah.conanfile.deps_cpp_info.libs),
                              ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
+
+    def test_test_require(self):
+        # app -(tr)-> gtest/0.1
+        # This test should survive in 2.0
+        tool_ref = ConanFileReference.loads("gtest/0.1")
+        self._cache_recipe(tool_ref, GenConanfile("gtest", "0.1"))
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                def build_requirements(self):
+                    self.test_requires("gtest/0.1")
+            """)
+        deps_graph = self.build_graph(conanfile)
+
+        # Build requires always apply to the consumer
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        tool = app.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[], build_deps=[tool], dependents=[],
+                         closure=[tool])
+        self._check_node(tool, "gtest/0.1#123", deps=[], build_deps=[],
+                         dependents=[app], closure=[])

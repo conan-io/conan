@@ -298,6 +298,15 @@ class GraphManager(object):
     @staticmethod
     def _get_recipe_build_requires(conanfile, default_context):
         conanfile.build_requires = _RecipeBuildRequires(conanfile, default_context)
+
+        class TestRequirements:
+            def __init__(self, build_requires):
+                self._build_requires = build_requires
+
+            def __call__(self, ref):
+                self._build_requires(ref, force_host_context=True)
+
+        conanfile.test_requires = TestRequirements(conanfile.build_requires)
         if hasattr(conanfile, "build_requirements"):
             with get_env_context_manager(conanfile):
                 with conanfile_exception_formatter(str(conanfile), "build_requirements"):
