@@ -16,17 +16,15 @@ class InstallAPI:
         self.conan_api = conan_api
 
     @api_method
-    def install_reference(self, reference, settings=None, options=None, env=None,
-                          remote_name=None, build=None, profile_names=None,
+    def install_reference(self, reference, profile_host=None, profile_build=None,
+                          remote_name=None, build=None,
                           update=False, generators=None, install_folder=None, cwd=None,
-                          lockfile=None, lockfile_out=None, profile_build=None,
+                          lockfile=None, lockfile_out=None,
                           is_build_require=False, conf=None,
                           require_overrides=None):
         app = ConanApp(self.conan_api.cache_folder)
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)], update=update)
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
 
         cwd = cwd or os.getcwd()
         try:
@@ -56,16 +54,14 @@ class InstallAPI:
 
     @api_method
     def install(self, path="", name=None, version=None, user=None, channel=None,
-                settings=None, options=None, env=None,
-                remote_name=None, build=None, profile_names=None,
+                profile_host=None, profile_build=None,
+                remote_name=None, build=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                lockfile=None, lockfile_out=None, profile_build=None, conf=None,
+                lockfile=None, lockfile_out=None,
                 require_overrides=None):
         app = ConanApp(self.conan_api.cache_folder)
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)], update=update)
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
 
         cwd = cwd or os.getcwd()
         try:

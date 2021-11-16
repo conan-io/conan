@@ -1,5 +1,19 @@
 from conans.cli.command import Extender, OnceArgument
 
+
+def get_profiles_from_args(args, conan_api):
+    # TODO: Do we want a ProfilesAPI.get_profiles() to return both profiles from args?
+    profiles = conan_api.profiles
+    build = [profiles.get_default_build()] if not args.profile_build else args.profile_build
+    host = [profiles.get_default_host()] if not args.profile_host else args.profile_host
+
+    profile_build = profiles.get_profile(profiles=build, settings=args.settings_build,
+                                         options=args.options_build, conf=args.conf_build)
+    profile_host = profiles.get_profile(profiles=host, settings=args.settings_host,
+                                        options=args.options_host, conf=args.conf_host)
+    return profile_host, profile_build
+
+
 _help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
     '--build' options on one command line is allowed. For dependencies, the optional 'build_policy'
     attribute in their conanfile.py takes precedence over the command line parameter.
@@ -21,25 +35,7 @@ _help_build_policies = '''Optional, specify which packages to build from source.
 '''
 
 
-def _add_profile_arguments(parser):
-    # Arguments that can apply to the build or host machines (easily extend to target machine)
-    def environment_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-e{}".format(short_suffix),
-                            "--env{}".format(long_suffix),
-                            nargs=1, action=Extender,
-                            dest="env_{}".format(machine),
-                            help='Environment variables that will be set during the'
-                                 ' package build ({} machine).'
-                                 ' e.g.: -e{} CXX=/usr/bin/clang++'.format(machine, short_suffix))
-
-    def options_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-o{}".format(short_suffix),
-                            "--options{}".format(long_suffix),
-                            nargs=1, action=Extender,
-                            dest="options_{}".format(machine),
-                            help='Define options values ({} machine), e.g.:'
-                                 ' -o{} Pkg:with_qt=true'.format(machine, short_suffix))
-
+def add_profiles_args(parser):
     def profile_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-pr{}".format(short_suffix),
                             "--profile{}".format(long_suffix),
@@ -56,6 +52,14 @@ def _add_profile_arguments(parser):
                                  ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
                                                                                  short_suffix))
 
+    def options_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-o{}".format(short_suffix),
+                            "--options{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest="options_{}".format(machine),
+                            help='Define options values ({} machine), e.g.:'
+                                 ' -o{} Pkg:with_qt=true'.format(machine, short_suffix))
+
     def conf_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-c{}".format(short_suffix),
                             "--conf{}".format(long_suffix),
@@ -66,8 +70,9 @@ def _add_profile_arguments(parser):
                                  'tools.cmake.cmaketoolchain:generator=Xcode'.format(machine,
                                                                                      short_suffix))
 
-    for item_fn in [environment_args, options_args, profile_args, settings_args, conf_args]:
-        item_fn("host", "", "")  # By default it is the HOST, the one we are building binaries for
+    for item_fn in [options_args, profile_args, settings_args, conf_args]:
+        item_fn("host", "",
+                "")  # By default it is the HOST, the one we are building binaries for
         item_fn("build", ":b", ":build")
         item_fn("host", ":h", ":host")
 
@@ -93,5 +98,4 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
                             help="Path to a lockfile")
         parser.add_argument("--lockfile-out", action=OnceArgument,
                             help="Filename of the updated lockfile")
-    _add_profile_arguments(parser)
-
+    add_profiles_args(parser)

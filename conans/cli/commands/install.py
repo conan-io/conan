@@ -47,10 +47,13 @@ def install(conan_api, parser, *args, **kwargs):
 
     args = parser.parse_args(*args)
 
+    profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                               options=args.options_host, env=None,
+                               conf=args.conf_host)
+
     profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                options=args.options_build, env=args.env_build,
+                                options=args.options_build, env=None,
                                 conf=args.conf_build)
-    # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
     cwd = os.getcwd()
 
@@ -64,9 +67,7 @@ def install(conan_api, parser, *args, **kwargs):
                                                                    user_channel_input=True)
             info = conan_api.install.install(path=args.path_or_reference,
                                              name=name, version=version, user=user, channel=channel,
-                                             settings=args.settings_host, options=args.options_host,
-                                             env=args.env_host, profile_names=args.profile_host,
-                                             conf=args.conf_host,
+                                             profile_host=profile_host,
                                              profile_build=profile_build,
                                              remote_name=args.remote,
                                              build=args.build,
@@ -83,11 +84,7 @@ def install(conan_api, parser, *args, **kwargs):
 
             ref = RecipeReference.loads(args.path_or_reference)
             info = conan_api.install.install_reference(ref,
-                                                       settings=args.settings_host,
-                                                       options=args.options_host,
-                                                       env=args.env_host,
-                                                       conf=args.conf_host,
-                                                       profile_names=args.profile_host,
+                                                       profile_host=profile_host,
                                                        profile_build=profile_build,
                                                        remote_name=args.remote,
                                                        build=args.build,
