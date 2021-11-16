@@ -90,7 +90,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                       LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
                       llvm, ClangCL, v143]
-            cppstd: [None, 14, 17, 20]
+            cppstd: [None, 14, 17, 20, 23]
         msvc:
             version: ["19.0",
                       "19.1", "19.10", "19.11", "19.12", "19.13", "19.14", "19.15", "19.16",
