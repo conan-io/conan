@@ -111,7 +111,7 @@ class Base(unittest.TestCase):
 
 
 @pytest.mark.skipif(platform.system() == "Darwin", reason="Test failing randomly in macOS")
-class LinuxTest(Base):
+class BazelToolchainTest(Base):
     @parameterized.expand(["Debug",])
     def test_toolchain(self, build_type):
         self._run_build()
