@@ -48,14 +48,14 @@ class GraphManager(object):
 
         return conanfile
 
-    def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
+    def load_graph(self, reference, path, create_reference, profile_host, profile_build, graph_lock,
                    root_ref, build_mode, is_build_require=False, require_overrides=None):
         """ main entry point to compute a full dependency graph
         """
         assert profile_host is not None
         assert profile_build is not None
 
-        root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
+        root_node = self._load_root_node(reference, path, create_reference, profile_host, graph_lock,
                                          root_ref, is_build_require,
                                          require_overrides)
         profile_host_build_requires = profile_host.build_requires
@@ -75,7 +75,7 @@ class GraphManager(object):
 
         return deps_graph
 
-    def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
+    def _load_root_node(self, reference, path, create_reference, profile_host, graph_lock, root_ref,
                         is_build_require, require_overrides):
         """ creates the first, root node of the graph, loading or creating a conanfile
         and initializing it (settings, options) as necessary. Also locking with lockfile
@@ -84,7 +84,7 @@ class GraphManager(object):
         profile_host.dev_reference = create_reference  # Make sure the created one has develop=True
 
         # create (without test_package), install|info|graph|export-pkg <ref>
-        if isinstance(reference, RecipeReference):
+        if reference and isinstance(reference, RecipeReference):
             # options without scope like ``-o shared=True`` refer to this reference
             profile_host.options.scope(reference.name)
             # FIXME: Might need here the profile_build
@@ -92,7 +92,6 @@ class GraphManager(object):
                                                     is_build_require,
                                                     require_overrides)
 
-        path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
             profile_host.options.scope(create_reference.name)
             return self._load_root_test_package(path, create_reference, graph_lock, profile_host,

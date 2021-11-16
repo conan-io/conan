@@ -25,14 +25,6 @@ def install(conan_api, parser, *args, **kwargs):
     """
     parser.add_argument("path", nargs="?", help="Path to a conanfile, including filename, "
                                                 "like 'path/conanfile.py'")
-    parser.add_argument("--name", action=OnceArgument,
-                        help='Provide a package name if not specified in conanfile')
-    parser.add_argument("--version", action=OnceArgument,
-                        help='Provide a package version if not specified in conanfile')
-    parser.add_argument("--user", action=OnceArgument,
-                        help='Provide a user')
-    parser.add_argument("--channel", action=OnceArgument,
-                        help='Provide a channel')
 
     parser.add_argument("--reference", action=OnceArgument,
                         help='Provide a package reference instead of a conanfile')
@@ -64,45 +56,22 @@ def install(conan_api, parser, *args, **kwargs):
 
     cwd = os.getcwd()
 
-    # We need @ otherwise it could be a path, so check strict
-    path_is_reference = check_valid_ref(args.path_or_reference)
-
     info = None
     try:
-        if not path_is_reference:
-            name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                                   user_channel_input=True)
-            info = conan_api.install.install(path=args.path_or_reference,
-                                             name=name, version=version, user=user, channel=channel,
-                                             profile_host=profile_host,
-                                             profile_build=profile_build,
-                                             remote_name=args.remote,
-                                             build=args.build,
-                                             update=args.update, generators=args.generator,
-                                             no_imports=args.no_imports,
-                                             install_folder=args.install_folder,
-                                             lockfile=args.lockfile,
-                                             lockfile_out=args.lockfile_out,
-                                             require_overrides=args.require_override)
-        else:
-            if args.reference:
-                raise ConanException("A full reference was provided as first argument, second "
-                                     "argument not allowed")
-
-            ref = RecipeReference.loads(args.path_or_reference)
-            info = conan_api.install.install_reference(ref,
-                                                       profile_host=profile_host,
-                                                       profile_build=profile_build,
-                                                       remote_name=args.remote,
-                                                       build=args.build,
-                                                       update=args.update,
-                                                       generators=args.generator,
-                                                       install_folder=args.install_folder,
-                                                       lockfile=args.lockfile,
-                                                       lockfile_out=args.lockfile_out,
-                                                       is_build_require=args.build_require,
-                                                       require_overrides=args.require_override)
-
+        info = conan_api.install.install_(path=os.path.join(cwd, args.path),
+                                         reference=args.reference,
+                                         profile_host=profile_host,
+                                         profile_build=profile_build,
+                                         remote_name=args.remote,
+                                         build=args.build,
+                                         update=args.update,
+                                         generators=args.generator,
+                                         no_imports=args.no_imports,
+                                         install_folder=args.install_folder,
+                                         lockfile=args.lockfile,
+                                         lockfile_out=args.lockfile_out,
+                                         is_build_require=args.build_require,
+                                         require_overrides=args.require_override)
     except ConanException as exc:
         info = exc.info
         raise

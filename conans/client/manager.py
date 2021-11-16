@@ -1,3 +1,5 @@
+import os.path
+
 from conans.cli.output import ConanOutput
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
@@ -9,7 +11,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.recipe_ref import RecipeReference
 
 
-def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
+def deps_install(app, reference, path, install_folder, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, build_modes=None, generators=None,
                  no_imports=False, create_reference=None,
                  is_build_require=False, require_overrides=None,
@@ -35,7 +37,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     out.info("Configuration (profile_build):")
     out.info(profile_build.dumps())
 
-    deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host, profile_build,
+    deps_graph = graph_manager.load_graph(reference, path, create_reference, profile_host, profile_build,
                                           graph_lock, root_ref, build_modes,
                                           is_build_require=is_build_require,
                                           require_overrides=require_overrides)
@@ -48,7 +50,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     root_node = deps_graph.root
     conanfile = root_node.conanfile
     if root_node.recipe == RECIPE_VIRTUAL:
-        out.highlight("Installing package: %s" % str(ref_or_path))
+        out.highlight("Installing package: %s" % str(reference))
     else:
         conanfile.output.highlight("Installing package")
     print_graph(deps_graph)
@@ -58,6 +60,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     build_modes = BuildMode(build_modes)
     installer.install(deps_graph, build_modes)
 
+    conanfile_path = os.path.dirname(path) if path else None
     if hasattr(conanfile, "layout") and not test:
         conanfile.folders.set_base_install(conanfile_path)
         conanfile.folders.set_base_imports(conanfile_path)
@@ -80,7 +83,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile)
 
-        if not create_reference and isinstance(ref_or_path, RecipeReference):
+        if not create_reference and isinstance(reference, RecipeReference):
             # The conanfile loaded is a virtual one. The one w deploy is the first level one
             neighbours = deps_graph.root.neighbors()
             deploy_conanfile = neighbours[0].conanfile
