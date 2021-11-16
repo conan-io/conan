@@ -24,7 +24,7 @@ def test_vcvars_generator(scope):
     """.format('scope="{}"'.format(scope) if scope else ""))
 
     client.save({"conanfile.py": conanfile})
-    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=19.1 '
+    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=19.1X '
                '-s compiler.cppstd=14 -s compiler.runtime=static')
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
@@ -47,7 +47,7 @@ def test_vcvars_generator_string():
             settings = "os", "compiler", "arch", "build_type"
     """)
     client.save({"conanfile.py": conanfile})
-    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=19.1 '
+    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=19.1X '
                '-s compiler.cppstd=14 -s compiler.runtime=static')
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
