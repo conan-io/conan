@@ -13,7 +13,7 @@ from conans.util.files import save
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.parametrize("compiler, version, runtime",
-                         [("msvc", "19.2", "dynamic"),
+                         [("msvc", "19.2X", "dynamic"),
                           ("msvc", "19.26", "static"),
                           ("msvc", "19.28", "static")])
 def test_cmake_toolchain_win_toolset(compiler, version, runtime):
