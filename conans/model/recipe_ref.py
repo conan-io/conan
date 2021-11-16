@@ -18,6 +18,11 @@ class Version:
         self._build = None
 
     def bump(self, index):
+        """
+           Increments by 1 the version field at the specified index, setting to 0 the fields on the right.
+           2.5 => bump(1) => 2.6
+           1.5.7 => bump(0) => 2.0.0
+        """
         if self._items is None:  # the indicator parse is needed if empty items
             self._parse()
         items = self._items.copy()
