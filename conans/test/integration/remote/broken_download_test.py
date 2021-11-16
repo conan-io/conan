@@ -1,5 +1,4 @@
 import os
-import textwrap
 import unittest
 
 from requests.exceptions import ConnectionError
@@ -37,14 +36,8 @@ class BrokenDownloadTest(unittest.TestCase):
     def test_client_retries(self):
         server = TestServer()
         servers = {"default": server}
-        conanfile = textwrap.dedent("""
-        from conans import ConanFile
-
-        class ConanFileToolsTest(ConanFile):
-            pass
-        """)
         client = TestClient(servers=servers, inputs=["admin", "password"])
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . lib/1.0@lasote/stable")
         client.run("upload lib/1.0@lasote/stable -c --all -r default")
 
@@ -72,13 +65,7 @@ class BrokenDownloadTest(unittest.TestCase):
 
         client = TestClient(servers=servers, inputs=["admin", "password"],
                             requester_class=DownloadFilesBrokenRequesterTimesOne)
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [general]
-                            retry_wait=1
-                        """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save({"global.conf": "core.download:retry_wait=1"}, path=client.cache.cache_folder)
         client.run("install lib/1.0@lasote/stable")
         self.assertEqual(1, str(client.out).count("Waiting 1 seconds to retry..."))
 
@@ -86,13 +73,7 @@ class BrokenDownloadTest(unittest.TestCase):
             return DownloadFilesBrokenRequester(10, *args, **kwargs)
         client = TestClient(servers=servers, inputs=["admin", "password"],
                             requester_class=DownloadFilesBrokenRequesterTimesTen)
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [general]
-                            retry=11
-                            retry_wait=0
-                        """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        client.save({"global.conf": "core.download:retry_wait=0\n"
+                                    "core.download:retry=11"}, path=client.cache.cache_folder)
         client.run("install lib/1.0@lasote/stable")
         self.assertEqual(10, str(client.out).count("Waiting 0 seconds to retry..."))

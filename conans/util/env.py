@@ -7,6 +7,30 @@
 
 """
 import os
+from contextlib import contextmanager
+
+
+# TODO: Rename this file, it is not longer "env_reader" only
+
+
+@contextmanager
+def environment_update(env_vars):
+    old_env = dict(os.environ)
+    sets = {k: v for k, v in env_vars.items() if v is not None}
+    unsets = [k for k, v in env_vars.items() if v is None]
+    os.environ.update(sets)
+    for var in unsets:
+        os.environ.pop(var, None)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
+
+
+@contextmanager
+def no_op():
+    yield
 
 
 def get_env(env_key, default=None, environment=None):

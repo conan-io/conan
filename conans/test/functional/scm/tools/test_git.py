@@ -13,6 +13,7 @@ from conans.client.tools.scm import Git
 from conans.errors import ConanException
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import temp_folder, TestClient
+from conans.util.env import environment_update
 from conans.util.files import save
 
 
@@ -408,6 +409,6 @@ class GitToolsTests(unittest.TestCase):
         folder = temp_folder()
         save(os.path.join(folder, "file"), "some contents")
         git = Git(folder)
-        with tools.environment_append({"PATH": ""}):
+        with environment_update({"PATH": ""}):
             excluded = git.excluded_files()
             self.assertEqual(excluded, [])

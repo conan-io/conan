@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.test.utils.tools import GenConanfile, TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import save
 

@@ -136,5 +136,5 @@ def profile_list(conan_api, parser, subparser, *args):
 @conan_command(group=COMMAND_GROUPS['consumer'])
 def profile(conan_api, parser, *args, **kwargs):
     """
-    Manage profiles
+    Manages profiles
     """

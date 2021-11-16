@@ -87,6 +87,16 @@ def _detect_encoding(text):
     return None, 0
 
 
+@contextmanager
+def chdir(newdir):
+    old_path = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)
+
+
 def decode_text(text, encoding="auto"):
     bom_length = 0
     if encoding == "auto":
@@ -295,17 +305,17 @@ def path_exists(path, basedir):
     return True
 
 
-def gzopen_without_timestamps(name, mode="r", fileobj=None, **kwargs):
+def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
     """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
         setted in Gzip file causing md5 to change. Not possible using the
         previous tarfile open because arguments are not passed to GzipFile constructor
     """
-    compresslevel = int(os.getenv("CONAN_COMPRESSION_LEVEL", 9))
 
     if mode not in ("r", "w"):
         raise ValueError("mode must be 'r' or 'w'")
 
     try:
+        compresslevel = compresslevel if compresslevel is not None else 9  # default Gzip = 9
         fileobj = gzip.GzipFile(name, mode, compresslevel, fileobj, mtime=0)
     except OSError:
         if fileobj is not None and mode == 'r':

@@ -4,7 +4,7 @@ import shutil
 from conans.cli.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 from conans.client.packager import report_files_from_manifest
-from conans.client.tools import no_op
+from conans.util.env import no_op
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO

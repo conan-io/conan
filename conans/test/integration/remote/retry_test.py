@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import os
 import unittest
 from collections import namedtuple, Counter
@@ -44,9 +42,11 @@ class _RequesterMock:
 
 
 class _ConfigMock:
-    def __init__(self):
-        self.retry = 0
-        self.retry_wait = 0
+    def __getitem__(self, item):
+        return 0
+
+    def get(self, conf_name, conf_type=None, conf_default=None):
+        return 0
 
 
 class RetryDownloadTests(unittest.TestCase):

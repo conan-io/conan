@@ -1,8 +1,9 @@
-import copy
+import os
 import os
 import shutil
 import time
 import traceback
+from collections import OrderedDict
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -14,9 +15,8 @@ from conans.errors import ConanConnectionError, ConanException, NotFoundExceptio
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.search.search import filter_packages
 from conans.util import progress_bar
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
     rmdir
 from conans.util.log import logger
@@ -199,10 +199,14 @@ class RemoteManager(object):
 
         return self._call_remote(remote, "search", pattern)
 
-    def search_packages(self, remote, ref, query):
-        packages = self._call_remote(remote, "search_packages", ref, query)
-        packages = filter_packages(query, packages)
-        return packages
+    def search_packages(self, remote, ref):
+        infos = self._call_remote(remote, "search_packages", ref)
+        ret = OrderedDict()
+        for package_id, data in infos.items():
+            # FIXME: we don't have the package reference, it uses the latest, we could check
+            #        here doing N requests or improve the Artifactory API.
+            ret[PkgReference(ref, package_id)] = data
+        return ret
 
     def remove_recipe(self, ref, remote):
         return self._call_remote(remote, "remove_recipe", ref)

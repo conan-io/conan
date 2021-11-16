@@ -5,7 +5,7 @@ import unittest
 import pytest
 
 from conans.client.cache.cache import ClientCache
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.test_files import temp_folder
@@ -71,7 +71,7 @@ class CacheTest(unittest.TestCase):
         localdb = self.cache.localdb
         self.assertIsNone(localdb.encryption_key)
 
-        with environment_append({"CONAN_LOGIN_ENCRYPTION_KEY": "key"}):
+        with environment_update({"CONAN_LOGIN_ENCRYPTION_KEY": "key"}):
             localdb = self.cache.localdb
             self.assertIsNotNone(localdb.encryption_key)
             self.assertEqual(localdb.encryption_key, "key")

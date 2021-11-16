@@ -7,7 +7,7 @@ from conans.client.conf import ConanClientConfigParser
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
-from conans.client.tools.oss import environment_append
+from conans.util.env import environment_update
 
 default_client_conf = '''[storage]
 path: ~/.conan/data
@@ -68,7 +68,7 @@ trace_file = "foo/bar/quotes"
 class ClientConfLogTest(unittest.TestCase):
 
     def run(self, *args, **kwargs):
-        with environment_append({"CONAN_LOGGING_LEVEL": None}):
+        with environment_update({"CONAN_LOGGING_LEVEL": None}):
             super(ClientConfLogTest, self).run(*args, **kwargs)
 
     def setUp(self):
@@ -91,13 +91,13 @@ class ClientConfLogTest(unittest.TestCase):
         self.assertEqual(logging.CRITICAL, config.logging_level)
 
     def test_log_level_numbers_env_var_debug(self):
-        with environment_append({"CONAN_LOGGING_LEVEL": "10"}):
+        with environment_update({"CONAN_LOGGING_LEVEL": "10"}):
             save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf)
             config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))
             self.assertEqual(logging.DEBUG, config.logging_level)
 
     def test_log_level_numbers_env_var_debug_text(self):
-        with environment_append({"CONAN_LOGGING_LEVEL": "WakaWaka"}):
+        with environment_update({"CONAN_LOGGING_LEVEL": "WakaWaka"}):
             save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf)
             config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))
             self.assertEqual(logging.CRITICAL, config.logging_level)
@@ -118,19 +118,19 @@ class ClientConfLogTest(unittest.TestCase):
         self.assertEqual(logging.CRITICAL, config.logging_level)
 
     def test_log_level_names_env_var_debug(self):
-        with environment_append({"CONAN_LOGGING_LEVEL": "Debug"}):
+        with environment_update({"CONAN_LOGGING_LEVEL": "Debug"}):
             save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf)
             config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))
             self.assertEqual(logging.DEBUG, config.logging_level)
 
     def test_log_level_names_env_var_warning(self):
-        with environment_append({"CONAN_LOGGING_LEVEL": "WARNING"}):
+        with environment_update({"CONAN_LOGGING_LEVEL": "WARNING"}):
             save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf)
             config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))
             self.assertEqual(logging.WARNING, config.logging_level)
 
     def test_log_level_names_env_var_invalid(self):
-        with environment_append({"CONAN_LOGGING_LEVEL": "WakaWaka"}):
+        with environment_update({"CONAN_LOGGING_LEVEL": "WakaWaka"}):
             save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf)
             config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))
             self.assertEqual(logging.CRITICAL, config.logging_level)
