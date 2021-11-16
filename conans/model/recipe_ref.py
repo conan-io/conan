@@ -23,7 +23,10 @@ class Version:
            2.5 => bump(1) => 2.6
            1.5.7 => bump(0) => 2.0.0
         """
-        if self._items is None:  # the indicator parse is needed if empty items
+        # this method is used to compute version ranges from tilde ~1.2 and caret ^1.2.1 ranges
+        # TODO: at this moment it only works for digits, cannot increment pre-release or builds
+        # better not make it public yet, keep it internal
+        if self._items is None:  # the indicator parse is needed is empty items
             self._parse()
         items = self._items.copy()
         try:
@@ -33,14 +36,9 @@ class Version:
         for i in range(index+1, len(items)):
             items[i] = 0
         v = ".".join(str(i) for i in items)
-        if self._pre:
-            v += f"-{self._pre}"
-        if self._build:
-            v += f"+{self._build}"
+        # prerelease and build are dropped while bumping digits
         result = Version(v)
         result._items = items
-        result._pre = self._pre
-        result._build = self._build
         return result
 
     @property
