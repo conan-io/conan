@@ -18,7 +18,7 @@ from conans import ConanFile
 import platform
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "1.2.1"
     files = '*'
 
@@ -43,7 +43,7 @@ class ExporterTest(unittest.TestCase):
     def test_complete(self):
         client = TestClient()
 
-        ref = RecipeReference.loads("Hello/1.2.1@frodo/stable")
+        ref = RecipeReference.loads("hello/1.2.1@frodo/stable")
         reg_folder = client.get_latest_ref_layout(ref).export()
 
         client.save({CONANFILE: myconan1,

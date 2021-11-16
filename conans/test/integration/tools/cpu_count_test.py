@@ -10,7 +10,7 @@ conanfile = """
 from conans import ConanFile, tools
 
 class AConan(ConanFile):
-    name = "Hello0"
+    name = "hello0"
     version = "0.1"
 
     def build(self):
@@ -33,5 +33,5 @@ class CPUCountTest(unittest.TestCase):
                 """.format())
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("export . lasote/stable")
-        client.run("install Hello0/0.1@lasote/stable --build missing")
+        client.run("install hello0/0.1@lasote/stable --build missing")
         self.assertIn("CPU COUNT=> 5", client.out)

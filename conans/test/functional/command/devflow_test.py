@@ -11,7 +11,7 @@ from conans.util.files import save, load
 import os
 
 class ConanFileToolsTest(ConanFile):
-    name = "Pkg"
+    name = "pkg"
     version = "0.1"
     exports_sources = "*"
 
@@ -55,9 +55,9 @@ class DevInSourceFlowTest(unittest.TestCase):
 
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=../build")
 
-        ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -74,9 +74,9 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("build .")
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=.")
 
-        ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -95,9 +95,9 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("build ..")
 
         client.current_folder = build_folder
-        client.run("export-pkg .. Pkg/0.1@lasote/testing --source-folder=.. ")
+        client.run("export-pkg .. pkg/0.1@lasote/testing --source-folder=.. ")
 
-        ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -109,7 +109,7 @@ from conans.util.files import save, load
 import os
 
 class ConanFileToolsTest(ConanFile):
-    name = "Pkg"
+    name = "pkg"
     version = "0.1"
 
     def source(self):
@@ -153,9 +153,9 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("build ../recipe --source-folder=../src")
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build -sf=../src")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=../build -sf=../src")
 
-        ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -173,9 +173,9 @@ class DevOutSourceFlowTest(unittest.TestCase):
 
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=.")
 
-        ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
@@ -195,9 +195,9 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("build .. --source-folder=.")
         client.current_folder = repo_folder
 
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./build")
+        client.run("export-pkg . pkg/0.1@lasote/testing -bf=./build")
 
-        ref = RecipeReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)

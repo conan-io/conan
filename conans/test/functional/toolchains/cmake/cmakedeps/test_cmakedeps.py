@@ -102,7 +102,7 @@ def test_system_libs():
         import os
 
         class Test(ConanFile):
-            name = "Test"
+            name = "test"
             version = "0.1"
             settings = "build_type"
             def package(self):
@@ -123,7 +123,7 @@ def test_system_libs():
 
     conanfile = textwrap.dedent("""
         [requires]
-        Test/0.1
+        test/0.1
 
         [generators]
         CMakeDeps
@@ -134,11 +134,11 @@ def test_system_libs():
         set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
         set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
         find_package(Test)
-        message("System libs release: ${Test_SYSTEM_LIBS_RELEASE}")
-        message("Libraries to Link release: ${Test_LIBS_RELEASE}")
-        message("System libs debug: ${Test_SYSTEM_LIBS_DEBUG}")
-        message("Libraries to Link debug: ${Test_LIBS_DEBUG}")
-        get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
+        message("System libs release: ${test_SYSTEM_LIBS_RELEASE}")
+        message("Libraries to Link release: ${test_LIBS_RELEASE}")
+        message("System libs debug: ${test_SYSTEM_LIBS_DEBUG}")
+        message("Libraries to Link debug: ${test_LIBS_DEBUG}")
+        get_target_property(tmp test::test INTERFACE_LINK_LIBRARIES)
         message("Target libs: ${tmp}")
         """)
 
@@ -148,18 +148,18 @@ def test_system_libs():
         client.run_command('cmake . -DCMAKE_BUILD_TYPE={0}'.format(build_type))
 
         library_name = "sys1d" if build_type == "Debug" else "sys1"
-        # FIXME: Note it is CONAN_LIB::Test_lib1_RELEASE, not "lib1" as cmake_find_package
+        # FIXME: Note it is CONAN_LIB::test_lib1_RELEASE, not "lib1" as cmake_find_package
         if build_type == "Release":
             assert "System libs release: %s" % library_name in client.out
             assert "Libraries to Link release: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
+            target_libs = ("$<$<CONFIG:Release>:CONAN_LIB::test_lib1_RELEASE;sys1;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>")
         else:
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Debug>:CONAN_LIB::Test_lib1_DEBUG;sys1d;"
+            target_libs = ("$<$<CONFIG:Debug>:CONAN_LIB::test_lib1_DEBUG;sys1d;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>")
