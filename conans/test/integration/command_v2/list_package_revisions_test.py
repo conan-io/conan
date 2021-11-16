@@ -158,7 +158,7 @@ class TestRemotes(TestListPackageRevisionsBase):
 
         expected_output = textwrap.dedent(f"""\
         remote1:
-          {repr(pref)}#.*""")
+          {pref.repr_notime()}""")
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -179,9 +179,9 @@ class TestRemotes(TestListPackageRevisionsBase):
         output = str(self.client.out)
         expected_output = textwrap.dedent(f"""\
         Local Cache:
-          {repr(pref)}#.*
+          {pref.repr_notime()}.*
         remote1:
-          {repr(pref)}#.*
+          {pref.repr_notime()}.*
         remote2:
           There are no matching package references""")
         assert bool(re.match(expected_output, output, re.MULTILINE))

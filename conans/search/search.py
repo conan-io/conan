@@ -2,9 +2,12 @@ import os
 import re
 from collections import OrderedDict
 from fnmatch import translate
+from typing import Dict
 
+from conans.cli.api.model import PackageConfiguration
 from conans.errors import ConanException
 from conans.model.info import ConanInfo
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
@@ -12,9 +15,9 @@ from conans.util.files import load
 from conans.util.log import logger
 
 
-def filter_packages(query, package_infos):
+def filter_packages(query, results: Dict[PkgReference, PackageConfiguration]):
     if query is None:
-        return package_infos
+        return results
     try:
         if "!" in query:
             raise ConanException("'!' character is not allowed")
@@ -22,17 +25,15 @@ def filter_packages(query, package_infos):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
         result = OrderedDict()
-        for package_id, info in package_infos.items():
-            if _evaluate_postfix_with_info(postfix, info):
-                # TODO: cache2.0 maybe it would be better to make the key the full reference
-                #  but the remote will return a dict with the pkgid as the key so maintain this
-                result[package_id] = info
+        for pref, data in results.items():
+            if _evaluate_postfix_with_info(postfix, data):
+                result[pref] = data
         return result
     except Exception as exc:
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def _evaluate_postfix_with_info(postfix, conan_vars_info):
+def _evaluate_postfix_with_info(postfix, conan_vars_info: PackageConfiguration):
 
     # Evaluate conaninfo with the expression
 
@@ -46,7 +47,7 @@ def _evaluate_postfix_with_info(postfix, conan_vars_info):
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def _evaluate(prop_name, prop_value, conan_vars_info):
+def _evaluate(prop_name, prop_value, conan_vars_info: PackageConfiguration):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -55,8 +56,8 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
     def compatible_prop(setting_value, _prop_value):
         return (_prop_value == setting_value) or (_prop_value == "None" and setting_value is None)
 
-    info_settings = conan_vars_info.get("settings", [])
-    info_options = conan_vars_info.get("options", [])
+    info_settings = conan_vars_info.settings
+    info_options = conan_vars_info.options
     properties = ["os", "compiler", "arch", "build_type"]
 
     def starts_with_common_settings(_prop_name):
@@ -103,25 +104,19 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-# TODO: cache2.0 for the moment we are passing here a list of layouts to later get the conaninfos
-#  we should refactor this to something better
-def search_packages(packages_layouts, packages_query):
-    """ Return a dict like this:
-
-            {package_ID: {name: "OpenCV",
-                           version: "2.14",
-                           settings: {os: Windows}}}
+def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PackageConfiguration]:
+    """
     param package_layout: Layout for the given reference
     """
 
-    infos = _get_local_infos_min(packages_layouts)
-    return filter_packages(packages_query, infos)
-
-
-def _get_local_infos_min(packages_layouts):
     result = OrderedDict()
 
-    for pkg_layout in packages_layouts:
+    package_layouts = []
+    for pref in prefs:
+        latest_prev = cache.get_latest_package_reference(pref)
+        package_layouts.append(cache.pkg_layout(latest_prev))
+
+    for pkg_layout in package_layouts:
         # Read conaninfo
         info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
@@ -131,8 +126,6 @@ def _get_local_infos_min(packages_layouts):
 
         info = ConanInfo.loads(conan_info_content)
         conan_vars_info = info.serialize_min()
-        # TODO: cache2.0 use the full ref or package rev as key
-        # FIXME: cache2.0 there will be several prevs with same package id
-        result[pkg_layout.reference.package_id] = conan_vars_info
+        result[pkg_layout.reference] = conan_vars_info
 
     return result

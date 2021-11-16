@@ -475,6 +475,12 @@ class TestClient(object):
         finally:
             self.current_folder = old_dir
 
+    @contextmanager
+    def mocked_servers(self, requester=None):
+        _req = requester or TestRequester(self.servers)
+        with mock.patch("conans.client.rest.conan_requester.requests", _req):
+            yield
+
     def get_conan_api(self, args=None):
         if self.is_conan_cli_v2_command(args):
             return ConanAPIV2(cache_folder=self.cache_folder)
@@ -539,8 +545,7 @@ class TestClient(object):
                             http_requester = TestRequester(self.servers)
 
                     if http_requester:
-                        with mock.patch("conans.client.rest.conan_requester.requests",
-                                        http_requester):
+                        with self.mocked_servers(http_requester):
                             return self.run_cli(command_line, assert_error=assert_error)
                     else:
                         return self.run_cli(command_line, assert_error=assert_error)
@@ -710,12 +715,13 @@ class TurboTestClient(TestClient):
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(str(ref), remote, args or ""),
+        self.run("upload {} -c --all -r {} {}".format(ref.repr_notime(), remote, args or ""),
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
-            ref.revision = remote_rrev
-            return ref
+            _tmp = copy.copy(ref)
+            _tmp.revision = remote_rrev
+            return _tmp
 
     def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
