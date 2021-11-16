@@ -1,7 +1,6 @@
 import os
 
 from conans.client.cache.cache import ClientCache
-from conans.client.conf.detect import detect_defaults_settings
 from conans.client.profile_loader import ProfileLoader
 from conans.model.profile import Profile
 
@@ -69,6 +68,7 @@ class ProfilesAPI:
         @return: an automatically detected Profile, with a "best guess" of the system settings
         """
         profile = Profile()
+        from conans.client.conf.detect import detect_defaults_settings
         settings = detect_defaults_settings()
         for name, value in settings:
             profile.settings[name] = value
