@@ -264,7 +264,7 @@ class ConanFileLoader(object):
 
         if require_overrides is not None:
             for req_override in require_overrides:
-                req_override = ConanFileReference.loads(req_override)
+                req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
         return conanfile
