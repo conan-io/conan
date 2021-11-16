@@ -65,7 +65,7 @@ _t_default_settings_yml = textwrap.dedent("""
                       "8", "8.1", "8.2", "8.3", "8.4",
                       "9", "9.1", "9.2", "9.3",
                       "10", "10.1", "10.2", "10.3",
-                      "11", "11.1"]
+                      "11", "11.1", "11.2"]
             libcxx: [libstdc++, libstdc++11]
             threads: [None, posix, win32] #  Windows MinGW
             exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -78,7 +78,7 @@ _t_default_settings_yml = textwrap.dedent("""
                       LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                       LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
                       llvm, ClangCL, v143]
-            cppstd: [None, 14, 17, 20]
+            cppstd: [None, 14, 17, 20, 23]
         msvc:
             version: ["19.0",
                       "19.1", "19.10", "19.11", "19.12", "19.13", "19.14", "19.15", "19.16",
