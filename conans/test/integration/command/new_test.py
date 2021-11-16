@@ -236,14 +236,6 @@ class NewCommandTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/example.cpp")))
 
-    def test_new_test_package_custom_name(self):
-        # https://github.com/conan-io/conan/issues/8164
-        client = TestClient()
-        client.run("new mypackage/0.1 -t")
-        source = client.load("test_package/example.cpp")
-        self.assertIn('#include "hello.h"', source)
-        self.assertIn("hello();", source)
-
     def test_new_cmake_lib(self):
         client = TestClient()
         client.run("new pkg/0.1 --template=cmake_lib")

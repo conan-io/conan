@@ -346,16 +346,16 @@ class Pkg(ConanFile):
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=["admin", "password"])
         for i in (1, 2):
-            client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.%s" % i)})
+            client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.%s" % i)})
             client.run("export . lasote/channel")
 
-        client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")
+        client.run("alias hello/0.X@lasote/channel hello/0.1@lasote/channel")
         conanfile_chat = textwrap.dedent("""
             from conans import ConanFile
             class TestConan(ConanFile):
                 name = "Chat"
                 version = "1.0"
-                requires = "Hello/0.X@lasote/channel"
+                requires = "hello/0.X@lasote/channel"
                 """)
         client.save({"conanfile.py": conanfile_chat}, clean_first=True)
         client.run("export . lasote/channel")
@@ -363,8 +363,8 @@ class Pkg(ConanFile):
 
         client.run("install . --build=missing")
 
-        self.assertIn("Hello/0.1@lasote/channel from local", client.out)
-        self.assertNotIn("Hello/0.X@lasote/channel", client.out)
+        self.assertIn("hello/0.1@lasote/channel from local", client.out)
+        self.assertNotIn("hello/0.X@lasote/channel", client.out)
 
         ref = RecipeReference.loads("Chat/1.0@lasote/channel")
         pkg_folder = client.cache.package_layout(ref).packages()
@@ -372,17 +372,17 @@ class Pkg(ConanFile):
         pkg_folder = os.path.join(pkg_folder, folders[0])
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
 
-        self.assertIn("Hello/0.1@lasote/channel", conaninfo)
-        self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)
+        self.assertIn("hello/0.1@lasote/channel", conaninfo)
+        self.assertNotIn("hello/0.X@lasote/channel", conaninfo)
 
         client.run('upload "*" --all --confirm -r default')
         client.run('remove "*" -f')
 
         client.run("install .")
-        self.assertIn("Hello/0.1@lasote/channel from 'default'", client.out)
-        self.assertNotIn("Hello/0.X@lasote/channel from", client.out)
+        self.assertIn("hello/0.1@lasote/channel from 'default'", client.out)
+        self.assertNotIn("hello/0.X@lasote/channel from", client.out)
 
-        client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
+        client.run("alias hello/0.X@lasote/channel hello/0.2@lasote/channel")
         client.run("install . --build=missing")
-        self.assertIn("Hello/0.2", client.out)
-        self.assertNotIn("Hello/0.1", client.out)
+        self.assertIn("hello/0.2", client.out)
+        self.assertNotIn("hello/0.1", client.out)

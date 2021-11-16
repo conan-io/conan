@@ -15,7 +15,7 @@ def test_pkg_config_dirs():
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
 
             def package_info(self):
@@ -32,9 +32,9 @@ def test_pkg_config_dirs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps")
+    client.run("install mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "MyLib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     expected_rpaths = ""
@@ -45,8 +45,8 @@ def test_pkg_config_dirs():
         libdir2=${prefix}/lib2
         includedir1=/my_absoulte_path/fake/mylib/include
 
-        Name: MyLib
-        Description: Conan package: MyLib
+        Name: mylib
+        Description: Conan package: mylib
         Version: 0.1
         Libs: -L"${libdir1}" -L"${libdir2}"%s
         Cflags: -I"${includedir1}\"""" % expected_rpaths)
@@ -76,7 +76,7 @@ def test_empty_dirs():
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
 
             def package_info(self):
@@ -89,14 +89,14 @@ def test_empty_dirs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps")
+    client.run("install mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "MyLib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     expected = textwrap.dedent("""
-        Name: MyLib
-        Description: Conan package: MyLib
+        Name: mylib
+        Description: Conan package: mylib
         Version: 0.1
         Libs:%s
         Cflags: """ % " ")  # ugly hack for trailing whitespace removed by IDEs
@@ -116,7 +116,7 @@ def test_pkg_config_rpaths():
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
             settings = "os", "compiler"
             exports = "mylib.so"
@@ -132,9 +132,9 @@ def test_pkg_config_rpaths():
                  "linux_gcc": profile,
                  "mylib.so": "fake lib content"})
     client.run("create . -pr=linux_gcc")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps -pr=linux_gcc")
+    client.run("install mylib/0.1@ -g PkgConfigDeps -pr=linux_gcc")
 
-    pc_path = os.path.join(client.current_folder, "MyLib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     assert '-Wl,-rpath,"${libdir1}"' in pc_content
@@ -147,7 +147,7 @@ def test_system_libs():
         import os
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
 
             def package(self):
@@ -160,9 +160,9 @@ def test_system_libs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps")
+    client.run("install mylib/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("MyLib.pc")
+    pc_content = client.load("mylib.pc")
     assert 'Libs: -L"${libdir1}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
 
 

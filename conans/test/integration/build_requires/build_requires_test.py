@@ -71,7 +71,6 @@ def client():
             """)
     client = TestClient()
     save(client.cache.default_profile_path, "[settings]\nos=Windows")
-    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     client.save({"cmake/conanfile.py": cmake,
                  "gtest/conanfile.py": gtest,
                  "openssl/conanfile.py": openssl})
@@ -113,7 +112,6 @@ def test_complete(client):
         class Pkg(ConanFile):
             requires = "openssl/1.0"
             build_requires = "mycmake/1.0"
-            apply_env = False
 
             def build_requirements(self):
                 self.test_requires("mygtest/1.0")
@@ -221,15 +219,15 @@ class BuildRequiresTest(unittest.TestCase):
                       t.out)
 
     def test_build_requires_diamond(self):
-        libA_ref = RecipeReference.loads("libA/0.1@user/testing")
-        libB_ref = RecipeReference.loads("libB/0.1@user/testing")
+        libA_ref = RecipeReference.loads("liba/0.1@user/testing")
+        libB_ref = RecipeReference.loads("libb/0.1@user/testing")
 
         t = TestClient()
         t.save({"conanfile.py": GenConanfile()})
-        t.run("create . libA/0.1@user/testing")
+        t.run("create . liba/0.1@user/testing")
 
         t.save({"conanfile.py": GenConanfile().with_require(libA_ref)})
-        t.run("create . libB/0.1@user/testing")
+        t.run("create . libb/0.1@user/testing")
 
         t.save({"conanfile.py": GenConanfile().with_build_requires(libB_ref)
                                               .with_build_requires(libA_ref)})
@@ -319,11 +317,11 @@ class Other(ConanFile):
         self.env_info.PATH.append("myotherpath")
 """
         client.save({CONANFILE: other})
-        client.run("create . Other/1.0@user/channel")
+        client.run("create . other/1.0@user/channel")
         lib = """from conans import ConanFile
 import os
 class Lib(ConanFile):
-    build_requires = "Boost/1.0@user/channel", "Other/1.0@user/channel"
+    build_requires = "boost/1.0@user/channel", "other/1.0@user/channel"
     def build(self):
         self.output.info("LIB PATH FOR BUILD %s" % os.getenv("PATH"))
 """

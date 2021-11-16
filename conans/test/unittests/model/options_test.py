@@ -219,9 +219,9 @@ class TestOptionsNone:
 
         options = {"Boost": boost_values,
                    "Poco": poco_values,
-                   "Hello1": hello1_values}
-        down_ref = RecipeReference.loads("Hello0/0.1@diego/testing")
-        own_ref = RecipeReference.loads("Hello1/0.1@diego/testing")
+                   "hello1": hello1_values}
+        down_ref = RecipeReference.loads("hello0/0.1@diego/testing")
+        own_ref = RecipeReference.loads("hello1/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "4"),
                                                      ("path", "NOTDEF"),
@@ -242,11 +242,11 @@ class TestOptionsNone:
         hello1_values.add_option("optimized", "2")
         options2 = {"Boost": boost_values,
                     "Poco": poco_values,
-                    "Hello1": hello1_values}
-        down_ref = RecipeReference.loads("Hello2/0.1@diego/testing")
+                    "hello1": hello1_values}
+        down_ref = RecipeReference.loads("hello2/0.1@diego/testing")
 
-        with self.assertRaisesRegex(ConanException, "Hello2/0.1@diego/testing tried to change "
-                                     "Hello1/0.1@diego/testing option optimized to 2"):
+        with self.assertRaisesRegex(ConanException, "hello2/0.1@diego/testing tried to change "
+                                     "hello1/0.1@diego/testing option optimized to 2"):
             self.sut.propagate_upstream(options2, down_ref, own_ref)
 
         self.assertEqual(self.sut.values.dumps(),
@@ -265,7 +265,7 @@ Poco:deps_bundled=True""")
 
         options = {"Boost.*": boost_values}
         own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
-        down_ref = RecipeReference.loads("Consumer/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "FuzzBuzz"),
@@ -284,7 +284,7 @@ Poco:deps_bundled=True""")
         options = {"Boost.*": boost_values,
                    "*": boost_values2}
         own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
-        down_ref = RecipeReference.loads("Consumer/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "2"),
                                                      ("path", "FuzzBuzz"),
@@ -303,7 +303,7 @@ Poco:deps_bundled=True""")
         options = {"Boost.*": boost_values,
                    "*": boost_values2}
         own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
-        down_ref = RecipeReference.loads("Consumer/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [('optimized', '4'),
                                                      ('path', 'NOTDEF'),
@@ -318,7 +318,7 @@ Poco:deps_bundled=True""")
 
         options = {"*": boost_values}
         own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
-        down_ref = RecipeReference.loads("Consumer/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "FuzzBuzz"),
@@ -332,7 +332,7 @@ Poco:deps_bundled=True""")
         boost_values.add_option("fake_option", "FuzzBuzz")
 
         options = {"Boost.*": boost_values}
-        down_ref = RecipeReference.loads("Consumer/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
         own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),

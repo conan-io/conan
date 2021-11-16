@@ -32,8 +32,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "base.SomeBase"
             """)
         client.save({"conanfile.py": reuse})
-        client.run("export . Pkg/0.1@user/testing")
-        scm_info = client.scm_info("Pkg/0.1@user/testing")
+        client.run("export . pkg/0.1@user/testing")
+        scm_info = client.scm_info("pkg/0.1@user/testing")
         self.assertIsNotNone(scm_info.revision)
         self.assertEqual(scm_info.type, 'git')
         self.assertEqual(scm_info.url, 'somerepo')
@@ -67,9 +67,9 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.scm["url"] = self.base_repo
             """)
         client.save({"conanfile.py": reuse})
-        client.run("export . Pkg/0.1@user/testing")
+        client.run("export . pkg/0.1@user/testing")
 
-        scm_info = client.scm_info("Pkg/0.1@user/testing")
+        scm_info = client.scm_info("pkg/0.1@user/testing")
         self.assertIsNotNone(scm_info.revision)
         self.assertEqual(scm_info.type, 'git')
         self.assertEqual(scm_info.url, 'other_repo')

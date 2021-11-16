@@ -11,8 +11,8 @@ tool_conanfile = """
 import os
 from conans import ConanFile
 
-class Tool(ConanFile):
-    name = "Tool"
+class tool(ConanFile):
+    name = "tool"
     version = "0.1"
     exports_sources = "mytool*"
 
@@ -26,8 +26,8 @@ class Tool(ConanFile):
 lib_conanfile = """
 from conans import ConanFile
 
-class MyLib(ConanFile):
-    name = "MyLib"
+class mylib(ConanFile):
+    name = "mylib"
     version = "0.1"
 
     def build(self):
@@ -36,14 +36,14 @@ class MyLib(ConanFile):
 
 profile = """
 [build_requires]
-Tool/0.1@lasote/stable
-nonexistingpattern*: SomeTool/1.2@user/channel
+tool/0.1@lasote/stable
+nonexistingpattern*: sometool/1.2@user/channel
 """
 
 profile2 = """
 [build_requires]
-Tool/0.1@lasote/stable
-nonexistingpattern*: SomeTool/1.2@user/channel
+tool/0.1@lasote/stable
+nonexistingpattern*: sometool/1.2@user/channel
 """
 
 
@@ -58,7 +58,6 @@ class BuildRequiresTest(unittest.TestCase):
 
     def test_profile_requires(self):
         client = TestClient()
-        save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
         self._create(client)
 
         client.save({CONANFILE: lib_conanfile,
@@ -66,15 +65,14 @@ class BuildRequiresTest(unittest.TestCase):
                      "profile2.txt": profile2}, clean_first=True)
         client.run("export . lasote/stable")
 
-        client.run("install MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
+        client.run("install mylib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertIn("Hello World!", client.out)
 
-        client.run("install MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
+        client.run("install mylib/0.1@lasote/stable --profile ./profile2.txt --build")
         self.assertIn("Hello World!", client.out)
 
     def test_profile_open_requires(self):
         client = TestClient()
-        save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
         self._create(client)
 
         client.save({CONANFILE: lib_conanfile,
@@ -91,27 +89,26 @@ class BuildRequiresTest(unittest.TestCase):
                      "profile.txt": profile}, clean_first=True)
 
         client.run("install . --profile ./profile.txt", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'", client.out)
-        client.run("install . --profile ./profile.txt --build=PythonTool", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'", client.out)
-        client.run("install . --profile ./profile.txt --build=*Tool")
-        self.assertIn("Tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1@lasote/stable'", client.out)
+        client.run("install . --profile ./profile.txt --build=Pythontool", assert_error=True)
+        self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1@lasote/stable'", client.out)
+        client.run("install . --profile ./profile.txt --build=*tool")
+        self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
         # now remove packages, ensure --build=missing also creates them
         client.run('remove "*" -p -f')
         client.run("install . --profile ./profile.txt --build=missing")
-        self.assertIn("Tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
     def test_profile_test_requires(self):
         client = TestClient()
-        save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
         self._create(client)
 
         test_conanfile = """
 import os
 from conans import ConanFile, tools
 
-class TestMyLib(ConanFile):
+class Testmylib(ConanFile):
 
     def build(self):
         self.run("mytool")
@@ -129,14 +126,13 @@ class TestMyLib(ConanFile):
 
     def test_consumer_patterns(self):
         client = TestClient()
-        save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
         self._create(client)
 
         test_conanfile = """
 import os
 from conans import ConanFile, tools
 
-class TestMyLib(ConanFile):
+class Testmylib(ConanFile):
 
     def build(self):
         self.run("mytool")
@@ -147,16 +143,16 @@ class TestMyLib(ConanFile):
 import os
 from conans import ConanFile, tools
 
-class MyLib(ConanFile):
-    name = "MyLib"
+class mylib(ConanFile):
+    name = "mylib"
     version = "0.1"
 
 
 """
         profile_patterns = """
 [build_requires]
-&: Tool/0.1@lasote/stable
-nonexistingpattern*: SomeTool/1.2@user/channel
+&: tool/0.1@lasote/stable
+nonexistingpattern*: sometool/1.2@user/channel
 """
         client.save({CONANFILE: lib_conanfile,
                      "test_package/conanfile.py": test_conanfile,
@@ -167,28 +163,28 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
     def test_build_requires_options(self):
         client = TestClient()
-        client.save({CONANFILE: GenConanfile("MyTool", "0.1")})
+        client.save({CONANFILE: GenConanfile("mytool", "0.1")})
         client.run("export . lasote/stable")
 
         conanfile = """
 from conans import ConanFile, tools
 
-class MyLib(ConanFile):
-    name = "MyLib"
+class mylib(ConanFile):
+    name = "mylib"
     version = "0.1"
-    build_requires = "MyTool/0.1@lasote/stable"
+    build_requires = "mytool/0.1@lasote/stable"
     options = {"coverage": [True, False]}
     def build(self):
         self.output.info("Coverage %s" % self.options.coverage)
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("build . -o MyLib:coverage=True --build missing")
-        self.assertIn("MyTool/0.1@lasote/stable from local cache", client.out)
-        self.assertIn("MyTool/0.1@lasote/stable: Calling build()", client.out)
-        self.assertIn("conanfile.py (MyLib/0.1): Coverage True", client.out)
+        client.run("build . -o mylib:coverage=True --build missing")
+        self.assertIn("mytool/0.1@lasote/stable from local cache", client.out)
+        self.assertIn("mytool/0.1@lasote/stable: Calling build()", client.out)
+        self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)
 
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . -o coverage=True")
-        self.assertIn("MyTool/0.1@lasote/stable from local cache", client.out)
-        self.assertIn("MyTool/0.1@lasote/stable: Already installed!", client.out)
-        self.assertIn("conanfile.py (MyLib/0.1): Coverage True", client.out)
+        self.assertIn("mytool/0.1@lasote/stable from local cache", client.out)
+        self.assertIn("mytool/0.1@lasote/stable: Already installed!", client.out)
+        self.assertIn("conanfile.py (mylib/0.1): Coverage True", client.out)

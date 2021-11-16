@@ -22,22 +22,22 @@ class InstallCascadeTest(unittest.TestCase):
         servers = OrderedDict([("default", server)])
         self.client = TurboTestClient(servers=servers)
 
-        self.ref_a = RecipeReference.loads("libA/1.0@conan/stable")
+        self.ref_a = RecipeReference.loads("liba/1.0@conan/stable")
         self.client.create(self.ref_a, conanfile=GenConanfile())
 
-        self.ref_b = RecipeReference.loads("libB/1.0@conan/stable")
+        self.ref_b = RecipeReference.loads("libb/1.0@conan/stable")
         self.client.create(self.ref_b, conanfile=GenConanfile().with_requirement(self.ref_a))
 
-        self.ref_c = RecipeReference.loads("libC/1.0@conan/stable")
+        self.ref_c = RecipeReference.loads("libc/1.0@conan/stable")
         self.client.create(self.ref_c, conanfile=GenConanfile().with_requirement(self.ref_a))
 
-        self.ref_d = RecipeReference.loads("libD/1.0@conan/stable")
+        self.ref_d = RecipeReference.loads("libd/1.0@conan/stable")
         self.client.create(self.ref_d, conanfile=GenConanfile().with_requirement(self.ref_b))
 
-        self.ref_e = RecipeReference.loads("libE/1.0@conan/stable")
+        self.ref_e = RecipeReference.loads("libe/1.0@conan/stable")
         self.client.create(self.ref_e, conanfile=GenConanfile().with_requirement(self.ref_d))
 
-        self.ref_f = RecipeReference.loads("libF/1.0@conan/stable")
+        self.ref_f = RecipeReference.loads("libf/1.0@conan/stable")
         conanfile = GenConanfile().with_requirement(self.ref_c).with_requirement(self.ref_d)
         self.client.create(self.ref_f, conanfile=conanfile)
 

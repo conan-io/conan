@@ -41,9 +41,9 @@ def download(app, ref, package_ids, recipe):
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
-            scoped_output.info("Getting the complete package list from '%s'..." % repr(ref))
-            packages_props = remote_manager.search_packages(remote, ref, None)
-            package_ids = list(packages_props.keys())
+            scoped_output.info("Getting the complete package list from '%s'..." % ref.repr_notime())
+            packages = remote_manager.search_packages(remote, ref)
+            package_ids = [p.package_id for p in packages.keys()]
             if not package_ids:
                 scoped_output.warning("No remote binary packages found in remote")
 

@@ -22,13 +22,13 @@ class DefaultProfileTest(unittest.TestCase):
         save(client.cache.default_profile_path, "[env]\nValue1=A")
 
         client.save({CONANFILE: conanfile})
-        client.run("create . Pkg/0.1@lasote/stable")
-        self.assertIn("Pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
+        client.run("create . pkg/0.1@lasote/stable")
+        self.assertIn("pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-        client.save({"conanfile.txt": "[requires]\nPkg/0.1@lasote/stable"}, clean_first=True)
+        client.save({"conanfile.txt": "[requires]\npkg/0.1@lasote/stable"}, clean_first=True)
         client.run('install .')
-        self.assertIn("Pkg/0.1@lasote/stable: Already installed!", client.out)
+        self.assertIn("pkg/0.1@lasote/stable: Already installed!", client.out)
 
     def test_change_default_profile(self):
         br = '''
