@@ -5,7 +5,8 @@ from conans.errors import ConanException
 
 COMMAND_GROUPS = {
     'consumer': 'Consumer commands',
-    'misc': 'Miscellaneous commands'
+    'misc': 'Miscellaneous commands',
+    'creator': 'Creator commands'
 }
 
 

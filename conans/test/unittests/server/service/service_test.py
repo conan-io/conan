@@ -220,12 +220,12 @@ class ConanServiceTest(unittest.TestCase):
         ref3_norev.revision = None
         self.assertEqual(info, [ref3_norev])
 
-        info = self.search_service.search_packages(ref2, None)
+        info = self.search_service.search_packages(ref2)
         self.assertEqual(info, {'12345587754': {'requires': [],
                                                 'options': {'use_Qt': 'False'},
                                                 'settings': {}}})
 
-        info = self.search_service.search_packages(ref3, None)
+        info = self.search_service.search_packages(ref3)
         self.assertEqual(info, {'77777777777': {'requires': [],
                                                 'options': {'use_Qt': 'True'},
                                                 'settings': {}}})

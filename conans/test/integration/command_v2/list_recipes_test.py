@@ -97,8 +97,12 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
         self._add_remote("remote1")
         self._add_remote("remote2")
-        with patch("conans.cli.api.subapi.search.SearchAPI.search_remote_recipes",
-                   new=Mock(side_effect=exc)):
+
+        def boom_if_remote(self, query: str, remote=None):
+            if remote:
+                raise exc
+            return []
+        with patch("conans.cli.api.subapi.search.SearchAPI.recipes", new=boom_if_remote):
             self.client.run('list recipes whatever -r="*" -c')
         expected_output = textwrap.dedent(f"""\
         Local Cache:
@@ -135,10 +139,10 @@ class TestRemotes(TestListRecipesBase):
         expected_output = (
             r"Local Cache:\n"
             r"  test_recipe\n"
-            r"    test_recipe/2.1.0@user/channel#.*\n"
-            r"    test_recipe/2.0.0@user/channel#.*\n"
-            r"    test_recipe/1.1.0@user/channel#.*\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
+            r"    test_recipe/2.1.0@user/channel\n"
+            r"    test_recipe/2.0.0@user/channel\n"
+            r"    test_recipe/1.1.0@user/channel\n"
+            r"    test_recipe/1.0.0@user/channel\n"
             r"remote1:\n"
             r"  test_recipe\n"
             r"    test_recipe/1.0.0@user/channel\n"
@@ -233,8 +237,8 @@ class TestRemotes(TestListRecipesBase):
         expected_output = (
             r"Local Cache:\n"
             r"  test_recipe\n"
-            r"    test_recipe/1.1.0@user/channel#.*\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
+            r"    test_recipe/1.1.0@user/channel\n"
+            r"    test_recipe/1.0.0@user/channel\n"
             r"remote1:\n"
             r"  test_recipe\n"
             r"    test_recipe/1.0.0@user/channel\n"
@@ -282,11 +286,11 @@ class TestRemotes(TestListRecipesBase):
         expected_output = (
             r"Local Cache:\n"
             r"  test_another\n"
-            r"    test_another/4.1.0@user/channel#.*\n"
-            r"    test_another/2.1.0@user/channel#.*\n"
+            r"    test_another/4.1.0@user/channel\n"
+            r"    test_another/2.1.0@user/channel\n"
             r"  test_recipe\n"
-            r"    test_recipe/1.1.0@user/channel#.*\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
+            r"    test_recipe/1.1.0@user/channel\n"
+            r"    test_recipe/1.0.0@user/channel\n"
             r"remote1:\n"
             r"  test_another\n"
             r"    test_another/2.1.0@user/channel\n"

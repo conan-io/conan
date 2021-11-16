@@ -9,7 +9,7 @@ from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
-from conans.search.search import filter_packages, _partial_match
+from conans.search.search import _partial_match
 from conans.util.files import list_folder_subdirs
 from conans.util.log import logger
 
@@ -48,7 +48,7 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
     return result
 
 
-def search_packages(server_store, ref, query, look_in_all_rrevs):
+def search_packages(server_store, ref, look_in_all_rrevs):
     """
     Used both for v1 and v2. V1 will iterate rrevs.
 
@@ -68,7 +68,7 @@ def search_packages(server_store, ref, query, look_in_all_rrevs):
     if not os.path.exists(server_store.conan_revisions_root(ref_norev)):
         raise RecipeNotFoundException(ref)
     infos = _get_local_infos_min(server_store, ref, look_in_all_rrevs)
-    return filter_packages(query, infos)
+    return infos
 
 
 class SearchService(object):
@@ -78,10 +78,10 @@ class SearchService(object):
         self._server_store = server_store
         self._auth_user = auth_user
 
-    def search_packages(self, reference, query, look_in_all_rrevs=False):
+    def search_packages(self, reference, look_in_all_rrevs=False):
         """Shared between v1 and v2, v1 will iterate rrevs"""
         self._authorizer.check_read_conan(self._auth_user, reference)
-        info = search_packages(self._server_store, reference, query, look_in_all_rrevs)
+        info = search_packages(self._server_store, reference, look_in_all_rrevs)
         return info
 
     def _search_recipes(self, pattern=None, ignorecase=True):
