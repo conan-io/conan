@@ -8,6 +8,7 @@ import pytest
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
+
 @pytest.mark.tool_meson
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Windows")
@@ -47,3 +48,10 @@ def test_cross_x86():
     client.run("install .")
     content = client.load("conan_meson_native.ini")
     assert "backend = 'vs'" in content
+    client.run("build .")
+    assert "Auto detected Visual Studio backend" in client.out
+    client.run_command(os.path.join("build", "demo"))
+
+    assert "main _M_X64 defined" in client.out
+    assert "main _MSC_VER19" in client.out
+    assert "main _MSVC_LANG2014" in client.out
