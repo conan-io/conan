@@ -47,9 +47,3 @@ def test_cross_x86():
     client.run("install .")
     content = client.load("conan_meson_native.ini")
     assert "backend = 'vs'" in content
-    client.run("build .")
-    client.run_command(os.path.join("build", "demo"))
-
-    assert "main _M_X64 defined" in client.out
-    assert "main _MSC_VER19" in client.out
-    assert "main _MSVC_LANG2014" in client.out
