@@ -23,13 +23,20 @@ def install(conan_api, parser, *args, **kwargs):
     the package is installed, Conan will write the files for the specified
     generators.
     """
-    parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
-                                                  " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
-                                                  "./my_project/conanfile.txt. It could also be a reference")
-    parser.add_argument("reference", nargs="?",
-                        help='Reference for the conanfile path of the first argument: '
-                             'user/channel, version@user/channel or pkg/version@user/channel'
-                             '(if name or version declared in conanfile.py, they should match)')
+    parser.add_argument("path", nargs="?", help="Path to a conanfile, including filename, "
+                                                "like 'path/conanfile.py'")
+    parser.add_argument("--name", action=OnceArgument,
+                        help='Provide a package name if not specified in conanfile')
+    parser.add_argument("--version", action=OnceArgument,
+                        help='Provide a package version if not specified in conanfile')
+    parser.add_argument("--user", action=OnceArgument,
+                        help='Provide a user')
+    parser.add_argument("--channel", action=OnceArgument,
+                        help='Provide a channel')
+
+    parser.add_argument("--reference", action=OnceArgument,
+                        help='Provide a package reference instead of a conanfile')
+
     parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                         help='Generators to use')
     parser.add_argument("-if", "--install-folder", action=OnceArgument,
@@ -46,13 +53,13 @@ def install(conan_api, parser, *args, **kwargs):
                         help="Define a requirement override")
 
     args = parser.parse_args(*args)
-
+    env = None  # TODO: Not handling environment
     profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
-                               options=args.options_host, env=None,
+                               options=args.options_host, env=env,
                                conf=args.conf_host)
 
     profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                options=args.options_build, env=None,
+                                options=args.options_build, env=env,
                                 conf=args.conf_build)
 
     cwd = os.getcwd()
