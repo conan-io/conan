@@ -18,7 +18,7 @@ class Version:
         self._build = None
 
     def bump(self, index):
-        if self._items is None:  # the indicator parse is needed is empty items
+        if self._items is None:  # the indicator parse is needed if empty items
             self._parse()
         items = self._items.copy()
         try:
