@@ -28,7 +28,7 @@ from conans import tools
 import platform, os, sys
 
 class BoostConan(ConanFile):
-    name = "BoostDbg"
+    name = "boostdbg"
     version = "1.0"
     options = {"shared": [True, False]}
     default_options ={"shared": False}
@@ -41,7 +41,7 @@ class BoostConan(ConanFile):
 """
         files = {"conanfile.py": boost}
         client.save(files, clean_first=True)
-        client.run("create . lasote/testing -o BoostDbg:shared=True --build=missing")
+        client.run("create . lasote/testing -o boostdbg:shared=True --build=missing")
         ref = RecipeReference.loads("zlib/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
         pkg_folder = client.get_latest_pkg_layout(pref).package()

@@ -12,7 +12,7 @@ class ConanfileErrorsTest(unittest.TestCase):
             from conans import ConanFile
 
             class HelloConan(ConanFile):
-                name = "Hello"
+                name = "hello"
                 version = "0.1"
                 exports = "*"
                 def package(self):
@@ -21,8 +21,8 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
-        self.assertIn("Hello/0.1@lasote/stable: Error in package() method, line 9", client.out)
+        client.run("install hello/0.1@lasote/stable --build", assert_error=True)
+        self.assertIn("hello/0.1@lasote/stable: Error in package() method, line 9", client.out)
         self.assertIn('self.copy2("*.h", dst="include", src=["include","platform"]', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
 
@@ -32,7 +32,7 @@ class ConanfileErrorsTest(unittest.TestCase):
             from conans import ConanFile
 
             class HelloConan(ConanFile):
-                name = "Hello"
+                name = "hello"
                 version = "0.1"
                 exports = "*"
                 def package(self):
@@ -41,8 +41,8 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
-        self.assertIn("Hello/0.1@lasote/stable: Error in package() method, line 9", client.out)
+        client.run("install hello/0.1@lasote/stable --build", assert_error=True)
+        self.assertIn("hello/0.1@lasote/stable: Error in package() method, line 9", client.out)
         self.assertIn('self.copy("*.h", dst="include", src=["include","platform"]', client.out)
         # It results that the error is different in different Python2/3 and OSs
         # self.assertIn("'list' object has no attribute 'replace'", client.out)
@@ -53,7 +53,7 @@ class ConanfileErrorsTest(unittest.TestCase):
             from conans import ConanFile
 
             class HelloConan(ConanFile):
-                name = "Hello"
+                name = "hello"
                 version = "0.1"
                 exports = "*"
                 def package_info(self):
@@ -62,8 +62,8 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
-        self.assertIn("Hello/0.1@lasote/stable: Error in package_info() method, line 9", client.out)
+        client.run("install hello/0.1@lasote/stable --build", assert_error=True)
+        self.assertIn("hello/0.1@lasote/stable: Error in package_info() method, line 9", client.out)
         self.assertIn('self.copy2()', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
 
@@ -73,7 +73,7 @@ class ConanfileErrorsTest(unittest.TestCase):
             from conans import ConanFile
 
             class HelloConan(ConanFile):
-                name = "Hello"
+                name = "hello"
                 version = "0.1"
                 exports = "*"
                 def configure(self):
@@ -82,9 +82,9 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install hello/0.1@lasote/stable --build", assert_error=True)
 
-        self.assertIn("ERROR: Hello/0.1@lasote/stable: Error in configure() method, line 9",
+        self.assertIn("ERROR: hello/0.1@lasote/stable: Error in configure() method, line 9",
                       client.out)
         self.assertIn("self.copy2()", client.out)
         self.assertIn("AttributeError: 'HelloConan' object has no attribute 'copy2'""", client.out)
@@ -95,7 +95,7 @@ class ConanfileErrorsTest(unittest.TestCase):
             from conans import ConanFile
 
             class HelloConan(ConanFile):
-                name = "Hello"
+                name = "hello"
                 version = "0.1"
                 exports = "*"
                 def source(self):
@@ -104,8 +104,8 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . lasote/stable")
-        client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
-        self.assertIn("Hello/0.1@lasote/stable: Error in source() method, line 9", client.out)
+        client.run("install hello/0.1@lasote/stable --build", assert_error=True)
+        self.assertIn("hello/0.1@lasote/stable: Error in source() method, line 9", client.out)
         self.assertIn('self.copy2()', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
 
@@ -127,7 +127,7 @@ class ConanfileErrorsTest(unittest.TestCase):
             from conans import ConanFile
 
             class HelloConan(ConanFile):
-                name = "Hello"
+                name = "hello"
                 version = "0.1"
                 requires = "foo/0.1@user/testing", "foo/0.2@user/testing"
             ''')
@@ -143,7 +143,7 @@ def test_notduplicate_requires_py():
         from conans import ConanFile
 
         class HelloConan(ConanFile):
-            name = "Hello"
+            name = "hello"
             version = "0.1"
             requires = "foo/0.1@user/testing"
             build_requires = "foo/0.2@user/testing"
@@ -151,4 +151,4 @@ def test_notduplicate_requires_py():
     files = {"conanfile.py": conanfile}
     client.save(files)
     client.run("export .")
-    assert "Hello/0.1: Exported" in client.out
+    assert "hello/0.1: Exported" in client.out

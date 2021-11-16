@@ -954,9 +954,9 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", nargs='?', default=None,
-                            help="user/channel, Pkg/version@user/channel (if name "
+                            help="user/channel, pkg/version@user/channel (if name "
                                  "and version are not declared in the conanfile.py) "
-                                 "Pkg/version@ if user/channel is not relevant.")
+                                 "pkg/version@ if user/channel is not relevant.")
         parser.add_argument("-l", "--lockfile", action=OnceArgument,
                             help="Path to a lockfile file.")
         parser.add_argument("--lockfile-out", action=OnceArgument,

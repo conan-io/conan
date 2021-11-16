@@ -20,34 +20,34 @@ class OptionsTest(unittest.TestCase):
             """)
         test = GenConanfile().with_test("pass")
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@user/testing -o *:shared=1")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
-        client.run("create . Pkg/0.1@user/testing -o shared=2")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        client.run("create . pkg/0.1@user/testing -o *:shared=1")
+        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
+        client.run("create . pkg/0.1@user/testing -o shared=2")
+        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
-        client.run("create . Pkg/0.1@user/testing -o *:shared=1")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
-        client.run("create . Pkg/0.1@user/testing -o Pkg:shared=2")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
-        client.run("create . Pkg/0.1@user/testing -o shared=1")
-        self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
+        client.run("create . pkg/0.1@user/testing -o *:shared=1")
+        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
+        client.run("create . pkg/0.1@user/testing -o pkg:shared=2")
+        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        client.run("create . pkg/0.1@user/testing -o shared=1")
+        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
 
     def test_general_scope_options_test_package_notdefined(self):
         client = TestClient()
         conanfile = GenConanfile()
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@user/testing -o *:shared=True")
-        self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
-        client.run("create . Pkg/0.1@user/testing -o shared=False", assert_error=True)
+        client.run("create . pkg/0.1@user/testing -o *:shared=True")
+        self.assertIn("pkg/0.1@user/testing: Calling build()", client.out)
+        client.run("create . pkg/0.1@user/testing -o shared=False", assert_error=True)
         self.assertIn("option 'shared' doesn't exist", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        client.run("create . Pkg/0.1@user/testing -o *:shared=True")
-        self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
-        self.assertIn("Pkg/0.1@user/testing (test package): Calling build()", client.out)
+        client.run("create . pkg/0.1@user/testing -o *:shared=True")
+        self.assertIn("pkg/0.1@user/testing: Calling build()", client.out)
+        self.assertIn("pkg/0.1@user/testing (test package): Calling build()", client.out)
 
     def test_general_scope_priorities(self):
         client = TestClient()
@@ -117,14 +117,14 @@ equal:opt=a=b
                     self.output.info("shared=%s" % self.options.shared)
                 """)
         client.save({"conanfile.py": conanfile_liba})
-        client.run("create . libA/0.1@danimtb/testing -o *:shared=True")
-        self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+        client.run("create . liba/0.1@danimtb/testing -o *:shared=True")
+        self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
 
         conanfile_libb = textwrap.dedent("""
             from conans import ConanFile
             class LibB(ConanFile):
                 options = {"shared": [True, False]}
-                requires = "libA/0.1@danimtb/testing"
+                requires = "liba/0.1@danimtb/testing"
 
                 def configure(self):
                     self.options["*"].shared = self.options.shared
@@ -141,15 +141,15 @@ equal:opt=a=b
             # Test info
             client.run("info . -o *:shared=True")
             self.assertIn("conanfile.py: shared=True", client.out)
-            self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
             # Test create
-            client.run("create . libB/0.1@danimtb/testing -o *:shared=True")
-            self.assertIn("libB/0.1@danimtb/testing: shared=True", client.out)
-            self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+            client.run("create . libb/0.1@danimtb/testing -o *:shared=True")
+            self.assertIn("libb/0.1@danimtb/testing: shared=True", client.out)
+            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
             # Test install
             client.run("install . -o *:shared=True")
             self.assertIn("conanfile.py: shared=True", client.out)
-            self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
 
     @pytest.mark.xfail(reason="info.shared_library_package_id() to be removed")
     def test_overridable_shared_option(self):

@@ -79,7 +79,7 @@ class RemoteTest(unittest.TestCase):
     def test_rename(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . Hello/0.1@user/testing")
+        client.run("export . hello/0.1@user/testing")
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")

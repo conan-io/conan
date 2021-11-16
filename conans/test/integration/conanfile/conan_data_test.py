@@ -29,7 +29,7 @@ class ConanDataTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "bar",
                      "conandata.yml": conandata})
-        ref = RecipeReference.loads("Lib/0.1@user/testing")
+        ref = RecipeReference.loads("lib/0.1@user/testing")
         client.run("export . {}".format(ref))
         export_folder = client.get_latest_ref_layout(ref).export()
         exported_data = os.path.join(export_folder, "conandata.yml")
@@ -73,7 +73,7 @@ sources:
     url: "the url"
     other: "field"
 """})
-        ref = RecipeReference.loads("Lib/0.1@user/testing")
+        ref = RecipeReference.loads("lib/0.1@user/testing")
         client.run("create . {}".format(ref))
         self.assertIn("File 'conandata.yml' found. Exporting it...", client.out)
         self.assertIn("My URL:", client.out)
@@ -137,7 +137,7 @@ sources:
         client.save({"conanfile.py": conanfile,
                      "conandata.yml": conandata.format(thread.port, md5_value, sha1_value,
                                                        sha256_value)})
-        ref = RecipeReference.loads("Lib/0.1@user/testing")
+        ref = RecipeReference.loads("lib/0.1@user/testing")
         client.run("create . {}".format(ref))
         self.assertIn("OK!", client.out)
 
@@ -156,7 +156,7 @@ class Lib(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "conandata.yml": ">>>> ::"})
-        ref = RecipeReference.loads("Lib/0.1@user/testing")
+        ref = RecipeReference.loads("lib/0.1@user/testing")
         client.run("create . {}".format(ref), assert_error=True)
         self.assertIn("ERROR: Error loading conanfile at", client.out)
         self.assertIn(": Invalid yml format at conandata.yml: while scanning a block scalar",

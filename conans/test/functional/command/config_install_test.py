@@ -34,7 +34,7 @@ my-repo-2 https://myrepo2.com True
 
 registry = """myrepo1 https://myrepourl.net False
 
-Pkg/1.0@user/channel myrepo1
+pkg/1.0@user/channel myrepo1
 """
 
 settings_yml = """os:

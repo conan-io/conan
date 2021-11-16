@@ -105,7 +105,7 @@ class FullRevisionModeTest(unittest.TestCase):
 
     def test_binary_id_recomputation_with_build_requires(self):
         clienta = TestClient()
-        clienta.save({"conanfile.py": GenConanfile().with_name("Tool").with_version("0.1")
+        clienta.save({"conanfile.py": GenConanfile().with_name("tool").with_version("0.1")
                                                     .with_package_info(cpp_info={"libs":
                                                                                  ["tool.lib"]},
                                                                        env_info={})})
@@ -116,7 +116,7 @@ class FullRevisionModeTest(unittest.TestCase):
             from conans.tools import save
             import uuid, os
             class Pkg(ConanFile):
-                build_requires = "Tool/0.1@user/testing"
+                build_requires = "tool/0.1@user/testing"
                 %s
                 def package(self):
                     save(os.path.join(self.package_folder, "file.txt"),
@@ -229,77 +229,77 @@ class PackageRevisionModeTest(unittest.TestCase):
 
     def test_simple_dependency_graph(self):
         dependencies = {
-            "Log4Qt/0.3.0": [],
-            "MccApi/3.0.9": ["Log4Qt/0.3.0"],
-            "Util/0.3.5": ["MccApi/3.0.9"],
-            "Invent/1.0": ["Util/0.3.5"]
+            "log4qt/0.3.0": [],
+            "mccapi/3.0.9": ["log4qt/0.3.0"],
+            "util/0.3.5": ["mccapi/3.0.9"],
+            "invent/1.0": ["util/0.3.5"]
         }
         self._generate_graph(dependencies)
 
-        self.client.run("install Invent.py --build missing")
-        mcapi_pkg_id = "c24c471b778d3c10903ca45f3193587c5f446fd6"
-        self.assertIn(f"MccApi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
-        util_pkg_id = "d175bcd86c51b7f773ddc37a1d46026dafb80fd4"
-        self.assertIn(f"Util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
+        self.client.run("install invent.py --build missing")
+        mcapi_pkg_id = "6b115bc2428b925e8ee4fdb91c700520592e3b29"
+        self.assertIn(f"mccapi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
+        util_pkg_id = "88d63d5c29a361250e6eba12aae6037b5a4d1e15"
+        self.assertIn(f"util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
 
     def test_triangle_dependency_graph(self):
         dependencies = {
-            "Log4Qt/0.3.0": [],
-            "MccApi/3.0.9": ["Log4Qt/0.3.0"],
-            "Util/0.3.5": ["MccApi/3.0.9"],
-            "GenericSU/1.0": ["Log4Qt/0.3.0", "MccApi/3.0.9", "Util/0.3.5"]
+            "log4qt/0.3.0": [],
+            "mccapi/3.0.9": ["log4qt/0.3.0"],
+            "util/0.3.5": ["mccapi/3.0.9"],
+            "genericsu/1.0": ["log4qt/0.3.0", "mccapi/3.0.9", "util/0.3.5"]
                         }
         self._generate_graph(dependencies)
 
-        self.client.run("install GenericSU.py --build missing")
-        mcapi_pkg_id = "c24c471b778d3c10903ca45f3193587c5f446fd6"
-        self.assertIn(f"MccApi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
-        util_pkg_id = "d175bcd86c51b7f773ddc37a1d46026dafb80fd4"
-        self.assertIn(f"Util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
+        self.client.run("install genericsu.py --build missing")
+        mcapi_pkg_id = "6b115bc2428b925e8ee4fdb91c700520592e3b29"
+        self.assertIn(f"mccapi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
+        util_pkg_id = "88d63d5c29a361250e6eba12aae6037b5a4d1e15"
+        self.assertIn(f"util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
 
     def test_diamond_dependency_graph(self):
         dependencies = {
-            "Log4Qt/0.3.0": [],
-            "MccApi/3.0.9": ["Log4Qt/0.3.0"],
-            "Util/0.3.5": ["Log4Qt/0.3.0"],
-            "GenericSU/0.3.5": ["MccApi/3.0.9", "Util/0.3.5"]
+            "log4qt/0.3.0": [],
+            "mccapi/3.0.9": ["log4qt/0.3.0"],
+            "util/0.3.5": ["log4qt/0.3.0"],
+            "genericsu/0.3.5": ["mccapi/3.0.9", "util/0.3.5"]
                         }
         self._generate_graph(dependencies)
 
-        self.client.run("install GenericSU.py --build missing")
-        pkg_id = "c24c471b778d3c10903ca45f3193587c5f446fd6"
-        self.assertIn(f"MccApi/3.0.9: Package '{pkg_id}' created", self.client.out)
-        self.assertIn(f"Util/0.3.5: Package '{pkg_id}' created", self.client.out)
+        self.client.run("install genericsu.py --build missing")
+        pkg_id = "6b115bc2428b925e8ee4fdb91c700520592e3b29"
+        self.assertIn(f"mccapi/3.0.9: Package '{pkg_id}' created", self.client.out)
+        self.assertIn(f"util/0.3.5: Package '{pkg_id}' created", self.client.out)
 
     @pytest.mark.xfail(reason="package id computation has changed")
     def test_full_dependency_graph(self):
         dependencies = {
-            "Log4Qt/0.3.0": [],
-            "MccApi/3.0.9": ["Log4Qt/0.3.0"],
-            "Util/0.3.5": ["MccApi/3.0.9"],
-            "GenericSU/0.3.5": ["Log4Qt/0.3.0", "MccApi/3.0.9", "Util/0.3.5"],
-            "ManagementModule/0.3.5": ["Log4Qt/0.3.0", "MccApi/3.0.9", "Util/0.3.5"],
-            "StationInterfaceModule/0.13.0": ["ManagementModule/0.3.5", "GenericSU/0.3.5"],
-            "PleniterGenericSuApp/0.1.8": ["ManagementModule/0.3.5", "GenericSU/0.3.5",
-                                           "Log4Qt/0.3.0", "MccApi/3.0.9", "Util/0.3.5"],
+            "log4qt/0.3.0": [],
+            "mccapi/3.0.9": ["log4qt/0.3.0"],
+            "util/0.3.5": ["mccapi/3.0.9"],
+            "genericsu/0.3.5": ["log4qt/0.3.0", "mccapi/3.0.9", "util/0.3.5"],
+            "ManagementModule/0.3.5": ["log4qt/0.3.0", "mccapi/3.0.9", "util/0.3.5"],
+            "StationInterfaceModule/0.13.0": ["ManagementModule/0.3.5", "genericsu/0.3.5"],
+            "PleniterGenericSuApp/0.1.8": ["ManagementModule/0.3.5", "genericsu/0.3.5",
+                                           "log4qt/0.3.0", "mccapi/3.0.9", "util/0.3.5"],
             "StationinterfaceRpm/2.2.0": ["StationInterfaceModule/0.13.0",
                                           "PleniterGenericSuApp/0.1.8"]
                         }
         self._generate_graph(dependencies)
 
         # Obtained with with create and reevaluate_node
-        ids = {"Log4Qt/0.3.0": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-               "MccApi/3.0.9": "3c5ba9bba23b494f3ce0649fd32a8b997098f08e",
-               "Util/0.3.5": "3b8e8cc0ba9594e28d17856df15bc7287bb4b3eb",
-               "GenericSU/0.3.5": "e55df1a3e79765d0a29a0cc1630c3a56dfaeea8e",
+        ids = {"log4qt/0.3.0": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+               "mccapi/3.0.9": "3c5ba9bba23b494f3ce0649fd32a8b997098f08e",
+               "util/0.3.5": "3b8e8cc0ba9594e28d17856df15bc7287bb4b3eb",
+               "genericsu/0.3.5": "e55df1a3e79765d0a29a0cc1630c3a56dfaeea8e",
                "ManagementModule/0.3.5": "e55df1a3e79765d0a29a0cc1630c3a56dfaeea8e",
                "StationInterfaceModule/0.13.0": "d24f5fea9cfbcb155f5be8fb061d6193ea0b62d9",
                "PleniterGenericSuApp/0.1.8": "d24f5fea9cfbcb155f5be8fb061d6193ea0b62d9"}
 
-        rev = {"Log4Qt/0.3.0": "cf924fbb5ed463b8bb960cf3a4ad4f3a",
-               "MccApi/3.0.9": "ee083a6a3593fa42571f9973254cf97c",
-               "Util/0.3.5": "5c2c94edcdc5d46cd9a0c0c798791e9a",
-               "GenericSU/0.3.5": "defb3fe7ee1e093b18512555ba04fe7c",
+        rev = {"log4qt/0.3.0": "cf924fbb5ed463b8bb960cf3a4ad4f3a",
+               "mccapi/3.0.9": "ee083a6a3593fa42571f9973254cf97c",
+               "util/0.3.5": "5c2c94edcdc5d46cd9a0c0c798791e9a",
+               "genericsu/0.3.5": "defb3fe7ee1e093b18512555ba04fe7c",
                "ManagementModule/0.3.5": "defb3fe7ee1e093b18512555ba04fe7c",
                "StationInterfaceModule/0.13.0": "d96c69d1c47d66e6c7ed2ede43af3477",
                "PleniterGenericSuApp/0.1.8": "d96c69d1c47d66e6c7ed2ede43af3477"}

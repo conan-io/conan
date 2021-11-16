@@ -17,7 +17,7 @@ class MyConanfile(ConanFile):
     pass
 '''
         client.save({CONANFILE: conanfile})
-        client.run("create . Pkg/0.1@lasote/stable")
+        client.run("create . pkg/0.1@lasote/stable")
         client.run("upload '*' -c --all -r default")
         self.assertEqual(str(client.out).count("seconds to retry..."), 0)
 
@@ -26,7 +26,7 @@ class MyConanfile(ConanFile):
         client = TestClient(servers={"default": test_server}, inputs=["admin", "password"])
 
         client.save({CONANFILE: GenConanfile()})
-        client.run("create . Pkg/0.1@lasote/stable")
+        client.run("create . pkg/0.1@lasote/stable")
         client.run("upload '*' -c --all -r default")
 
         class Response(object):
@@ -56,6 +56,6 @@ class MyConanfile(ConanFile):
         # The buggy requester will cause a failure only downloading files, not in regular requests
         client = TestClient(servers={"default": test_server}, inputs=["admin", "password"],
                             requester_class=BuggyRequester)
-        client.run("install Pkg/0.1@lasote/stable", assert_error=True)
+        client.run("install pkg/0.1@lasote/stable", assert_error=True)
         self.assertEqual(str(client.out).count("Waiting 0 seconds to retry..."), 2)
         self.assertEqual(str(client.out).count("Error 200 downloading"), 3)

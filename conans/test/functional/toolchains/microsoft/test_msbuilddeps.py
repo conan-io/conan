@@ -116,7 +116,7 @@ myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan_Hello3.props" />
+    <Import Project="..\conan_hello3.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -287,7 +287,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan_Hello1.props" />
+    <Import Project="..\conan_hello1.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -413,11 +413,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_msbuild_generator(self):
         client = TestClient()
-        client.save(pkg_cmake("Hello0", "1.0"))
+        client.save(pkg_cmake("hello0", "1.0"))
         client.run("create . ")
-        client.save(pkg_cmake("Hello3", "1.0"), clean_first=True)
+        client.save(pkg_cmake("hello3", "1.0"), clean_first=True)
         client.run("create . ")
-        client.save(pkg_cmake("Hello1", "1.0", ["Hello0/1.0"]), clean_first=True)
+        client.save(pkg_cmake("hello1", "1.0", ["hello0/1.0"]), clean_first=True)
         client.run("create . ")
 
         conanfile = textwrap.dedent("""
@@ -425,16 +425,16 @@ class MSBuildGeneratorTest(unittest.TestCase):
             from conan.tools.microsoft import MSBuild
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
-                requires = "Hello1/1.0", "Hello3/1.0"
+                requires = "hello1/1.0", "hello3/1.0"
                 generators = "MSBuildDeps", "MSBuildToolchain"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
             """)
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp",
-                                     includes=["Hello1"], calls=["Hello1"])
-        myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["Hello3"],
-                                         calls=["Hello3"])
+                                     includes=["hello1"], calls=["hello1"])
+        myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["hello3"],
+                                         calls=["hello3"])
         files = {"MyProject.sln": sln_file,
                  "MyProject/MyProject.vcxproj": myproject_vcxproj,
                  "MyProject/MyProject.cpp": myproject_cpp,
@@ -448,11 +448,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertNotIn("warning MSB4011", client.out)
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("MyProject: Release!", client.out)
-        self.assertIn("Hello3: Release!", client.out)
+        self.assertIn("hello3: Release!", client.out)
         client.run_command(r"x64\Release\MyApp.exe")
         self.assertIn("MyApp: Release!", client.out)
-        self.assertIn("Hello0: Release!", client.out)
-        self.assertIn("Hello1: Release!", client.out)
+        self.assertIn("hello0: Release!", client.out)
+        self.assertIn("hello1: Release!", client.out)
 
     def test_install_reference(self):
         client = TestClient()
@@ -585,10 +585,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp")
         myproject_cpp = gen_function_cpp(name="main", msg="MyProject")
         files = {"MyProject.sln": sln_file,
-                 "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_Hello3.props",
+                 "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_hello3.props",
                                                                           "conandeps.props"),
                  "MyProject/MyProject.cpp": myproject_cpp,
-                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_Hello1.props",
+                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_hello1.props",
                                                               "conandeps.props"),
                  "MyApp/MyApp.cpp": myapp_cpp,
                  "conanfile.py": conanfile}

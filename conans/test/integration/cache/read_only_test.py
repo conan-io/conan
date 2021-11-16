@@ -31,11 +31,11 @@ class MyPkg(ConanFile):
         self.copy("*")
 """
         self.client.save({"conanfile.py": conanfile,
-                     "myheader.h": "my header"})
-        self.client.run("create . Pkg/0.1@lasote/channel")
+                          "myheader.h": "my header"})
+        self.client.run("create . pkg/0.1@lasote/channel")
 
     def test_basic(self):
-        pref = self.client.get_latest_package_reference(RecipeReference.loads("Pkg/0.1@lasote/channel"),
+        pref = self.client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@lasote/channel"),
                                                         NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(self.client.get_latest_pkg_layout(pref).package(), "myheader.h")
         with self.assertRaises(IOError):
@@ -46,22 +46,22 @@ class MyPkg(ConanFile):
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_remove(self):
         self.client.run("search")
-        self.assertIn("Pkg/0.1@lasote/channel", self.client.out)
-        self.client.run("remove Pkg* -f")
-        self.assertNotIn("Pkg/0.1@lasote/channel", self.client.out)
+        self.assertIn("pkg/0.1@lasote/channel", self.client.out)
+        self.client.run("remove pkg* -f")
+        self.assertNotIn("pkg/0.1@lasote/channel", self.client.out)
 
     def test_upload(self):
         self.client.run("upload * --all --confirm -r default")
-        self.client.run("remove Pkg* -f")
-        self.client.run("install Pkg/0.1@lasote/channel")
+        self.client.run("remove pkg* -f")
+        self.client.run("install pkg/0.1@lasote/channel")
         self.test_basic()
 
     def test_upload_change(self):
         self.client.run("upload * --all --confirm -r default")
         client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
 
-        client.run("install Pkg/0.1@lasote/channel")
-        pref = self.client.get_latest_package_reference(RecipeReference.loads("Pkg/0.1@lasote/channel"),
+        client.run("install pkg/0.1@lasote/channel")
+        pref = self.client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@lasote/channel"),
                                                         NO_SETTINGS_PACKAGE_ID)
         path = os.path.join(client.get_latest_pkg_layout(pref).package(), "myheader.h")
         with self.assertRaises(IOError):

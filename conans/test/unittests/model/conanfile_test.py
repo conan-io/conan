@@ -32,10 +32,10 @@ class Pkg(ConanFile):
                 assert(member.startswith('_conan'))
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . PkgA/0.1@user/testing")
+        client.run("create . pkga/0.1@user/testing")
         client.save({"conanfile.py": conanfile.replace("pass",
-                                                       "requires = 'PkgA/0.1@user/testing'")})
-        client.run("create . PkgB/0.1@user/testing")
+                                                       "requires = 'pkga/0.1@user/testing'")})
+        client.run("create . pkgb/0.1@user/testing")
         client.save({"conanfile.py": conanfile.replace("pass",
-                                                       "requires = 'PkgB/0.1@user/testing'")})
-        client.run("create . PkgC/0.1@user/testing")
+                                                       "requires = 'pkgb/0.1@user/testing'")})
+        client.run("create . pkgc/0.1@user/testing")
