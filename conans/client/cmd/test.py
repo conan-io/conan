@@ -32,8 +32,9 @@ def install_build_and_test(app, conanfile_abs_path, reference, profile_host, pro
         build_modes = ["never"]
     try:
         deps_info = deps_install(app=app,
+                                 reference=None,
+                                 path=conanfile_abs_path,
                                  create_reference=reference,
-                                 ref_or_path=conanfile_abs_path,
                                  install_folder=test_build_folder,
                                  base_folder=test_build_folder,
                                  profile_host=profile_host,

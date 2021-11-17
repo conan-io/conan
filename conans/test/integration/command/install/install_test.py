@@ -351,11 +351,12 @@ def test_install_error_never(client):
 
 def test_install_basic():
     client = TestClient(default_server_user=True)
-    client.save({"conanfile.py": GenConanfile("hello", "1.0")})
+    client.run("new hello/1.0 -m=cmake_lib")
     client.run("create .")
     client.run('upload "*" -r default -c --all')
     client.run("remove '*' -f")
     client.save({"conanfile.py": GenConanfile("greetings", "1.0").with_require("hello/1.0")})
+    client.run("info conanfile.py")
     client.run("install conanfile.py")
 
 
