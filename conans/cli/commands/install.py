@@ -58,7 +58,7 @@ def install(conan_api, parser, *args, **kwargs):
 
     info = None
     try:
-        info = conan_api.install.install_(path=os.path.join(cwd, args.path),
+        info = conan_api.install.install(path=os.path.join(cwd, args.path),
                                          reference=args.reference,
                                          profile_host=profile_host,
                                          profile_build=profile_build,
