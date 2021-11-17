@@ -357,7 +357,9 @@ def test_install_basic():
     client.run("remove '*' -f")
     client.save({"conanfile.py": GenConanfile("greetings", "1.0").with_require("hello/1.0")})
     client.run("info conanfile.py")
+    client.run("remove '*' -f")
     client.run("install conanfile.py")
+    print("----------")
 
 
 class TestCliOverride:
