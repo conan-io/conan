@@ -11,7 +11,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO, CONAN_MANIFEST
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.service.authorize import BasicAuthorizer
-from conans.server.service.common.search import SearchService
+from conans.server.service.v2.search import SearchService
 from conans.server.service.v2.service_v2 import ConanServiceV2
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore

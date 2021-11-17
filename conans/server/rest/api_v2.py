@@ -4,8 +4,8 @@ from conans.errors import EXCEPTION_CODE_MAPPING
 from conans.server.rest.bottle_plugins.http_basic_authentication import HttpBasicAuthentication
 from conans.server.rest.bottle_plugins.jwt_authentication import JWTAuthentication
 from conans.server.rest.bottle_plugins.return_handler import ReturnHandlerPlugin
-from conans.server.rest.controller.common.ping import PingController
-from conans.server.rest.controller.common.users import UsersController
+from conans.server.rest.controller.v2.ping import PingController
+from conans.server.rest.controller.v2.users import UsersController
 from conans.server.rest.controller.v2.conan import ConanControllerV2
 from conans.server.rest.controller.v2.delete import DeleteControllerV2
 from conans.server.rest.controller.v2.revisions import RevisionsController
