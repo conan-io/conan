@@ -135,8 +135,7 @@ class InstallAPI:
             install_folder = _make_abs_path(install_folder, cwd)
 
             deps_install(app=app,
-                         reference=reference,
-                         path=path,
+                         ref_or_path=path or reference,
                          install_folder=install_folder,
                          base_folder=cwd,
                          profile_host=profile_host,
