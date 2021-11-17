@@ -26,20 +26,32 @@ from conans.errors import ConanException
 from conans.util.files import save
 
 
-def get_package_name(req):
-    ret = req.cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
-    return ret or req.ref.name
+def get_package_name(dep):
+    """Get the reference name for the given package"""
+    # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
+    #        Remove it for Conan 2.0
+    return str(dep.ref.name)
 
 
-def get_component_name(req, comp_name):
-    if comp_name not in req.cpp_info.components:
-        # foo::foo might be referencing the root cppinfo
-        if req.ref.name == comp_name:
-            return get_package_name(req)
+def get_package_alias(dep):
+    """
+    If user declares the property "pkg_config_name" as part of the global cpp_info,
+    it'll be used as a complete alias for that package.
+    """
+    pkg_alias = dep.cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
+    return pkg_alias
+
+
+def get_component_alias(dep, comp_name):
+    """
+    If user declares the property "pkg_config_name" as part of the cpp_info.components["comp_name"],
+    it'll be used as a complete alias for that package component.
+    """
+    if comp_name not in dep.cpp_info.components:
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
-                             "package requirement".format(name=req.ref.name, cname=comp_name))
-    ret = req.cpp_info.components[comp_name].get_property("pkg_config_name", "PkgConfigDeps")
-    return ret or comp_name
+                             "package requirement".format(name=get_package_name(dep), cname=comp_name))
+    comp_alias = dep.cpp_info.components[comp_name].get_property("pkg_config_name", "PkgConfigDeps")
+    return comp_alias
 
 
 class PkgConfigDeps(object):
@@ -64,47 +76,45 @@ class PkgConfigDeps(object):
             pkg_name, comp_name = req.split("::") if "::" in req else (dep_name, req)
             # FIXME: it could allow defining requires to not direct dependencies
             req_conanfile = self._conanfile.dependencies.host[pkg_name]
-            comp_alias_name = get_component_name(req_conanfile, comp_name)
-            ret.append(self._get_pc_name(pkg_name, comp_alias_name))
+            comp_alias_name = get_component_alias(req_conanfile, comp_name)
+            if not comp_alias_name:
+                comp_alias_name = self._get_pc_name(pkg_name, comp_name)
+            ret.append(comp_alias_name)
         return ret
 
     def _get_requires_names(self, dep):
-        """
-        Get all the dependency's requirements (public dependencies and components)
-        """
-        # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
-        #        Remove it for Conan 2.0
-        dep_name = str(dep.ref.name)
+        """Get all the dependency's requirements (public dependencies and components)"""
+        dep_name = get_package_name(dep)
         # At first, let's check if we have defined some component requires, e.g., "pkg::cmp1"
         requires = self._get_component_requires_names(dep_name, dep.cpp_info)
         # If we have found some component requires it would be enough
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
-            requires = [get_package_name(req) for req in dep.dependencies.direct_host.values()]
+            requires = [get_package_alias(req) or get_package_name(req)
+                        for req in dep.dependencies.direct_host.values()]
         return requires
 
     def get_components_files_and_content(self, dep):
         """Get all the *.pc files content for the dependency and each of its components"""
         pc_files = {}
-        pkg_name = get_package_name(dep)
-        comp_names = []
+        pkg_name = get_package_alias(dep) or get_package_name(dep)
+        pkg_comp_names = []
         pc_gen = _PCFilesTemplate(self._conanfile, dep)
         # Loop through all the package's components
         for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
-            comp_name = get_component_name(dep, comp_name)
-            comp_names.append(comp_name)
-            # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
-            #        Remove it for Conan 2.0
-            comp_requires_names = self._get_component_requires_names(str(dep.ref.name), comp_cpp_info)
+            comp_requires_names = self._get_component_requires_names(get_package_name(dep),
+                                                                     comp_cpp_info)
+            pkg_comp_name = get_component_alias(dep, comp_name)
+            if not pkg_comp_name:
+                pkg_comp_name = self._get_pc_name(pkg_name, comp_name)
+            pkg_comp_names.append(pkg_comp_name)
             # Get the *.pc file content for each component
-            pkg_comp_name = self._get_pc_name(pkg_name, comp_name)
             pc_files.update(pc_gen.get_pc_filename_and_content(comp_requires_names,
                                                                name=pkg_comp_name,
                                                                cpp_info=comp_cpp_info))
         # Let's create a *.pc file for the main package
-        pkg_requires = [self._get_pc_name(pkg_name, i) for i in comp_names]
-        pc_files.update(pc_gen.get_wrapper_pc_filename_and_content(pkg_requires))
+        pc_files.update(pc_gen.get_wrapper_pc_filename_and_content(pkg_comp_names))
         return pc_files
 
     @property
@@ -134,7 +144,7 @@ class _PCFilesTemplate(object):
     def __init__(self, conanfile, dep):
         self._conanfile = conanfile
         self._dep = dep
-        self._name = get_package_name(dep)
+        self._name = get_package_alias(dep) or get_package_name(dep)
 
     pc_file_template = textwrap.dedent("""\
 

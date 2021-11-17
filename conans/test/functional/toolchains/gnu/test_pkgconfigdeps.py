@@ -264,8 +264,16 @@ def test_custom_content_components():
 
 def test_pkg_with_component_requires():
     client = TestClient()
-    client.save({"conanfile.py": GenConanfile("first", "0.1").with_package_file("file.h", "0.1")})
-    client.run("create . user/channel")
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Recipe(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.components["cmp1"].libs = ["libcmp1"]
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . first/0.1@")
     client.save({"conanfile.py": GenConanfile("other", "0.1").with_package_file("file.h", "0.1")})
     client.run("create .")
 
@@ -273,10 +281,10 @@ def test_pkg_with_component_requires():
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            requires = "first/0.1@user/channel"
+            requires = "first/0.1"
 
             def package_info(self):
-                self.cpp_info.components["mycomponent"].requires.append("first::first")
+                self.cpp_info.components["mycomponent"].requires.append("first::cmp1")
                 self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
 
         """)
@@ -306,11 +314,11 @@ def test_pkg_with_component_requires():
     pc_content = client2.load("second-mycomponent.pc")
     # Note: the first-first.pc does not exist because first/0.1 is not defining any component but
     # we're testing the "Requires" field is well defined and not the "first" recipe.
-    assert "Requires: first-first" == get_requires_from_content(pc_content)
+    assert "Requires: first-cmp1" == get_requires_from_content(pc_content)
     pc_content = client2.load("second-myfirstcomp.pc")
     assert "Requires: second-mycomponent" == get_requires_from_content(pc_content)
     pc_content = client2.load("first.pc")
-    assert "" == get_requires_from_content(pc_content)
+    assert "Requires: first-cmp1" == get_requires_from_content(pc_content)
     pc_content = client2.load("other.pc")
     assert "" == get_requires_from_content(pc_content)
 
