@@ -39,12 +39,12 @@ class TestSearch:
         self.client = TestClient(servers=self.servers)
 
         self.client.run("search whatever", assert_error=True)
-        assert "ERROR: Remotes for pattern '*' can't be found or are disabled" in self.client.out
+        assert "ERROR: Remotes for pattern '*' can't be found" in self.client.out
 
     def test_search_disabled_remote(self, remotes):
         self.client.run("remote disable remote1")
         self.client.run("search whatever -r remote1", assert_error=True)
-        expected_output = "ERROR: Remotes for pattern 'remote1' can't be found or are disabled"
+        expected_output = "ERROR: Remotes for pattern 'remote1' can't be found"
         assert expected_output in self.client.out
 
 
@@ -92,7 +92,7 @@ class TestRemotes:
 
     def test_no_remotes(self):
         self.client.run("search something", assert_error=True)
-        expected_output = "Remotes for pattern '*' can't be found or are disabled"
+        expected_output = "Remotes for pattern '*' can't be found"
         assert expected_output in self.client.out
 
     def test_search_by_name(self):

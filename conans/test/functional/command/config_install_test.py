@@ -132,9 +132,9 @@ class ConfigInstallTest(unittest.TestCase):
         save(client.cache.conan_conf_path, conf)
         client.run('config install "%s"' % folder)
         client.run("remote list")
-        self.assertIn("myrepo1: https://myrepourl.net [Verify SSL: False, Enabled: True]",
+        self.assertIn("myrepo1: https://myrepourl.net [Verify SSL: False, Enabled: True",
                       client.out)
-        self.assertIn("my-repo-2: https://myrepo2.com [Verify SSL: True, Enabled: True]", client.out)
+        self.assertIn("my-repo-2: https://myrepo2.com [Verify SSL: True, Enabled: True", client.out)
 
     def _create_zip(self, zippath=None):
         folder = self._create_profile_folder()

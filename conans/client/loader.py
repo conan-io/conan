@@ -23,7 +23,8 @@ from conans.util.files import load
 
 class ConanFileLoader(object):
 
-    def __init__(self, remotes_registry, runner,  pyreq_loader=None, requester=None):
+    def __init__(self, runner,  pyreq_loader=None, requester=None, remotes_registry=None):
+        # FIXME: If kept after POC, make remotes_registry positional
         self._remotes_registry = remotes_registry
         self._runner = runner
 
@@ -200,7 +201,8 @@ class ConanFileLoader(object):
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
         # Initialize the generic remotes
-        conanfile.generic_remotes = [r for r in self._remotes_registry.list() if r.generic]
+        if self._remotes_registry:
+            conanfile.generic_remotes = [r for r in self._remotes_registry.list() if r.generic]
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
                       channel=None, graph_lock=None, require_overrides=None):
@@ -218,7 +220,7 @@ class ConanFileLoader(object):
         conanfile.in_local_cache = False
         try:
             conanfile.develop = True
-            self._initialize_conanfile(self, conanfile, profile_host)
+            self._initialize_conanfile(conanfile, profile_host)
 
             if require_overrides is not None:
                 for req_override in require_overrides:

@@ -78,7 +78,7 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
 
     def test_fail_if_no_configured_remotes(self):
         self.client.run('list recipes -r="*" whatever', assert_error=True)
-        assert "Remotes for pattern '*' can't be found or are disabled" in self.client.out
+        assert "Remotes for pattern '*' can't be found" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
@@ -87,7 +87,7 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
         # He have to put both remotes instead of using "-a" because of the
         # disbaled remote won't appear
         self.client.run("list recipes whatever -r remote1 -r remote2", assert_error=True)
-        assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
+        assert "Remotes for pattern 'remote1' can't be found" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),

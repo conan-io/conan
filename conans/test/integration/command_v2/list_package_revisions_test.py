@@ -112,7 +112,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
     def test_fail_if_no_configured_remotes(self):
         pref = self._get_fake_package_refence('whatever/0.1')
         self.client.run(f'list package-revisions -r="*" {pref}', assert_error=True)
-        assert "ERROR: Remotes for pattern '*' can't be found or are disabled" in self.client.out
+        assert "ERROR: Remotes for pattern '*' can't be found" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
@@ -122,7 +122,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         # disbaled remote won't appear
         pref = self._get_fake_package_refence('whatever/0.1')
         self.client.run(f"list package-revisions {pref} -r remote1 -r remote2", assert_error=True)
-        assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
+        assert "Remotes for pattern 'remote1' can't be found" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
