@@ -491,3 +491,39 @@ def test_multiple_deactivate():
     assert 2 == str(out).count("Restoring environment")
     assert "VAR1=!!" in out
     assert "VAR2=!!" in out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Path problem in Windows only")
+@pytest.mark.parametrize("num_deps", [3, 60])
+def test_massive_paths(num_deps):
+    client = TestClient()
+    compiler_bat = "@echo off\necho MYTOOL {}!!\n"
+    conanfile = textwrap.dedent("""\
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            exports = "*"
+            def package(self):
+                self.copy("*", dst="bin")
+        """)
+
+    for i in range(num_deps):
+        client.save({"conanfile.py": conanfile,
+                     "mycompiler{}.bat".format(i): compiler_bat.format(i)})
+        client.run("create . pkg{}/0.1@".format(i))
+
+    conanfile = textwrap.dedent("""\
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            requires = {}
+            generators = "VirtualRunEnv"
+        """)
+    requires = ", ".join('"pkg{}/0.1"'.format(i) for i in range(num_deps))
+    client.save({"conanfile.py": conanfile.format(requires)}, clean_first=True)
+    client.run("install .")
+
+    for i in range(num_deps):
+        cmd = environment_wrap_command("conanrunenv", "mycompiler{}.bat".format(i),
+                                       cwd=client.current_folder)
+        client.run_command(cmd)
+        assert "MYTOOL {}!!".format(i) in client.out
