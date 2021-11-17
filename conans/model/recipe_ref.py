@@ -33,7 +33,7 @@ class Version:
         items = [int(item) if item.isdigit() else item for item in items]
         self._items = items
         self._nonzero_items = items.copy()
-        while self._nonzero_items[-1] == 0:
+        while self._nonzero_items and self._nonzero_items[-1] == 0:
             del self._nonzero_items[-1]
 
     def bump(self, index):
