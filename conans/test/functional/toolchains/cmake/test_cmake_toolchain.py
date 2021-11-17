@@ -34,7 +34,7 @@ def test_cmake_toolchain_win_toolset(compiler, version, runtime):
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
     toolchain = client.load("conan_toolchain.cmake")
-    if len(version) == 5:  # Fullversion
+    if "X" not in version:  # Fullversion
         minor = version.split(".")[1]
         value = "version=14.{}".format(minor)
     else:
