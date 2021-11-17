@@ -349,19 +349,6 @@ def test_install_error_never(client):
     assert "ERROR: --build=never not compatible with other options" in client.out
 
 
-def test_install_basic():
-    client = TestClient(default_server_user=True)
-    client.run("new hello/1.0 -m=cmake_lib")
-    client.run("create .")
-    client.run('upload "*" -r default -c --all')
-    client.run("remove '*' -f")
-    client.save({"conanfile.py": GenConanfile("greetings", "1.0").with_require("hello/1.0")})
-    client.run("info conanfile.py")
-    client.run("remove '*' -f")
-    client.run("install conanfile.py")
-    print("----------")
-
-
 class TestCliOverride:
 
     def test_install_cli_override(self, client):
