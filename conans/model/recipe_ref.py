@@ -55,7 +55,6 @@ class Version:
         v = ".".join(str(i) for i in items)
         # prerelease and build are dropped while bumping digits
         result = Version(v)
-        result._items = items
         return result
 
     @property
@@ -107,7 +106,7 @@ class Version:
                (other._nonzero_items, other._pre, other._build)
 
     def __hash__(self):
-        return hash((self._nonzero_items, self._pre, self._build))
+        return hash((tuple(self._nonzero_items), self._pre, self._build))
 
     def __lt__(self, other):
         if other is None:
