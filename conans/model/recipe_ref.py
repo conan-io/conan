@@ -13,9 +13,28 @@ class Version:
     def __init__(self, value):
         assert isinstance(value, str)
         self._value = value
-        self._items = None  # elements of the version
-        self._pre = None
-        self._build = None
+
+        items = value.rsplit("+", 1)  # split for build
+        if len(items) == 2:
+            value, build = items
+            self._build = Version(build)  # This is a nested version by itself
+        else:
+            value = items[0]
+            self._build = None
+
+        items = value.rsplit("-", 1)  # split for pre-release
+        if len(items) == 2:
+            value, pre = items
+            self._pre = Version(pre)  # This is a nested version by itself
+        else:
+            value = items[0]
+            self._pre = None
+        items = value.split(".")
+        items = [int(item) if item.isdigit() else item for item in items]
+        self._items = items
+        self._nonzero_items = items.copy()
+        while self._nonzero_items[-1] == 0:
+            del self._nonzero_items[-1]
 
     def bump(self, index):
         """
@@ -26,8 +45,6 @@ class Version:
         # this method is used to compute version ranges from tilde ~1.2 and caret ^1.2.1 ranges
         # TODO: at this moment it only works for digits, cannot increment pre-release or builds
         # better not make it public yet, keep it internal
-        if self._items is None:  # the indicator parse is needed is empty items
-            self._parse()
         items = self._items.copy()
         try:
             items[index] += 1
@@ -43,20 +60,14 @@ class Version:
 
     @property
     def pre(self):
-        if self._items is None:  # the indicator parse is needed is empty items
-            self._parse()
         return self._pre
 
     @property
     def build(self):
-        if self._items is None:  # the indicator parse is needed is empty items
-            self._parse()
         return self._build
 
     @property
     def main(self):
-        if self._items is None:
-            self._parse()
         return self._items
 
     @property
@@ -87,50 +98,40 @@ class Version:
         return self._value
 
     def __eq__(self, other):
-        if not isinstance(other, Version):
-            return self._value == other  # Assume the other is string like
-        return self._value == other._value
-
-    def __hash__(self):
-        return hash(self._value)
-
-    def __lt__(self, other):
+        if other is None:
+            return False
         if not isinstance(other, Version):
             other = Version(other)
-        if self.pre:
-            if other.pre:  # both are pre-releases
-                return (self.main, self.pre, self.build) < (other.main, other.pre, other.build)
+
+        return (self._nonzero_items, self._pre, self._build) ==\
+               (other._nonzero_items, other._pre, other._build)
+
+    def __hash__(self):
+        return hash((self._nonzero_items, self._pre, self._build))
+
+    def __lt__(self, other):
+        if other is None:
+            return False
+        if not isinstance(other, Version):
+            other = Version(other)
+
+        if self._pre:
+            if other._pre:  # both are pre-releases
+                return (self._nonzero_items, self._pre, self._build) < \
+                       (other._nonzero_items, other._pre, other._build)
             else:  # Left hand is pre-release, right side is regular
-                if self.main == other.main:  # Problem only happens if both are equal
+                if self._nonzero_items == other._nonzero_items:  # Problem only happens if both equal
                     return True
                 else:
-                    return self.main < other.main
+                    return self._nonzero_items < other._nonzero_items
         else:
-            if other.pre:  # Left hand is regular, right side is pre-release
-                if self.main == other.main:  # Problem only happens if both are equal
+            if other._pre:  # Left hand is regular, right side is pre-release
+                if self._nonzero_items == other._nonzero_items:  # Problem only happens if both equal
                     return False
                 else:
-                    return self.main < other.main
+                    return self._nonzero_items < other._nonzero_items
             else:  # None of them is pre-release
-                return (self.main, self.build) < (other.main, other.build)
-
-    def _parse(self):
-        items = self._value.rsplit("+", 1)  # split for build
-        if len(items) == 2:
-            value, build = items
-            self._build = Version(build)  # This is a nested version by itself
-        else:
-            value = items[0]
-
-        items = value.rsplit("-", 1)  # split for pre-release
-        if len(items) == 2:
-            value, pre = items
-            self._pre = Version(pre)  # This is a nested version by itself
-        else:
-            value = items[0]
-        items = value.split(".")
-        items = [int(item) if item.isdigit() else item for item in items]
-        self._items = items
+                return (self._nonzero_items, self._build) < (other._nonzero_items, other._build)
 
 
 @total_ordering
