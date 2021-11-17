@@ -90,9 +90,9 @@ class InstallAPI:
             raise ConanException("Both path and reference arguments were provided. Please provide "
                                  "only one of them")
 
-        if not reference and ".txt" not in path and ".py" not in path:
-            raise ConanException("Please, add the full path to the conanfile with the filename "
-                                 "and extension")
+        if reference and name or version or user or channel:
+            raise ConanException("Can't use --name, --version, --user or --channel arguments with "
+                                 "--reference")
 
         app = ConanApp(self.conan_api.cache_folder)
 

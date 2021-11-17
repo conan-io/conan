@@ -2,8 +2,42 @@ import os
 
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies
-from conans.client.conan_api import ProfileData
+from conans.client.conan_api import ProfileData, _make_abs_path
 from conans.errors import ConanException
+
+
+def _get_conanfile_path(path, cwd, py):
+    """
+    param py= True: Must be .py, False: Must be .txt, None: Try .py, then .txt
+    """
+    candidate_paths = list()
+    path = _make_abs_path(path, cwd)
+
+    if os.path.isdir(path):  # Can be a folder
+        if py:
+            path = os.path.join(path, "conanfile.py")
+            candidate_paths.append(path)
+        elif py is False:
+            path = os.path.join(path, "conanfile.txt")
+            candidate_paths.append(path)
+        else:
+            path_py = os.path.join(path, "conanfile.py")
+            candidate_paths.append(path_py)
+            if os.path.exists(path_py):
+                path = path_py
+            else:
+                path = os.path.join(path, "conanfile.txt")
+                candidate_paths.append(path)
+    else:
+        candidate_paths.append(path)
+
+    if not os.path.isfile(path):  # Must exist
+        raise ConanException("Conanfile not found at %s" % " or ".join(candidate_paths))
+
+    if py and not path.endswith(".py"):
+        raise ConanException("A conanfile.py is needed, " + path + " is not acceptable")
+
+    return path
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
@@ -21,8 +55,9 @@ def install(conan_api, parser, *args, **kwargs):
     the package is installed, Conan will write the files for the specified
     generators.
     """
-    parser.add_argument("path", nargs="?", help="Path to a conanfile, including filename, "
-                                                "like 'path/conanfile.py'")
+    parser.add_argument("path", nargs="?", help="Path to a folder containing a recipe (conanfile.py "
+                                                "or conanfile.txt) or to a recipe file. e.g., "
+                                                "./my_project/conanfile.txt.")
 
     parser.add_argument("--name", action=OnceArgument,
                         help='Provide a package name if not specified in conanfile')
@@ -63,9 +98,11 @@ def install(conan_api, parser, *args, **kwargs):
 
     cwd = os.getcwd()
 
+    path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
+
     info = None
     try:
-        info = conan_api.install.install(path=os.path.join(cwd, args.path),
+        info = conan_api.install.install(path=path,
                                          name=args.name, version=args.version,
                                          user=args.user, channel=args.channel,
                                          reference=args.reference,

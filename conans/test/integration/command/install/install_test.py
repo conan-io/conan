@@ -27,8 +27,8 @@ def test_install_reference_txt(client):
 
 def test_install_reference_error(client):
     # Test to check the "conan install <path> <reference>" command argument
-    client.run("install Pkg/0.1@myuser/testing user/testing", assert_error=True)
-    assert "ERROR: A full reference was provided as first argument" in client.out
+    client.run("install --reference=Pkg/0.1@myuser/testing --user=user --channel=testing", assert_error=True)
+    assert "ERROR: Can't use --name, --version, --user or --channel arguments with --reference" in client.out
 
 
 def test_four_subfolder_install(client):
@@ -48,11 +48,11 @@ def test_install_system_requirements(client):
     client.run(" install .")
     assert "Running system requirements!!" in client.out
     client.run("export . Pkg/0.1@lasote/testing")
-    client.run(" install Pkg/0.1@lasote/testing --build")
+    client.run(" install --reference=Pkg/0.1@lasote/testing --build")
     assert "Running system requirements!!" in client.out
     client.run("upload * --all --confirm -r default")
     client.run('remove "*" -f')
-    client.run(" install Pkg/0.1@lasote/testing")
+    client.run(" install --reference=Pkg/0.1@lasote/testing")
     assert "Running system requirements!!" in client.out
 
 
