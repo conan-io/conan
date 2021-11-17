@@ -1,7 +1,6 @@
 import os
 from os.path import join, normpath, relpath
 
-from conans import DEFAULT_REVISION_V1
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -161,28 +160,6 @@ class ServerStore(object):
             path = join(subpath, filepath)
             self._storage_adapter.delete_file(path)
 
-    # ONLY APIv1 URLS
-    # ############ DOWNLOAD URLS
-    def get_download_conanfile_urls(self, ref, files_subset=None, user=None):
-        """Returns a {filepath: url} """
-        assert isinstance(ref, RecipeReference)
-        return self._get_download_urls(self.export(ref), files_subset, user)
-
-    def get_download_package_urls(self, pref, files_subset=None, user=None):
-        """Returns a {filepath: url} """
-        assert isinstance(pref, PkgReference)
-        return self._get_download_urls(self.package(pref), files_subset, user)
-
-    # ############ UPLOAD URLS
-    def get_upload_conanfile_urls(self, ref, filesizes, user):
-        """
-        :param ref: RecipeReference
-        :param filesizes: {filepath: bytes}
-        :return {filepath: url} """
-        assert isinstance(ref, RecipeReference)
-        assert isinstance(filesizes, dict)
-        return self._get_upload_urls(self.export(ref), filesizes, user)
-
     def get_upload_package_urls(self, pref, filesizes, user):
         """
         :param pref: PkgReference
@@ -296,16 +273,7 @@ class ServerStore(object):
     def _get_latest_revision(self, rev_file_path):
         rev_list = self._get_revisions_list(rev_file_path)
         if not rev_list:
-            # FIXING BREAK MIGRATION NOT CREATING INDEXES
-            # BOTH FOR RREV AND PREV THE FILE SHOULD BE CREATED WITH "0" REVISION
-            if self.path_exists(os.path.join(os.path.dirname(rev_file_path), DEFAULT_REVISION_V1)):
-                rev_list = RevisionList()
-                rev_list.add_revision(DEFAULT_REVISION_V1)
-                self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
-                                                 lock_file=rev_file_path + ".lock")
-                return rev_list.latest_revision()
-            else:
-                return None
+            return None
         return rev_list.latest_revision()
 
     def _recipe_revisions_file(self, ref):

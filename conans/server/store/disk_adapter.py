@@ -2,9 +2,9 @@ import os
 
 import fasteners
 
-from conans.util.env import no_op
 from conans.errors import NotFoundException
-from conans.util.files import decode_text, md5sum, path_exists, relative_dirs, rmdir
+from conans.util.env import no_op
+from conans.util.files import md5sum, path_exists, relative_dirs, rmdir
 
 
 class ServerDiskAdapter(object):
@@ -18,43 +18,6 @@ class ServerDiskAdapter(object):
         # URLs are generated removing this base path
         self.updown_auth_manager = updown_auth_manager
         self._store_folder = base_storage_path
-
-    # ONLY USED BY APIV1
-    def get_download_urls(self, paths, user=None):
-        """Get the urls for download the specified files using s3 signed request.
-        returns a dict with this structure: {"filepath": "http://..."}
-
-        paths is a list of path files """
-
-        assert isinstance(paths, list)
-        ret = {}
-        for filepath in paths:
-            url_path = os.path.relpath(filepath, self._store_folder)
-            url_path = url_path.replace("\\", "/")
-            # FALTA SIZE DEL FICHERO PARA EL UPLOAD URL!
-            signature = self.updown_auth_manager.get_token_for(url_path, user)
-            url = "%s/%s?signature=%s" % (self.base_url, url_path, decode_text(signature))
-            ret[filepath] = url
-
-        return ret
-
-    # ONLY USED BY APIV1
-    def get_upload_urls(self, paths_sizes, user=None):
-        """Get the urls for upload the specified files using s3 signed request.
-        returns a dict with this structure: {"filepath": "http://..."}
-
-        paths_sizes is a dict of {path: size_in_bytes} """
-        assert isinstance(paths_sizes, dict)
-        ret = {}
-        for filepath, filesize in paths_sizes.items():
-            url_path = os.path.relpath(filepath, self._store_folder)
-            url_path = url_path.replace("\\", "/")
-            # FALTA SIZE DEL FICHERO PARA EL UPLOAD URL!
-            signature = self.updown_auth_manager.get_token_for(url_path, user, filesize)
-            url = "%s/%s?signature=%s" % (self.base_url, url_path, decode_text(signature))
-            ret[filepath] = url
-
-        return ret
 
     def _get_paths(self, absolute_path, files_subset):
         if not path_exists(absolute_path, self._store_folder):

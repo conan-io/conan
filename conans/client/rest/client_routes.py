@@ -74,14 +74,6 @@ class ClientCommonRouter(object):
         return self.base_url + self.routes.common_check_credentials
 
 
-class ClientV1Router(ClientCommonRouter):
-    """Builds urls for v1"""
-
-    def __init__(self, base_url, artifact_properties, matrix_params):
-        base_url = "{}/v1/".format(base_url)
-        super(ClientV1Router, self).__init__(base_url, artifact_properties, matrix_params)
-
-
 class ClientV2Router(ClientCommonRouter):
     """Builds urls for v2"""
 

@@ -69,7 +69,6 @@ class TestServerLauncher(object):
                               authorizer, authenticator, self.server_store,
                               server_capabilities)
         for plugin in plugins:
-            self.ra.api_v1.install(plugin)
             self.ra.api_v2.install(plugin)
 
     def start(self, daemon=True):

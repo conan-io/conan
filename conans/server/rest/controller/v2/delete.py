@@ -1,7 +1,7 @@
 from conans.model.recipe_ref import RecipeReference
 from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.rest.controller.v2 import get_package_ref
-from conans.server.service.v1.service import ConanService
+from conans.server.service.v2.service_v2 import ConanServiceV2
 
 
 class DeleteControllerV2(object):
@@ -21,8 +21,8 @@ class DeleteControllerV2(object):
             is passed
             """
             ref = RecipeReference(name, version, username, channel, revision)
-            conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            conan_service.remove_recipe(ref)
+            conan_service = ConanServiceV2(app.authorizer, app.server_store)
+            conan_service.remove_recipe(ref, auth_user)
 
         @app.route(r.package_recipe_revision, method=["DELETE"])
         @app.route(r.package_revision, method=["DELETE"])
@@ -35,12 +35,12 @@ class DeleteControllerV2(object):
              """
             pref = get_package_ref(name, version, username, channel, package_id,
                                    revision, p_revision)
-            conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            conan_service.remove_package(pref)
+            conan_service = ConanServiceV2(app.authorizer, app.server_store)
+            conan_service.remove_package(pref, auth_user)
 
         @app.route(r.packages_revision, method="DELETE")
         def remove_all_packages(name, version, username, channel, auth_user, revision=None):
             """ Remove all packages from a RREV"""
             ref = RecipeReference(name, version, username, channel, revision)
-            conan_service = ConanService(app.authorizer, app.server_store, auth_user)
-            conan_service.remove_all_packages(ref)
+            conan_service = ConanServiceV2(app.authorizer, app.server_store)
+            conan_service.remove_all_packages(ref, auth_user)
