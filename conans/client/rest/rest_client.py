@@ -2,7 +2,6 @@ from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN, MATRIX_PARAMS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import AuthenticationException, ConanException
-from conans.search.search import filter_packages
 from conans.util.log import logger
 
 

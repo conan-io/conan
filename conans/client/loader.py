@@ -23,7 +23,8 @@ from conans.util.files import load
 
 class ConanFileLoader(object):
 
-    def __init__(self, runner,  pyreq_loader=None, requester=None):
+    def __init__(self, remotes_registry, runner,  pyreq_loader=None, requester=None):
+        self._remotes_registry = remotes_registry
         self._runner = runner
 
         self._pyreq_loader = pyreq_loader
@@ -165,8 +166,7 @@ class ConanFileLoader(object):
         conanfile.output.scope = conanfile.display_name
         return conanfile
 
-    @staticmethod
-    def _initialize_conanfile(conanfile, profile):
+    def _initialize_conanfile(self, conanfile, profile):
         # Prepare the settings for the loaded conanfile
         # Mixing the global settings with the specified for that name if exist
         tmp_settings = profile.processed_settings.copy()
@@ -199,6 +199,9 @@ class ConanFileLoader(object):
         conanfile.initialize(tmp_settings, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
+        # Initialize the generic remotes
+        conanfile.generic_remotes = [r for r in self._remotes_registry.list() if r.generic]
+
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
                       channel=None, graph_lock=None, require_overrides=None):
         """ loads a conanfile.py in user space. Might have name/version or not
@@ -215,7 +218,7 @@ class ConanFileLoader(object):
         conanfile.in_local_cache = False
         try:
             conanfile.develop = True
-            self._initialize_conanfile(conanfile, profile_host)
+            self._initialize_conanfile(self, conanfile, profile_host)
 
             if require_overrides is not None:
                 for req_override in require_overrides:

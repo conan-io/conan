@@ -13,7 +13,8 @@ from conans.errors import ConanException
 
 
 def output_remote_list_json(remotes):
-    info = [{"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl, "enabled": not r.disabled}
+    info = [{"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl, "enabled": not r.disabled,
+             "type": "generic" if r.generic else "conan"}
             for r in remotes]
     myjson = json.dumps(info, indent=4)
     cli_out_write(myjson)
@@ -74,10 +75,14 @@ def remote_add(conan_api, parser, subparser, *args):
                            help="Allow insecure server connections when using SSL")
     subparser.add_argument("--index", action=OnceArgument, type=int,
                            help="Insert the remote at a specific position in the remote list")
+    subparser.add_argument("--generic", action='store_true',
+                           help="Add a generic repository used to store generic credentials to be "
+                                "used in recipes on download(), get() etc.")
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
     index = _check_index_argument(args.index)
-    r = Remote(args.name, args.url, args.secure, disabled=False)
+    generic = args.generic
+    r = Remote(args.name, args.url, args.secure, disabled=False, generic=generic)
     conan_api.remotes.add(r)
     if index is not None:
         conan_api.remotes.move(r, index)

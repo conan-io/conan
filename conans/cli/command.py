@@ -183,9 +183,10 @@ def get_remote_selection(conan_api, remote_patterns):
     """
     ret_remotes = []
     for pattern in remote_patterns:
-        tmp = conan_api.remotes.list(pattern=pattern, only_active=True)
+        tmp = conan_api.remotes.list(pattern=pattern)
+        tmp = [r for r in tmp if not r.disabled and not r.generic]
         if not tmp:
-            raise ConanException("Remotes for pattern '{}' can't be found or are "
+            raise ConanException("Remotes for pattern '{}' can't be found, are generic, or are "
                                  "disabled".format(pattern))
         ret_remotes.extend(tmp)
     return ret_remotes

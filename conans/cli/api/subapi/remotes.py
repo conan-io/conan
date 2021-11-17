@@ -13,7 +13,7 @@ class RemotesAPI:
         self.conan_api = conan_api
 
     @api_method
-    def list(self, pattern=None, only_active=False):
+    def list(self, pattern=None):
         app = ConanApp(self.conan_api.cache_folder)
         remotes = app.cache.remotes_registry.list()
         if pattern:
@@ -26,8 +26,6 @@ class RemotesAPI:
                 raise ConanException(f"Remote '{pattern}' not found in remotes")
 
             remotes = filtered_remotes
-        if only_active:
-            remotes = [r for r in remotes if not r.disabled]
         return remotes
 
     @api_method
@@ -64,20 +62,48 @@ class RemotesAPI:
     @api_method
     def user_info(self, remote: Remote):
         app = ConanApp(self.conan_api.cache_folder)
+        # FIXME: The return of this should be a model, not a dict
+        # FIXME: This is weird, probably the storage of users should all be in the json
+        # FIXME: If the password/token is kept in the model, this method is USELESS, just read
+        #        the remote and check if credentials and instead of the custom dict, just remote
+        #        objects can be returned
+        if remote.generic:
+            return {"name": remote.name,
+                    "authenticated": (remote.password is not None and remote.username is not None),
+                    "user_name": remote.username
+                    }
         return users_list(app.cache.localdb, remotes=[remote])[0]
 
     @api_method
     def login(self, remote: Remote, username, password):
         app = ConanApp(self.conan_api.cache_folder)
-        app.remote_manager.authenticate(remote, username, password)
+        # FIXME: This is weird, probably the storage of users should all be in the json
+        if remote.generic:
+            remote.username = username
+            remote.password = password
+            app.cache.remotes_registry.update(remote)
+        else:
+            app.remote_manager.authenticate(remote, username, password)
 
     @api_method
     def logout(self, remote: Remote):
         app = ConanApp(self.conan_api.cache_folder)
-        # The localdb only stores url + username + token, not remote name, so use URL as key
-        users_clean(app.cache.localdb, remote.url)
+        # FIXME: This is weird, probably the storage of users should all be in the json
+        if remote.generic:
+            remote.username = None
+            remote.password = None
+            app.cache.remotes_registry.update(remote)
+        else:
+            # The localdb only stores url + username + token, not remote name, so use URL as key
+            users_clean(app.cache.localdb, remote.url)
 
     @api_method
     def user_set(self, remote: Remote, username):
         app = ConanApp(self.conan_api.cache_folder)
+        # FIXME: This is weird, probably the storage of users should all be in the json
+        if remote.generic:
+            old_username = remote.username
+            remote.username = username
+            app.cache.remotes_registry.update(remote)
+            return remote.name, old_username, remote.username
         return user_set(app.cache.localdb, username, remote)

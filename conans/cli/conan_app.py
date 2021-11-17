@@ -52,7 +52,8 @@ class ConanApp(object):
         self.range_resolver = RangeResolver(self)
 
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.pyreq_loader, self.requester)
+        self.loader = ConanFileLoader(self.cache.remotes_registry, self.runner, self.pyreq_loader,
+                                      self.requester)
         self.binaries_analyzer = GraphBinariesAnalyzer(self)
         self.graph_manager = GraphManager(self)
 

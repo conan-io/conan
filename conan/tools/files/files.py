@@ -97,7 +97,7 @@ def ftp_download(conanfile, ip, filename, login='', password=''):
 
 
 def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
-             auth=None, headers=None, md5='', sha1='', sha256=''):
+             auth=None, headers=None, md5='', sha1='', sha256='', remote=None):
     """Retrieves a file from a given URL into a file with a given filename.
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.
@@ -116,8 +116,13 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     :param md5: MD5 hash code to check the downloaded file
     :param sha1: SHA-1 hash code to check the downloaded file
     :param sha256: SHA-256 hash code to check the downloaded file
+    :param remote: Name of a generic remote configured. If specified, the url should be relative
+                   to the configured remote URL, e.g: "/files/foo.txt".
     :return: None
     """
+    if auth and remote:
+        raise ConanException("The 'auth' parameter cannot be used together if 'remote'")
+
     # TODO: Add all parameters to the new conf
     requester = conanfile._conan_requester
     config = conanfile.conf
@@ -135,6 +140,22 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
+        auth = None
+        if remote:
+            #  A generic repository name has been provided, read the remote, complete the URL
+            #  and use the credentials if present
+            generic_remotes = [r for r in conanfile.generic_remotes
+                               if r.name == remote and not r.disabled]
+            if generic_remotes:
+                _r = generic_remotes[0]
+                file_url = _r.url + file_url
+                if _r.username and _r.password:
+                    auth = (_r.username, _r.password)
+            else:
+                raise ConanException("The specified remote '{}' doesn't exist or it "
+                                     "is disabled".format(remote))
+            pass
+
         run_downloader(requester=requester, verify=verify, download_cache=download_cache,
                        user_download=True, url=file_url, overwrite=overwrite,
                        file_path=filename, retry=retry, retry_wait=retry_wait,

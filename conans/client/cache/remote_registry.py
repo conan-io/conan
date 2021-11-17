@@ -157,7 +157,11 @@ class RemoteRegistry(object):
         data = json.loads(content)
         for r in data.get("remotes", []):
             disabled = r.get("disabled", False)
-            remote = Remote(r["name"], r["url"], r["verify_ssl"], disabled)
+            generic = r.get("generic", False)
+            username = r.get("username", None)
+            password = r.get("password", None)
+            remote = Remote(r["name"], r["url"], r["verify_ssl"], disabled,
+                            generic, username, password)
             result._remotes.append(remote)
         return result
 
@@ -165,7 +169,10 @@ class RemoteRegistry(object):
     def _dumps_json(remotes):
         ret = {"remotes": []}
         for r in remotes.items():
-            remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl}
+            remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl, "generic": r.generic}
+            if r.generic:
+                remote["username"] = r.username
+                remote["password"] = r.password
             if r.disabled:
                 remote["disabled"] = True
             ret["remotes"].append(remote)
