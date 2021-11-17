@@ -4,6 +4,7 @@ from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgu
 from conans.cli.common import _add_common_install_arguments, _help_build_policies
 from conans.client.conan_api import ProfileData, _make_abs_path
 from conans.errors import ConanException
+from conans.model.recipe_ref import RecipeReference
 
 
 def _get_conanfile_path(path, cwd, py):
@@ -99,13 +100,17 @@ def install(conan_api, parser, *args, **kwargs):
     cwd = os.getcwd()
 
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
+    reference = RecipeReference.loads(args.reference) if args.reference else None
+
+    if not path and not reference:
+        raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
     info = None
     try:
         info = conan_api.install.install(path=path,
                                          name=args.name, version=args.version,
                                          user=args.user, channel=args.channel,
-                                         reference=args.reference,
+                                         reference=reference,
                                          profile_host=profile_host,
                                          profile_build=profile_build,
                                          remote_name=args.remote,
