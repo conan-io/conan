@@ -4,8 +4,6 @@ from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgu
 from conans.cli.common import _add_common_install_arguments, _help_build_policies
 from conans.client.conan_api import ProfileData
 from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import check_valid_ref, get_reference_fields
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
@@ -25,6 +23,15 @@ def install(conan_api, parser, *args, **kwargs):
     """
     parser.add_argument("path", nargs="?", help="Path to a conanfile, including filename, "
                                                 "like 'path/conanfile.py'")
+
+    parser.add_argument("--name", action=OnceArgument,
+                        help='Provide a package name if not specified in conanfile')
+    parser.add_argument("--version", action=OnceArgument,
+                        help='Provide a package version if not specified in conanfile')
+    parser.add_argument("--user", action=OnceArgument,
+                        help='Provide a user')
+    parser.add_argument("--channel", action=OnceArgument,
+                        help='Provide a channel')
 
     parser.add_argument("--reference", action=OnceArgument,
                         help='Provide a package reference instead of a conanfile')
@@ -59,6 +66,8 @@ def install(conan_api, parser, *args, **kwargs):
     info = None
     try:
         info = conan_api.install.install(path=os.path.join(cwd, args.path),
+                                         name=args.name, version=args.version,
+                                         user=args.user, channel=args.channel,
                                          reference=args.reference,
                                          profile_host=profile_host,
                                          profile_build=profile_build,

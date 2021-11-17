@@ -81,7 +81,7 @@ class InstallAPI:
         return deps_graph
 
     @api_method
-    def install(self, path="", reference="",
+    def install(self, path="", reference="", name=None, version=None, user=None, channel=None,
                 profile_host=None, profile_build=None, remote_name=None, build=None, update=False,
                 generators=None, no_imports=False, install_folder=None, lockfile=None,
                 lockfile_out=None, is_build_require=None, require_overrides=None):
@@ -102,6 +102,10 @@ class InstallAPI:
             profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
                                                                                profile_build, cwd,
                                                                                app.cache,
+                                                                               name=name,
+                                                                               version=version,
+                                                                               user=user,
+                                                                               channel=channel,
                                                                                lockfile=lockfile)
 
             # Make lockfile strict for consuming and install
