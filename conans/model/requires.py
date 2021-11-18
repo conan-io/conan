@@ -71,6 +71,12 @@ class Requirement:
             self.run = False
             self.libs = False
             self.headers = True
+        elif pkg_type is PackageType.BUILD_SCRIPTS:
+            self.run = False
+            self.libs = False
+            self.headers = False
+            self.build = True
+            self.visible = False  # Conflicts might be allowed for this kind of package
 
     def __hash__(self):
         return hash((self.ref.name, self.build))
