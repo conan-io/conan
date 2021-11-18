@@ -9,7 +9,6 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO, CONAN_MANIFEST
-from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.service.authorize import BasicAuthorizer
 from conans.server.service.v2.search import SearchService
 from conans.server.service.v2.service_v2 import ConanServiceV2
@@ -43,8 +42,7 @@ class ConanServiceTest(unittest.TestCase):
         authorizer = BasicAuthorizer(read_perms, write_perms)
 
         self.fake_url = "http://url"
-        updown_auth_manager = JWTUpDownAuthManager("secret", timedelta(seconds=200))
-        adapter = ServerDiskAdapter(self.fake_url, self.tmp_dir, updown_auth_manager)
+        adapter = ServerDiskAdapter(self.fake_url, self.tmp_dir)
         self.server_store = ServerStore(storage_adapter=adapter)
         self.service = ConanServiceV2(authorizer, self.server_store)
         self.search_service = SearchService(authorizer, self.server_store, "lasote")
