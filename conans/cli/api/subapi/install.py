@@ -22,11 +22,11 @@ class InstallAPI:
         self.conan_api = conan_api
 
     @api_method
-    def install_binaries(self, ref_or_path, deps_graph, install_folder, base_folder,
+    def install_binaries(self, deps_graph, install_folder,
                          build_modes=None, generators=None, no_imports=False, create_reference=None,
-                         test=None, remote_name=None, update=False):
+                         remote_name=None, update=False):
         """ Install binaries for dependency graph
-        @param app: The ConanApp instance with all collaborators
+        @param deps_graph: Dependency graphs
         """
         app = ConanApp(self.conan_api.cache_folder)
         # FIXME: remote_name should be remote
@@ -36,8 +36,12 @@ class InstallAPI:
 
         root_node = deps_graph.root
         conanfile = root_node.conanfile
+
+        # TODO: maybe we want a way to get this directly from the DepsGraph?
+        reference = deps_graph.nodes[1] if root_node.recipe == RECIPE_VIRTUAL else None
+
         if root_node.recipe == RECIPE_VIRTUAL:
-            out.highlight("Installing package: %s" % str(ref_or_path))
+            out.highlight("Installing package: %s" % str(reference))
         else:
             conanfile.output.highlight("Installing package")
         print_graph(deps_graph)
@@ -46,17 +50,6 @@ class InstallAPI:
         # TODO: Extract this from the GraphManager, reuse same object, check args earlier
         build_modes = BuildMode(build_modes)
         installer.install(deps_graph, build_modes)
-
-        conanfile_path = os.path.dirname(ref_or_path) if not isinstance(ref_or_path,
-                                                                        RecipeReference) else None
-        if hasattr(conanfile, "layout") and not test:
-            conanfile.folders.set_base_install(conanfile_path)
-            conanfile.folders.set_base_imports(conanfile_path)
-            conanfile.folders.set_base_generators(conanfile_path)
-        else:
-            conanfile.folders.set_base_install(install_folder)
-            conanfile.folders.set_base_imports(install_folder)
-            conanfile.folders.set_base_generators(base_folder)
 
         if install_folder:
             # Write generators
@@ -71,7 +64,7 @@ class InstallAPI:
             if type(conanfile).system_requirements != ConanFile.system_requirements:
                 call_system_requirements(conanfile)
 
-            if not create_reference and isinstance(ref_or_path, RecipeReference):
+            if not create_reference and reference:
                 # The conanfile loaded is a virtual one. The one w deploy is the first level one
                 neighbours = deps_graph.root.neighbors()
                 deploy_conanfile = neighbours[0].conanfile
@@ -90,7 +83,7 @@ class InstallAPI:
             raise ConanException("Both path and reference arguments were provided. Please provide "
                                  "only one of them")
 
-        if reference and name or version or user or channel:
+        if reference and (name or version or user or channel):
             raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                                  "--reference")
 
@@ -114,20 +107,22 @@ class InstallAPI:
 
             install_folder = _make_abs_path(install_folder, cwd)
 
-            ref_or_path = reference or path
-
-            deps_graph = self.conan_api.graph.load_graph(ref_or_path=ref_or_path,
+            # TODO: load_graph + install_binaries should replace deps_install
+            deps_graph = self.conan_api.graph.load_graph(reference=reference,
+                                                         path=path,
                                                          profile_host=profile_host,
                                                          profile_build=profile_build,
                                                          graph_lock=graph_lock,
-                                                         root_ref=root_ref, build_modes=build,
+                                                         root_ref=root_ref,
+                                                         install_folder=install_folder,
+                                                         base_folder=cwd,
+                                                         build_modes=build,
                                                          is_build_require=is_build_require,
                                                          require_overrides=require_overrides,
                                                          remote_name=remote_name, update=update)
 
-            self.install_binaries(ref_or_path=ref_or_path, deps_graph=deps_graph,
-                                  install_folder=install_folder, base_folder=cwd, build_modes=build,
-                                  generators=generators, no_imports=no_imports,
+            self.install_binaries(deps_graph=deps_graph, install_folder=install_folder,
+                                  build_modes=build, generators=generators, no_imports=no_imports,
                                   remote_name=remote_name, update=update)
 
             if lockfile_out:

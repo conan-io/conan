@@ -11,7 +11,9 @@ from conans.model.conan_file import ConanFile
 from conans.model.recipe_ref import RecipeReference
 
 
-# TODO: this is duplicated in the new API until all commands that use this function are migrated
+# FIXME: this is duplicated in the new API until all commands that use this function are migrated
+#  this should be replaced by a call to APIV2.graph.load_graph + APIV2.install.install_binaries
+
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, build_modes=None, generators=None,
                  no_imports=False, create_reference=None,
