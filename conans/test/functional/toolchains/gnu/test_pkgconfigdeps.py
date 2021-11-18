@@ -262,7 +262,31 @@ def test_custom_content_components():
     assert "componentdir=${prefix}/mydir" in pc_content
 
 
-def test_pkg_with_component_requires():
+def test_pkg_with_public_deps_and_component_requires():
+    """
+    Testing a complex structure like:
+
+    * first/0.1
+        - Global pkg_config_name == "pkg_alias"
+        - Components: "cmp1"
+    * other/0.1
+    * second/0.1
+        - Requires: "first/0.1"
+        - Components: "mycomponent", "myfirstcomp"
+            + "mycomponent" requires "first::cmp1"
+            + "myfirstcomp" requires "mycomponent"
+    * third/0.1
+        - Requires: "second/0.1", "other/0.1"
+
+    Expected file structure after running PkgConfigDeps as generator:
+        - other.pc
+        - pkg_alias-cmp1.pc
+        - pkg_alias.pc
+        - second-mycomponent.pc
+        - second-myfirstcomp.pc
+        - second.pc
+        - third.pc
+    """
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -270,6 +294,7 @@ def test_pkg_with_component_requires():
         class Recipe(ConanFile):
 
             def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "pkg_alias")
                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
     """)
     client.save({"conanfile.py": conanfile})
@@ -306,24 +331,41 @@ def test_pkg_with_component_requires():
         """)
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
+
     pc_content = client2.load("third.pc")
     # Originally posted: https://github.com/conan-io/conan/issues/9939
     assert "Requires: second other" == get_requires_from_content(pc_content)
     pc_content = client2.load("second.pc")
     assert "Requires: second-mycomponent second-myfirstcomp" == get_requires_from_content(pc_content)
     pc_content = client2.load("second-mycomponent.pc")
-    # Note: the first-first.pc does not exist because first/0.1 is not defining any component but
-    # we're testing the "Requires" field is well defined and not the "first" recipe.
-    assert "Requires: first-cmp1" == get_requires_from_content(pc_content)
+    assert "Requires: pkg_alias-cmp1" == get_requires_from_content(pc_content)
     pc_content = client2.load("second-myfirstcomp.pc")
     assert "Requires: second-mycomponent" == get_requires_from_content(pc_content)
-    pc_content = client2.load("first.pc")
-    assert "Requires: first-cmp1" == get_requires_from_content(pc_content)
+    pc_content = client2.load("pkg_alias.pc")
+    assert "Requires: pkg_alias-cmp1" == get_requires_from_content(pc_content)
     pc_content = client2.load("other.pc")
     assert "" == get_requires_from_content(pc_content)
 
 
-def test_pkg_getting_public_requires():
+def test_pkg_with_public_deps_and_component_requires_2():
+    """
+    Testing another complex structure like:
+
+    * other/0.1
+        - Components: "cmp1", "cmp2", "cmp3"
+            + "cmp1" pkg_config_name == "component1"
+            + "cmp3" pkg_config_name == "component3"
+            + "cmp3" requires "cmp1"
+    * pkg/0.1
+        - Requires: "other/0.1" -> "other::cmp1"
+
+    Expected file structure after running PkgConfigDeps as generator:
+        - component1.pc
+        - component3.pc
+        - other-cmp2.pc
+        - other.pc
+        - pkg.pc
+    """
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -332,9 +374,10 @@ def test_pkg_getting_public_requires():
 
             def package_info(self):
                 self.cpp_info.components["cmp1"].libs = ["other_cmp1"]
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "component1")
                 self.cpp_info.components["cmp2"].libs = ["other_cmp2"]
                 self.cpp_info.components["cmp3"].requires.append("cmp1")
-
+                self.cpp_info.components["cmp3"].set_property("pkg_config_name", "component3")
     """)
     client.save({"conanfile.py": conanfile})
     client.run("create . other/1.0@")
@@ -362,10 +405,10 @@ def test_pkg_getting_public_requires():
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
     pc_content = client2.load("pkg.pc")
-    assert "Requires: other-cmp1" == get_requires_from_content(pc_content)
+    assert "Requires: component1" == get_requires_from_content(pc_content)
     pc_content = client2.load("other.pc")
-    assert "Requires: other-cmp1 other-cmp2 other-cmp3" == get_requires_from_content(pc_content)
-    assert client2.load("other-cmp1.pc")
+    assert "Requires: component1 other-cmp2 component3" == get_requires_from_content(pc_content)
+    assert client2.load("component1.pc")
     assert client2.load("other-cmp2.pc")
-    pc_content = client2.load("other-cmp3.pc")
-    assert "Requires: other-cmp1" == get_requires_from_content(pc_content)
+    pc_content = client2.load("component3.pc")
+    assert "Requires: component1" == get_requires_from_content(pc_content)

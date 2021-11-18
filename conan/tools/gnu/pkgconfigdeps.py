@@ -78,6 +78,8 @@ class PkgConfigDeps(object):
             req_conanfile = self._conanfile.dependencies.host[pkg_name]
             comp_alias_name = get_component_alias(req_conanfile, comp_name)
             if not comp_alias_name:
+                # Just in case, let's be sure about the pkg has any alias
+                pkg_name = get_package_alias(req_conanfile) or pkg_name
                 comp_alias_name = self._get_pc_name(pkg_name, comp_name)
             ret.append(comp_alias_name)
         return ret
