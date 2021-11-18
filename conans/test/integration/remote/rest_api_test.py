@@ -10,7 +10,6 @@ from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
-from conans.client.rest.rest_client_v1 import complete_url
 from conans.model.conf import ConfDefinition
 from conans.util.env import environment_update
 from conans.client.userio import UserInput
@@ -25,34 +24,6 @@ from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import get_free_port
 from conans.util.files import md5, save
-
-
-class RestApiUnitTest(unittest.TestCase):
-
-    def test_relative_url_completion(self):
-
-        # test absolute urls
-        self.assertEqual(complete_url("http://host2", "http://host"), "http://host")
-        self.assertEqual(complete_url("http://host2", "http://host:1234"), "http://host:1234")
-        self.assertEqual(complete_url("http://host2", "https://host"), "https://host")
-        self.assertEqual(complete_url("http://host2", "https://host:1234"), "https://host:1234")
-
-        # test relative urls
-        self.assertEqual(complete_url("http://host", "v1/path_to_file.txt"),
-                         "http://host/v1/path_to_file.txt")
-
-        self.assertEqual(complete_url("http://host:1234", "v1/path_to_file.txt"),
-                         "http://host:1234/v1/path_to_file.txt")
-
-        self.assertEqual(complete_url("https://host", "v1/path_to_file.txt"),
-                         "https://host/v1/path_to_file.txt")
-
-        self.assertEqual(complete_url("https://host:1234", "v1/path_to_file.txt"),
-                         "https://host:1234/v1/path_to_file.txt")
-
-        # test relative urls with subdirectory
-        self.assertEqual(complete_url("https://host:1234/subdir/", "v1/path_to_file.txt"),
-                         "https://host:1234/subdir/v1/path_to_file.txt")
 
 
 @pytest.mark.slow

@@ -136,7 +136,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
         run_downloader(requester=requester, verify=verify, download_cache=download_cache,
-                       user_download=True, url=file_url, overwrite=overwrite,
+                       url=file_url, overwrite=overwrite,
                        file_path=filename, retry=retry, retry_wait=retry_wait,
                        auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")

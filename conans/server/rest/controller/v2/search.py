@@ -2,7 +2,7 @@ from bottle import request
 
 from conans.model.recipe_ref import RecipeReference
 from conans.server.rest.bottle_routes import BottleRoutes
-from conans.server.service.common.search import SearchService
+from conans.server.service.v2.search import SearchService
 
 
 class SearchControllerV2(object):
