@@ -63,7 +63,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     build_modes = BuildMode(build_modes)
     installer.install(deps_graph, build_modes)
 
-    conanfile_path = os.path.dirname(ref_or_path) if not isinstance(ref_or_path, RecipeReference) else None
     if hasattr(conanfile, "layout") and not test:
         conanfile.folders.set_base_install(conanfile_path)
         conanfile.folders.set_base_imports(conanfile_path)
