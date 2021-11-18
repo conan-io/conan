@@ -4,7 +4,6 @@ from conans.model.recipe_ref import Version
 
 v = [("1", "2"),
      ("1.0", "1.1"),
-     ("1.1", "1.1.0"),  # generic 1.1 is earlier than 1.1.0
      ("1.0.2", "1.1.0"),
      ("1.3", "1.22"),
      ("1.1.3", "1.1.22"),
@@ -20,6 +19,8 @@ v = [("1", "2"),
      ("a.b.c", "b.c"),
      # build is easy
      ("1.1+b1", "1.1+b2"),
+     ("1.1", "1.1+b2"),
+     ("1.1+b1", "1.2"),
      ("1.1+b.3", "1.1+b.22"),
      # pre-release is challenging
      ("1.1-pre1", "1.1-pre2"),
@@ -40,3 +41,29 @@ def test_comparison(v1, v2):
     assert v1 != v2
     assert v1 <= v2
     assert v2 >= v1
+
+
+e = [("1", "1.0"),
+     ("1", "1.0.0"),
+     ("1.0", "1.0.0"),
+     ("1.0", "1.0.0.0"),
+     ("1-pre1", "1.0-pre1"),
+     ("1-pre1", "1.0.0-pre1"),
+     ("1.0-pre1", "1.0.0-pre1"),
+     ("1.0-pre1.0", "1.0.0-pre1"),
+     ("1-pre1+b1", "1.0-pre1+b1"),
+     ("1-pre1+b1", "1.0.0-pre1+b1"),
+     ("1.0-pre1+b1", "1.0.0-pre1+b1"),
+     ("1+b1", "1.0+b1"),
+     ("1+b1", "1.0+b1.0"),
+     ("1+b1", "1.0.0+b1"),
+     ("1.0+b1", "1.0.0+b1"),
+     ]
+
+
+@pytest.mark.parametrize("v1, v2", e)
+def test_equality(v1, v2):
+    v1 = Version(v1)
+    v2 = Version(v2)
+    assert v1 == v2
+    assert not v1 != v2
