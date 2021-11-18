@@ -13,20 +13,7 @@ from conans.client.graph.printer import print_graph
 from conans.client.importer import run_imports, run_deploy
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.errors import ConanException
-from conans.model.graph_lock import LOCKFILE, Lockfile
 from conans.model.recipe_ref import RecipeReference
-
-
-def get_graph_info(name=None, version=None, user=None, channel=None, lockfile=None):
-    root_ref = RecipeReference(name, version, user, channel)
-
-    graph_lock = None
-    if lockfile:
-        lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
-        graph_lock = Lockfile.load(lockfile)
-        ConanOutput().info("Using lockfile: '{}'".format(lockfile))
-
-    return graph_lock, root_ref
 
 
 class InstallAPI:
@@ -103,11 +90,9 @@ class InstallAPI:
         cwd = os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
 
-        graph_lock, root_ref = get_graph_info(name=name,
-                                              version=version,
-                                              user=user,
-                                              channel=channel,
-                                              lockfile=lockfile)
+        graph_lock = self.conan_api.graph.get_graph_lock(lockfile=lockfile)
+
+        root_ref = RecipeReference(name, version, user, channel)
 
         # Make lockfile strict for consuming and install
         if graph_lock is not None:

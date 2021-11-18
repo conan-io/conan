@@ -5,6 +5,7 @@ from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
+from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -15,8 +16,9 @@ class GraphAPI:
 
     @api_method
     def load_graph(self, reference, path, profile_host, profile_build, graph_lock, root_ref,
-                   install_folder, base_folder, build_modes=None, create_reference=None, is_build_require=False,
-                   require_overrides=None, remote_name=None, update=False, test=None):
+                   install_folder, base_folder, build_modes=None, create_reference=None,
+                   is_build_require=False, require_overrides=None, remote_name=None, update=False,
+                   test=None):
         """ Calculate graph and fetch needed recipes
         @param ref_or_path: ...
         """
@@ -66,3 +68,13 @@ class GraphAPI:
             graph_lock.update_lock(deps_graph)
 
         return deps_graph
+
+    # should this be an API method?
+    @api_method
+    def get_graph_lock(self, lockfile):
+        graph_lock = None
+        if lockfile:
+            lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
+            graph_lock = Lockfile.load(lockfile)
+            ConanOutput().info("Using lockfile: '{}'".format(lockfile))
+        return graph_lock
