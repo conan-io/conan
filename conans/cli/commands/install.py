@@ -88,14 +88,8 @@ def install(conan_api, parser, *args, **kwargs):
                         help="Define a requirement override")
 
     args = parser.parse_args(*args)
-    env = None  # TODO: Not handling environment
-    profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
-                               options=args.options_host, env=env,
-                               conf=args.conf_host)
 
-    profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                options=args.options_build, env=env,
-                                conf=args.conf_build)
+    profile_host, profile_build = conan_api.profiles.get_profiles(args)
 
     cwd = os.getcwd()
 

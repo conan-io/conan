@@ -26,6 +26,16 @@ class ProfilesAPI:
         loader = ProfileLoader(self._cache)
         return loader.get_default_build()
 
+    def get_profiles(self, args):
+        build = [self.get_default_build()] if not args.profile_build else args.profile_build
+        host = [self.get_default_host()] if not args.profile_host else args.profile_host
+
+        profile_build = self.get_profile(profiles=build, settings=args.settings_build,
+                                         options=args.options_build, conf=args.conf_build)
+        profile_host = self.get_profile(profiles=host, settings=args.settings_host,
+                                        options=args.options_host, conf=args.conf_host)
+        return profile_host, profile_build
+
     def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
         """ Computes a Profile as the result of aggregating all the user arguments, first
         it loads the "profiles", composing them in order (last profile has priority), and finally
@@ -35,6 +45,8 @@ class ProfilesAPI:
         loader = ProfileLoader(self._cache)
         env = None  # TODO: Not handling environment
         profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd)
+        # Apply the new_config to the profiles the global one, so recipes get it too
+        profile.conf.rebase_conf_definition(self._cache.new_config)
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):

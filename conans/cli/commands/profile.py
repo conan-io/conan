@@ -27,19 +27,6 @@ def detected_profile_cli_output(detect_profile):
     cli_out_write(detect_profile.dumps())
 
 
-def get_profiles_from_args(args, conan_api):
-    # TODO: Do we want a ProfilesAPI.get_profiles() to return both profiles from args?
-    profiles = conan_api.profiles
-    build = [profiles.get_default_build()] if not args.profile_build else args.profile_build
-    host = [profiles.get_default_host()] if not args.profile_host else args.profile_host
-
-    profile_build = profiles.get_profile(profiles=build, settings=args.settings_build,
-                                         options=args.options_build, conf=args.conf_build)
-    profile_host = profiles.get_profile(profiles=host, settings=args.settings_host,
-                                        options=args.options_host, conf=args.conf_host)
-    return profile_host, profile_build
-
-
 @conan_subcommand(formatters={"cli": profiles_cli_output})
 def profile_show(conan_api, parser, subparser, *args):
     """
@@ -47,7 +34,7 @@ def profile_show(conan_api, parser, subparser, *args):
     """
     add_profiles_args(subparser)
     args = parser.parse_args(*args)
-    return get_profiles_from_args(args, conan_api)
+    return conan_api.profiles.get_profiles(args, conan_api)
 
 
 @conan_subcommand(formatters={"cli": cli_out_write, "json": json_formatter})

@@ -5,7 +5,7 @@ from conans.cli.api.model import Remote
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
-from conans.client.conan_api import _make_abs_path, get_graph_info
+from conans.client.conan_api import _make_abs_path
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_VIRTUAL
@@ -13,7 +13,20 @@ from conans.client.graph.printer import print_graph
 from conans.client.importer import run_imports, run_deploy
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.errors import ConanException
+from conans.model.graph_lock import LOCKFILE, Lockfile
 from conans.model.recipe_ref import RecipeReference
+
+
+def get_graph_info(name=None, version=None, user=None, channel=None, lockfile=None):
+    root_ref = RecipeReference(name, version, user, channel)
+
+    graph_lock = None
+    if lockfile:
+        lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
+        graph_lock = Lockfile.load(lockfile)
+        ConanOutput().info("Using lockfile: '{}'".format(lockfile))
+
+    return graph_lock, root_ref
 
 
 class InstallAPI:
@@ -87,46 +100,39 @@ class InstallAPI:
             raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                                  "--reference")
 
-        app = ConanApp(self.conan_api.cache_folder)
-
         cwd = os.getcwd()
-        try:
-            lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-            profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
-                                                                               profile_build, cwd,
-                                                                               app.cache,
-                                                                               name=name,
-                                                                               version=version,
-                                                                               user=user,
-                                                                               channel=channel,
-                                                                               lockfile=lockfile)
+        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
 
-            # Make lockfile strict for consuming and install
-            if graph_lock is not None:
-                graph_lock.strict = True
+        graph_lock, root_ref = get_graph_info(name=name,
+                                              version=version,
+                                              user=user,
+                                              channel=channel,
+                                              lockfile=lockfile)
 
-            install_folder = _make_abs_path(install_folder, cwd)
+        # Make lockfile strict for consuming and install
+        if graph_lock is not None:
+            graph_lock.strict = True
 
-            # TODO: load_graph + install_binaries should replace deps_install
-            deps_graph = self.conan_api.graph.load_graph(reference=reference,
-                                                         path=path,
-                                                         profile_host=profile_host,
-                                                         profile_build=profile_build,
-                                                         graph_lock=graph_lock,
-                                                         root_ref=root_ref,
-                                                         install_folder=install_folder,
-                                                         base_folder=cwd,
-                                                         build_modes=build,
-                                                         is_build_require=is_build_require,
-                                                         require_overrides=require_overrides,
-                                                         remote_name=remote_name, update=update)
+        install_folder = _make_abs_path(install_folder, cwd)
 
-            self.install_binaries(deps_graph=deps_graph, install_folder=install_folder,
-                                  build_modes=build, generators=generators, no_imports=no_imports,
-                                  remote_name=remote_name, update=update)
+        # deps_install is replaced by APIV2.graph.load_graph + APIV2.install.install_binaries
+        deps_graph = self.conan_api.graph.load_graph(reference=reference,
+                                                     path=path,
+                                                     profile_host=profile_host,
+                                                     profile_build=profile_build,
+                                                     graph_lock=graph_lock,
+                                                     root_ref=root_ref,
+                                                     install_folder=install_folder,
+                                                     base_folder=cwd,
+                                                     build_modes=build,
+                                                     is_build_require=is_build_require,
+                                                     require_overrides=require_overrides,
+                                                     remote_name=remote_name, update=update)
 
-            if lockfile_out:
-                lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock.save(lockfile_out)
-        except ConanException as exc:
-            raise
+        self.install_binaries(deps_graph=deps_graph, install_folder=install_folder,
+                              build_modes=build, generators=generators, no_imports=no_imports,
+                              remote_name=remote_name, update=update)
+
+        if lockfile_out:
+            lockfile_out = _make_abs_path(lockfile_out, cwd)
+            graph_lock.save(lockfile_out)

@@ -1,19 +1,6 @@
 from conans.cli.command import Extender, OnceArgument
 
 
-def get_profiles_from_args(args, conan_api):
-    # TODO: Do we want a ProfilesAPI.get_profiles() to return both profiles from args?
-    profiles = conan_api.profiles
-    build = [profiles.get_default_build()] if not args.profile_build else args.profile_build
-    host = [profiles.get_default_host()] if not args.profile_host else args.profile_host
-
-    profile_build = profiles.get_profile(profiles=build, settings=args.settings_build,
-                                         options=args.options_build, conf=args.conf_build)
-    profile_host = profiles.get_profile(profiles=host, settings=args.settings_host,
-                                        options=args.options_host, conf=args.conf_host)
-    return profile_host, profile_build
-
-
 _help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
     '--build' options on one command line is allowed. For dependencies, the optional 'build_policy'
     attribute in their conanfile.py takes precedence over the command line parameter.
