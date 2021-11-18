@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool_cmake
-@pytest.mark.parametrize("package", ["hello", "ZLIB"])
+@pytest.mark.parametrize("package", ["hello", "zlib"])
 @pytest.mark.parametrize("find_package", ["module", "config"])
 def test_cmaketoolchain_path_find(package, find_package):
     """Test with user "Hello" and also ZLIB one, to check that package ZLIB

@@ -15,13 +15,13 @@ class BrokenDownloadTest(unittest.TestCase):
         server = TestServer()
         servers = {"default": server}
         client = TestClient(servers=servers, inputs=["admin", "password"])
-        client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
+        client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("export . lasote/stable")
-        ref = RecipeReference.loads("Hello/0.1@lasote/stable")
+        ref = RecipeReference.loads("hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).export()))
-        client.run("upload Hello/0.1@lasote/stable -r default")
+        client.run("upload hello/0.1@lasote/stable -r default")
         export_folder = client.get_latest_ref_layout(ref).export()
-        client.run("remove Hello/0.1@lasote/stable -f")
+        client.run("remove hello/0.1@lasote/stable -f")
         self.assertFalse(os.path.exists(export_folder))
 
         rev = server.server_store.get_last_revision(ref).revision
@@ -29,7 +29,7 @@ class BrokenDownloadTest(unittest.TestCase):
         path = server.test_server.server_store.export(ref)
         tgz = os.path.join(path, "conan_export.tgz")
         save(tgz, "contents")  # dummy content to break it, so the download decompress will fail
-        client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install hello/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("Error while extracting downloaded file", client.out)
         self.assertFalse(os.path.exists(client.get_latest_ref_layout(ref).export()))
 

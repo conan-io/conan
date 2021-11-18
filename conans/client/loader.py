@@ -253,7 +253,7 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conanfile_txt(self, conan_txt_path, profile_host, ref=None):
+    def load_conanfile_txt(self, conan_txt_path, profile_host, ref=None, require_overrides=None):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
@@ -261,6 +261,12 @@ class ConanFileLoader(object):
         path, basename = os.path.split(conan_txt_path)
         display_name = "%s (%s)" % (basename, ref) if ref and ref.name else basename
         conanfile = self._parse_conan_txt(contents, path, display_name, profile_host)
+
+        if require_overrides is not None:
+            for req_override in require_overrides:
+                req_override = RecipeReference.loads(req_override)
+                conanfile.requires.override(req_override)
+
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name, profile):

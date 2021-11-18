@@ -14,7 +14,7 @@ conanfile_scope_env = """
 from conans import ConanFile
 
 class AConan(ConanFile):
-    requires = "Hello/0.1@lasote/testing"
+    requires = "hello/0.1@lasote/testing"
 
     def build(self):
         self.output.info("INCLUDE PATH: %s" %
@@ -31,7 +31,7 @@ from conans import ConanFile
 from conans.tools import mkdir
 
 class AConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 
     def package(self):
@@ -54,7 +54,7 @@ class ConanBuildTest(unittest.TestCase):
 
         client.save({"my_conanfile.py": conanfile_scope_env})
         client.run("build ./my_conanfile.py --build=missing")
-        pref = client.get_latest_package_reference(RecipeReference.loads("Hello/0.1@lasote/testing"),
+        pref = client.get_latest_package_reference(RecipeReference.loads("hello/0.1@lasote/testing"),
                                                    NO_SETTINGS_PACKAGE_ID)
         package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/")
         self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
@@ -151,13 +151,13 @@ class AConan(ConanFile):
     pass
 """
         client.save({CONANFILE: conanfile_dep})
-        client.run("create . Hello.Pkg/0.1@lasote/testing")
+        client.run("create . Hello.pkg/0.1@lasote/testing")
         client.run("create . Hello-Tools/0.1@lasote/testing")
         conanfile_scope_env = """
 from conans import ConanFile
 
 class AConan(ConanFile):
-    requires = "Hello.Pkg/0.1@lasote/testing", "Hello-Tools/0.1@lasote/testing"
+    requires = "Hello.pkg/0.1@lasote/testing", "Hello-Tools/0.1@lasote/testing"
 
     def build(self):
         self.output.info("HELLO ROOT PATH: %s" %
@@ -168,7 +168,7 @@ class AConan(ConanFile):
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         client.run("build conanfile.py --build=missing")
 
-        self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
+        self.assertIn("Hello.pkg/0.1/lasote/testing", client.out)
         self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
 
     @pytest.mark.xfail(reason="deps_cpp_info access removed")
@@ -258,11 +258,10 @@ class BarConan(ConanFile):
                     self.output.info("PACKAGE_INFO: %s BuildType=%s!"
                                      % (self.name, self.settings.build_type))
             """)
-        client.save({CONANFILE: conanfile.format(name="Dep", requires="")})
-        client.run("create . Dep/0.1@user/testing -s build_type=Release")
-        client.save({CONANFILE: conanfile.format(name="MyPkg",
-                                                 requires="requires = 'Dep/0.1@user/testing'")})
-        client.run("build . -s MyPkg:build_type=Debug -s build_type=Release")
-        self.assertIn("Dep/0.1@user/testing: PACKAGE_INFO: Dep BuildType=Release!", client.out)
-        self.assertIn("conanfile.py (MyPkg/None): BUILD: MyPkg BuildType=Debug!",
-                      client.out)
+        client.save({CONANFILE: conanfile.format(name="dep", requires="")})
+        client.run("create . dep/0.1@user/testing -s build_type=Release")
+        client.save({CONANFILE: conanfile.format(name="mypkg",
+                                                 requires="requires = 'dep/0.1@user/testing'")})
+        client.run("build . -s mypkg:build_type=Debug -s build_type=Release")
+        self.assertIn("dep/0.1@user/testing: PACKAGE_INFO: dep BuildType=Release!", client.out)
+        self.assertIn("conanfile.py (mypkg/None): BUILD: mypkg BuildType=Debug!", client.out)

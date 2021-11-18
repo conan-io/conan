@@ -12,7 +12,7 @@ conanfile = """
 from conans import ConanFile
 
 class OpenSSLConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 """
 
@@ -63,7 +63,7 @@ class AuthorizeBearerTest(unittest.TestCase):
             save(client.cache.artifacts_properties_path, "key=value")
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
-        errors = client.run("upload Hello/0.1@lasote/stable -r default")
+        errors = client.run("upload hello/0.1@lasote/stable -r default")
         self.assertFalse(errors)
 
         expected_calls = [('ping', None),

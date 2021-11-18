@@ -45,7 +45,6 @@ def client():
             """)
 
     client = TestClient()
-    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     client.save({"tool/conanfile.py": GenConanfile(),
                  "cmake/conanfile.py": cmake,
                  "openssl/conanfile.py": openssl})

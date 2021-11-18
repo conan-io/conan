@@ -105,7 +105,8 @@ class ConanAPIV1(object):
         from conans.client.cmd.new import cmd_new
         app = ConanApp(self.cache_folder)
         cwd = os.path.abspath(cwd or os.getcwd())
-        files = cmd_new(name, header=header, pure_c=pure_c, test=test,
+        ref = RecipeReference.loads(name)
+        files = cmd_new(ref.name, ref.version, header=header, pure_c=pure_c, test=test,
                         exports_sources=exports_sources, bare=bare, gitignore=gitignore,
                         template=template, cache=app.cache, defines=defines)
 

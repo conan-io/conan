@@ -71,7 +71,7 @@ class Pkg(ConanFile):
         self.assertIn("PATCH: this is my patch", client.out)
         client.run("source . -sf=mysrc")
         self.assertIn("PATCH: this is my patch", client.out)
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
         self.assertIn("PATCH: this is my patch", client.out)
 
     def test_source_warning_os_build(self):
@@ -107,7 +107,7 @@ import os
 from conans import ConanFile
 
 class ConanLib(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 
     def source(self):
@@ -120,15 +120,15 @@ class ConanLib(ConanFile):
         os.mkdir(subdir)
         client.run("install . --install-folder subdir")
         client.run("source . --source-folder subdir")
-        self.assertIn("conanfile.py (Hello/0.1): Configuring sources", client.out)
-        self.assertIn("conanfile.py (Hello/0.1): cwd=>%s" % subdir, client.out)
+        self.assertIn("conanfile.py (hello/0.1): Configuring sources", client.out)
+        self.assertIn("conanfile.py (hello/0.1): cwd=>%s" % subdir, client.out)
 
     def test_local_source_src_not_exist(self):
         conanfile = '''
 import os
 from conans import ConanFile
 class ConanLib(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 '''
         client = TestClient()

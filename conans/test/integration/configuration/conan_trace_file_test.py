@@ -27,7 +27,7 @@ class ConanTraceTest(unittest.TestCase):
             from conans import ConanFile
 
             class HelloConan(ConanFile):
-                name = "Hello0"
+                name = "hello0"
                 version = "0.1"
 
                 def build(self):
@@ -48,7 +48,7 @@ class ConanTraceTest(unittest.TestCase):
                                         run_to_output=True
                                     """.format(print_commands_to_output, generate_run_log_file))
             client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-            ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
+            ref = RecipeReference.loads("hello0/0.1@lasote/stable")
             client.save({"conanfile.py": base})
             client.run("create . lasote/stable")
             pref = client.get_latest_package_reference(ref)
@@ -80,8 +80,8 @@ class ConanTraceTest(unittest.TestCase):
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         with environment_update({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
-            ref = RecipeReference.loads("Hello0/0.1@lasote/stable")
-            client.save({"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
+            ref = RecipeReference.loads("hello0/0.1@lasote/stable")
+            client.save({"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
                          "file.txt": "content"})
             client.run("remote login default lasote -p mypass")
             client.run("export . lasote/stable")
