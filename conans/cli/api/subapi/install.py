@@ -22,11 +22,20 @@ class InstallAPI:
         self.conan_api = conan_api
 
     @api_method
-    def install_binaries(self, deps_graph, install_folder,
+    def install_binaries(self, deps_graph, install_folder, base_folder, conanfile_folder,
                          build_modes=None, generators=None, no_imports=False, create_reference=None,
-                         remote_name=None, update=False):
+                         remote_name=None, update=False, test=None):
         """ Install binaries for dependency graph
-        @param deps_graph: Dependency graphs
+        @param deps_graph: Dependency graph to intall packages for
+        @param install_folder:
+        @param base_folder: Tipically current folder
+        @param conanfile_folder: Folder where the conanfile is located
+        @param build_modes:
+        @param generators:
+        @param no_imports:
+        @param create_reference:
+        @param update:
+        @param test:
         """
         app = ConanApp(self.conan_api.cache_folder)
         # FIXME: remote_name should be remote
@@ -51,6 +60,18 @@ class InstallAPI:
         build_modes = BuildMode(build_modes)
         installer.install(deps_graph, build_modes)
 
+        root_node = deps_graph.root
+        conanfile = root_node.conanfile
+
+        if hasattr(conanfile, "layout") and not test:
+            conanfile.folders.set_base_install(conanfile_folder)
+            conanfile.folders.set_base_imports(conanfile_folder)
+            conanfile.folders.set_base_generators(conanfile_folder)
+        else:
+            conanfile.folders.set_base_install(install_folder)
+            conanfile.folders.set_base_imports(install_folder)
+            conanfile.folders.set_base_generators(base_folder)
+
         if install_folder:
             # Write generators
             tmp = list(conanfile.generators)  # Add the command line specified generators
@@ -73,6 +94,8 @@ class InstallAPI:
 
         return deps_graph
 
+    # maybe this is not wanted as API method, for the moment just leaving this to not
+    # explode things too much
     @api_method
     def install(self, path="", reference="", name=None, version=None, user=None, channel=None,
                 profile_host=None, profile_build=None, remote_name=None, build=None, update=False,
@@ -99,6 +122,7 @@ class InstallAPI:
             graph_lock.strict = True
 
         install_folder = _make_abs_path(install_folder, cwd)
+        conanfile_folder = os.path.dirname(path) if path else None
 
         # deps_install is replaced by APIV2.graph.load_graph + APIV2.install.install_binaries
         deps_graph = self.conan_api.graph.load_graph(reference=reference,
@@ -107,16 +131,15 @@ class InstallAPI:
                                                      profile_build=profile_build,
                                                      graph_lock=graph_lock,
                                                      root_ref=root_ref,
-                                                     install_folder=install_folder,
-                                                     base_folder=cwd,
                                                      build_modes=build,
                                                      is_build_require=is_build_require,
                                                      require_overrides=require_overrides,
                                                      remote_name=remote_name, update=update)
 
-        self.install_binaries(deps_graph=deps_graph, install_folder=install_folder,
-                              build_modes=build, generators=generators, no_imports=no_imports,
-                              remote_name=remote_name, update=update)
+        self.install_binaries(deps_graph=deps_graph, install_folder=install_folder, base_folder=cwd,
+                              conanfile_folder=conanfile_folder, build_modes=build,
+                              generators=generators, no_imports=no_imports, remote_name=remote_name,
+                              update=update)
 
         if lockfile_out:
             lockfile_out = _make_abs_path(lockfile_out, cwd)

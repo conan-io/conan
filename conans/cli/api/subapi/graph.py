@@ -6,7 +6,6 @@ from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
-from conans.model.recipe_ref import RecipeReference
 
 
 class GraphAPI:
@@ -16,11 +15,21 @@ class GraphAPI:
 
     @api_method
     def load_graph(self, reference, path, profile_host, profile_build, graph_lock, root_ref,
-                   install_folder, base_folder, build_modes=None, create_reference=None,
-                   is_build_require=False, require_overrides=None, remote_name=None, update=False,
-                   test=None):
+                   build_modes=None, create_reference=None, is_build_require=False,
+                   require_overrides=None, remote_name=None, update=False):
         """ Calculate graph and fetch needed recipes
-        @param ref_or_path: ...
+        @param reference: Conan reference to build the graph for
+        @param path: Path to the conanfile.py or conanfile.txt to build the graph
+        @param profile_host: Profile for the host context
+        @param profile_build: Profile for the build context
+        @param graph_lock: Locked graph to use to build the graph
+        @param root_ref: RecipeReference with fields (name, version, user, channel) that may be missing in the conanfile provided as argument
+        @param build_modes:
+        @param create_reference:
+        @param is_build_require:
+        @param require_overrides:
+        @param remote_name:
+        @param update:
         """
         app = ConanApp(self.conan_api.cache_folder)
         # FIXME: remote_name should be remote
@@ -47,20 +56,6 @@ class GraphAPI:
                                               graph_lock, root_ref, build_modes,
                                               is_build_require=is_build_require,
                                               require_overrides=require_overrides)
-
-        root_node = deps_graph.root
-        conanfile = root_node.conanfile
-
-        if hasattr(conanfile, "layout") and not test:
-            conanfile_path = os.path.dirname(ref_or_path) if not isinstance(ref_or_path,
-                                                                            RecipeReference) else None
-            conanfile.folders.set_base_install(conanfile_path)
-            conanfile.folders.set_base_imports(conanfile_path)
-            conanfile.folders.set_base_generators(conanfile_path)
-        else:
-            conanfile.folders.set_base_install(install_folder)
-            conanfile.folders.set_base_imports(install_folder)
-            conanfile.folders.set_base_generators(base_folder)
 
         deps_graph.report_graph_error()
 
