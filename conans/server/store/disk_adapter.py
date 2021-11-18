@@ -10,13 +10,12 @@ from conans.util.files import md5sum, path_exists, relative_dirs, rmdir
 class ServerDiskAdapter(object):
     """Manage access to disk files with common methods required
     for conan operations"""
-    def __init__(self, base_url, base_storage_path, updown_auth_manager):
+    def __init__(self, base_url, base_storage_path):
         """
         :param: base_url Base url for generate urls to download and upload operations"""
 
         self.base_url = base_url
         # URLs are generated removing this base path
-        self.updown_auth_manager = updown_auth_manager
         self._store_folder = base_storage_path
 
     def _get_paths(self, absolute_path, files_subset):

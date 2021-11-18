@@ -113,7 +113,7 @@ class ConanServerConfigParser(ConfigParser):
     def public_url(self):
         host_name = self.host_name
         ssl_enabled = self.ssl_enabled
-        protocol_version = "v1"
+        protocol_version = "v2"
         if host_name is None and ssl_enabled is None:
             # No hostname and ssl config means that the transfer and the
             # logical endpoint are the same and a relative URL is sufficient
@@ -219,9 +219,7 @@ class ConanServerConfigParser(ConfigParser):
         return timedelta(minutes=float(self._get_conf_server_string("jwt_expire_minutes")))
 
 
-def get_server_store(disk_storage_path, public_url, updown_auth_manager):
+def get_server_store(disk_storage_path, public_url):
     disk_controller_url = "%s/%s" % (public_url, "files")
-    if not updown_auth_manager:
-        raise Exception("Updown auth manager needed for disk controller (not s3)")
-    adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path, updown_auth_manager)
+    adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path)
     return ServerStore(adapter)
