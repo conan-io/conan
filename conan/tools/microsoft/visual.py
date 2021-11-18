@@ -170,5 +170,5 @@ def _vcvars_vers(conanfile, compiler, vs_version):
         assert len(version_components) >= 2  # there is a 19.XX
         minor = version_components[1]
         # The equivalent of compiler 19.26 is toolset 14.26
-        vcvars_ver = "14.{}".format(minor)
+        vcvars_ver = "14.{}".format(minor[0])
     return vcvars_ver
