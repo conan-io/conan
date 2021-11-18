@@ -92,5 +92,5 @@ class Qbs(object):
         for name in self._configuration:
             args.append('config:%s' % name)
 
-        cmd = 'qbs install %s' % (' '.join(args))
+        cmd = 'qbs install --reference=%s' % (' '.join(args))
         self._conanfile.run(cmd)

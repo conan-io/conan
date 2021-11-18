@@ -213,7 +213,7 @@ def test_token_expired():
                                     """)
     c.save({"conan.conf": conan_conf}, path=c.cache.cache_folder)
     c.run("remove * -f")
-    c.run("install pkg/0.1@user/stable")
+    c.run("install --reference=pkg/0.1@user/stable")
     user, token, _ = c.cache.localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is None

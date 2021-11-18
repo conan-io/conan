@@ -85,7 +85,7 @@ class ConanTraceTest(unittest.TestCase):
                          "file.txt": "content"})
             client.run("remote login default lasote -p mypass")
             client.run("export . lasote/stable")
-            client.run("install %s --build missing" % str(ref))
+            client.run("install --reference=%s --build missing" % str(ref))
             client.run("upload %s --all -r default" % str(ref))
 
         traces = load(trace_file)

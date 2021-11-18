@@ -42,6 +42,6 @@ def test_options():
     to_build = json.loads(json_file)
     f = to_build[0]
 
-    cmd = "install {} --build={} {} --lockfile=conan.lock".format(f[0], f[0], f[3])
+    cmd = "install --reference={} --build={} {} --lockfile=conan.lock".format(f[0], f[0], f[3])
     client.run(cmd)
     assert "ffmpeg/1.0: Variation nano!!" in client.out

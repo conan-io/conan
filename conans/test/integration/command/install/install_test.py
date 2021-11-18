@@ -211,12 +211,12 @@ def test_install_broken_reference(client):
     # Because the folder is removed, the metadata is removed and the
     # origin remote is lost
     rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
-    client.run("install hello/0.1@lasote/stable", assert_error=True)
+    client.run("install --reference=hello/0.1@lasote/stable", assert_error=True)
     assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
 
     # If it was associated, it has to be desasociated
     client.run("remote remove_ref hello/0.1@lasote/stable")
-    client.run("install hello/0.1@lasote/stable", assert_error=True)
+    client.run("install --reference=hello/0.1@lasote/stable", assert_error=True)
     assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
 
 
@@ -279,7 +279,7 @@ def test_install_without_ref(client):
     client.run('remove "*" -f')
 
     # This fails, Conan thinks this is a path
-    client.run('install lib/1.0', assert_error=True)
+    client.run('install --reference=lib/1.0', assert_error=True)
     fake_path = os.path.join(client.current_folder, "lib", "1.0")
     assert "Conanfile not found at {}".format(fake_path) in client.out
 

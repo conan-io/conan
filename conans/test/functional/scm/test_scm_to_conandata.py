@@ -223,10 +223,10 @@ def test_auto_can_be_automated():
 
     t.run("upload * -c -r default")
     t.run("remove * -f")
-    t.run("install pkg/1.0@ --build", assert_error=True)
+    t.run("install --reference=pkg/1.0@ --build", assert_error=True)
     assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out
 
     with environment_update({"USER_EXTERNAL_URL": "https://other.different.url",
                              "USER_EXTERNAL_COMMIT": "invalid commit"}):
-        t.run("install pkg/1.0@ --build", assert_error=True)
+        t.run("install --reference=pkg/1.0@ --build", assert_error=True)
         assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out

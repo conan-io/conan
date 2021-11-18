@@ -254,7 +254,7 @@ def test_conditional():
     t.save({'requires.py': GenConanfile("req", "v1").with_provides("libjpeg"),
             'app.py': conanfile})
     t.run("create requires.py")
-    t.run("install app.py app/version@")
-    t.run("install app.py app/version@ -o app:conflict=True", assert_error=True)
+    t.run("install --reference=app.py --name=app --version=version")
+    t.run("install --reference=app.py --name=app --version=version -o app:conflict=True", assert_error=True)
     # TODO: Improve the error diagnostics
     assert "ERROR: provide conflict" in t.out
