@@ -1,4 +1,7 @@
+import textwrap
+
 import pytest
+
 from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphError
@@ -560,3 +563,27 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._check_node(app, "app/0.1@", deps=[libb, libc], dependents=[])
         self._check_node(libb, "libb/0.1#123", deps=[cmake1], dependents=[app])
         self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[libb])
+
+    def test_test_require(self):
+        # app -(tr)-> gtest/0.1
+        # This test should survive in 2.0
+        tool_ref = RecipeReference.loads("gtest/0.1")
+        self._cache_recipe(tool_ref, GenConanfile("gtest", "0.1"))
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                def build_requirements(self):
+                    self.test_requires("gtest/0.1")
+            """)
+        deps_graph = self.build_graph(conanfile)
+
+        # Build requires always apply to the consumer
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        tool = app.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[tool], dependents=[])
+        self._check_node(tool, "gtest/0.1#123", deps=[], dependents=[app])
