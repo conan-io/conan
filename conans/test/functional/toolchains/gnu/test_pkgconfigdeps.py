@@ -352,9 +352,10 @@ def test_pkg_with_public_deps_and_component_requires_2():
     Testing another complex structure like:
 
     * other/0.1
+        - Global pkg_config_name == "other_alias"
         - Components: "cmp1", "cmp2", "cmp3"
-            + "cmp1" pkg_config_name == "component1"
-            + "cmp3" pkg_config_name == "component3"
+            + "cmp1" pkg_config_name == "component1" (it shouldn't be affected by "other_alias")
+            + "cmp3" pkg_config_name == "component3" (it shouldn't be affected by "other_alias")
             + "cmp3" requires "cmp1"
     * pkg/0.1
         - Requires: "other/0.1" -> "other::cmp1"
@@ -373,6 +374,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
         class Recipe(ConanFile):
 
             def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "other_alias")
                 self.cpp_info.components["cmp1"].libs = ["other_cmp1"]
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "component1")
                 self.cpp_info.components["cmp2"].libs = ["other_cmp2"]
@@ -406,9 +408,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
     client2.run("install .")
     pc_content = client2.load("pkg.pc")
     assert "Requires: component1" == get_requires_from_content(pc_content)
-    pc_content = client2.load("other.pc")
-    assert "Requires: component1 other-cmp2 component3" == get_requires_from_content(pc_content)
+    pc_content = client2.load("other_alias.pc")
+    assert "Requires: component1 other_alias-cmp2 component3" == get_requires_from_content(pc_content)
     assert client2.load("component1.pc")
-    assert client2.load("other-cmp2.pc")
+    assert client2.load("other_alias-cmp2.pc")
     pc_content = client2.load("component3.pc")
     assert "Requires: component1" == get_requires_from_content(pc_content)
