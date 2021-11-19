@@ -3,6 +3,7 @@ import os
 from conans import ConanFile
 from conans.cli.api.model import Remote
 from conans.cli.api.subapi import api_method
+from conans.cli.common import get_lockfile
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.conan_api import _make_abs_path
@@ -99,7 +100,7 @@ class InstallAPI:
     @api_method
     def install(self, path="", reference="", name=None, version=None, user=None, channel=None,
                 profile_host=None, profile_build=None, remote_name=None, build=None, update=False,
-                generators=None, no_imports=False, install_folder=None, lockfile=None,
+                generators=None, no_imports=False, install_folder=None, lockfile_in=None,
                 lockfile_out=None, is_build_require=None, require_overrides=None):
 
         if path and reference:
@@ -111,15 +112,15 @@ class InstallAPI:
                                  "--reference")
 
         cwd = os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
+        lockfile_path = _make_abs_path(lockfile_in, cwd) if lockfile_in else None
 
-        graph_lock = self.conan_api.graph.get_graph_lock(lockfile=lockfile)
+        lockfile = get_lockfile(lockfile=lockfile_path)
 
         root_ref = RecipeReference(name, version, user, channel)
 
         # Make lockfile strict for consuming and install
-        if graph_lock is not None:
-            graph_lock.strict = True
+        if lockfile is not None:
+            lockfile.strict = True
 
         install_folder = _make_abs_path(install_folder, cwd)
         conanfile_folder = os.path.dirname(path) if path else None
@@ -129,7 +130,7 @@ class InstallAPI:
                                                      path=path,
                                                      profile_host=profile_host,
                                                      profile_build=profile_build,
-                                                     graph_lock=graph_lock,
+                                                     lockfile=lockfile,
                                                      root_ref=root_ref,
                                                      build_modes=build,
                                                      is_build_require=is_build_require,

@@ -114,7 +114,7 @@ def install(conan_api, parser, *args, **kwargs):
                                          generators=args.generator,
                                          no_imports=args.no_imports,
                                          install_folder=args.install_folder,
-                                         lockfile=args.lockfile,
+                                         lockfile_in=args.lockfile,
                                          lockfile_out=args.lockfile_out,
                                          is_build_require=args.build_require,
                                          require_overrides=args.require_override)

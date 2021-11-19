@@ -11,7 +11,7 @@ class GraphAPI:
         self.conan_api = conan_api
 
     @api_method
-    def load_graph(self, reference, path, profile_host, profile_build, graph_lock, root_ref,
+    def load_graph(self, reference, path, profile_host, profile_build, lockfile, root_ref,
                    build_modes=None, create_reference=None, is_build_require=False,
                    require_overrides=None, remote_name=None, update=False):
         """ Calculate graph and fetch needed recipes
@@ -19,7 +19,7 @@ class GraphAPI:
         @param path: Path to the conanfile.py or conanfile.txt to build the graph
         @param profile_host: Profile for the host context
         @param profile_build: Profile for the build context
-        @param graph_lock: Locked graph to use to build the graph
+        @param lockfile: Locked graph to use to build the graph
         @param root_ref: RecipeReference with fields (name, version, user, channel) that may be missing in the conanfile provided as argument
         @param build_modes:
         @param create_reference:
@@ -50,13 +50,13 @@ class GraphAPI:
         ref_or_path = reference or path
         deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host,
                                               profile_build,
-                                              graph_lock, root_ref, build_modes,
+                                              lockfile, root_ref, build_modes,
                                               is_build_require=is_build_require,
                                               require_overrides=require_overrides)
 
         deps_graph.report_graph_error()
 
-        if graph_lock:
-            graph_lock.update_lock(deps_graph)
+        if lockfile:
+            lockfile.update_lock(deps_graph)
 
         return deps_graph
