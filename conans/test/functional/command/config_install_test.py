@@ -509,10 +509,10 @@ class ConfigInstallTest(unittest.TestCase):
             self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=download_verify_false):
-            self.client.run("config install --reference=%s --verify-ssl=False" % fake_url)
+            self.client.run("config install %s --verify-ssl=False" % fake_url)
 
         with patch.object(FileDownloader, 'download', new=download_verify_true):
-            self.client.run("config install --reference=%s --verify-ssl=True" % fake_url)
+            self.client.run("config install %s --verify-ssl=True" % fake_url)
 
     @pytest.mark.tool_git
     def test_git_checkout_is_possible(self):
