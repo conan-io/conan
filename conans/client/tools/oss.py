@@ -212,7 +212,7 @@ class OSInfo(object):
             return "lenny"
         elif version.major == 4:
             return "etch"
-        elif version.minor == 1:
+        elif (version.major, version.minor) == (3, 1):
             return "sarge"
         elif version.minor == 0:
             return "woody"
