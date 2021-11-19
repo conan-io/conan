@@ -233,6 +233,8 @@ class OSInfo(object):
             return "Windows 8.1"
         elif version.major == 10:
             return "Windows 10"
+        elif version.major == 11:
+            return "Windows 11"
 
     @staticmethod
     def get_osx_version_name(version):
