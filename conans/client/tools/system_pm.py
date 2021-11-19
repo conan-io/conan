@@ -355,7 +355,7 @@ class BrewTool(BaseTool):
         self._run("brew update")
 
     def install(self, package_name):
-        self._run("brew install --reference=%s" % package_name)
+        self._run("brew install %s" % package_name)
 
     def installed(self, package_name):
         exit_code = self._run('test -n "$(brew ls --versions %s)"' % package_name, None)

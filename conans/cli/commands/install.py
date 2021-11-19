@@ -1,8 +1,9 @@
 import os
 
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
-from conans.cli.common import _add_common_install_arguments, _help_build_policies
-from conans.client.conan_api import ProfileData, _make_abs_path
+from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
+    get_profiles_from_args
+from conans.client.conan_api import _make_abs_path
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 
@@ -89,7 +90,7 @@ def install(conan_api, parser, *args, **kwargs):
 
     args = parser.parse_args(*args)
 
-    profile_host, profile_build = conan_api.profiles.get_profiles(args)
+    profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     cwd = os.getcwd()
 

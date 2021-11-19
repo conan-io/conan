@@ -488,7 +488,7 @@ class ConfigInstallTest(unittest.TestCase):
             self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=my_download):
-            self.client.run("config install --reference=%s" % fake_url_with_credentials)
+            self.client.run("config install %s" % fake_url_with_credentials)
 
             # Check credentials are not displayed in output
             self.assertNotIn(fake_url_with_credentials, self.client.out)

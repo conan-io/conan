@@ -2,7 +2,7 @@ import os
 
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter
-from conans.cli.common import add_profiles_args
+from conans.cli.common import add_profiles_args, get_profiles_from_args
 from conans.cli.output import cli_out_write, ConanOutput
 from conans.errors import ConanException
 from conans.util.files import save
@@ -34,7 +34,7 @@ def profile_show(conan_api, parser, subparser, *args):
     """
     add_profiles_args(subparser)
     args = parser.parse_args(*args)
-    return conan_api.profiles.get_profiles(args, conan_api)
+    return get_profiles_from_args(conan_api, args)
 
 
 @conan_subcommand(formatters={"cli": cli_out_write, "json": json_formatter})

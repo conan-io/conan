@@ -1,5 +1,8 @@
-from conans.cli.command import Extender, OnceArgument
+import os
 
+from conans.cli.command import Extender, OnceArgument
+from conans.cli.output import ConanOutput
+from conans.model.graph_lock import LOCKFILE, Lockfile
 
 _help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
     '--build' options on one command line is allowed. For dependencies, the optional 'build_policy'
@@ -86,3 +89,24 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
         parser.add_argument("--lockfile-out", action=OnceArgument,
                             help="Filename of the updated lockfile")
     add_profiles_args(parser)
+
+
+def get_profiles_from_args(conan_api, args):
+    build = [
+        conan_api.profiles.get_default_build()] if not args.profile_build else args.profile_build
+    host = [conan_api.profiles.get_default_host()] if not args.profile_host else args.profile_host
+
+    profile_build = conan_api.profiles.get_profile(profiles=build, settings=args.settings_build,
+                                                   options=args.options_build, conf=args.conf_build)
+    profile_host = conan_api.profiles.get_profile(profiles=host, settings=args.settings_host,
+                                                  options=args.options_host, conf=args.conf_host)
+    return profile_host, profile_build
+
+
+def get_lockfile(lockfile):
+    graph_lock = None
+    if lockfile:
+        lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
+        graph_lock = Lockfile.load(lockfile)
+        ConanOutput().info("Using lockfile: '{}'".format(lockfile))
+    return graph_lock
