@@ -1,7 +1,42 @@
+from conans.model.version import Version
+from conans.util.dates import timestamp_to_str
 from functools import total_ordering
 
 from conans.errors import ConanException
-from conans.util.dates import timestamp_to_str
+
+
+@total_ordering
+class _NonZeroItems:
+    def __init__(self, items):
+        self._items = items.copy()
+        while self._items and self._items[-1] == 0:
+            del self._items[-1]
+
+    def __eq__(self, other):
+        """
+        @type other: _NonZeroItems
+        """
+        return self._items == other._items
+
+    def __hash__(self):
+        return hash((tuple(self._items)))
+
+    def __lt__(self, other):
+        """
+        @type other: _NonZeroItems
+        """
+        for me, you in zip(self._items, other._items):
+            try:
+                if me < you:
+                    return True
+                elif me > you:
+                    return False
+            except TypeError:
+                if str(me) < str(you):
+                    return True
+                elif str(me) > str(you):
+                    return False
+        return len(self._items) < len(other._items)
 
 
 @total_ordering
@@ -32,9 +67,7 @@ class Version:
         items = value.split(".")
         items = [int(item) if item.isdigit() else item for item in items]
         self._items = items
-        self._nonzero_items = items.copy()
-        while self._nonzero_items and self._nonzero_items[-1] == 0:
-            del self._nonzero_items[-1]
+        self._nonzero_items = _NonZeroItems(items)
 
     def bump(self, index):
         """
@@ -106,7 +139,7 @@ class Version:
                (other._nonzero_items, other._pre, other._build)
 
     def __hash__(self):
-        return hash((tuple(self._nonzero_items), self._pre, self._build))
+        return hash((self._nonzero_items, self._pre, self._build))
 
     def __lt__(self, other):
         if other is None:
