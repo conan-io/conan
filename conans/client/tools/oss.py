@@ -214,7 +214,7 @@ class OSInfo(object):
             return "etch"
         elif (version.major, version.minor) == (3, 1):
             return "sarge"
-        elif version.minor == 0:
+        elif (version.major, version.minor) == (3, 0):
             return "woody"
 
     @staticmethod
