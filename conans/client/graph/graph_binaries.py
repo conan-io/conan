@@ -399,11 +399,24 @@ class GraphBinariesAnalyzer(object):
             if (node.graph_lock_node is not None and
                     node.graph_lock_node.options is not None and
                     node.conanfile.options.values != node.graph_lock_node.options):
+
+                toset = lambda a: set(str(a).split())
+
+                computed = toset(node.graph_lock_node.options)
+                locked = toset(node.conanfile.options.values)
+
+                difference = computed ^ locked
+
+                incomputed = difference & computed
+                inlocked = difference & locked
+
                 raise ConanException("{}: Locked options do not match computed options\n"
-                                     "Locked options:\n{}\n"
-                                     "Computed options:\n{}".format(node.ref,
-                                                                    node.graph_lock_node.options,
-                                                                    node.conanfile.options.values))
+                                     "difference:\n{}\n"
+                                     "in Locked options:\n{}\n"
+                                     "in Computed options:\n{}".format(node.ref,
+                                                                    difference,
+                                                                    inlocked,
+                                                                    incomputed))
 
             self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
