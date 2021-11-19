@@ -15,22 +15,13 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(v1 > "1.2")
         self.assertTrue(v1 > "1.2.2.2")
         self.assertTrue(v1 < "1.2.3.2")
-        self.assertEqual(v1.major(), "1.Y.Z")  # 1.X.Y
-        self.assertEqual(v1.minor(), "1.2.Z")  # 1.2.Y
-        self.assertEqual(v1.patch(), "1.2.3")
-        self.assertEqual(v1.pre(), "1.2.3")
-        self.assertEqual(v1.build, "")
-        self.assertTrue(v1.compatible("1.X"))
-        self.assertTrue(v1.compatible("1.2.Y"))
-        self.assertFalse(v1.compatible("0.X"))
-        self.assertFalse(v1.compatible("1.2.2"))
-        v2 = v1.minor()
-        self.assertTrue(v2.compatible("1.X"))
-        self.assertTrue(v2.compatible("1.2.3.4"))
-        self.assertFalse(v2.compatible("1.3.3.4"))
-        self.assertTrue(v2.major().compatible("1.3.3.4"))
+        self.assertEqual(v1.major, "1")  # 1.X.Y
+        self.assertEqual(v1.minor, "2")  # 1.2.Y
+        self.assertEqual(v1.patch, "3")
+        self.assertEqual(v1.pre, None)
+        self.assertEqual(v1.build, None)
 
-        v1 = Version("1.2.rc1")
+        v1 = Version("1.2-rc1")
         self.assertTrue(v1 < "1.2.0")
         self.assertFalse(v1 < "1.1.9")
 
@@ -40,7 +31,6 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(Version("1.2.1-dev") < Version("1.3-alpha"))
         self.assertTrue(Version("1.2.1-dev") > Version("1.2.0"))
         self.assertTrue(Version("1.2.1-dev") > Version("1.2"))
-        self.assertTrue(Version("1.2.1-dev") > Version("1.2.alpha"))
         self.assertTrue(Version("1.2.1-dev") > Version("1.2-alpha"))
 
         self.assertFalse(Version("4") < Version("4.0.0"))
@@ -61,8 +51,8 @@ class VersionTest(unittest.TestCase):
         self.assertNotEqual(Version("4.0.0+abc"), Version("4.0.0+xyz"))
         # Shouldn't be an "official" order for build metadata, but as they cannot be equal
         # the order is alphabetic
-        self.assertTrue(Version("4.0.0+abc") > Version("4.0.0+xyz"))
-        self.assertTrue(Version("4.0.0+xyz") < Version("4.0.0+abc"))
+        self.assertTrue(Version("4.0.0+abc") != Version("4.0.0+xyz"))
+        self.assertTrue(Version("4.0.0+xyz") != Version("4.0.0+abc"))
 
     def test_text(self):
         from conans.model.recipe_ref import Version
@@ -116,17 +106,3 @@ class VersionTest(unittest.TestCase):
         v2 = Version("0.2.3+b178")
         vr = _VersionRepr(v2)
         self.assertEqual(vr.build, "b178")
-
-    def test_msvc_generic(self):
-        v1 = Version("19.1X")
-        v2 = Version("19.2X")
-        v3 = Version("19.3X")
-
-        assert v1 < v2
-        assert v1 < v3
-        assert v1 < "19.2X"
-        assert v1 < "19.21"
-        assert v1 < "19.11"
-        assert not v1 > "19.13"
-        assert v2 < v3
-        assert v2 < "19.37"

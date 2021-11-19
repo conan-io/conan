@@ -149,7 +149,7 @@ def _get_default_compiler():
 
 def _get_profile_compiler_version(compiler, version):
     output = ConanOutput()
-    tokens = version.split(".")
+    tokens = version.main
     major = tokens[0]
     minor = tokens[1] if len(tokens) > 1 else 0
     if compiler == "clang" and int(major) >= 8:
