@@ -10,6 +10,7 @@ class GraphAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
+    # Maybe we don't want to pass Profile objects to the API?
     @api_method
     def load_graph(self, reference, path, profile_host, profile_build, lockfile, root_ref,
                    build_modes=None, create_reference=None, is_build_require=False,
