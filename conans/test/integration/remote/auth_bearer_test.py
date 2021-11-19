@@ -66,8 +66,7 @@ class AuthorizeBearerTest(unittest.TestCase):
         errors = client.run("upload hello/0.1@lasote/stable -r default")
         self.assertFalse(errors)
 
-        expected_calls = [('ping', None),
-                          ('get_recipe_revisions_references', None),
+        expected_calls = [('get_recipe_revisions_references', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('upload_recipe_file', 'Bearer')]
