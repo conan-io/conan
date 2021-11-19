@@ -351,12 +351,12 @@ def test_mixed_user_channel():
     # https://github.com/conan-io/conan/issues/7846
     t = TestClient(default_server_user=True)
     t.save({"conanfile.py": GenConanfile()})
-    t.run("create . --name=pkg --version=1.0")
-    t.run("create . --name=pkg --version=1.1")
-    t.run("create . --name=pkg --version=2.0")
-    t.run("create . --name=pkg --version=1.0 --user=user --channel=testing")
-    t.run("create . --name=pkg --version=1.1 --user=user --channel=testing")
-    t.run("create . --name=pkg --version=2.0 --user=user --channel=testing")
+    t.run("create . pkg/1.0@")
+    t.run("create . pkg/1.1@")
+    t.run("create . pkg/2.0@")
+    t.run("create . pkg/1.0@user/testing")
+    t.run("create . pkg/1.1@user/testing")
+    t.run("create . pkg/2.0@user/testing")
     t.run("upload * --all --confirm -r default")
     t.run("remove * -f")
 

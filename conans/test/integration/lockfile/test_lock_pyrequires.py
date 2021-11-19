@@ -27,11 +27,11 @@ def test_transitive_py_requires():
 
     client.run("export dep dep/0.2@user/channel")
 
-    client.run("install --reference=consumer/conanfile.py --lockfile=conan.lock")
+    client.run("install consumer/conanfile.py --lockfile=conan.lock")
     assert "dep/0.1@user/channel" in client.out
     assert "dep/0.2" not in client.out
 
-    client.run("install --reference=consumer/conanfile.py")
+    client.run("install consumer/conanfile.py")
     assert "dep/0.2@user/channel" in client.out
     assert "dep/0.1" not in client.out
 
@@ -120,7 +120,7 @@ def test_transitive_matching_ranges():
     client.run("export pkga pkga/0.2@")
     client.run("export pkgb pkgb/0.2@")
 
-    client.run("install --reference=app/conanfile.py --lockfile=conan.lock")
+    client.run("install app/conanfile.py --lockfile=conan.lock")
     assert "pkga/0.1: tool: tool/0.1!!" in client.out
     assert "pkga/0.1: dep: dep/0.1!!" in client.out
     assert "pkgb/0.1: tool: tool/0.2!!" in client.out
