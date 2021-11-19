@@ -293,7 +293,7 @@ class ProfileTest(unittest.TestCase):
                         "myprofile", settings=profile_settings,
                         package_settings=package_settings)
         # Try to override some settings in install command
-        self.client.run("install . lasote/testing -pr myprofile")
+        self.client.run("install . --user=lasote --channel=testing -pr myprofile")
         info = self.client.out
         self.assertIn("(hello0/0.1@lasote/testing): gcc", info)
         self.assertIn("(hello0/0.1@lasote/testing): 4.8", info)
@@ -303,7 +303,7 @@ class ProfileTest(unittest.TestCase):
                         "myprofile", settings=profile_settings,
                         package_settings=package_settings)
         # Try to override some settings in install command
-        self.client.run("install . lasote/testing -pr myprofile")
+        self.client.run("install . --user=lasote --channel=testing -pr myprofile")
         info = self.client.out
         self.assertIn("(hello0/0.1@lasote/testing): Visual Studio", info)
         self.assertIn("(hello0/0.1@lasote/testing): 12", info)
