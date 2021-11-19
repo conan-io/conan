@@ -684,6 +684,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.client.run('config help', assert_error=True)
         self.assertIn("config_install_interval defined, but no config_install file", self.client.out)
 
+    @pytest.mark.xfail(reason="Will fail until we migrate config install to new CLI and the APIv2")
     @parameterized.expand([("1y",), ("2015t",), ("42",)])
     def test_invalid_time_interval(self, internal):
         """ config_install_interval only accepts seconds, minutes, hours, days and weeks.
