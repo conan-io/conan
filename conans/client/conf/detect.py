@@ -172,7 +172,7 @@ def _get_profile_compiler_version(compiler, version):
 def _detect_gcc_libcxx(version):
     output = ConanOutput()
     # Assumes a working g++ executable
-    new_abi_available = Version(version) >= Version("5.1")
+    new_abi_available = version >= "5.1"
     if not new_abi_available:
         return "libstdc++"
 
