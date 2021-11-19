@@ -26,38 +26,67 @@ from conans.errors import ConanException
 from conans.util.files import save
 
 
-def get_package_name(dep):
+def get_package_reference_name(dep):
     """Get the reference name for the given package"""
     # FIXME: this str(dep.ref.name) is only needed for python2.7 (unicode values).
     #        Remove it for Conan 2.0
     return str(dep.ref.name)
 
 
-def get_package_alias(dep):
-    """
-    If user declares the property "pkg_config_name" as part of the global cpp_info,
-    it'll be used as a complete alias for that package.
-    """
-    pkg_alias = dep.cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
-    return pkg_alias
-
-
-def get_component_alias(dep, comp_name):
-    """
-    If user declares the property "pkg_config_name" as part of the cpp_info.components["comp_name"],
-    it'll be used as a complete alias for that package component.
-    """
-    if comp_name not in dep.cpp_info.components:
-        raise ConanException("Component '{name}::{cname}' not found in '{name}' "
-                             "package requirement".format(name=get_package_name(dep), cname=comp_name))
-    comp_alias = dep.cpp_info.components[comp_name].get_property("pkg_config_name", "PkgConfigDeps")
-    return comp_alias
-
-
 class PkgConfigDeps(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        self._out = self._conanfile.output
+        # pkg_config_name could be a list of names so let's save all the names as alias
+        # for instance, set_property("pkg_config_name", ["target1", "alias1", "alias2"])
+        self._global_pkg_config_name_aliases = list()
+        self._pkg_config_name_aliases = dict()
+
+    def _get_pkg_config_name(self, info_obj):
+        """
+        Get the property pkg_config_name given by a CppInfo or _NewComponent object and
+        save all the possible aliases defined for that name.
+
+        :param info_obj: <_NewComponent> or <_CppInfo> object
+        :return: str or None
+        """
+        aliases = info_obj.get_property("pkg_config_name", "PkgConfigDeps")
+        # if it's a list of names, let's save the other ones as pure aliases
+        if isinstance(aliases, list):
+            # The main pkg_config_name is the first one
+            pkg_config_name = aliases[0]
+            aliases = aliases[1:]
+            if aliases:
+                self._pkg_config_name_aliases[pkg_config_name] = aliases
+                # Loop over the aliases defined to check any possible duplication
+                for alias in aliases:
+                    if alias in self._global_pkg_config_name_aliases:
+                        self._out.warn("Alias name '%s' was already defined by any other package or "
+                                       "component and it'll be overwritten." % alias)
+                    else:
+                        self._global_pkg_config_name_aliases.append(alias)
+        else:
+            pkg_config_name = aliases
+        return pkg_config_name
+
+    def get_package_name(self, dep):
+        """
+        If user declares the property "pkg_config_name" as part of the global cpp_info,
+        it'll be used as a complete alias for that package.
+        """
+        return self._get_pkg_config_name(dep.cpp_info) or get_package_reference_name(dep)
+
+    def get_component_name(self, dep, comp_name):
+        """
+        If user declares the property "pkg_config_name" as part of the cpp_info.components["comp_name"],
+        it'll be used as a complete alias for that package component.
+        """
+        if comp_name not in dep.cpp_info.components:
+            raise ConanException("Component '{name}::{cname}' not found in '{name}' "
+                                 "package requirement".format(name=get_package_reference_name(dep),
+                                                              cname=comp_name))
+        return self._get_pkg_config_name(dep.cpp_info.components[comp_name])
 
     @staticmethod
     def _get_pc_name(pkg_name, comp_name):
@@ -76,38 +105,51 @@ class PkgConfigDeps(object):
             pkg_name, comp_name = req.split("::") if "::" in req else (dep_name, req)
             # FIXME: it could allow defining requires to not direct dependencies
             req_conanfile = self._conanfile.dependencies.host[pkg_name]
-            comp_alias_name = get_component_alias(req_conanfile, comp_name)
+            comp_alias_name = self.get_component_name(req_conanfile, comp_name)
             if not comp_alias_name:
                 # Just in case, let's be sure about the pkg has any alias
-                pkg_name = get_package_alias(req_conanfile) or pkg_name
+                pkg_name = self.get_package_name(req_conanfile)
                 comp_alias_name = self._get_pc_name(pkg_name, comp_name)
             ret.append(comp_alias_name)
         return ret
 
     def _get_requires_names(self, dep):
         """Get all the dependency's requirements (public dependencies and components)"""
-        dep_name = get_package_name(dep)
+        dep_name = get_package_reference_name(dep)
         # At first, let's check if we have defined some component requires, e.g., "pkg::cmp1"
         requires = self._get_component_requires_names(dep_name, dep.cpp_info)
         # If we have found some component requires it would be enough
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
-            requires = [get_package_alias(req) or get_package_name(req)
-                        for req in dep.dependencies.direct_host.values()]
+            requires = [self.get_package_name(req) for req in dep.dependencies.direct_host.values()]
         return requires
 
-    def get_components_files_and_content(self, dep):
+    def _get_aliases_files_and_content(self, dep):
+        """Get all the *.pc files content for the aliases defined previously"""
+        pc_files = {}
+        for pkg_config_name, aliases in self._pkg_config_name_aliases.items():
+            for alias in aliases:
+                pc_file = _PCFilesTemplate.get_wrapper_pc_filename_and_content(
+                    [pkg_config_name],
+                    alias,
+                    description="Alias %s for %s" % (alias, pkg_config_name),
+                    version=dep.ref.version
+                )
+                pc_files.update(pc_file)
+        return pc_files
+
+    def _get_components_files_and_content(self, dep):
         """Get all the *.pc files content for the dependency and each of its components"""
         pc_files = {}
-        pkg_name = get_package_alias(dep) or get_package_name(dep)
+        pkg_name = self.get_package_name(dep)
         pkg_comp_names = []
         pc_gen = _PCFilesTemplate(self._conanfile, dep)
         # Loop through all the package's components
         for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
-            comp_requires_names = self._get_component_requires_names(get_package_name(dep),
+            comp_requires_names = self._get_component_requires_names(get_package_reference_name(dep),
                                                                      comp_cpp_info)
-            pkg_comp_name = get_component_alias(dep, comp_name)
+            pkg_comp_name = self.get_component_name(dep, comp_name)
             if not pkg_comp_name:
                 pkg_comp_name = self._get_pc_name(pkg_name, comp_name)
             pkg_comp_names.append(pkg_comp_name)
@@ -116,7 +158,10 @@ class PkgConfigDeps(object):
                                                                name=pkg_comp_name,
                                                                cpp_info=comp_cpp_info))
         # Let's create a *.pc file for the main package
-        pc_files.update(pc_gen.get_wrapper_pc_filename_and_content(pkg_comp_names))
+        pc_files.update(pc_gen.get_wrapper_pc_filename_and_content(pkg_comp_names,
+                                                                   pkg_name,
+                                                                   description=self._conanfile.description,
+                                                                   version=dep.ref.version))
         return pc_files
 
     @property
@@ -125,12 +170,19 @@ class PkgConfigDeps(object):
         pc_files = {}
         host_req = self._conanfile.dependencies.host
         for require, dep in host_req.items():
+            # Restart the aliases cache per dependency
+            self._pkg_config_name_aliases = dict()
+
             if dep.cpp_info.has_components:
-                pc_files.update(self.get_components_files_and_content(dep))
+                pc_files.update(self._get_components_files_and_content(dep))
             else:  # Content for package without components
                 pc_gen = _PCFilesTemplate(self._conanfile, dep)
                 requires = self._get_requires_names(dep)
-                pc_files.update(pc_gen.get_pc_filename_and_content(requires))
+                name = self.get_package_name(dep)
+                pc_files.update(pc_gen.get_pc_filename_and_content(requires, name))
+            # Save all the created alias if any
+            pc_files.update(self._get_aliases_files_and_content(dep))
+
         return pc_files
 
     def generate(self):
@@ -146,7 +198,6 @@ class _PCFilesTemplate(object):
     def __init__(self, conanfile, dep):
         self._conanfile = conanfile
         self._dep = dep
-        self._name = get_package_alias(dep) or get_package_name(dep)
 
     pc_file_template = textwrap.dedent("""\
 
@@ -217,7 +268,7 @@ class _PCFilesTemplate(object):
     {% endif %}
     """)
 
-    def get_pc_filename_and_content(self, requires, name=None, cpp_info=None):
+    def get_pc_filename_and_content(self, requires, name, cpp_info=None):
 
         def get_formatted_dirs(folders, prefix_path_):
             ret = []
@@ -232,7 +283,6 @@ class _PCFilesTemplate(object):
                 ret.append("%s%s" % (prefix, directory))
             return ret
 
-        dep_name = name or self._name
         package_folder = self._dep.package_folder
         version = self._dep.ref.version
         cpp_info = cpp_info or self._dep.cpp_info
@@ -246,8 +296,8 @@ class _PCFilesTemplate(object):
             "libdirs": libdirs,
             "includedirs": includedirs,
             "pkg_config_custom_content": cpp_info.get_property("pkg_config_custom_content", "PkgConfigDeps"),
-            "name": dep_name,
-            "description": self._conanfile.description or "Conan package: %s" % dep_name,
+            "name": name,
+            "description": self._conanfile.description or "Conan package: %s" % name,
             "version": version,
             "requires": requires,
             "cpp_info": cpp_info,
@@ -255,16 +305,16 @@ class _PCFilesTemplate(object):
         }
         template = Template(self.pc_file_template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
-        return {dep_name + ".pc": template.render(context)}
+        return {name + ".pc": template.render(context)}
 
-    def get_wrapper_pc_filename_and_content(self, requires, name=None):
-        dep_name = name or self._name
+    @staticmethod
+    def get_wrapper_pc_filename_and_content(requires, name, description=None, version=None):
         context = {
-            "name": dep_name,
-            "description": self._conanfile.description or "Conan package: %s" % dep_name,
-            "version": self._dep.ref.version,
+            "name": name,
+            "description": description or "Conan package: %s" % name,
+            "version": version,
             "requires": requires
         }
-        template = Template(self.wrapper_pc_file_template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=StrictUndefined)
-        return {dep_name + ".pc": template.render(context)}
+        template = Template(_PCFilesTemplate.wrapper_pc_file_template, trim_blocks=True,
+                            lstrip_blocks=True, undefined=StrictUndefined)
+        return {name + ".pc": template.render(context)}

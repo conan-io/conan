@@ -414,3 +414,118 @@ def test_pkg_with_public_deps_and_component_requires_2():
     assert client2.load("other_alias-cmp2.pc")
     pc_content = client2.load("component3.pc")
     assert "Requires: component1" == get_requires_from_content(pc_content)
+
+
+def test_pkg_config_name_full_aliases():
+    """
+    Testing a simpler structure but paying more attention into several aliases.
+    Expected file structure after running PkgConfigDeps as generator:
+        - compo1.pc
+        - compo1_alias.pc
+        - pkg_alias1.pc
+        - pkg_alias2.pc
+        - pkg_other_name.pc
+        - second-mycomponent.pc
+        - second.pc
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Recipe(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", ["pkg_other_name", "pkg_alias1", "pkg_alias2"])
+                self.cpp_info.components["cmp1"].libs = ["libcmp1"]
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", ["compo1", "compo1_alias"])
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . first/0.3@")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            requires = "first/0.3"
+
+            def package_info(self):
+                self.cpp_info.components["mycomponent"].requires.append("first::cmp1")
+
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . second/0.2@")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        second/0.2
+
+        [generators]
+        PkgConfigDeps
+        """)
+    client.save({"conanfile.txt": conanfile}, clean_first=True)
+    client.run("install .")
+
+    pc_content = client.load("compo1.pc")
+    assert "Description: Conan package: compo1" in pc_content
+    assert "Requires" not in pc_content
+
+    pc_content = client.load("compo1_alias.pc")
+    content = textwrap.dedent("""\
+    Name: compo1_alias
+    Description: Alias compo1_alias for compo1
+    Version: 0.3
+    Requires: compo1
+    """)
+    assert content == pc_content
+
+    pc_content = client.load("pkg_other_name.pc")
+    assert "Description: Conan package: pkg_other_name" in pc_content
+    assert "Requires: compo1" in pc_content
+
+    pc_content = client.load("pkg_alias1.pc")
+    content = textwrap.dedent("""\
+    Name: pkg_alias1
+    Description: Alias pkg_alias1 for pkg_other_name
+    Version: 0.3
+    Requires: pkg_other_name
+    """)
+    assert content == pc_content
+
+    pc_content = client.load("pkg_alias2.pc")
+    content = textwrap.dedent("""\
+    Name: pkg_alias2
+    Description: Alias pkg_alias2 for pkg_other_name
+    Version: 0.3
+    Requires: pkg_other_name
+    """)
+    assert content == pc_content
+
+    pc_content = client.load("second-mycomponent.pc")
+    assert "Requires: compo1" == get_requires_from_content(pc_content)
+
+
+def test_pkg_config_warning_if_same_alias_defined():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Recipe(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", ["pkg", "alias1"])
+                self.cpp_info.components["cmp1"].libs = ["libcmp1"]
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", ["compo1", "alias1"])
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . first/0.1@")
+    conanfile = textwrap.dedent("""
+        [requires]
+        first/0.1
+
+        [generators]
+        PkgConfigDeps
+        """)
+    client.save({"conanfile.txt": conanfile}, clean_first=True)
+    client.run("install .")
+    assert "WARN: Alias name 'alias1' was already defined by any other " \
+           "package or component and it'll be overwritten." in client.out
