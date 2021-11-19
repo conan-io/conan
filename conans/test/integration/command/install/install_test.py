@@ -279,7 +279,7 @@ def test_install_without_ref(client):
     client.run('remove "*" -f')
 
     # This fails, Conan thinks this is a path
-    client.run('install --reference=lib/1.0', assert_error=True)
+    client.run('install lib/1.0', assert_error=True)
     fake_path = os.path.join(client.current_folder, "lib", "1.0")
     assert "Conanfile not found at {}".format(fake_path) in client.out
 
