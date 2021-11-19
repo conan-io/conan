@@ -201,6 +201,7 @@ def test_env_files():
                "MyPath3": "OldPath3",
                "MyPath4": "OldPath4",
                }
+    prevenv.update(dict(os.environ.copy()))
 
     display_bat = textwrap.dedent("""\
         @echo off
@@ -217,6 +218,20 @@ def test_env_files():
         echo MyPath4=%MyPath4%!!
         """)
 
+    display_ps1 = textwrap.dedent("""\
+        echo "MyVar=$env:MyVar!!"
+        echo "MyVar1=$env:MyVar1!!"
+        echo "MyVar2=$env:MyVar2!!"
+        echo "MyVar3=$env:MyVar3!!"
+        echo "MyVar4=$env:MyVar4!!"
+        echo "MyVar5=$env:MyVar5!!"
+        echo "MyVar6=$env:MyVar6!!"
+        echo "MyPath1=$env:MyPath1!!"
+        echo "MyPath2=$env:MyPath2!!"
+        echo "MyPath3=$env:MyPath3!!"
+        echo "MyPath4=$env:MyPath4!!"
+    """)
+
     display_sh = textwrap.dedent("""\
         echo MyVar=$MyVar!!
         echo MyVar1=$MyVar1!!
@@ -232,9 +247,10 @@ def test_env_files():
         """)
 
     def check(cmd_):
-        out, _ = subprocess.Popen(cmd_, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  env=prevenv, shell=True).communicate()
-        out = out.decode()
+        result = subprocess.run(cmd_, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                env=prevenv, shell=True)
+        out = result.stdout.decode()
+
         assert "MyVar=MyValue!!" in out
         assert "MyVar1=MyValue1!!" in out
         assert "MyVar2=OldVar2 MyValue2!!" in out
@@ -268,13 +284,11 @@ def test_env_files():
             save("display.bat", display_bat)
             cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
             check(cmd)
-            # FIXME: Powershell still not working
-            # env.save_ps1("test.ps1", pathsep=":")
-            # cmd = 'powershell.exe -ExecutionPolicy ./test.ps1; gci env:'
-            # shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            # (stdout, stderr) = shell.communicate()
-            # stdout, stderr = decode_text(stdout), decode_text(stderr)
-            # check(cmd)
+
+            env.save_ps1("test.ps1")
+            save("display.ps1", display_ps1)
+            cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
+            check(cmd)
         else:
             env = env.vars(ConanFileMock())
             env.save_sh("test.sh")
@@ -302,23 +316,43 @@ def test_windows_case_insensitive():
         echo MyVar2=%MyVar2%!!
         """)
 
+    display_ps1 = textwrap.dedent("""\
+        echo "MyVar=$env:MyVar!!"
+        echo "MyVar1=$env:MyVar1!!"
+        echo "MyVar2=$env:MyVar2!!"
+        """)
+
+    def check(cmd_):
+        prevenv = {
+            "MYVAR2": "OldValue2",
+        }
+        prevenv.update(dict(os.environ.copy()))
+
+        result = subprocess.run(cmd_, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                env=prevenv, shell=True)
+        out = result.stdout.decode()
+
+        assert "MyVar=MyValueB!!" in out
+        assert "MyVar=!!" in out
+        assert "MyVar1=MyValue1A MyValue1B!!" in out
+        assert "MyVar1=!!" in out
+        assert "MyVar2=MyNewValue2!!" in out
+        assert "MyVar2=OldValue2!!" in out
+
     with chdir(folder):
-        env = env.vars(ConanFileMock())
-        env._subsystem = WINDOWS
-        env.save_bat("test.bat")
+        env1 = env.vars(ConanFileMock())
+        env1._subsystem = WINDOWS
+        env1.save_bat("test.bat")
         save("display.bat", display_bat)
         cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
-        out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                  shell=True, env={"MYVAR2": "OldValue2"}).communicate()
+        check(cmd)
 
-    out = out.decode()
-    assert "MyVar=MyValueB!!" in out
-    assert "MyVar=!!" in out
-    assert "MyVar1=MyValue1A MyValue1B!!" in out
-    assert "MyVar1=!!" in out
-    assert "MyVar2=MyNewValue2!!" in out
-    assert "MyVar2=OldValue2!!" in out
-
+        env2 = env.vars(ConanFileMock())
+        env2._subsystem = WINDOWS
+        env2.save_ps1("test.ps1")
+        save("display.ps1", display_ps1)
+        cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
+        check(cmd)
 
 def test_dict_access():
     env = Environment()
