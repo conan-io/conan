@@ -119,5 +119,4 @@ def install(conan_api, parser, *args, **kwargs):
                                          is_build_require=args.build_require,
                                          require_overrides=args.require_override)
     except ConanException as exc:
-        info = exc.info
         raise

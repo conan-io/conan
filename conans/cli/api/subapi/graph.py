@@ -28,6 +28,10 @@ class GraphAPI:
         @param remote_name:
         @param update:
         """
+        if path and reference:
+            raise ConanException("Both path and reference arguments were provided. Please provide "
+                                 "only one of them")
+
         app = ConanApp(self.conan_api.cache_folder)
         # FIXME: remote_name should be remote
         app.load_remotes([Remote(remote_name, None)], update=update)

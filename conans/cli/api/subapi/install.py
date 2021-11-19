@@ -103,10 +103,6 @@ class InstallAPI:
                 generators=None, no_imports=False, install_folder=None, lockfile_in=None,
                 lockfile_out=None, is_build_require=None, require_overrides=None):
 
-        if path and reference:
-            raise ConanException("Both path and reference arguments were provided. Please provide "
-                                 "only one of them")
-
         if reference and (name or version or user or channel):
             raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                                  "--reference")
@@ -144,4 +140,4 @@ class InstallAPI:
 
         if lockfile_out:
             lockfile_out = _make_abs_path(lockfile_out, cwd)
-            graph_lock.save(lockfile_out)
+            lockfile.save(lockfile_out)

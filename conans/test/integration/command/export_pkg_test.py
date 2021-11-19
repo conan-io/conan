@@ -177,7 +177,7 @@ class TestConan(ConanFile):
     settings = "os", "build_type"
 """
         client.save({CONANFILE: consumer}, clean_first=True)
-        client.run("install --reference=%s" % install_args)
+        client.run("install %s" % install_args)
         self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
 
     def test_new(self):
