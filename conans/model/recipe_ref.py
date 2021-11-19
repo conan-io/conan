@@ -6,37 +6,45 @@ from conans.errors import ConanException
 
 
 @total_ordering
-class _NonZeroItems:
-    def __init__(self, items):
-        self._items = items.copy()
-        while self._items and self._items[-1] == 0:
-            del self._items[-1]
+class _VersionItem:
+    """ a single "digit" in a version, like X.Y.Z all X and Y and Z are VersionItems
+    They can be int or strings
+    """
+    def __init__(self, item):
+        try:
+            self._v = int(item)
+        except ValueError:
+            self._v = item
+
+    @property
+    def value(self):
+        return self._v
+
+    def __str__(self):
+        return str(self._v)
+
+    def __add__(self, other):
+        # necessary for the "bump()" functionality. Other aritmetic operations are missing
+        return self._v + other
 
     def __eq__(self, other):
-        """
-        @type other: _NonZeroItems
-        """
-        return self._items == other._items
+        if not isinstance(other, _VersionItem):
+            other = _VersionItem(other)
+        return self._v == other._v
 
     def __hash__(self):
-        return hash((tuple(self._items)))
+        return hash(self._v)
 
     def __lt__(self, other):
         """
-        @type other: _NonZeroItems
+        @type other: _VersionItem
         """
-        for me, you in zip(self._items, other._items):
-            try:
-                if me < you:
-                    return True
-                elif me > you:
-                    return False
-            except TypeError:
-                if str(me) < str(you):
-                    return True
-                elif str(me) > str(you):
-                    return False
-        return len(self._items) < len(other._items)
+        if not isinstance(other, _VersionItem):
+            other = _VersionItem(other)
+        try:
+            return self._v < other._v
+        except TypeError:
+            return str(self._v) < str(other._v)
 
 
 @total_ordering
@@ -65,26 +73,28 @@ class Version:
             value = items[0]
             self._pre = None
         items = value.split(".")
-        items = [int(item) if item.isdigit() else item for item in items]
-        self._items = items
-        self._nonzero_items = _NonZeroItems(items)
+        items = [_VersionItem(item) for item in items]
+        self._items = tuple(items)
+        while items and items[-1].value == 0:
+            del items[-1]
+        self._nonzero_items = tuple(items)
 
     def bump(self, index):
         """
-           Increments by 1 the version field at the specified index, setting to 0 the fields on the right.
+           Increments by 1 the version field at the specified index, setting to 0 the fields
+            on the right.
            2.5 => bump(1) => 2.6
            1.5.7 => bump(0) => 2.0.0
         """
         # this method is used to compute version ranges from tilde ~1.2 and caret ^1.2.1 ranges
         # TODO: at this moment it only works for digits, cannot increment pre-release or builds
         # better not make it public yet, keep it internal
-        items = self._items.copy()
+        items = list(self._items[:index])
         try:
-            items[index] += 1
+            items.append(self._items[index]+1)
         except TypeError:
-            raise ConanException("Cannot bump version index {index}, not an int")
-        for i in range(index+1, len(items)):
-            items[i] = 0
+            raise ConanException(f"Cannot bump '{self._value} version index {index}, not an int")
+        items.extend([0] * (len(items) - index - 1))
         v = ".".join(str(i) for i in items)
         # prerelease and build are dropped while bumping digits
         result = Version(v)
@@ -120,6 +130,13 @@ class Version:
     def patch(self):
         try:
             return self.main[2]
+        except IndexError:
+            return None
+
+    @property
+    def micro(self):
+        try:
+            return self.main[3]
         except IndexError:
             return None
 
