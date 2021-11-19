@@ -177,129 +177,8 @@ def test_profile():
         assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
 
 
-def test_env_files():
-    env = Environment()
-    env.define("MyVar", "MyValue")
-    env.define("MyVar1", "MyValue1")
-    env.append("MyVar2", "MyValue2")
-    env.prepend("MyVar3", "MyValue3")
-    env.unset("MyVar4")
-    env.define("MyVar5", "MyValue5 With Space5=More Space5;:More")
-    env.append("MyVar6", "MyValue6")  # Append, but previous not existing
-    env.define_path("MyPath1", "/Some/Path1/")
-    env.append_path("MyPath2", ["/Some/Path2/", "/Other/Path2/"])
-    env.prepend_path("MyPath3", "/Some/Path3/")
-    env.unset("MyPath4")
-    folder = temp_folder()
-
-    prevenv = {"MyVar1": "OldVar1",
-               "MyVar2": "OldVar2",
-               "MyVar3": "OldVar3",
-               "MyVar4": "OldVar4",
-               "MyPath1": "OldPath1",
-               "MyPath2": "OldPath2",
-               "MyPath3": "OldPath3",
-               "MyPath4": "OldPath4",
-               }
-    prevenv.update(dict(os.environ.copy()))
-
-    display_bat = textwrap.dedent("""\
-        @echo off
-        echo MyVar=%MyVar%!!
-        echo MyVar1=%MyVar1%!!
-        echo MyVar2=%MyVar2%!!
-        echo MyVar3=%MyVar3%!!
-        echo MyVar4=%MyVar4%!!
-        echo MyVar5=%MyVar5%!!
-        echo MyVar6=%MyVar6%!!
-        echo MyPath1=%MyPath1%!!
-        echo MyPath2=%MyPath2%!!
-        echo MyPath3=%MyPath3%!!
-        echo MyPath4=%MyPath4%!!
-        """)
-
-    display_ps1 = textwrap.dedent("""\
-        echo "MyVar=$env:MyVar!!"
-        echo "MyVar1=$env:MyVar1!!"
-        echo "MyVar2=$env:MyVar2!!"
-        echo "MyVar3=$env:MyVar3!!"
-        echo "MyVar4=$env:MyVar4!!"
-        echo "MyVar5=$env:MyVar5!!"
-        echo "MyVar6=$env:MyVar6!!"
-        echo "MyPath1=$env:MyPath1!!"
-        echo "MyPath2=$env:MyPath2!!"
-        echo "MyPath3=$env:MyPath3!!"
-        echo "MyPath4=$env:MyPath4!!"
-    """)
-
-    display_sh = textwrap.dedent("""\
-        echo MyVar=$MyVar!!
-        echo MyVar1=$MyVar1!!
-        echo MyVar2=$MyVar2!!
-        echo MyVar3=$MyVar3!!
-        echo MyVar4=$MyVar4!!
-        echo MyVar5=$MyVar5!!
-        echo MyVar6=$MyVar6!!
-        echo MyPath1=$MyPath1!!
-        echo MyPath2=$MyPath2!!
-        echo MyPath3=$MyPath3!!
-        echo MyPath4=$MyPath4!!
-        """)
-
-    def check(cmd_):
-        result = subprocess.run(cmd_, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                env=prevenv, shell=True)
-        out = result.stdout.decode()
-
-        assert "MyVar=MyValue!!" in out
-        assert "MyVar1=MyValue1!!" in out
-        assert "MyVar2=OldVar2 MyValue2!!" in out
-        assert "MyVar3=MyValue3 OldVar3!!" in out
-        assert "MyVar4=!!" in out
-        assert "MyVar5=MyValue5 With Space5=More Space5;:More!!" in out
-        assert "MyVar6= MyValue6!!" in out  # The previous is non existing, append has space
-        assert "MyPath1=/Some/Path1/!!" in out
-        assert os.pathsep.join(["MyPath2=OldPath2", "/Some/Path2/", "/Other/Path2/!!"]) in out
-        assert os.pathsep.join(["MyPath3=/Some/Path3/", "OldPath3!!"]) in out
-        assert "MyPath4=!!" in out
-
-        # This should be output when deactivated
-        assert "MyVar=!!" in out
-        assert "MyVar1=OldVar1!!" in out
-        assert "MyVar2=OldVar2!!" in out
-        assert "MyVar3=OldVar3!!" in out
-        assert "MyVar4=OldVar4!!" in out
-        assert "MyVar5=!!" in out
-        assert "MyVar6=!!" in out
-        assert "MyPath1=OldPath1!!" in out
-        assert "MyPath2=OldPath2!!" in out
-        assert "MyPath3=OldPath3!!" in out
-        assert "MyPath4=OldPath4!!" in out
-
-    with chdir(folder):
-        if platform.system() == "Windows":
-            env = env.vars(ConanFileMock())
-            env.save_bat("test.bat")
-
-            save("display.bat", display_bat)
-            cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
-            check(cmd)
-
-            env.save_ps1("test.ps1")
-            save("display.ps1", display_ps1)
-            cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
-            check(cmd)
-        else:
-            env = env.vars(ConanFileMock())
-            env.save_sh("test.sh")
-            save("display.sh", display_sh)
-            os.chmod("display.sh", 0o777)
-            cmd = '. ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
-            check(cmd)
-
-
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_windows_case_insensitive():
+@pytest.fixture
+def env():
     # Append and define operation over the same variable in Windows preserve order
     env = Environment()
     env.define("MyVar", "MyValueA")
@@ -307,52 +186,65 @@ def test_windows_case_insensitive():
     env.define("MyVar1", "MyValue1A")
     env.append("MYVAR1", "MyValue1B")
     env.define("MyVar2", "MyNewValue2")
-    folder = temp_folder()
 
-    display_bat = textwrap.dedent("""\
+    env = env.vars(ConanFileMock())
+    env._subsystem = WINDOWS
+
+    return env
+
+
+def check_command_output(cmd, prevenv):
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            env=prevenv, shell=True)
+    out = result.stdout.decode()
+
+    assert "MyVar=MyValueB!!" in out
+    assert "MyVar=!!" in out
+    assert "MyVar1=MyValue1A MyValue1B!!" in out
+    assert "MyVar1=!!" in out
+    assert "MyVar2=MyNewValue2!!" in out
+    assert "MyVar2=OldValue2!!" in out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_windows_case_insensitive_bat(env):
+    display = textwrap.dedent("""\
         @echo off
         echo MyVar=%MyVar%!!
         echo MyVar1=%MyVar1%!!
         echo MyVar2=%MyVar2%!!
         """)
 
-    display_ps1 = textwrap.dedent("""\
+    prevenv = {
+        "MYVAR2": "OldValue2",
+    }
+
+    with chdir(temp_folder()):
+        env.save_bat("test.bat")
+        save("display.bat", display)
+        cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
+        check_command_output(cmd, prevenv)
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_windows_case_insensitive_ps1(env):
+    display = textwrap.dedent("""\
         echo "MyVar=$env:MyVar!!"
         echo "MyVar1=$env:MyVar1!!"
         echo "MyVar2=$env:MyVar2!!"
         """)
 
-    def check(cmd_):
-        prevenv = {
-            "MYVAR2": "OldValue2",
-        }
-        prevenv.update(dict(os.environ.copy()))
+    prevenv = {
+        "MYVAR2": "OldValue2",
+    }
+    prevenv.update(dict(os.environ.copy()))
 
-        result = subprocess.run(cmd_, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                env=prevenv, shell=True)
-        out = result.stdout.decode()
-
-        assert "MyVar=MyValueB!!" in out
-        assert "MyVar=!!" in out
-        assert "MyVar1=MyValue1A MyValue1B!!" in out
-        assert "MyVar1=!!" in out
-        assert "MyVar2=MyNewValue2!!" in out
-        assert "MyVar2=OldValue2!!" in out
-
-    with chdir(folder):
-        env1 = env.vars(ConanFileMock())
-        env1._subsystem = WINDOWS
-        env1.save_bat("test.bat")
-        save("display.bat", display_bat)
-        cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
-        check(cmd)
-
-        env2 = env.vars(ConanFileMock())
-        env2._subsystem = WINDOWS
-        env2.save_ps1("test.ps1")
-        save("display.ps1", display_ps1)
+    with chdir(temp_folder()):
+        env.save_ps1("test.ps1")
+        save("display.ps1", display)
         cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
-        check(cmd)
+        check_command_output(cmd, prevenv)
+
 
 def test_dict_access():
     env = Environment()
