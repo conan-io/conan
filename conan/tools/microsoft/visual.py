@@ -12,7 +12,7 @@ def msvc_version_to_vs_ide_version(version):
                 '191': '15',
                 '192': '16',
                 '193': '17'}
-    return _visuals[version]
+    return _visuals[str(version)]
 
 
 class VCVars:
