@@ -43,6 +43,9 @@ class VersionRange:
         for expression in expressions:
             self.conditions.extend(_parse_expression(expression))
 
+    def __str__(self):
+        return self._expression
+
     def __contains__(self, version):
         assert isinstance(version, Version)
         for condition in self.conditions:

@@ -1,12 +1,14 @@
 from conans.client.cache.cache import ClientCache
-from semver import satisfies
 from conans import __version__ as client_version
 from conans.errors import ConanException
+from conans.model.version import Version
+from conans.model.version_range import VersionRange
+
+client_version = Version(client_version)
 
 
 def validate_conan_version(required_range):
-    result = satisfies(client_version, required_range, loose=True, include_prerelease=True)
-    if not result:
+    if client_version not in VersionRange(required_range):
         raise ConanException("Current Conan version ({}) does not satisfy "
                              "the defined one ({}).".format(client_version, required_range))
 
