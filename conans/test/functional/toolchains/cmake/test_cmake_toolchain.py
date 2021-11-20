@@ -12,14 +12,15 @@ from conans.util.files import save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-@pytest.mark.parametrize("compiler, version, runtime",
-                         [("msvc", "19.2X", "dynamic"),
-                          ("msvc", "19.26", "static"),
-                          ("msvc", "19.28", "static")])
-def test_cmake_toolchain_win_toolset(compiler, version, runtime):
+@pytest.mark.parametrize("compiler, version, update, runtime",
+                         [("msvc", "192", None, "dynamic"),
+                          ("msvc", "192", "6", "static"),
+                          ("msvc", "192", "8", "static")])
+def test_cmake_toolchain_win_toolset(compiler, version, update, runtime):
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": compiler,
                 "compiler.version": version,
+                "compiler.update": update,
                 "compiler.cppstd": "17",
                 "compiler.runtime": runtime,
                 "build_type": "Release",
@@ -34,11 +35,10 @@ def test_cmake_toolchain_win_toolset(compiler, version, runtime):
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
     toolchain = client.load("conan_toolchain.cmake")
-    if "X" not in version:  # Fullversion
-        minor = version.split(".")[1]
-        value = "version=14.{}".format(minor)
+    if update is not None:  # Fullversion
+        value = "version=14.{}{}".format(version[-1], update)
     else:
-        value = "v142"
+        value = "v14{}".format(version[-1])
     assert 'set(CMAKE_GENERATOR_TOOLSET "{}" CACHE STRING "" FORCE)'.format(value) in toolchain
 
 

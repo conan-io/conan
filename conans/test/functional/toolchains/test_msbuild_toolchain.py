@@ -7,8 +7,8 @@ from parameterized import parameterized
 from conans.test.utils.tools import TestClient
 
 
-@parameterized.expand([("msvc", "19.0", "dynamic"),
-                       ("msvc", "19.1X", "static")]
+@parameterized.expand([("msvc", "190", "dynamic"),
+                       ("msvc", "191", "static")]
                       )
 @pytest.mark.tool_visual_studio
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")

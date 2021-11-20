@@ -233,7 +233,7 @@ def _detect_compiler_version(result, output, profile_path):
         version = Version(version)
         if version == "17":
             compiler = "msvc"
-            version = "19.3"
+            version = "193"
 
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version, output)))

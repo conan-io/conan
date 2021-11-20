@@ -7,6 +7,14 @@ from conans.errors import ConanException
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
+def msvc_version_to_vs_ide_version(version):
+    _visuals = {'190': '14',
+                '191': '15',
+                '192': '16',
+                '193': '17'}
+    return _visuals[version]
+
+
 class VCVars:
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -54,12 +62,7 @@ def vs_ide_version(conanfile):
         if toolset_override:
             visual_version = toolset_override
         else:
-            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
-            _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
-                        '19.1': '15',
-                        '19.2': '16',
-                        '19.3': '17'}
-            visual_version = _visuals[version]
+            visual_version = msvc_version_to_vs_ide_version(compiler_version)
     else:
         visual_version = compiler_version
     return visual_version
@@ -166,9 +169,6 @@ def _vcvars_vers(conanfile, compiler, vs_version):
         assert compiler == "msvc"
         # Code similar to CMakeToolchain toolset one
         compiler_version = str(conanfile.settings.compiler.version)
-        version_components = compiler_version.split(".")
-        assert len(version_components) >= 2  # there is a 19.XX
-        minor = version_components[1]
-        # The equivalent of compiler 19.26 is toolset 14.26
-        vcvars_ver = "14.{}".format(minor[0])
+        # The equivalent of compiler 192 is toolset 14.2
+        vcvars_ver = "14.{}".format(compiler_version[-1])
     return vcvars_ver
