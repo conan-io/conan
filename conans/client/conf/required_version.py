@@ -4,13 +4,12 @@ from conans.errors import ConanException
 from conans.model.version import Version
 from conans.model.version_range import VersionRange
 
-client_version = Version(client_version)
-
 
 def validate_conan_version(required_range):
-    if client_version not in VersionRange(required_range):
+    clientver = Version(client_version)
+    if clientver not in VersionRange(required_range):
         raise ConanException("Current Conan version ({}) does not satisfy "
-                             "the defined one ({}).".format(client_version, required_range))
+                             "the defined one ({}).".format(clientver, required_range))
 
 
 def check_required_conan_version(cache_folder):
