@@ -31,14 +31,14 @@ class TestVersionRanges(GraphManagerTest):
             self.recipe_cache(f"libb/{v}")
 
         for expr, solution in [(">0.0", "2.2.1"),
-                               (">0.1,<1", "0.3"),
-                               (">0.1,<1||2.1", "2.1"),
+                               (">0.1 <1", "0.3"),
+                               (">0.1 <1||2.1", "2.1"),
                                ("", "2.2.1"),
                                ("~0", "0.3"),
-                               ("~=1", "1.2.1"),
+                               ("~1", "1.2.1"),
                                ("~1.1", "1.1.2"),
-                               ("~=2", "2.2.1"),
-                               ("~=2.1", "2.1"),
+                               ("~2", "2.2.1"),
+                               ("~2.1", "2.1"),
                                ]:
             consumer = self.recipe_consumer("app/0.1", [f"libb/[{expr}]"])
             deps_graph = self.build_consumer(consumer)
@@ -376,14 +376,14 @@ def test_remote_version_ranges():
     t.run("upload * --all --confirm -r default")
     # TODO: Deprecate the comma separator for expressions
     for expr, solution in [(">0.0", "2.2.1"),
-                           (">0.1,<1", "0.3"),
-                           (">0.1,<1||2.1", "2.1"),
+                           (">0.1 <1", "0.3"),
+                           (">0.1 <1||2.1", "2.1"),
                            ("", "2.2.1"),
                            ("~0", "0.3"),
-                           ("~=1", "1.2.1"),
+                           ("~1", "1.2.1"),
                            ("~1.1", "1.1.2"),
-                           ("~=2", "2.2.1"),
-                           ("~=2.1", "2.1"),
+                           ("~2", "2.2.1"),
+                           ("~2.1", "2.1"),
                            ]:
         t.run("remove * -f")
         t.save({"conanfile.py": GenConanfile().with_requires(f"dep/[{expr}]")})
