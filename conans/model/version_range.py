@@ -32,7 +32,8 @@ class _ConditionSet:
         version = expression[index:]
         if operator == "~":  # tilde minor
             v = Version(version)
-            return [_Condition(">=", v), _Condition("<", v.bump(1))]
+            index = 1 if len(v.main) > 1 else 0
+            return [_Condition(">=", v), _Condition("<", v.bump(index))]
         elif operator == "^":  # caret major
             v = Version(version)
 
