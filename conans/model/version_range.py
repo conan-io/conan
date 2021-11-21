@@ -10,8 +10,10 @@ _Condition = namedtuple("_Condition", ["operator", "version"])
 def _parse_expression(expression):
     operator = expression[0]
     if operator not in (">", "<", "^", "~"):
-        raise ConanException(f"Invalid version range {expression}")
-    index = 1
+        operator = "="
+        index = 0
+    else:
+        index = 1
     if operator in (">", "<"):
         if expression[1] == "=":
             operator += "="
@@ -44,7 +46,7 @@ class VersionRange:
             self.conditions.extend(_parse_expression(expression))
 
     def __contains__(self, version):
-        assert isinstance(version, Version)
+        assert isinstance(version, Version), type(version)
         for condition in self.conditions:
             if condition.operator == ">":
                 if not version > condition.version:
@@ -57,5 +59,8 @@ class VersionRange:
                     return False
             elif condition.operator == "<=":
                 if not version <= condition.version:
+                    return False
+            elif condition.operator == "=":
+                if not version == condition.version:
                     return False
         return True
