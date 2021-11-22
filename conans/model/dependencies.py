@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_SKIP
+from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.requires import Requirement
 from conans.model.conanfile_interface import ConanFileInterface
@@ -43,8 +44,15 @@ class UserRequirementsDict(object):
         return self._data.get(r)
 
     def __getitem__(self, name):
-        r = self._get_require(name)
-        return self._data[r]
+        ret = []
+        for k, v in self._data.items():
+            if k.ref.name == name:
+                ret.append(v)
+
+        if len(ret) > 1:
+            raise ConanException("There is more than one '{}' transitive requirements, filter before "
+                                 "getting by name".format(name))
+        return ret[0]
 
     def __delitem__(self, name):
         r = self._get_require(name)
@@ -103,7 +111,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_build(self):
-        return self.filter({"build": True, "direct": True, "run": True})
+        return self.filter({"build": True, "direct": True})
 
     @property
     def host(self):
@@ -115,4 +123,4 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def build(self):
-        return self.filter({"build": True, "run": True})
+        return self.filter({"build": True})
