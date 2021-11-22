@@ -123,7 +123,7 @@ def test_locally_build_msvc_toolset(client):
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.0
+        compiler.version=190
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release
