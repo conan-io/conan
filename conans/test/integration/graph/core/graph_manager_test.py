@@ -19,6 +19,8 @@ def _check_transitive(node, transitive_deps):
         assert v1.require.libs is v2[2]
         assert v1.require.build is v2[3]
         assert v1.require.run is v2[4]
+        if len(v2) > 5:
+            assert v1.require.package_id_mode is v2[5]
 
 
 class TestLinear(GraphManagerTest):
@@ -983,6 +985,43 @@ class PureOverrideTest(GraphManagerTest):
         app = deps_graph.root
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[])
+
+
+class PackageIDDeductions(GraphManagerTest):
+
+    def test_static_dep_to_shared(self):
+        # project -> app1 -> lib
+        #    \---- > app2 --/
+
+        self._cache_recipe("lib/0.1", GenConanfile())
+        self._cache_recipe("app1/0.1", GenConanfile().with_requirement("lib/0.1"))
+        self._cache_recipe("app2/0.1", GenConanfile().with_requirement("lib/0.1"))
+
+        deps_graph = self.build_graph(GenConanfile("project", "0.1")
+                                      .with_requirement("app1/0.1", headers=False, libs=False,
+                                                        build=False, run=True)
+                                      .with_requirement("app2/0.1", headers=False, libs=False,
+                                                        build=False, run=True)
+                                      )
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        project = deps_graph.root
+        app1 = project.dependencies[0].dst
+        app2 = project.dependencies[1].dst
+        lib = app1.dependencies[0].dst
+        lib2 = app2.dependencies[0].dst
+
+        assert lib is lib2
+
+        self._check_node(project, "project/0.1@", deps=[app1, app2], dependents=[])
+        self._check_node(app1, "app1/0.1#123", deps=[lib], dependents=[project])
+        self._check_node(app2, "app2/0.1#123", deps=[lib], dependents=[project])
+        self._check_node(lib, "lib/0.1#123", deps=[], dependents=[app1, app2])
+
+        # node, headers, lib, build, run
+        _check_transitive(project, [(app1, False, False, False, True),
+                                    (app2, False, False, False, True),
+                                    (lib, False, False, False, None)])
 
 
 class TestProjectApp(GraphManagerTest):
