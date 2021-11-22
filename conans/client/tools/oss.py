@@ -277,9 +277,9 @@ class OSInfo(object):
     def get_solaris_version_name(version):
         if not version:
             return None
-        elif version.minor == "10":
+        elif version.major == "5" and version.minor == "10":
             return "Solaris 10"
-        elif version.minor == "11":
+        elif version.major == "5" and version.minor == "11":
             return "Solaris 11"
 
     @staticmethod
