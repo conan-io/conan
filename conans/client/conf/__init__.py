@@ -1,13 +1,8 @@
 import logging
-import os
 import textwrap
-
-from jinja2 import Template
 from configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
-from conans.model.env_info import unquote
-from conans.paths import DEFAULT_PROFILE_NAME, CACERT_FILE
 from conans.util.dates import timedelta_from_text
 from conans.util.env import get_env
 from conans.util.files import load
@@ -138,7 +133,7 @@ def get_default_settings_yml():
     return _t_default_settings_yml
 
 
-_t_default_client_conf = Template(textwrap.dedent("""
+_t_default_client_conf = textwrap.dedent("""
     [log]
     run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
     run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
@@ -147,18 +142,13 @@ _t_default_client_conf = Template(textwrap.dedent("""
     print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
     [general]
-    default_profile = {{default_profile}}
     sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
-    request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
 
     # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
     # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
-    # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
-    # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
 
     # non_interactive = False
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
-
 
     # cpu_count = 1             # environment CONAN_CPU_COUNT
 
@@ -166,34 +156,18 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # which is deleted after the test.
     # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
-    # cacert_path                         # environment CONAN_CACERT_PATH
-
     # config_install_interval = 1h
-    # required_conan_version = >=1.26
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
     # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
     # with "~/", will be relative to the conan user home, not to the system user home)
     path = ./data
-
-    [proxies]
-    # Empty (or missing) section will try to use system proxies.
-    # As documented in https://requests.readthedocs.io/en/master/user/advanced/#proxies - but see below
-    # for proxies to specific hosts
-    # http = http://user:pass@10.10.1.10:3128/
-    # http = http://10.10.1.10:3128
-    # https = http://10.10.1.10:1080
-    # To specify a proxy for a specific host or hosts, use multiple lines each specifying host = proxy-spec
-    # http =
-    #   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
-    # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
-    # no_proxy_match = *bintray.com*, https://myserver.*
-    """))
+    """)
 
 
-def get_default_client_conf(force_v1=False):
-    return _t_default_client_conf.render(default_profile=DEFAULT_PROFILE_NAME)
+def get_default_client_conf():
+    return _t_default_client_conf
 
 
 class ConanClientConfigParser(ConfigParser, object):
@@ -201,55 +175,11 @@ class ConanClientConfigParser(ConfigParser, object):
     # So keys are not converted to lowercase, we override the default optionxform
     optionxform = str
 
-    _table_vars = {
-        # Environment variable | conan.conf variable | Default value
-        "log": [
-            ("CONAN_LOG_RUN_TO_OUTPUT", "run_to_output", True),
-            ("CONAN_LOG_RUN_TO_FILE", "run_to_file", False),
-            ("CONAN_LOGGING_LEVEL", "level", logging.CRITICAL),
-            ("CONAN_TRACE_FILE", "trace_file", None),
-            ("CONAN_PRINT_RUN_COMMANDS", "print_run_commands", False),
-        ],
-        "general": [
-            ("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", "skip_broken_symlinks_check", False),
-            ("CONAN_SYSREQUIRES_SUDO", "sysrequires_sudo", False),
-            ("CONAN_SYSREQUIRES_MODE", "sysrequires_mode", None),
-            ("CONAN_CPU_COUNT", "cpu_count", None),
-            ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
-        ],
-        "hooks": [
-            ("CONAN_HOOKS", "", None),
-        ]
-    }
-
     def __init__(self, filename):
         super(ConanClientConfigParser, self).__init__(allow_no_value=True)
         self.read(filename)
         self.filename = filename
         self._non_interactive = None
-
-    @property
-    def env_vars(self):
-        ret = {}
-        for section, values in self._table_vars.items():
-            for env_var, var_name, default_value in values:
-                var_name = ".".join([section, var_name]) if var_name else section
-                value = self._env_c(var_name, env_var, default_value)
-                if value is not None:
-                    ret[env_var] = str(value)
-        return ret
-
-    def _env_c(self, var_name, env_var_name, default_value):
-        """ Returns the value Conan will use: first tries with environment variable,
-            then value written in 'conan.conf' and fallback to 'default_value'
-        """
-        env = os.environ.get(env_var_name, None)
-        if env is not None:
-            return env
-        try:
-            return unquote(self.get_item(var_name))
-        except ConanException:
-            return default_value
 
     def get_item(self, item):
         """ Return the value stored in 'conan.conf' """
@@ -282,84 +212,12 @@ class ConanClientConfigParser(ConfigParser, object):
                 raise ConanException("'%s' doesn't exist in [%s]" % (key, section_name))
             return value
 
-    def set_item(self, key, value):
-        tokens = key.split(".", 1)
-        if len(tokens) == 1:  # defining full section
-            raise ConanException("You can't set a full section, please specify a section.key=value")
-
-        section_name = tokens[0]
-        if not self.has_section(section_name):
-            self.add_section(section_name)
-
-        key = tokens[1]
-        try:
-            super(ConanClientConfigParser, self).set(section_name, key, value)
-        except ValueError:
-            # https://github.com/conan-io/conan/issues/4110
-            value = value.replace("%", "%%")
-            super(ConanClientConfigParser, self).set(section_name, key, value)
-
-        with open(self.filename, "w") as f:
-            self.write(f)
-
-    def rm_item(self, item):
-        tokens = item.split(".", 1)
-        section_name = tokens[0]
-        if not self.has_section(section_name):
-            raise ConanException("'%s' is not a section of conan.conf" % section_name)
-
-        if len(tokens) == 1:
-            self.remove_section(tokens[0])
-        else:
-            key = tokens[1]
-            if not self.has_option(section_name, key):
-                raise ConanException("'%s' doesn't exist in [%s]" % (key, section_name))
-            self.remove_option(section_name, key)
-
-        with open(self.filename, "w") as f:
-            self.write(f)
-
     def _get_conf(self, varname):
         """Gets the section from config file or raises an exception"""
         try:
             return self.items(varname)
         except NoSectionError:
             raise ConanException("Invalid configuration, missing %s" % varname)
-
-    @property
-    def parallel_download(self):
-        try:
-            parallel = self.get_item("general.parallel_download")
-        except ConanException:
-            return None
-
-        try:
-            return int(parallel) if parallel is not None else None
-        except ValueError:
-            raise ConanException("Specify a numeric parameter for 'parallel_download'")
-
-    @property
-    def proxies(self):
-        try:  # optional field, might not exist
-            proxies = self._get_conf("proxies")
-        except Exception:
-            return None
-        result = {}
-        # Handle proxy specifications of the form:
-        # http = http://proxy.xyz.com
-        #   special-host.xyz.com = http://special-proxy.xyz.com
-        # (where special-proxy.xyz.com is only used as a proxy when special-host.xyz.com)
-        for scheme, proxy_string in proxies or []:
-            if proxy_string is None or proxy_string == "None":
-                result[scheme] = None
-            else:
-                for line in proxy_string.splitlines():
-                    proxy_value = [t.strip() for t in line.split("=", 1)]
-                    if len(proxy_value) == 2:
-                        result[scheme+"://"+proxy_value[0]] = proxy_value[1]
-                    elif proxy_value[0]:
-                        result[scheme] = proxy_value[0]
-        return result
 
     @property
     def hooks(self):
@@ -452,26 +310,3 @@ class ConanClientConfigParser(ConfigParser, object):
             "notset": logging.NOTSET
         }
         return levels.get(str(level_name).lower())
-
-    @property
-    def config_install_interval(self):
-        item = "general.config_install_interval"
-        try:
-            interval = self.get_item(item)
-        except ConanException:
-            return None
-
-        try:
-            return timedelta_from_text(interval)
-        except Exception:
-            self.rm_item(item)
-            raise ConanException("Incorrect definition of general.config_install_interval: {}. "
-                                 "Removing it from conan.conf to avoid possible loop error."
-                                 .format(interval))
-
-    @property
-    def required_conan_version(self):
-        try:
-            return self.get_item("general.required_conan_version")
-        except ConanException:
-            return None
