@@ -334,7 +334,7 @@ def test_install_version_range_reference(client):
     client.run("create . pkg/0.1@user/channel")
     client.run("install pkg/[*]@user/channel")
     assert "pkg/0.1@user/channel from local cache - Cache" in client.out
-    client.run("install pkg/[0.*]@user/channel")
+    client.run("install pkg/[>0]@user/channel")
     assert "pkg/0.1@user/channel from local cache - Cache" in client.out
 
 
