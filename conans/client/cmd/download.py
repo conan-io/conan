@@ -47,7 +47,7 @@ def download(app, ref, package_ids, recipe):
             if not package_ids:
                 scoped_output.warning("No remote binary packages found in remote")
 
-        parallel = cache.config.parallel_download
+        parallel = cache.new_config.get("core.download:parallel", int)
         _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote,
                            scoped_output, parallel)
     hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,

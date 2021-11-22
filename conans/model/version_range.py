@@ -7,6 +7,7 @@ _Condition = namedtuple("_Condition", ["operator", "version"])
 
 
 class _ConditionSet:
+
     def __init__(self, expression, prerelease):
         expressions = expression.split()
         self.prerelease = prerelease
