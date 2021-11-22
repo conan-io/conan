@@ -44,9 +44,9 @@ def prevenv():
 
 
 def check_env_files_output(cmd_, prevenv):
-    result = subprocess.run(cmd_, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            env=prevenv, shell=True)
-    out = result.stdout.decode()
+    result, _ = subprocess.Popen(cmd_, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            env=prevenv, shell=True).communicate()
+    out = result.decode()
 
     assert "MyVar=MyValue!!" in out
     assert "MyVar1=MyValue1!!" in out

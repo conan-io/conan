@@ -194,9 +194,9 @@ def env():
 
 
 def check_command_output(cmd, prevenv):
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            env=prevenv, shell=True)
-    out = result.stdout.decode()
+    result, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            env=prevenv, shell=True).communicate()
+    out = result.decode()
 
     assert "MyVar=MyValueB!!" in out
     assert "MyVar=!!" in out
