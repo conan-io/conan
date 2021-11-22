@@ -22,7 +22,6 @@ from conans.client.tools.apple import *
 # Tools form conans.util
 from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \
     rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
-from conans.client.tools.version import Version
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
 
 
