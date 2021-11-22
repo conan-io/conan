@@ -42,9 +42,11 @@ class RangeResolver(object):
         remote_name = None
         remote_resolved_ref = None
         resolved_ref = self._resolve_local(search_ref, version_range)
-        if not resolved_ref or self._conan_app.update:
+        if resolved_ref is None or self._conan_app.update:
             remote_resolved_ref, remote_name = self._resolve_remote(search_ref, version_range)
-            resolved_ref = self._resolve_version(version_range, [resolved_ref, remote_resolved_ref])
+            if resolved_ref is None or (remote_resolved_ref is not None and
+                                        resolved_ref.version < remote_resolved_ref.version):
+                resolved_ref = remote_resolved_ref
 
         origin = f"remote '{remote_name}'" if resolved_ref == remote_resolved_ref and remote_name \
             else "local cache"
