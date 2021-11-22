@@ -323,7 +323,7 @@ class TestLinear(GraphManagerTest):
     def test_build_script_requirement(self):
         # app -> libb0.1 -> liba0.1 (build-scripts)
         self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("build-scripts"))
-        libb = GenConanfile().with_requirement("liba/0.1")
+        libb = GenConanfile().with_build_requirement("liba/0.1", run=False)
         self.recipe_conanfile("libb/0.1", libb)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
 
@@ -337,6 +337,24 @@ class TestLinear(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, None)])
         _check_transitive(libb, [(liba, False, False, True, False)])
+
+    def test_build_script_runnable_requirement(self):
+        # app -> libb0.1 -> liba0.1 (build-scripts)
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("build-scripts"))
+        libb = GenConanfile().with_build_requirement("liba/0.1", run=True)
+        self.recipe_conanfile("libb/0.1", libb)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libb, True, True, False, None)])
+        _check_transitive(libb, [(liba, False, False, True, True)])
 
     def test_header_only(self):
         # app -> libb0.1 -> liba0.1 (header_only)
@@ -832,6 +850,19 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.2#123", dependents=[libb, app])
 
+    # FIXME: Remove
+    def test_a_ver_si_me_entero(self):
+        # consumer -> dep1 -> dep2
+        #         \-> dep3
+        self.recipe_cache("dep2/0")
+        self.recipe_cache("dep1/0", ["dep2/0"])
+        self.recipe_cache("dep3/0")
+        consumer = self.consumer_conanfile(GenConanfile("consumer", "0").with_require("dep1/0")
+                                           .with_require("dep3/0"))
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.2 (overriden to lib0.2)
         #    \-> --------- ->/
@@ -841,7 +872,7 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/0.2"])
 
         deps_graph = self.build_consumer(consumer, install=False)
-
+        assert deps_graph.error is not False
         assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
 
         self.assertEqual(2, len(deps_graph.nodes))
@@ -857,8 +888,8 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         #    \-> libc0.1 -> liba0.2
         self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("build-scripts"))
         self.recipe_conanfile("liba/0.2", GenConanfile())
-        self.recipe_cache("libb/0.1", ["liba/0.1"])
-        self.recipe_cache("libc/0.1", ["liba/0.2"])
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_build_requirement("liba/0.1", run=False))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_requirement("liba/0.2"))
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
 
         deps_graph = self.build_consumer(consumer)
@@ -1061,8 +1092,8 @@ class TestProjectApp(GraphManagerTest):
         assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
 
     def test_project_require_private(self):
-        # project -(private)-> app1 -> lib1
-        #    \----(private)- > app2 -> lib2
+        # project -(!visible)-> app1 -> lib1
+        #    \----(!visible)- > app2 -> lib2
         # This doesn't conflict on project, as lib1, lib2 do not include, link or public
 
         self._cache_recipe("lib/0.1", GenConanfile())

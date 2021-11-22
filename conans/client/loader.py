@@ -16,7 +16,6 @@ from conans.errors import ConanException, NotFoundException, ConanInvalidConfigu
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
 from conans.paths import DATA_YML
 from conans.util.files import load
 

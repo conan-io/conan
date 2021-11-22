@@ -149,11 +149,11 @@ class DepsGraphBuilder(object):
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 
-        pro_options = profile_host.options if node.context == CONTEXT_HOST else profile_build.options
-        assert isinstance(pro_options, Options), type(pro_options)
-        run_configure_method(conanfile, down_options, pro_options, ref)
+        profile_options = profile_host.options if node.context == CONTEXT_HOST else profile_build.options
+        assert isinstance(profile_options, Options), type(profile_options)
+        run_configure_method(conanfile, down_options, profile_options, ref)
 
-        # Apply build_requires from profile, overrriding the declared ones
+        # Apply build_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
         build_requires = profile.build_requires
         str_ref = str(node.ref)
@@ -170,14 +170,14 @@ class DepsGraphBuilder(object):
 
     def _initialize_requires(self, node, graph, graph_lock):
         # Introduce the current requires to define overrides
-        # This is the first pass over one recip requires
+        # This is the first pass over one recipe requires
         if graph_lock is not None:
             for require in node.conanfile.requires.values():
                 graph_lock.resolve_locked(node, require)
 
         for require in node.conanfile.requires.values():
             self._resolve_alias(node, require, graph)
-            node.transitive_deps[require] = TransitiveRequirement(require, None)
+            node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, graph):
         alias = require.alias
@@ -275,7 +275,6 @@ class DepsGraphBuilder(object):
         # FIXME
         down_options = node.conanfile.up_options
         self._prepare_node(new_node, profile_host, profile_build, down_options)
-
         require.process_package_type(new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)
