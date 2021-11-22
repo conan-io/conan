@@ -147,7 +147,6 @@ _t_default_client_conf = textwrap.dedent("""
     # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
     # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
 
-    # non_interactive = False
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
 
     # cpu_count = 1             # environment CONAN_CPU_COUNT
@@ -179,7 +178,6 @@ class ConanClientConfigParser(ConfigParser, object):
         super(ConanClientConfigParser, self).__init__(allow_no_value=True)
         self.read(filename)
         self.filename = filename
-        self._non_interactive = None
 
     def get_item(self, item):
         """ Return the value stored in 'conan.conf' """
@@ -229,25 +227,6 @@ class ConanClientConfigParser(ConfigParser, object):
             except Exception:
                 hooks = []
         return hooks
-
-    @property
-    def non_interactive(self):
-        if self._non_interactive is None:
-            try:
-                non_interactive = get_env("CONAN_NON_INTERACTIVE")
-                if non_interactive is None:
-                    non_interactive = self.get_item("general.non_interactive")
-                self._non_interactive = non_interactive.lower() in ("1", "true")
-            except ConanException:
-                self._non_interactive = False
-        return self._non_interactive
-
-    @non_interactive.setter
-    def non_interactive(self, value):
-        # Made this because uploads in parallel need a way to disable the interactive
-        # FIXME: Can't we fail in the command line directly if no interactive?
-        #        see uploader.py  if parallel_upload:
-        self._non_interactive = value
 
     @property
     def logging_level(self):

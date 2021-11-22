@@ -89,7 +89,7 @@ class _UploadCollecter:
     """
     def __init__(self, cache):
         self._cache = cache
-        self._user_input = UserInput(cache.config.non_interactive)
+        self._user_input = UserInput(cache.new_config["core:non_interactive"])
 
     def collect(self, pattern, confirm, all_packages):
         """ validate inputs and compute the refs (without revisions) to be uploaded
