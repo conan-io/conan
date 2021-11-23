@@ -268,10 +268,9 @@ class ParallelBlock(Block):
 
     def context(self):
         # TODO: Check this conf
-        max_cpu_count = self._conanfile.conf["tools.cmake.cmaketoolchain:msvc_parallel_compile"]
-
-        if max_cpu_count:
-            return {"parallel": max_cpu_count}
+        msvc_parallel = self._conanfile.conf["tools.cmake.cmaketoolchain:msvc_parallel_compile"]
+        if msvc_parallel:
+            return {"parallel": msvc_parallel}
 
 
 class AndroidSystemBlock(Block):
