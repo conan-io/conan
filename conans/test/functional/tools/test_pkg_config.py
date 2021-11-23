@@ -54,7 +54,7 @@ class TestPkgConfig:
         pkg_config.fill_cpp_info(cpp_info, is_system=False, system_libs=["m"])
 
         assert cpp_info.includedirs == ['/usr/local/include/libastral']
-        assert cpp_info.defines == ['-D_USE_LIBASTRAL']
+        assert cpp_info.defines == ['_USE_LIBASTRAL']
         assert cpp_info.libs == ['astral']
         assert cpp_info.system_libs == ['m']
         assert cpp_info.libdirs == ['/usr/local/lib/libastral']
