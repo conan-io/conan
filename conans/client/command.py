@@ -718,8 +718,6 @@ class Command(object):
                                          prog="conan source",
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("-sf", "--source-folder", action=OnceArgument,
-                            help='Destination directory. Defaulted to current directory')
         args = parser.parse_args(*args)
 
         try:
@@ -735,7 +733,7 @@ class Command(object):
             pass
 
         self._warn_python_version()
-        return self._conan_api.source(args.path, args.source_folder)
+        return self._conan_api.source(args.path)
 
     def build(self, *args):
         """

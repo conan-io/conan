@@ -2,12 +2,9 @@ import os
 import unittest
 from collections import OrderedDict
 
-import pytest
-
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import mkdir
 
 
 class SourceTest(unittest.TestCase):
@@ -20,6 +17,9 @@ import os
 class TestexportConan(ConanFile):
     exports = "mypython.py"
     exports_sources = "patch.patch"
+
+    def layout(self):
+        self.folders.source = "mysrc"
 
     def source(self):
         save("hello/hello.h", "my hello header!")
@@ -35,10 +35,6 @@ class TestexportConan(ConanFile):
                      "patch.patch": "mypatch",
                      "mypython.py": "mypython"})
         client.run("source .")
-        self.assertIn("conanfile.py: PATCH: mypatch", client.out)
-        self.assertIn("conanfile.py: HEADER: my hello header!", client.out)
-        self.assertIn("conanfile.py: PYTHON: mypython", client.out)
-        client.run("source . -sf=mysrc")
         self.assertIn("conanfile.py: Executing exports to", client.out)
         self.assertIn("conanfile.py: PATCH: mypatch", client.out)
         self.assertIn("conanfile.py: HEADER: my hello header!", client.out)
@@ -69,7 +65,7 @@ class Pkg(ConanFile):
                      "mypatch": "this is my patch"})
         client.run("source .")
         self.assertIn("PATCH: this is my patch", client.out)
-        client.run("source . -sf=mysrc")
+        client.run("source .")
         self.assertIn("PATCH: this is my patch", client.out)
         client.run("create . pkg/0.1@user/testing")
         self.assertIn("PATCH: this is my patch", client.out)
@@ -119,7 +115,7 @@ class ConanLib(ConanFile):
         subdir = os.path.join(client.current_folder, "subdir")
         os.mkdir(subdir)
         client.run("install . --install-folder subdir")
-        client.run("source . --source-folder subdir")
+        client.run("source .")
         self.assertIn("conanfile.py (hello/0.1): Configuring sources", client.out)
         self.assertIn("conanfile.py (hello/0.1): cwd=>%s" % subdir, client.out)
 
@@ -134,26 +130,8 @@ class ConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         # Automatically created
-        client.run("source conanfile.py --source-folder=src")
+        client.run("source conanfile.py")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "src")))
-
-    def test_repeat_args_fails(self):
-        conanfile = '''
-from conans import ConanFile
-class ConanLib(ConanFile):
-
-    def source(self):
-        pass
-'''
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("source ./conanfile.py --source-folder sf")
-        with self.assertRaisesRegex(Exception, "Command failed"):
-            client.run("source . --source-folder sf --source-folder sf")
-        with self.assertRaisesRegex(Exception, "Command failed"):
-
-            client.run("source conanfile.py --source-folder sf --install-folder if "
-                       "--install-folder rr")
 
     def test_local_source(self):
         conanfile = '''

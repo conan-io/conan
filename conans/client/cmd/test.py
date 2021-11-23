@@ -46,10 +46,7 @@ def install_build_and_test(app, conanfile_abs_path, reference, profile_host, pro
                                  test=True  # To keep legacy test_package_layout)
                                  )
         conanfile = deps_info.root.conanfile
-        cmd_build(app, conanfile_abs_path, conanfile, test_build_folder,
-                  source_folder=base_folder, build_folder=test_build_folder,
-                  package_folder=os.path.join(test_build_folder, "package"),
-                  install_folder=test_build_folder, test=reference)
+        cmd_build(app, conanfile_abs_path, conanfile, test=reference)
     finally:
         if delete_after_build:
             # Required for windows where deleting the cwd is not possible.

@@ -503,27 +503,28 @@ class ConanAPIV1(object):
                 graph_lock.save(lockfile_out)
 
             conanfile = deps_info.root.conanfile
-            cmd_build(app, conanfile_path, conanfile, base_path=cwd,
-                      install_folder=install_folder)
+            cmd_build(app, conanfile_path, conanfile)
         except ConanException as exc:
             raise
 
     @api_method
-    def source(self, path, source_folder=None, cwd=None):
+    def source(self, path, cwd=None):
         app = ConanApp(self.cache_folder)
 
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        source_folder = _make_abs_path(source_folder, cwd)
-
-        mkdir(source_folder)
 
         # only infos if exist
         conanfile = app.graph_manager.load_consumer_conanfile(conanfile_path)
-        conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_source(os.path.dirname(conanfile_path))
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
+        if hasattr(conanfile, "layout"):
+            try:  # FIXME: If the self.folders.source declaration is soon enough, might work
+                conanfile.layout()
+            except ConanException:
+                pass
         config_source_local(conanfile, conanfile_path, app.hook_manager)
 
     @api_method
