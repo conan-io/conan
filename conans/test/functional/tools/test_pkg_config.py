@@ -44,7 +44,7 @@ class TestPkgConfig:
         assert pkg_config.provides == "libastral = 6.6.6"
         assert pkg_config.version == "6.6.6"
         assert pkg_config.includedirs == ['/usr/local/include/libastral']
-        assert pkg_config.defines == ['-D_USE_LIBASTRAL']
+        assert pkg_config.defines == ['_USE_LIBASTRAL']
         assert pkg_config.libs == ['astral', 'm']
         assert pkg_config.libdirs == ['/usr/local/lib/libastral']
         assert pkg_config.linkflags == ['-Wl,--whole-archive']

@@ -45,7 +45,7 @@ class PkgConfig:
 
     @property
     def defines(self):
-        return [flag for flag in self._get_option('cflags-only-other').split()
+        return [flag[2:] for flag in self._get_option('cflags-only-other').split()
                 if flag.startswith("-D")]
 
     @property
