@@ -149,30 +149,30 @@ def _get_default_compiler():
 
 def _get_profile_compiler_version(compiler, version):
     output = ConanOutput()
-    tokens = version.split(".")
+    tokens = version.main
     major = tokens[0]
     minor = tokens[1] if len(tokens) > 1 else 0
-    if compiler == "clang" and int(major) >= 8:
+    if compiler == "clang" and major >= 8:
         output.info("clang>=8, using the major as version")
         return major
-    elif compiler == "gcc" and int(major) >= 5:
+    elif compiler == "gcc" and major >= 5:
         output.info("gcc>=5, using the major as version")
         return major
     elif compiler == "Visual Studio":
         return major
-    elif compiler == "intel" and (int(major) < 19 or (int(major) == 19 and int(minor) == 0)):
+    elif compiler == "intel" and (major < 19 or (major == 19 and minor == 0)):
         return major
     elif compiler == "msvc":
         # by default, drop the last digit of the minor (19.30 -> 19.3)
-        if len(minor) == 2:
-            version = version[:-1]
+        if len(str(minor)) == 2:
+            version = str(version)[:-1]
     return version
 
 
 def _detect_gcc_libcxx(version):
     output = ConanOutput()
     # Assumes a working g++ executable
-    new_abi_available = Version(version) >= Version("5.1")
+    new_abi_available = version >= "5.1"
     if not new_abi_available:
         return "libstdc++"
 
@@ -214,12 +214,12 @@ def _detect_compiler_version(result):
         ConanOutput().error("Unable to find a working compiler")
         return
 
+    version = Version(version)
     # Visual Studio 2022 onwards, detect as a new compiler "msvc"
     if compiler == "Visual Studio":
-        version = Version(version)
         if version == "17":
             compiler = "msvc"
-            version = "19.3"
+            version = Version("19.3")
 
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version)))
@@ -243,7 +243,6 @@ def _detect_compiler_version(result):
     elif compiler == "mcst-lcc":
         result.append(("compiler.base", "gcc"))  # do the same for Intel?
         result.append(("compiler.base.libcxx", "libstdc++"))
-        version = Version(version)
         if version >= "1.24":
             result.append(("compiler.base.version", "7.3"))
         elif version >= "1.23":

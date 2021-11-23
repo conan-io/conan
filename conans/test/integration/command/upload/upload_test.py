@@ -431,13 +431,8 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         client = TestClient(default_server_user=True)
         client.save(files)
-        conan_conf = textwrap.dedent("""
-                                    [storage]
-                                    path = ./data
-                                    [general]
-                                    non_interactive=True
-                                """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        conan_conf = "core:non_interactive=True"
+        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("create . user/testing")
         client.run("remote logout '*'")
@@ -453,13 +448,8 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         client = TestClient(default_server_user=True)
         client.save(files)
-        conan_conf = textwrap.dedent("""
-                                    [storage]
-                                    path = ./data
-                                    [general]
-                                    non_interactive=True
-                                """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        conan_conf = "core:non_interactive=True"
+        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("create . user/testing")
         client.run("remote logout '*'")
         client.run("remote set-user default lasote")
@@ -474,13 +464,8 @@ class UploadTest(unittest.TestCase):
         #  When user is authenticated, uploads should work even when login prompt has been disabled.
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
-        conan_conf = textwrap.dedent("""
-                                    [storage]
-                                    path = ./data
-                                    [general]
-                                    non_interactive=True
-                                """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        conan_conf = "core:non_interactive=True"
+        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("create . user/testing")
         client.run("remote logout '*'")
         client.run("remote login default admin -p password")
