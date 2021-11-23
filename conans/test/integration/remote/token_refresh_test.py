@@ -1,5 +1,4 @@
 import unittest
-from collections import namedtuple
 
 import mock
 from mock import Mock
@@ -84,8 +83,8 @@ class TestTokenRefresh(unittest.TestCase):
                                                         artifacts_properties=None)
         self.localdb = LocalDBMock()
         cache = Mock()
-        cache.config.non_interactive = False
         cache.localdb = self.localdb
+        cache.new_config = config
         self.auth_manager = ConanApiAuthManager(self.rest_client_factory, cache)
         self.remote = Remote("myremote", "myurl", True, True)
         self.ref = RecipeReference.loads("lib/1.0@conan/stable#myreciperev")

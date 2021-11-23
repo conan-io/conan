@@ -88,7 +88,7 @@ class ConanRemover(object):
 
     def __init__(self, app):
         self._app = app
-        self._user_input = UserInput(app.cache.config.non_interactive)
+        self._user_input = UserInput(app.cache.new_config["core:non_interactive"])
         self._cache = app.cache
         self._remote_manager = app.remote_manager
 
