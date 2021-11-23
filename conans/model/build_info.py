@@ -219,14 +219,12 @@ class _CppInfo(object):
     #  Use get_property for 2.0
     def get_name(self, generator, default_name=True):
         property_name = None
-        if generator == "cmake_find_package" and self.get_property("cmake_module_target_name", generator):
-            property_name = "cmake_module_target_name"
         # set_property will have no effect on "cmake" legacy generator
-        elif "cmake" in generator and "cmake" != generator and "cmake_multi" != generator:
+        if "cmake" in generator and "cmake" != generator and "cmake_multi" != generator:
             property_name = "cmake_target_name"
         elif "pkg_config" in generator:
             property_name = "pkg_config_name"
-        # TODO: revisit this logic, not touching for the moment
+
         property_value = self.get_property(property_name, generator)
         # we need compatibility between cpp_info.names and set_property("cmake_target_name")
         # this one specifies the target name in absolute like CURL::curl so we need to split that
@@ -240,12 +238,11 @@ class _CppInfo(object):
         # cmake_target_namespace is deprecated and now the name is absolute with a namespace
         # this will try to extract the namespace from the absolute name to provide compatibility
         # with current build_info.names and also with CMakeDeps that specifies names with namespaces
-        if generator == "cmake_find_package" or generator == "cmake_find_package_multi":
-            name = self.get_property("cmake_target_name", generator)
-            namespace = None
-            if self._is_absolute_name(name):
-                namespace = name.split(COMPONENT_SCOPE)[0]
-            return namespace
+        namespace = None
+        name = self.get_property("cmake_target_name", generator)
+        if self._is_absolute_name(name):
+            namespace = name.split(COMPONENT_SCOPE)[0]
+        return namespace
 
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
     def get_filename(self, generator, default_name=True):
@@ -282,10 +279,8 @@ class _CppInfo(object):
 
     def set_property(self, property_name, value, generator=None):
         if property_name == "cmake_target_namespace" or property_name == "cmake_module_target_namespace":
-            # TODO: add test
             raise ConanException("Property '{}' has been deprecated.".format(property_name))
         elif property_name == "cmake_target_name" and not re.match(r"\w+{}\w+".format(COMPONENT_SCOPE), value):
-            # TODO: add test
             raise ConanException("Target name: '{}' not valid. Property 'cmake_target_name' "
                                  "has to set an absolute target name with a namespace like "
                                  "'NAMESPACE::NAME'.".format(value))
@@ -504,6 +499,17 @@ class CppInfo(_CppInfo):
             _check_components_requires_instersection(requires_from_components)
         else:
             _check_components_requires_instersection(self.requires)
+
+    def _raise_incorrect_components_names(self, pkg_name):
+        if self.components:
+            # Raise on component name
+            pkg_namespace = self.get_namespace(generator=None)
+            for comp_name, comp in self.components.items():
+                cmp_namespace = comp.get_namespace(generator=None)
+                if cmp_namespace and cmp_namespace != pkg_namespace:
+                    raise ConanException("Component '{}' was defined with namespace '{}' but it "
+                                         "should be the same as the one defined for the root "
+                                         "cpp_info ('{}')".format(comp_name, cmp_namespace, pkg_namespace))
 
 
 class _BaseDepsCppInfo(_CppInfo):
