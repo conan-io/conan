@@ -1,5 +1,5 @@
 import math
-import os
+import multiprocessing
 
 from conans.util.files import load
 
@@ -23,7 +23,7 @@ def _cpu_count():
                 return int(math.ceil(cfs_quota_us / cfs_period_us))
         except (OSError, TypeError):
             pass
-        return os.cpu_count()
+        return multiprocessing.cpu_count()
     except NotImplementedError:
         # print("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
         return 1  # Safe guess
