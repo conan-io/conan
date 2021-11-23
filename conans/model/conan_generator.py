@@ -94,14 +94,6 @@ class GeneratorComponentsMixin(object):
         # by the property cmake_target_name
         pkg_namespace = self._get_namespace(pkg_build_info) or pkg_name
         if cmp in pkg_build_info.components:
-            if self.name == "cmake_find_package" or self.name == "cmake_find_package_multi":
-                # we are forcing for legacy generators to declare components with the same
-                # namespace as the root cpp_info
-                cmp_namespace = self._get_namespace(pkg_build_info.components[cmp])
-                if cmp_namespace and cmp_namespace != pkg_namespace:
-                    raise ConanException("Component '{}' was defined with namespace '{}' but it "
-                                         "should be the same as the one defined for the root "
-                                         "cpp_info ('{}')".format(req, cmp_namespace, pkg_namespace))
             cmp_name = self._get_name(pkg_build_info.components[cmp])
         else:
             cmp_name = pkg_name
