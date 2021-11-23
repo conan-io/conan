@@ -6,6 +6,7 @@ from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
 from conans.model.options import Options
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, Version
 from conans.model.values import Values
 from conans.paths import CONANINFO
@@ -442,7 +443,7 @@ class PythonRequiresInfo(object):
 class _PackageReferenceList(list):
     @staticmethod
     def loads(text):
-        return _PackageReferenceList([PackageReference.loads(package_reference)
+        return _PackageReferenceList([PkgReference.loads(package_reference)
                                      for package_reference in text.splitlines()])
 
 
