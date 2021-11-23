@@ -77,13 +77,15 @@ class PkgConfig:
                 self._variables[name] = self._parse_output('variable=%s' % name)
         return self._variables
 
-    def cpp_info(self, cpp_info, is_system=True):
+    def fill_cpp_info(self, cpp_info, is_system=True, system_libs=None):
         if not self.provides:
             raise ConanException("PkgConfig error, '{}' files not available".format(self._package))
         if is_system:
             cpp_info.system_libs = self.libs
         else:
-            cpp_info.libs = self.libs
+            system_libs = system_libs or []
+            cpp_info.libs = [lib for lib in self.libs if lib not in system_libs]
+            cpp_info.system_libs = [lib for lib in self.libs if lib in system_libs]
         cpp_info.libdirs = self.libdirs
         cpp_info.sharedlinkflags = self.linkflags
         cpp_info.exelinkflags = self.linkflags
