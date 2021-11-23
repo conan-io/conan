@@ -26,7 +26,7 @@ class TestOptions(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb], options={"shared": "True"})
 
         # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, None),
+        _check_transitive(app, [(libb, True, True, False, False),
                                 (liba, True, True, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
@@ -51,7 +51,7 @@ class TestOptions(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb], options={"shared": "False"})
 
         # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, None),
+        _check_transitive(app, [(libb, True, True, False, False),
                                 (liba, True, True, False, False)])
         _check_transitive(libb, [(liba, True, True, False, False)])
 
@@ -100,9 +100,9 @@ class TestBuildRequireOptions(GraphManagerTest):
         assert zlib_shared.conanfile.options.shared
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None),
-                                (protobuf_host, True, True, False, None),
+        _check_transitive(app, [(lib, True, True, False, False),
+                                (protobuf_host, True, True, False, False),
                                 (zlib_shared, True, True, False, True)])
-        _check_transitive(lib, [(protobuf_host, True, True, False, None),
+        _check_transitive(lib, [(protobuf_host, True, True, False, False),
                                 (zlib_shared, True, True, False, True),
                                 (protobuf_build, False, False, True, True)])

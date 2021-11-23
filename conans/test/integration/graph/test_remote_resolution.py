@@ -25,7 +25,7 @@ def test_build_requires_ranges():
             def generate(self):
                 for r, d in self.dependencies.items():
                     self.output.info("REQUIRE {{}}: {{}}".format(r.ref, d))
-                dep = self.dependencies.build["cmake"]
+                dep = self.dependencies.get("cmake")
                 self.output.info("CMAKEVER: {{}}!!".format(dep.ref.version))
             """)
     client.save({"pkgc/conanfile.py": conanfile.format("", "[*]"),

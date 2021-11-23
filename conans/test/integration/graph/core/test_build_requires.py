@@ -60,7 +60,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(app, [(lib, True, True, False, False)])  # TODO: Check run=None
         _check_transitive(lib, [(cmake, False, False, True, True)])
 
     @parameterized.expand([("shared", ), ("static", ), ("notrun", ), ("run", )])
@@ -97,10 +97,10 @@ class BuildRequiresGraphTest(GraphManagerTest):
                          settings={"os": "Windows"})
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(app, [(lib, True, True, False, False)])
 
         if cmakelib_type in ("static", "notrun"):
-            _check_transitive(lib, [(cmake, False, False, True, True)])
+            _check_transitive(lib, [(cmake, False, False, True, False)])
         else:
             _check_transitive(lib, [(cmake, False, False, True, True),
                                     (cmakelib, False, False, True, True)])
@@ -124,13 +124,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[cmake2])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, True)])
         _check_transitive(lib, [(cmake2, False, False, True, True)])
         _check_transitive(cmake2, [(cmake1, False, False, True, True)])
-
-
-
-
 
 
 
@@ -258,7 +254,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._check_node(zlib2, "zlib/0.2#123", deps=[], dependents=[mingw])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(cmake, False, False, True, True),
                                 (mingw, False, False, True, True)])
 
@@ -372,7 +368,7 @@ class TestTestRequire(GraphManagerTest):
         self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[app])
 
         # node, include, link, build, run
-        _check_transitive(app, [(gtest, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(app, [(gtest, True, True, False, False)])
 
     def test_lib_build_require(self):
         # app -> lib -(tr)-> gtest
@@ -390,8 +386,8 @@ class TestTestRequire(GraphManagerTest):
         self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
-        _check_transitive(lib, [(gtest, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, False)])
+        _check_transitive(lib, [(gtest, True, True, False, False)])
 
     def test_lib_build_require_transitive(self):
         # app -> lib -(tr)-> gtest
@@ -409,8 +405,8 @@ class TestTestRequire(GraphManagerTest):
         self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
-        _check_transitive(lib, [(gtest, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, False)])
+        _check_transitive(lib, [(gtest, True, True, False, False)])
 
     @parameterized.expand([("shared",), ("static",), ("notrun",), ("run",)])
     def test_test_require_transitive(self, gtestlib_type):
@@ -446,17 +442,17 @@ class TestTestRequire(GraphManagerTest):
                          settings={"os": "Linux"})
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(app, [(lib, True, True, False, False)])  # TODO: Check run=None
 
         if gtestlib_type in ("shared", "run"):
-            _check_transitive(lib, [(gtest, True, True, False, None),
+            _check_transitive(lib, [(gtest, True, True, False, False),
                                     (gtestlib, True, True, False, True)])
         elif gtestlib_type == "static":
-            _check_transitive(lib, [(gtest, True, True, False, None),
+            _check_transitive(lib, [(gtest, True, True, False, False),
                                     (gtestlib, True, True, False, False)])
         elif gtestlib_type == "notrun":
-            _check_transitive(lib, [(gtest, True, True, False, None),
-                                    (gtestlib, True, True, False, None)])
+            _check_transitive(lib, [(gtest, True, True, False, False),
+                                    (gtestlib, True, True, False, False)])
 
 
 class BuildRequiresPackageIDTest(GraphManagerTest):
@@ -531,7 +527,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
         _check_transitive(lib, [(cmake, False, False, True, True)])
-        _check_transitive(app, [(lib, True, True, False, None),
+        _check_transitive(app, [(lib, True, True, False, False),
                                 (cmake, False, False, True, False)])
 
     def test_conflict_diamond(self):

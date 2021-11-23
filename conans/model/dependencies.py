@@ -3,7 +3,6 @@ from collections import OrderedDict
 from conans.client.graph.graph import BINARY_SKIP
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
-from conans.model.requires import Requirement
 from conans.model.conanfile_interface import ConanFileInterface
 
 
@@ -26,36 +25,43 @@ class UserRequirementsDict(object):
     def __bool__(self):
         return bool(self._data)
 
-    def _get_require(self, ref, **kwargs):
-        assert isinstance(ref, str)
+    def get(self, ref, build=None, **kwargs):
+        if build is None:
+            current_filters = self._require_filter or {}
+            if "build" not in current_filters:
+                # By default we search in the "host" context
+                kwargs["build"] = False
+        else:
+            kwargs["build"] = build
+        data = self.filter(kwargs)
+        ret = []
         if "/" in ref:
             # FIXME: Validate reference
             ref = RecipeReference.loads(ref)
+            for require, conanfile in data.items():
+                if conanfile.ref == ref:
+                    ret.append((require ,conanfile))
         else:
-            ref = RecipeReference(ref, "unknown", "unknown", "unknown")
+            name = ref
+            for require, conanfile in data.items():
+                if conanfile.ref.name == name:
+                    ret.append((require, conanfile))
+        if len(ret) > 1:
+            current_filters = data._require_filter or "{}"
+            requires = "\n".join(["- {}".format(require) for require, _ in ret])
+            raise ConanException("There are more than one requires matching the specified filters:"
+                                 " {}\n{}".format(current_filters, requires))
+        if not ret:
+            raise KeyError("'{}' not found in the dependency set".format(ref))
 
-        if self._require_filter:
-            kwargs.update(self._require_filter)
-        r = Requirement(ref, **kwargs)
-        return r
-
-    def get(self, ref, **kwargs):
-        r = self._get_require(ref, **kwargs)
-        return self._data.get(r)
+        _, conanfile_interface = ret[0]
+        return conanfile_interface
 
     def __getitem__(self, name):
-        ret = []
-        for k, v in self._data.items():
-            if k.ref.name == name:
-                ret.append(v)
-
-        if len(ret) > 1:
-            raise ConanException("There is more than one '{}' transitive requirements, filter before "
-                                 "getting by name".format(name))
-        return ret[0]
+        return self.get(name)
 
     def __delitem__(self, name):
-        r = self._get_require(name)
+        r = self.get(name)
         del self._data[r]
 
     def items(self):

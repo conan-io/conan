@@ -74,9 +74,9 @@ class TestLinear(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
         # node, headers, lib, build, run
-        _check_transitive(app, [(libb, True, True, False, None),
-                                (liba, True, True, False, None)])
-        _check_transitive(libb, [(liba, True, True, False, None)])
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (liba, True, True, False, False)])
+        _check_transitive(libb, [(liba, True, True, False, False)])
 
     def test_transitive_propagate_link(self):
         # app -> libb0.1 -> liba0.1
@@ -98,9 +98,9 @@ class TestLinear(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
         # node, headers, lib, build, run
-        _check_transitive(app, [(libb, True, True, False, None),
-                                (liba, True, False, False, None)])
-        _check_transitive(libb, [(liba, True, True, False, None)])
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (liba, True, False, False, False)])
+        _check_transitive(libb, [(liba, True, True, False, False)])
 
     def test_transitive_all_static(self):
         # app -> libb0.1 (static) -> liba0.1 (static)
@@ -308,8 +308,8 @@ class TestLinear(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
         # node, headers, lib, build, run
-        _check_transitive(app, [(libb, True, True, False, None)])
-        _check_transitive(libb, [(liba, True, True, False, None)])
+        _check_transitive(app, [(libb, True, True, False, False)])
+        _check_transitive(libb, [(liba, True, True, False, False)])
 
     def test_generic_library_without_shared_option(self):
         # app -> libb0.1 -> liba0.1 (library without shared option)
@@ -337,8 +337,27 @@ class TestLinear(GraphManagerTest):
         liba = libb.dependencies[0].dst
 
         # node, headers, lib, build, run
-        _check_transitive(app, [(libb, True, True, False, None)])
+        _check_transitive(app, [(libb, True, True, False, False)])
         _check_transitive(libb, [(liba, False, False, True, False)])
+
+    def test_generic_build_require_adjust_run_with_package_type(self):
+        # FIXME: parametrize when superclass is not unittest
+        for package_type in ["application", "shared-library", "static-library",
+                             "header-library", "build-scripts", None]:
+            # app --br-> cmake (app)
+            self.recipe_conanfile("cmake/0.1", GenConanfile().with_package_type(package_type))
+            # build require with run=None by default
+            consumer = self.recipe_consumer("app/0.1", build_requires=["cmake/0.1"])
+
+            deps_graph = self.build_consumer(consumer)
+
+            self.assertEqual(2, len(deps_graph.nodes))
+            app = deps_graph.root
+            cmake = app.dependencies[0].dst
+
+            # node, headers, lib, build, run
+            run = package_type in ("application", "shared-library")
+            _check_transitive(app, [(cmake, False, False, True, run)])
 
     def test_build_script_runnable_requirement(self):
         # app -> libb0.1 -> liba0.1 (build-scripts)
@@ -355,7 +374,7 @@ class TestLinear(GraphManagerTest):
         liba = libb.dependencies[0].dst
 
         # node, headers, lib, build, run
-        _check_transitive(app, [(libb, True, True, False, None)])
+        _check_transitive(app, [(libb, True, True, False, False)])
         _check_transitive(libb, [(liba, False, False, True, True)])
 
     def test_header_only(self):
@@ -377,7 +396,7 @@ class TestLinear(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
         # node, headers, lib, build, run
-        _check_transitive(app, [(libb, True, True, False, None),
+        _check_transitive(app, [(libb, True, True, False, False),
                                 (liba, False, False, False, False)])
         _check_transitive(libb, [(liba, True, False, False, False)])
 
@@ -406,9 +425,9 @@ class TestDiamond(GraphManagerTest):
         self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
-        _check_transitive(app, [(libb, True, True, False, None),
-                                (libc, True, True, False, None),
-                                (liba, True, True, False, None)])
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (libc, True, True, False, False),
+                                (liba, True, True, False, False)])
 
     @parameterized.expand([(True, ), (False, )])
     def test_diamond_additive(self, order):
@@ -438,8 +457,8 @@ class TestDiamond(GraphManagerTest):
         self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
-        _check_transitive(app, [(libb, True, True, False, None),
-                                (libc, True, True, False, None),
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (libc, True, True, False, False),
                                 (liba, True, True, False, True)])
 
     def test_half_diamond(self):
@@ -462,8 +481,8 @@ class TestDiamond(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[app, libc])
 
         # Order seems to be link order
-        _check_transitive(app, [(libc, True, True, False, None),
-                                (liba, True, True, False, None)])
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (liba, True, True, False, False)])
 
     def test_shared_static(self):
         # app -> libb0.1 (shared) -> liba0.1 (static)
@@ -526,10 +545,10 @@ class TestDiamond(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
         # node, headers, lib, build, run
-        _check_transitive(app, [(libd, True, True, False, None)])
-        _check_transitive(libd, [(libb, True, True, False, None),
-                                 (libc, True, True, False, None),
-                                 (liba, True, True, False, None)])
+        _check_transitive(app, [(libd, True, True, False, False)])
+        _check_transitive(libd, [(libb, True, True, False, False),
+                                 (libc, True, True, False, False),
+                                 (liba, True, True, False, False)])
 
     def test_shared_static_private(self):
         # app -> libb0.1 (shared) -(private)-> liba0.1 (static)
@@ -679,12 +698,12 @@ class TestDiamondMultiple(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libd])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
-        _check_transitive(app, [(libe, True, True, False, None),
-                                (libf, True, True, False, None),
-                                (libd, True, True, False, None),
-                                (libb, True, True, False, None),
-                                (libc, True, True, False, None),
-                                (liba, True, True, False, None)])
+        _check_transitive(app, [(libe, True, True, False, False),
+                                (libf, True, True, False, False),
+                                (libd, True, True, False, False),
+                                (libb, True, True, False, False),
+                                (libc, True, True, False, False),
+                                (liba, True, True, False, False)])
 
     def test_consecutive_diamonds_private(self):
         # app -> libe0.1 ---------> libd0.1 ---> libb0.1 ---> liba0.1
@@ -719,11 +738,11 @@ class TestDiamondMultiple(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
         # FIXME: In this case the order seems a bit broken
-        _check_transitive(app, [(libe, True, True, False, None),
-                                (libf, True, True, False, None),
-                                (libd, True, True, False, None),
-                                (libb, True, True, False, None),
-                                (liba, True, True, False, None),
+        _check_transitive(app, [(libe, True, True, False, False),
+                                (libf, True, True, False, False),
+                                (libd, True, True, False, False),
+                                (libb, True, True, False, False),
+                                (liba, True, True, False, False),
                                 ])
 
     def test_parallel_diamond(self):
@@ -910,11 +929,11 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self._check_node(liba2, "liba/0.2#123", dependents=[libc])
 
         # node, headers, lib, build, run
-        _check_transitive(app, [(libb, True, True, False, None),
-                                (libc, True, True, False, None),
-                                (liba2, True, True, False, None)])
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (libc, True, True, False, False),
+                                (liba2, True, True, False, False)])
         _check_transitive(libb, [(liba1, False, False, True, False)])
-        _check_transitive(libc, [(liba2, True, True, False, None)])
+        _check_transitive(libc, [(liba2, True, True, False, False)])
 
     def test_diamond_reverse_order(self):
         # foo ---------------------------------> dep1/2.0
@@ -1021,7 +1040,7 @@ class PackageIDDeductions(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(project, [(app1, False, False, False, True),
                                     (app2, False, False, False, True),
-                                    (lib, False, False, False, None)])
+                                    (lib, False, False, False, False)])
 
 
 class TestProjectApp(GraphManagerTest):
@@ -1061,7 +1080,7 @@ class TestProjectApp(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(project, [(app1, False, False, False, True),
                                     (app2, False, False, False, True),
-                                    (lib, False, False, False, None)])
+                                    (lib, False, False, False, False)])
 
     def test_project_require_transitive_conflict(self):
         # project -> app1 -> lib/0.1
@@ -1111,7 +1130,7 @@ class TestProjectApp(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(project, [(app1, False, False, False, True),
                                     (app2, False, False, False, True),
-                                    (lib, False, False, False, None)])
+                                    (lib, False, False, False, False)])
 
     def test_project_require_apps_transitive_conflict(self):
         # project -> app1 (app type) -> lib/0.1
@@ -1164,6 +1183,6 @@ class TestProjectApp(GraphManagerTest):
 
         # node, headers, lib, build, run
         _check_transitive(project, [(app1, False, False, False, True),
-                                    (lib1, False, False, False, None),
+                                    (lib1, False, False, False, False),
                                     (app2, False, False, False, True),
-                                    (lib2, False, False, False, None)])
+                                    (lib2, False, False, False, False)])

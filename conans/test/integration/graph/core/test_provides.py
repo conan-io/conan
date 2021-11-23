@@ -91,8 +91,8 @@ class TestProvidesTest(GraphManagerTest):
         self._check_node(br_lib, "br_lib/0.1#123", deps=[], dependents=[br])
 
         # node, include, link, build, run
-        _check_transitive(app, [(br, True, True, False, None)])
-        _check_transitive(br, [(br_lib, True, True, False, None)])
+        _check_transitive(app, [(br, True, True, False, False)])
+        _check_transitive(br, [(br_lib, True, True, False, False)])
 
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.1
@@ -167,7 +167,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
 
         # node, include, link, build, run
         _check_transitive(app, [(br, False, False, True, True)])
-        _check_transitive(br, [(br_lib, True, True, False, None)])
+        _check_transitive(br, [(br_lib, True, True, False, False)])
 
     def test_transitive_br_no_conflict(self):
         # app (provides libjpeg) -> lib/v1 -(br)-> br/v1(provides libjpeg)
@@ -188,7 +188,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         self._check_node(br, "br/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(br, False, False, True, True)])
 
     def test_transitive_test_require_conflict(self):

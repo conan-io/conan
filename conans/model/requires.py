@@ -97,7 +97,7 @@ class Requirement:
 
     @property
     def run(self):
-        return self._run
+        return self._default_if_none(self._run, False)
 
     @run.setter
     def run(self, value):
@@ -129,6 +129,12 @@ class Requirement:
 
     def __repr__(self):
         return repr(self.__dict__)
+
+    def __str__(self):
+        traits = 'build={}, headers={}, libs={}, '  \
+                 'run={}, visible={}'.format(self.build, self.headers, self.libs, self.run,
+                                             self.visible)
+        return "{}, Traits: {}".format(self.ref, traits)
 
     def copy_requirement(self):
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
