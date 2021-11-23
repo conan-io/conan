@@ -674,7 +674,7 @@ class BinaryInstaller(object):
 
                     # this is necessary to check if the components declared for legacy generators
                     # have the same namespace as the root cpp_info
-                    conanfile.cpp_info._raise_incorrect_components_names(conanfile.name)
+                    conanfile.cpp_info._raise_incorrect_components_names()
 
                     if hasattr(conanfile, "layout") and is_editable:
                         # Adjust the folders of the layout to consolidate the rootfolder of the

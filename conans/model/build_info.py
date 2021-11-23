@@ -500,16 +500,19 @@ class CppInfo(_CppInfo):
         else:
             _check_components_requires_instersection(self.requires)
 
-    def _raise_incorrect_components_names(self, pkg_name):
+    def _raise_incorrect_components_names(self):
         if self.components:
-            # Raise on component name
-            pkg_namespace = self.get_namespace(generator=None)
-            for comp_name, comp in self.components.items():
-                cmp_namespace = comp.get_namespace(generator=None)
-                if cmp_namespace and cmp_namespace != pkg_namespace:
-                    raise ConanException("Component '{}' was defined with namespace '{}' but it "
-                                         "should be the same as the one defined for the root "
-                                         "cpp_info ('{}')".format(comp_name, cmp_namespace, pkg_namespace))
+            # Raise if component name does not contain the root cpp_info namespace
+            # for "cmake_find_package", "cmake_find_package_multi" generators
+            for generator in ["cmake_find_package", "cmake_find_package_multi"]:
+                pkg_name = self.get_name(generator)
+                pkg_namespace = self.get_namespace(generator) or pkg_name
+                for comp_name, comp in self.components.items():
+                    cmp_namespace = comp.get_namespace(generator=generator)
+                    if cmp_namespace and cmp_namespace != pkg_namespace:
+                        raise ConanException("Component '{}' was defined with namespace '{}' but it "
+                                             "should be the same as the one defined for the root "
+                                             "cpp_info ('{}')".format(comp_name, cmp_namespace, pkg_namespace))
 
 
 class _BaseDepsCppInfo(_CppInfo):
