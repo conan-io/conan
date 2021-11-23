@@ -13,8 +13,9 @@ class PkgConfig:
         """
         self._conanfile = conanfile
         self._package = package
-        self._info = dict()
+        self._info = {}
         self._pkg_config_path = pkg_config_path
+        self._variables = {}
 
     def _parse_output(self, option):
         executable = self._conanfile.conf["tools.gnu:pkg_config"] or "pkg-config"
@@ -66,6 +67,15 @@ class PkgConfig:
     @property
     def version(self):
         return self._get_option('modversion')
+
+    @property
+    def variables(self):
+        if self._variables is None:
+            variable_names = self._parse_output('print-variables').split()
+            self._variables = {}
+            for name in variable_names:
+                self._variables[name] = self._parse_output('variable=%s' % name)
+        return self._variables
 
     def cpp_info(self, cpp_info, is_system=True):
         if not self.provides:

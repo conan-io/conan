@@ -48,6 +48,7 @@ class TestPkgConfig:
         assert pkg_config.libs == ['astral']
         assert pkg_config.libdirs == ['/usr/local/lib/libastral']
         assert pkg_config.linkflags == ['-Wl,--whole-archive']
+        assert pkg_config.variables['prefix'] == '/usr/local'
 
         cpp_info = NewCppInfo()
         pkg_config.cpp_info(cpp_info)
