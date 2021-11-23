@@ -15,7 +15,7 @@ class PkgConfig:
         self._package = package
         self._info = {}
         self._pkg_config_path = pkg_config_path
-        self._variables = {}
+        self._variables = None
 
     def _parse_output(self, option):
         executable = self._conanfile.conf["tools.gnu:pkg_config"] or "pkg-config"
