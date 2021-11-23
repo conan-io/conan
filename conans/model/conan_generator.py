@@ -84,13 +84,24 @@ class GeneratorComponentsMixin(object):
         for pkg_require in cpp_info.requires:
             _check_component_in_requirements(pkg_require)
 
+    # takes the name of the pkg and the component name that can have :: or not and
+    # converts to the name set by names or properties
     def _get_require_name(self, pkg_name, req):
         pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (pkg_name, req)
         pkg_build_info = self.deps_build_info[pkg]
         pkg_name = self._get_name(pkg_build_info)
-        # fallback namespace to pkg_name if not defined
+        # this will get the namespace from the absolute target if it was defined
+        # by the property cmake_target_name
         pkg_namespace = self._get_namespace(pkg_build_info) or pkg_name
         if cmp in pkg_build_info.components:
+            if self.name == "cmake_find_package" or self.name == "cmake_find_package_multi":
+                # we are forcing for legacy generators to declare components with the same
+                # namespace as the root cpp_info
+                cmp_namespace = self._get_namespace(pkg_build_info.components[cmp])
+                if cmp_namespace and cmp_namespace != pkg_namespace:
+                    raise ConanException("Component '{}' was defined with namespace '{}' but it "
+                                         "should be the same as the one defined for the root "
+                                         "cpp_info ('{}')".format(req, cmp_namespace, pkg_namespace))
             cmp_name = self._get_name(pkg_build_info.components[cmp])
         else:
             cmp_name = pkg_name

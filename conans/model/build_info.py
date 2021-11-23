@@ -225,14 +225,25 @@ class _CppInfo(object):
             property_name = "cmake_target_name"
         elif "pkg_config" in generator:
             property_name = "pkg_config_name"
-        return self.get_property(property_name, generator) \
-               or self.names.get(generator, self._name if default_name else None)
+        # TODO: revisit this logic, not touching for the moment
+        property_value = self.get_property(property_name, generator)
+        # we need compatibility between cpp_info.names and set_property("cmake_target_name")
+        # this one specifies the target name in absolute like CURL::curl so we need to split that
+        # this is just to enable migration
+        if (generator == "cmake_find_package" or generator == "cmake_find_package_multi") \
+            and self._is_absolute_name(property_value):
+            property_value = property_value.split(COMPONENT_SCOPE)[1]
+        return property_value or self.names.get(generator, self._name if default_name else None)
 
-    # To provide compatibility for legacy generators with cmake_target_namespace
-    # and make migration easier
     def get_namespace(self, generator):
+        # cmake_target_namespace is deprecated and now the name is absolute with a namespace
+        # this will try to extract the namespace from the absolute name to provide compatibility
+        # with current build_info.names and also with CMakeDeps that specifies names with namespaces
         if generator == "cmake_find_package" or generator == "cmake_find_package_multi":
-            namespace = self.get_property("cmake_target_namespace", generator)
+            name = self.get_property("cmake_target_name", generator)
+            namespace = None
+            if self._is_absolute_name(name):
+                namespace = name.split(COMPONENT_SCOPE)[0]
             return namespace
 
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
@@ -269,7 +280,14 @@ class _CppInfo(object):
         return self._build_modules
 
     def set_property(self, property_name, value, generator=None):
+        if property_name == "cmake_target_namespace" or property_name == "cmake_module_target_namespace":
+            raise ConanException("Property '{}' has been deprecated.".format(property_name))
         self._generator_properties.setdefault(generator, {})[property_name] = value
+
+    @staticmethod
+    def _is_absolute_name(name):
+        # an "absolute name" includes the namespace like CURL::curl
+        return name and COMPONENT_SCOPE in name
 
     def get_property(self, property_name, generator=None):
         if generator:
