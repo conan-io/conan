@@ -537,11 +537,11 @@ class GenericSystemBlock(Block):
             version_components = compiler_version.split(".")
             if len(version_components) >= 2:  # there is a 19.XX
                 minor = version_components[1]
-                if len(minor) >= 2:  # It is a full one, like 19.28, not generic 19.2
+                if len(minor) >= 2 and "X" not in minor:  # It is full one(19.28), not generic 19.2X
                     # The equivalent of compiler 19.26 is toolset 14.26
                     return "version=14.{}".format(minor)
                 else:
-                    return "v14{}".format(minor)
+                    return "v14{}".format(minor[0])
         elif compiler == "clang":
             if generator and "Visual" in generator:
                 if "Visual Studio 16" in generator:

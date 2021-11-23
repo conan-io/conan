@@ -12,7 +12,7 @@ from conans.cli.api.conan_api import ConanAPIV2, ConanAPI
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.cli.output import ConanOutput
+from conans.cli.output import ConanOutput, cli_out_write, Color
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf.config_installer import is_config_install_scheduled
@@ -112,7 +112,7 @@ class Cli(object):
                 command = self._commands[command_argument]
             except KeyError as exc:
                 if command_argument in ["-v", "--version"]:
-                    output.info("Conan version %s" % client_version)
+                    cli_out_write("Conan version %s" % client_version, fg=Color.BRIGHT_GREEN)
                     return SUCCESS
 
                 if command_argument in ["-h", "--help"]:

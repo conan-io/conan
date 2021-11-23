@@ -1,8 +1,6 @@
 from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN, MATRIX_PARAMS
-from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import AuthenticationException, ConanException
-from conans.search.search import filter_packages
 from conans.util.log import logger
 
 
@@ -47,7 +45,7 @@ class RestApiClient(object):
     def _capable(self, capability, user=None, password=None):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
-            tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers,
+            tmp = RestV2Methods(self._remote_url, self._token, self._custom_headers,
                                 self._requester, self._config, self._verify_ssl,
                                 self._artifacts_properties)
             capabilities = tmp.server_capabilities(user, password)
@@ -57,6 +55,7 @@ class RestApiClient(object):
 
     def _get_api(self):
         revisions = self._capable(REVISIONS)
+
         if not revisions:
             # TODO: port conan_v2_error to 1.X if not revisions
             raise ConanException("The remote doesn't support revisions. "

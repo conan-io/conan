@@ -32,12 +32,12 @@ class _VersionRepr:
             return self.major()
 
     def major(self):
-        if not isinstance(self._version.major, int):
+        if not isinstance(self._version.major.value, int):
             return str(self._version.major)
         return ".".join([str(self._version.major), 'Y', 'Z'])
 
     def minor(self, fill=True):
-        if not isinstance(self._version.major, int):
+        if not isinstance(self._version.major.value, int):
             return str(self._version.major)
 
         v0 = str(self._version.major)
@@ -47,7 +47,7 @@ class _VersionRepr:
         return ".".join([v0, v1])
 
     def patch(self):
-        if not isinstance(self._version.major, int):
+        if not isinstance(self._version.major.value, int):
             return str(self._version.major)
 
         v0 = str(self._version.major)
@@ -56,7 +56,7 @@ class _VersionRepr:
         return ".".join([v0, v1, v2])
 
     def pre(self):
-        if not isinstance(self._version.major, int):
+        if not isinstance(self._version.major.value, int):
             return str(self._version.major)
 
         v0 = str(self._version.major)

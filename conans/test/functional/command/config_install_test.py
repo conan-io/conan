@@ -64,11 +64,6 @@ myfuncpy = """def mycooladd(a, b):
     return a + b
 """
 
-conanconf_interval = """
-[general]
-config_install_interval = 5m
-"""
-
 
 class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
@@ -628,7 +623,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
 
     def setUp(self):
         self.folder = temp_folder(path_with_spaces=False)
-        save_files(self.folder, {"conan.conf": conanconf_interval})
+        save_files(self.folder, {"global.conf": "core:config_install_interval=5m"})
         self.client = TestClient()
         self.client.save({"conanfile.txt": ""})
 
@@ -636,10 +631,10 @@ class ConfigInstallSchedTest(unittest.TestCase):
         """ Config install can be executed without restriction
         """
         self.client.run('config install "%s"' % self.folder)
-        self.assertIn("Processing conan.conf", self.client.out)
-        content = load(self.client.cache.conan_conf_path)
+        self.assertIn("Copying file global.conf", self.client.out)
+        content = load(self.client.cache.new_config_path)
         self.assertEqual(1, content.count("config_install_interval"))
-        self.assertIn("config_install_interval = 5m", content.splitlines())
+        self.assertIn("core:config_install_interval=5m", content.splitlines())
         self.assertTrue(os.path.exists(self.client.cache.config_install_file))
         self.assertLess(os.path.getmtime(self.client.cache.config_install_file), time.time() + 1)
 
@@ -648,10 +643,10 @@ class ConfigInstallSchedTest(unittest.TestCase):
             when invoked manually
         """
         self.client.run('config install "%s"' % self.folder)
-        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Copying file global.conf", self.client.out)
 
         self.client.run('config install "%s"' % self.folder)
-        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Copying file global.conf", self.client.out)
         self.assertLess(os.path.getmtime(self.client.cache.config_install_file), time.time() + 1)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
@@ -667,14 +662,14 @@ class ConfigInstallSchedTest(unittest.TestCase):
                 """)
         self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
 
-        self.assertNotIn("Processing conan.conf", self.client.out)
+        self.assertNotIn("Copying file global.conf", self.client.out)
         past_time = int(time.time() - 120)  # 120 seconds in the past
         os.utime(self.client.cache.config_install_file, (past_time, past_time))
 
         self.client.run('search')  # any command will fire it
-        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Copying file global.conf", self.client.out)
         self.client.run('search')  # not again, it was fired already
-        self.assertNotIn("Processing conan.conf", self.client.out)
+        self.assertNotIn("Copying file global.conf", self.client.out)
 
     def test_invalid_scheduler(self):
         """ An exception must be raised when conan_config.json is not listed
@@ -689,19 +684,12 @@ class ConfigInstallSchedTest(unittest.TestCase):
     def test_invalid_time_interval(self, internal):
         """ config_install_interval only accepts seconds, minutes, hours, days and weeks.
         """
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [general]
-                            config_install_interval={}
-                        """).format(internal)
-        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
+        self.client.save({"global.conf": f"core:config_install_interval={internal}"},
+                         path=self.client.cache.cache_folder)
         # Any conan invocation will fire the configuration error
-        self.client.run('install .', assert_error=True)
-        self.assertIn("ERROR: Incorrect definition of general.config_install_interval: {}. "
-                      "Removing it from conan.conf to avoid possible loop error.".format(internal),
-                      self.client.out)
         self.client.run('install .')
+        self.assertIn("Conf 'core:config_install_interval' value '{}' "
+                      "must be 'timedelta_from_text'".format(internal), self.client.out)
 
     @pytest.mark.tool_git
     def test_config_install_remove_git_repo(self):
@@ -714,7 +702,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
             self.client.run_command('git config user.email myname@mycompany.com')
             self.client.run_command('git commit -m "mymsg"')
         self.client.run('config install "%s/.git" --type git' % self.folder)
-        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Copying file global.conf", self.client.out)
         self.assertIn("Repo cloned!", self.client.out)  # git clone executed by scheduled task
         folder_name = self.folder
         new_name = self.folder + "_test"
@@ -740,7 +728,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
             self.client.run_command('git config user.email myname@mycompany.com')
             self.client.run_command('git commit -m "mymsg"')
         self.client.run('config install "%s/.git" --type git' % self.folder)
-        self.assertIn("Processing conan.conf", self.client.out)
+        self.assertIn("Copying file global.conf", self.client.out)
         self.assertIn("Repo cloned!", self.client.out)
         # force scheduled time for all commands
         with patch("conans.client.conf.config_installer._is_scheduled_intervals", return_value=True):
@@ -774,11 +762,9 @@ class ConfigInstallSchedTest(unittest.TestCase):
             client.run_command('git commit -m "mymsg"')
         assert ".gitlab-conan" in client.cache_folder
         assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_USER_HOME
-        conf = load(client.cache.conan_conf_path)
-        assert "config_install_interval = 5m" not in conf
         client.run('config install "%s/.git" --type git' % self.folder)
-        conf = load(client.cache.conan_conf_path)
-        assert "config_install_interval = 5m" in conf
+        conf = load(client.cache.new_config_path)
+        assert "core:config_install_interval=5m" in conf
         dirs = os.listdir(client.cache.cache_folder)
         assert ".git" not in dirs
 
