@@ -7,19 +7,19 @@ from conans.util.runners import check_output_runner
 
 class PkgConfig:
 
-    def __init__(self, conanfile, package, pkg_config_path=None):
+    def __init__(self, conanfile, library, pkg_config_path=None):
         """
-        :param package: library (package) name, such as libastral
+        :param library: library (package) name, such as libastral
         """
         self._conanfile = conanfile
-        self._package = package
+        self._library = library
         self._info = {}
         self._pkg_config_path = pkg_config_path
         self._variables = None
 
     def _parse_output(self, option):
         executable = self._conanfile.conf["tools.gnu:pkg_config"] or "pkg-config"
-        command = [executable, '--' + option, self._package, '--print-errors']
+        command = [executable, '--' + option, self._library, '--print-errors']
         try:
             env = Environment()
             if self._pkg_config_path:
@@ -79,7 +79,7 @@ class PkgConfig:
 
     def fill_cpp_info(self, cpp_info, is_system=True, system_libs=None):
         if not self.provides:
-            raise ConanException("PkgConfig error, '{}' files not available".format(self._package))
+            raise ConanException("PkgConfig error, '{}' files not available".format(self._library))
         if is_system:
             cpp_info.system_libs = self.libs
         else:
