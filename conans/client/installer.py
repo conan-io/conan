@@ -393,11 +393,10 @@ class BinaryInstaller(object):
             download_nodes.append(node)
 
         def _download(n):
-            npref = n.pref
-            layout = self._cache.package_layout(npref.ref, n.conanfile.short_paths)
+            layout = self._cache.package_layout(n.pref.ref, n.conanfile.short_paths)
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
-            with layout.package_lock(pref):
+            with layout.package_lock(n.pref):
                 self._download_pkg(layout, n)
 
         parallel = self._cache.config.parallel_download
