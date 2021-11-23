@@ -462,8 +462,7 @@ class ConanAPIV1(object):
 
     @api_method
     def build(self, conanfile_path, name=None, version=None, user=None, channel=None,
-              source_folder=None, package_folder=None, build_folder=None,
-              install_folder=None, cwd=None, settings=None, options=None, env=None,
+              cwd=None, settings=None, options=None, env=None,
               remote_name=None, build=None, profile_names=None,
               update=False, generators=None, no_imports=False,
               lockfile=None, lockfile_out=None, profile_build=None, conf=None):
@@ -477,11 +476,7 @@ class ConanAPIV1(object):
         cwd = cwd or os.getcwd()
 
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
-        build_folder = _make_abs_path(build_folder, cwd)
-        install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
-        source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
-        default_pkg_folder = os.path.join(build_folder, "package")
-        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
+        install_folder = cwd or os.getcwd()  # FIXME: Still used in -g deploy, but ugly
 
         try:
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
@@ -492,7 +487,7 @@ class ConanAPIV1(object):
                                lockfile=lockfile)
             deps_info = deps_install(app=app,
                                      ref_or_path=conanfile_path,
-                                     install_folder=install_folder,
+                                     install_folder=True,
                                      base_folder=cwd,
                                      profile_host=profile_host,
                                      profile_build=profile_build,
@@ -509,8 +504,7 @@ class ConanAPIV1(object):
 
             conanfile = deps_info.root.conanfile
             cmd_build(app, conanfile_path, conanfile, base_path=cwd,
-                      source_folder=source_folder, build_folder=build_folder,
-                      package_folder=package_folder, install_folder=install_folder)
+                      install_folder=install_folder)
         except ConanException as exc:
             raise
 

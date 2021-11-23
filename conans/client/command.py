@@ -757,20 +757,8 @@ class Command(object):
                                                                    'if not specified in conanfile')
         parser.add_argument("--user", action=OnceArgument, help='Provide a user')
         parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
-        parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("-pf", "--package-folder", action=OnceArgument,
-                            help="Directory to install the package (when the build system or "
-                                 "build() method does it). Defaulted to the '{build_folder}/package' "
-                                 "folder. A relative path can be specified, relative to the current "
-                                 "folder. Also an absolute path is allowed.")
-        parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
-
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
-
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help='Use this directory as the directory where to put the generator'
-                                 'files.')
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
@@ -779,8 +767,6 @@ class Command(object):
                                  'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        parser.add_argument("--lockfile-node-id", action=OnceArgument,
-                            help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
 
@@ -797,10 +783,6 @@ class Command(object):
                                      version=args.version,
                                      user=args.user,
                                      channel=args.channel,
-                                     source_folder=args.source_folder,
-                                     package_folder=args.package_folder,
-                                     build_folder=args.build_folder,
-                                     install_folder=args.install_folder,
                                      settings=args.settings_host, options=args.options_host,
                                      env=args.env_host, profile_names=args.profile_host,
                                      profile_build=profile_build,
