@@ -464,9 +464,8 @@ def test_pkg_config_names(setup_client):
         assert "mypkg-config-name" in gen_file.read()
 
 
-def test_set_properties_simplified():
+def test_set_absolute_target_names_legacy_generators():
     client = TestClient()
-    client.current_folder = '/private/var/folders/6s/l9c3n5696gvg7qm3v7ms78lc0000gq/T/tmpb77ctm1lconans/path with spaces'
     my_pkg = textwrap.dedent("""
         from conans import ConanFile
         class MyPkg(ConanFile):
@@ -497,12 +496,12 @@ def test_set_properties_simplified():
                 self.cpp_info.components["curl2"].requires.extend(["curl", "my_pkg::MYPKGCOMP"])
 
     """)
-    client.save({"properties/conanfile.py": conanfile}, clean_first=True)
+    client.save({"properties/conanfile.py": conanfile})
     client.run("create properties")
-    client.run("install libcurl/0.1@ -g cmake_find_package_multi --install-folder=properties")
+    client.run("install libcurl/0.1@ -g cmake_find_package_multi -g cmake_find_package "
+               "--install-folder=properties")
     files_with_properties = []
-    # check_files = ["FindCURL.cmake"]
-    check_files = ["CURLConfig.cmake", "CURLTargets.cmake", "CURLTarget-release.cmake",
+    check_files = ["FindCURL.cmake", "CURLConfig.cmake", "CURLTargets.cmake", "CURLTarget-release.cmake",
                    "CURLConfigVersion.cmake"]
     for filename in check_files:
         files_with_properties.append(client.load(os.path.join("properties", filename)))
@@ -525,7 +524,8 @@ def test_set_properties_simplified():
     """)
     client.save({"names/conanfile.py": conanfile})
     client.run("create names")
-    client.run("install libcurl/0.1@ -g cmake_find_package_multi --install-folder=names")
+    client.run("install libcurl/0.1@ -g cmake_find_package_multi -g cmake_find_package "
+               "--install-folder=names")
     files_with_names = []
     for filename in check_files:
         files_with_names.append(client.load(os.path.join("names", filename)))
