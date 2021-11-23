@@ -233,8 +233,7 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
-                   package_folder=None, profile_names=None, settings=None,
+    def export_pkg(self, conanfile_path, name, channel, profile_names=None, settings=None,
                    options=None, env=None, force=False, user=None, version=None, cwd=None,
                    lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
                    conf=None):
@@ -243,27 +242,8 @@ class ConanAPIV1(object):
         app = ConanApp(self.cache_folder)
         cwd = cwd or os.getcwd()
 
-
         try:
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
-
-            if package_folder:
-                if build_folder or source_folder:
-                    raise ConanException("package folder definition incompatible with build "
-                                         "and source folders")
-                package_folder = _make_abs_path(package_folder, cwd)
-
-            build_folder = _make_abs_path(build_folder, cwd)
-
-            source_folder = _make_abs_path(source_folder, cwd,
-                                           default=os.path.dirname(conanfile_path))
-
-            for folder, path in {"source": source_folder, "build": build_folder,
-                                 "package": package_folder}.items():
-                if path and not os.path.exists(path):
-                    raise ConanException("The {} folder '{}' does not exist."
-                                         .format(folder, path))
-
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
             # Checks that no both settings and info files are specified
             profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
@@ -274,8 +254,7 @@ class ConanAPIV1(object):
             new_ref = cmd_export(app, conanfile_path, name, version, user, channel,
                                  graph_lock=graph_lock, ignore_dirty=ignore_dirty)
             # new_ref has revision
-            export_pkg(app, new_ref, source_folder=source_folder,
-                       build_folder=build_folder, package_folder=package_folder,
+            export_pkg(app, new_ref,
                        profile_host=profile_host, profile_build=profile_build,
                        graph_lock=graph_lock, root_ref=root_ref, force=force,
                        source_conanfile_path=conanfile_path)

@@ -59,7 +59,7 @@ class PkgA(ConanFile):
         client.save({CONANFILE: conanfile})
         client.run("install . -if=build")
         client.run("build . -bf=build")
-        client.run("export-pkg . pkga/0.1@user/testing -bf=build -pr=default")
+        client.run("export-pkg . pkga/0.1@user/testing -pr=default")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         self.assertIn(f"pkga/0.1@user/testing: Package '{package_id}' created", client.out)
 
@@ -67,46 +67,9 @@ class PkgA(ConanFile):
         # https://github.com/conan-io/conan/issues/2350
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
-        mkdir(os.path.join(client.current_folder, "pkg"))
-
-        client.run("export-pkg . hello/0.1@lasote/stable -pf=pkg -bf=.", assert_error=True)
-        self.assertIn("ERROR: package folder definition incompatible with build and source folders",
+        client.run("export-pkg . hello/0.1@lasote/stable")
+        self.assertIn("hello/0.1@lasote/stable package(): WARN: No files in this package!",
                       client.out)
-
-        client.run("export-pkg . hello/0.1@lasote/stable -pf=pkg -sf=.", assert_error=True)
-        self.assertIn("ERROR: package folder definition incompatible with build and source folders",
-                      client.out)
-
-        client.run("export-pkg . hello/0.1@lasote/stable -pf=pkg")
-        self.assertIn("hello/0.1@lasote/stable: WARN: No files in this package!",
-                      client.out)
-
-    def test_package_folder(self):
-        # https://github.com/conan-io/conan/issues/2350
-        conanfile = """from conans import ConanFile
-class helloPythonConan(ConanFile):
-    settings = "os"
-    def package(self):
-        self.output.info("PACKAGE NOT CALLED")
-        raise Exception("PACKAGE NOT CALLED")
-"""
-        client = TestClient()
-        client.save({CONANFILE: conanfile,
-                     "pkg/myfile.h": "",
-                     "profile": "[settings]\nos=Windows"})
-
-        client.run("export-pkg . hello/0.1@lasote/stable -pf=pkg -pr=profile")
-        self.assertNotIn("PACKAGE NOT CALLED", client.out)
-        self.assertIn("hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
-        self.assertNotIn("No files in this package!", client.out)
-        ref = RecipeReference.loads("hello/0.1@lasote/stable")
-        pref = client.get_latest_package_reference(ref)
-        latest_package = client.get_latest_pkg_layout(pref).package()
-        conaninfo = load(os.path.join(latest_package, "conaninfo.txt"))
-        self.assertEqual(1, conaninfo.count("os=Windows"))
-        manifest = load(os.path.join(latest_package, "conanmanifest.txt"))
-        self.assertIn("conaninfo.txt:", manifest)
-        self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
 
     def test_develop(self):
         # https://github.com/conan-io/conan/issues/2513
@@ -216,7 +179,7 @@ class TestConan(ConanFile):
                      "libs/what": "",
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
-        client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows --build-folder=.")
+        client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
         pref = PkgReference.loads(f"hello/0.1@lasote/stable#9583c5d0a62cd7afe4f83f821bf37be2:{package_id}#{prev}")
@@ -240,7 +203,7 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents",
                      "build/lib/hello.lib": "My Lib"})
-        client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows --build-folder=build")
+        client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
         pref = PkgReference.loads(f"hello/0.1@lasote/stable#cd0221af3af8be9e3d7e7b6ae56ce0b6:{package_id}#{prev}")
@@ -258,6 +221,10 @@ class TestConan(ConanFile):
 class TestConan(ConanFile):
     settings = "os"
 
+    def layout(self):
+        self.folders.build = "build"
+        self.folders.source = "src"
+
     def package(self):
         self.copy("*.h", src="include", dst="inc")
         self.copy("*.lib", src="lib", dst="lib")
@@ -268,11 +235,11 @@ class TestConan(ConanFile):
                      "build/libs/what": "",
                      "build/lib/hello.lib": "My Lib",
                      "build/lib/bye.txt": ""})
-        client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows --build-folder=build "
-                   "--source-folder=src")
+        client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows")
+        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1@lasote/stable#c05196f9787f3f375005b1b9772ab828:{package_id}#{prev}")
+        pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -321,17 +288,17 @@ class TestConan(ConanFile):
                       client.out)
 
     def test_with_deps(self):
-        hello_ref = RecipeReference.loads("hello/0.1@lasote/stable")
         client = TestClient()
-        conanfile = GenConanfile().with_name("hello").with_version("0.1")
-        client.save({"conanfile.py": str(conanfile)})
-        client.run("export . lasote/stable")
-        client.run("install hello/0.1@lasote/stable --build")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . hello/0.1@lasote/stable")
         conanfile = GenConanfile().with_name("hello1").with_version("0.1")\
-                                  .with_import("from conans import tools").with_require(hello_ref)
+                                  .with_import("from conans import tools")\
+                                  .with_require("hello/0.1@lasote/stable")
 
         conanfile = str(conanfile) + """\n    def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
+    def layout(self):
+        self.folders.build = "Release_x86"
     def package(self):
         self.copy("*")
         """
@@ -339,7 +306,7 @@ class TestConan(ConanFile):
         client.save({"Release_x86/lib/libmycoollib.a": ""})
         settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
                     '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("export-pkg . hello1/0.1@lasote/stable %s -bf=Release_x86" % settings)
+        client.run("export-pkg . hello1/0.1@lasote/stable %s" % settings)
 
         # consumer
         consumer = """
@@ -503,18 +470,6 @@ class TestConan(ConanFile):
         self.assertFalse(layout.package_is_dirty())
         client.run("install pkg/0.1@")
         self.assertIn("pkg/0.1: Already installed!", client.out)
-
-    def test_invalid_folder(self):
-        """ source, build and package path must exists, otherwise, raise ConanException
-        """
-        for folder in ["source", "build", "package"]:
-            client = TestClient()
-            client.save({CONANFILE: GenConanfile().with_name("foo").with_version("0.1.0")})
-
-            client.run("export-pkg . foo/0.1.0@user/testing -{}f={}".format(folder[0], folder),
-                       assert_error=True)
-            self.assertIn("ERROR: The {} folder '{}' does not exist."
-                          .format(folder, os.path.join(client.current_folder, folder)), client.out)
 
 
 def test_build_policy_never():
