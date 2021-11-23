@@ -168,6 +168,8 @@ class Lib(ConanFile):
             from conans import ConanFile
 
             class Lib(ConanFile):
+                def layout(self):
+                    self.folders.build = "tmp/build"
 
                 def _assert_data(self):
                     assert(self.conan_data["sources"]["all"]["url"] == "this url")
@@ -196,5 +198,5 @@ class Lib(ConanFile):
         client.run("install . -if tmp/install")
         client.run("build . -if tmp/install -bf tmp/build")
         self.assertIn("My URL: this url", client.out)
-        client.run("export-pkg . name/version@ -sf tmp/source -bf tmp/build")
+        client.run("export-pkg . name/version@")
         self.assertIn("My URL: this url", client.out)
