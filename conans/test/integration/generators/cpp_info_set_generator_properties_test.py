@@ -462,3 +462,89 @@ def test_pkg_config_names(setup_client):
 
     with open(os.path.join(client.current_folder, "mypkg-config-name.pc")) as gen_file:
         assert "mypkg-config-name" in gen_file.read()
+
+
+def test_set_properties_simplified():
+    client = TestClient()
+    client.current_folder = '/private/var/folders/6s/l9c3n5696gvg7qm3v7ms78lc0000gq/T/tmpb77ctm1lconans/path with spaces'
+    my_pkg = textwrap.dedent("""
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            name = "my_pkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.names["cmake_find_package"] = "MYPKG"
+                self.cpp_info.names["cmake_find_package_multi"] = "MYPKG"
+                self.cpp_info.components["MYPKGCOMP"].names["cmake_find_package"] = "MYPKGCOMPNAME"
+                self.cpp_info.components["MYPKGCOMP"].names["cmake_find_package_multi"] = "MYPKGCOMPNAME"
+    """)
+    client.save({"my_pkg/conanfile.py": my_pkg}, clean_first=True)
+    client.run("create my_pkg")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class LibcurlConan(ConanFile):
+            name = "libcurl"
+            version = "0.1"
+            requires = "my_pkg/0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "CURL::CURL")
+                self.cpp_info.set_property("cmake_file_name", "CURL")
+                self.cpp_info.components["curl"].set_property("cmake_target_name", "CURL::libcurl")
+                self.cpp_info.components["curl2"].set_property("cmake_target_name", "CURL::libcurl2")
+                self.cpp_info.components["curl2"].requires.extend(["curl", "my_pkg::MYPKGCOMP"])
+
+    """)
+    client.save({"properties/conanfile.py": conanfile}, clean_first=True)
+    client.run("create properties")
+    client.run("install libcurl/0.1@ -g cmake_find_package_multi --install-folder=properties")
+    files_with_properties = []
+    # check_files = ["FindCURL.cmake"]
+    check_files = ["CURLConfig.cmake", "CURLTargets.cmake", "CURLTarget-release.cmake",
+                   "CURLConfigVersion.cmake"]
+    for filename in check_files:
+        files_with_properties.append(client.load(os.path.join("properties", filename)))
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class LibcurlConan(ConanFile):
+            name = "libcurl"
+            version = "0.1"
+            requires = "my_pkg/0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.names["cmake_find_package"] = "CURL"
+                self.cpp_info.names["cmake_find_package_multi"] = "CURL"
+                self.cpp_info.components["curl"].names["cmake_find_package"] = "libcurl"
+                self.cpp_info.components["curl"].names["cmake_find_package_multi"] = "libcurl"
+                self.cpp_info.components["curl2"].names["cmake_find_package"] = "libcurl2"
+                self.cpp_info.components["curl2"].names["cmake_find_package_multi"] = "libcurl2"
+                self.cpp_info.components["curl2"].requires.extend(["curl", "my_pkg::MYPKGCOMP"])
+    """)
+    client.save({"names/conanfile.py": conanfile})
+    client.run("create names")
+    client.run("install libcurl/0.1@ -g cmake_find_package_multi --install-folder=names")
+    files_with_names = []
+    for filename in check_files:
+        files_with_names.append(client.load(os.path.join("names", filename)))
+
+    assert files_with_properties == files_with_names
+
+    # conanfile = textwrap.dedent("""
+    #     from conans import ConanFile
+    #     class LibcurlConan(ConanFile):
+    #         name = "libcurl"
+    #         version = "0.1"
+    #         settings = "os", "arch", "compiler", "build_type"
+    #         def package_info(self):
+    #             self.cpp_info.set_property("cmake_target_name", "CURLNAMESPACE::CURLNAME")
+    #             self.cpp_info.components["curl"].libs = ["libcurl"]
+    # """)
+    # client.save({"conanfile.py": conanfile}, clean_first=True)
+    # client.run("create .")
+    # client.run("install libcurl/0.1@ -g CMakeDeps")
+    # data_cmake = client.load("libcurl-release-x86_64-data.cmake")
+    # # if not defined, we take the pkg name as namespace
+    # assert "set(libcurl_COMPONENT_NAMES ${libcurl_COMPONENT_NAMES} libcurl::curl)" in data_cmake
