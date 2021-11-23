@@ -532,19 +532,57 @@ def test_set_absolute_target_names_legacy_generators():
 
     assert files_with_properties == files_with_names
 
-    # conanfile = textwrap.dedent("""
-    #     from conans import ConanFile
-    #     class LibcurlConan(ConanFile):
-    #         name = "libcurl"
-    #         version = "0.1"
-    #         settings = "os", "arch", "compiler", "build_type"
-    #         def package_info(self):
-    #             self.cpp_info.set_property("cmake_target_name", "CURLNAMESPACE::CURLNAME")
-    #             self.cpp_info.components["curl"].libs = ["libcurl"]
-    # """)
-    # client.save({"conanfile.py": conanfile}, clean_first=True)
-    # client.run("create .")
-    # client.run("install libcurl/0.1@ -g CMakeDeps")
-    # data_cmake = client.load("libcurl-release-x86_64-data.cmake")
-    # # if not defined, we take the pkg name as namespace
-    # assert "set(libcurl_COMPONENT_NAMES ${libcurl_COMPONENT_NAMES} libcurl::curl)" in data_cmake
+
+@pytest.mark.parametrize("property_name", ["cmake_target_namespace", "cmake_module_target_namespace"])
+def test_deprectated_namespace(property_name):
+    client = TestClient()
+    my_pkg = textwrap.dedent("""
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("{}", "something")
+    """.format(property_name))
+    client.save({"conanfile.py": my_pkg})
+    client.run("create . my_pkg/0.1@", assert_error=True)
+    assert "Property '{}' has been deprecated.".format(property_name) in client.out
+
+
+def test_cmake_target_name_restrictions():
+    client = TestClient()
+    my_pkg = textwrap.dedent("""
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "something")
+    """)
+    client.save({"conanfile.py": my_pkg})
+    client.run("create . my_pkg/0.1@", assert_error=True)
+    assert "Target name: 'something' not valid. Property 'cmake_target_name' " \
+           "has to set an absolute target name with a namespace like " \
+           "'NAMESPACE::NAME'." in client.out
+
+
+def test_component_cmake_target_name_restrictions():
+    client = TestClient()
+    my_pkg_base = textwrap.dedent("""
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "pkg_namespace::othername")
+                self.cpp_info.components["mycomponent"].set_property("cmake_target_name", "{comp_name}")
+                self.cpp_info.components["mycomponent"].libs = ["comp_lib"]
+    """)
+    my_pkg = my_pkg_base.format(comp_name="component_name")
+    client.save({"conanfile.py": my_pkg})
+    client.run("create . my_pkg/0.1@", assert_error=True)
+    assert "Target name: 'component_name' not valid. Property 'cmake_target_name' has to set an " \
+           "absolute target name with a namespace like 'NAMESPACE::NAME'." in client.out
+
+    my_pkg = my_pkg_base.format(comp_name="component_namespace::component_name")
+    client.save({"conanfile.py": my_pkg})
+    client.run("create . my_pkg/0.1@", assert_error=True)
+    assert "Component 'mycomponent' was defined with namespace 'component_namespace' but it should " \
+           "be the same as the one defined for the root cpp_info ('pkg_namespace')" in client.out
