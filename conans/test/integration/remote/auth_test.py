@@ -5,7 +5,6 @@ import unittest
 
 from requests.models import Response
 
-from conans.client import tools
 from conans.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
@@ -205,13 +204,8 @@ def test_token_expired():
     import time
     time.sleep(3)
     c.users = {}
-    conan_conf = textwrap.dedent("""
-                                        [storage]
-                                        path = ./data
-                                        [general]
-                                        non_interactive=True
-                                    """)
-    c.save({"conan.conf": conan_conf}, path=c.cache.cache_folder)
+    conan_conf = "core:non_interactive=True"
+    c.save({"global.conf": conan_conf}, path=c.cache.cache_folder)
     c.run("remove * -f")
     c.run("install pkg/0.1@user/stable")
     user, token, _ = c.cache.localdb.get_login(server.fake_url)

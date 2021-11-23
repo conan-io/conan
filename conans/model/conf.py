@@ -5,6 +5,7 @@ from conans.errors import ConanException
 
 DEFAULT_CONFIGURATION = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
+    "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core.package_id:msvc_visual_incompatible": "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile (None by default)",
