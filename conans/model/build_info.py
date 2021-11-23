@@ -278,9 +278,10 @@ class _CppInfo(object):
         return self._build_modules
 
     def set_property(self, property_name, value, generator=None):
+        reg_exp = r"[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]+{}[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]+".format(COMPONENT_SCOPE)
         if property_name == "cmake_target_namespace" or property_name == "cmake_module_target_namespace":
             raise ConanException("Property '{}' has been deprecated.".format(property_name))
-        elif property_name == "cmake_target_name" and not re.match(r"\w+{}\w+".format(COMPONENT_SCOPE), value):
+        elif property_name == "cmake_target_name" and not re.match(reg_exp, value):
             raise ConanException("Target name: '{}' not valid. Property 'cmake_target_name' "
                                  "has to set an absolute target name with a namespace like "
                                  "'NAMESPACE::NAME'.".format(value))
