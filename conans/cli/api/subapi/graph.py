@@ -1,4 +1,3 @@
-from conans.cli.api.model import Remote
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
@@ -14,7 +13,7 @@ class GraphAPI:
     @api_method
     def load_graph(self, reference, path, profile_host, profile_build, lockfile, root_ref,
                    build_modes=None, create_reference=None, is_build_require=False,
-                   require_overrides=None, remote_name=None, update=False):
+                   require_overrides=None, remote=None, update=False):
         """ Calculate graph and fetch needed recipes
         @param reference: Conan reference to build the graph for
         @param path: Path to the conanfile.py or conanfile.txt to build the graph
@@ -26,7 +25,7 @@ class GraphAPI:
         @param create_reference:
         @param is_build_require:
         @param require_overrides:
-        @param remote_name:
+        @param remote:
         @param update:
         """
         if path and reference:
@@ -34,8 +33,8 @@ class GraphAPI:
                                  "only one of them")
 
         app = ConanApp(self.conan_api.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)], update=update)
+
+        app.load_remotes([remote], update=update)
 
         assert profile_host is not None
         assert profile_build is not None

@@ -1,7 +1,6 @@
 import os
 
 from conans import ConanFile
-from conans.cli.api.model import Remote
 from conans.cli.api.subapi import api_method
 from conans.cli.common import get_lockfile
 from conans.cli.conan_app import ConanApp
@@ -25,7 +24,7 @@ class InstallAPI:
     @api_method
     def install_binaries(self, deps_graph, install_folder, base_folder, conanfile_folder,
                          build_modes=None, generators=None, no_imports=False, create_reference=None,
-                         remote_name=None, update=False, test=None):
+                         remote=None, update=False, test=None):
         """ Install binaries for dependency graph
         @param deps_graph: Dependency graph to intall packages for
         @param install_folder:
@@ -35,12 +34,12 @@ class InstallAPI:
         @param generators:
         @param no_imports:
         @param create_reference:
+        @param remote:
         @param update:
         @param test:
         """
         app = ConanApp(self.conan_api.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)], update=update)
+        app.load_remotes([remote], update=update)
 
         out = ConanOutput()
 
@@ -99,7 +98,7 @@ class InstallAPI:
     # explode things too much
     @api_method
     def install(self, path="", reference="", name=None, version=None, user=None, channel=None,
-                profile_host=None, profile_build=None, remote_name=None, build=None, update=False,
+                profile_host=None, profile_build=None, remote=None, build=None, update=False,
                 generators=None, no_imports=False, install_folder=None, lockfile_in=None,
                 lockfile_out=None, is_build_require=None, require_overrides=None):
 
@@ -131,11 +130,11 @@ class InstallAPI:
                                                      build_modes=build,
                                                      is_build_require=is_build_require,
                                                      require_overrides=require_overrides,
-                                                     remote_name=remote_name, update=update)
+                                                     remote=remote, update=update)
 
         self.install_binaries(deps_graph=deps_graph, install_folder=install_folder, base_folder=cwd,
                               conanfile_folder=conanfile_folder, build_modes=build,
-                              generators=generators, no_imports=no_imports, remote_name=remote_name,
+                              generators=generators, no_imports=no_imports, remote=remote,
                               update=update)
 
         if lockfile_out:
