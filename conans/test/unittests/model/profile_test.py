@@ -64,8 +64,9 @@ class ProfileTest(unittest.TestCase):
         profile.settings["arch"] = "x86_64"
         profile.settings["compiler"] = "Visual Studio"
         profile.settings["compiler.version"] = "12"
-        profile.build_requires["*"] = ["zlib/1.2.8@lasote/testing"]
-        profile.build_requires["zlib/*"] = ["aaaa/1.2.3@lasote/testing", "bb/1.2@lasote/testing"]
+        profile.build_tool_requires["*"] = ["zlib/1.2.8@lasote/testing"]
+        profile.build_tool_requires["zlib/*"] = ["aaaa/1.2.3@lasote/testing",
+                                                 "bb/1.2@lasote/testing"]
         self.assertEqual("""[settings]
 arch=x86_64
 compiler=Visual Studio
@@ -97,22 +98,22 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
 def test_update_build_requires():
     # https://github.com/conan-io/conan/issues/8205#issuecomment-775032229
     profile = Profile()
-    profile.build_requires["*"] = ["zlib/1.2.8"]
+    profile.build_tool_requires["*"] = ["zlib/1.2.8"]
 
     profile2 = Profile()
-    profile2.build_requires["*"] = ["zlib/1.2.8"]
+    profile2.build_tool_requires["*"] = ["zlib/1.2.8"]
 
     profile.compose_profile(profile2)
-    assert profile.build_requires["*"] == ["zlib/1.2.8"]
+    assert profile.build_tool_requires["*"] == ["zlib/1.2.8"]
 
     profile3 = Profile()
-    profile3.build_requires["*"] = ["zlib/1.2.11"]
+    profile3.build_tool_requires["*"] = ["zlib/1.2.11"]
 
     profile.compose_profile(profile3)
-    assert profile.build_requires["*"] == ["zlib/1.2.11"]
+    assert profile.build_tool_requires["*"] == ["zlib/1.2.11"]
 
     profile4 = Profile()
-    profile4.build_requires["*"] = ["cmake/2.7"]
+    profile4.build_tool_requires["*"] = ["cmake/2.7"]
 
     profile.compose_profile(profile4)
-    assert profile.build_requires["*"] == ["zlib/1.2.11", "cmake/2.7"]
+    assert profile.build_tool_requires["*"] == ["zlib/1.2.11", "cmake/2.7"]

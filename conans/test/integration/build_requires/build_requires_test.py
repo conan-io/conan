@@ -187,7 +187,7 @@ override = conanfile.format("""build_requires = "Tool/0.2@user/channel"
 
 
 profile = """
-[build_requires]
+[build_tool_requires]
 Tool/0.3@lasote/stable
 nonexistingpattern*: SomeTool/1.2@user/channel
 """
@@ -267,7 +267,7 @@ class MyLib(ConanFile):
             assert(os.environ['MYVAR2']=='2')
 
 """, "myprofile": '''
-[build_requires]
+[build_tool_requires]
 Build1/0.1@conan/stable
 ''',
                     "test_package/conanfile.py": """from conans import ConanFile
@@ -298,7 +298,7 @@ class Boost(ConanFile):
 """
         client.save({CONANFILE: boost})
         client.run("create . Boost/1.0@user/channel")
-        other = """[build_requires]
+        other = """[build_tool_requires]
 Boost/1.0@user/channel
 """
         client.save({"conanfile.txt": other}, clean_first=True)
@@ -339,7 +339,7 @@ class Tool(ConanFile):
         self.buildenv_info.define_path("PATH", "mymingwpath")
 """
         myprofile = """
-[build_requires]
+[build_tool_requires]
 consumer*: mingw/0.1@myuser/stable
 """
         app = """from conans import ConanFile
@@ -370,7 +370,7 @@ class Tool(ConanFile):
         self.buildenv_info.append("MYVAR", "mymingwpath")
 """
         myprofile = """
-[build_requires]
+[build_tool_requires]
 mingw/0.1@lasote/stable
 """
         gtest = """from conans import ConanFile
@@ -417,12 +417,12 @@ class Tool(ConanFile):
         self.buildenv_info.append("MYVAR", "mymsyspath")
 """
         myprofile1 = """
-[build_requires]
+[build_tool_requires]
 mingw/0.1@lasote/stable
 msys/0.1@lasote/stable
 """
         myprofile2 = """
-[build_requires]
+[build_tool_requires]
 msys/0.1@lasote/stable
 mingw/0.1@lasote/stable
 """
@@ -457,7 +457,7 @@ class Tool(ConanFile):
         self.output.info("BUILDING MYTOOL")
 """
         myprofile = """
-[build_requires]
+[build_tool_requires]
 Tool/0.1@lasote/stable
 """
         client.save({CONANFILE: mytool_conanfile,
@@ -562,7 +562,7 @@ class package(ConanFile):
         consumer = textwrap.dedent("""
                     [requires]
                     req/1.0@test/test
-                    [build_requires]
+                    [build_tool_requires]
                     build_req_req/1.0@test/test
                 """)
         client.save({"conanfile.txt": consumer}, clean_first=True)

@@ -58,7 +58,6 @@ class GraphManager(object):
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
                                          root_ref, is_build_require,
                                          require_overrides)
-        profile_host_build_requires = profile_host.build_requires
         builder = DepsGraphBuilder(self._proxy, self._loader, self._range_resolver)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, graph_lock)
         version_ranges_output = self._range_resolver.output

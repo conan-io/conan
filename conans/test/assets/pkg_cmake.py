@@ -118,6 +118,7 @@ def pkg_cmake_app(name, version, requires=None):
             {deps}
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps"
+            package_type = "application"
 
             def layout(self):
                 cmake_layout(self)

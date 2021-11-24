@@ -149,7 +149,7 @@ class GraphManagerTest(unittest.TestCase):
         profile_build = Profile()
         profile_build.settings["os"] = "Windows"
         if profile_build_requires:
-            profile_host.build_requires = profile_build_requires
+            profile_host.build_tool_requires = profile_build_requires
         if options_build:
             profile_build.options = Options(options_values=options_build)
         profile_host.process_settings(self.cache)
