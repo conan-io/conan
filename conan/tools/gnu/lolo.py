@@ -93,7 +93,7 @@ class PkgConfigDeps(object):
         """Build a composed name for all the components and its package root name"""
         return "%s-%s" % (pkg_name, comp_name)
 
-    def _get_component_requires_names(self, dep_name, cpp_info):
+    def _get_component_requires_names(self, dep_name, cpp_info, dep=None):
         """
         Get all the pkg-config valid names from the requires ones given a dependency and
         a CppInfo object.
@@ -105,6 +105,7 @@ class PkgConfigDeps(object):
             pkg_name, comp_name = req.split("::") if "::" in req else (dep_name, req)
             # FIXME: it could allow defining requires to not direct dependencies
             req_conanfile = self._conanfile.dependencies.host[pkg_name]
+            breakpoint()
             comp_alias_name = self.get_component_name(req_conanfile, comp_name)
             if not comp_alias_name:
                 # Just in case, let's be sure about the pkg has any alias
@@ -117,7 +118,7 @@ class PkgConfigDeps(object):
         """Get all the dependency's requirements (public dependencies and components)"""
         dep_name = get_package_reference_name(dep)
         # At first, let's check if we have defined some component requires, e.g., "pkg::cmp1"
-        requires = self._get_component_requires_names(dep_name, dep.cpp_info)
+        requires = self._get_component_requires_names(dep_name, dep.cpp_info, dep=dep)
         # If we have found some component requires it would be enough
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,
@@ -148,7 +149,7 @@ class PkgConfigDeps(object):
         # Loop through all the package's components
         for comp_name, comp_cpp_info in dep.cpp_info.get_sorted_components().items():
             comp_requires_names = self._get_component_requires_names(get_package_reference_name(dep),
-                                                                     comp_cpp_info)
+                                                                     comp_cpp_info, dep=dep)
             pkg_comp_name = self.get_component_name(dep, comp_name)
             if not pkg_comp_name:
                 pkg_comp_name = self._get_pc_name(pkg_name, comp_name)
@@ -169,7 +170,7 @@ class PkgConfigDeps(object):
         """Get all the *.pc files content"""
         pc_files = {}
         host_req = self._conanfile.dependencies.host
-        for require, dep in host_req.items():
+        for _, dep in host_req.items():
             # Restart the aliases cache per dependency
             self._pkg_config_name_aliases = dict()
 
