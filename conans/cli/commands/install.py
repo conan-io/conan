@@ -100,7 +100,7 @@ def install(conan_api, parser, *args, **kwargs):
     if not path and not reference:
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
-    remote = conan_api.remotes.get(args.remote)
+    remote = conan_api.remotes.get(args.remote) if args.remote else None
 
     info = None
     try:

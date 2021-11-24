@@ -34,7 +34,8 @@ class GraphAPI:
 
         app = ConanApp(self.conan_api.cache_folder)
 
-        app.load_remotes([remote], update=update)
+        remote = [remote] if remote is not None else None
+        app.load_remotes(remote, update=update)
 
         assert profile_host is not None
         assert profile_build is not None
