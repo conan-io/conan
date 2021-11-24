@@ -286,19 +286,46 @@ class EnvVars:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
             result.append('set {}={}'.format(varname, value))
+
         content = "\n".join(result)
         save(filename, content)
 
     def save_ps1(self, filename, generate_deactivate=True,):
-        # FIXME: This is broken and doesnt work
-        deactivate = ""
+        deactivate = textwrap.dedent("""\
+            echo "Capturing current environment in deactivate_{filename}"
+
+            "echo `"Restoring environment`"" | Out-File -FilePath "deactivate_{filename}"
+            $vars = (Get-ChildItem env:*).name
+            $updated_vars = @({vars})
+
+            foreach ($var in $updated_vars)
+            {{
+                if ($var -in $vars)
+                {{
+                    $var_value = (Get-ChildItem env:$var).value
+                    Add-Content "deactivate_{filename}" "`n`$env:$var = `"$var_value`""
+                }}
+                else
+                {{
+                    Add-Content "deactivate_{filename}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
+                }}
+            }}
+        """).format(
+            filename=os.path.basename(filename),
+            vars=",".join(['"{}"'.format(var) for var in self._values.keys()])
+        )
+
         capture = textwrap.dedent("""\
-               {deactivate}
-               """).format(deactivate=deactivate if generate_deactivate else "")
+            {deactivate}
+            echo "Configuring environment variables"
+        """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("$env:{name}", self._pathsep)
-            result.append('$env:{}={}'.format(varname, value))
+            value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep)
+            if value:
+                result.append('$env:{}="{}"'.format(varname, value))
+            else:
+                result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
         content = "\n".join(result)
         save(filename, content)

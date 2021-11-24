@@ -201,17 +201,19 @@ def test_components_system_libs():
         project(consumer)
         cmake_minimum_required(VERSION 3.1)
         find_package(requirement)
-        get_target_property(tmp requirement::component INTERFACE_LINK_LIBRARIES)
-        message("component libs: ${tmp}")
+        get_target_property(tmp_libs requirement::component INTERFACE_LINK_LIBRARIES)
+        get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
+        message("component libs: ${tmp_libs}")
+        message("component options: ${tmp_options}")
     """)
 
     t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
     t.run("create . --build missing -s build_type=Release")
-
-    assert ("component libs: "
-            "$<$<CONFIG:Release>:system_lib_component;"
-            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>") in t.out
+    assert 'component libs: $<$<CONFIG:Release>:system_lib_component;>' in t.out
+    assert ('component options: '
+            '$<$<CONFIG:Release>:'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>') in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>
