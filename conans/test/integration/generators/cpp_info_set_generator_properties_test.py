@@ -535,9 +535,9 @@ def test_set_absolute_target_names_legacy_generators():
     assert files_with_properties == files_with_names
 
 
+# TODO: add some asserts and move to functional
 def test_set_absolute_target_names_cmakedeps():
     client = TestClient()
-    client.current_folder = "/Users/carlos/Documents/developer/conan-develop/sandbox/properties_hell"
     my_pkg = textwrap.dedent("""
         from conans import ConanFile
         class MyPkg(ConanFile):
@@ -560,16 +560,42 @@ def test_set_absolute_target_names_cmakedeps():
             settings = "os", "arch", "compiler", "build_type"
             def package_info(self):
                 self.cpp_info.set_property("cmake_target_name", "CURL::CURL")
-                self.cpp_info.set_property("cmake_file_name", "CURL")
-                #self.cpp_info.components["curl"].set_property("cmake_target_name", "CURL::libcurl")
-                self.cpp_info.components["curl"].libs = ["jander"]
+                self.cpp_info.set_property("cmake_file_name", "CURLFILENAME")
+                self.cpp_info.components["curl"].set_property("cmake_target_name", "CURL::libcurl")
                 self.cpp_info.components["curl2"].set_property("cmake_target_name", "CURL::libcurl2")
                 self.cpp_info.components["curl2"].requires.extend(["curl", "my_pkg::MYPKGCOMP"])
         """)
-    client.save({"properties/conanfile.py": conanfile})
-    client.run("create properties")
-    client.run("install libcurl/0.1@ -g CMakeDeps --install-folder=properties")
-    print("....")
+    client.save({"libcurl/conanfile.py": conanfile})
+    client.run("create libcurl")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMakeDeps, CMake, CMakeToolchain
+        class CONSUMER(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            requires = "libcurl/0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            exports_sources = "CMakeLists.txt"
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.check_components_exist=True
+                deps.generate()
+                tc = CMakeToolchain(self)
+                tc.generate()
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmakelists = textwrap.dedent("""cmake_minimum_required(VERSION 3.15)
+        project(Consumer)
+        find_package(CURLFILENAME CONFIG REQUIRED COMPONENTS CURL::libcurl CURL::libcurl2)
+        """)
+
+    client.save({"consumer/conanfile.py": conanfile, "consumer/CMakeLists.txt": cmakelists})
+    client.run("create consumer")
 
 
 @pytest.mark.parametrize("property_name", ["cmake_target_namespace", "cmake_module_target_namespace"])
