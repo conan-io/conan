@@ -2,7 +2,6 @@ import os
 import shutil
 
 from conans.client import tools
-from conans.client.cmd.export import export_recipe, export_source
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
     conanfile_exception_formatter, NotFoundException
 from conans.model.scm import SCM, get_scm_data
@@ -55,23 +54,6 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
 
     # FIXME: this output is scoped but without reference, check if we want this
     conanfile.output.info("Sources downloaded from '{}'".format(sources_remote.name))
-
-
-def config_source_local(conanfile, conanfile_path, hook_manager):
-    """ Entry point for the "conan source" command.
-    """
-    conanfile_folder = os.path.dirname(conanfile_path)
-
-    def get_sources_from_exports():
-        src_folder = conanfile.source_folder
-        if conanfile_folder != src_folder:
-            _run_local_scm(conanfile, conanfile_folder, src_folder)
-            conanfile.output.info("Executing exports to: %s" % src_folder)
-            export_recipe(conanfile, conanfile_folder, src_folder)
-            export_source(conanfile, conanfile_folder, src_folder)
-
-    _run_source(conanfile, conanfile_path, hook_manager, reference=None, cache=None,
-                get_sources_from_exports=get_sources_from_exports)
 
 
 def config_source(export_folder, export_source_folder, scm_sources_folder, conanfile,
@@ -146,16 +128,7 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                 if cache:
                     # Clear the conanfile.py to avoid errors cloning git repositories.
                     _clean_source_folder(src_folder)
-                with conanfile_exception_formatter(conanfile.display_name, "source"):
-
-                    with conan_v2_property(conanfile, 'settings',
-                                           "'self.settings' access in source() method is "
-                                           "deprecated"):
-                        with conan_v2_property(conanfile, 'options',
-                                               "'self.options' access in source() method is "
-                                               "deprecated"):
-                            conanfile.source()
-
+                run_source_method(conanfile)
                 hook_manager.execute("post_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
                                      reference=reference)
@@ -163,6 +136,24 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
             raise
         except Exception as e:
             raise ConanException(e)
+
+
+def run_source_method(conanfile):
+    if not hasattr(conanfile, "source"):
+        return
+    src_folder = conanfile.source_folder
+    mkdir(src_folder)
+    with tools.chdir(src_folder):
+        output = conanfile.output
+        output.info('Running source() method in %s' % src_folder)
+        with conanfile_exception_formatter(conanfile.display_name, "source"):
+            with conan_v2_property(conanfile, 'settings',
+                                   "'self.settings' access in source() method is "
+                                   "deprecated"):
+                with conan_v2_property(conanfile, 'options',
+                                       "'self.options' access in source() method is "
+                                       "deprecated"):
+                    conanfile.source()
 
 
 def _clean_source_folder(folder):
@@ -207,35 +198,3 @@ def _run_cache_scm(conanfile, scm_sources_folder):
         # Maybe check conan 2.0
         # TODO: Why removing in the cache? There is no danger.
         _clean_source_folder(dest_dir)
-
-
-def _run_local_scm(conanfile, conanfile_folder, src_folder):
-    """
-    Only called when 'conan source' in user space
-    :param conanfile: recipe
-    :param src_folder: specified src_folder
-    :param conanfile_folder: Folder containing the local conanfile
-    :param output: Output
-    :return:
-    """
-
-    scm_data = get_scm_data(conanfile)
-    if not scm_data:
-        return
-    dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
-    # In user space, if revision="auto", then copy
-    if scm_data.capture_origin or scm_data.capture_revision:  # FIXME: or clause?
-        scm = SCM(scm_data, conanfile_folder, conanfile.output)
-        scm_url = scm_data.url if scm_data.url != "auto" else \
-            scm.get_qualified_remote_url(remove_credentials=True)
-
-        src_path = scm.get_local_path_to_url(url=scm_url)
-        if src_path and src_path != dest_dir:
-            excluded = SCM(scm_data, src_path, conanfile.output).excluded_files
-            conanfile.output.info("SCM: Getting sources from folder: %s" % src_path)
-            merge_directories(src_path, dest_dir, excluded=excluded)
-            return
-
-    conanfile.output.info("SCM: Getting sources from url: '%s'" % scm_data.url)
-    scm = SCM(scm_data, dest_dir, conanfile.output)
-    scm.checkout()

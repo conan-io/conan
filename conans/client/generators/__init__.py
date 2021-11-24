@@ -76,6 +76,7 @@ def _get_generator_class(generator_name):
 
 def write_generators(conanfile):
     new_gen_folder = conanfile.generators_folder
+    assert new_gen_folder is not None
     _receive_conf(conanfile)
 
     for generator_name in set(conanfile.generators):

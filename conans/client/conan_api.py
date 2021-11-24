@@ -23,9 +23,8 @@ from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.profile_loader import ProfileLoader
 from conans.client.remover import ConanRemover
-from conans.client.source import config_source_local
-from conans.errors import (ConanException, RecipeNotFoundException,
-                           PackageNotFoundException, NotFoundException)
+from conans.client.source import run_source_method
+from conans.errors import (ConanException, RecipeNotFoundException, NotFoundException)
 from conans.model.graph_lock import LOCKFILE, Lockfile
 from conans.model.manifest import discarded_file
 from conans.model.package_ref import PkgReference
@@ -314,7 +313,8 @@ class ConanAPIV1(object):
                          graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
                          generators=generators,
                          is_build_require=is_build_require,
-                         require_overrides=require_overrides)
+                         require_overrides=require_overrides,
+                         conanfile_path=install_folder)  # FIXME: This conanfile_path=install_folder sucks
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -508,24 +508,50 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def source(self, path, cwd=None):
+    def source(self, conanfile_path, name=None, version=None, user=None, channel=None,
+               cwd=None, settings=None, options=None, env=None,
+               remote_name=None, build=None, profile_names=None,
+               generators=None, no_imports=False,
+               lockfile=None, lockfile_out=None, profile_build=None, conf=None):
+        # TODO: This is basically a copy of the build() api method, should be refactorized
         app = ConanApp(self.cache_folder)
 
+        app.load_remotes([Remote(remote_name, None)])
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
+                                   env=env, conf=conf)
+
         cwd = cwd or os.getcwd()
-        conanfile_path = _get_conanfile_path(path, cwd, py=True)
 
-        # only infos if exist
-        conanfile = app.graph_manager.load_consumer_conanfile(conanfile_path)
-        conanfile.folders.set_base_source(os.path.dirname(conanfile_path))
-        conanfile.folders.set_base_build(None)
-        conanfile.folders.set_base_package(None)
+        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-        if hasattr(conanfile, "layout"):
-            try:  # FIXME: If the self.folders.source declaration is soon enough, might work
-                conanfile.layout()
-            except ConanException:
-                pass
-        config_source_local(conanfile, conanfile_path, app.hook_manager)
+        try:
+            lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
+            profile_host, profile_build, graph_lock, root_ref = \
+                get_graph_info(profile_host, profile_build, cwd,
+                               app.cache,
+                               name=name, version=version, user=user, channel=channel,
+                               lockfile=lockfile)
+            deps_info = deps_install(app=app,
+                                     ref_or_path=conanfile_path,
+                                     install_folder=True,
+                                     base_folder=cwd,
+                                     profile_host=profile_host,
+                                     profile_build=profile_build,
+                                     graph_lock=graph_lock,
+                                     root_ref=root_ref,
+                                     build_modes=build,
+                                     generators=generators,
+                                     no_imports=no_imports,
+                                     conanfile_path=os.path.dirname(conanfile_path))
+
+            if lockfile_out:
+                lockfile_out = _make_abs_path(lockfile_out, cwd)
+                graph_lock.save(lockfile_out)
+
+            conanfile = deps_info.root.conanfile
+            run_source_method(conanfile)
+        except ConanException as exc:
+            raise
 
     @api_method
     def imports(self, conanfile_path, dest=None, cwd=None, settings=None,

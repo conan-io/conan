@@ -58,6 +58,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     build_modes = BuildMode(build_modes)
     installer.install(deps_graph, build_modes)
 
+    conanfile.folders.set_base_source(conanfile_path)
     conanfile.folders.set_base_install(conanfile_path)
     conanfile.folders.set_base_imports(conanfile_path)
     conanfile.folders.set_base_generators(conanfile_path)

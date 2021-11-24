@@ -711,38 +711,42 @@ class Command(object):
     def source(self, *args):
         """
         Calls your local conanfile.py 'source()' method.
-
-        Usually downloads and uncompresses the package sources.
         """
+
         parser = argparse.ArgumentParser(description=self.source.__doc__,
                                          prog="conan source",
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
+        parser.add_argument("--name", action=OnceArgument, help='Provide a package name '
+                                                                'if not specified in conanfile')
+        parser.add_argument("--version", action=OnceArgument, help='Provide a package version '
+                                                                   'if not specified in conanfile')
+        parser.add_argument("--user", action=OnceArgument, help='Provide a user')
+        parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
         args = parser.parse_args(*args)
-
-        try:
-            if "@" in args.path and RecipeReference.loads(args.path):
-                raise ArgumentError(None,
-                                    "'conan source' doesn't accept a reference anymore. "
-                                    "If you were using it as a concurrency workaround, "
-                                    "you can call 'conan install' simultaneously from several "
-                                    "different processes, the concurrency is now natively supported"
-                                    ". The path parameter should be a folder containing a "
-                                    "conanfile.py file.")
-        except ConanException:
-            pass
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         self._warn_python_version()
-        return self._conan_api.source(args.path)
+        self._conan_api.source(conanfile_path=args.path,
+                                     name=args.name,
+                                     version=args.version,
+                                     user=args.user,
+                                     channel=args.channel,
+                                     settings=args.settings_host, options=args.options_host,
+                                     env=args.env_host, profile_names=args.profile_host,
+                                     profile_build=profile_build,
+                                     remote_name=args.remote,
+                                     build=args.build,
+                                     no_imports=True,
+                                     lockfile=args.lockfile,
+                                     conf=args.conf_host)
 
     def build(self, *args):
         """
         Calls your local conanfile.py 'build()' method.
-
-        The recipe will be built in the local directory specified by
-        --build-folder, reading the sources from --source-folder. If you are
-        using a build helper, like CMake(), the --package-folder will be
-        configured as the destination folder for the install step.
         """
 
         parser = argparse.ArgumentParser(description=self.build.__doc__,
