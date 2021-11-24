@@ -1,11 +1,10 @@
 import os
 
 from conans.client import tools
-from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
+from conans.errors import ConanException, \
     conanfile_exception_formatter, NotFoundException
 from conans.model.scm import SCM, get_scm_data
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.env import no_op
 from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
                                merge_directories, clean_dirty)
 
@@ -86,24 +85,16 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
     if not os.path.exists(conanfile.folders.base_source):  # No source folder, need to get it
         with set_dirty_context_manager(conanfile.folders.base_source):
             mkdir(conanfile.source_folder)
-
-            def get_sources_from_exports():
-                # First of all get the exported scm sources (if auto) or clone (if fixed)
-                _run_cache_scm(conanfile, scm_sources_folder)
-                # Now move the export-sources to the right location
-                merge_directories(export_source_folder, conanfile.folders.base_source)
-
             _run_source(conanfile, conanfile_path, hook_manager, reference,
-                        get_sources_from_exports=get_sources_from_exports)
+                        scm_sources_folder, export_source_folder)
 
 
 def _run_source(conanfile, conanfile_path, hook_manager, reference,
-                get_sources_from_exports):
+                scm_sources_folder, export_source_folder):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
         - Getting sources from SCM
         - Getting sources from exported folders in the local cache
-        - Clean potential TGZ and other files in the local cache
         - Executing the recipe source() method
         - Calling post_source hook
     """
@@ -112,22 +103,19 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference,
     mkdir(src_folder)
 
     with tools.chdir(src_folder):
-        try:
-            with no_op():  # TODO: Remove this in a later refactor
-                hook_manager.execute("pre_source", conanfile=conanfile,
-                                     conanfile_path=conanfile_path,
-                                     reference=reference)
-                output = conanfile.output
-                output.info('Configuring sources in %s' % src_folder)
-                get_sources_from_exports()
-                run_source_method(conanfile)
-                hook_manager.execute("post_source", conanfile=conanfile,
-                                     conanfile_path=conanfile_path,
-                                     reference=reference)
-        except ConanExceptionInUserConanfileMethod:
-            raise
-        except Exception as e:
-            raise ConanException(e)
+        hook_manager.execute("pre_source", conanfile=conanfile,
+                             conanfile_path=conanfile_path,
+                             reference=reference)
+        output = conanfile.output
+        output.info('Configuring sources in %s' % src_folder)
+        # First of all get the exported scm sources (if auto) or clone (if fixed)
+        _run_cache_scm(conanfile, scm_sources_folder)
+        # Now move the export-sources to the right location
+        merge_directories(export_source_folder, conanfile.folders.base_source)
+        run_source_method(conanfile)
+        hook_manager.execute("post_source", conanfile=conanfile,
+                             conanfile_path=conanfile_path,
+                             reference=reference)
 
 
 def run_source_method(conanfile):
@@ -151,7 +139,6 @@ def run_source_method(conanfile):
 def _run_cache_scm(conanfile, scm_sources_folder):
     """
     :param conanfile: recipe
-    :param src_folder: sources folder in the cache, (Destination dir)
     :param scm_sources_folder: scm sources folder in the cache, where the scm sources were exported
     :return:
     """
@@ -173,7 +160,3 @@ def _run_cache_scm(conanfile, scm_sources_folder):
             scm.checkout()
         except Exception as e:
             raise ConanException("Couldn't checkout SCM: %s" % str(e))
-        # This is a bit weird. Why after a SCM should we remove files.
-        # Maybe check conan 2.0
-        # TODO: Why removing in the cache? There is no danger.
-        _clean_source_folder(dest_dir)
