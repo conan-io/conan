@@ -116,6 +116,7 @@ class TestFoldersAccess(unittest.TestCase):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
+        self.client.run("install . --build=missing")
         self.client.run("source .")
 
         c1 = conanfile % {"no_copy_source": True, "source_with_infos": False,

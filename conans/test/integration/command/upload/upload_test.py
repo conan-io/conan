@@ -331,7 +331,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conaninfo.txt", client2.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn("hello0/1.2.1@frodo/stable#3a26992ac7bfd9de8ca9a821a6ca54dc:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
+                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#e430e1f685a56fd52122c5679304cdaa"
                       " already in server, skipping upload", client2.out)
 
         # first client tries to upload again
@@ -345,7 +345,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conaninfo.txt", client.out)  # conaninfo NOT changed
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn("hello0/1.2.1@frodo/stable#3a26992ac7bfd9de8ca9a821a6ca54dc:"
-                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#9040c90925bc0cb0a3ba3ce7db39166b"
+                      "357add7d387f11a959f3ee7d4fc9c2487dbaa604#e430e1f685a56fd52122c5679304cdaa"
                       " already in server, skipping upload", client2.out)
 
     def test_upload_no_overwrite_all(self):

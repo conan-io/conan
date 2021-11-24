@@ -32,14 +32,14 @@ def test_reuse_with_modules_and_config(cmake_find_mode):
                                                  .with_settings("build_type", "os", "arch")
     t.save({"conanfile.py": conanfile})
 
-    t.run("install . -if=install -s os=Linux -s compiler=gcc -s compiler.version=6 "
+    t.run("install . -s os=Linux -s compiler=gcc -s compiler.version=6 "
           "-s compiler.libcxx=libstdc++11")
 
     def exists_config():
-        return os.path.exists(os.path.join(t.current_folder, "install", "mydep-config.cmake"))
+        return os.path.exists(os.path.join(t.current_folder, "mydep-config.cmake"))
 
     def exists_module():
-        return os.path.exists(os.path.join(t.current_folder, "install", "Findmydep.cmake"))
+        return os.path.exists(os.path.join(t.current_folder, "Findmydep.cmake"))
 
     if cmake_find_mode == FIND_MODE_CONFIG or cmake_find_mode is None:
         # None is default "config"

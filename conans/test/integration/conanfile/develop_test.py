@@ -69,7 +69,7 @@ class DevelopTest(unittest.TestCase):
         self.assertNotIn("build!", client.out)
         self.assertNotIn("package!", client.out)
         self.assertNotIn("package_info!", client.out)
-        self.assertNotIn("package_id!", client.out)
+        self.assertIn("package_id!", client.out)
 
         client.run("build .")
         self.assertIn("Develop True configure!", client.out)

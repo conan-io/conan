@@ -11,7 +11,7 @@ conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
     name = "%s"
     version = "0.1"
-    exports = "*"
+    exports_sources = "*"
     def package(self):
         self.copy("*")
 """
