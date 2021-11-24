@@ -191,6 +191,9 @@ class Requirement:
         return hash((self.ref.name, self.build))
 
     def __eq__(self, other):
+        """If the name is the same and they are in the same context, and if both of them are
+        propagating includes or libs or run info or both are visible or the reference is the same,
+        we consider the requires equal, so they can conflict"""
         return (self.ref.name == other.ref.name and self.build == other.build and
                 ((self.headers and other.headers) or
                  (self.libs and other.libs) or
