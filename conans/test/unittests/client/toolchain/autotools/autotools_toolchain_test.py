@@ -17,7 +17,6 @@ def test_modify_environment():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
-    conanfile.folders.set_base_install(f)
     be = AutotoolsToolchain(conanfile)
     env = be.environment()
     env.define("foo", "var")

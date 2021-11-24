@@ -14,7 +14,6 @@ class Infos(object):
 class Folders(object):
 
     def __init__(self):
-        self._base_install = None
         self._base_source = None
         self._base_build = None
         self._base_package = None
@@ -60,13 +59,6 @@ class Folders(object):
 
     def set_base_build(self, folder):
         self._base_build = folder
-
-    @property
-    def base_install(self):
-        return self._base_install
-
-    def set_base_install(self, folder):
-        self._base_install = folder
 
     @property
     def base_package(self):

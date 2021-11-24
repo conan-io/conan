@@ -25,7 +25,7 @@ def cmd_build(app, conanfile_path, conan_file, test=False):
         conan_file.folders.set_base_source(conanfile_folder)
         conan_file.folders.set_base_package(conanfile_folder)
         conan_file.folders.set_base_generators(conanfile_folder)
-        conan_file.folders.set_base_install(conanfile_folder)
+        conan_file.folders.set_base_imports(conanfile_folder)
 
         mkdir(conan_file.build_folder)
         with chdir(conan_file.build_folder):

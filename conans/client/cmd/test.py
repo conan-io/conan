@@ -34,16 +34,13 @@ def install_build_and_test(app, conanfile_abs_path, reference, profile_host, pro
         deps_info = deps_install(app=app,
                                  create_reference=reference,
                                  ref_or_path=conanfile_abs_path,
-                                 install_folder=test_build_folder,
-                                 base_folder=test_build_folder,
                                  profile_host=profile_host,
                                  profile_build=profile_build,
                                  graph_lock=graph_lock,
                                  root_ref=root_ref,
                                  build_modes=build_modes,
                                  require_overrides=require_overrides,
-                                 conanfile_path=os.path.dirname(conanfile_abs_path),
-                                 test=True  # To keep legacy test_package_layout)
+                                 conanfile_path=os.path.dirname(conanfile_abs_path)
                                  )
         conanfile = deps_info.root.conanfile
         cmd_build(app, conanfile_abs_path, conanfile, test=reference)

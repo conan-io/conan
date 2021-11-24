@@ -30,12 +30,12 @@ def editable_cmake(generator):
         build_dep()
 
     def build_pkg(msg):
-        c.run("build . -if=install_release")
+        c.run("build .")
         folder = os.path.join("build", "Release") if multi else "cmake-build-release"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Release!" in c.out
         assert "{}: Release!".format(msg) in c.out
-        c.run("build . -if=install_debug -s build_type=Debug")
+        c.run("build . -s build_type=Debug")
         folder = os.path.join("build", "Debug") if multi else "cmake-build-debug"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Debug!" in c.out

@@ -393,10 +393,6 @@ class Command(object):
                             '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help='Use this directory as the directory where to put the generator'
-                                 'files.')
-
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
         parser.add_argument("--build-require", action='store_true', default=False,
@@ -436,7 +432,6 @@ class Command(object):
                                                build=args.build,
                                                update=args.update, generators=args.generator,
                                                no_imports=args.no_imports,
-                                               install_folder=args.install_folder,
                                                lockfile=args.lockfile,
                                                lockfile_out=args.lockfile_out,
                                                require_overrides=args.require_override)
@@ -457,7 +452,6 @@ class Command(object):
                                                          build=args.build,
                                                          update=args.update,
                                                          generators=args.generator,
-                                                         install_folder=args.install_folder,
                                                          lockfile=args.lockfile,
                                                          lockfile_out=args.lockfile_out,
                                                          is_build_require=args.build_require,

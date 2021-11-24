@@ -155,7 +155,7 @@ class _PackageBuilder(object):
         package_id = pref.package_id
         # Do the actual copy, call the conanfile.package() method
         # While installing, the infos goes to build folder
-        conanfile.folders.set_base_install(conanfile.folders.base_build)
+        conanfile.folders.set_base_imports(conanfile.folders.base_build)
 
         prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
                                   pref.ref)
@@ -208,7 +208,7 @@ class _PackageBuilder(object):
                     # In local cache, generators folder always in build_folder
                     conanfile.folders.set_base_generators(base_build)
                     # In local cache, install folder always is build_folder
-                    conanfile.folders.set_base_install(base_build)
+                    conanfile.folders.set_base_imports(base_build)
                     self._build(conanfile, pref)
                     clean_dirty(base_build)
 
@@ -399,7 +399,6 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_package(base_path)
             conanfile.folders.set_base_source(base_path)
             conanfile.folders.set_base_build(base_path)
-            conanfile.folders.set_base_install(base_path)
             conanfile.folders.set_base_imports(base_path)
 
             # Need a temporary package revision for package_revision_mode
@@ -450,7 +449,7 @@ class BinaryInstaller(object):
         conanfile.folders.set_base_package(package_folder)
         conanfile.folders.set_base_source(None)
         conanfile.folders.set_base_build(None)
-        conanfile.folders.set_base_install(None)
+        conanfile.folders.set_base_imports(None)
 
         conanfile.user_info = UserInfo()
 

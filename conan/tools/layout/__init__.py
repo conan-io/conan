@@ -23,10 +23,12 @@ def cmake_layout(conanfile, generator=None):
     if multi:
         conanfile.folders.build = "build"
         conanfile.folders.generators = "build/conan"
+        conanfile.folders.imports = "build/{}".format(build_type)
     else:
         build_type = build_type.lower()
         conanfile.folders.build = "cmake-build-{}".format(build_type)
         conanfile.folders.generators = os.path.join(conanfile.folders.build, "conan")
+        conanfile.folders.imports = conanfile.folders.generators
 
     conanfile.cpp.source.includedirs = ["src"]
     if multi:

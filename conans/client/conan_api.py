@@ -285,7 +285,7 @@ class ConanAPIV1(object):
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, build=None, profile_names=None,
-                          update=False, generators=None, install_folder=None, cwd=None,
+                          update=False, generators=None, cwd=None,
                           lockfile=None, lockfile_out=None, profile_build=None,
                           is_build_require=False, conf=None,
                           require_overrides=None):
@@ -305,16 +305,14 @@ class ConanAPIV1(object):
 
             if graph_lock is not None:
                 graph_lock.strict = True
-            install_folder = _make_abs_path(install_folder, cwd)
 
-            mkdir(install_folder)
-            deps_install(app, ref_or_path=reference, install_folder=install_folder, base_folder=cwd,
+            deps_install(app, ref_or_path=reference,
                          profile_host=profile_host, profile_build=profile_build,
                          graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
                          generators=generators,
                          is_build_require=is_build_require,
                          require_overrides=require_overrides,
-                         conanfile_path=install_folder)  # FIXME: This conanfile_path=install_folder sucks
+                         conanfile_path=cwd)  # FIXME: This conanfile_path=cwd sucks
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -326,7 +324,7 @@ class ConanAPIV1(object):
     def install(self, path="", name=None, version=None, user=None, channel=None,
                 settings=None, options=None, env=None,
                 remote_name=None, build=None, profile_names=None,
-                update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
+                update=False, generators=None, no_imports=False, cwd=None,
                 lockfile=None, lockfile_out=None, profile_build=None, conf=None,
                 require_overrides=None):
         app = ConanApp(self.cache_folder)
@@ -346,8 +344,6 @@ class ConanAPIV1(object):
                                                                                user=user,
                                                                                channel=channel,
                                                                                lockfile=lockfile)
-
-            install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
             # Make lockfile strict for consuming and install
@@ -355,8 +351,6 @@ class ConanAPIV1(object):
                 graph_lock.strict = True
             deps_install(app=app,
                          ref_or_path=conanfile_path,
-                         install_folder=install_folder,
-                         base_folder=cwd,
                          profile_host=profile_host,
                          profile_build=profile_build,
                          graph_lock=graph_lock,
@@ -476,7 +470,6 @@ class ConanAPIV1(object):
         cwd = cwd or os.getcwd()
 
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
-        install_folder = cwd or os.getcwd()  # FIXME: Still used in -g deploy, but ugly
 
         try:
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
@@ -487,8 +480,6 @@ class ConanAPIV1(object):
                                lockfile=lockfile)
             deps_info = deps_install(app=app,
                                      ref_or_path=conanfile_path,
-                                     install_folder=True,
-                                     base_folder=cwd,
                                      profile_host=profile_host,
                                      profile_build=profile_build,
                                      graph_lock=graph_lock,
@@ -533,8 +524,6 @@ class ConanAPIV1(object):
                                lockfile=lockfile)
             deps_info = deps_install(app=app,
                                      ref_or_path=conanfile_path,
-                                     install_folder=True,
-                                     base_folder=cwd,
                                      profile_host=profile_host,
                                      profile_build=profile_build,
                                      graph_lock=graph_lock,
@@ -581,12 +570,11 @@ class ConanAPIV1(object):
 
             deps_info = deps_install(app=app,
                                      ref_or_path=conanfile_path,
-                                     install_folder=None,
-                                     base_folder=cwd,
                                      profile_host=profile_host,
                                      profile_build=profile_build,
                                      graph_lock=graph_lock,
-                                     root_ref=root_ref)
+                                     root_ref=root_ref,
+                                     conanfile_path=conanfile_path)
             conanfile = deps_info.root.conanfile
             conanfile.folders.set_base_imports(dest)
             return run_imports(conanfile)
