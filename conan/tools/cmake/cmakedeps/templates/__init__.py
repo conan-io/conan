@@ -89,11 +89,13 @@ class CMakeDepsFileTemplate(object):
 
     def get_component_alias(self, req, comp_name):
         if comp_name not in req.cpp_info.components:
+            # TODO: remove this
+            raise Exception("Can you get to this point?")
             # foo::foo might be referencing the root cppinfo
-            if req.ref.name == comp_name:
-                return self.get_target_namespace(req)
-            raise ConanException("Component '{name}::{cname}' not found in '{name}' "
-                                 "package requirement".format(name=req.ref.name, cname=comp_name))
+            # if req.ref.name == comp_name:
+            #     return self.get_target_namespace(req)
+            # raise ConanException("Component '{name}::{cname}' not found in '{name}' "
+            #                      "package requirement".format(name=req.ref.name, cname=comp_name))
         if self.find_module_mode:
             ret = req.cpp_info.components[comp_name].get_property("cmake_module_target_name",
                                                                   "CMakeDeps")
