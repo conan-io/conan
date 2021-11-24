@@ -37,27 +37,27 @@ class FullRevisionModeTest(unittest.TestCase):
         clientc = TestClient(cache_folder=clienta.cache_folder)
         clientc.save({"conanfile.py": GenConanfile().with_name("libc").with_version("0.1")
                                                     .with_require(libb_ref)})
-        clientc.run("install . user/testing")
+        clientc.run("install . --user=user --channel=testing")
 
         # Do a minor change to the recipe, it will change the recipe revision
         clienta.save({"conanfile.py": conanfilea + "# comment"})
         clienta.run("create . liba/0.1@user/testing")
 
-        clientc.run("install . user/testing", assert_error=True)
+        clientc.run("install . --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
         # Building b with the new recipe revision of liba works
-        clientc.run("install . user/testing --build=libb")
+        clientc.run("install . --user=user --channel=testing --build=libb")
 
         # Now change only the package revision of liba
         clienta.run("create . liba/0.1@user/testing")
-        clientc.run("install . user/testing")
+        clientc.run("install . --user=user --channel=testing")
         save(clientc.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
-        clientc.run("install . user/testing", assert_error=True)
+        clientc.run("install . --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
-        clientc.run("install . user/testing --build=libb")
+        clientc.run("install . --user=user --channel=testing --build=libb")
 
         clienta.run("create . liba/0.1@user/testing")
-        clientc.run("install . user/testing", assert_error=True)
+        clientc.run("install . --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
 
     def test_binary_id_recomputation_after_build(self):
@@ -89,13 +89,13 @@ class FullRevisionModeTest(unittest.TestCase):
         clientd = TestClient(cache_folder=clienta.cache_folder)
         save(clientd.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientd.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
-        clientd.run("install . libd/0.1@user/testing")
+        clientd.run("install . --name=libd --version=0.1 --user=user --channel=testing")
 
         # Change A PREV
         clienta.run("create . liba/0.1@user/testing")
-        clientd.run("install . libd/0.1@user/testing", assert_error=True)
+        clientd.run("install . --name=libd --version=0.1 --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientd.out)
-        clientd.run("install . libd/0.1@user/testing --build=missing")
+        clientd.run("install . --name=libd --version=0.1 --user=user --channel=testing --build=missing")
 
         self.assertIn("libc/0.1@user/testing: Unknown binary", clientd.out)
         self.assertIn("libc/0.1@user/testing: Updated ID", clientd.out)
@@ -138,13 +138,13 @@ class FullRevisionModeTest(unittest.TestCase):
         clientd = TestClient(cache_folder=clienta.cache_folder)
         save(clientd.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientd.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
-        clientd.run("install . libd/0.1@user/testing")
+        clientd.run("install . --name=libd --version=0.1@ --user=user --channel=testing")
 
         # Change A PREV
         clienta.run("create . liba/0.1@user/testing")
-        clientd.run("install . libd/0.1@user/testing", assert_error=True)
+        clientd.run("install . --name=libd --version=0.1@ --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientd.out)
-        clientd.run("install . libd/0.1@user/testing --build=missing")
+        clientd.run("install . --name=libd --version=0.1@ --user=user --channel=testing --build=missing")
 
         self.assertIn("libc/0.1@user/testing: Unknown binary", clientd.out)
         self.assertIn("libc/0.1@user/testing: Updated ID", clientd.out)
@@ -168,7 +168,7 @@ class FullRevisionModeTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_require('libc/0.1@user/testing')})
         # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
-        client.run("install . libd/0.1@user/testing --build=liba")
+        client.run("install . --name=libd --version=0.1 --user=user --channel=testing --build=liba")
         # So it is not necessary to build the downstream consumers of LibA
         for lib in ("libb", "libc"):
             self.assertIn("%s/0.1@user/testing: Unknown binary" % lib, client.out)

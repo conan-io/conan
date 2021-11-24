@@ -54,7 +54,7 @@ pkg/0.1@lasote/channel
 
     def _deploy(self, client):
         with client.chdir('deploy'):
-            client.run('install pkg/0.1@lasote/channel')
+            client.run('install --reference=pkg/0.1@lasote/channel')
 
     def _is_file_writable(self, client, folder):
         return bool(os.stat(os.path.join(client.current_folder, folder, self.file_name)).st_mode & stat.S_IWRITE)
