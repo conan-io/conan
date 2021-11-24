@@ -23,11 +23,11 @@ class TestexportConan(ConanFile):
 
     def source(self):
         save("hello/hello.h", "my hello header!")
-        patch = os.path.join(self.source_folder, "patch.patch")
+        patch = os.path.join("../patch.patch")
         self.output.info("PATCH: %s" % tools.load(patch))
-        header = os.path.join(self.source_folder, "hello/hello.h")
+        header = os.path.join("hello/hello.h")
         self.output.info("HEADER: %s" % tools.load(header))
-        python = os.path.join(self.source_folder, "mypython.py")
+        python = os.path.join(self.recipe_folder, "mypython.py")
         self.output.info("PYTHON: %s" % tools.load(python))
 """
         client = TestClient()
@@ -35,16 +35,14 @@ class TestexportConan(ConanFile):
                      "patch.patch": "mypatch",
                      "mypython.py": "mypython"})
         client.run("source .")
-        self.assertIn("conanfile.py: Executing exports to", client.out)
         self.assertIn("conanfile.py: PATCH: mypatch", client.out)
         self.assertIn("conanfile.py: HEADER: my hello header!", client.out)
         self.assertIn("conanfile.py: PYTHON: mypython", client.out)
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
-                                                    "mysrc", "patch.patch")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
-                                                    "mysrc", "mypython.py")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
-                                                    "mysrc", "hello/hello.h")))
+
+        client.run("create . pkg/0.1@")
+        self.assertIn("pkg/0.1: PATCH: mypatch", client.out)
+        self.assertIn("pkg/0.1: HEADER: my hello header!", client.out)
+        self.assertIn("pkg/0.1: PYTHON: mypython", client.out)
 
     def test_apply_patch(self):
         # https://github.com/conan-io/conan/issues/2327
@@ -81,11 +79,6 @@ class ConanLib(ConanFile):
         client.run("source .")
         self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
 
-    def test_source_reference(self):
-        client = TestClient()
-        client.run("source lib/1.0@conan/stable", assert_error=True)
-        self.assertIn("'conan source' doesn't accept a reference anymore", client.out)
-
     def test_source_with_path_errors(self):
         client = TestClient()
         client.save({"conanfile.txt": "contents"}, clean_first=True)
@@ -106,6 +99,9 @@ class ConanLib(ConanFile):
     name = "hello"
     version = "0.1"
 
+    def layout(self):
+        self.folders.source = "subdir"
+
     def source(self):
         self.output.info("Running source!")
         self.output.info("cwd=>%s" % os.getcwd())
@@ -113,25 +109,8 @@ class ConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         subdir = os.path.join(client.current_folder, "subdir")
-        os.mkdir(subdir)
-        client.run("install . --install-folder subdir")
         client.run("source .")
-        self.assertIn("conanfile.py (hello/0.1): Configuring sources", client.out)
         self.assertIn("conanfile.py (hello/0.1): cwd=>%s" % subdir, client.out)
-
-    def test_local_source_src_not_exist(self):
-        conanfile = '''
-import os
-from conans import ConanFile
-class ConanLib(ConanFile):
-    name = "hello"
-    version = "0.1"
-'''
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        # Automatically created
-        client.run("source conanfile.py")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "src")))
 
     def test_local_source(self):
         conanfile = '''
@@ -156,7 +135,6 @@ class ConanLib(ConanFile):
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})
         client.run("source .")
-        self.assertIn("conanfile.py: Configuring sources in", client.out)
         self.assertIn("conanfile.py: Running source!", client.out)
         self.assertEqual("Hello World", client.load("file1.txt"))
 

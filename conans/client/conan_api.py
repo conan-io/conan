@@ -12,7 +12,7 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
-from conans.client.cmd.export import cmd_export, export_alias
+from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload

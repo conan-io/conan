@@ -1,11 +1,9 @@
 import os
-import shutil
 
 from conans.client import tools
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
     conanfile_exception_formatter, NotFoundException
 from conans.model.scm import SCM, get_scm_data
-from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.conan_v2_mode import conan_v2_property
 from conans.util.env import no_op
 from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
@@ -92,16 +90,14 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
             def get_sources_from_exports():
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
                 _run_cache_scm(conanfile, scm_sources_folder)
-                # so self exported files have precedence over python_requires ones
-                merge_directories(export_folder, conanfile.folders.base_source)
                 # Now move the export-sources to the right location
                 merge_directories(export_source_folder, conanfile.folders.base_source)
 
-            _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
+            _run_source(conanfile, conanfile_path, hook_manager, reference,
                         get_sources_from_exports=get_sources_from_exports)
 
 
-def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
+def _run_source(conanfile, conanfile_path, hook_manager, reference,
                 get_sources_from_exports):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
@@ -124,10 +120,6 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                 output = conanfile.output
                 output.info('Configuring sources in %s' % src_folder)
                 get_sources_from_exports()
-
-                if cache:
-                    # Clear the conanfile.py to avoid errors cloning git repositories.
-                    _clean_source_folder(src_folder)
                 run_source_method(conanfile)
                 hook_manager.execute("post_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
@@ -154,19 +146,6 @@ def run_source_method(conanfile):
                                        "'self.options' access in source() method is "
                                        "deprecated"):
                     conanfile.source()
-
-
-def _clean_source_folder(folder):
-    for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
-              CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
-        try:
-            os.remove(os.path.join(folder, f))
-        except OSError:
-            pass
-    try:
-        shutil.rmtree(os.path.join(folder, "__pycache__"))
-    except OSError:
-        pass
 
 
 def _run_cache_scm(conanfile, scm_sources_folder):
