@@ -104,12 +104,10 @@ def test_cpp_info_component_objects():
         content = f.read()
         assert """set_property(TARGET hello::say PROPERTY INTERFACE_LINK_LIBRARIES
              $<$<CONFIG:Release>:${hello_say_LINK_LIBS_RELEASE}
-             ${hello_say_LINKER_FLAGS_RELEASE}
              ${hello_say_OBJECTS_RELEASE}> APPEND)""" in content
         assert """set_property(TARGET hello::hello
              PROPERTY INTERFACE_LINK_LIBRARIES
              $<$<CONFIG:Release>:${hello_LIBRARIES_TARGETS_RELEASE}
-                                           ${hello_LINKER_FLAGS_RELEASE}
                                            ${hello_OBJECTS_RELEASE}> APPEND)""" in content
 
     with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
