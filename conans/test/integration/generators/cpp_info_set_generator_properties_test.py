@@ -535,6 +535,43 @@ def test_set_absolute_target_names_legacy_generators():
     assert files_with_properties == files_with_names
 
 
+def test_set_absolute_target_names_cmakedeps():
+    client = TestClient()
+    client.current_folder = "/Users/carlos/Documents/developer/conan-develop/sandbox/properties_hell"
+    my_pkg = textwrap.dedent("""
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            name = "my_pkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "MYPKG::MYPKG")
+                self.cpp_info.components["MYPKGCOMP"].set_property("cmake_target_name", "MYPKG::MYPKGCOMPNAME")
+        """)
+    client.save({"my_pkg/conanfile.py": my_pkg}, clean_first=True)
+    client.run("create my_pkg")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class LibcurlConan(ConanFile):
+            name = "libcurl"
+            version = "0.1"
+            requires = "my_pkg/0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "CURL::CURL")
+                self.cpp_info.set_property("cmake_file_name", "CURL")
+                #self.cpp_info.components["curl"].set_property("cmake_target_name", "CURL::libcurl")
+                self.cpp_info.components["curl"].libs = ["jander"]
+                self.cpp_info.components["curl2"].set_property("cmake_target_name", "CURL::libcurl2")
+                self.cpp_info.components["curl2"].requires.extend(["curl", "my_pkg::MYPKGCOMP"])
+        """)
+    client.save({"properties/conanfile.py": conanfile})
+    client.run("create properties")
+    client.run("install libcurl/0.1@ -g CMakeDeps --install-folder=properties")
+    print("....")
+
+
 @pytest.mark.parametrize("property_name", ["cmake_target_namespace", "cmake_module_target_namespace"])
 def test_deprectated_namespace(property_name):
     client = TestClient()

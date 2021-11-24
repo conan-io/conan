@@ -18,10 +18,6 @@ class CMakeDepsFileTemplate(object):
         return self.conanfile.ref.name + self.suffix
 
     @property
-    def target_namespace(self):
-        return self.get_target_namespace(self.conanfile) + self.suffix
-
-    @property
     def global_target_name(self):
         return self.get_global_target_name(self.conanfile) + self.suffix
 
@@ -82,15 +78,6 @@ class CMakeDepsFileTemplate(object):
     def get_file_name(self):
         return get_file_name(self.conanfile, find_module_mode=self.find_module_mode)
 
-    def get_target_namespace(self, req):
-        if self.find_module_mode:
-            ret = req.cpp_info.get_property("cmake_module_target_namespace", "CMakeDeps")
-            if ret:
-                return ret
-
-        ret = req.cpp_info.get_property("cmake_target_namespace", "CMakeDeps")
-        return ret or self.get_global_target_name(req)
-
     def get_global_target_name(self, req):
         if self.find_module_mode:
             ret = req.cpp_info.get_property("cmake_module_target_name", "CMakeDeps")
@@ -98,7 +85,7 @@ class CMakeDepsFileTemplate(object):
                 return ret
 
         ret = req.cpp_info.get_property("cmake_target_name", "CMakeDeps")
-        return ret or req.ref.name
+        return ret or "{}::{}".format(req.ref.name, req.ref.name)
 
     def get_component_alias(self, req, comp_name):
         if comp_name not in req.cpp_info.components:
@@ -113,4 +100,11 @@ class CMakeDepsFileTemplate(object):
             if ret:
                 return ret
         ret = req.cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
-        return ret or comp_name
+        if not ret:
+            global_target_name = self.get_global_target_name(req)
+            if "::" in global_target_name:
+                namespace = global_target_name.split("::")[0]
+                comp_name = "{}::{}".format(namespace, comp_name)
+            return comp_name
+        else:
+            return ret

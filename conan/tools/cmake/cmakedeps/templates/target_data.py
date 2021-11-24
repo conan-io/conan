@@ -126,12 +126,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                 if "::" in require:  # Points to a component of a different package
                     pkg, cmp_name = require.split("::")
                     req = direct_visible_host[pkg]
-                    public_comp_deps.append("{}::{}".format(self.get_target_namespace(req),
-                                                            self.get_component_alias(req, cmp_name)))
+                    public_comp_deps.append(self.get_component_alias(req, cmp_name))
                 else:  # Points to a component of same package
-                    public_comp_deps.append("{}::{}".format(self.target_namespace,
-                                                            self.get_component_alias(self.conanfile,
-                                                                                     require)))
+                    public_comp_deps.append(self.get_component_alias(self.conanfile, require))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
             component_rename = self.get_component_alias(self.conanfile, comp_name)
             ret.append((component_rename, deps_cpp_cmake))
