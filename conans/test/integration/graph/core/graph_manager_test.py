@@ -323,10 +323,9 @@ class TestLinear(GraphManagerTest):
         assert "Package type is 'library', but no 'shared' option declared" in str(exc)
 
     def test_build_script_requirement(self):
-        # app -> libb0.1 -> liba0.1 (build-scripts)
+        # app -> libb0.1 -br-> liba0.1 (build-scripts)
         self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("build-scripts"))
-        libb = GenConanfile().with_build_requirement("liba/0.1", run=False)
-        self.recipe_conanfile("libb/0.1", libb)
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_build_tool_requirement("liba/0.1"))
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
 
         deps_graph = self.build_consumer(consumer)
@@ -338,7 +337,7 @@ class TestLinear(GraphManagerTest):
 
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, False)])
-        _check_transitive(libb, [(liba, False, False, True, False)])
+        _check_transitive(libb, [(liba, False, False, True, True)])
 
     def test_generic_build_require_adjust_run_with_package_type(self):
         # FIXME: parametrize when superclass is not unittest
@@ -358,24 +357,6 @@ class TestLinear(GraphManagerTest):
             # node, headers, lib, build, run
             run = package_type in ("application", "shared-library")
             _check_transitive(app, [(cmake, False, False, True, run)])
-
-    def test_build_script_runnable_requirement(self):
-        # app -> libb0.1 -> liba0.1 (build-scripts)
-        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("build-scripts"))
-        libb = GenConanfile().with_build_requirement("liba/0.1", run=True)
-        self.recipe_conanfile("libb/0.1", libb)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        # node, headers, lib, build, run
-        _check_transitive(app, [(libb, True, True, False, False)])
-        _check_transitive(libb, [(liba, False, False, True, True)])
 
     def test_header_only(self):
         # app -> libb0.1 -> liba0.1 (header_only)
@@ -909,7 +890,8 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         #    \-> libc0.1 -> liba0.2
         self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("build-scripts"))
         self.recipe_conanfile("liba/0.2", GenConanfile())
-        self.recipe_conanfile("libb/0.1", GenConanfile().with_build_requirement("liba/0.1", run=False))
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_build_tool_requirement("liba/0.1", run=False))
         self.recipe_conanfile("libc/0.1", GenConanfile().with_requirement("liba/0.2"))
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
 

@@ -151,7 +151,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         # app (provides libjpeg) -(build)-> br/v1 -> br_lib/v1(provides libjpeg)
         self.recipe_conanfile("br_lib/0.1", GenConanfile().with_provides("libjpeg"))
         self.recipe_cache("br/0.1", ["br_lib/0.1"])
-        path = self.consumer_conanfile(GenConanfile("app", "0.1").with_build_requires("br/0.1").
+        path = self.consumer_conanfile(GenConanfile("app", "0.1").with_build_tool_requires("br/0.1").
                                        with_provides("libjpeg"))
 
         deps_graph = self.build_consumer(path)
@@ -172,7 +172,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
     def test_transitive_br_no_conflict(self):
         # app (provides libjpeg) -> lib/v1 -(br)-> br/v1(provides libjpeg)
         self.recipe_conanfile("br/0.1", GenConanfile().with_provides("libjpeg"))
-        self.recipe_conanfile("lib/0.1", GenConanfile().with_build_requires("br/0.1"))
+        self.recipe_conanfile("lib/0.1", GenConanfile().with_build_tool_requires("br/0.1"))
         path = self.consumer_conanfile(GenConanfile("app", "0.1").with_requires("lib/0.1").
                                        with_provides("libjpeg"))
 
@@ -217,8 +217,8 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         #   \ -(build)-> br2/v1 (provides libjpeg)
         self.recipe_conanfile("br1/0.1", GenConanfile().with_provides("libjpeg"))
         self.recipe_conanfile("br2/0.1", GenConanfile().with_provides("libjpeg"))
-        path = self.consumer_conanfile(GenConanfile("app", "0.1").with_build_requires("br1/0.1",
-                                                                                      "br2/0.1"))
+        path = self.consumer_conanfile(GenConanfile("app", "0.1")
+                                       .with_build_tool_requires("br1/0.1", "br2/0.1"))
         deps_graph = self.build_consumer(path, install=False)
 
         assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT

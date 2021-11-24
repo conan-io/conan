@@ -21,11 +21,11 @@ def test_build_requires_ranges():
         from conans import ConanFile
         class Pkg(ConanFile):
             {}
-            build_requires = "cmake/{}"
+            build_tool_requires = "cmake/{}"
             def generate(self):
                 for r, d in self.dependencies.items():
                     self.output.info("REQUIRE {{}}: {{}}".format(r.ref, d))
-                dep = self.dependencies.get("cmake")
+                dep = self.dependencies.build.get("cmake")
                 self.output.info("CMAKEVER: {{}}!!".format(dep.ref.version))
             """)
     client.save({"pkgc/conanfile.py": conanfile.format("", "[*]"),

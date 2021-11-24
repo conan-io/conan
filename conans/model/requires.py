@@ -323,6 +323,17 @@ class BuildRequirements:
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run)
 
 
+class BuildToolRequirements:
+    # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
+    def __init__(self, requires):
+        self._requires = requires
+
+    def __call__(self, ref, package_id_mode=None, visible=False, run=True):
+        # TODO: Check which arguments could be user-defined
+        self._requires.build_tool_require(ref, package_id_mode=package_id_mode, visible=visible,
+                                          run=run)
+
+
 class TestRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
     def __init__(self, requires):
@@ -335,7 +346,8 @@ class TestRequirements:
 class Requirements:
     """ User definitions of all requires in a conanfile
     """
-    def __init__(self, declared=None, declared_build=None, declared_test=None):
+    def __init__(self, declared=None, declared_build=None, declared_test=None,
+                 declared_build_tool=None):
         self._requires = OrderedDict()
         # Construct from the class definitions
         if declared is not None:
@@ -354,6 +366,11 @@ class Requirements:
                 declared_test = [declared_test, ]
             for item in declared_test:
                 self.test_require(item)
+        if declared_build_tool is not None:
+            if isinstance(declared_build_tool, str):
+                declared_build_tool = [declared_build_tool, ]
+            for item in declared_build_tool:
+                self.build_require(item, run=True)
 
     def values(self):
         return self._requires.values()
@@ -393,6 +410,16 @@ class Requirements:
         req = Requirement(ref, headers=True, libs=True, build=False, run=None, visible=False,
                           test=True, package_id_mode=None)
         if self._requires.get(req):
+            raise ConanException("Duplicated requirement: {}".format(ref))
+        self._requires[req] = req
+
+    def build_tool_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
+                           run=True):
+        # FIXME: This raise_if_duplicated is ugly, possibly remove
+        ref = RecipeReference.loads(ref)
+        req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
+                          package_id_mode=package_id_mode)
+        if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 

@@ -38,14 +38,14 @@ class UserRequirementsDict(object):
         if "/" in ref:
             # FIXME: Validate reference
             ref = RecipeReference.loads(ref)
-            for require, conanfile in data.items():
-                if conanfile.ref == ref:
-                    ret.append((require ,conanfile))
+            for require, value in data.items():
+                if require.ref == ref:
+                    ret.append((require, value))
         else:
             name = ref
-            for require, conanfile in data.items():
-                if conanfile.ref.name == name:
-                    ret.append((require, conanfile))
+            for require, value in data.items():
+                if require.ref.name == name:
+                    ret.append((require, value))
         if len(ret) > 1:
             current_filters = data._require_filter or "{}"
             requires = "\n".join(["- {}".format(require) for require, _ in ret])
@@ -54,8 +54,8 @@ class UserRequirementsDict(object):
         if not ret:
             raise KeyError("'{}' not found in the dependency set".format(ref))
 
-        _, conanfile_interface = ret[0]
-        return conanfile_interface
+        _, value = ret[0]
+        return value
 
     def __getitem__(self, name):
         return self.get(name)

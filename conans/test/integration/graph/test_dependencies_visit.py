@@ -72,9 +72,11 @@ def test_dependencies_visit_settings_options():
 asserts = [
     ('print("=>{}".format(self.dependencies["zlib"].ref))',
      False, "=>zlib/0.2"),
+    ('print("=>{}".format(self.dependencies.build.get("zlib").ref))',
+     False, "=>zlib/0.1"),
     ('print("=>{}".format(self.dependencies.get("zlib", build=True).ref))',
      False, "=>zlib/0.1"),
-    ('print("=>{}".format(self.dependencies.get("zlib", build=None).ref))',
+    ('print("=>{}".format(self.dependencies.get("zlib", build=False).ref))',
      False, "=>zlib/0.2"),
     ('print("=>{}".format(self.dependencies.get("zlib", build=True, visible=True).ref))',
      False, "=>zlib/0.1"),
@@ -97,7 +99,8 @@ def test_cmake_zlib(generates_line, assert_error, output_text):
     client.run("create . zlib/0.1@")
     client.run("create . zlib/0.2@")
 
-    client.save({"conanfile.py": GenConanfile().with_build_requirement("zlib/0.1", visible=True)})
+    client.save({"conanfile.py": GenConanfile().with_build_tool_requirement("zlib/0.1",
+                                                                            visible=True)})
     client.run("create . cmake/0.1@")
 
     client.save({"conanfile.py": GenConanfile()})
@@ -106,12 +109,11 @@ def test_cmake_zlib(generates_line, assert_error, output_text):
     app_conanfile = textwrap.dedent("""
     from conans import ConanFile
     class Pkg(ConanFile):
-        def build_requirements(self):
-            self.requires("cmake/0.1", headers=False, libs=False, visible=False, build=True, run=False)
-            self.requires("cmake/0.2", headers=False, libs=False, visible=False, build=True, run=False)
 
         def requirements(self):
             self.requires("zlib/0.2")
+            self.requires("cmake/0.1", headers=False, libs=False, visible=False, build=True, run=False)
+            self.requires("cmake/0.2", headers=False, libs=False, visible=False, build=True, run=False)
 
         def generate(self):
            {}

@@ -73,7 +73,8 @@ class ConanFile:
             self.settings = [self.settings]
         self.requires = Requirements(getattr(self, "requires", None),
                                      getattr(self, "build_requires", None),
-                                     getattr(self, "test_requires", None))
+                                     getattr(self, "test_requires", None),
+                                     getattr(self, "build_tool_requires", None))
 
         # user declared variables
         self.user_info = None

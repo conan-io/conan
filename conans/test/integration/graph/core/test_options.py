@@ -78,7 +78,7 @@ class TestBuildRequireOptions(GraphManagerTest):
         self._cache_recipe("zlib/0.1", GenConanfile().with_shared_option(True))
         self._cache_recipe("protobuf/0.1", GenConanfile().with_require("zlib/0.1"))
         self._cache_recipe("lib/0.1", GenConanfile().with_requires("protobuf/0.1").
-                           with_build_requires("protobuf/0.1"))
+                           with_build_tool_requires("protobuf/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       options_build={"zlib:shared": False})
 

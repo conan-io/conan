@@ -531,7 +531,7 @@ class TestInfoContext:
     def test_context_build(self):
         client = TestClient()
         client.save({"cmake/conanfile.py": GenConanfile(),
-                     "pkg/conanfile.py": GenConanfile().with_build_requires("cmake/1.0")})
+                     "pkg/conanfile.py": GenConanfile().with_build_tool_requires("cmake/1.0")})
 
         client.run("create cmake cmake/1.0@")
         client.run("export pkg pkg/1.0@")
