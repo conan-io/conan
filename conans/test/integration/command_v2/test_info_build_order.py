@@ -83,7 +83,7 @@ def test_info_build_order_build_require():
         ],
         [
             {
-                "ref": "pkg/0.1#1364f701b47130c7e38f04c5e5fab985",
+                "ref": "pkg/0.1#7a8e9776f7216a0fabaf97d28a1cca9b",
                 "depends": [
                     "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
                 ],
