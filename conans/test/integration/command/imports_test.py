@@ -261,7 +261,7 @@ class SymbolicImportsComponentTest(unittest.TestCase):
         pkg = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
-                exports = "*"
+                exports_sources = "*"
                 def package(self):
                     self.copy("*A.bin", "binA")  # USE DIFFERENT FOLDERS
                     self.copy("*B.bin", "binB")

@@ -177,7 +177,7 @@ class DownloadCacheTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
-                exports = "*"
+                exports_sources = "*"
                 def package(self):
                     self.copy("*")
                 def deploy(self):

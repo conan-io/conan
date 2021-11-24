@@ -105,7 +105,7 @@ def test_update_not_date():
 
 def test_reuse():
     client = TestClient(default_server_user=True)
-    conanfile = GenConanfile("hello0", "1.0").with_exports("*").with_package("self.copy('*')")
+    conanfile = GenConanfile("hello0", "1.0").with_exports_sources("*").with_package("self.copy('*')")
     client.save({"conanfile.py": conanfile,
                  "header.h": "content1"})
     client.run("export . lasote/stable")
