@@ -29,7 +29,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             global_cpp.build_modules_paths = ""
 
         components_cpp = self.get_required_components_cpp()
-        components_renames = " ".join([component_rename for component_rename, _ in
+        components_target_names = " ".join([components_target_name for components_target_name, _, _ in
                                        reversed(components_cpp)])
         # For the build requires, we don't care about the transitive (only runtime for the br)
         # so as the xxx-conf.cmake files won't be generated, don't include them as find_dependency
@@ -42,7 +42,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                 "pkg_name": self.pkg_name,
                 "package_folder": package_folder,
                 "config_suffix": self.config_suffix,
-                "components_renames": components_renames,
+                "components_target_names": components_target_names,
                 "components_cpp": components_cpp,
                 "dependency_filenames": " ".join(dependency_filenames)}
 
@@ -53,7 +53,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               ########### AGGREGATED COMPONENTS AND DEPENDENCIES FOR THE MULTI CONFIG #####################
               #############################################################################################
 
-              set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_renames }})
+              set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_target_names }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_NAMES)
               set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ pkg_name }}_FIND_DEPENDENCY_NAMES} {{ dependency_filenames }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
@@ -78,25 +78,25 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
 
-              set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_renames }})
+              set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_target_names }})
 
-              {%- for comp_name, cpp in components_cpp %}
+              {%- for comp_target_name, comp_variable_name, cpp in components_cpp %}
 
-              ########### COMPONENT {{ comp_name }} VARIABLES #############################################
-              set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS{{ config_suffix }} {{ cpp.include_paths }})
-              set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
-              set({{ pkg_name }}_{{ comp_name }}_RES_DIRS{{ config_suffix }} {{ cpp.res_paths }})
-              set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS{{ config_suffix }} {{ cpp.defines }})
-              set({{ pkg_name }}_{{ comp_name }}_OBJECTS{{ config_suffix }} {{ cpp.objects_list }})
-              set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS{{ config_suffix }} {{ cpp.compile_definitions }})
-              set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_C{{ config_suffix }} "{{ cpp.cflags_list }}")
-              set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }} "{{ cpp.cxxflags_list }}")
-              set({{ pkg_name }}_{{ comp_name }}_LIBS{{ config_suffix }} {{ cpp.libs }})
-              set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS{{ config_suffix }} {{ cpp.system_libs }})
-              set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS{{ config_suffix }} {{ cpp.framework_paths }})
-              set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS{{ config_suffix }} {{ cpp.frameworks }})
-              set({{ pkg_name }}_{{ comp_name }}_DEPENDENCIES{{ config_suffix }} {{ cpp.public_deps }})
-              set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS{{ config_suffix }}
+              ########### COMPONENT {{ comp_target_name }} VARIABLES #############################################
+              set({{ pkg_name }}_{{ comp_variable_name }}_INCLUDE_DIRS{{ config_suffix }} {{ cpp.include_paths }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_RES_DIRS{{ config_suffix }} {{ cpp.res_paths }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_DEFINITIONS{{ config_suffix }} {{ cpp.defines }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_OBJECTS{{ config_suffix }} {{ cpp.objects_list }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_DEFINITIONS{{ config_suffix }} {{ cpp.compile_definitions }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_C{{ config_suffix }} "{{ cpp.cflags_list }}")
+              set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS_CXX{{ config_suffix }} "{{ cpp.cxxflags_list }}")
+              set({{ pkg_name }}_{{ comp_variable_name }}_LIBS{{ config_suffix }} {{ cpp.libs }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_SYSTEM_LIBS{{ config_suffix }} {{ cpp.system_libs }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORK_DIRS{{ config_suffix }} {{ cpp.framework_paths }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS{{ config_suffix }} {{ cpp.frameworks }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_DEPENDENCIES{{ config_suffix }} {{ cpp.public_deps }})
+              set({{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }}
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ cpp.sharedlinkflags_list }}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ cpp.sharedlinkflags_list }}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ cpp.exelinkflags_list }}>
@@ -130,8 +130,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                 else:  # Points to a component of same package
                     public_comp_deps.append(self.get_component_alias(self.conanfile, require))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
-            component_rename = self.get_component_alias(self.conanfile, comp_name)
-            ret.append((component_rename, deps_cpp_cmake))
+            component_target_name = self.get_component_alias(self.conanfile, comp_name)
+            component_variable_name = component_target_name.replace("::", "_")
+            ret.append((component_target_name, component_variable_name, deps_cpp_cmake))
         ret.reverse()
         return ret
 

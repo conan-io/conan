@@ -22,7 +22,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         deps_targets_names = self.get_deps_targets_names() \
             if not self.conanfile.is_build_context else []
         return {"pkg_name": self.pkg_name,
-                "target_namespace": self.target_namespace,
                 "global_target_name": self.global_target_name,
                 "config_suffix": self.config_suffix,
                 "deps_targets_names": ";".join(deps_targets_names),
@@ -83,63 +82,63 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set(CMAKE_MODULE_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_PREFIX_PATH})
 
-        {%- for comp_name in components_names %}
+        {%- for comp_target_name, comp_variable_name in components_names %}
 
-        ########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
+        ########## COMPONENT {{ comp_target_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
 
-        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "")
-        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS'+config_suffix+'}' }}" "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORK_DIRS'+config_suffix+'}' }}")
+        set({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "")
+        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_variable_name }}_FRAMEWORKS_FOUND{{ config_suffix }} "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS'+config_suffix+'}' }}" "{{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORK_DIRS'+config_suffix+'}' }}")
 
-        set({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS{{ config_suffix }} "")
-        set({{ pkg_name }}_{{ comp_name }}_NOT_USED{{ config_suffix }} "")
-        set({{ pkg_name }}_{{ comp_name }}_LIBS_FRAMEWORKS_DEPS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_FOUND'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES'+config_suffix+'}' }})
-        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_name+'_LIBS'+config_suffix+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS'+config_suffix+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }}"
-                                      {{ pkg_name }}_{{ comp_name }}_NOT_USED{{ config_suffix }}
-                                      {{ pkg_name }}_{{ comp_name }}_LIB_TARGETS{{ config_suffix }}
+        set({{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }} "")
+        set({{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }} "")
+        set({{ pkg_name }}_{{ comp_variable_name }}_LIBS_FRAMEWORKS_DEPS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_FRAMEWORKS_FOUND'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_SYSTEM_LIBS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_DEPENDENCIES'+config_suffix+'}' }})
+        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS'+config_suffix+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_DIRS'+config_suffix+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }}"
+                                      {{ pkg_name }}_{{ comp_variable_name }}_NOT_USED{{ config_suffix }}
+                                      {{ pkg_name }}_{{ comp_variable_name }}_LIB_TARGETS{{ config_suffix }}
                                       "{{ config_suffix }}"
-                                      "{{ pkg_name }}_{{ comp_name }}")
+                                      "{{ pkg_name }}_{{ comp_variable_name }}")
 
-        set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }})
+        set({{ pkg_name }}_{{ comp_variable_name }}_LINK_LIBS{{ config_suffix }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIB_TARGETS'+config_suffix+'}' }} {{ '${'+pkg_name+'_'+comp_variable_name+'_LIBS_FRAMEWORKS_DEPS'+config_suffix+'}' }})
         {%- endfor %}
 
 
 
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
-        set_property(TARGET {{target_namespace}}::{{global_target_name}}
+        set_property(TARGET {{global_target_name}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
                                                    ${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}
                                                    ${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{target_namespace}}::{{global_target_name}}
+        set_property(TARGET {{global_target_name}}
                      PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{target_namespace}}::{{global_target_name}}
+        set_property(TARGET {{global_target_name}}
                      PROPERTY INTERFACE_COMPILE_DEFINITIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{target_namespace}}::{{global_target_name}}
+        set_property(TARGET {{global_target_name}}
                      PROPERTY INTERFACE_COMPILE_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
 
         ########## COMPONENTS TARGET PROPERTIES {{ configuration }} ########################################
 
-        {%- for comp_name in components_names %}
+        {%- for comp_target_name, comp_variable_name in components_names %}
 
-        ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
-        set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config_suffix)}}
-                     {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', config_suffix)}}
-                     {{tvalue(pkg_name, comp_name, 'OBJECTS', config_suffix)}}> APPEND)
-        set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config_suffix)}}> APPEND)
-        set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', config_suffix)}}> APPEND)
-        set_property(TARGET {{ target_namespace }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
+        ########## COMPONENT {{ comp_target_name }} TARGET PROPERTIES ######################################
+        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LINK_LIBS', config_suffix)}}
+                     {{tvalue(pkg_name, comp_variable_name, 'LINKER_FLAGS', config_suffix)}}
+                     {{tvalue(pkg_name, comp_variable_name, 'OBJECTS', config_suffix)}}> APPEND)
+        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'INCLUDE_DIRS', config_suffix)}}> APPEND)
+        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
+                     $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'COMPILE_DEFINITIONS', config_suffix)}}> APPEND)
+        set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
                      $<$<CONFIG:{{ configuration }}>:
-                     {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_C', config_suffix)}}
-                     {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
-        set({{ pkg_name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
+                     {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix)}}
+                     {{tvalue(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
+        set({{ pkg_name }}_{{ comp_variable_name }}_TARGET_PROPERTIES TRUE)
 
         {%- endfor %}
 
@@ -150,7 +149,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         for comp_name, comp in sorted_comps.items():
-            ret.append(self.get_component_alias(self.conanfile, comp_name))
+            component_target_name = self.get_component_alias(self.conanfile, comp_name)
+            variable_name = component_target_name.replace("::", "_")
+            ret.append((component_target_name, variable_name))
         ret.reverse()
         return ret
 
@@ -172,11 +173,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 else:
                     req = visible_host[dep_name]
 
-                dep_name = self.get_target_namespace(req)
                 component_name = self.get_component_alias(req, component_name)
-                ret.append("{}::{}".format(dep_name, component_name))
+                ret.append(component_name)
         elif visible_host_direct:
             # Regular external "conanfile.requires" declared, not cpp_info requires
-            ret = ["{p}::{n}".format(p=self.get_target_namespace(r), n=self.get_global_target_name(r))
-                   for r in visible_host_direct.values()]
+            ret = [self.get_global_target_name(r) for r in visible_host_direct.values()]
         return ret
