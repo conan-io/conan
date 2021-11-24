@@ -6,6 +6,7 @@ import textwrap
 import pytest
 
 from conan.tools.env import Environment
+from conan.tools.microsoft.subsystems import WINDOWS
 from conans.client.tools import chdir
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
@@ -45,9 +46,8 @@ def prevenv():
 
 def check_env_files_output(cmd_, prevenv):
     result, _ = subprocess.Popen(cmd_, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            env=prevenv, shell=True).communicate()
+                                 env=prevenv, shell=True).communicate()
     out = result.decode()
-
     assert "MyVar=MyValue!!" in out
     assert "MyVar1=MyValue1!!" in out
     assert "MyVar2=OldVar2 MyValue2!!" in out
@@ -93,6 +93,7 @@ def test_env_files_bat(env, prevenv):
 
     with chdir(temp_folder()):
         env = env.vars(ConanFileMock())
+        env._subsystem = WINDOWS
         env.save_bat("test.bat")
         save("display.bat", display)
         cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
@@ -119,6 +120,7 @@ def test_env_files_ps1(env, prevenv):
 
     with chdir(temp_folder()):
         env = env.vars(ConanFileMock())
+        env._subsystem = WINDOWS
         env.save_ps1("test.ps1")
         save("display.ps1", display)
         cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
