@@ -61,26 +61,24 @@ class Pkg(ConanFile):
         client.run("create . pkg/0.1@user/testing")
         self.assertNotIn("deploy()", client.out)
 
-        def test_install_in(folder):
-            client.current_folder = temp_folder()
-            client.run("install pkg/0.1@user/testing --install-folder=%s" % folder)
+        client.current_folder = temp_folder()
+        client.run("install pkg/0.1@user/testing")
 
-            self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.dll' file: mylib.dll",
-                          client.out)
-            self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.exe' file: myapp.exe",
-                          client.out)
-            deploy_manifest = FileTreeManifest.loads(
-                    client.load(os.path.join(folder, "deploy_manifest.txt")))
+        self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.dll' file: mylib.dll",
+                      client.out)
+        self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.exe' file: myapp.exe",
+                      client.out)
+        deploy_manifest = FileTreeManifest.loads(
+                client.load(os.path.join("deploy_manifest.txt")))
 
-            app = os.path.abspath(os.path.join(client.current_folder, folder, "myapp.exe"))
-            if deploy_to_abs:
-                lib = os.path.join(dll_folder, "mylib.dll")
-            else:
-                lib = os.path.abspath(os.path.join(client.current_folder, folder, "mylib.dll"))
-            self.assertEqual(sorted([app, lib]),
-                             sorted(deploy_manifest.file_sums.keys()))
-            self.assertEqual(load(app), "myexe")
-            self.assertEqual(load(lib), "mydll")
+        app = os.path.abspath(os.path.join(client.current_folder, "myapp.exe"))
+        if deploy_to_abs:
+            lib = os.path.join(dll_folder, "mylib.dll")
+        else:
+            lib = os.path.abspath(os.path.join(client.current_folder, "mylib.dll"))
+        self.assertEqual(sorted([app, lib]),
+                         sorted(deploy_manifest.file_sums.keys()))
+        self.assertEqual(load(app), "myexe")
+        self.assertEqual(load(lib), "mydll")
 
-        test_install_in("./")
-        test_install_in("other_install_folder")
+

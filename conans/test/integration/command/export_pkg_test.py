@@ -57,8 +57,7 @@ class PkgA(ConanFile):
         self.output.info("BUILDING PKGA")
 """
         client.save({CONANFILE: conanfile})
-        client.run("install . -if=build")
-        client.run("build . -bf=build")
+        client.run("build .")
         client.run("export-pkg . pkga/0.1@user/testing -pr=default")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         self.assertIn(f"pkga/0.1@user/testing: Package '{package_id}' created", client.out)

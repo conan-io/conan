@@ -574,7 +574,7 @@ class ConanAPIV1(object):
                                      profile_build=profile_build,
                                      graph_lock=graph_lock,
                                      root_ref=root_ref,
-                                     conanfile_path=conanfile_path)
+                                     conanfile_path=os.path.dirname(conanfile_path))
             conanfile = deps_info.root.conanfile
             conanfile.folders.set_base_imports(dest)
             return run_imports(conanfile)

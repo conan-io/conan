@@ -97,6 +97,7 @@ def remove_imports(conanfile, copied_files):
 
 
 def run_deploy(conanfile, install_folder):
+    assert install_folder is not None
     deploy_output = ScopedOutput("%s deploy()" % conanfile.display_name, conanfile.output)
     file_importer = _FileImporter(conanfile, install_folder)
     package_copied = set()

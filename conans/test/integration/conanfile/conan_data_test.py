@@ -195,7 +195,7 @@ class Lib(ConanFile):
                      "conandata.yml": conandata})
         client.run("source .")
         self.assertIn("My URL: this url", client.out)
-        client.run("install . -if tmp/install")
+        client.run("install .")
         client.run("build .")
         self.assertIn("My URL: this url", client.out)
         client.run("export-pkg . name/version@")
