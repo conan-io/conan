@@ -1,6 +1,5 @@
 import os
 
-from conans.cli.api.model import Remote
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args
@@ -101,6 +100,8 @@ def install(conan_api, parser, *args, **kwargs):
     if not path and not reference:
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
+    remote = conan_api.remotes.get(args.remote)
+
     info = None
     try:
         info = conan_api.install.install(path=path,
@@ -109,7 +110,7 @@ def install(conan_api, parser, *args, **kwargs):
                                          reference=reference,
                                          profile_host=profile_host,
                                          profile_build=profile_build,
-                                         remote=Remote(args.remote, None),
+                                         remote=remote,
                                          build=args.build,
                                          update=args.update,
                                          generators=args.generator,
