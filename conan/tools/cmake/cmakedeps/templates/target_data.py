@@ -174,8 +174,9 @@ class DepsCppCmake(object):
 
         def join_flags(separator, values):
             # Flags have to be escaped
-            return separator.join(v.replace('\\', '\\\\').replace('$', '\\$').replace('"', '\\"')
-                                  for v in values)
+            ret = separator.join(v.replace('\\', '\\\\').replace('$', '\\$').replace('"', '\\"')
+                                 for v in values)
+            return ret
 
         def join_defines(values, prefix=""):
             # Defines have to be escaped, included spaces
@@ -213,8 +214,10 @@ class DepsCppCmake(object):
         # linker flags without magic: trying to mess with - and / =>
         # https://github.com/conan-io/conan/issues/8811
         # frameworks should be declared with cppinfo.frameworks not "-framework Foundation"
-        self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
-        self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
+        self.sharedlinkflags_list = '"{}"'.format(join_flags(";", cpp_info.sharedlinkflags)) \
+            if cpp_info.sharedlinkflags else ''
+        self.exelinkflags_list = '"{}"'.format(join_flags(";", cpp_info.exelinkflags)) \
+            if cpp_info.exelinkflags else ''
 
         self.objects_list = join_paths(cpp_info.objects)
 
