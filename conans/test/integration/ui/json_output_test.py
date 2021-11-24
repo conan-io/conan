@@ -151,7 +151,7 @@ class JsonOutputTest(unittest.TestCase):
         save(os.path.join(self.client.cache.profiles_path, "mybr"),
              """
 include(default)
-[build_requires]
+[build_tool_requires]
 AA*: c/1.0@private_user/channel
 """)
         self.client.save({"conanfile.py": GenConanfile("PROJECT", "1.0").

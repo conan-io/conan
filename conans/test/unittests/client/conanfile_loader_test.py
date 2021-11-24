@@ -136,7 +136,7 @@ OpenCV/2.4.10@user/stable#RREV1 # My requirement for CV
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable
 OpenCV2/2.4.10@phil/stable
-[build_requires]
+[build_tool_requires]
 Mypkg/1.0.0@phil/stable
 [generators]
 one

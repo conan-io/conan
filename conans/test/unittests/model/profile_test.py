@@ -72,7 +72,7 @@ compiler=Visual Studio
 compiler.version=12
 zlib:compiler=gcc
 [options]
-[build_requires]
+[build_tool_requires]
 *: zlib/1.2.8@lasote/testing
 zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
 [env]""".splitlines(), profile.dumps().splitlines())
@@ -89,7 +89,7 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio'
                          '\ncompiler.version=14\n'
                          '[options]\n'
-                         '[build_requires]\n'
+                         '[build_tool_requires]\n'
                          '[env]\n',
                          profile.dumps())
 

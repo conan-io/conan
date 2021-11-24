@@ -77,7 +77,7 @@ def test_profiles_includes():
             ROOTVAR=0
 
 
-            [build_requires]
+            [build_tool_requires]
             one/1.$ROOTVAR@lasote/stable
             two/1.2@lasote/stable
         """)
@@ -108,7 +108,7 @@ def test_profiles_includes():
     profile3 = textwrap.dedent("""
             OTHERVAR=34
 
-            [build_requires]
+            [build_tool_requires]
             one/1.5@lasote/stable
         """)
 

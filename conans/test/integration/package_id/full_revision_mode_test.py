@@ -321,7 +321,7 @@ def test_package_revision_mode_full_transitive_package_id():
     save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
 
     profile = textwrap.dedent("""
-        [build_requires]
+        [build_tool_requires]
         tool/0.1
         """)
     client.save({"tool/conanfile.py": GenConanfile(),

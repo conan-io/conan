@@ -80,7 +80,7 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
         # otherwise it will conflict, as it will not be overriden by regular requires
         t.save({"conanfile.py": GenConanfile().with_requires("gtest/1.8.1@bloomberg/stable",
                                                              "scubaclient/1.6@PORT/stable"),
-                "myprofile": "[build_requires]\ngtest/1.8.1@bloomberg/stable"})
+                "myprofile": "[build_tool_requires]\ngtest/1.8.1@bloomberg/stable"})
 
         t.run("lock create conanfile.py --build -pr=myprofile")
         lock = t.load("conan.lock")

@@ -211,8 +211,10 @@ class Requirement:
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """
-        consumer(not known type) -> requires(self) -> pkg_type -> require -> dep_pkg_type
-        compute new Requirement to be applied to "consumer" translating the effect of the dependency
+
+        consumer ---self--->  foo<pkg_type> ---require---> bar<dep_pkg_type>
+            \\ -------------------????-------------------- /
+        Compute new Requirement to be applied to "consumer" translating the effect of the dependency
         to such "consumer".
         Result can be None if nothing is to be propagated
         """
@@ -339,8 +341,8 @@ class TestRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref):
-        self._requires.test_require(ref)
+    def __call__(self, ref, run=None):
+        self._requires.test_require(ref, run=run)
 
 
 class Requirements:
@@ -386,6 +388,16 @@ class Requirements:
 
     def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
                       run=None):
+        """
+             Represent a generic build require, could be a tool, like "cmake" or a bundle of build
+             scripts.
+
+             visible = False => Only the direct consumer can see it, won't conflict
+             build = True => They run in the build machine (e.g cmake)
+             libs = False => We won't link with it, is a tool, no propagate the libs.
+             headers = False => We won't include headers, is a tool, no propagate the includes.
+             run = None => It will be determined by the package_type of the ref
+        """
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
@@ -405,9 +417,22 @@ class Requirements:
             req.override = True
             self._requires[req] = req
 
-    def test_require(self, ref):
+    def test_require(self, ref, run=None):
+        """
+             Represent a testing framework like gtest
+
+             visible = False => Only the direct consumer can see it, won't conflict
+             build = False => The test are linked in the host context to run in the host machine
+             libs = True => We need to link with gtest
+             headers = True => We need to include gtest.
+             run = None => It will be determined by the package_type of ref, maybe is gtest shared
+        """
         ref = RecipeReference.loads(ref)
-        req = Requirement(ref, headers=True, libs=True, build=False, run=None, visible=False,
+        # visible = False => Only the direct consumer can see it, won't conflict
+        # build = False => They run in host context, e.g the gtest application is a host app
+        # libs = True => We need to link with it
+        # headers = True => We need to include it
+        req = Requirement(ref, headers=True, libs=True, build=False, run=run, visible=False,
                           test=True, package_id_mode=None)
         if self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
@@ -415,6 +440,14 @@ class Requirements:
 
     def build_tool_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
                            run=True):
+        """
+         Represent a build tool like "cmake".
+
+         visible = False => Only the direct consumer can see it, won't conflict
+         build = True => They run in the build machine (e.g cmake)
+         libs = False => We won't link with it, is a tool, no propagate the libs.
+         headers = False => We won't include headers, is a tool, no propagate the includes.
+        """
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
