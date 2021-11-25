@@ -779,3 +779,65 @@ def test_targets_declared_in_build_modules(check_components_exist):
     assert "my_modules.cmake" in client.out
     assert bool(check_components_exist) == ("Conan: Component 'hello::invented' found in package 'hello'"
                                             in client.out)
+
+
+def test_set_absolute_target_names():
+    client = TestClient()
+    my_pkg = textwrap.dedent("""
+        from conans import ConanFile
+        class MyPkg(ConanFile):
+            name = "my_pkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "MYPKG::MYPKG")
+                self.cpp_info.components["MYPKGCOMP"].set_property("cmake_target_name", "MYPKG::MYPKGCOMPNAME")
+        """)
+    client.save({"my_pkg/conanfile.py": my_pkg}, clean_first=True)
+    client.run("create my_pkg")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class LibcurlConan(ConanFile):
+            name = "libcurl"
+            version = "0.1"
+            requires = "my_pkg/0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "CURL::CURL")
+                self.cpp_info.set_property("cmake_file_name", "CURLFILENAME")
+                self.cpp_info.components["curl"].set_property("cmake_target_name", "CURL::libcurl")
+                self.cpp_info.components["curl2"].set_property("cmake_target_name", "CURL::libcurl2")
+                self.cpp_info.components["curl2"].requires.extend(["curl", "my_pkg::MYPKGCOMP"])
+        """)
+    client.save({"libcurl/conanfile.py": conanfile})
+    client.run("create libcurl")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMakeDeps, CMake, CMakeToolchain
+        class CONSUMER(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            requires = "libcurl/0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            exports_sources = "CMakeLists.txt"
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.check_components_exist=True
+                deps.generate()
+                tc = CMakeToolchain(self)
+                tc.generate()
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmakelists = textwrap.dedent("""cmake_minimum_required(VERSION 3.15)
+        project(Consumer)
+        find_package(CURLFILENAME CONFIG REQUIRED COMPONENTS CURL::libcurl CURL::libcurl2)
+        """)
+
+    client.save({"consumer/conanfile.py": conanfile, "consumer/CMakeLists.txt": cmakelists})
+    client.run("create consumer")
