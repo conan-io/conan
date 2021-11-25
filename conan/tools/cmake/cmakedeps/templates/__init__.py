@@ -19,7 +19,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def global_target_name(self):
-        return self.get_global_target_name(self.conanfile) + self.suffix
+        return self.get_global_target_name(self.conanfile, self.suffix)
 
     @property
     def file_name(self):
@@ -78,14 +78,14 @@ class CMakeDepsFileTemplate(object):
     def get_file_name(self):
         return get_file_name(self.conanfile, find_module_mode=self.find_module_mode)
 
-    def get_global_target_name(self, req):
+    def get_global_target_name(self, req, suffix=""):
         if self.find_module_mode:
             ret = req.cpp_info.get_property("cmake_module_target_name", "CMakeDeps")
             if ret:
                 return ret
 
         ret = req.cpp_info.get_property("cmake_target_name", "CMakeDeps")
-        return ret or "{}::{}".format(req.ref.name, req.ref.name)
+        return ret or "{name}{suffix}::{name}{suffix}".format(name=req.ref.name, suffix=suffix)
 
     def get_component_alias(self, req, comp_name):
         if comp_name not in req.cpp_info.components:
