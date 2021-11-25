@@ -781,6 +781,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
                                             in client.out)
 
 
+@pytest.mark.tool_cmake
 def test_set_absolute_target_names():
     client = TestClient()
     my_pkg = textwrap.dedent("""
