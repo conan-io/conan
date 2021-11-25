@@ -113,11 +113,14 @@ class Lockfile(object):
                 "build_requires": [repr(r) for r in self.build_requires]}
 
     def resolve_locked(self, node, require):
-        ref = require.ref
         if require.build or node.context == CONTEXT_BUILD:
             locked_refs = self.build_requires
         else:
             locked_refs = self.requires
+        self._resolve(require, locked_refs)
+
+    def _resolve(self, require, locked_refs):
+        ref = require.ref
         version_range = require.version_range
 
         if version_range:
@@ -140,24 +143,13 @@ class Lockfile(object):
                             r.channel == ref.channel:
                         require.ref = r
                         break
+            else:
+                if ref not in locked_refs and self.strict:
+                    raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
 
     def resolve_locked_pyrequires(self, require):
-        ref = require.ref
         locked_refs = self.python_requires  # CHANGE
-        version_range = require.version_range
-        if version_range:
-            matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
-                       r.channel == ref.channel]
-            for m in matches:
-                if m.version in version_range:
-                    require.ref = m
-                    break
-            else:
-                if self.strict:
-                    raise ConanException(f"Requirement '{ref}' not in lockfile")
-        else:
-            # find exact
-            pass
+        self._resolve(require, locked_refs)
 
     def update_lock_export_ref(self, ref):
         """ when the recipe is exported, it will complete the missing RREV, otherwise it should
