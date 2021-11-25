@@ -12,7 +12,7 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
-from conans.util.files import load, mkdir, is_dirty
+from conans.util.files import load, is_dirty
 
 
 class ExportPkgTest(unittest.TestCase):
@@ -468,7 +468,7 @@ class TestConan(ConanFile):
 
         client.run("export-pkg . pkg/0.1@")
         self.assertFalse(layout.package_is_dirty())
-        client.run("install pkg/0.1@")
+        client.run("install --reference=pkg/0.1@")
         self.assertIn("pkg/0.1: Already installed!", client.out)
 
 
@@ -487,7 +487,7 @@ def test_build_policy_never():
     client.run("export-pkg . pkg/1.0@")
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
 
-    client.run("install pkg/1.0@ --build")
+    client.run("install --reference=pkg/1.0@ --build")
     assert "pkg/1.0:{} - Cache".format(NO_SETTINGS_PACKAGE_ID) in client.out
     assert "pkg/1.0: Calling build()" not in client.out
 
@@ -499,8 +499,8 @@ def test_build_policy_never_missing():
                  "consumer.txt": "[requires]\npkg/1.0"})
     client.run("export . pkg/1.0@")
 
-    client.run("install pkg/1.0@ --build", assert_error=True)
+    client.run("install --reference=pkg/1.0@ --build", assert_error=True)
     assert "ERROR: Missing binary: pkg/1.0" in client.out
 
-    client.run("install pkg/1.0@ --build=missing", assert_error=True)
+    client.run("install --reference=pkg/1.0@ --build=missing", assert_error=True)
     assert "ERROR: Missing binary: pkg/1.0" in client.out

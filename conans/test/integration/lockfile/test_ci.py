@@ -90,7 +90,7 @@ def test_single_config_centralized(client_setup):
     assert "pkgb/0.2: DEP FILE pkgawin: HelloA" in c.out
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_b_changed.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_b_changed.lock "
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
     assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in c.out
@@ -127,7 +127,7 @@ def test_single_config_centralized_out_range(client_setup):
     assert "pkgb/1.0: DEP FILE pkgawin: HelloA" in c.out
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_b_changed.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_b_changed.lock "
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
     # Nothing changed, the change is outside the range, app1 not affected!!
@@ -170,7 +170,7 @@ def test_single_config_centralized_change_dep(client_setup):
     c.run("create pkgj pkgj/0.2@ -s os=Windows")
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_b_changed.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_b_changed.lock "
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
     assert "pkga" not in c.out
@@ -214,7 +214,7 @@ def test_multi_config_centralized(client_setup):
     assert "pkgb/0.2: DEP FILE pkganix: HelloA" in c.out
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_win.lock --lockfile-out=app1_win.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_win.lock --lockfile-out=app1_win.lock "
           "--build=missing  -s os=Windows")
     assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in c.out
     assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in c.out
@@ -226,7 +226,7 @@ def test_multi_config_centralized(client_setup):
     assert "app1/0.1: DEP FILE pkgb: ByeB World!!" in c.out
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_nix.lock --lockfile-out=app1_nix.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_nix.lock --lockfile-out=app1_nix.lock "
           "--build=missing  -s os=Linux")
     assert "pkganix/0.1:02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8 - Cache" in c.out
     assert "pkgb/0.2:d169a8a97fd0ef581801b24d7c61a9afb933aa13 - Cache" in c.out
@@ -310,7 +310,7 @@ def test_single_config_decentralized(client_setup):
                 if binary != "Build":
                     continue
                 # TODO: The options are completely missing
-                c.run("install %s@ --build=%s@ --lockfile=app1_b_changed.lock  -s os=Windows"
+                c.run("install --reference=%s@ --build=%s@ --lockfile=app1_b_changed.lock  -s os=Windows"
                       % (ref, ref))
                 assert "{}:{} - Build".format(str(ref), package_id) in c.out
 
@@ -387,7 +387,7 @@ def test_multi_config_decentralized(client_setup):
                 filenames = package["filenames"]
                 lockfile = filenames[0] + ".lock"
                 the_os = "Windows" if "win" in lockfile else "Linux"
-                c.run("install %s --build=%s --lockfile=%s -s os=%s"
+                c.run("install --reference=%s --build=%s --lockfile=%s -s os=%s"
                       % (ref, ref, lockfile, the_os))
                 assert "{}:{} - Build".format(ref_without_rev, package_id) in c.out
 

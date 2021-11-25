@@ -26,7 +26,7 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": conanfile_py,
                      "header.h": ""})
         client.run("create . hello/0.1@lasote/testing")
-        client.run("install hello/0.1@lasote/testing -g json")
+        client.run("install --reference=hello/0.1@lasote/testing -g json")
         conan_json = client.load("conanbuildinfo.json")
         data = json.loads(conan_json)
 
@@ -55,7 +55,7 @@ class HelloConan(ConanFile):
                      "header.h": ""})
         settings = "-sos=Linux -sarch=x86_64"
         client.run("create . hello/0.1@lasote/testing " + settings)
-        client.run("install hello/0.1@lasote/testing -g json " + settings)
+        client.run("install --reference=hello/0.1@lasote/testing -g json " + settings)
 
         conan_json = client.load("conanbuildinfo.json")
         data = json.loads(conan_json)
@@ -86,7 +86,7 @@ class HelloConan(ConanFile):
         client.save({'conanfile.py': conanfile})
 
         client.run("create . hello/0.1@lasote/testing")
-        client.run("install hello/0.1@lasote/testing -g json")
+        client.run("install --reference=hello/0.1@lasote/testing -g json")
 
         my_json = json.loads(client.load("conanbuildinfo.json"))
 
@@ -135,7 +135,7 @@ class HelloConan(ConanFile):
         client.save({'conanfile.py': conanfile})
 
         client.run("create . hello/0.1@lasote/testing")
-        client.run("install hello/0.1@lasote/testing -g json")
+        client.run("install --reference=hello/0.1@lasote/testing -g json")
 
         my_json = client.load("conanbuildinfo.json")
         my_json = json.loads(my_json)
@@ -155,7 +155,7 @@ class HelloConan(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . bar/0.1.0@user/testing")
-        client.run("install bar/0.1.0@user/testing -g json")
+        client.run("install --reference=bar/0.1.0@user/testing -g json")
         conan_json = client.load("conanbuildinfo.json")
         content = json.loads(conan_json)
 

@@ -38,7 +38,7 @@ def test_install_combined(client):
 
 
 def test_install_transitive_cache(client):
-    client.run("install hello2/0.1@lasote/stable --build=missing")
+    client.run("install --reference=hello2/0.1@lasote/stable --build=missing")
     assert "hello0/0.1@lasote/stable: Generating the package" in client.out
     assert "hello1/0.1@lasote/stable: Generating the package" in client.out
     assert "hello2/0.1@lasote/stable: Generating the package" in client.out

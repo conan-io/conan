@@ -25,7 +25,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         servers = OrderedDict(client.servers)
         servers["new_server"] = TestServer(users={"user": "password"})
         client2 = TestClient(servers=servers, inputs=["user", "password"])
-        client2.run("install pkg/0.1@user/testing")
+        client2.run("install --reference=pkg/0.1@user/testing")
         client2.run("remote remove default")
         client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
         self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
@@ -35,7 +35,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
 
         # Failure because remote removed the package
         client2 = TestClient(servers=servers, inputs=2*["admin", "password"])
-        client2.run("install pkg/0.1@user/testing")
+        client2.run("install --reference=pkg/0.1@user/testing")
         client2.run("remove * -r=default -f")
         client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
         self.assertIn("pkg/0.1@user/testing Error while compressing: The 'pkg/0.1@user/testing' ",
@@ -74,7 +74,7 @@ class MultiRemotesTest(unittest.TestCase):
         sleep(1)  # For timestamp and updates checks
 
         # Download hello0 from local with client_b
-        client_b.run("install hello0/0.0@lasote/stable -r local --build missing")
+        client_b.run("install --reference=hello0/0.0@lasote/stable -r local --build missing")
 
         # Update hello0 with client_a and reupload
         self._create(client_a, "hello0", "0.0", modifier="\n")
@@ -87,7 +87,7 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Binary: Cache", client_b.out)
 
         # Now try to update the package with install -u
-        client_b.run("install hello0/0.0@lasote/stable -u --build")
+        client_b.run("install --reference=hello0/0.0@lasote/stable -u --build")
         self.assertIn("hello0/0.0@lasote/stable from 'local' - Updated", client_b.out)
 
         # Upload a new version from client A, but only to the default server (not the ref-listed)
@@ -109,7 +109,7 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Recipe: Update available", client_b.out)
 
         # Well, now try to update the package with -r default -u
-        client_b.run("install hello0/0.0@lasote/stable -r default -u --build")
+        client_b.run("install --reference=hello0/0.0@lasote/stable -r default -u --build")
         self.assertIn("hello0/0.0@lasote/stable: Calling build()",
                       str(client_b.out))
         # TODO: cache2.0 conan info not yet implemented with new cache
@@ -124,30 +124,30 @@ class MultiRemotesTest(unittest.TestCase):
         client = TestClient(servers=self.servers, inputs=2*["admin", "password"])
 
         self._create(client, "hello0", "0.0")
-        client.run("install hello0/0.0@lasote/stable --build missing")
+        client.run("install --reference=hello0/0.0@lasote/stable --build missing")
         client.run("upload hello0/0.0@lasote/stable --all -r default")
         sleep(1)  # For timestamp and updates checks
         self._create(client, "hello0", "0.0", modifier=" ")
-        client.run("install hello0/0.0@lasote/stable --build missing")
+        client.run("install --reference=hello0/0.0@lasote/stable --build missing")
         client.run("upload hello0/0.0@lasote/stable --all -r local")
         client.run("remove '*' -f")
 
-        client.run("install hello0/0.0@lasote/stable")
+        client.run("install --reference=hello0/0.0@lasote/stable")
         # If we don't set a remote we find between all remotes and get the first match
         self.assertIn("hello0/0.0@lasote/stable from 'default' - Downloaded", client.out)
-        client.run("install hello0/0.0@lasote/stable --update")
+        client.run("install --reference=hello0/0.0@lasote/stable --update")
         self.assertIn("hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
-        client.run("install hello0/0.0@lasote/stable --update -r default")
+        client.run("install --reference=hello0/0.0@lasote/stable --update -r default")
         self.assertIn("hello0/0.0@lasote/stable from 'default' - Cache", client.out)
 
         sleep(1)  # For timestamp and updates checks
         # Check that it really updates in case of newer package uploaded to the associated remote
         client_b = TestClient(servers=self.servers, inputs=3*["admin", "password"])
         self._create(client_b, "hello0", "0.0", modifier="  ")
-        client_b.run("install hello0/0.0@lasote/stable --build missing")
+        client_b.run("install --reference=hello0/0.0@lasote/stable --build missing")
         client_b.run("upload hello0/0.0@lasote/stable --all -r local")
-        client.run("install hello0/0.0@lasote/stable --update")
+        client.run("install --reference=hello0/0.0@lasote/stable --update")
         self.assertIn("hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
 
@@ -181,7 +181,7 @@ class MultiRemoteTest(unittest.TestCase):
 
         servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd.com"  # Do not exist
         client2 = TestClient(servers=servers)
-        err = client2.run("install mylib/0.1@conan/testing --build=missing", assert_error=True)
+        err = client2.run("install --reference=mylib/0.1@conan/testing --build=missing", assert_error=True)
         self.assertTrue(err)
         self.assertIn("mylib/0.1@conan/testing: Checking remote: s0", client2.out)
         self.assertIn("mylib/0.1@conan/testing: Checking remote: s1", client2.out)
