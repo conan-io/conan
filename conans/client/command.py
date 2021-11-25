@@ -779,14 +779,8 @@ class Command(object):
                                  "(if name and version are not declared in the "
                                  "conanfile.py)")
 
-        parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Overwrite existing package if existing')
-        parser.add_argument("-pf", "--package-folder", action=OnceArgument,
-                            help="folder containing a locally created package. If a value is given,"
-                                 " it won't call the recipe 'package()' method, and will run a copy"
-                                 " of the provided folder.")
-        parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
@@ -817,9 +811,6 @@ class Command(object):
             info = self._conan_api.export_pkg(conanfile_path=args.path,
                                           name=name,
                                           version=version,
-                                          source_folder=args.source_folder,
-                                          build_folder=args.build_folder,
-                                          package_folder=args.package_folder,
                                           profile_names=args.profile_host,
                                           env=args.env_host,
                                           settings=args.settings_host,
