@@ -240,7 +240,6 @@ def test_same_results_specific_generators(setup_client):
     assert new_approach_contents == old_approach_contents
 
 
-@pytest.mark.xfail(reason="revisit later")
 def test_cmake_find_package_new_properties():
     # test new properties support for cmake_find_package, necessary for migration in cci
     # cmake_target_name --> cmake_module_target_name
@@ -257,10 +256,10 @@ def test_cmake_find_package_new_properties():
             name = "greetings"
             version = "1.0"
             def package_info(self):
-                self.cpp_info.set_property("cmake_module_target_name", "MyChat")
+                self.cpp_info.set_property("cmake_module_target_name", "MyChat::MyChat")
                 self.cpp_info.set_property("cmake_module_file_name", "MyChat")
-                self.cpp_info.components["sayhello"].set_property("cmake_module_target_name", "MySay")
-                self.cpp_info.components["sayhellobye"].set_property("cmake_module_target_name", "MySayBye")
+                self.cpp_info.components["sayhello"].set_property("cmake_module_target_name", "MyChat::MySay")
+                self.cpp_info.components["sayhellobye"].set_property("cmake_module_target_name", "MyChat::MySayBye")
         """)
     client.save({"greetings.py": greetings})
     client.run("create greetings.py greetings/1.0@")
@@ -278,10 +277,10 @@ def test_cmake_find_package_new_properties():
             name = "greetings"
             version = "1.0"
             def package_info(self):
-                self.cpp_info.set_property("cmake_target_name", "MyChat")
+                self.cpp_info.set_property("cmake_target_name", "MyChat::MyChat")
                 self.cpp_info.set_property("cmake_file_name", "MyChat")
-                self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MySay")
-                self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MySayBye")
+                self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MyChat::MySay")
+                self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MyChat::MySayBye")
         """)
     client.save({"greetings.py": greetings})
     client.run("create greetings.py greetings/1.0@")
