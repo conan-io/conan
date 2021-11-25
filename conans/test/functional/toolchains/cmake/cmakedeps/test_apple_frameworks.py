@@ -344,6 +344,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     client.run("create .")
     assert "Hello World Release!" in client.out
 
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
@@ -369,9 +370,7 @@ class HelloConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name", "HELLO")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
-
+        self.cpp_info.components["libhello"].set_property("cmake_target_name", "hello::libhello")
         self.cpp_info.components["libhello"].libs = ["hello"]
         self.cpp_info.components["libhello"].frameworks.extend(["CoreFoundation"])
         """)
