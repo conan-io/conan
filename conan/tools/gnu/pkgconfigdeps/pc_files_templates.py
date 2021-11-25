@@ -26,7 +26,6 @@ class PCFilesTemplate(object):
         self._conanfile = conanfile
         self._package_folder = dep.package_folder
         self._version = dep.ref.version
-        self._description = conanfile.description or "Conan package: %s" % name
         self._cpp_info = dep.cpp_info
 
     @property
@@ -101,12 +100,12 @@ class PCFilesTemplate(object):
             {% endif %}
         """)
 
-    def get_pc_filename_and_content(self, requires, name, description, cpp_info=None):
+    def get_pc_filename_and_content(self, name, requires, description, cpp_info=None):
         cpp_info = cpp_info or self._cpp_info
         prefix_path = self._package_folder.replace("\\", "/")
-        libdirs = _get_formatted_dirs(self._cpp_info.libdirs, prefix_path)
-        includedirs = _get_formatted_dirs(self._cpp_info.includedirs, prefix_path)
-        custom_content = self._cpp_info.get_property("pkg_config_custom_content", "PkgConfigDeps")
+        libdirs = _get_formatted_dirs(cpp_info.libdirs, prefix_path)
+        includedirs = _get_formatted_dirs(cpp_info.includedirs, prefix_path)
+        custom_content = cpp_info.get_property("pkg_config_custom_content", "PkgConfigDeps")
 
         context = {
             "prefix_path": prefix_path,
@@ -124,7 +123,7 @@ class PCFilesTemplate(object):
                             undefined=StrictUndefined)
         return {name + ".pc": template.render(context)}
 
-    def get_wrapper_pc_filename_and_content(self, requires, name, description):
+    def get_wrapper_pc_filename_and_content(self, name, requires, description):
         context = {
             "name": name,
             "description": description,
