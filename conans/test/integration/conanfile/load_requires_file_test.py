@@ -29,7 +29,7 @@ class Test(ConanFile):
                          "reqs.txt": reqs})
             client.run("create . hello%s/0.1@user/channel" % (i + 1))
 
-        client.run("install hello3/0.1@user/channel")
+        client.run("install --reference=hello3/0.1@user/channel")
         self.assertIn("hello0/0.1@user/channel from local", client.out)
         self.assertIn("hello1/0.1@user/channel from local", client.out)
         self.assertIn("hello2/0.1@user/channel from local", client.out)

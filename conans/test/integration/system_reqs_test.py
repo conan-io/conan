@@ -35,13 +35,13 @@ class SystemReqsTest(unittest.TestCase):
         client.save(files)
         client.run("create . user/channel")
         self.assertIn("*+Running system requirements+*", client.out)
-        client.run("install Test/0.1@user/channel")
+        client.run("install --reference=Test/0.1@user/channel")
         self.assertNotIn("*+Running system requirements+*", client.out)
         ref = RecipeReference.loads("Test/0.1@user/channel")
         pref = client.get_latest_package_reference(ref)
         reqs_file = client.get_latest_pkg_layout(pref).system_reqs_package()
         os.unlink(reqs_file)
-        client.run("install Test/0.1@user/channel")
+        client.run("install --reference=Test/0.1@user/channel")
         self.assertIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(reqs_file))
 
@@ -62,7 +62,7 @@ class SystemReqsTest(unittest.TestCase):
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
         client.run("export . user/testing")
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
         self.assertIn("*+Running system requirements+*", client.out)
         ref = RecipeReference.loads("Test/0.1@user/testing")
@@ -73,7 +73,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("Installed my stuff", load_file)
 
         # Run again
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         pkg_layout = client.get_latest_pkg_layout(pref)
         self.assertNotIn("*+Running system requirements+*", client.out)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs()))
@@ -81,7 +81,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("Installed my stuff", load_file)
 
         # Run with different option
-        client.run("install Test/0.1@user/testing -o myopt=False --build missing")
+        client.run("install --reference=Test/0.1@user/testing -o myopt=False --build missing")
         pref2 = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
         pkg_layout = client.get_latest_pkg_layout(pref)
         pkg_layout2 = client.get_latest_pkg_layout(pref2)
@@ -110,7 +110,7 @@ class SystemReqsTest(unittest.TestCase):
         }
         client.save(files)
         client.run("export . user/testing")
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         self.assertIn("*+Running system requirements+*", client.out)
         ref = RecipeReference.loads("Test/0.1@user/testing")
         pref = PkgReference(ref, "a527106fd9f2e3738a55b02087c20c0a63afce9d")
@@ -120,7 +120,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("Installed my stuff", load_file)
 
         # Run again
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         self.assertNotIn("*+Running system requirements+*", client.out)
         pkg_layout = client.get_latest_pkg_layout(pref)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
@@ -128,7 +128,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("Installed my stuff", load_file)
 
         # Run with different option
-        client.run("install Test/0.1@user/testing -o myopt=False --build missing")
+        client.run("install --reference=Test/0.1@user/testing -o myopt=False --build missing")
         self.assertNotIn("*+Running system requirements+*", client.out)
         pref2 = PkgReference(ref, "54c9626b48cefa3b819e64316b49d3b1e1a78c26")
         pkg_layout = client.get_latest_pkg_layout(pref)
@@ -154,7 +154,7 @@ class SystemReqsTest(unittest.TestCase):
         }
         client.save(files)
         client.run("export . user/testing")
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
 
         self.assertIn("*+Running system requirements+*", client.out)

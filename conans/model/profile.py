@@ -1,4 +1,5 @@
 import copy
+import json
 from collections import OrderedDict, defaultdict
 
 from conan.tools.env.environment import ProfileEnvironment
@@ -49,6 +50,9 @@ class Profile(object):
         # FIXME: Simplify the values.as_list()
         self.settings = OrderedDict(self.processed_settings.values.as_list())
         # Per-package settings cannot be processed here, until composed not possible
+
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
 
     def dumps(self):
         result = ["[settings]"]

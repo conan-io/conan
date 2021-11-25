@@ -35,6 +35,8 @@ class ProfilesAPI:
         loader = ProfileLoader(self._cache)
         env = None  # TODO: Not handling environment
         profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd)
+        # Apply the new_config to the profiles the global one, so recipes get it too
+        profile.conf.rebase_conf_definition(self._cache.new_config)
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):

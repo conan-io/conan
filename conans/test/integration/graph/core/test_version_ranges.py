@@ -360,9 +360,9 @@ def test_mixed_user_channel():
     t.run("upload * --all --confirm -r default")
     t.run("remove * -f")
 
-    t.run('install "pkg/[>0 <2]@"')
+    t.run('install --reference="pkg/[>0 <2]@"')
     assert "pkg/1.1 from 'default' - Downloaded" in t.out
-    t.run('install "pkg/[>0 <2]@user/testing"')
+    t.run('install --reference="pkg/[>0 <2]@user/testing"')
     assert "pkg/1.1@user/testing from 'default' - Downloaded" in t.out
 
 
@@ -414,6 +414,6 @@ def test_different_user_channel_resolved_correctly():
     client.run("upload lib/1.0@conan/testing -r=server2 --all")
 
     client2 = TestClient(servers=servers)
-    client2.run("install lib/[>=1.0]@conan/testing")
+    client2.run("install --reference=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
            f"from remote 'server2' " in client2.out

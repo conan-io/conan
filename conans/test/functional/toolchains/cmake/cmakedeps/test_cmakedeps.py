@@ -58,7 +58,7 @@ def test_transitive_multi(client):
 
     with client.chdir("build"):
         for bt in ("Debug", "Release"):
-            client.run("install .. user/channel -s build_type={}".format(bt))
+            client.run("install .. --user=user --channel=channel -s build_type={}".format(bt))
 
         # Test that we are using find_dependency with the NO_MODULE option
         # to skip finding first possible FindBye somewhere
@@ -152,17 +152,12 @@ def test_system_libs():
         if build_type == "Release":
             assert "System libs release: %s" % library_name in client.out
             assert "Libraries to Link release: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Release>:CONAN_LIB::test_lib1_RELEASE;sys1;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>")
+            target_libs = "$<$<CONFIG:Release>:CONAN_LIB::test_lib1_RELEASE;sys1;"
         else:
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Debug>:CONAN_LIB::test_lib1_DEBUG;sys1d;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>")
+            target_libs = "$<$<CONFIG:Debug>:CONAN_LIB::test_lib1_DEBUG;sys1d;"
+
         assert "Target libs: %s" % target_libs in client.out
 
 

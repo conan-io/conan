@@ -45,7 +45,7 @@ class PackageIDTest(unittest.TestCase):
         # Now change the Hello version and build it, if we install out requires should not be
         # needed the --build needed because hello2 don't need to be rebuilt
         self._export("hello", "1.5.0", package_id_text=None, requires=None)
-        self.client.run("install hello/1.5.0@lasote/stable --build missing")
+        self.client.run("install --reference=hello/1.5.0@lasote/stable --build missing")
         self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].semver()',
                      requires=["hello/1.5.0@lasote/stable"])
@@ -66,7 +66,7 @@ class PackageIDTest(unittest.TestCase):
         # Try to change user and channel too, should be the same, not rebuilt needed
         self._export("hello", "1.5.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
-        self.client.run("install hello/1.5.0@memsharded/testing --build missing")
+        self.client.run("install --reference=hello/1.5.0@memsharded/testing --build missing")
         self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].semver()',
                      requires=["hello/1.5.0@memsharded/testing"])
@@ -92,7 +92,7 @@ class PackageIDTest(unittest.TestCase):
         # If we change the user and channel should not be needed to rebuild
         self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
-        self.client.run("install hello/1.2.0@memsharded/testing --build missing")
+        self.client.run("install --reference=hello/1.2.0@memsharded/testing --build missing")
         self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.2.0@memsharded/testing"])
@@ -108,7 +108,7 @@ class PackageIDTest(unittest.TestCase):
         # Now change the Hello version and build it, if we install out requires is
         # needed the --build needed because hello2 needs to be build
         self._export("hello", "1.5.0", package_id_text=None, requires=None)
-        self.client.run("install hello/1.5.0@lasote/stable --build missing")
+        self.client.run("install --reference=hello/1.5.0@lasote/stable --build missing")
         self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.5.0@lasote/stable"])
@@ -138,7 +138,7 @@ class PackageIDTest(unittest.TestCase):
         # If we change the user and channel should be needed to rebuild
         self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
-        self.client.run("install hello/1.2.0@memsharded/testing --build missing")
+        self.client.run("install --reference=hello/1.2.0@memsharded/testing --build missing")
         self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_recipe_mode()',
                      requires=["hello/1.2.0@memsharded/testing"])
@@ -153,7 +153,7 @@ class PackageIDTest(unittest.TestCase):
         #  to True) should not affect
         self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      default_option_value='"on"')
-        self.client.run("install hello/1.2.0@lasote/stable --build missing")
+        self.client.run("install --reference=hello/1.2.0@lasote/stable --build missing")
         self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["hello"].full_recipe_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
@@ -179,7 +179,7 @@ class PackageIDTest(unittest.TestCase):
         #  to True) should affect
         self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      default_option_value='"on"')
-        self.client.run("install hello/1.2.0@lasote/stable --build missing")
+        self.client.run("install --reference=hello/1.2.0@lasote/stable --build missing")
         self.client.save({"conanfile.txt": "[requires]\nhello2/2.3.8@lasote/stable"},
                          clean_first=True)
         with self.assertRaises(Exception):
@@ -201,7 +201,7 @@ class PackageIDTest(unittest.TestCase):
 
         # If we change even the require, should not affect
         self._export("HelloNew", "1.2.0")
-        self.client.run("install HelloNew/1.2.0@lasote/stable --build missing")
+        self.client.run("install --reference=HelloNew/1.2.0@lasote/stable --build missing")
         self._export("hello2", "2.3.8",
                      package_id_text='self.info.requires["HelloNew"].unrelated_mode()',
                      requires=["HelloNew/1.2.0@lasote/stable"])
@@ -225,17 +225,17 @@ class PackageIDTest(unittest.TestCase):
             self._export("hello", "1.2.0", package_id_text=package_id,
                          channel="user/testing",
                          settings=["compiler", ])
-            self.client.run('install hello/1.2.0@user/testing '
+            self.client.run('install --reference=hello/1.2.0@user/testing '
                             ' -s compiler="Visual Studio" '
                             ' -s compiler.version=14 --build')
 
             # Should have binary available
-            self.client.run('install hello/1.2.0@user/testing'
+            self.client.run('install --reference=hello/1.2.0@user/testing'
                             ' -s compiler="Visual Studio" '
                             ' -s compiler.version=15 -s compiler.toolset=v140')
 
             # Should NOT have binary available
-            self.client.run('install hello/1.2.0@user/testing '
+            self.client.run('install --reference=hello/1.2.0@user/testing '
                             '-s compiler="Visual Studio" '
                             '-s compiler.version=15 -s compiler.toolset=v120',
                             assert_error=True)
@@ -243,7 +243,7 @@ class PackageIDTest(unittest.TestCase):
             self.assertIn("Missing prebuilt package for 'hello/1.2.0@user/testing'", self.client.out)
 
             # Specify a toolset not involved with the visual version is ok, needed to build:
-            self.client.run('install hello/1.2.0@user/testing'
+            self.client.run('install --reference=hello/1.2.0@user/testing'
                             ' -s compiler="Visual Studio" '
                             ' -s compiler.version=15 -s compiler.toolset=v141_clang_c2 '
                             '--build missing')
@@ -254,12 +254,12 @@ class PackageIDTest(unittest.TestCase):
                      channel="user/testing",
                      settings=["compiler", ],
                      )
-        self.client.run('install hello/1.2.0@user/testing '
+        self.client.run('install --reference=hello/1.2.0@user/testing '
                         ' -s compiler="Visual Studio" '
                         ' -s compiler.version=14 --build')
 
         # Should NOT have binary available
-        self.client.run('install hello/1.2.0@user/testing'
+        self.client.run('install --reference=hello/1.2.0@user/testing'
                         ' -s compiler="Visual Studio" '
                         ' -s compiler.version=15 -s compiler.toolset=v140',
                         assert_error=True)
@@ -270,11 +270,11 @@ class PackageIDTest(unittest.TestCase):
                      channel="user/testing",
                      settings=["compiler", ]
                      )
-        self.client.run('install hello/1.2.0@user/testing '
+        self.client.run('install --reference=hello/1.2.0@user/testing '
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 --build')
 
-        self.client.run('install hello/1.2.0@user/testing '
+        self.client.run('install --reference=hello/1.2.0@user/testing '
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 -s compiler.cppstd=gnu14', assert_error=True)
         self.assertIn("Missing prebuilt package for 'hello/1.2.0@user/testing'", self.client.out)
@@ -284,11 +284,11 @@ class PackageIDTest(unittest.TestCase):
                      channel="user/testing",
                      settings=["compiler", ]
                      )
-        self.client.run('install hello/1.2.0@user/testing '
+        self.client.run('install --reference=hello/1.2.0@user/testing '
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 --build')
 
-        self.client.run('install hello/1.2.0@user/testing '
+        self.client.run('install --reference=hello/1.2.0@user/testing '
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 -s compiler.cppstd=gnu14')
         self.assertIn("hello/1.2.0@user/testing: Already installed!", self.client.out)
@@ -508,7 +508,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         t.run("remove * -f")
 
         # If we build pkg1, we need a new packageID for pkg2
-        t.run("install pkg3/1.0@ --build=pkg1")
+        t.run("install --reference=pkg3/1.0@ --build=pkg1")
         self.assertIn("pkg2/1.0:Package_ID_unknown - Unknown", t.out)
         self.assertIn("pkg3/1.0:ad2a3c63a3adc6721aeaac45b34f80f0e1b72827 - Download", t.out)
         self.assertIn("pkg2/1.0: Unknown binary for pkg2/1.0, computing updated ID", t.out)

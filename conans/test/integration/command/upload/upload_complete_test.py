@@ -202,7 +202,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("install hello0/1.2.1@frodo/stable --build -r default")
+        client.run("install --reference=hello0/1.2.1@frodo/stable --build -r default")
         client.run("upload hello* --confirm --retry 3 --retry-wait=0 --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
@@ -271,7 +271,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("install hello0/1.2.1@frodo/stable --build")
+        client.run("install --reference=hello0/1.2.1@frodo/stable --build")
         conan_conf = textwrap.dedent("""
                                     [storage]
                                     path = ./data

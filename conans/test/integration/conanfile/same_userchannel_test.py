@@ -90,11 +90,11 @@ class HelloConan(ConanFile):
         self.assertIn("ERROR: Package 'say/0.1' not resolved: No remote defined",
                       self.client.out)
 
-        self.client.run("install . @lasote/stable")
+        self.client.run("install . --user=lasote --channel=stable")
         self.assertIn("say/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertNotIn("other/testing", self.client.out)
 
-        self.client.run("install . @other/testing")
+        self.client.run("install . --user=other --channel=testing")
         self.assertIn("say/0.1@other/testing: Building other/testing", self.client.out)
         self.assertNotIn("lasote/stable", self.client.out)
 
@@ -136,6 +136,6 @@ class SayConan(ConanFile):
         self.output.info("MYCHANNEL: %s" % self.channel)
 """
         client.save({"conanfile.py": conanfile})
-        client.run("install . @myuser/mychannel")
+        client.run("install . --user=myuser --channel=mychannel")
         self.assertIn("MYUSER: myuser", client.out)
         self.assertIn("MYCHANNEL: mychannel", client.out)

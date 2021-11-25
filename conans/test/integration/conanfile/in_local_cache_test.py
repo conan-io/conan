@@ -26,7 +26,7 @@ class InLocalCacheTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
-        client.run("install hello0/0.1@lasote/stable --build missing")
+        client.run("install --reference=hello0/0.1@lasote/stable --build missing")
         self.assertIn("build() IN LOCAL CACHE=> True", client.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.out)
 
@@ -60,6 +60,6 @@ class OtherConan(ConanFile):
         self.assertIn("build() IN LOCAL CACHE=> True", client.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.out)
         client.run("export . lasote/stable")
-        client.run("install hello1/0.1@lasote/stable --build")
+        client.run("install --reference=hello1/0.1@lasote/stable --build")
         self.assertIn("build() IN LOCAL CACHE=> True", client.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.out)
