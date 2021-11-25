@@ -241,6 +241,7 @@ class _CppInfo(object):
         # this will try to extract the namespace from the absolute name to provide compatibility
         # with current build_info.names and also with CMakeDeps that specifies names with namespaces
         namespace = None
+        property_name = None
         if generator == "cmake_find_package" and self.get_property("cmake_module_target_name", generator):
             property_name = "cmake_module_target_name"
         elif "cmake" in generator and "cmake" != generator and "cmake_multi" != generator:
