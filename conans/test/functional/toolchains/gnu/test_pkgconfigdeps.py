@@ -504,30 +504,3 @@ def test_pkg_config_name_full_aliases():
 
     pc_content = client.load("second-mycomponent.pc")
     assert "Requires: compo1" == get_requires_from_content(pc_content)
-
-
-# def test_pkg_config_warning_if_same_alias_defined():
-#     client = TestClient()
-#     conanfile = textwrap.dedent("""
-#         from conans import ConanFile
-#
-#         class Recipe(ConanFile):
-#
-#             def package_info(self):
-#                 self.cpp_info.set_property("pkg_config_name", ["pkg", "alias1"])
-#                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
-#                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", ["compo1", "alias1"])
-#     """)
-#     client.save({"conanfile.py": conanfile})
-#     client.run("create . first/0.1@")
-#     conanfile = textwrap.dedent("""
-#         [requires]
-#         first/0.1
-#
-#         [generators]
-#         PkgConfigDeps
-#         """)
-#     client.save({"conanfile.txt": conanfile}, clean_first=True)
-#     client.run("install .")
-#     assert "WARN: Alias name 'alias1' was already defined by any other " \
-#            "package or component and it'll be overwritten." in client.out
