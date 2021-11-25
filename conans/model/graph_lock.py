@@ -2,7 +2,6 @@ import json
 import os
 
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD
-from conans.client.graph.range_resolver import range_satisfies
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save
@@ -122,13 +121,10 @@ class Lockfile(object):
         version_range = require.version_range
 
         if version_range:
-            print("Resolving range", version_range)
             matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
                        r.channel == ref.channel]
-            print("Matces", matches)
             for m in matches:
-                if range_satisfies(version_range, str(m.version)):
-                    print("Satisfied! ", repr(m))
+                if m.version in version_range:
                     require.ref = m
                     break
             else:
@@ -153,7 +149,7 @@ class Lockfile(object):
             matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
                        r.channel == ref.channel]
             for m in matches:
-                if range_satisfies(version_range, str(m.version)):
+                if m.version in version_range:
                     require.ref = m
                     break
             else:
