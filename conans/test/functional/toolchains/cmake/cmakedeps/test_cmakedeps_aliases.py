@@ -99,8 +99,7 @@ def test_custom_name():
         settings = "os", "compiler", "build_type", "arch"
 
         def package_info(self):
-            self.cpp_info.set_property("cmake_target_namespace", "ola")
-            self.cpp_info.set_property("cmake_target_name", "comprar")
+            self.cpp_info.set_property("cmake_target_name", "ola::comprar")
             self.cpp_info.set_property("cmake_target_aliases", ["hello"])
     """)
 
