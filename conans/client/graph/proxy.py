@@ -17,15 +17,6 @@ class ConanProxy(object):
         self._conan_app = conan_app
 
     def get_recipe(self, ref):
-
-        # TODO: cache2.0 check editables
-        # if isinstance(layout, PackageEditableLayout):
-        #     conanfile_path = layout.conanfile()
-        #     status = RECIPE_EDITABLE
-        #     # TODO: log_recipe_got_from_editable(reference)
-        #     # TODO: recorder.recipe_fetched_as_editable(reference)
-        #     return conanfile_path, status, None, ref
-
         # TODO: cache2.0 Check with new locks
         # with layout.conanfile_write_lock(self._out):
         result = self._get_recipe(ref)

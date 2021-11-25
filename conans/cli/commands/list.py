@@ -1,9 +1,9 @@
 import copy
 from typing import List
 
-from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS, \
-    get_remote_selection
+from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter, CommandResult
+from conans.cli.common import get_remote_selection
 from conans.cli.output import Color
 from conans.cli.output import cli_out_write
 from conans.errors import ConanException, InvalidNameException, PackageNotFoundException, \
