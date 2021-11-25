@@ -219,6 +219,8 @@ class _CppInfo(object):
     #  Use get_property for 2.0
     def get_name(self, generator, default_name=True):
         property_name = None
+        if generator == "cmake_find_package" and self.get_property("cmake_module_target_name", generator):
+            property_name = "cmake_module_target_name"
         # set_property will have no effect on "cmake" legacy generator
         if "cmake" in generator and "cmake" != generator and "cmake_multi" != generator:
             property_name = "cmake_target_name"
