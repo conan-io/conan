@@ -86,7 +86,7 @@ class ConanLib(ConanFile):
         self.client.run("export . lasote/stable")
 
         self.client.current_folder = temp_folder()
-        self.client.run("install say/0.1@lasote/stable --build=missing")
+        self.client.run("install --reference=say/0.1@lasote/stable --build=missing")
         for filename in ["file1.txt", "file2.txt"]:
             self.assertFalse(os.path.exists(os.path.join(dst_global_folder, filename)))
 

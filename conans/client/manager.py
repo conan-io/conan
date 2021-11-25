@@ -1,3 +1,5 @@
+import os.path
+
 from conans.cli.output import ConanOutput
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
@@ -8,6 +10,9 @@ from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.model.conan_file import ConanFile
 from conans.model.recipe_ref import RecipeReference
 
+
+# FIXME: this is duplicated in the new API until all commands that use this function are migrated
+#  this should be replaced by a call to APIV2.graph.load_graph + APIV2.install.install_binaries
 
 def deps_install(app, ref_or_path, profile_host, profile_build,
                  graph_lock, root_ref, build_modes=None, generators=None,

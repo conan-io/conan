@@ -249,8 +249,8 @@ class TestNoNamespaceTarget:
     def test_multi_generator_windows(self):
         t = self.t
         with t.chdir('multi_windows'):
-            t.run('install library/version@ -g CMakeDeps -s build_type=Release')
-            t.run('install library/version@ -g CMakeDeps -s build_type=Debug')
+            t.run('install --reference=library/version@ -g CMakeDeps -s build_type=Release')
+            t.run('install --reference=library/version@ -g CMakeDeps -s build_type=Debug')
             generator = '-G "Visual Studio 15 Win64"'
             t.run_command(
                 'cmake .. {} -DCMAKE_PREFIX_PATH:PATH="{}"'.format(generator, t.current_folder))
@@ -264,8 +264,8 @@ class TestNoNamespaceTarget:
     def test_multi_generator_macos(self):
         t = self.t
         with t.chdir('multi_macos'):
-            t.run('install library/version@ -g CMakeDeps -s build_type=Release')
-            t.run('install library/version@ -g CMakeDeps -s build_type=Debug')
+            t.run('install --reference=library/version@ -g CMakeDeps -s build_type=Release')
+            t.run('install --reference=library/version@ -g CMakeDeps -s build_type=Debug')
             t.run_command('cmake .. -G Xcode -DCMAKE_PREFIX_PATH:PATH="{}"'.format(t.current_folder))
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
             assert '>> nonamespace libs: library::library' in t.out

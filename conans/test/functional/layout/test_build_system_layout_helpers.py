@@ -78,7 +78,7 @@ def test_layout_with_local_methods(conanfile, layout_helper_name, build_type, ar
         """
     client = TestClient()
     client.save({"conanfile.py": conanfile.format(ly=layout_helper_name)})
-    client.run("install . lib/1.0@ -s build_type={} -s arch={}".format(build_type, arch))
+    client.run("install . --name=lib --version=1.0 -s build_type={} -s arch={}".format(build_type, arch))
     client.run("source .")
     # Check the source folder (release)
     assert os.path.exists(os.path.join(client.current_folder, "myheader.h"))

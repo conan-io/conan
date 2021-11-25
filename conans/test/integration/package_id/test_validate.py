@@ -129,7 +129,7 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Package '139ed6a9c0b2338ce5c491c593f88a5c328ea9e4' created",
                       client.out)
         # compatible_packges fallback works
-        client.run("install pkg/0.1@ -s os=Linux -s build_type=Debug")
+        client.run("install --reference=pkg/0.1@ -s os=Linux -s build_type=Debug")
         self.assertIn("pkg/0.1:139ed6a9c0b2338ce5c491c593f88a5c328ea9e4 - Cache", client.out)
 
         error = client.run("create . pkg/0.1@ -s os=Windows -s build_type=Release",
@@ -166,7 +166,7 @@ class TestValidate(unittest.TestCase):
         self.assertIn(f"pkg/0.1: Package '{package_id}' created",
                       client.out)
         # compatible_packges fallback works
-        client.run("install pkg/0.1@ -s os=Linux -s build_type=Debug")
+        client.run("install --reference=pkg/0.1@ -s os=Linux -s build_type=Debug")
         self.assertIn(f"pkg/0.1:{package_id} - Cache", client.out)
 
         # Windows invalid configuration
@@ -175,13 +175,13 @@ class TestValidate(unittest.TestCase):
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
 
-        error = client.run("install pkg/0.1@ -s os=Windows -s build_type=Release",
+        error = client.run("install --reference=pkg/0.1@ -s os=Windows -s build_type=Release",
                            assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
 
         # Windows missing binary: INVALID
-        error = client.run("install pkg/0.1@ -s os=Windows -s build_type=Debug",
+        error = client.run("install --reference=pkg/0.1@ -s os=Windows -s build_type=Debug",
                            assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)

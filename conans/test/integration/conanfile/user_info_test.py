@@ -48,7 +48,7 @@ class UserInfoTest(unittest.TestCase):
                 """)
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . reuse/0.1@lasote/stable")
-        client.run('install reuse/0.1@lasote/stable --build')
+        client.run('install --reference=reuse/0.1@lasote/stable --build')
         # Now try local command with a consumer
         client.run('install . --build')
         client.run("build .")

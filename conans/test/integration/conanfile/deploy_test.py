@@ -62,7 +62,7 @@ class Pkg(ConanFile):
         self.assertNotIn("deploy()", client.out)
 
         client.current_folder = temp_folder()
-        client.run("install pkg/0.1@user/testing")
+        client.run("install --reference=pkg/0.1@user/testing")
 
         self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.dll' file: mylib.dll",
                       client.out)
@@ -80,5 +80,3 @@ class Pkg(ConanFile):
                          sorted(deploy_manifest.file_sums.keys()))
         self.assertEqual(load(app), "myexe")
         self.assertEqual(load(lib), "mydll")
-
-

@@ -51,7 +51,7 @@ class CorruptedPackagesTest(unittest.TestCase):
                       "but package recipe found", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install pkg/0.1@user/testing", assert_error=True)
+        self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn(f"pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing",
                       self.client.out)
         # Try upload of fresh package
@@ -67,7 +67,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn(f"Package_ID: {NO_SETTINGS_PACKAGE_ID}", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install pkg/0.1@user/testing", assert_error=True)
+        self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn("ERROR: Binary package not found", self.client.out)
         self.assertIn(NO_SETTINGS_PACKAGE_ID, self.client.out)
         # Try upload of fresh package
@@ -85,7 +85,7 @@ class CorruptedPackagesTest(unittest.TestCase):
                       "but package recipe found", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install pkg/0.1@user/testing", assert_error=True)
+        self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn(f"pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
         self.client.run("create . pkg/0.1@user/testing")
@@ -101,7 +101,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("search pkg/0.1@user/testing -r default")
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install pkg/0.1@user/testing", assert_error=True)
+        self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn("ERROR: Binary package not found", self.client.out)
         # Try upload of fresh package
         self.client.run("create . pkg/0.1@user/testing")
@@ -120,7 +120,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn(f"Package_ID: {NO_SETTINGS_PACKAGE_ID}", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install pkg/0.1@user/testing", assert_error=True)
+        self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn("ERROR: Binary package not found", self.client.out)
         # Try upload of fresh package
         self.client.run("create . pkg/0.1@user/testing")
@@ -138,7 +138,7 @@ class CorruptedPackagesTest(unittest.TestCase):
                       "but package recipe found", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install pkg/0.1@user/testing", assert_error=True)
+        self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn(f"pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
         self.client.run("create . pkg/0.1@user/testing")
