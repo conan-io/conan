@@ -12,7 +12,7 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
-from conans.util.files import load, mkdir, is_dirty
+from conans.util.files import load, is_dirty
 
 
 class ExportPkgTest(unittest.TestCase):
@@ -57,7 +57,12 @@ class PkgA(ConanFile):
         self.output.info("BUILDING PKGA")
 """
         client.save({CONANFILE: conanfile})
+<<<<<<< HEAD
         client.run("build .")
+=======
+        client.run("install . -if=build")
+        client.run("build . -bf=build")
+>>>>>>> develop2
         client.run("export-pkg . pkga/0.1@user/testing -pr=default")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         self.assertIn(f"pkga/0.1@user/testing: Package '{package_id}' created", client.out)
