@@ -146,15 +146,7 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                 if cache:
                     # Clear the conanfile.py to avoid errors cloning git repositories.
                     _clean_source_folder(src_folder)
-                with conanfile_exception_formatter(conanfile.display_name, "source"):
-
-                    with conan_v2_property(conanfile, 'settings',
-                                           "'self.settings' access in source() method is "
-                                           "deprecated"):
-                        with conan_v2_property(conanfile, 'options',
-                                               "'self.options' access in source() method is "
-                                               "deprecated"):
-                            conanfile.source()
+                run_source_method(conanfile)
 
                 hook_manager.execute("post_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
@@ -163,6 +155,19 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
             raise
         except Exception as e:
             raise ConanException(e)
+
+
+def run_source_method(conanfile):
+    mkdir(conanfile.source_folder)
+    with tools.chdir(conanfile.source_folder):
+        with conanfile_exception_formatter(conanfile.display_name, "source"):
+            with conan_v2_property(conanfile, 'settings',
+                                   "'self.settings' access in source() method is "
+                                   "deprecated"):
+                with conan_v2_property(conanfile, 'options',
+                                       "'self.options' access in source() method is "
+                                       "deprecated"):
+                    conanfile.source()
 
 
 def _clean_source_folder(folder):

@@ -446,24 +446,6 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def source(self, path, source_folder=None, cwd=None):
-        app = ConanApp(self.cache_folder)
-
-        cwd = cwd or os.getcwd()
-        conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        source_folder = _make_abs_path(source_folder, cwd)
-
-        mkdir(source_folder)
-
-        # only infos if exist
-        conanfile = app.graph_manager.load_consumer_conanfile(conanfile_path)
-        conanfile.folders.set_base_source(source_folder)
-        conanfile.folders.set_base_build(None)
-        conanfile.folders.set_base_package(None)
-
-        config_source_local(conanfile, conanfile_path, app.hook_manager)
-
-    @api_method
     def imports(self, conanfile_path, dest=None, cwd=None, settings=None,
                 options=None, env=None, profile_names=None, profile_build=None, lockfile=None,
                 conf=None):
