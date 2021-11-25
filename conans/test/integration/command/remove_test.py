@@ -404,7 +404,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.client.run("remove lib/1.0 -f")
         # we can still install it
         self.client.run("install --reference=lib/1.0@")
-        self.assertIn("Installing package: lib/1.0", self.client.out)
+        self.assertIn("lib/1.0: Retrieving package", self.client.out)
         self.client.run("remove lib/1.0 -f")
 
         # Now remove remotely

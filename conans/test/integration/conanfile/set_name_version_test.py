@@ -35,7 +35,7 @@ class SetVersionNameTest(unittest.TestCase):
 
         # Local flow should also work
         client.run("install .")
-        self.assertIn("conanfile.py (pkg/2.1): Installing package", client.out)
+        self.assertIn("conanfile.py (pkg/2.1):", client.out)
 
     def test_set_version_name_file(self):
         client = TestClient()
@@ -60,7 +60,7 @@ class SetVersionNameTest(unittest.TestCase):
                       client.out)
         # Local flow should also work
         client.run("install .")
-        self.assertIn("conanfile.py (pkg/2.1): Installing package", client.out)
+        self.assertIn("conanfile.py (pkg/2.1):", client.out)
 
     def test_set_version_name_errors(self):
         client = TestClient()
