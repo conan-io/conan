@@ -74,7 +74,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
         set({{ pkg_name }}_COMPONENTS {{ pkg_components }})
 
-        if({{ pkg_name }}_FIND_COMPONENTS)
+        if({{ pkg_filename }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
                 list(FIND {{ pkg_name }}_COMPONENTS "{{ namespace }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
@@ -265,8 +265,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         if cpp_info.components:
             components = self._get_components(pkg_name, cpp_info)
             # Note these are in reversed order, from more dependent to less dependent
-            pkg_components = " ".join(["{p}::{c}".format(p=pkg_namespace, c=comp_findname) for
-                                       comp_findname, _ in reversed(components)])
+            pkg_components = " ".join([comp_findname for comp_findname, _ in reversed(components)])
             pkg_info = DepsCppCmake(cpp_info, self.name)
             global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
                                                              build_type_suffix="",

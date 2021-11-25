@@ -184,7 +184,7 @@ endforeach()
             include(${f})
         endforeach()
 
-        if({{ pkg_name }}_FIND_COMPONENTS)
+        if({{ pkg_filename }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
                 list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ namespace }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
@@ -349,8 +349,7 @@ endforeach()
                 pkg_info = DepsCppCmake(cpp_info, self.name)
                 components = self._get_components(pkg_name, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
-                pkg_components = " ".join(["{p}::{c}".format(p=pkg_namespace, c=comp_findname) for
-                                           comp_findname, _ in reversed(components)])
+                pkg_components = " ".join([comp_findname for comp_findname, _ in reversed(components)])
                 global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
                                                                  build_type_suffix=build_type_suffix,
                                                                  deps_names=deps_names)

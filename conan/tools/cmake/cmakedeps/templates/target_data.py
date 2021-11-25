@@ -29,8 +29,16 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             global_cpp.build_modules_paths = ""
 
         components_cpp = self.get_required_components_cpp()
-        components_target_names = " ".join([components_target_name for components_target_name, _, _ in
-                                       reversed(components_cpp)])
+        components_names = []
+        components_target_names = []
+        for component_target_name, _, _ in reversed(components_cpp):
+            name = component_target_name if not "::" in component_target_name else component_target_name.split("::")[1]
+            components_names.append(name)
+            components_target_names.append(component_target_name)
+
+        components_names = " ".join(components_names)
+        components_target_names = " ".join(components_target_names)
+
         # For the build requires, we don't care about the transitive (only runtime for the br)
         # so as the xxx-conf.cmake files won't be generated, don't include them as find_dependency
         # This is because in Conan 2.0 model, only the pure tools like CMake will be build_requires
@@ -42,6 +50,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                 "pkg_name": self.pkg_name,
                 "package_folder": package_folder,
                 "config_suffix": self.config_suffix,
+                "components_names": components_names,
                 "components_target_names": components_target_names,
                 "components_cpp": components_cpp,
                 "dependency_filenames": " ".join(dependency_filenames)}
@@ -53,8 +62,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               ########### AGGREGATED COMPONENTS AND DEPENDENCIES FOR THE MULTI CONFIG #####################
               #############################################################################################
 
-              set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_target_names }})
+              set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_names }})
+              set({{ pkg_name }}_COMPONENT_TARGET_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_target_names }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_NAMES)
+              list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_TARGET_NAMES)
               set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ pkg_name }}_FIND_DEPENDENCY_NAMES} {{ dependency_filenames }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
 
@@ -78,7 +89,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
 
-              set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_target_names }})
+              set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
 
               {%- for comp_target_name, comp_variable_name, cpp in components_cpp %}
 

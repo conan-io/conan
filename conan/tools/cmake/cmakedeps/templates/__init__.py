@@ -22,6 +22,11 @@ class CMakeDepsFileTemplate(object):
         return self.get_global_target_name(self.conanfile, self.suffix)
 
     @property
+    def global_target_namespace(self):
+        gname = self.get_global_target_name(self.conanfile, self.suffix)
+        return gname if "::" not in gname else gname.split("::")[0]
+
+    @property
     def file_name(self):
         return get_file_name(self.conanfile, self.find_module_mode) + self.suffix
 

@@ -30,6 +30,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 "version": self.conanfile.ref.version,
                 "file_name": self.file_name,
                 "pkg_name": self.pkg_name,
+                # TODO: maybe we should change this to file_name instead
+                #  using the namespace of the global target
+                "global_namespace": self.global_target_namespace,
                 "config_suffix": self.config_suffix,
                 "check_components_exist": self.cmakedeps.check_components_exist,
                 "targets_include_file": targets_include}
@@ -77,7 +80,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         # This is the variable filled by CMake with the requested components in find_package
         if({{ file_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+file_name+'_FIND_COMPONENTS}' }})
-                if (TARGET ${_FIND_COMPONENT})
+                if (TARGET {{ global_namespace }}::${_FIND_COMPONENT})
                     conan_message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
                 else()
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
