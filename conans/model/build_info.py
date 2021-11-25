@@ -222,7 +222,7 @@ class _CppInfo(object):
         if generator == "cmake_find_package" and self.get_property("cmake_module_target_name", generator):
             property_name = "cmake_module_target_name"
         # set_property will have no effect on "cmake" legacy generator
-        if "cmake" in generator and "cmake" != generator and "cmake_multi" != generator:
+        elif "cmake" in generator and "cmake" != generator and "cmake_multi" != generator:
             property_name = "cmake_target_name"
         elif "pkg_config" in generator:
             property_name = "pkg_config_name"
@@ -241,7 +241,7 @@ class _CppInfo(object):
         # this will try to extract the namespace from the absolute name to provide compatibility
         # with current build_info.names and also with CMakeDeps that specifies names with namespaces
         namespace = None
-        name = self.get_property("cmake_target_name", generator)
+        name = self.get_name(generator)
         if self._is_absolute_name(name):
             namespace = name.split(COMPONENT_SCOPE)[0]
         return namespace
