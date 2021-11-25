@@ -289,96 +289,6 @@ def test_cmake_find_package_new_properties():
     assert find_package_contents_old == find_package_contents
 
 
-@pytest.mark.xfail(reason="revisit later")
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
-def test_cmake_find_package_target_namespace(generator):
-    # https://github.com/conan-io/conan/issues/9946
-    client = TestClient()
-    hello = textwrap.dedent("""
-        import os
-        from conans import ConanFile
-        class MyHello(ConanFile):
-            settings = "build_type"
-            name = "hello"
-            version = "1.0"
-            def package_info(self):
-                self.cpp_info.components["helloworld"].set_property("cmake_target_name", "hello::HelloWorld")
-                {}
-
-        """)
-
-    greetings = textwrap.dedent("""
-        import os
-        from conans import ConanFile
-        class MyPkg(ConanFile):
-            settings = "build_type"
-            name = "greetings"
-            version = "1.0"
-            requires = "hello/1.0"
-            def package_info(self):
-                self.cpp_info.components["greetingshello"].requires = ["hello::helloworld"]
-                {}
-        """)
-
-    client.save({"hello.py": hello.format('self.cpp_info.set_property("cmake_target_namespace", "hello_namespace")'),
-                 "greetings.py": greetings.format('self.cpp_info.set_property("cmake_target_namespace", "greetings_namespace")')})
-    client.run("create hello.py hello/1.0@")
-    client.run("create greetings.py greetings/1.0@")
-    client.run("install greetings/1.0@ -g {}".format(generator))
-    if generator == "cmake_find_package_multi":
-        hello_config = client.load("hello-config.cmake")
-        assert "set_property(TARGET hello_namespace::HelloWorld" in hello_config
-        hello_targets_release = client.load("helloTarget-release.cmake")
-        assert "set(hello_COMPONENTS_RELEASE hello_namespace::HelloWorld)" in hello_targets_release
-        hello_target = client.load("helloTargets.cmake")
-        assert "add_library(hello_namespace::HelloWorld" in hello_target
-        assert "add_library(hello_namespace::hello" in hello_target
-        greetings_config = client.load("greetings-config.cmake")
-        assert "set_property(TARGET greetings_namespace::greetings" in greetings_config
-        greetings_targets_release = client.load("greetingsTarget-release.cmake")
-        assert "set(greetings_COMPONENTS_RELEASE greetings_namespace::greetingshello)" in greetings_targets_release
-        greetings_target = client.load("greetingsTargets.cmake")
-        assert "add_library(greetings_namespace::greetingshello INTERFACE IMPORTED)" in greetings_target
-        assert "add_library(greetings_namespace::greetings INTERFACE IMPORTED)" in greetings_target
-    else:
-        hello_contents = client.load("Findhello.cmake")
-        assert "set(hello_COMPONENTS hello_namespace::HelloWorld)" in hello_contents
-        assert "add_library(hello_namespace::HelloWorld INTERFACE IMPORTED)" in hello_contents
-        assert "add_library(hello_namespace::hello INTERFACE IMPORTED)" in hello_contents
-        greetings_contents = client.load("Findgreetings.cmake")
-        assert "set(greetings_COMPONENTS greetings_namespace::greetingshello)" in greetings_contents
-        assert "add_library(greetings_namespace::greetingshello INTERFACE IMPORTED)" in greetings_contents
-        assert "add_library(greetings_namespace::greetings INTERFACE IMPORTED)" in greetings_contents
-
-    # check that the contents with the namespace that equals the default
-    # generates exactly the same files
-    client.save({"hello.py": hello.format('self.cpp_info.set_property("cmake_target_namespace", "hello")'),
-                 "greetings.py": greetings.format('self.cpp_info.set_property("cmake_target_namespace", "greetings")')},
-                clean_first=True)
-    client.run("create hello.py hello/1.0@")
-    client.run("create greetings.py greetings/1.0@")
-    client.run("install greetings/1.0@ -g {}".format(generator))
-
-    if generator == "cmake_find_package_multi":
-        files_to_compare = ["greetings-config.cmake", "greetingsTarget-release.cmake", "greetingsTargets.cmake",
-                            "hello-config.cmake", "helloTarget-release.cmake", "helloTargets.cmake"]
-    else:
-        files_to_compare = ["Findhello.cmake", "Findgreetings.cmake"]
-
-    files_namespace = [client.load(file) for file in files_to_compare]
-
-    client.save({"hello.py": hello.format(''),
-                 "greetings.py": greetings.format('')},
-                clean_first=True)
-    client.run("create hello.py hello/1.0@")
-    client.run("create greetings.py greetings/1.0@")
-    client.run("install greetings/1.0@ -g {}".format(generator))
-
-    files_no_namespace = [client.load(file) for file in files_to_compare]
-
-    assert files_namespace == files_no_namespace
-
-
 def test_legacy_cmake_is_not_affected_by_set_property_usage():
     """
     "set_property" will have no effect on "cmake" legacy generator
@@ -522,6 +432,52 @@ def test_set_absolute_target_names_legacy_generators():
                 self.cpp_info.components["curl2"].names["cmake_find_package"] = "libcurl2"
                 self.cpp_info.components["curl2"].names["cmake_find_package_multi"] = "libcurl2"
                 self.cpp_info.components["curl2"].requires.extend(["curl", "my_pkg::MYPKGCOMP"])
+    """)
+    client.save({"names/conanfile.py": conanfile})
+    client.run("create names")
+    client.run("install libcurl/0.1@ -g cmake_find_package_multi -g cmake_find_package "
+               "--install-folder=names")
+    files_with_names = []
+    for filename in check_files:
+        files_with_names.append(client.load(os.path.join("names", filename)))
+
+    assert files_with_properties == files_with_names
+
+
+def test_set_absolute_target_names_same_as_default():
+    # Test that using the new absolute names with names equaling the default result in the same
+    # that no adding any propeties
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class LibcurlConan(ConanFile):
+            name = "libcurl"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_target_name", "libcurl::libcurl")
+                self.cpp_info.set_property("cmake_file_name", "libcurl")
+                self.cpp_info.components["curl"].set_property("cmake_target_name", "libcurl::curl")
+                self.cpp_info.components["curl"].libs = ["curl_lib"]
+    """)
+    client.save({"properties/conanfile.py": conanfile})
+    client.run("create properties")
+    client.run("install libcurl/0.1@ -g cmake_find_package_multi -g cmake_find_package "
+               "--install-folder=properties")
+    files_with_properties = []
+    check_files = ["Findlibcurl.cmake", "libcurl-config.cmake", "libcurlTargets.cmake", "libcurlTarget-release.cmake",
+                   "libcurl-config-version.cmake"]
+    for filename in check_files:
+        files_with_properties.append(client.load(os.path.join("properties", filename)))
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class LibcurlConan(ConanFile):
+            name = "libcurl"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            def package_info(self):
+                self.cpp_info.components["curl"].libs = ["curl_lib"]
     """)
     client.save({"names/conanfile.py": conanfile})
     client.run("create names")
