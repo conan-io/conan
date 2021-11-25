@@ -22,46 +22,26 @@ class InstallAPI:
         self.conan_api = conan_api
 
     @api_method
-    def install_binaries(self, deps_graph, install_folder, base_folder, conanfile_folder,
-                         build_modes=None, generators=None, no_imports=False, create_reference=None,
-                         remote=None, update=False, test=None):
+    def install_binaries(self, deps_graph, build_modes=None, remote=None, update=False):
         """ Install binaries for dependency graph
         @param deps_graph: Dependency graph to intall packages for
-        @param install_folder:
-        @param base_folder: Tipically current folder
-        @param conanfile_folder: Folder where the conanfile is located
         @param build_modes:
-        @param generators:
-        @param no_imports:
-        @param create_reference:
         @param remote:
         @param update:
-        @param test:
         """
         app = ConanApp(self.conan_api.cache_folder)
-
         remote = [remote] if remote is not None else None
         app.load_remotes(remote, update=update)
-
-        out = ConanOutput()
-
-        root_node = deps_graph.root
-        conanfile = root_node.conanfile
-
-        # TODO: maybe we want a way to get this directly from the DepsGraph?
-        reference = deps_graph.nodes[1] if root_node.recipe == RECIPE_VIRTUAL else None
-
-        if root_node.recipe == RECIPE_VIRTUAL:
-            out.highlight("Installing package: %s" % str(reference))
-        else:
-            conanfile.output.highlight("Installing package")
-        print_graph(deps_graph)
-
         installer = BinaryInstaller(app)
         # TODO: Extract this from the GraphManager, reuse same object, check args earlier
         build_modes = BuildMode(build_modes)
         installer.install(deps_graph, build_modes)
 
+    # TODO: Look for a better name
+    @staticmethod
+    def install_consumer(deps_graph, install_folder, base_folder, conanfile_folder,
+                         generators=None, reference=None, no_imports=False, create_reference=None,
+                         test=None):
         root_node = deps_graph.root
         conanfile = root_node.conanfile
 
@@ -95,50 +75,3 @@ class InstallAPI:
                     run_deploy(deploy_conanfile, install_folder)
 
         return deps_graph
-
-    # maybe this is not wanted as API method, for the moment just leaving this to not
-    # explode things too much
-    @api_method
-    def install(self, path="", reference="", name=None, version=None, user=None, channel=None,
-                profile_host=None, profile_build=None, remote=None, build=None, update=False,
-                generators=None, no_imports=False, install_folder=None, lockfile_in=None,
-                lockfile_out=None, is_build_require=None, require_overrides=None):
-
-        if reference and (name or version or user or channel):
-            raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                                 "--reference")
-
-        cwd = os.getcwd()
-        lockfile_path = _make_abs_path(lockfile_in, cwd) if lockfile_in else None
-
-        lockfile = get_lockfile(lockfile=lockfile_path)
-
-        root_ref = RecipeReference(name, version, user, channel)
-
-        # Make lockfile strict for consuming and install
-        if lockfile is not None:
-            lockfile.strict = True
-
-        install_folder = _make_abs_path(install_folder, cwd)
-        conanfile_folder = os.path.dirname(path) if path else None
-
-        # deps_install is replaced by APIV2.graph.load_graph + APIV2.install.install_binaries
-        deps_graph = self.conan_api.graph.load_graph(reference=reference,
-                                                     path=path,
-                                                     profile_host=profile_host,
-                                                     profile_build=profile_build,
-                                                     lockfile=lockfile,
-                                                     root_ref=root_ref,
-                                                     build_modes=build,
-                                                     is_build_require=is_build_require,
-                                                     require_overrides=require_overrides,
-                                                     remote=remote, update=update)
-
-        self.install_binaries(deps_graph=deps_graph, install_folder=install_folder, base_folder=cwd,
-                              conanfile_folder=conanfile_folder, build_modes=build,
-                              generators=generators, no_imports=no_imports, remote=remote,
-                              update=update)
-
-        if lockfile_out:
-            lockfile_out = _make_abs_path(lockfile_out, cwd)
-            lockfile.save(lockfile_out)

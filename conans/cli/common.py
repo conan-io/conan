@@ -103,10 +103,11 @@ def get_profiles_from_args(conan_api, args):
     return profile_host, profile_build
 
 
-def get_lockfile(lockfile):
+def get_lockfile(lockfile, strict=False):
     graph_lock = None
     if lockfile:
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock = Lockfile.load(lockfile)
+        graph_lock.strict = strict
         ConanOutput().info("Using lockfile: '{}'".format(lockfile))
     return graph_lock
