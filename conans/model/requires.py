@@ -3,6 +3,7 @@ from collections import OrderedDict
 from conans.errors import ConanException
 from conans.model.pkg_type import PackageType
 from conans.model.recipe_ref import RecipeReference
+from conans.model.version_range import VersionRange
 
 
 class Requirement:
@@ -43,7 +44,7 @@ class Requirement:
         """
         version = repr(self.ref.version)
         if version.startswith("[") and version.endswith("]"):
-            return version[1:-1]
+            return VersionRange(version[1:-1])
 
     @property
     def alias(self):
