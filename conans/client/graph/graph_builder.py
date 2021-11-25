@@ -244,6 +244,7 @@ class DepsGraphBuilder(object):
             # TODO: This range-resolve might resolve in a given remote or cache
             # Make sure next _resolve_recipe use it
             resolved_ref = self._resolver.resolve(require, str(node.ref))
+            print("RESOLVED REF!!!!!!!!!!!!", repr(resolved_ref))
 
             # This accounts for alias too
             resolved = self._resolve_recipe(resolved_ref, profile, graph_lock)

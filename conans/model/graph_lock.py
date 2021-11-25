@@ -1,4 +1,3 @@
-import copy
 import json
 import os
 
@@ -123,10 +122,13 @@ class Lockfile(object):
         version_range = require.version_range
 
         if version_range:
+            print("Resolving range", version_range)
             matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
                        r.channel == ref.channel]
+            print("Matces", matches)
             for m in matches:
                 if range_satisfies(version_range, str(m.version)):
+                    print("Satisfied! ", repr(m))
                     require.ref = m
                     break
             else:
@@ -137,8 +139,11 @@ class Lockfile(object):
             if alias:
                 require.ref = self.alias.get(require.ref, require.ref)
             elif require.ref.revision is None:
-                # find exact revision
-                pass
+                for r in locked_refs:
+                    if r.name == ref.name and r.version == ref.version and r.user == ref.user and \
+                            r.channel == ref.channel:
+                        require.ref = r
+                        break
 
     def resolve_locked_pyrequires(self, require):
         ref = require.ref
