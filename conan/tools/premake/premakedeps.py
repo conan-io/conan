@@ -32,7 +32,7 @@ class PremakeDeps(object):
             save(generator_file, content)
 
     def _get_cpp_info(self):
-        ret = CppInfo()
+        ret = CppInfo('','')
         for dep in self._conanfile.dependencies.host.values():
             dep_cppinfo = dep.cpp_info.copy()
             dep_cppinfo.set_relative_base_folder(dep.package_folder)
