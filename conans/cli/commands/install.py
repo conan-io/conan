@@ -3,6 +3,7 @@ import os
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile
+from conans.cli.output import ConanOutput
 from conans.client.conan_api import _make_abs_path
 from conans.client.graph.printer import print_graph
 from conans.errors import ConanException
@@ -111,18 +112,25 @@ def install(conan_api, parser, *args, **kwargs):
     root_ref = RecipeReference(name=args.name, version=args.version,
                                user=args.user, channel=args.channel)
 
-    # TODO: Discuss: This could be further split into graph + binary-analyzer
-    deps_graph = conan_api.graph.load_graph(reference=reference,
-                                            path=path,
-                                            profile_host=profile_host,
+    out = ConanOutput()
+    out.info("Configuration (profile_host):")
+    out.info(profile_host.dumps())
+    out.info("Configuration (profile_build):")
+    out.info(profile_build.dumps())
+
+    # decoupling the most complex part, which is loading the root_node, this is the point where
+    # the difference between "reference", "path", etc
+    root_node = conan_api.graph.load_root_node(reference, path, profile_host, profile_build,
+                                               lockfile, root_ref,
+                                               create_reference=None,
+                                               is_build_require=args.build_require,
+                                               require_overrides=args.require_override)
+    deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
-                                            root_ref=root_ref,
-                                            build_modes=args.build,
-                                            is_build_require=args.build_require,
-                                            require_overrides=args.require_override,
                                             remote=remote,
                                             update=args.update)
+    conan_api.graph.analyze_binaries(deps_graph, args.build, remote=remote, update=args.update)
     print_graph(deps_graph)
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remote=remote, update=args.update)

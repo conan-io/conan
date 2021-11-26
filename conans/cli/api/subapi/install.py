@@ -1,19 +1,10 @@
-import os
-
 from conans import ConanFile
 from conans.cli.api.subapi import api_method
-from conans.cli.common import get_lockfile
 from conans.cli.conan_app import ConanApp
-from conans.cli.output import ConanOutput
-from conans.client.conan_api import _make_abs_path
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import RECIPE_VIRTUAL
-from conans.client.graph.printer import print_graph
 from conans.client.importer import run_imports, run_deploy
 from conans.client.installer import BinaryInstaller, call_system_requirements
-from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
 
 
 class InstallAPI:
