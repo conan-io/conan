@@ -417,12 +417,13 @@ class PyRequiresExtendTest(unittest.TestCase):
 
                 def init(self):
                     base = self.python_requires['base'].module.MyBase
-                    self.options.update(base.options)
-                    self.default_options.update(base.default_options)
+                    self.options.update(base.options, base.default_options)
                 """)
         client.save({"conanfile.py": derived})
-        client.run("create . pkg/0.1@ -o base_option=True")
+        client.run("create . pkg/0.1@ -o base_option=True -o derived_option=True")
         self.assertIn("pkg/0.1: Created package", client.out)
+        client.run("create . pkg/0.1@ -o whatever=True", assert_error=True)
+        assert "Possible options are ['derived_option', 'base_option']" in client.out
 
     def test_transitive_imports_conflicts(self):
         # https://github.com/conan-io/conan/issues/3874

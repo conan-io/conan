@@ -74,6 +74,7 @@ class ConanFile:
         self.requires = Requirements(getattr(self, "requires", None),
                                      getattr(self, "build_requires", None),
                                      getattr(self, "test_requires", None))
+        self.options = Options(self.options or {}, self.default_options)
 
         # user declared variables
         self.user_info = None
@@ -89,13 +90,6 @@ class ConanFile:
         # layout() method related variables:
         self.folders = Folders()
         self.cpp = Infos()
-
-        self.cpp.package.includedirs = ["include"]
-        self.cpp.package.libdirs = ["lib"]
-        self.cpp.package.bindirs = ["bin"]
-        self.cpp.package.resdirs = ["res"]
-        self.cpp.package.builddirs = [""]
-        self.cpp.package.frameworkdirs = ["Frameworks"]
 
     @property
     def output(self):
@@ -136,7 +130,7 @@ class ConanFile:
     def initialize(self, settings, buildenv=None):
         # If we move this to constructor, the python_require inheritance in init fails
         # and "conan inspect" also breaks
-        self.options = Options(self.options or {}, self.default_options)
+
         self._conan_buildenv = buildenv
         try:
             settings.constrained(self.settings)
