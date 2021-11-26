@@ -1,7 +1,8 @@
 from conans.cli.api.conan_api import ConanAPIV2
-from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, get_remote_selection
+from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conans.cli.commands import CommandResult
 from conans.cli.commands.list import list_recipes_cli_formatter, json_formatter
+from conans.cli.common import get_remote_selection
 from conans.errors import NotFoundException, PackageNotFoundException
 
 search_formatters = {

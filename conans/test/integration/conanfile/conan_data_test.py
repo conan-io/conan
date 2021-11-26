@@ -168,6 +168,8 @@ class Lib(ConanFile):
             from conans import ConanFile
 
             class Lib(ConanFile):
+                def layout(self):
+                    self.folders.build = "tmp/build"
 
                 def _assert_data(self):
                     assert(self.conan_data["sources"]["all"]["url"] == "this url")

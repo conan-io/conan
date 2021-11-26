@@ -2,6 +2,7 @@ import os
 
 from conans.cli.command import Extender, OnceArgument
 from conans.cli.output import ConanOutput
+from conans.errors import ConanException
 from conans.model.graph_lock import LOCKFILE, Lockfile
 
 _help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
@@ -103,7 +104,23 @@ def get_profiles_from_args(conan_api, args):
     return profile_host, profile_build
 
 
+def get_remote_selection(conan_api, remote_patterns):
+    """
+    Return a list of Remote() objects matching the specified patterns. If a pattern doesn't match
+    anything, it fails
+    """
+    ret_remotes = []
+    for pattern in remote_patterns:
+        tmp = conan_api.remotes.list(pattern=pattern, only_active=True)
+        if not tmp:
+            raise ConanException("Remotes for pattern '{}' can't be found or are "
+                                 "disabled".format(pattern))
+        ret_remotes.extend(tmp)
+    return ret_remotes
+
+
 def get_lockfile(lockfile, strict=False):
+
     graph_lock = None
     if lockfile:
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
