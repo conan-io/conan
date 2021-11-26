@@ -87,7 +87,6 @@ class SettingsItem(object):
         child_setting = self._get_child(self._value)
         delattr(child_setting, item)
 
-
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
             raise undefined_field(self._name, item, None, self._value)
@@ -179,13 +178,6 @@ class Settings(object):
             return str(tmp)
         return default
 
-    @staticmethod
-    def loads(text):
-        try:
-            return Settings(yaml.safe_load(text) or {})
-        except (yaml.YAMLError, AttributeError) as ye:
-            raise ConanException("Invalid settings.yml format: {}".format(ye))
-
     def copy(self):
         """ deepcopy, recursive
         """
@@ -193,6 +185,13 @@ class Settings(object):
         for k, v in self._data.items():
             result._data[k] = v.copy()
         return result
+
+    @staticmethod
+    def loads(text):
+        try:
+            return Settings(yaml.safe_load(text) or {})
+        except (yaml.YAMLError, AttributeError) as ye:
+            raise ConanException("Invalid settings.yml format: {}".format(ye))
 
     def validate(self):
         for field in self.fields:
@@ -231,11 +230,6 @@ class Settings(object):
     def values(self):
         return Values.from_list(self.values_list)
 
-    @values.setter
-    def values(self, vals):
-        assert isinstance(vals, Values)
-        self.update_values(vals.as_list())
-
     @property
     def values_list(self):
         result = []
@@ -258,6 +252,11 @@ class Settings(object):
             for setting in list_settings[:-1]:
                 attr = getattr(attr, setting)
             setattr(attr, list_settings[-1], str(value))
+
+    @values.setter
+    def values(self, vals):
+        assert isinstance(vals, Values)
+        self.update_values(vals.as_list())
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
