@@ -46,4 +46,4 @@ class InstallMissingDependency(unittest.TestCase):
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . pkg/1.0@", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'dep1/1.0', 'dep2/1.0'", client.out)
-        self.assertIn("Try to build from sources with '--build=dep1 --build=dep2'", client.out)
+        self.assertIn("Or try to build locally from sources with '--build=dep1 --build=dep2'", client.out)
