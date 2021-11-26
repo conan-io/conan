@@ -13,13 +13,17 @@ class GraphAPI:
     @api_method
     def load_root_node(self, reference, path, profile_host, profile_build, lockfile, root_ref,
                        create_reference=None, is_build_require=False,
-                       require_overrides=None):
+                       require_overrides=None, remote=None, update=None):
 
         if path and reference:
             raise ConanException("Both path and reference arguments were provided. Please provide "
                                  "only one of them")
 
         app = ConanApp(self.conan_api.cache_folder)
+        # necessary for correct resolution and update of remote python_requires
+        remote = [remote] if remote is not None else None
+        app.load_remotes(remote, update=update)
+
         graph_manager, cache = app.graph_manager, app.cache
         reference = reference or path
         root_node = graph_manager._load_root_node(reference, create_reference, profile_host,

@@ -124,7 +124,9 @@ def install(conan_api, parser, *args, **kwargs):
                                                lockfile, root_ref,
                                                create_reference=None,
                                                is_build_require=args.build_require,
-                                               require_overrides=args.require_override)
+                                               require_overrides=args.require_override,
+                                               remote=remote,
+                                               update=args.update)
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
