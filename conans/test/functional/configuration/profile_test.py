@@ -70,7 +70,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install .. -pr=sub/profile2", assert_error=True)
         self.assertIn("ERROR: Profile not found: sub/profile2", self.client.out)
         self.client.run("install .. -pr=sub/profile")
-        self.assertIn("conanfile.txt: Installing package", self.client.out)
+        self.assertIn("Installing (downloading, building) binaries", self.client.out)
 
     def test_base_profile_generated(self):
         """we are testing that the default profile is created (when not existing, fresh install)

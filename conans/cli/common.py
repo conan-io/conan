@@ -119,10 +119,11 @@ def get_remote_selection(conan_api, remote_patterns):
     return ret_remotes
 
 
-def get_lockfile(lockfile):
+def get_lockfile(lockfile, strict=False):
     graph_lock = None
     if lockfile:
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock = Lockfile.load(lockfile)
+        graph_lock.strict = strict
         ConanOutput().info("Using lockfile: '{}'".format(lockfile))
     return graph_lock

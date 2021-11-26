@@ -2,8 +2,9 @@ import os
 
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
-    get_profiles_from_args
+    get_profiles_from_args, get_lockfile
 from conans.client.conan_api import _make_abs_path
+from conans.client.graph.printer import print_graph
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 
@@ -90,35 +91,44 @@ def install(conan_api, parser, *args, **kwargs):
 
     args = parser.parse_args(*args)
 
-    profile_host, profile_build = get_profiles_from_args(conan_api, args)
-
+    # parameter validation
+    if args.reference and (args.name or args.version or args.user or args.channel):
+        raise ConanException("Can't use --name, --version, --user or --channel arguments with "
+                             "--reference")
     cwd = os.getcwd()
-
+    install_folder = _make_abs_path(args.install_folder, cwd)
+    lockfile_path = _make_abs_path(args.lockfile, cwd) if args.lockfile else None
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
+    conanfile_folder = os.path.dirname(path) if path else None
     reference = RecipeReference.loads(args.reference) if args.reference else None
-
     if not path and not reference:
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
+    # Basic collaborators, remotes, lockfile, profiles
     remote = conan_api.remotes.get(args.remote) if args.remote else None
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
+    profile_host, profile_build = get_profiles_from_args(conan_api, args)
+    root_ref = RecipeReference(name=args.name, version=args.version,
+                               user=args.user, channel=args.channel)
 
-    info = None
-    try:
-        info = conan_api.install.install(path=path,
-                                         name=args.name, version=args.version,
-                                         user=args.user, channel=args.channel,
-                                         reference=reference,
-                                         profile_host=profile_host,
-                                         profile_build=profile_build,
-                                         remote=remote,
-                                         build=args.build,
-                                         update=args.update,
-                                         generators=args.generator,
-                                         no_imports=args.no_imports,
-                                         install_folder=args.install_folder,
-                                         lockfile_in=args.lockfile,
-                                         lockfile_out=args.lockfile_out,
-                                         is_build_require=args.build_require,
-                                         require_overrides=args.require_override)
-    except ConanException as exc:
-        raise
+    # TODO: Discuss: This could be further split into graph + binary-analyzer
+    deps_graph = conan_api.graph.load_graph(reference=reference,
+                                            path=path,
+                                            profile_host=profile_host,
+                                            profile_build=profile_build,
+                                            lockfile=lockfile,
+                                            root_ref=root_ref,
+                                            build_modes=args.build,
+                                            is_build_require=args.build_require,
+                                            require_overrides=args.require_override,
+                                            remote=remote,
+                                            update=args.update)
+    print_graph(deps_graph)
+    conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
+                                       remote=remote, update=args.update)
+    conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd, reference=reference,
+                                       install_folder=install_folder, generators=args.generator,
+                                       no_imports=args.no_imports, conanfile_folder=conanfile_folder)
+    if args.lockfile_out:
+        lockfile_out = _make_abs_path(args.lockfile_out, cwd)
+        lockfile.save(lockfile_out)
