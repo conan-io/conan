@@ -5,7 +5,7 @@ import tqdm
 from colorama import Fore, Style
 
 from conans.client.userio import color_enabled
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 
 
 class Color(object):

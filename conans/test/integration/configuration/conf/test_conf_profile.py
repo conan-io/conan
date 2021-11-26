@@ -102,7 +102,7 @@ def test_config_profile_forbidden(client):
         cache:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
-    client.run("install . pkg/0.1@ -pr=myprofile", assert_error=True)
+    client.run("install . --name=pkg --version=0.1 -pr=myprofile", assert_error=True)
     assert ("ERROR: Error reading 'myprofile' profile: [conf] "
             "'cache:verbosity' not allowed in profiles" in client.out)
 

@@ -15,8 +15,8 @@ class DepsGraphTest(unittest.TestCase):
         so they can be repeated if necessary in the graph (common
         static libraries)
         """
-        ref1 = RecipeReference.loads("Hello/0.1@user/stable")
-        ref2 = RecipeReference.loads("Hello/0.1@user/stable")
+        ref1 = RecipeReference.loads("hello/0.1@user/stable")
+        ref2 = RecipeReference.loads("hello/0.1@user/stable")
 
         conanfile1 = ConanFile(None)
         conanfile2 = ConanFile(None)
@@ -26,9 +26,9 @@ class DepsGraphTest(unittest.TestCase):
         self.assertNotEqual(n1, n2)
 
     def test_basic_levels(self):
-        ref1 = RecipeReference.loads("Hello/1.0@user/stable")
-        ref2 = RecipeReference.loads("Hello/2.0@user/stable")
-        ref3 = RecipeReference.loads("Hello/3.0@user/stable")
+        ref1 = RecipeReference.loads("hello/1.0@user/stable")
+        ref2 = RecipeReference.loads("hello/2.0@user/stable")
+        ref3 = RecipeReference.loads("hello/3.0@user/stable")
 
         deps = DepsGraph()
         n1 = Node(ref1, Mock(), context=CONTEXT_HOST)
@@ -42,10 +42,10 @@ class DepsGraphTest(unittest.TestCase):
         self.assertEqual([[n3], [n2], [n1]], deps.by_levels())
 
     def test_multi_levels(self):
-        ref1 = RecipeReference.loads("Hello/1.0@user/stable")
-        ref2 = RecipeReference.loads("Hello/2.0@user/stable")
-        ref31 = RecipeReference.loads("Hello/31.0@user/stable")
-        ref32 = RecipeReference.loads("Hello/32.0@user/stable")
+        ref1 = RecipeReference.loads("hello/1.0@user/stable")
+        ref2 = RecipeReference.loads("hello/2.0@user/stable")
+        ref31 = RecipeReference.loads("hello/31.0@user/stable")
+        ref32 = RecipeReference.loads("hello/32.0@user/stable")
 
         deps = DepsGraph()
         n1 = Node(ref1, Mock(), context=CONTEXT_HOST)
@@ -63,11 +63,11 @@ class DepsGraphTest(unittest.TestCase):
 
     def test_multi_levels_2(self):
 
-        ref1 = RecipeReference.loads("Hello/1.0@user/stable")
-        ref2 = RecipeReference.loads("Hello/2.0@user/stable")
-        ref5 = RecipeReference.loads("Hello/5.0@user/stable")
-        ref31 = RecipeReference.loads("Hello/31.0@user/stable")
-        ref32 = RecipeReference.loads("Hello/32.0@user/stable")
+        ref1 = RecipeReference.loads("hello/1.0@user/stable")
+        ref2 = RecipeReference.loads("hello/2.0@user/stable")
+        ref5 = RecipeReference.loads("hello/5.0@user/stable")
+        ref31 = RecipeReference.loads("hello/31.0@user/stable")
+        ref32 = RecipeReference.loads("hello/32.0@user/stable")
 
         deps = DepsGraph()
         n1 = Node(ref1, Mock(), context=CONTEXT_HOST)
@@ -88,11 +88,11 @@ class DepsGraphTest(unittest.TestCase):
 
     def test_multi_levels_3(self):
 
-        ref1 = RecipeReference.loads("Hello/1.0@user/stable")
-        ref2 = RecipeReference.loads("Hello/2.0@user/stable")
-        ref5 = RecipeReference.loads("Hello/5.0@user/stable")
-        ref31 = RecipeReference.loads("Hello/31.0@user/stable")
-        ref32 = RecipeReference.loads("Hello/32.0@user/stable")
+        ref1 = RecipeReference.loads("hello/1.0@user/stable")
+        ref2 = RecipeReference.loads("hello/2.0@user/stable")
+        ref5 = RecipeReference.loads("hello/5.0@user/stable")
+        ref31 = RecipeReference.loads("hello/31.0@user/stable")
+        ref32 = RecipeReference.loads("hello/32.0@user/stable")
 
         deps = DepsGraph()
         n1 = Node(ref1, Mock(), context=CONTEXT_HOST)

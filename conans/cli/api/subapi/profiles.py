@@ -1,7 +1,6 @@
 import os
 
 from conans.client.cache.cache import ClientCache
-from conans.client.conf.detect import detect_defaults_settings
 from conans.client.profile_loader import ProfileLoader
 from conans.model.profile import Profile
 
@@ -36,6 +35,8 @@ class ProfilesAPI:
         loader = ProfileLoader(self._cache)
         env = None  # TODO: Not handling environment
         profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd)
+        # Apply the new_config to the profiles the global one, so recipes get it too
+        profile.conf.rebase_conf_definition(self._cache.new_config)
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):
@@ -69,6 +70,7 @@ class ProfilesAPI:
         @return: an automatically detected Profile, with a "best guess" of the system settings
         """
         profile = Profile()
+        from conans.client.conf.detect import detect_defaults_settings
         settings = detect_defaults_settings()
         for name, value in settings:
             profile._settings_values[name] = value

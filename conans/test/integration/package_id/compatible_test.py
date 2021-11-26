@@ -168,7 +168,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
     def test_visual_package_compatible_with_intel(self):
         client = TestClient()
-        ref = RecipeReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -200,17 +200,17 @@ class CompatibleIDsTest(unittest.TestCase):
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
         client.run("create . %s --profile visual_profile" % repr(ref))
-        package_id = re.search(r"Bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
-        client.run("install %s -pr intel_profile" % repr(ref))
+        package_id = re.search(r"bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
+        client.run("install --reference=%s -pr intel_profile" % repr(ref))
         missing_id = "c1b60feb368929efd9e60fd47dbfa45969742332"
-        self.assertIn(f"Bye/0.1@us/ch: Main binary package '{missing_id}'"
+        self.assertIn(f"bye/0.1@us/ch: Main binary package '{missing_id}'"
                       " missing. Using compatible package "
                       f"'{package_id}'", client.out)
-        self.assertIn(f"Bye/0.1@us/ch:{package_id} - Cache", client.out)
+        self.assertIn(f"bye/0.1@us/ch:{package_id} - Cache", client.out)
 
     def test_wrong_base_compatible(self):
         client = TestClient()
-        ref = RecipeReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -235,7 +235,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
     def test_intel_package_compatible_with_base(self):
         client = TestClient()
-        ref = RecipeReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -267,18 +267,18 @@ class CompatibleIDsTest(unittest.TestCase):
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
         client.run("create . %s --profile intel_profile" % repr(ref))
-        package_id = re.search(r"Bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
-        client.run("install %s -pr visual_profile" % repr(ref))
+        package_id = re.search(r"bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
+        client.run("install --reference=%s -pr visual_profile" % repr(ref))
         missing_id = "6e399d2c50620569974e4d894ee9651ee7861be9"
-        self.assertIn("Bye/0.1@us/ch: Main binary package "
+        self.assertIn("bye/0.1@us/ch: Main binary package "
                       f"'{missing_id}' missing. Using compatible "
                       f"package '{package_id}'",
                       client.out)
-        self.assertIn(f"Bye/0.1@us/ch:{package_id} - Cache", client.out)
+        self.assertIn(f"bye/0.1@us/ch:{package_id} - Cache", client.out)
 
     def test_no_valid_compiler_keyword_base(self):
         client = TestClient()
-        ref = RecipeReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -308,7 +308,7 @@ class CompatibleIDsTest(unittest.TestCase):
         """If I specify an invalid subsetting of my base compiler, it won't fail, but it won't
         file the available package_id"""
         client = TestClient()
-        ref = RecipeReference.loads("Bye/0.1@us/ch")
+        ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -339,12 +339,12 @@ class CompatibleIDsTest(unittest.TestCase):
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
         client.run("create . %s --profile intel_profile" % repr(ref))
-        client.run("install %s -pr visual_profile" % repr(ref), assert_error=True)
-        self.assertIn("Missing prebuilt package for 'Bye/0.1@us/ch'", client.out)
+        client.run("install --reference=%s -pr visual_profile" % repr(ref), assert_error=True)
+        self.assertIn("Missing prebuilt package for 'bye/0.1@us/ch'", client.out)
 
     def test_additional_id_mode(self):
-        c1 = GenConanfile().with_name("AA").with_version("1.0")
-        c2 = GenConanfile().with_name("BB").with_version("1.0").with_require("AA/1.0")
+        c1 = GenConanfile().with_name("aa").with_version("1.0")
+        c2 = GenConanfile().with_name("bb").with_version("1.0").with_require("aa/1.0")
         client = TestClient()
         # Recipe revision mode
         save(client.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
@@ -357,8 +357,8 @@ class CompatibleIDsTest(unittest.TestCase):
 
         # Back to semver default
         save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
-        client.run("install BB/1.0@", assert_error=True)
-        self.assertIn("Missing prebuilt package for 'BB/1.0'", client.out)
+        client.run("install --reference=bb/1.0@", assert_error=True)
+        self.assertIn("Missing prebuilt package for 'bb/1.0'", client.out)
 
         # What if client modifies the packages declaring a compatible_package with the recipe mode
         # Recipe revision mode
@@ -380,12 +380,12 @@ class CompatibleIDsTest(unittest.TestCase):
 
         client.save({"conanfile.py": c2})
         client.run("create .")
-        package_id = "c4597d37d3321fbd01d761b83d9cef4baed840db"
+        package_id = "f29e72f904368de60f68e77dc245fcb37b2af6af"
         self.assertIn(f"Package '{package_id}' created", client.out)
 
         # Back to semver mode
         save(client.cache.new_config_path, "core.package_id:default_mode=semver_mode")
-        client.run("install BB/1.0@ --update")
+        client.run("install --reference=bb/1.0@ --update")
         self.assertIn(f"Using compatible package '{package_id}'", client.out)
 
     def test_package_id_consumers(self):
@@ -539,7 +539,7 @@ def test_msvc_visual_incompatible():
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.1
+        compiler.version=19.1X
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release
@@ -549,9 +549,9 @@ def test_msvc_visual_incompatible():
                  "profile": profile})
     client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
                '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
-    client.run("install pkg/0.1@ -pr=profile")
+    client.run("install --reference=pkg/0.1@ -pr=profile")
     assert "Using compatible package" in client.out
     new_config = "core.package_id:msvc_visual_incompatible=1"
     save(client.cache.new_config_path, new_config)
-    client.run("install pkg/0.1@ -pr=profile", assert_error=True)
+    client.run("install --reference=pkg/0.1@ -pr=profile", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out

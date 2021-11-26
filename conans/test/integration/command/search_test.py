@@ -30,7 +30,7 @@ conan_vars1 = '''
 [options]
     use_Qt=True
 [full_requires]
-  Hello2/0.1@lasote/stable:11111
+  hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
 '''
@@ -55,7 +55,7 @@ conan_vars1c = '''
 [options]
     use_Qt=False
 [full_requires]
-  Hello2/0.1@lasote/stable:11111
+  hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
 '''  # The recipe_hash correspond to the faked conanmanifests in export
@@ -100,7 +100,7 @@ conan_vars4 = """[settings]
 [options]
   language=1
 [full_requires]
-  Hello2/0.1@lasote/stable:11111
+  hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
 """
@@ -122,14 +122,14 @@ class SearchTest(unittest.TestCase):
         self.assertIn('There are no packages', output)
 
         # Conans with and without packages created
-        root_folder1 = 'Hello/1.4.10/myuser/testing'
+        root_folder1 = 'hello/1.4.10/myuser/testing'
         root_folder2 = 'helloTest/1.4.10/myuser/stable'
         root_folder3 = 'Bye/0.14/myuser/testing'
         root_folder4 = 'NodeInfo/1.0.2/myuser/stable'
         root_folder5 = 'MissFile/1.0.2/myuser/stable'
-        root_folder6 = 'Hello/1.5.10/myuser/testing'
-        root_folder11 = 'Hello/1.4.11/myuser/testing'
-        root_folder12 = 'Hello/1.4.12/myuser/testing'
+        root_folder6 = 'hello/1.5.10/myuser/testing'
+        root_folder11 = 'hello/1.4.11/myuser/testing'
+        root_folder12 = 'hello/1.4.12/myuser/testing'
         root_folder_tool = 'Tool/1.0.0/myuser/testing'
 
         self.client.save({"Empty/1.10/fake/test/export/fake.txt": "//",
@@ -219,10 +219,10 @@ class SearchTest(unittest.TestCase):
         def check():
             for remote in ("local", "search_able"):
                 expected = """Remote '{}':
-Hello/1.4.10@myuser/testing
-Hello/1.4.11@myuser/testing
-Hello/1.4.12@myuser/testing
-Hello/1.5.10@myuser/testing
+hello/1.4.10@myuser/testing
+hello/1.4.11@myuser/testing
+hello/1.4.12@myuser/testing
+hello/1.5.10@myuser/testing
 helloTest/1.4.10@myuser/stable""".format(remote)
                 self.assertIn(expected, self.client.out)
 
@@ -235,106 +235,106 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def test_recipe_search(self):
         self.client.run("search Hello*")
         self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n"
-                         "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n"
-                         "Hello/1.5.10@myuser/testing\n"
+                         "hello/1.4.10@myuser/testing\n"
+                         "hello/1.4.11@myuser/testing\n"
+                         "hello/1.4.12@myuser/testing\n"
+                         "hello/1.5.10@myuser/testing\n"
                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
         self.client.run("search Hello* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n"
-                         "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n"
-                         "Hello/1.5.10@myuser/testing\n", self.client.out)
+                         "hello/1.4.10@myuser/testing\n"
+                         "hello/1.4.11@myuser/testing\n"
+                         "hello/1.4.12@myuser/testing\n"
+                         "hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search *myuser* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
                          "Bye/0.14@myuser/testing\n"
-                         "Hello/1.4.10@myuser/testing\n"
-                         "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n"
-                         "Hello/1.5.10@myuser/testing\n"
+                         "hello/1.4.10@myuser/testing\n"
+                         "hello/1.4.11@myuser/testing\n"
+                         "hello/1.4.12@myuser/testing\n"
+                         "hello/1.5.10@myuser/testing\n"
                          "MissFile/1.0.2@myuser/stable\n"
                          "NodeInfo/1.0.2@myuser/stable\n"
                          "Tool/1.0.0@myuser/testing\n"
                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
-        self.client.run("search Hello/*@myuser/testing")
-        self.assertIn("Hello/1.4.10@myuser/testing\n"
-                      "Hello/1.4.11@myuser/testing\n"
-                      "Hello/1.4.12@myuser/testing\n"
-                      "Hello/1.5.10@myuser/testing\n", self.client.out)
+        self.client.run("search hello/*@myuser/testing")
+        self.assertIn("hello/1.4.10@myuser/testing\n"
+                      "hello/1.4.11@myuser/testing\n"
+                      "hello/1.4.12@myuser/testing\n"
+                      "hello/1.5.10@myuser/testing\n", self.client.out)
 
     def test_search_partial_match(self):
         self.client.run("search Hello")
         self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n"
-                         "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n"
-                         "Hello/1.5.10@myuser/testing\n", self.client.out)
+                         "hello/1.4.10@myuser/testing\n"
+                         "hello/1.4.11@myuser/testing\n"
+                         "hello/1.4.12@myuser/testing\n"
+                         "hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search hello")
         self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n"
-                         "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n"
-                         "Hello/1.5.10@myuser/testing\n", self.client.out)
+                         "hello/1.4.10@myuser/testing\n"
+                         "hello/1.4.11@myuser/testing\n"
+                         "hello/1.4.12@myuser/testing\n"
+                         "hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n"
-                         "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n"
-                         "Hello/1.5.10@myuser/testing\n", self.client.out)
+                         "hello/1.4.10@myuser/testing\n"
+                         "hello/1.4.11@myuser/testing\n"
+                         "hello/1.4.12@myuser/testing\n"
+                         "hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hel")
         self.assertEqual("There are no packages matching the 'Hel' pattern\n", self.client.out)
 
-        self.client.run("search Hello/")
+        self.client.run("search hello/")
         self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n"
-                         "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n"
-                         "Hello/1.5.10@myuser/testing\n", self.client.out)
+                         "hello/1.4.10@myuser/testing\n"
+                         "hello/1.4.11@myuser/testing\n"
+                         "hello/1.4.12@myuser/testing\n"
+                         "hello/1.5.10@myuser/testing\n", self.client.out)
 
-        self.client.run("search Hello/1.4.10")
+        self.client.run("search hello/1.4.10")
         self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "hello/1.4.10@myuser/testing\n", self.client.out)
 
-        self.client.run("search Hello/1.4")
-        self.assertEqual("There are no packages matching the 'Hello/1.4' pattern\n",
+        self.client.run("search hello/1.4")
+        self.assertEqual("There are no packages matching the 'hello/1.4' pattern\n",
                          self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser")
+        self.client.run("search hello/1.4.10@myuser")
         self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "hello/1.4.10@myuser/testing\n", self.client.out)
 
-        self.client.run("search Hello/1.4.10@fen")
-        self.assertEqual("There are no packages matching the 'Hello/1.4.10@fen' pattern\n",
+        self.client.run("search hello/1.4.10@fen")
+        self.assertEqual("There are no packages matching the 'hello/1.4.10@fen' pattern\n",
                          self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser/")
+        self.client.run("search hello/1.4.10@myuser/")
         self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "hello/1.4.10@myuser/testing\n", self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser/test", assert_error=True)
-        self.assertEqual("ERROR: Recipe not found: 'Hello/1.4.10@myuser/test'\n", self.client.out)
+        self.client.run("search hello/1.4.10@myuser/test", assert_error=True)
+        self.assertEqual("ERROR: Recipe not found: 'hello/1.4.10@myuser/test'\n", self.client.out)
 
     def test_search_raw(self):
         self.client.run("search Hello* --raw")
-        self.assertEqual("Hello/1.4.10@myuser/testing\n"
-                         "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n"
-                         "Hello/1.5.10@myuser/testing\n"
+        self.assertEqual("hello/1.4.10@myuser/testing\n"
+                         "hello/1.4.11@myuser/testing\n"
+                         "hello/1.4.12@myuser/testing\n"
+                         "hello/1.5.10@myuser/testing\n"
                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
-        self.client.run("search Hello/1.4.10@myuser/testing --raw")
+        self.client.run("search hello/1.4.10@myuser/testing --raw")
         self.assertNotIn("Existing packages for recipe", self.client.out)
 
     def test_search_html_table(self):
-        self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
+        self.client.run("search hello/1.4.10@myuser/testing --table=table.html")
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
-        self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
+        self.assertIn("<h1>hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>LinuxPackageSHA</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
@@ -357,10 +357,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         os.rmdir(self.servers["search_able"].server_store.store)
         self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
-        self.client.run("search Hello/1.4.10@myuser/testing -r=all --table=table.html")
+        self.client.run("search hello/1.4.10@myuser/testing -r=all --table=table.html")
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
 
-        self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
+        self.assertIn("<h1>hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<th>remote</th>"
                       "<th>package_id</th>", html)
         self.assertIn("<td>local</td>"
@@ -388,19 +388,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("-q parameter only allowed with a valid recipe", str(self.client.out))
 
     def test_package_search_with_empty_query(self):
-        self.client.run("search Hello/1.4.10@myuser/testing")
+        self.client.run("search hello/1.4.10@myuser/testing")
         self.assertIn("WindowsPackageSHA", self.client.out)
         self.assertIn("PlatformIndependantSHA", self.client.out)
         self.assertIn("LinuxPackageSHA", self.client.out)
 
     def test_package_search_nonescaped_characters(self):
-        self.client.run('search Hello/1.4.10@myuser/testing '
+        self.client.run('search hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11"')
         self.assertIn("LinuxPackageSHA", self.client.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing '
+        self.client.run('search hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++"')
         self.assertNotIn("LinuxPackageSHA", self.client.out)
         self.assertIn("PlatformIndependantSHA", self.client.out)
@@ -410,13 +410,13 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         os.rmdir(self.servers["local"].server_store.store)
         self._copy_to_server(self.client.cache, self.servers["local"].server_store)
 
-        self.client.run('search Hello/1.4.10@myuser/testing '
+        self.client.run('search hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
         self.assertIn("LinuxPackageSHA", self.client.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing '
+        self.client.run('search hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++" -r local')
         self.assertNotIn("LinuxPackageSHA", self.client.out)
         self.assertIn("PlatformIndependantSHA", self.client.out)
@@ -426,19 +426,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         os.rmdir(self.servers["search_able"].server_store.store)
         self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
-        self.client.run('search Hello/1.4.10@myuser/testing '
+        self.client.run('search hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r all')
         self.assertEqual(str(self.client.out).count("LinuxPackageSHA"), 2)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing '
+        self.client.run('search hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++" -r all')
         self.assertNotIn("LinuxPackageSHA", self.client.out)
         self.assertEqual(str(self.client.out).count("PlatformIndependantSHA"), 2)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
 
-    def _assert_pkg_q(self, query, packages_found, remote, ref="Hello/1.4.10@myuser/testing"):
+    def _assert_pkg_q(self, query, packages_found, remote, ref="hello/1.4.10@myuser/testing"):
 
         command = 'search %s -q \'%s\'' % (ref, query)
         if remote:
@@ -521,7 +521,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             q = 'compiler="gcc" AND compiler.libcxx="libstdc++" AND ' \
                 'arch="x86" AND arch.vendor="intel" AND os.distro="Ubuntu" AND ' \
                 'os.distro.version="19.04" AND compiler.version="4.3" AND os="Linux"'
-            self._assert_pkg_q(q, ["LinuxPackageCustom"], remote, ref="Hello/1.5.10@myuser/testing")
+            self._assert_pkg_q(q, ["LinuxPackageCustom"], remote, ref="hello/1.5.10@myuser/testing")
 
         # test in local
         test_cases()
@@ -557,7 +557,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         os.rmdir(self.servers["search_able"].server_store.store)
         self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
 
-        self.client.run("search Hello/1.4.10@myuser/testing -r=all")
+        self.client.run("search hello/1.4.10@myuser/testing -r=all")
         self.assertIn("Existing recipe in remote 'local':", self.client.out)
         self.assertIn("Existing recipe in remote 'search_able':", self.client.out)
 
@@ -566,26 +566,26 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(str(self.client.out).count("LinuxPackageSHA"), 2)
 
     def test_package_search_with_invalid_query(self):
-        self.client.run("search Hello/1.4.10@myuser/testing -q 'invalid'", assert_error=True)
+        self.client.run("search hello/1.4.10@myuser/testing -q 'invalid'", assert_error=True)
         self.assertIn("Invalid package query: invalid", self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser/testing -q 'os= 3'", assert_error=True)
+        self.client.run("search hello/1.4.10@myuser/testing -q 'os= 3'", assert_error=True)
         self.assertIn("Invalid package query: os= 3", self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser/testing -q 'os=3 FAKE '", assert_error=True)
+        self.client.run("search hello/1.4.10@myuser/testing -q 'os=3 FAKE '", assert_error=True)
         self.assertIn("Invalid package query: os=3 FAKE ", self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser/testing -q 'os=3 os.compiler=4'",
+        self.client.run("search hello/1.4.10@myuser/testing -q 'os=3 os.compiler=4'",
                         assert_error=True)
         self.assertIn("Invalid package query: os=3 os.compiler=4", self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser/testing -q 'not os=3 AND os.compiler=4'",
+        self.client.run("search hello/1.4.10@myuser/testing -q 'not os=3 AND os.compiler=4'",
                         assert_error=True)
         self.assertIn("Invalid package query: not os=3 AND os.compiler=4. "
                       "'not' operator is not allowed",
                       self.client.out)
 
-        self.client.run("search Hello/1.4.10@myuser/testing -q 'os=3 AND !os.compiler=4'",
+        self.client.run("search hello/1.4.10@myuser/testing -q 'os=3 AND !os.compiler=4'",
                         assert_error=True)
         self.assertIn("Invalid package query: os=3 AND !os.compiler=4. '!' character is not allowed",
                       self.client.out)
@@ -593,53 +593,53 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def test_package_search_properties_filter(self):
 
         # All packages without filter
-        self.client.run("search Hello/1.4.10@myuser/testing -q ''")
+        self.client.run("search hello/1.4.10@myuser/testing -q ''")
 
         self.assertIn("WindowsPackageSHA", self.client.out)
         self.assertIn("PlatformIndependantSHA", self.client.out)
         self.assertIn("LinuxPackageSHA", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing -q os=Windows')
+        self.client.run('search hello/1.4.10@myuser/testing -q os=Windows')
         self.assertIn("WindowsPackageSHA", self.client.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("LinuxPackageSHA", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing -q "os=Windows or os=None"')
+        self.client.run('search hello/1.4.10@myuser/testing -q "os=Windows or os=None"')
         self.assertIn("WindowsPackageSHA", self.client.out)
         self.assertIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("LinuxPackageSHA", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing -q "os=Windows or os=Linux"')
+        self.client.run('search hello/1.4.10@myuser/testing -q "os=Windows or os=Linux"')
         self.assertIn("WindowsPackageSHA", self.client.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertIn("LinuxPackageSHA", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing '
+        self.client.run('search hello/1.4.10@myuser/testing '
                         '-q "os=Windows AND compiler.version=4.5"')
-        self.assertIn("There are no packages for reference 'Hello/1.4.10@myuser/testing' "
+        self.assertIn("There are no packages for reference 'hello/1.4.10@myuser/testing' "
                       "matching the query 'os=Windows AND compiler.version=4.5'", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing -q "os=Linux AND compiler.version=4.5"')
+        self.client.run('search hello/1.4.10@myuser/testing -q "os=Linux AND compiler.version=4.5"')
         self.assertNotIn("WindowsPackageSHA", self.client.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertIn("LinuxPackageSHA", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing -q "compiler.version=1.0"')
-        self.assertIn("There are no packages for reference 'Hello/1.4.10@myuser/testing' "
+        self.client.run('search hello/1.4.10@myuser/testing -q "compiler.version=1.0"')
+        self.assertIn("There are no packages for reference 'hello/1.4.10@myuser/testing' "
                       "matching the query 'compiler.version=1.0'", self.client.out)
 
-        self.client.run("search Hello/1.5.10@myuser/testing -q 'glib=glibc AND glib.version=2.29'")
-        self.assertIn("There are no packages for reference 'Hello/1.5.10@myuser/testing' matching "
+        self.client.run("search hello/1.5.10@myuser/testing -q 'glib=glibc AND glib.version=2.29'")
+        self.assertIn("There are no packages for reference 'hello/1.5.10@myuser/testing' matching "
                       "the query 'glib=glibc AND glib.version=2.29'", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing '
+        self.client.run('search hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.version=4.5"')
         self.assertNotIn("WindowsPackageSHA", self.client.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertIn("LinuxPackageSHA", self.client.out)
 
-        self.client.run('search Hello/1.4.10@myuser/testing -q "arch=x86"')
-        self.assertEqual("""Existing packages for recipe Hello/1.4.10@myuser/testing:
+        self.client.run('search hello/1.4.10@myuser/testing -q "arch=x86"')
+        self.assertEqual("""Existing packages for recipe hello/1.4.10@myuser/testing:
 
     Package_ID: LinuxPackageSHA
         [options]
@@ -651,7 +651,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             compiler.version: 4.5
             os: Linux
         [requires]
-            Hello2/0.1@lasote/stable:11111
+            hello2/0.1@lasote/stable:11111
             HelloInfo1/0.45@myuser/testing:33333
             OpenSSL/2.10@lasote/testing:2222
 
@@ -723,19 +723,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@myuser/testing'}
+                                'id': 'hello/1.4.10@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.11@myuser/testing'}
+                                'id': 'hello/1.4.11@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.12@myuser/testing'}
+                                'id': 'hello/1.4.12@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.5.10@myuser/testing'}
+                                'id': 'hello/1.5.10@myuser/testing'}
                         },
                         {
                             'recipe': {
@@ -765,19 +765,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                     'items': [
                         {
                              'recipe': {
-                                 'id': 'Hello/1.4.10@myuser/testing'}
+                                 'id': 'hello/1.4.10@myuser/testing'}
                         },
                         {
                              'recipe': {
-                                 'id': 'Hello/1.4.11@myuser/testing'}
+                                 'id': 'hello/1.4.11@myuser/testing'}
                         },
                         {
                              'recipe': {
-                                 'id': 'Hello/1.4.12@myuser/testing'}
+                                 'id': 'hello/1.4.12@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.5.10@myuser/testing'}
+                                'id': 'hello/1.5.10@myuser/testing'}
                         },
                         {
                              'recipe': {
@@ -790,19 +790,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@myuser/testing'}
+                                'id': 'hello/1.4.10@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.11@myuser/testing'}
+                                'id': 'hello/1.4.11@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.12@myuser/testing'}
+                                'id': 'hello/1.4.12@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.5.10@myuser/testing'}
+                                'id': 'hello/1.5.10@myuser/testing'}
                         },
                         {
                             'recipe': {
@@ -827,19 +827,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@myuser/testing'}
+                                'id': 'hello/1.4.10@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.11@myuser/testing'}
+                                'id': 'hello/1.4.11@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.12@myuser/testing'}
+                                'id': 'hello/1.4.12@myuser/testing'}
                         },
                         {
                             'recipe': {
-                                'id': 'Hello/1.5.10@myuser/testing'}
+                                'id': 'hello/1.5.10@myuser/testing'}
                         },
                         {
                             'recipe': {
@@ -852,7 +852,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(expected_output, output)
 
         # Test search packages local
-        self.client.run("search Hello/1.4.10@myuser/testing --json search.json")
+        self.client.run("search hello/1.4.10@myuser/testing --json search.json")
         self.assertTrue(os.path.exists(json_path))
         json_content = load(json_path)
         output = json.loads(json_content)
@@ -864,7 +864,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@myuser/testing'},
+                                'id': 'hello/1.4.10@myuser/testing'},
                             'packages': [
                                 {
                                     'id': 'LinuxPackageSHA',
@@ -877,7 +877,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler.version': '4.5',
                                         'os': 'Linux'},
                                     'requires': [
-                                        'Hello2/0.1@lasote/stable:11111',
+                                        'hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
                                         'OpenSSL/2.10@lasote/testing:2222']
                                 },
@@ -902,7 +902,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler.version': '8.1',
                                         'os': 'Windows'},
                                     'requires': [
-                                        'Hello2/0.1@lasote/stable:11111',
+                                        'hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
                                         'OpenSSL/2.10@lasote/testing:2222']
                                 }
@@ -915,7 +915,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(expected_output, output)
 
         # Test search packages remote
-        self.client.run("search Hello/1.4.10@myuser/testing -r search_able --json search.json")
+        self.client.run("search hello/1.4.10@myuser/testing -r search_able --json search.json")
         self.assertTrue(os.path.exists(json_path))
         json_content = load(json_path)
         output = json.loads(json_content)
@@ -927,7 +927,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@myuser/testing'},
+                                'id': 'hello/1.4.10@myuser/testing'},
                             'packages': [
                                 {
                                     'id': 'LinuxPackageSHA',
@@ -940,7 +940,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler.version': '4.5',
                                         'os': 'Linux'},
                                     'requires': [
-                                        'Hello2/0.1@lasote/stable:11111',
+                                        'hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
                                         'OpenSSL/2.10@lasote/testing:2222']
                                 },
@@ -965,7 +965,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler.version': '8.1',
                                         'os': 'Windows'},
                                     'requires': [
-                                        'Hello2/0.1@lasote/stable:11111',
+                                        'hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
                                         'OpenSSL/2.10@lasote/testing:2222']
                                 }
@@ -978,7 +978,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(expected_output, output)
 
         # Test search packages remote ALL
-        self.client.run("search Hello/1.4.10@myuser/testing -r all --json search.json")
+        self.client.run("search hello/1.4.10@myuser/testing -r all --json search.json")
         self.assertTrue(os.path.exists(json_path))
         json_content = load(json_path)
         output = json.loads(json_content)
@@ -990,7 +990,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@myuser/testing'},
+                                'id': 'hello/1.4.10@myuser/testing'},
                             'packages': [
                                 {
                                     'id': 'LinuxPackageSHA',
@@ -1003,7 +1003,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler.version': '4.5',
                                         'os': 'Linux'},
                                     'requires': [
-                                        'Hello2/0.1@lasote/stable:11111',
+                                        'hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
                                         'OpenSSL/2.10@lasote/testing:2222']
                                 },
@@ -1028,7 +1028,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler.version': '8.1',
                                         'os': 'Windows'},
                                     'requires': [
-                                        'Hello2/0.1@lasote/stable:11111',
+                                        'hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
                                         'OpenSSL/2.10@lasote/testing:2222']
                                 }
@@ -1041,7 +1041,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                     'items': [
                         {
                             'recipe': {
-                                'id': 'Hello/1.4.10@myuser/testing'},
+                                'id': 'hello/1.4.10@myuser/testing'},
                             'packages': [
                                 {
                                     'id': 'LinuxPackageSHA',
@@ -1054,7 +1054,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler.version': '4.5',
                                         'os': 'Linux'},
                                     'requires': [
-                                        'Hello2/0.1@lasote/stable:11111',
+                                        'hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
                                         'OpenSSL/2.10@lasote/testing:2222']
                                 },
@@ -1079,7 +1079,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler.version': '8.1',
                                         'os': 'Windows'},
                                     'requires': [
-                                        'Hello2/0.1@lasote/stable:11111',
+                                        'hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
                                         'OpenSSL/2.10@lasote/testing:2222']
                                 }
@@ -1223,7 +1223,7 @@ class Test(ConanFile):
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
         client.run("remove -f lib*")
-        client.run("install lib/1.0@user/testing --build")  # To update the local time
+        client.run("install --reference=lib/1.0@user/testing --build")  # To update the local time
 
         client.run("search lib/1.0@user/testing -r default --revisions")
 
@@ -1282,12 +1282,12 @@ class Test(ConanFile):
         self.assertIn("%s (%s)" % (first_prev, time_str), client.out)
 
         # If we update, (no updates available) there also time
-        client.run("install lib/1.0@user/testing --update")
+        client.run("install --reference=lib/1.0@user/testing --update")
         client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
         self.assertIn("%s (%s)" % (first_prev, time_str),  client.out)
 
         client.run("remove lib/1.0@user/testing -f")
-        client.run("install lib/1.0@user/testing")
+        client.run("install --reference=lib/1.0@user/testing")
         # Now installed the package the time is ok
         client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
         self.assertIn("%s (%s)" % (first_prev, time_str), client.out)

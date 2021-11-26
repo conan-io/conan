@@ -9,12 +9,12 @@ import pytest
 from mock import patch
 
 from conans import load
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.errors import RecipeNotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 
 
 @pytest.mark.artifactory_ready
@@ -33,14 +33,14 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         second one with a PREV of the binary.
         If a client installs without specifying -r remote1, it will iterate remote2 also"""
         conanfile = GenConanfile().with_package_file("file.txt", env_var="MY_VAR")
-        with environment_append({"MY_VAR": "1"}):
+        with environment_update({"MY_VAR": "1"}):
             pref = self.c_v2.create(self.ref, conanfile=conanfile)
         the_time = time.time()
         with patch.object(RevisionList, '_now', return_value=the_time):
             self.c_v2.upload_all(self.ref, remote="default")
         self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.package_id))
         # Same RREV, different PREV
-        with environment_append({"MY_VAR": "2"}):
+        with environment_update({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
 
         the_time = the_time + 10.0
@@ -50,7 +50,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         self.assertEqual(pref.ref.revision, pref2.ref.revision)
 
-        self.c_v2.run("install {}".format(self.ref))
+        self.c_v2.run("install --reference={}".format(self.ref))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.package_id),
                       self.c_v2.out)
@@ -108,7 +108,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.upload_all(RecipeReference.loads("lib/latest@conan/stable"))
         self.c_v2.remove_all()
 
-        self.c_v2.run("install lib/(latest)@conan/stable")
+        self.c_v2.run("install --reference=lib/(latest)@conan/stable")
         # Shouldn't be packages in the cache
         self.assertNotIn("doesn't belong to the installed recipe revision", self.c_v2.out)
 
@@ -126,7 +126,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.remove_all()
         assert len(self.c_v2.cache.get_recipe_revisions_references(self.ref)) == 0
 
-        self.c_v2.run("install {}".format(self.ref))
+        self.c_v2.run("install --reference={}".format(self.ref))
         local_rev = self.c_v2.recipe_revision(self.ref)
         local_prev = self.c_v2.package_revision(pref)
         self.assertEqual(local_rev, pref.ref.revision)
@@ -158,7 +158,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(rrev1_time_remote, rrev2_time_remote)
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)
 
-        client.run("install {} --update".format(self.ref))
+        client.run("install --reference={} --update".format(self.ref))
         self.assertIn("Package installed {}".format(pref2.package_id), client.out)
 
         rrev = client.recipe_revision(self.ref)
@@ -177,7 +177,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client2 = TurboTestClient(servers={"default": self.server}, inputs=["admin", "password"])
 
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
-        with environment_append({"MY_VAR": "1"}):
+        with environment_update({"MY_VAR": "1"}):
             pref = client.create(self.ref, conanfile=conanfile)
 
         time.sleep(1)
@@ -185,7 +185,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         with patch.object(RevisionList, '_now', return_value=time.time()):
             client.upload_all(self.ref)
 
-        with environment_append({"MY_VAR": "2"}):
+        with environment_update({"MY_VAR": "2"}):
             pref2 = client2.create(self.ref, conanfile=conanfile)
 
         with patch.object(RevisionList, '_now', return_value=time.time() + 20.0):
@@ -195,7 +195,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev2_time_remote = self.server.package_revision_time(pref2)
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)  # Two package revisions
 
-        client.run("install {} --update".format(self.ref))
+        client.run("install --reference={} --update".format(self.ref))
         self.assertIn("{} from 'default' - Cache (Updated date)".format(self.ref), client.out)
         self.assertIn("Retrieving package {}".format(pref.package_id), client.out)
 
@@ -219,7 +219,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(pref.ref.revision, ref2.revision)
 
         # Now we try to install the self.ref, the binary is missing when using revisions
-        command = "install {}".format(self.ref)
+        command = "install --reference={}".format(self.ref)
         client.run(command, assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for '{}'".format(self.ref), client.out)
 
@@ -228,10 +228,10 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # It fail and won't look the remotes unless --update
         client = self.c_v2
         ref = client.export(self.ref)
-        command = "install {}#fakerevision".format(ref)
+        command = "install --reference={}#fakerevision".format(ref)
         client.run(command, assert_error=True)
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
-        command = "install {}#fakerevision --update".format(ref)
+        command = "install --reference={}#fakerevision --update".format(ref)
         client.run(command, assert_error=True)
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
 
@@ -241,7 +241,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         new_client.upload_all(self.ref)
 
         # Repeat the install --update pointing to the new reference
-        client.run("install {} --update".format(repr(pref.ref)))
+        client.run("install --reference={} --update".format(repr(pref.ref)))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
 
     def test_revision_mismatch_packages_remote(self):
@@ -253,7 +253,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client = self.c_v2
         client.remove_all()
         client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
-        command = "install {}".format(self.ref)
+        command = "install --reference={}".format(self.ref)
 
         client.run(command, assert_error=True)
         self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
@@ -418,11 +418,11 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         # Second RREV with two PREVS (exactly same conanfile, different package files)
         rev2_conanfile = GenConanfile().with_build_msg("RREV 2!")\
                                        .with_package_file("file", env_var="MY_VAR")
-        with environment_append({"MY_VAR": "1"}):
+        with environment_update({"MY_VAR": "1"}):
             pref2 = self.c_v2.create(self.ref, conanfile=rev2_conanfile)
             self.c_v2.upload_all(pref2.ref)
 
-        with environment_append({"MY_VAR": "2"}):
+        with environment_update({"MY_VAR": "2"}):
             pref2b = self.c_v2.create(self.ref, conanfile=rev2_conanfile)
             self.c_v2.upload_all(pref2b.ref)
 
@@ -792,11 +792,11 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         """
         client = self.c_v2
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
-        with environment_append({"MY_VAR": "1"}):
+        with environment_update({"MY_VAR": "1"}):
             pref = client.create(self.ref, conanfile=conanfile)
         client.upload_all(self.ref)
 
-        with environment_append({"MY_VAR": "2"}):
+        with environment_update({"MY_VAR": "2"}):
             pref2 = client.create(self.ref, conanfile=conanfile)
 
         self.assertNotEqual(pref.revision, pref2.revision)
@@ -931,17 +931,17 @@ class ServerRevisionsIndexes(unittest.TestCase):
         the first is now the latest
         """
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
-        with environment_append({"MY_VAR": "1"}):
+        with environment_update({"MY_VAR": "1"}):
             pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                          pref1.revision)
-        with environment_append({"MY_VAR": "2"}):
+        with environment_update({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                          pref2.revision)
-        with environment_append({"MY_VAR": "3"}):
+        with environment_update({"MY_VAR": "3"}):
             pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
         server_pref3 = self.c_v2.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
@@ -999,13 +999,13 @@ class ServerRevisionsIndexes(unittest.TestCase):
         If then a client uploads a RREV/PREV it is the latest
         """
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
-        with environment_append({"MY_VAR": "1"}):
+        with environment_update({"MY_VAR": "1"}):
             pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        with environment_append({"MY_VAR": "2"}):
+        with environment_update({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        with environment_append({"MY_VAR": "3"}):
+        with environment_update({"MY_VAR": "3"}):
             pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
 
@@ -1015,7 +1015,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.run(command.format(pref2.revision))
         self.c_v2.run(command.format(pref1.revision))
 
-        with environment_append({"MY_VAR": "4"}):
+        with environment_update({"MY_VAR": "4"}):
             pref4 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
 
@@ -1037,6 +1037,6 @@ def test_touching_other_server():
     c.run("remove * -f")
 
     # This is OK, binary found
-    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Windows")
-    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
+    c.run("install --reference=pkg/0.1@conan/channel -r=remote1 -s os=Windows")
+    c.run("install --reference=pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
     assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out

@@ -33,7 +33,7 @@ from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
 from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.client.tools.files import replace_in_file
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
@@ -51,7 +51,7 @@ from conans.test.utils.scm import create_local_git_repo, create_local_svn_checko
     create_remote_svn_repo
 from conans.test.utils.server_launcher import (TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import mkdir, save_files, save
 
 NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
@@ -475,6 +475,12 @@ class TestClient(object):
         finally:
             self.current_folder = old_dir
 
+    @contextmanager
+    def mocked_servers(self, requester=None):
+        _req = requester or TestRequester(self.servers)
+        with mock.patch("conans.client.rest.conan_requester.requests", _req):
+            yield
+
     def get_conan_api(self, args=None):
         if self.is_conan_cli_v2_command(args):
             return ConanAPIV2(cache_folder=self.cache_folder)
@@ -525,7 +531,7 @@ class TestClient(object):
             tuple if required
         """
         from conans.test.utils.mocks import RedirectedTestOutput
-        with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
+        with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.out = RedirectedTestOutput()  # Initialize each command
             with redirect_output(self.out):
                 with redirect_input(self.user_inputs):
@@ -539,8 +545,7 @@ class TestClient(object):
                             http_requester = TestRequester(self.servers)
 
                     if http_requester:
-                        with mock.patch("conans.client.rest.conan_requester.requests",
-                                        http_requester):
+                        with self.mocked_servers(http_requester):
                             return self.run_cli(command_line, assert_error=assert_error)
                     else:
                         return self.run_cli(command_line, assert_error=assert_error)
@@ -710,12 +715,13 @@ class TurboTestClient(TestClient):
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(str(ref), remote, args or ""),
+        self.run("upload {} -c --all -r {} {}".format(ref.repr_notime(), remote, args or ""),
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
-            ref.revision = remote_rrev
-            return ref
+            _tmp = copy.copy(ref)
+            _tmp.revision = remote_rrev
+            return _tmp
 
     def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
@@ -783,7 +789,7 @@ class TurboTestClient(TestClient):
                 for k in range(num_prev):
                     args = " ".join(["-s {}={}".format(key, value)
                                      for key, value in settings.items()])
-                    with environment_append({"MY_VAR": str(k)}):
+                    with environment_update({"MY_VAR": str(k)}):
                         pref = self.create(ref, conanfile=conanfile_gen, args=args)
                         self.upload_all(ref, remote=remote)
                         tmp.append(pref)

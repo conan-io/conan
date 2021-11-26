@@ -89,7 +89,7 @@ class _UploadCollecter:
     """
     def __init__(self, cache):
         self._cache = cache
-        self._user_input = UserInput(cache.config.non_interactive)
+        self._user_input = UserInput(cache.new_config["core:non_interactive"])
 
     def collect(self, pattern, confirm, all_packages):
         """ validate inputs and compute the refs (without revisions) to be uploaded
@@ -286,7 +286,9 @@ class _PackagePreparator:
             elif tgz_files:
                 if self._output and not self._output.is_terminal:
                     self._output.info(msg)
-                tgz = compress_files(tgz_files, tgz_symlinks, tgz_name, download_export_folder)
+                compresslevel = self._cache.new_config.get("core.gzip:compresslevel", int)
+                tgz = compress_files(tgz_files, tgz_symlinks, tgz_name, download_export_folder,
+                                     compresslevel=compresslevel)
                 result[tgz_name] = tgz
 
         add_tgz(EXPORT_TGZ_NAME, files, symlinks, "Compressing recipe...")
@@ -326,7 +328,9 @@ class _PackagePreparator:
                 self._output.info("Compressing package...")
             tgz_files = {f: path for f, path in files.items() if
                          f not in [CONANINFO, CONAN_MANIFEST]}
-            tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, download_pkg_folder)
+            compresslevel = self._cache.new_config.get("core.gzip:compresslevel", int)
+            tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, download_pkg_folder,
+                                      compresslevel=compresslevel)
             assert tgz_path == package_tgz
             assert os.path.exists(package_tgz)
 
@@ -481,12 +485,13 @@ class _UploadExecutor:
                                    reference=pref.ref, package_id=pref.package_id, remote=remote)
 
 
-def compress_files(files, symlinks, name, dest_dir):
+def compress_files(files, symlinks, name, dest_dir, compresslevel=None):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
-        tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
+        tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
+                                        compresslevel=compresslevel)
 
         for filename, dest in sorted(symlinks.items()):
             info = tarfile.TarInfo(name=filename)

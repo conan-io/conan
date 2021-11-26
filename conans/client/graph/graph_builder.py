@@ -7,7 +7,6 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_
     CONTEXT_BUILD, RECIPE_CONSUMER, TransitiveRequirement
 from conans.client.graph.graph_error import GraphError
 from conans.client.graph.provides import check_graph_provides
-from conans.client.graph.range_resolver import range_satisfies
 from conans.errors import ConanException
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
@@ -103,14 +102,14 @@ class DepsGraphBuilder(object):
             if prev_version_range is not None:
                 pass  # Do nothing, evaluate current as it were a fixed one
             else:
-                if range_satisfies(version_range, prev_ref.version):
+                if prev_ref.version in version_range:
                     require.ref = prev_ref
                 else:
                     raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
 
         elif prev_version_range is not None:
             # TODO: CHeck user/channel conflicts first
-            if not range_satisfies(prev_version_range, require.ref.version):
+            if require.ref.version not in prev_version_range:
                 raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
         else:
             def _conflicting_refs(ref1, ref2):

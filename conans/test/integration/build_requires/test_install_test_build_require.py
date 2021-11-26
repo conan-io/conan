@@ -45,7 +45,6 @@ def client():
             """)
 
     client = TestClient()
-    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     client.save({"tool/conanfile.py": GenConanfile(),
                  "cmake/conanfile.py": cmake,
                  "openssl/conanfile.py": openssl})
@@ -166,7 +165,7 @@ def test_build_require_conanfile_text(client):
 
 
 def test_build_require_command_line_build_context(client):
-    client.run("install mycmake/1.0@ --build-require -g VirtualBuildEnv -pr:b=default")
+    client.run("install --reference=mycmake/1.0@ --build-require -g VirtualBuildEnv -pr:b=default")
     ext = ".bat" if platform.system() == "Windows" else ".sh"
     cmd = environment_wrap_command("conanbuild", f"mycmake{ext}", cwd=client.current_folder)
     client.run_command(cmd)

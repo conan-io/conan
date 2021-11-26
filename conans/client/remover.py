@@ -1,5 +1,4 @@
 import os
-from io import StringIO
 
 from conans.cli.output import ConanOutput
 from conans.client.cache.remote_registry import Remote
@@ -10,7 +9,7 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import check_valid_ref
 from conans.paths import SYSTEM_REQS
-from conans.search.search import search_packages, search_recipes
+from conans.search.search import search_recipes, filter_packages, get_packages_search_info
 from conans.util.files import rmdir
 from conans.util.log import logger
 
@@ -89,7 +88,7 @@ class ConanRemover(object):
 
     def __init__(self, app):
         self._app = app
-        self._user_input = UserInput(app.cache.config.non_interactive)
+        self._user_input = UserInput(app.cache.new_config["core:non_interactive"])
         self._cache = app.cache
         self._remote_manager = app.remote_manager
 
@@ -223,15 +222,16 @@ class ConanRemover(object):
             if packages_query:
                 # search packages
                 if self._app.selected_remote:
-                    packages = self._remote_manager.search_packages(self._app.selected_remote,
-                                                                    ref, packages_query)
+                    infos = self._remote_manager.search_packages(self._app.selected_remote, ref)
+                    packages = filter_packages(packages_query, infos)
+                    return packages
                 else:
                     pkg_ids = self._cache.get_package_references(ref)
-                    all_package_revs = []
+                    all_package_prefs = []
                     for pkg in pkg_ids:
-                        all_package_revs.extend(self._cache.get_package_revisions_references(pkg))
-                    packages_layouts = [self._cache.pkg_layout(pref) for pref in all_package_revs]
-                    packages = search_packages(packages_layouts, packages_query)
+                        all_package_prefs.extend(self._cache.get_package_revisions_references(pkg))
+                    packages = get_packages_search_info(self._cache, all_package_prefs)
+                    packages = filter_packages(packages_query, packages)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]
                 else:

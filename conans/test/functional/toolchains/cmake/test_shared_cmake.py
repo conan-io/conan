@@ -17,7 +17,7 @@ def test_shared_cmake_toolchain():
     client.run("remove * -f")
 
     client = TestClient(servers=client.servers)
-    client.run("install app/0.1@ -o chat:shared=True -o hello:shared=True -g VirtualRunEnv")
+    client.run("install --reference=app/0.1@ -o chat:shared=True -o hello:shared=True -g VirtualRunEnv")
     command = environment_wrap_command("conanrun", "app", cwd=client.current_folder)
 
     client.run_command(command)

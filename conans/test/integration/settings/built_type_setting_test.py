@@ -27,23 +27,23 @@ class Pkg(ConanFile):
                      "myprofile": ""})
 
         # This won't fail, as it has a build_type=None, which is allowed
-        client.run("export . Pkg/0.1@lasote/testing")
-        client.run("install Pkg/0.1@lasote/testing -pr=myprofile --build")
+        client.run("export . pkg/0.1@lasote/testing")
+        client.run("install --reference=pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
 
         # test_package is totally consinstent with the regular package
-        client.run("create . Pkg/0.1@lasote/testing -pr=myprofile")
+        client.run("create . pkg/0.1@lasote/testing -pr=myprofile")
         self.assertEqual(2, str(client.out).count("BUILD TYPE: Not defined"))
 
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile,
                      "myprofile": "[settings]\nbuild_type=Release"})
 
-        client.run("export . Pkg/0.1@lasote/testing")
-        client.run("install Pkg/0.1@lasote/testing -pr=myprofile --build")
+        client.run("export . pkg/0.1@lasote/testing")
+        client.run("install --reference=pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Release"))
 
-        client.run("create . Pkg/0.1@lasote/testing -pr=myprofile")
+        client.run("create . pkg/0.1@lasote/testing -pr=myprofile")
         self.assertEqual(2, str(client.out).count("BUILD TYPE: Release"))
 
         # Explicit build_tyep=None
@@ -52,9 +52,9 @@ class Pkg(ConanFile):
                      "myprofile": "[settings]\nbuild_type=None"})
 
         # This won't fail, as it has a build_type=None, which is allowed
-        client.run("export . Pkg/0.1@lasote/testing")
-        client.run("install Pkg/0.1@lasote/testing -pr=myprofile --build")
+        client.run("export . pkg/0.1@lasote/testing")
+        client.run("install --reference=pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
 
-        client.run("create . Pkg/0.1@lasote/testing -pr=myprofile")
+        client.run("create . pkg/0.1@lasote/testing -pr=myprofile")
         self.assertEqual(2, str(client.out).count("BUILD TYPE: Not defined"))

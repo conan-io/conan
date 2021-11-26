@@ -56,7 +56,7 @@ conaninfo = '''
 [options]
     use_Qt=True
 [full_requires]
-  Hello2/0.1@lasote/stable:11111
+  hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
 [recipe_revision]
@@ -67,7 +67,7 @@ conaninfo = '''
 class RemoveTest(unittest.TestCase):
 
     def setUp(self):
-        test_conanfile_contents = str(GenConanfile("Hello", "0.1"))
+        test_conanfile_contents = str(GenConanfile("hello", "0.1"))
         hello_files = {"conanfile.py": test_conanfile_contents}
 
         self.server_folder = temp_folder()
@@ -78,10 +78,10 @@ class RemoveTest(unittest.TestCase):
         client = TestClient(servers=servers, inputs=["myuser", "mypass"])
 
         # Conans with and without packages created
-        self.root_folder = {"H1": 'Hello/1.4.10@myuser/testing',
-                            "H2": 'Hello/2.4.11@myuser/testing',
-                            "B": 'Bye/0.14@myuser/testing',
-                            "O": 'Other/1.2@myuser/testing'}
+        self.root_folder = {"H1": 'hello/1.4.10@myuser/testing',
+                            "H2": 'hello/2.4.11@myuser/testing',
+                            "B": 'bye/0.14@myuser/testing',
+                            "O": 'other/1.2@myuser/testing'}
 
         files = {}
         prefs = []
@@ -214,11 +214,11 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["build", "source", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/1.4.10/myuser/testing")))
+                                                     "hello/1.4.10/myuser/testing")))
         self.assertCountEqual(["build", "source", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/2.4.11/myuser/testing")))
+                                                     "hello/2.4.11/myuser/testing")))
 
     def _validate_remove_all_hello_packages(self):
         self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
@@ -229,15 +229,15 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["Other", "Bye"], folders)
 
     def test_remove_any_package_version(self):
-        self.client.run("remove Hello/*@myuser/testing -f")
+        self.client.run("remove hello/*@myuser/testing -f")
         self._validate_remove_all_hello_packages()
 
     def test_remove_any_package_version_user(self):
-        self.client.run("remove Hello/*@*/testing -f")
+        self.client.run("remove hello/*@*/testing -f")
         self._validate_remove_all_hello_packages()
 
     def test_remove_any_package_version_channel(self):
-        self.client.run("remove Hello/*@*/* -f")
+        self.client.run("remove hello/*@*/* -f")
         self._validate_remove_all_hello_packages()
 
     def _validate_remove_hello_1_4_10(self):
@@ -249,11 +249,11 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["Hello", "Other", "Bye"], folders)
 
     def test_remove_any_package_user(self):
-        self.client.run("remove Hello/1.4.10@*/testing -f")
+        self.client.run("remove hello/1.4.10@*/testing -f")
         self._validate_remove_hello_1_4_10()
 
     def test_remove_any_package_channel(self):
-        self.client.run("remove Hello/1.4.10@myuser/* -f")
+        self.client.run("remove hello/1.4.10@myuser/* -f")
         self._validate_remove_hello_1_4_10()
 
     def test_builds(self):
@@ -268,11 +268,11 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/1.4.10/myuser/testing")))
+                                                     "hello/1.4.10/myuser/testing")))
         self.assertCountEqual(["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/2.4.11/myuser/testing")))
+                                                     "hello/2.4.11/myuser/testing")))
 
     def test_src(self):
         with patch.object(sys.stdin, "readline", return_value="y"):
@@ -286,11 +286,11 @@ class RemoveTest(unittest.TestCase):
         self.assertCountEqual(["package", "build", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/1.4.10/myuser/testing")))
+                                                     "hello/1.4.10/myuser/testing")))
         self.assertCountEqual(["package", "build", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
-                                                     "Hello/2.4.11/myuser/testing")))
+                                                     "hello/2.4.11/myuser/testing")))
 
     def test_reject_removal(self):
         with patch.object(sys.stdin, "readline", return_value="n"):
@@ -403,13 +403,13 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.client.run("upload lib/1.0 -r default -c --all")
         self.client.run("remove lib/1.0 -f")
         # we can still install it
-        self.client.run("install lib/1.0@")
-        self.assertIn("Installing package: lib/1.0", self.client.out)
+        self.client.run("install --reference=lib/1.0@")
+        self.assertIn("lib/1.0: Retrieving package", self.client.out)
         self.client.run("remove lib/1.0 -f")
 
         # Now remove remotely
         self.client.run("remove lib/1.0 -f -r default")
-        self.client.run("install lib/1.0@", assert_error=True)
+        self.client.run("install --reference=lib/1.0@", assert_error=True)
 
         self.assertIn("Unable to find 'lib/1.0' in remotes", self.client.out)
 

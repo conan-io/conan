@@ -4,10 +4,7 @@ import os
 import platform
 import subprocess
 import sys
-import warnings
-from collections import namedtuple
 
-from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import CalledProcessErrorWithStderr, ConanException
 from conans.model.version import Version
@@ -110,7 +107,7 @@ class OSInfo(object):
             self.os_version_name = self.get_solaris_version_name(self.os_version)
         elif self.is_aix:
             self.os_version = self.get_aix_version()
-            self.os_version_name = "AIX %s" % self.os_version.minor(fill=False)
+            self.os_version_name = "AIX %s.%s" % (self.os_version.major, self.os_version.minor)
 
     def _get_linux_distro_info(self):
         import distro
@@ -205,69 +202,71 @@ class OSInfo(object):
     def get_debian_version_name(version):
         if not version:
             return None
-        elif version.major() == "8.Y.Z":
+        elif version.major == 8:
             return "jessie"
-        elif version.major() == "7.Y.Z":
+        elif version.major == 7:
             return "wheezy"
-        elif version.major() == "6.Y.Z":
+        elif version.major == 6:
             return "squeeze"
-        elif version.major() == "5.Y.Z":
+        elif version.major == 5:
             return "lenny"
-        elif version.major() == "4.Y.Z":
+        elif version.major == 4:
             return "etch"
-        elif version.minor() == "3.1.Z":
+        elif (version.major, version.minor) == (3, 1):
             return "sarge"
-        elif version.minor() == "3.0.Z":
+        elif (version.major, version.minor) == (3, 0):
             return "woody"
 
     @staticmethod
     def get_win_version_name(version):
         if not version:
             return None
-        elif version.major() == "5.Y.Z":
+        elif version.major == 5:
             return "Windows XP"
-        elif version.minor() == "6.0.Z":
+        elif version.major == 6 and version.minor == 0:
             return "Windows Vista"
-        elif version.minor() == "6.1.Z":
+        elif version.major == 6 and version.minor == 1:
             return "Windows 7"
-        elif version.minor() == "6.2.Z":
+        elif version.major == 6 and version.minor == 2:
             return "Windows 8"
-        elif version.minor() == "6.3.Z":
+        elif version.major == 6 and version.minor == 3:
             return "Windows 8.1"
-        elif version.minor() == "10.0.Z":
+        elif version.major == 10:
             return "Windows 10"
+        elif version.major == 11:
+            return "Windows 11"
 
     @staticmethod
     def get_osx_version_name(version):
         if not version:
             return None
-        elif version.minor() == "10.13.Z":
+        elif version.minor == 13:
             return "High Sierra"
-        elif version.minor() == "10.12.Z":
+        elif version.minor == 12:
             return "Sierra"
-        elif version.minor() == "10.11.Z":
+        elif version.minor == 11:
             return "El Capitan"
-        elif version.minor() == "10.10.Z":
+        elif version.minor == 10:
             return "Yosemite"
-        elif version.minor() == "10.9.Z":
+        elif version.minor == 9:
             return "Mavericks"
-        elif version.minor() == "10.8.Z":
+        elif version.minor == 8:
             return "Mountain Lion"
-        elif version.minor() == "10.7.Z":
+        elif version.minor == 7:
             return "Lion"
-        elif version.minor() == "10.6.Z":
+        elif version.minor == 6:
             return "Snow Leopard"
-        elif version.minor() == "10.5.Z":
+        elif version.minor == 5:
             return "Leopard"
-        elif version.minor() == "10.4.Z":
+        elif version.minor == 4:
             return "Tiger"
-        elif version.minor() == "10.3.Z":
+        elif version.minor == 3:
             return "Panther"
-        elif version.minor() == "10.2.Z":
+        elif version.minor == 2:
             return "Jaguar"
-        elif version.minor() == "10.1.Z":
+        elif version.minor == 1:
             return "Puma"
-        elif version.minor() == "10.0.Z":
+        elif version.minor == 0:
             return "Cheetha"
 
     @staticmethod
@@ -278,9 +277,9 @@ class OSInfo(object):
     def get_solaris_version_name(version):
         if not version:
             return None
-        elif version.minor() == "5.10":
+        elif version.major == "5" and version.minor == "10":
             return "Solaris 10"
-        elif version.minor() == "5.11":
+        elif version.major == "5" and version.minor == "11":
             return "Solaris 11"
 
     @staticmethod

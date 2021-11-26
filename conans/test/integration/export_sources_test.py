@@ -19,7 +19,7 @@ conanfile_py = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports = "*.h", "*.cpp", "*.lic"
     def package(self):
@@ -31,7 +31,7 @@ combined_conanfile = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "*.h", "*.cpp"
     exports = "*.txt", "*.lic"
@@ -45,7 +45,7 @@ nested_conanfile = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "src/*.h", "src/*.cpp"
     exports = "src/*.txt", "src/*.lic"
@@ -59,7 +59,7 @@ overlap_conanfile = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "src/*.h", "*.txt"
     exports = "src/*.txt", "*.h", "src/*.lic"
@@ -78,7 +78,7 @@ class ExportsSourcesTest(unittest.TestCase):
                                ("other", self.other_server)])
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
         self.client = client
-        self.ref = RecipeReference.loads("Hello/0.1@lasote/testing")
+        self.ref = RecipeReference.loads("hello/0.1@lasote/testing")
         self.pref = PkgReference(self.ref, NO_SETTINGS_PACKAGE_ID)
 
     def _get_folders(self):
@@ -201,7 +201,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     def _check_manifest(self, mode):
         manifest = load(os.path.join(self.client.current_folder,
-                                     ".conan_manifests/Hello/0.1/lasote/testing/export/"
+                                     ".conan_manifests/hello/0.1/lasote/testing/export/"
                                      "conanmanifest.txt"))
 
         if mode == "exports_sources":
@@ -261,7 +261,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_export_folder(mode)
 
         # now build package
-        self.client.run("install Hello/0.1@lasote/testing --build=missing")
+        self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
         # Source folder and package should be exatly the same
         self._get_folders()
         self._check_export_folder(mode)
@@ -269,16 +269,16 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_package_folder(mode)
 
         # upload to remote
-        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing --all -r default")
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
 
         # remove local
-        self.client.run('remove Hello/0.1@lasote/testing -f')
+        self.client.run('remove hello/0.1@lasote/testing -f')
         self.assertFalse(os.path.exists(self.export_folder))
 
         # install from remote
-        self.client.run("install Hello/0.1@lasote/testing")
+        self.client.run("install --reference=hello/0.1@lasote/testing")
         self.assertFalse(os.path.exists(self.source_folder))
         self._check_export_installed_folder(mode)
         self._check_package_folder(mode)
@@ -291,17 +291,17 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("export . lasote/testing")
         self._get_folders()
 
-        self.client.run("upload Hello/0.1@lasote/testing -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self.assertFalse(os.path.exists(self.source_folder))
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
 
         # remove local
-        self.client.run('remove Hello/0.1@lasote/testing -f')
+        self.client.run('remove hello/0.1@lasote/testing -f')
         self.assertFalse(os.path.exists(self.export_folder))
 
         # install from remote
-        self.client.run("install Hello/0.1@lasote/testing --build")
+        self.client.run("install --reference=hello/0.1@lasote/testing --build")
         self._get_folders()
         self._check_export_folder(mode)
         self._check_source_folder(mode)
@@ -315,18 +315,18 @@ class ExportsSourcesTest(unittest.TestCase):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
-        self.client.run("install Hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
-        self.client.run('remove Hello/0.1@lasote/testing -f')
-        self.client.run("install Hello/0.1@lasote/testing")
+        self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
+        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run('remove hello/0.1@lasote/testing -f')
+        self.client.run("install --reference=hello/0.1@lasote/testing")
         self._get_folders()
 
         # upload to remote again, the folder remains as installed
-        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing --all -r default")
         self._check_export_installed_folder(mode)
         self._check_server_folder(mode)
 
-        self.client.run("upload Hello/0.1@lasote/testing --all -r=other")
+        self.client.run("upload hello/0.1@lasote/testing --all -r=other")
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode, self.other_server)
 
@@ -336,14 +336,14 @@ class ExportsSourcesTest(unittest.TestCase):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
-        self.client.run("install Hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
-        self.client.run('remove Hello/0.1@lasote/testing -f')
-        self.client.run("install Hello/0.1@lasote/testing")
+        self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
+        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run('remove hello/0.1@lasote/testing -f')
+        self.client.run("install --reference=hello/0.1@lasote/testing")
 
         # upload to remote again, the folder remains as installed
-        self.client.run("install Hello/0.1@lasote/testing --update")
-        self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.out)
+        self.client.run("install --reference=hello/0.1@lasote/testing --update")
+        self.assertIn("hello/0.1@lasote/testing: Already installed!", self.client.out)
         self._get_folders()
         self._check_export_installed_folder(mode)
 
@@ -352,12 +352,12 @@ class ExportsSourcesTest(unittest.TestCase):
 
         the_time = time.time() + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
-            self.client.run("upload Hello/0.1@lasote/testing --all -r default")
+            self.client.run("upload hello/0.1@lasote/testing --all -r default")
 
-        ref = RecipeReference.loads('Hello/0.1@lasote/testing')
-        self.client.run(f"remove Hello/0.1@lasote/testing"
+        ref = RecipeReference.loads('hello/0.1@lasote/testing')
+        self.client.run(f"remove hello/0.1@lasote/testing"
                         f"#{self.client.cache.get_latest_recipe_reference(ref).revision} -f")
 
-        self.client.run("install Hello/0.1@lasote/testing --update")
+        self.client.run("install --reference=hello/0.1@lasote/testing --update")
         self._get_folders()
         self._check_export_installed_folder(mode, updated=True)

@@ -8,7 +8,7 @@ conanfile = """
 from conans import ConanFile, tools
 
 class AConan(ConanFile):
-    name = "Hello0"
+    name = "hello0"
     version = "0.1"
 
     def build(self):
@@ -26,7 +26,7 @@ class InLocalCacheTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
-        client.run("install Hello0/0.1@lasote/stable --build missing")
+        client.run("install --reference=hello0/0.1@lasote/stable --build missing")
         self.assertIn("build() IN LOCAL CACHE=> True", client.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.out)
 
@@ -48,9 +48,9 @@ class InLocalCacheTest(unittest.TestCase):
 from conans import ConanFile, tools
 
 class OtherConan(ConanFile):
-    name = "Hello1"
+    name = "hello1"
     version = "0.1"
-    requires = "Hello0/0.1@lasote/stable"
+    requires = "hello0/0.1@lasote/stable"
 
     def build(self):
         pass
@@ -60,6 +60,6 @@ class OtherConan(ConanFile):
         self.assertIn("build() IN LOCAL CACHE=> True", client.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.out)
         client.run("export . lasote/stable")
-        client.run("install Hello1/0.1@lasote/stable --build")
+        client.run("install --reference=hello1/0.1@lasote/stable --build")
         self.assertIn("build() IN LOCAL CACHE=> True", client.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.out)

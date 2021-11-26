@@ -8,9 +8,11 @@ from conans.util.files import save
 
 
 class _ConfigMock:
-    def __init__(self):
-        self.retry = 0
-        self.retry_wait = 0
+    def __getitem__(self, item):
+        return None
+
+    def get(self, conf_name, conf_type=None, conf_default=None):
+        return conf_default
 
 
 class MockRequester(object):

@@ -1,9 +1,7 @@
-import copy
 import json
 import os
 
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD
-from conans.client.graph.range_resolver import range_satisfies
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save
@@ -115,18 +113,21 @@ class Lockfile(object):
                 "build_requires": [repr(r) for r in self.build_requires]}
 
     def resolve_locked(self, node, require):
-        ref = require.ref
         if require.build or node.context == CONTEXT_BUILD:
             locked_refs = self.build_requires
         else:
             locked_refs = self.requires
+        self._resolve(require, locked_refs)
+
+    def _resolve(self, require, locked_refs):
+        ref = require.ref
         version_range = require.version_range
 
         if version_range:
             matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
                        r.channel == ref.channel]
             for m in matches:
-                if range_satisfies(version_range, str(m.version)):
+                if m.version in version_range:
                     require.ref = m
                     break
             else:
@@ -137,26 +138,18 @@ class Lockfile(object):
             if alias:
                 require.ref = self.alias.get(require.ref, require.ref)
             elif require.ref.revision is None:
-                # find exact revision
-                pass
+                for r in locked_refs:
+                    if r.name == ref.name and r.version == ref.version and r.user == ref.user and \
+                            r.channel == ref.channel:
+                        require.ref = r
+                        break
+            else:
+                if ref not in locked_refs and self.strict:
+                    raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
 
     def resolve_locked_pyrequires(self, require):
-        ref = require.ref
         locked_refs = self.python_requires  # CHANGE
-        version_range = require.version_range
-        if version_range:
-            matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
-                       r.channel == ref.channel]
-            for m in matches:
-                if range_satisfies(version_range, str(m.version)):
-                    require.ref = m
-                    break
-            else:
-                if self.strict:
-                    raise ConanException(f"Requirement '{ref}' not in lockfile")
-        else:
-            # find exact
-            pass
+        self._resolve(require, locked_refs)
 
     def update_lock_export_ref(self, ref):
         """ when the recipe is exported, it will complete the missing RREV, otherwise it should

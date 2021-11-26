@@ -5,7 +5,6 @@ import unittest
 
 from requests.models import Response
 
-from conans.client import tools
 from conans.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
@@ -14,6 +13,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer
+from conans.util.env import environment_update
 from conans.util.files import save
 
 conan_content = """
@@ -65,7 +65,7 @@ class AuthorizeTest(unittest.TestCase):
             cli = TestClient(servers=self.servers)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
             cli.run("export . lasote/testing")
-            with tools.environment_append(credentials):
+            with environment_update(credentials):
                 cli.run("upload %s -r default" % str(self.ref))
             return cli
 
@@ -204,15 +204,10 @@ def test_token_expired():
     import time
     time.sleep(3)
     c.users = {}
-    conan_conf = textwrap.dedent("""
-                                        [storage]
-                                        path = ./data
-                                        [general]
-                                        non_interactive=True
-                                    """)
-    c.save({"conan.conf": conan_conf}, path=c.cache.cache_folder)
+    conan_conf = "core:non_interactive=True"
+    c.save({"global.conf": conan_conf}, path=c.cache.cache_folder)
     c.run("remove * -f")
-    c.run("install pkg/0.1@user/stable")
+    c.run("install --reference=pkg/0.1@user/stable")
     user, token, _ = c.cache.localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is None

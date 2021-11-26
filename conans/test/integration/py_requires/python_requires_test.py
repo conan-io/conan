@@ -41,20 +41,20 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "base.MyConanfileBase"
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        package_id = re.search(r"Pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
-        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
         client.run("upload * --all --confirm -r default")
         client.run("remove * -f")
-        client.run("install Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        client.run("install --reference=pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
         client.run("remove * -f")
-        client.run("download Pkg/0.1@user/testing")
-        self.assertIn(f"Pkg/0.1@user/testing: Package installed {package_id}", client.out)
+        client.run("download pkg/0.1@user/testing")
+        self.assertIn(f"pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
     def test_reuse_dot(self):
         client = TestClient(default_server_user=True)
@@ -73,8 +73,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "my.base.MyConanfileBase"
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
 
     def test_with_alias(self):
         client = TestClient()
@@ -88,11 +88,11 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "base.MyConanfileBase"
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
     def test_reuse_version_ranges(self):
         client = TestClient()
@@ -106,13 +106,13 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
         self.assertIn("Python requires", str(client.out).splitlines())
         self.assertIn("    base/1.1@user/testing", str(client.out).splitlines())
-        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
     def test_multiple_reuse(self):
         client = TestClient()
@@ -125,7 +125,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("My cool build!")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . SourceBuild/1.0@user/channel")
+        client.run("export . sourcebuild/1.0@user/channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -136,20 +136,20 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("My cool package_info!")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . PackageInfo/1.0@user/channel")
+        client.run("export . packageinfo/1.0@user/channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class MyConanfileBase(ConanFile):
-                python_requires = "SourceBuild/1.0@user/channel", "PackageInfo/1.0@user/channel"
-                python_requires_extend = "SourceBuild.SourceBuild", "PackageInfo.PackageInfo"
+                python_requires = "sourcebuild/1.0@user/channel", "packageinfo/1.0@user/channel"
+                python_requires_extend = "sourcebuild.SourceBuild", "packageinfo.PackageInfo"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
     @staticmethod
     def test_transitive_access():
@@ -225,15 +225,15 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PKG2F : %s" % self.python_requires["pkg2"].module.myfunct())
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . Consumer/0.1@user/testing")
-        self.assertIn("Consumer/0.1@user/testing: PKG1 N: pkg1", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1 V: 1.0", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1 U: user", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1 C: channel", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1 : 123", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG2 : 234", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG1F : 123", client.out)
-        self.assertIn("Consumer/0.1@user/testing: PKG2F : 234", client.out)
+        client.run("create . consumer/0.1@user/testing")
+        self.assertIn("consumer/0.1@user/testing: PKG1 N: pkg1", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1 V: 1.0", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1 U: user", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1 C: channel", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1 : 123", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG2 : 234", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG1F : 123", client.out)
+        self.assertIn("consumer/0.1@user/testing: PKG2F : 234", client.out)
 
     def test_local_import(self):
         client = TestClient(default_server_user=True)
@@ -268,20 +268,20 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        package_id = re.search(r"Pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
-        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
         client.run("upload * --all --confirm -r default")
         client.run("remove * -f")
-        client.run("install Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        client.run("install --reference=pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
         client.run("remove * -f")
-        client.run("download Pkg/0.1@user/testing")
-        self.assertIn(f"Pkg/0.1@user/testing: Package installed {package_id}", client.out)
+        client.run("download pkg/0.1@user/testing")
+        self.assertIn(f"pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
     def test_reuse_class_members(self):
         client = TestClient()
@@ -317,17 +317,17 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": reuse,
                      "header.h": "pkg new header contents",
                      "other.txt": "text"})
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: Exports sources! *.h", client.out)
-        self.assertIn("Pkg/0.1@user/testing exports: Copied 1 '.txt' file: other.txt",
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: Exports sources! *.h", client.out)
+        self.assertIn("pkg/0.1@user/testing exports: Copied 1 '.txt' file: other.txt",
                       client.out)
-        self.assertIn("Pkg/0.1@user/testing exports_sources: Copied 1 '.h' file: header.h",
+        self.assertIn("pkg/0.1@user/testing exports_sources: Copied 1 '.h' file: header.h",
                       client.out)
-        self.assertIn("Pkg/0.1@user/testing: Short paths! True", client.out)
-        self.assertIn("Pkg/0.1@user/testing: License! MyLicense", client.out)
-        self.assertIn("Pkg/0.1@user/testing: Author! author@company.com", client.out)
-        self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents", client.out)
-        ref = RecipeReference.loads("Pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: Short paths! True", client.out)
+        self.assertIn("pkg/0.1@user/testing: License! MyLicense", client.out)
+        self.assertIn("pkg/0.1@user/testing: Author! author@company.com", client.out)
+        self.assertIn("pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents", client.out)
+        ref = RecipeReference.loads("pkg/0.1@user/testing")
         self.assertTrue(os.path.exists(os.path.join(client.get_latest_ref_layout(ref).export(),
                                                     "other.txt")))
 
@@ -349,8 +349,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "base.MyConanfileBase"
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: My system_requirements Pkg being called!", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: My system_requirements pkg being called!", client.out)
 
     def test_overwrite_class_members(self):
         client = TestClient()
@@ -385,10 +385,10 @@ class PyRequiresExtendTest(unittest.TestCase):
                                                           self.settings.arch))
             """)
         client.save({"conanfile.py": reuse})
-        client.run("create . Pkg/0.1@user/testing -s os=Windows -s arch=armv7")
-        self.assertIn("Pkg/0.1@user/testing: License! MyLicense", client.out)
-        self.assertIn("Pkg/0.1@user/testing: Author! frodo", client.out)
-        self.assertIn("Pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
+        client.run("create . pkg/0.1@user/testing -s os=Windows -s arch=armv7")
+        self.assertIn("pkg/0.1@user/testing: License! MyLicense", client.out)
+        self.assertIn("pkg/0.1@user/testing: Author! frodo", client.out)
+        self.assertIn("pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
 
     def test_failure_init_method(self):
         client = TestClient()
@@ -455,15 +455,15 @@ class PyRequiresExtendTest(unittest.TestCase):
         # This should work, even if there is a local "myhelper.py" file, which could be
         # accidentaly imported (and it was, it was a bug)
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: MyHelperOutput!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: MyHelperOutput!", client.out)
+        self.assertIn("pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
 
         # Now, the same, but with "clean_first=True", should keep working
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: MyHelperOutput!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: MyHelperOutput!", client.out)
+        self.assertIn("pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
 
     def test_update(self):
         client = TestClient(default_server_user=True)
@@ -613,14 +613,14 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("Pkg1 package: %s:%s" % (self.name, self.version))
             """)
         client.save({"conanfile.py": conanfile,
-                     "name.txt": "MyPkg",
-                     "version.txt": "MyVersion"})
+                     "name.txt": "mypkg",
+                     "version.txt": "myversion"})
         client.run("export .")
-        self.assertIn("MyPkg/MyVersion: A new conanfile.py version was exported", client.out)
+        self.assertIn("mypkg/myversion: A new conanfile.py version was exported", client.out)
         client.run("create .")
-        self.assertIn("MyPkg/MyVersion: Pkg1 source: MyPkg:MyVersion", client.out)
-        self.assertIn("MyPkg/MyVersion: Pkg1 build: MyPkg:MyVersion", client.out)
-        self.assertIn("MyPkg/MyVersion: Pkg1 package: MyPkg:MyVersion", client.out)
+        self.assertIn("mypkg/myversion: Pkg1 source: mypkg:myversion", client.out)
+        self.assertIn("mypkg/myversion: Pkg1 build: mypkg:myversion", client.out)
+        self.assertIn("mypkg/myversion: Pkg1 package: mypkg:myversion", client.out)
 
     @parameterized.expand([(False, False), (True, False), (True, True), ])
     def test_python_requires_with_alias(self, use_alias, use_alias_of_alias):
@@ -849,11 +849,11 @@ class PyRequiresExtendTest(unittest.TestCase):
                     pass
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
-        self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
+        self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
 
 def test_transitive_python_requires():

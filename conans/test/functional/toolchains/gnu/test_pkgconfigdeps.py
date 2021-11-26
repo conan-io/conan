@@ -7,6 +7,13 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
+def get_requires_from_content(content):
+    for line in content.splitlines():
+        if "Requires:" in line:
+            return line
+    return ""
+
+
 # Without compiler, def rpath_flags(settings, os_build, lib_paths): doesn't append the -Wl...etc
 def test_pkg_config_dirs():
     # https://github.com/conan-io/conan/issues/2756
@@ -15,7 +22,7 @@ def test_pkg_config_dirs():
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
 
             def package_info(self):
@@ -32,9 +39,9 @@ def test_pkg_config_dirs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps")
+    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "MyLib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     expected_rpaths = ""
@@ -45,8 +52,8 @@ def test_pkg_config_dirs():
         libdir2=${prefix}/lib2
         includedir1=/my_absoulte_path/fake/mylib/include
 
-        Name: MyLib
-        Description: Conan package: MyLib
+        Name: mylib
+        Description: Conan package: mylib
         Version: 0.1
         Libs: -L"${libdir1}" -L"${libdir2}"%s
         Cflags: -I"${includedir1}\"""" % expected_rpaths)
@@ -76,7 +83,7 @@ def test_empty_dirs():
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
 
             def package_info(self):
@@ -89,14 +96,14 @@ def test_empty_dirs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps")
+    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "MyLib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     expected = textwrap.dedent("""
-        Name: MyLib
-        Description: Conan package: MyLib
+        Name: mylib
+        Description: Conan package: mylib
         Version: 0.1
         Libs:%s
         Cflags: """ % " ")  # ugly hack for trailing whitespace removed by IDEs
@@ -116,7 +123,7 @@ def test_pkg_config_rpaths():
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
             settings = "os", "compiler"
             exports = "mylib.so"
@@ -132,9 +139,9 @@ def test_pkg_config_rpaths():
                  "linux_gcc": profile,
                  "mylib.so": "fake lib content"})
     client.run("create . -pr=linux_gcc")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps -pr=linux_gcc")
+    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps -pr=linux_gcc")
 
-    pc_path = os.path.join(client.current_folder, "MyLib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     assert '-Wl,-rpath,"${libdir1}"' in pc_content
@@ -147,7 +154,7 @@ def test_system_libs():
         import os
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
 
             def package(self):
@@ -160,9 +167,9 @@ def test_system_libs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps")
+    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("MyLib.pc")
+    pc_content = client.load("mylib.pc")
     assert 'Libs: -L"${libdir1}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
 
 
@@ -185,7 +192,7 @@ def test_multiple_include():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create . pkg/0.1@")
-    client.run("install pkg/0.1@ -g PkgConfigDeps")
+    client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
     assert "includedir1=${prefix}/inc1" in pc_content
@@ -224,7 +231,7 @@ def test_custom_content():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create . pkg/0.1@")
-    client.run("install pkg/0.1@ -g PkgConfigDeps")
+    client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
     assert "libdir1=${prefix}/lib" in pc_content
@@ -250,46 +257,62 @@ def test_custom_content_components():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create . pkg/0.1@")
-    client.run("install pkg/0.1@ -g PkgConfigDeps")
+    client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
     pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
 
 
 def test_pkg_with_component_requires():
     client = TestClient()
-    client.save({"conanfile.py": GenConanfile("other", "0.1").with_package_file("file.h", "0.1")})
+    client.save({"conanfile.py": GenConanfile("first", "0.1").with_package_file("file.h", "0.1")})
     client.run("create . user/channel")
+    client.save({"conanfile.py": GenConanfile("other", "0.1").with_package_file("file.h", "0.1")})
+    client.run("create .")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            requires = "other/0.1@user/channel"
+            requires = "first/0.1@user/channel"
 
             def package_info(self):
-                self.cpp_info.components["mycomponent"].requires.append("other::other")
-                self.cpp_info.components["myothercomp"].requires.append("mycomponent")
+                self.cpp_info.components["mycomponent"].requires.append("first::first")
+                self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
 
         """)
-    client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . second/0.1@")
+    client.save({"conanfile.py": GenConanfile("third", "0.1").with_package_file("file.h", "0.1")
+                                                             .with_require("second/0.1")
+                                                             .with_require("other/0.1")},
+                clean_first=True)
+    client.run("create .")
 
     client2 = TestClient(cache_folder=client.cache_folder)
     conanfile = textwrap.dedent("""
         [requires]
-        pkg/0.1
+        third/0.1
 
         [generators]
         PkgConfigDeps
         """)
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
-    pc_content = client2.load("pkg.pc")
-    assert "Requires: pkg-mycomponent" in pc_content
-    pc_content = client2.load("pkg-mycomponent.pc")
-    assert "Requires: other" in pc_content
-    pc_content = client2.load("pkg-myothercomp.pc")
-    assert "Requires: pkg-mycomponent" in pc_content
+    pc_content = client2.load("third.pc")
+    # Originally posted: https://github.com/conan-io/conan/issues/9939
+    assert "Requires: second other" == get_requires_from_content(pc_content)
+    pc_content = client2.load("second.pc")
+    assert "Requires: second-mycomponent second-myfirstcomp" == get_requires_from_content(pc_content)
+    pc_content = client2.load("second-mycomponent.pc")
+    # Note: the first-first.pc does not exist because first/0.1 is not defining any component but
+    # we're testing the "Requires" field is well defined and not the "first" recipe.
+    assert "Requires: first-first" == get_requires_from_content(pc_content)
+    pc_content = client2.load("second-myfirstcomp.pc")
+    assert "Requires: second-mycomponent" == get_requires_from_content(pc_content)
+    pc_content = client2.load("first.pc")
+    assert "" == get_requires_from_content(pc_content)
+    pc_content = client2.load("other.pc")
+    assert "" == get_requires_from_content(pc_content)
 
 
 def test_pkg_getting_public_requires():
@@ -331,10 +354,10 @@ def test_pkg_getting_public_requires():
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
     pc_content = client2.load("pkg.pc")
-    assert "Requires: other-cmp1" in pc_content
+    assert "Requires: other-cmp1" == get_requires_from_content(pc_content)
     pc_content = client2.load("other.pc")
-    assert "Requires: other-cmp1 other-cmp2 other-cmp3" in pc_content
+    assert "Requires: other-cmp1 other-cmp2 other-cmp3" == get_requires_from_content(pc_content)
     assert client2.load("other-cmp1.pc")
     assert client2.load("other-cmp2.pc")
     pc_content = client2.load("other-cmp3.pc")
-    assert "Requires: other-cmp1" in pc_content
+    assert "Requires: other-cmp1" == get_requires_from_content(pc_content)

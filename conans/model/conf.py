@@ -5,9 +5,26 @@ from conans.errors import ConanException
 
 DEFAULT_CONFIGURATION = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
+    "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core.package_id:msvc_visual_incompatible": "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile (None by default)",
+    "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
+    "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
+    "core.download:parallel": "Number of concurrent threads to download packages",
+    "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
+    "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
+    # General HTTP(python-requests) configuration
+    "core.net.http:max_retries": "Maximum number of connection retries (requests library)",
+    "core.net.http:timeout": "Number of seconds without response to timeout (requests library)",
+    "core.net.http:no_proxy_match": "List of urls to skip from proxies configuration",
+    "core.net.http:proxies": "Dictionary containing the proxy configuration",
+    "core.net.http:cacert_path": "Path containing a custom Cacert file",
+    "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
+    "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
+    # Gzip compression
+    "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
+    # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
     "tools.build:processes": "Default jobs number",
@@ -19,7 +36,6 @@ DEFAULT_CONFIGURATION = {
     "tools.cmake.cmaketoolchain:system_name": "Define CMAKE_SYSTEM_NAME in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
-    "tools.env.virtualenv:auto_use": "Automatically activate virtualenv file generation",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
     "tools.gnu:make_program": "Indicate path to make program",
@@ -52,6 +68,19 @@ class Conf(object):
 
     def __getitem__(self, name):
         return self._values.get(name)
+
+    def get(self, conf_name, conf_type=None, conf_default=None):
+        v = self._values.get(conf_name)
+        if v is not None:
+            if conf_type is not None:
+                try:
+                    v = conf_type(v)
+                except Exception:
+                    raise ConanException(f"Conf '{conf_name}' value '{v}' "
+                                         f"must be '{conf_type.__name__}'")
+        else:
+            v = conf_default
+        return v
 
     def __setitem__(self, name, value):
         if name != name.lower():
@@ -117,6 +146,9 @@ class ConfDefinition(object):
         """ if a module name is requested for this, always goes to the None-Global config
         """
         del self._pattern_confs.get(None, Conf())[module_name]
+
+    def get(self, conf_name, conf_type=None, conf_default=None):
+        return self._pattern_confs.get(None, Conf()).get(conf_name, conf_type, conf_default)
 
     def get_conanfile_conf(self, ref_str):
         result = Conf()

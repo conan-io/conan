@@ -1,111 +1,7 @@
 from functools import total_ordering
 
+from conans.model.version import Version
 from conans.util.dates import timestamp_to_str
-
-
-@total_ordering
-class Version:
-    """
-    This is NOT an implementation of semver, as users may use any pattern in their versions.
-    It is just a helper to parse "." or "-" and compare taking into account integers when possible
-    """
-    def __init__(self, value):
-        assert isinstance(value, str)
-        self._value = value
-        self._items = None  # elements of the version
-        self._pre = None
-        self._build = None
-
-    @property
-    def pre(self):
-        if self._items is None:  # the indicator parse is needed is empty items
-            self._parse()
-        return self._pre
-
-    @property
-    def build(self):
-        if self._items is None:  # the indicator parse is needed is empty items
-            self._parse()
-        return self._build
-
-    @property
-    def main(self):
-        if self._items is None:
-            self._parse()
-        return self._items
-
-    @property
-    def major(self):
-        try:
-            return self.main[0]
-        except IndexError:
-            return None
-
-    @property
-    def minor(self):
-        try:
-            return self.main[1]
-        except IndexError:
-            return None
-
-    @property
-    def patch(self):
-        try:
-            return self.main[2]
-        except IndexError:
-            return None
-
-    def __str__(self):
-        return self._value
-
-    def __repr__(self):
-        return self._value
-
-    def __eq__(self, other):
-        if not isinstance(other, Version):
-            return self._value == other  # Assume the other is string like
-        return self._value == other._value
-
-    def __hash__(self):
-        return hash(self._value)
-
-    def __lt__(self, other):
-        if not isinstance(other, Version):
-            other = Version(other)
-        if self.pre:
-            if other.pre:  # both are pre-releases
-                return (self.main, self.pre, self.build) < (other.main, other.pre, other.build)
-            else:  # Left hand is pre-release, right side is regular
-                if self.main == other.main:  # Problem only happens if both are equal
-                    return True
-                else:
-                    return self.main < other.main
-        else:
-            if other.pre:  # Left hand is regular, right side is pre-release
-                if self.main == other.main:  # Problem only happens if both are equal
-                    return False
-                else:
-                    return self.main < other.main
-            else:  # None of them is pre-release
-                return (self.main, self.build) < (other.main, other.build)
-
-    def _parse(self):
-        items = self._value.rsplit("+", 1)  # split for build
-        if len(items) == 2:
-            value, build = items
-            self._build = Version(build)  # This is a nested version by itself
-        else:
-            value = items[0]
-
-        items = value.rsplit("-", 1)  # split for pre-release
-        if len(items) == 2:
-            value, pre = items
-            self._pre = Version(pre)  # This is a nested version by itself
-        else:
-            value = items[0]
-        items = value.split(".")
-        items = [int(item) if item.isdigit() else item for item in items]
-        self._items = items
 
 
 @total_ordering
@@ -160,8 +56,10 @@ class RecipeReference:
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
         # In theory this is enough for sorting
-        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp, self.revision) \
-               < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp, ref.revision)
+        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp,
+                self.revision) \
+               < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp,
+                  ref.revision)
 
     def __eq__(self, ref):
         # Timestamp doesn't affect equality.

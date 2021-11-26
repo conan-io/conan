@@ -2,6 +2,7 @@ import os
 
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter
+from conans.cli.common import add_profiles_args, get_profiles_from_args
 from conans.cli.output import cli_out_write, ConanOutput
 from conans.errors import ConanException
 from conans.util.files import save
@@ -26,62 +27,6 @@ def detected_profile_cli_output(detect_profile):
     cli_out_write(detect_profile.dumps())
 
 
-def add_profiles_args(parser):
-
-    def profile_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-pr{}".format(short_suffix),
-                            "--profile{}".format(long_suffix),
-                            default=None, action=Extender,
-                            dest='profile_{}'.format(machine),
-                            help='Apply the specified profile to the {} machine'.format(machine))
-
-    def settings_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-s{}".format(short_suffix),
-                            "--settings{}".format(long_suffix),
-                            nargs=1, action=Extender,
-                            dest='settings_{}'.format(machine),
-                            help='Settings to build the package, overwriting the defaults'
-                                 ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
-                                                                                 short_suffix))
-
-    def options_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-o{}".format(short_suffix),
-                            "--options{}".format(long_suffix),
-                            nargs=1, action=Extender,
-                            dest="options_{}".format(machine),
-                            help='Define options values ({} machine), e.g.:'
-                                 ' -o{} Pkg:with_qt=true'.format(machine, short_suffix))
-
-    def conf_args(machine, short_suffix="", long_suffix=""):
-        parser.add_argument("-c{}".format(short_suffix),
-                            "--conf{}".format(long_suffix),
-                            nargs=1, action=Extender,
-                            dest='conf_{}'.format(machine),
-                            help='Configuration to build the package, overwriting the defaults'
-                                 ' ({} machine). e.g.: -c{} '
-                                 'tools.cmake.cmaketoolchain:generator=Xcode'.format(machine,
-                                                                                     short_suffix))
-
-    for item_fn in [options_args, profile_args, settings_args, conf_args]:
-        item_fn("host", "",
-                "")  # By default it is the HOST, the one we are building binaries for
-        item_fn("build", ":b", ":build")
-        item_fn("host", ":h", ":host")
-
-
-def get_profiles_from_args(args, conan_api):
-    # TODO: Do we want a ProfilesAPI.get_profiles() to return both profiles from args?
-    profiles = conan_api.profiles
-    build = [profiles.get_default_build()] if not args.profile_build else args.profile_build
-    host = [profiles.get_default_host()] if not args.profile_host else args.profile_host
-
-    profile_build = profiles.get_profile(profiles=build, settings=args.settings_build,
-                                         options=args.options_build, conf=args.conf_build)
-    profile_host = profiles.get_profile(profiles=host, settings=args.settings_host,
-                                        options=args.options_host, conf=args.conf_host)
-    return profile_host, profile_build
-
-
 @conan_subcommand(formatters={"cli": profiles_cli_output})
 def profile_show(conan_api, parser, subparser, *args):
     """
@@ -89,7 +34,7 @@ def profile_show(conan_api, parser, subparser, *args):
     """
     add_profiles_args(subparser)
     args = parser.parse_args(*args)
-    return get_profiles_from_args(args, conan_api)
+    return get_profiles_from_args(conan_api, args)
 
 
 @conan_subcommand(formatters={"cli": cli_out_write, "json": json_formatter})
@@ -136,5 +81,5 @@ def profile_list(conan_api, parser, subparser, *args):
 @conan_command(group=COMMAND_GROUPS['consumer'])
 def profile(conan_api, parser, *args, **kwargs):
     """
-    Manage profiles
+    Manages profiles
     """
