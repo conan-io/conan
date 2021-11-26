@@ -837,7 +837,7 @@ def test_set_absolute_target_names():
 
     cmakelists = textwrap.dedent("""cmake_minimum_required(VERSION 3.15)
         project(Consumer)
-        find_package(CURLFILENAME CONFIG REQUIRED COMPONENTS CURL::libcurl CURL::libcurl2)
+        find_package(CURLFILENAME CONFIG REQUIRED COMPONENTS libcurl libcurl2)
         """)
 
     client.save({"consumer/conanfile.py": conanfile, "consumer/CMakeLists.txt": cmakelists})
