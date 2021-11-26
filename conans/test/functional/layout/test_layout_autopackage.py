@@ -14,19 +14,19 @@ def test_auto_package_no_components():
     conan_file += """
 
     def source(self):
-        tools.save("my_source/source_sources/source_stuff.cpp", "")
-        tools.save("my_source/source_includes/include1.hpp", "")
-        tools.save("my_source/source_includes/include2.hpp", "")
-        tools.save("my_source/source_includes2/include3.h", "")
-        tools.save("my_source/source_libs/slibone.a", "")
-        tools.save("my_source/source_libs/slibtwo.a", "")
-        tools.save("my_source/source_libs/bin_to_discard.exe", "")
-        tools.save("my_source/source_bins/source_bin.exe", "")
-        tools.save("my_source/source_frameworks/sframe1/include/include.h", "")
-        tools.save("my_source/source_frameworks/sframe2/include/include.h", "")
-        tools.save("my_source/source_frameworks/sframe1/lib/libframework.lib", "")
-        tools.save("my_source/source_frameworks/sframe2/lib/libframework.lib", "")
-        tools.save("my_source/source_frameworks/sframe2/foo/bar.txt", "")
+        tools.save("source_sources/source_stuff.cpp", "")
+        tools.save("source_includes/include1.hpp", "")
+        tools.save("source_includes/include2.hpp", "")
+        tools.save("source_includes2/include3.h", "")
+        tools.save("source_libs/slibone.a", "")
+        tools.save("source_libs/slibtwo.a", "")
+        tools.save("source_libs/bin_to_discard.exe", "")
+        tools.save("source_bins/source_bin.exe", "")
+        tools.save("source_frameworks/sframe1/include/include.h", "")
+        tools.save("source_frameworks/sframe2/include/include.h", "")
+        tools.save("source_frameworks/sframe1/lib/libframework.lib", "")
+        tools.save("source_frameworks/sframe2/lib/libframework.lib", "")
+        tools.save("source_frameworks/sframe2/foo/bar.txt", "")
 
     def build(self):
         tools.save("build_sources/build_stuff.cpp", "")

@@ -140,6 +140,7 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                 if cache:
                     # Clear the conanfile.py to avoid errors cloning git repositories.
                     _clean_source_folder(src_folder)
+                mkdir(conanfile.source_folder)
                 with tools.chdir(conanfile.source_folder):  # Lets see how many things this breaks
                     with conanfile_exception_formatter(conanfile.display_name, "source"):
 
