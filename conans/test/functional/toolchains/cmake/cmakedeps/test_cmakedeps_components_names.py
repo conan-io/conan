@@ -765,7 +765,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
         cmake_minimum_required(VERSION 3.15)
         project(project CXX)
 
-        find_package(hello COMPONENTS hello::invented missing)
+        find_package(hello COMPONENTS invented missing)
         add_executable(myapp main.cpp)
         target_link_libraries(myapp hello::invented)
     """)
@@ -777,7 +777,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
 
     assert "Conan: Including build module" in client.out
     assert "my_modules.cmake" in client.out
-    assert bool(check_components_exist) == ("Conan: Component 'hello::invented' found in package 'hello'"
+    assert bool(check_components_exist) == ("Conan: Component 'invented' found in package 'hello'"
                                             in client.out)
 
 
