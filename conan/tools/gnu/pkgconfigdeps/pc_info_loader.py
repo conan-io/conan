@@ -21,6 +21,13 @@ def _get_package_aliases(dep):
 
 
 def _get_component_aliases(dep, comp_name):
+    if comp_name not in dep.cpp_info.components:
+        # foo::foo might be referencing the root cppinfo
+        if dep.ref.name == comp_name:
+            return _get_package_aliases(dep)
+        raise ConanException("Component '{name}::{cname}' not found in '{name}' "
+                             "package requirement".format(name=_get_package_reference_name(dep),
+                                                          cname=comp_name))
     comp_aliases = dep.cpp_info.components[comp_name].get_property("pkg_config_aliases",
                                                                    "PkgConfigDeps")
     return comp_aliases or []
@@ -33,6 +40,9 @@ def _get_package_name(dep):
 
 def _get_component_name(dep, comp_name):
     if comp_name not in dep.cpp_info.components:
+        # foo::foo might be referencing the root cppinfo
+        if dep.ref.name == comp_name:
+            return _get_package_name(dep)
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                              "package requirement".format(name=_get_package_reference_name(dep),
                                                           cname=comp_name))
