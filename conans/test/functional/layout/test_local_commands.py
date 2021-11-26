@@ -144,7 +144,7 @@ def test_local_source():
     def layout(self):
         self.folders.source = "my_source"
     def source(self):
-        tools.save("my_source/downloaded.h", "bar")
+        tools.save("downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
@@ -164,11 +164,11 @@ def test_local_source_change_base():
     def layout(self):
         self.folders.source = "my_source"
     def source(self):
-        tools.save("my_source/downloaded.h", "bar")
+        tools.save("downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=common")
-    client.run("source . -sf=common")
+    client.run("source . -if=common")
     header = os.path.join(client.current_folder, "common", "my_source", "downloaded.h")
     assert os.path.exists(header)
 
