@@ -5,8 +5,7 @@ from contextlib import contextmanager
 import six
 from six import string_types
 
-from conan.tools.env import Environment
-from conan.tools.env.environment import environment_wrap_command
+
 from conans.client import tools
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
@@ -155,7 +154,7 @@ class ConanFile(object):
         self.compatible_packages = []
         self._conan_using_build_profile = False
         self._conan_requester = None
-
+        from conan.tools.env import Environment
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
@@ -200,6 +199,7 @@ class ConanFile(object):
     @property
     def buildenv(self):
         # Lazy computation of the package buildenv based on the profileone
+        from conan.tools.env import Environment
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
@@ -398,6 +398,7 @@ class ConanFile(object):
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
             if _env is None:
                 _env = "conanbuild"
+            from conan.tools.env.environment import environment_wrap_command
             wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 

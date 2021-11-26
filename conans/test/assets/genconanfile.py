@@ -15,8 +15,9 @@ class GenConanfile(object):
         with_package_file("file2.txt", "hola")
     """
 
-    def __init__(self, name=None, version=None):
-        self._imports = ["from conans import ConanFile"]
+    def __init__(self, name=None, version=None, new_import=False):
+        self._imports = ["from conans import ConanFile" if not new_import
+                         else "from conan import ConanFile"]
         self._name = name
         self._version = version
         self._settings = None
