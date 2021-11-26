@@ -64,6 +64,7 @@ class RangeResolver(object):
     def _resolve_local(self, search_ref, version_range):
         local_found = self._cached_cache.get(search_ref)
         if local_found is None:
+            # This local_found is weird, it contains multiple revisions, not just latest
             local_found = search_recipes(self._cache, search_ref)
             local_found = [ref for ref in local_found
                            if ref.user == search_ref.user and ref.channel == search_ref.channel]
