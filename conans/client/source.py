@@ -124,7 +124,6 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
         - Calling post_source hook
     """
 
-
     src_folder = conanfile.folders.base_source
     mkdir(src_folder)
 
@@ -141,13 +140,14 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                 if cache:
                     # Clear the conanfile.py to avoid errors cloning git repositories.
                     _clean_source_folder(src_folder)
-                with conanfile_exception_formatter(conanfile.display_name, "source"):
+                with tools.chdir(conanfile.source_folder):  # Lets see how many things this breaks
+                    with conanfile_exception_formatter(conanfile.display_name, "source"):
 
-                    with conan_v2_property(conanfile, 'settings',
-                                           "'self.settings' access in source() method is deprecated"):
-                        with conan_v2_property(conanfile, 'options',
-                                               "'self.options' access in source() method is deprecated"):
-                            conanfile.source()
+                        with conan_v2_property(conanfile, 'settings',
+                                               "'self.settings' access in source() method is deprecated"):
+                            with conan_v2_property(conanfile, 'options',
+                                                   "'self.options' access in source() method is deprecated"):
+                                conanfile.source()
 
                 hook_manager.execute("post_source", conanfile=conanfile,
                                      conanfile_path=conanfile_path,
