@@ -93,7 +93,6 @@ class PyRequireLoader(object):
         requirement = Requirement(ref)
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
-            # FIXME: Matching by name is not enough, should resolve ranges, etc.
             ref = requirement.ref
         else:
             alias = requirement.alias
