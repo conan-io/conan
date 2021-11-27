@@ -228,8 +228,6 @@ class ConanFileLoader(object):
                 req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
-        conanfile.initialize()
-
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name):

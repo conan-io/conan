@@ -1,7 +1,7 @@
 import fnmatch
 
 from conans.client import settings_preprocessor
-from conans.client.graph.graph import CONTEXT_HOST
+from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.errors import ConanException
 
 
@@ -60,7 +60,7 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
     # build(gcc) -(r)-> build(openssl/zlib) => settings_host=profile_build, settings_target=None
     # build(gcc) -(br)-> build(gcc) => settings_host=profile_build, settings_target=profile_build
     # profile host
-    profile = profile_build if build_require else profile_host
+    profile = profile_build if build_require or base_context == CONTEXT_BUILD else profile_host
     _initialize_conanfile(conanfile, profile, ref)
     # profile build
     conanfile.settings_build = profile_build.processed_settings.copy()
