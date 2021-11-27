@@ -6,6 +6,7 @@ from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
     CONTEXT_BUILD, RECIPE_CONSUMER, TransitiveRequirement
 from conans.client.graph.graph_error import GraphError
+from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.options import Options
@@ -55,8 +56,7 @@ class DepsGraphBuilder(object):
             dep_graph.error = e
         return dep_graph
 
-    def _expand_require(self, require, node, graph, profile_host,
-                        profile_build, graph_lock, populate_settings_target=True):
+    def _expand_require(self, require, node, graph, profile_host, profile_build, graph_lock):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
@@ -84,7 +84,7 @@ class DepsGraphBuilder(object):
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
             new_node = self._create_new_node(node, require, graph, profile_host, profile_build,
-                                             graph_lock, populate_settings_target)
+                                             graph_lock)
             return new_node
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
@@ -215,11 +215,10 @@ class DepsGraphBuilder(object):
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
 
-    def _resolve_recipe(self, ref, profile, graph_lock):
+    def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref)
         conanfile_path, recipe_status, remote, new_ref = result
-        dep_conanfile = self._loader.load_conanfile(conanfile_path, profile, ref=ref,
-                                                    graph_lock=graph_lock)
+        dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock)
 
         if recipe_status == RECIPE_EDITABLE:
             dep_conanfile.in_local_cache = False
@@ -227,16 +226,7 @@ class DepsGraphBuilder(object):
 
         return new_ref, dep_conanfile, recipe_status, remote
 
-    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock,
-                         populate_settings_target):
-
-        if require.build:
-            profile = profile_build
-            context = CONTEXT_BUILD
-        else:
-            profile = profile_host if node.context == CONTEXT_HOST else profile_build
-            context = node.context
-
+    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         try:
             # TODO: If it is locked not resolve range
             #  if not require.locked_id:  # if it is locked, nothing to resolved
@@ -245,28 +235,16 @@ class DepsGraphBuilder(object):
             resolved_ref = self._resolver.resolve(require, str(node.ref))
 
             # This accounts for alias too
-            resolved = self._resolve_recipe(resolved_ref, profile, graph_lock)
+            resolved = self._resolve_recipe(resolved_ref, graph_lock)
         except ConanException as e:
             raise GraphError.missing(node, require, str(e))
 
         new_ref, dep_conanfile, recipe_status, remote = resolved
 
-        # TODO: This should be out of here
-        # If there is a context_switch, it is because it is a BR-build
-        # Assign the profiles depending on the context
-        dep_conanfile.settings_build = profile_build.processed_settings.copy()
-        context_switch = (node.context == CONTEXT_HOST and require.build)
-        if not context_switch:
-            if populate_settings_target:
-                dep_conanfile.settings_target = node.conanfile.settings_target
-            else:
-                dep_conanfile.settings_target = None
-        else:
-            if node.context == CONTEXT_HOST:
-                dep_conanfile.settings_target = profile_host.processed_settings.copy()
-            else:
-                dep_conanfile.settings_target = profile_build.processed_settings.copy()
+        initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
+                                     require.build, new_ref)
 
+        context = CONTEXT_BUILD if require.build else node.context
         new_node = Node(new_ref, dep_conanfile, context=context)
         new_node.recipe = recipe_status
         new_node.remote = remote
