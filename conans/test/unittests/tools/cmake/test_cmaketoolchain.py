@@ -236,11 +236,9 @@ def test_no_fpic_when_not_an_option(conanfile_linux):
 def conanfile_linux_shared():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.options = {
-        "fPIC": [True, False],
-        "shared": [True, False],
-    }
-    c.default_options = {"fPIC": False, "shared": True, }
+    c.options = Options({"fPIC": [True, False],
+                         "shared": [True, False]},
+                        {"fPIC": False, "shared": True, })
     c.initialize(Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
@@ -280,8 +278,8 @@ def test_fpic_when_not_shared(conanfile_linux_shared):
 def conanfile_windows_fpic():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.options = {"fPIC": [True, False], }
-    c.default_options = {"fPIC": True, }
+    c.options = Options({"fPIC": [True, False]},
+                        {"fPIC": True})
     c.initialize(Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
@@ -310,8 +308,8 @@ def test_no_fpic_on_windows(conanfile_windows_fpic):
 def conanfile_linux_fpic():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.options = {"fPIC": [True, False], }
-    c.default_options = {"fPIC": False, }
+    c.options = Options({"fPIC": [True, False]},
+                        {"fPIC": False,})
     c.initialize(Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
