@@ -153,7 +153,11 @@ class ConanAPIV1(object):
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)
-                result[attribute] = attr
+                if attribute == "options":
+                    result[attribute] = {k: v._possible_values
+                                         for k, v in attr._package_options._data.items()}
+                else:
+                    result[attribute] = attr
             except AttributeError:
                 result[attribute] = ''
         return result
