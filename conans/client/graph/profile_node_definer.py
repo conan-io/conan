@@ -8,6 +8,9 @@ from conans.errors import ConanException
 def _initialize_conanfile(conanfile, profile, ref):
     # Prepare the settings for the loaded conanfile
     # Mixing the global settings with the specified for that name if exist
+    if profile.dev_reference and profile.dev_reference == ref:
+        conanfile.develop = True
+
     tmp_settings = profile.processed_settings.copy()
     package_settings_values = profile.package_settings_values
     if conanfile.user is not None:
@@ -43,8 +46,7 @@ def _initialize_conanfile(conanfile, profile, ref):
     conanfile.settings = tmp_settings
     conanfile._conan_buildenv = profile.buildenv
     conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
-    if profile.dev_reference and profile.dev_reference == ref:
-        conanfile.develop = True
+
 
 
 def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_context,
