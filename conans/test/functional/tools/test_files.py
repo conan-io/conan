@@ -142,11 +142,11 @@ def test_patch_real(no_copy_source):
             def build(self):
                 save("myfile.cpp", "//dummy contents")
                 if self.no_copy_source:
-                    # TODO: Discuss: This actually works always!!! It is the previous solution
-                    p = os.path.join(self.source_folder, "../patches/mypatch_cpp")
+                    patch_file = os.path.join(self.source_folder, "../patches/mypatch_cpp")
                 else:
-                    p = "../patches/mypatch_cpp"
-                patch(self, patch_file=p, patch_type="security")
+                    patch_file = "../patches/mypatch_cpp"
+                patch(self, patch_file=patch_file, patch_type="security",
+                      base_path=self.build_folder)
                 self.output.info("BUILD: {}".format(load("myfile.cpp")))
         """ % no_copy_source)
 
