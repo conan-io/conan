@@ -1,4 +1,4 @@
-from conan.tools.gnu.pkgconfigdeps.pc_files_creator import PCFilesCreator
+from conan.tools.gnu.pkgconfigdeps.pc_files_creator import get_pc_files_and_content
 from conans.util.files import save
 
 
@@ -13,8 +13,7 @@ class PkgConfigDeps(object):
         pc_files = {}
         host_req = self._conanfile.dependencies.host
         for _, dep in host_req.items():
-            pc_files_creator = PCFilesCreator(self._conanfile, dep)
-            pc_files.update(pc_files_creator.pc_files_and_content)
+            pc_files.update(get_pc_files_and_content(dep))
         return pc_files
 
     def generate(self):
