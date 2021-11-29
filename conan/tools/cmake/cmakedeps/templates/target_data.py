@@ -63,7 +63,6 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
               set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_names }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_NAMES)
-              list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_TARGET_NAMES)
               set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ pkg_name }}_FIND_DEPENDENCY_NAMES} {{ dependency_filenames }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
 
