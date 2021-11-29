@@ -83,10 +83,7 @@ class GraphManager(object):
     def _load_root_node(self, reference, create_reference, profile_build, profile_host,
                         graph_lock, root_ref,
                         is_build_require, require_overrides):
-        """ creates the first, root node of the graph, loading or creating a conanfile
-        and initializing it (settings, options) as necessary. Also locking with lockfile
-        information
-        """
+
         profile_host.dev_reference = create_reference  # Make sure the created one has develop=True
 
         # create (without test_package), install|info|graph|export-pkg <ref>
