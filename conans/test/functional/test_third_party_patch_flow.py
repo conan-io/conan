@@ -46,7 +46,7 @@ def test_third_party_patch_flow():
     assert "MISTAKE1 BUILD!" in client.out
 
     # user decides to create patches, first init the repo
-    client.init_git_repo(folder="src")
+    client.init_git_repo(folder="src") # Using helper for user/email repo init
     client.save({"src/myfile.cpp": "correct1\nsomething\nmistake2\nmistake3\nsome\n"})
     # compute the patch
     mkdir(os.path.join(client.current_folder, "patches"))
