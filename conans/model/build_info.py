@@ -226,7 +226,7 @@ class _CppInfo(object):
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
     def get_filename(self, generator, default_name=True):
         # Default to the legacy "names"
-        return self.names.get(generator, self._name if default_name else None)
+        return self.filenames.get(generator) or self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self):
