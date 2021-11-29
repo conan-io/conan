@@ -7,18 +7,19 @@ def cli_format_graph_basic(graph):
     # the definition of the graph, but some history how it was computed
     # maybe we want to summarize that info after the "GraphBuilder" ends?
     output = ConanOutput()
-    requires = set()
-    build_requires = set()
-    python_requires = set()
+    requires = {}
+    build_requires = {}
+    python_requires = {}
     for node in graph.nodes:
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         if node.context == CONTEXT_BUILD:
-            build_requires.add(node.ref)
+            build_requires[node.ref] = node.recipe
         else:
-            requires.add(node.ref)
+            requires[node.ref] = node.recipe
         if hasattr(node.conanfile, "python_requires"):
-            python_requires.update(node.conanfile.python_requires.all_refs())
+            for r in node.conanfile.python_requires._pyrequires.values():  # TODO: improve interface
+                python_requires[r.ref] = r.recipe
 
     output.info("Graph root", Color.BRIGHT_YELLOW)
     path = ": {}".format(graph.root.path) if graph.root.path else ""
@@ -28,9 +29,8 @@ def cli_format_graph_basic(graph):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
-        for r in sorted(reqs_to_print):
-            msg = r.repr_notime()
-            output.info("    {}".format(msg), Color.BRIGHT_CYAN)
+        for ref, recipe in sorted(reqs_to_print.items()):
+            output.info("    {} - {}".format(ref.repr_notime(), recipe), Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
     _format_requires("Build requirements", build_requires)
@@ -44,3 +44,31 @@ def cli_format_graph_basic(graph):
             output.info("    {}: {}".format(k, v), Color.BRIGHT_CYAN)
 
     _format_resolved("Resolved alias", graph.aliased)
+
+    # TODO: missing the version ranges
+
+
+def cli_format_graph_packages(graph):
+    # I am excluding the "download"-"cache" or remote information, that is not
+    # the definition of the graph, but some history how it was computed
+    # maybe we want to summarize that info after the "GraphBuilder" ends?
+    output = ConanOutput()
+    requires = {}
+    build_requires = {}
+    for node in graph.nodes:
+        if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+            continue
+        if node.context == CONTEXT_BUILD:
+            build_requires[node.pref] = node.binary
+        else:
+            requires[node.pref] = node.binary
+
+    def _format_requires(title, reqs_to_print):
+        if not reqs_to_print:
+            return
+        output.info(title, Color.BRIGHT_YELLOW)
+        for pref, status in sorted(reqs_to_print.items(), key=repr):
+            output.info("    {} - {}".format(pref.repr_notime(), status), Color.BRIGHT_CYAN)
+
+    _format_requires("Requirements", requires)
+    _format_requires("Build requirements", build_requires)
