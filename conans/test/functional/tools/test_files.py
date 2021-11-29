@@ -139,8 +139,7 @@ def test_patch_real():
 
             def build(self):
                 save("myfile.cpp", "//dummy contents")
-                patch(self, patch_file="../patches/mypatch_cpp", patch_type="security",
-                      base_path=self.build_folder)
+                patch(self, patch_file="../patches/mypatch_cpp", patch_type="security")
                 self.output.info("BUILD: {}".format(load("myfile.cpp")))
         """)
 
@@ -181,7 +180,7 @@ def test_apply_conandata_patches(mock_patch_ng):
             version = "1.11.0"
 
             def layout(self):
-                self.folders.source = "source_subfolder"
+                self.folders.build = "source_subfolder"
 
             def build(self):
                 apply_conandata_patches(self)
@@ -227,7 +226,7 @@ def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
             version = "1.11.0"
 
             def layout(self):
-                self.folders.source = "source_subfolder"
+                self.folders.build = "source_subfolder"
 
             def build(self):
                 apply_conandata_patches(self)
@@ -320,7 +319,7 @@ def test_relate_base_path_all_versions(mock_patch_ng):
             version = "1.0"
 
             def layout(self):
-                self.folders.source = "source_subfolder"
+                self.folders.build = "source_subfolder"
 
             def build(self):
                 apply_conandata_patches(self)
