@@ -270,7 +270,7 @@ Just the wind that smells fresh before the storm."""), foo_content)
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
         loader = ConanFileLoader(None)
-        ret = loader.load_consumer(file_path, create_profile())
+        ret = loader.load_consumer(file_path)
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:

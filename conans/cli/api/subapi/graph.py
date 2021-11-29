@@ -32,8 +32,8 @@ class GraphAPI:
         graph_manager, cache = app.graph_manager, app.cache
         reference = reference or path
         # TODO: Improve this interface, not making it public yet, because better to be splitted
-        root_node = graph_manager._load_root_node(reference, create_reference, profile_host,
-                                                  lockfile, root_ref, is_build_require,
+        root_node = graph_manager._load_root_node(reference, create_reference, profile_build,
+                                                  profile_host, lockfile, root_ref, is_build_require,
                                                   require_overrides)
         return root_node
 

@@ -50,11 +50,8 @@ class InstallAPI:
             conanfile.folders.set_base_generators(base_folder)
 
         if install_folder:
-            # Write generators
-            tmp = list(conanfile.generators)  # Add the command line specified generators
-            generators = set(generators) if generators else set()
-            tmp.extend([g for g in generators if g not in tmp])
-            conanfile.generators = tmp
+            # Add cli -g generators
+            conanfile.generators = list(set(conanfile.generators).union(generators or []))
             write_generators(conanfile)
 
             if not no_imports:
@@ -68,5 +65,3 @@ class InstallAPI:
                 deploy_conanfile = neighbours[0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                     run_deploy(deploy_conanfile, install_folder)
-
-        return deps_graph

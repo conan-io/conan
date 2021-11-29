@@ -15,10 +15,12 @@ from conans.model.settings import Settings
 def conanfile():
     c = ConanFile(None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": ["Windows"],
+    c.initialize()
+    settings = Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}))
+                           "arch": ["x86"]})
+    c.settings = settings
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "gcc"
@@ -149,10 +151,11 @@ def test_user_toolchain(conanfile):
 def conanfile_apple():
     c = ConanFile(None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": {"Macos": {"version": ["10.15"]}},
+    c.initialize()
+    c.settings = Settings({"os": {"Macos": {"version": ["10.15"]}},
                            "compiler": {"apple-clang": {"libcxx": ["libc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}))
+                           "arch": ["x86"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "apple-clang"
@@ -178,10 +181,11 @@ def test_osx_deployment_target(conanfile_apple):
 def conanfile_msvc():
     c = ConanFile(None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": ["Windows"],
+    c.initialize()
+    c.settings = Settings({"os": ["Windows"],
                            "compiler": {"msvc": {"version": ["19.3X"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}))
+                           "arch": ["x86"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "msvc"
@@ -207,10 +211,11 @@ def test_toolset(conanfile_msvc):
 def conanfile_linux():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": ["Linux"],
+    c.initialize()
+    c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86_64"]}))
+                           "arch": ["x86_64"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86_64"
     c.settings.compiler = "gcc"
@@ -241,10 +246,11 @@ def conanfile_linux_shared():
         "shared": [True, False],
     }
     c.default_options = {"fPIC": False, "shared": True, }
-    c.initialize(Settings({"os": ["Linux"],
+    c.initialize()
+    c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86_64"]}))
+                           "arch": ["x86_64"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86_64"
     c.settings.compiler = "gcc"
@@ -282,10 +288,11 @@ def conanfile_windows_fpic():
     c.settings = "os", "compiler", "build_type", "arch"
     c.options = {"fPIC": [True, False], }
     c.default_options = {"fPIC": True, }
-    c.initialize(Settings({"os": ["Windows"],
+    c.initialize()
+    c.settings = Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}))
+                           "arch": ["x86"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "gcc"
@@ -312,10 +319,11 @@ def conanfile_linux_fpic():
     c.settings = "os", "compiler", "build_type", "arch"
     c.options = {"fPIC": [True, False], }
     c.default_options = {"fPIC": False, }
-    c.initialize(Settings({"os": ["Linux"],
+    c.initialize()
+    c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86_64"]}))
+                           "arch": ["x86_64"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86_64"
     c.settings.compiler = "gcc"
