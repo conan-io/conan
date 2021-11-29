@@ -116,6 +116,61 @@ def test_patch(mock_patch_ng):
     assert 'mypkg/1.0: Apply patch (security)' in str(client.out)
 
 
+def test_patch_real():
+    conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile, load
+        from conans.tools import save
+        from conan.tools.files import patch
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+            exports = "*"
+
+            def layout(self):
+                self.folders.source = "src"
+                self.folders.build = "build"
+
+            def source(self):
+                save("myfile.h", "//dummy contents")
+                patch(self, patch_file="../patches/mypatch_h", patch_type="security")
+                self.output.info("SOURCE: {}".format(load("myfile.h")))
+
+            def build(self):
+                save("myfile.cpp", "//dummy contents")
+                patch(self, patch_file="../patches/mypatch_cpp", patch_type="security",
+                      base_path=self.build_folder)
+                self.output.info("BUILD: {}".format(load("myfile.cpp")))
+        """)
+
+    client = TestClient()
+    patch_contents = textwrap.dedent("""\
+        --- myfile.{ext}
+        +++ myfile.{ext}
+        @@ -1 +1 @@
+        -//dummy contents
+        +//smart contents
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "patches/mypatch_h": patch_contents.format(ext="h"),
+                 "patches/mypatch_cpp": patch_contents.format(ext="cpp")})
+    client.run('create .')
+    assert "mypkg/1.0: Apply patch (security)" in client.out
+    assert "mypkg/1.0: SOURCE: //smart contents" in client.out
+    # TODO: This needs ``patch(..., base_path=self.build_folder...)``, really needed? why not cwd?
+    assert "mypkg/1.0: BUILD: //smart contents" in client.out
+
+    # Test local source too
+    client.run("install .")
+    client.run("source .")
+    assert "conanfile.py (mypkg/1.0): Apply patch (security)" in client.out
+    assert "conanfile.py (mypkg/1.0): SOURCE: //smart contents" in client.out
+    client.run("build .")
+    assert "conanfile.py (mypkg/1.0): Apply patch (security)" in client.out
+    assert "conanfile.py (mypkg/1.0): BUILD: //smart contents" in client.out
+
+
 def test_apply_conandata_patches(mock_patch_ng):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -224,6 +279,7 @@ def test_no_patch_file_entry():
     assert "The 'conandata.yml' file needs a 'patch_file' or 'patch_string' entry for every patch" \
            " to be applied" in str(client.out)
 
+
 def test_patch_string_entry(mock_patch_ng):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -253,6 +309,7 @@ def test_patch_string_entry(mock_patch_ng):
     assert 'mock patch data' == mock_patch_ng.string.decode('utf-8')
     assert 'mypkg/1.11.0: Apply patch (string)' in str(client.out)
 
+
 def test_relate_base_path_all_versions(mock_patch_ng):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -281,4 +338,3 @@ def test_relate_base_path_all_versions(mock_patch_ng):
 
     assert mock_patch_ng.apply_args[0].endswith(os.path.join('source_subfolder', "relative_dir"))
     assert mock_patch_ng.apply_args[1:] == (0, False)
-
