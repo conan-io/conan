@@ -18,11 +18,10 @@ from conans.paths import DATA_YML
 from conans.util.files import load
 
 
-class ConanFileLoader(object):
+class ConanFileLoader:
 
-    def __init__(self, runner,  pyreq_loader=None, requester=None):
+    def __init__(self, runner, pyreq_loader=None, requester=None):
         self._runner = runner
-
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
         self._requester = requester
@@ -47,7 +46,6 @@ class ConanFileLoader(object):
         try:
             module, conanfile = parse_conanfile(conanfile_path)
 
-            # This is the new py_requires feature, to supersede the old python_requires
             if self._pyreq_loader:
                 self._pyreq_loader.load_py_requires(conanfile, self, graph_lock)
 
@@ -150,8 +148,7 @@ class ConanFileLoader(object):
     def load_export(self, conanfile_path, name, version, user, channel, graph_lock=None):
         """ loads the conanfile and evaluates its name, version, and enforce its existence
         """
-        conanfile = self.load_named(conanfile_path, name, version, user, channel,
-                                    graph_lock)
+        conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock)
         if not conanfile.name:
             raise ConanException("conanfile didn't specify name")
         if not conanfile.version:
@@ -166,8 +163,7 @@ class ConanFileLoader(object):
                       channel=None, graph_lock=None, require_overrides=None):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
-        conanfile = self.load_named(conanfile_path, name, version, user, channel,
-                                    graph_lock)
+        conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock)
 
         ref = RecipeReference(conanfile.name, conanfile.version, user, channel)
         if str(ref):
@@ -186,8 +182,6 @@ class ConanFileLoader(object):
                     conanfile.requires.override(req_override)
 
             return conanfile
-        except ConanInvalidConfiguration:
-            raise
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
@@ -209,8 +203,6 @@ class ConanFileLoader(object):
         try:
             conanfile.initialize()
             return conanfile
-        except ConanInvalidConfiguration:
-            raise
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
