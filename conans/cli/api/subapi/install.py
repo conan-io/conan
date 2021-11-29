@@ -33,6 +33,10 @@ class InstallAPI:
     def install_consumer(deps_graph, install_folder, base_folder, conanfile_folder,
                          generators=None, reference=None, no_imports=False, create_reference=None,
                          test=None):
+        """ Once a dependency graph has been installed, there are things to be done, like invoking
+        generators for the root consumer, or calling imports()/deploy() to copy things to user space.
+        This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
+        """
         root_node = deps_graph.root
         conanfile = root_node.conanfile
 
