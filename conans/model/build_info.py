@@ -218,54 +218,20 @@ class _CppInfo(object):
     #  Use get_property for 2.0
     def get_name(self, generator, default_name=True):
         property_name = None
-        if generator == "cmake_find_package" and self.get_property("cmake_module_target_name", generator):
-            property_name = "cmake_module_target_name"
-        # set_property will have no effect on "cmake" legacy generator
-        elif "cmake" in generator and "cmake" != generator and "cmake_multi" != generator:
-            property_name = "cmake_target_name"
-        elif "pkg_config" in generator:
+        if "pkg_config" in generator:
             property_name = "pkg_config_name"
         return self.get_property(property_name, generator) \
                or self.names.get(generator, self._name if default_name else None)
 
-    # To provide compatibility for legacy generators with cmake_target_namespace
-    # and make migration easier
-    def get_namespace(self, generator):
-        if generator == "cmake_find_package" or generator == "cmake_find_package_multi":
-            namespace = self.get_property("cmake_target_namespace", generator)
-            return namespace
-
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
     def get_filename(self, generator, default_name=True):
-        if generator == "cmake_find_package" and self.get_property("cmake_module_file_name", generator):
-            property_name = "cmake_module_file_name"
-        else:
-            property_name = "cmake_file_name"
-        result = self.get_property(property_name, generator) or self.filenames.get(generator)
-        if result:
-            return result
-        # Default to the legacy "names", but not using the other properties like "cmake_target_name"
-        return self.names.get(generator, self._name if default_name else None)
+        # Default to the legacy "names"
+        return self.filenames.get(generator) or self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self):
         if self._build_modules is None:  # Not cached yet
-            try:
-                default_build_modules_value = self._generator_properties[None]["cmake_build_modules"]
-            except KeyError:
-                ret_dict = {}
-            else:
-                ret_dict = {"cmake_find_package": default_build_modules_value,
-                            "cmake_find_package_multi": default_build_modules_value,
-                            "cmake": default_build_modules_value,
-                            "cmake_multi": default_build_modules_value}
-
-            for generator, values in self._generator_properties.items():
-                if generator:
-                    v = values.get("cmake_build_modules")
-                    if v:
-                        ret_dict[generator] = v
-            self._build_modules = ret_dict if ret_dict else self.build_modules
+            self._build_modules = self.build_modules
         return self._build_modules
 
     def set_property(self, property_name, value, generator=None):
