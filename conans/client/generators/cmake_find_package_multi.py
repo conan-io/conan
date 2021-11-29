@@ -312,7 +312,7 @@ endforeach()
             self._validate_components(cpp_info)
             pkg_filename = self._get_filename(cpp_info)
             pkg_findname = self._get_name(cpp_info)
-            pkg_namespace = self._get_namespace(cpp_info) or pkg_findname
+            pkg_namespace = pkg_findname
             pkg_version = cpp_info.version
 
             public_deps = self.get_public_deps(cpp_info)
