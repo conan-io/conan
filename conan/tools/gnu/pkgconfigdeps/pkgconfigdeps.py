@@ -13,7 +13,7 @@ class PkgConfigDeps(object):
         pc_files = {}
         host_req = self._conanfile.dependencies.host
         for _, dep in host_req.items():
-            pc_files.update(get_pc_files_and_content(dep))
+            pc_files.update(get_pc_files_and_content(self._conanfile, dep))
         return pc_files
 
     def generate(self):

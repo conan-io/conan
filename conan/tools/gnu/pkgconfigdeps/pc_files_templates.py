@@ -92,7 +92,7 @@ def _get_formatted_dirs(folders, prefix_path_):
     return ret
 
 
-def get_pc_filename_and_content(dep, name, requires, description, cpp_info=None):
+def get_pc_filename_and_content(conanfile, dep, name, requires, description, cpp_info=None):
     package_folder = dep.package_folder
     version = dep.ref.version
     cpp_info = cpp_info or dep.cpp_info
@@ -112,7 +112,7 @@ def get_pc_filename_and_content(dep, name, requires, description, cpp_info=None)
         "version": version,
         "requires": requires,
         "cpp_info": cpp_info,
-        "gnudeps_flags": GnuDepsFlags(dep, cpp_info)
+        "gnudeps_flags": GnuDepsFlags(conanfile, cpp_info)
     }
     template = Template(_get_pc_file_template(), trim_blocks=True, lstrip_blocks=True,
                         undefined=StrictUndefined)
