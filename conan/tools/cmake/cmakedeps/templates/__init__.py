@@ -18,12 +18,8 @@ class CMakeDepsFileTemplate(object):
         return self.conanfile.ref.name + self.suffix
 
     @property
-    def target_namespace(self):
-        return self.get_target_namespace(self.conanfile) + self.suffix
-
-    @property
     def global_target_name(self):
-        return self.get_global_target_name(self.conanfile) + self.suffix
+        return self.get_global_target_name(self.conanfile, self.suffix)
 
     @property
     def file_name(self):
@@ -82,35 +78,32 @@ class CMakeDepsFileTemplate(object):
     def get_file_name(self):
         return get_file_name(self.conanfile, find_module_mode=self.find_module_mode)
 
-    def get_target_namespace(self, req):
-        if self.find_module_mode:
-            ret = req.cpp_info.get_property("cmake_module_target_namespace", "CMakeDeps")
-            if ret:
-                return ret
+    @staticmethod
+    def _get_target_default_name(req, component_name="", suffix=""):
+        return "{name}{suffix}::{cname}{suffix}".format(cname=component_name or req.ref.name,
+                                                        name=req.ref.name, suffix=suffix)
 
-        ret = req.cpp_info.get_property("cmake_target_namespace", "CMakeDeps")
-        return ret or self.get_global_target_name(req)
-
-    def get_global_target_name(self, req):
+    def get_global_target_name(self, req, suffix=""):
         if self.find_module_mode:
             ret = req.cpp_info.get_property("cmake_module_target_name", "CMakeDeps")
             if ret:
                 return ret
-
         ret = req.cpp_info.get_property("cmake_target_name", "CMakeDeps")
-        return ret or req.ref.name
+        return ret or self._get_target_default_name(req, suffix=suffix)
 
     def get_component_alias(self, req, comp_name):
         if comp_name not in req.cpp_info.components:
             # foo::foo might be referencing the root cppinfo
             if req.ref.name == comp_name:
-                return self.get_target_namespace(req)
+                return self.get_global_target_name(req)
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=req.ref.name, cname=comp_name))
         if self.find_module_mode:
-            ret = req.cpp_info.components[comp_name].get_property("cmake_module_target_name",
-                                                                  "CMakeDeps")
+            ret = req.cpp_info.components[comp_name].get_property("cmake_module_target_name", "CMakeDeps")
             if ret:
                 return ret
         ret = req.cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
-        return ret or comp_name
+        # If we don't specify a property for the name it will fallback to the pkg_name::comp_name
+        # note that it wont take cmake_target_name namespace as first component
+        # of the absolute target!
+        return ret or self._get_target_default_name(req, component_name=comp_name)

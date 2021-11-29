@@ -28,7 +28,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         cmake_target_aliases = self.conanfile.cpp_info.\
             get_property("cmake_target_aliases", "CMakeDeps") or dict()
 
-        target = "%s::%s" % (self.target_namespace, self.global_target_name)
+        target = self.global_target_name
         cmake_target_aliases = {alias: target for alias in cmake_target_aliases}
 
         cmake_component_target_aliases = dict()
@@ -37,12 +37,10 @@ class TargetsTemplate(CMakeDepsFileTemplate):
                 self.conanfile.cpp_info.components[comp_name].\
                 get_property("cmake_target_aliases", "CMakeDeps") or dict()
 
-            target = "%s::%s" % (self.target_namespace,
-                                 self.get_component_alias(self.conanfile, comp_name))
+            target = self.get_component_alias(self.conanfile, comp_name)
             cmake_component_target_aliases[comp_name] = {alias: target for alias in aliases}
 
         ret = {"pkg_name": self.pkg_name,
-               "target_namespace": self.target_namespace,
                "global_target_name": self.global_target_name,
                "file_name": self.file_name,
                "data_pattern": data_pattern,
@@ -64,16 +62,16 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         endforeach()
 
         # Create the targets for all the components
-        foreach(_COMPONENT {{ '${' + pkg_name + '_COMPONENT_NAMES' + '}' }} )
-            if(NOT TARGET {{ target_namespace }}::${_COMPONENT})
-                add_library({{ target_namespace }}::${_COMPONENT} INTERFACE IMPORTED)
-                conan_message(STATUS "Conan: Component target declared '{{ target_namespace }}::${_COMPONENT}'")
+        foreach(_COMPONENT {{ '${' + pkg_name + '_COMPONENT_TARGET_NAMES' + '}' }} )
+            if(NOT TARGET ${_COMPONENT})
+                add_library(${_COMPONENT} INTERFACE IMPORTED)
+                conan_message(STATUS "Conan: Component target declared '${_COMPONENT}'")
             endif()
         endforeach()
 
-        if(NOT TARGET {{ target_namespace }}::{{ global_target_name }})
-            add_library({{ target_namespace }}::{{ global_target_name }} INTERFACE IMPORTED)
-            conan_message(STATUS "Conan: Target declared '{{ target_namespace }}::{{ global_target_name }}'")
+        if(NOT TARGET {{ global_target_name }})
+            add_library({{ global_target_name }} INTERFACE IMPORTED)
+            conan_message(STATUS "Conan: Target declared '{{ global_target_name }}'")
         endif()
 
         {%- for alias, target in cmake_target_aliases.items() %}

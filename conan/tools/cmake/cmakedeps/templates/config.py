@@ -31,7 +31,6 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 "file_name": self.file_name,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
-                "target_namespace": self.target_namespace,
                 "check_components_exist": self.cmakedeps.check_components_exist,
                 "targets_include_file": targets_include}
 
@@ -76,9 +75,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         {% if check_components_exist %}
         # Check that the specified components in the find_package(Foo COMPONENTS x y z) are there
         # This is the variable filled by CMake with the requested components in find_package
-        if({{ target_namespace }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ '${'+target_namespace+'_FIND_COMPONENTS}' }})
-                if (TARGET {{ target_namespace }}::${_FIND_COMPONENT})
+        if({{ file_name }}_FIND_COMPONENTS)
+            foreach(_FIND_COMPONENT {{ '${'+file_name+'_FIND_COMPONENTS}' }})
+                if (TARGET ${_FIND_COMPONENT})
                     conan_message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
                 else()
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
