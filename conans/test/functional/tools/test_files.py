@@ -116,7 +116,8 @@ def test_patch(mock_patch_ng):
     assert 'mypkg/1.0: Apply patch (security)' in str(client.out)
 
 
-def test_patch_real():
+@pytest.mark.parametrize("no_copy_source", [False, True])
+def test_patch_real(no_copy_source):
     conanfile = textwrap.dedent("""
         import os
         from conans import ConanFile, load
@@ -127,6 +128,7 @@ def test_patch_real():
             name = "mypkg"
             version = "1.0"
             exports = "*"
+            no_copy_source = %s
 
             def layout(self):
                 self.folders.source = "src"
@@ -139,9 +141,14 @@ def test_patch_real():
 
             def build(self):
                 save("myfile.cpp", "//dummy contents")
-                patch(self, patch_file="../patches/mypatch_cpp", patch_type="security")
+                if self.no_copy_source:
+                    # TODO: Discuss: This actually works always!!! It is the previous solution
+                    p = os.path.join(self.source_folder, "../patches/mypatch_cpp")
+                else:
+                    p = "../patches/mypatch_cpp"
+                patch(self, patch_file=p, patch_type="security")
                 self.output.info("BUILD: {}".format(load("myfile.cpp")))
-        """)
+        """ % no_copy_source)
 
     client = TestClient()
     patch_contents = textwrap.dedent("""\
@@ -157,7 +164,6 @@ def test_patch_real():
     client.run('create .')
     assert "mypkg/1.0: Apply patch (security)" in client.out
     assert "mypkg/1.0: SOURCE: //smart contents" in client.out
-    # TODO: This needs ``patch(..., base_path=self.build_folder...)``, really needed? why not cwd?
     assert "mypkg/1.0: BUILD: //smart contents" in client.out
 
     # Test local source too
