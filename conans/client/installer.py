@@ -369,10 +369,11 @@ class BinaryInstaller(object):
 
         raise ConanException(textwrap.dedent('''\
             Missing prebuilt package for '%s'
-            Try to build from sources with '%s'
-            Use 'conan search <reference> --table table.html'
-            Or read 'http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-            ''' % (missing_pkgs, build_str)))
+            Use 'conan search %s --table=table.html -r=remote' and open the table.html file to see available packages
+            Or try to build locally from sources with '%s'
+
+            More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
+            ''' % (missing_pkgs, missing_pkgs, build_str)))
 
     def _download(self, downloads, processed_package_refs):
         """ executes the download of packages (both download and update), only once for a given
