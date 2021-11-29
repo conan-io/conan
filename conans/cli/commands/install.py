@@ -1,5 +1,6 @@
 import os
 
+from conans.cli.api.formatters.graph import cli_format_graph_basic
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile
@@ -123,6 +124,7 @@ def install(conan_api, parser, *args, **kwargs):
                                             require_overrides=args.require_override,
                                             remote=remote,
                                             update=args.update)
+    cli_format_graph_basic(deps_graph)
     print_graph(deps_graph)
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remote=remote, update=args.update)
