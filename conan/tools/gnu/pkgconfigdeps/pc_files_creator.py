@@ -17,12 +17,12 @@ class PCFilesCreator(object):
         pc_files = {}
         for name, aliases in self._pc_info_loader.aliases_info.items():
             for alias in aliases:
-                pc_wrapper_file = self._pc_files_templates.get_wrapper_pc_filename_and_content(
+                pc_alias_file = self._pc_files_templates.get_alias_pc_filename_and_content(
                     alias,
                     [name],  # require is the own name which is being used the aliases for.
                     description="Alias %s for %s" % (alias, name),
                 )
-                pc_files.update(pc_wrapper_file)
+                pc_files.update(pc_alias_file)
         return pc_files
 
     def _get_components_pc_files_and_content(self):
@@ -46,12 +46,12 @@ class PCFilesCreator(object):
         pc_files.update(self._get_components_pc_files_and_content())
         pkg_info = self._pc_info_loader.package_info
         description = self._conanfile.description or "Conan package: %s" % pkg_info.name
-        pc_wrapper_file_pkg = self._pc_files_templates.get_wrapper_pc_filename_and_content(
+        pc_alias_file_pkg = self._pc_files_templates.get_alias_pc_filename_and_content(
             pkg_info.name,
             pkg_info.requires,
             description
         )
-        pc_files.update(pc_wrapper_file_pkg)
+        pc_files.update(pc_alias_file_pkg)
         return pc_files
 
     @property

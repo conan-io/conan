@@ -90,7 +90,7 @@ class PCFilesTemplate(object):
         """)
 
     @property
-    def wrapper_pc_file_template(self):
+    def alias_pc_file_template(self):
         return textwrap.dedent("""\
             Name: {{ name }}
             Description: {{ description }}
@@ -123,13 +123,13 @@ class PCFilesTemplate(object):
                             undefined=StrictUndefined)
         return {name + ".pc": template.render(context)}
 
-    def get_wrapper_pc_filename_and_content(self, name, requires, description):
+    def get_alias_pc_filename_and_content(self, name, requires, description):
         context = {
             "name": name,
             "description": description,
             "version": self._version,
             "requires": requires
         }
-        template = Template(self.wrapper_pc_file_template, trim_blocks=True,
+        template = Template(self.alias_pc_file_template, trim_blocks=True,
                             lstrip_blocks=True, undefined=StrictUndefined)
         return {name + ".pc": template.render(context)}
