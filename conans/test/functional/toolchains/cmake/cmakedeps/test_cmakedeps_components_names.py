@@ -901,7 +901,8 @@ def test_colliding_target_names():
         """)
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run("create .", assert_error=True)
+    client.run("create .")
+
     assert "Target name 'mypkg::name' already exists." in client.out
 
     package_info = textwrap.dedent("""
@@ -913,5 +914,6 @@ def test_colliding_target_names():
     client.run("create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run("create .", assert_error=True)
+    client.run("create .")
+
     assert "Component target name 'componentname' already exists." in client.out

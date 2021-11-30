@@ -146,7 +146,7 @@ def test_collide_global_alias():
     client.run("create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run("create .", assert_error=True)
+    client.run("create .")
 
     assert "Target name 'hello::hello' already exists." in client.out
 
@@ -178,6 +178,6 @@ def test_collide_component_alias():
     client.run("create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run("create .", assert_error=True)
+    client.run("create .")
 
     assert "Target name 'hello::buy' already exists." in client.out
