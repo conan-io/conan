@@ -23,9 +23,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             if not self.conanfile.is_build_context else []
 
         components_targets_names = self.get_declared_components_targets_names()
-        components_variables_names = [components_variables_name.replace("::", "_") for
-                                      components_variables_name in components_targets_names]
-        components_names = list(zip(components_targets_names, components_variables_names))
+        components_names = [(components_target_name, components_target_name.replace("::", "_"))
+                            for components_target_name in components_targets_names]
 
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
