@@ -28,7 +28,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         components_names = list(zip(components_targets_names, components_variables_names))
 
         return {"pkg_name": self.pkg_name,
-                "global_target_name": self.global_target_name,
+                "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
@@ -112,20 +112,20 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
 
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
-        set_property(TARGET {{global_target_name}}
+        set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
                                                    ${{'{'}}{{pkg_name}}_OBJECTS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{global_target_name}}
+        set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_LINK_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{global_target_name}}
+        set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{global_target_name}}
+        set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_COMPILE_DEFINITIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
-        set_property(TARGET {{global_target_name}}
+        set_property(TARGET {{root_target_name}}
                      PROPERTY INTERFACE_COMPILE_OPTIONS
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
 
@@ -184,5 +184,5 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 ret.append(component_name)
         elif visible_host_direct:
             # Regular external "conanfile.requires" declared, not cpp_info requires
-            ret = [self.get_global_target_name(r) for r in visible_host_direct.values()]
+            ret = [self.get_root_target_name(r) for r in visible_host_direct.values()]
         return ret

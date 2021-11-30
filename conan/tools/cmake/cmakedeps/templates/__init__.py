@@ -18,8 +18,8 @@ class CMakeDepsFileTemplate(object):
         return self.conanfile.ref.name + self.suffix
 
     @property
-    def global_target_name(self):
-        return self.get_global_target_name(self.conanfile, self.suffix)
+    def root_target_name(self):
+        return self.get_root_target_name(self.conanfile, self.suffix)
 
     @property
     def file_name(self):
@@ -83,7 +83,7 @@ class CMakeDepsFileTemplate(object):
         return "{name}{suffix}::{cname}{suffix}".format(cname=component_name or req.ref.name,
                                                         name=req.ref.name, suffix=suffix)
 
-    def get_global_target_name(self, req, suffix=""):
+    def get_root_target_name(self, req, suffix=""):
         if self.find_module_mode:
             ret = req.cpp_info.get_property("cmake_module_target_name", "CMakeDeps")
             if ret:
@@ -95,7 +95,7 @@ class CMakeDepsFileTemplate(object):
         if comp_name not in req.cpp_info.components:
             # foo::foo might be referencing the root cppinfo
             if req.ref.name == comp_name:
-                return self.get_global_target_name(req)
+                return self.get_root_target_name(req)
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=req.ref.name, cname=comp_name))
         if self.find_module_mode:

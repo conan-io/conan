@@ -28,7 +28,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         cmake_target_aliases = self.conanfile.cpp_info.\
             get_property("cmake_target_aliases", "CMakeDeps") or dict()
 
-        target = self.global_target_name
+        target = self.root_target_name
         cmake_target_aliases = {alias: target for alias in cmake_target_aliases}
 
         cmake_component_target_aliases = dict()
@@ -41,7 +41,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             cmake_component_target_aliases[comp_name] = {alias: target for alias in aliases}
 
         ret = {"pkg_name": self.pkg_name,
-               "global_target_name": self.global_target_name,
+               "root_target_name": self.root_target_name,
                "file_name": self.file_name,
                "data_pattern": data_pattern,
                "target_pattern": target_pattern,
@@ -69,9 +69,9 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             endif()
         endforeach()
 
-        if(NOT TARGET {{ global_target_name }})
-            add_library({{ global_target_name }} INTERFACE IMPORTED)
-            conan_message(STATUS "Conan: Target declared '{{ global_target_name }}'")
+        if(NOT TARGET {{ root_target_name }})
+            add_library({{ root_target_name }} INTERFACE IMPORTED)
+            conan_message(STATUS "Conan: Target declared '{{ root_target_name }}'")
         endif()
 
         {%- for alias, target in cmake_target_aliases.items() %}
