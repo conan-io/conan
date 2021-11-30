@@ -103,7 +103,8 @@ class CMakeDepsFileTemplate(object):
             if ret:
                 return ret
         ret = req.cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
-        # If we don't specify a property for the name it will fallback to the pkg_name::comp_name
-        # note that it wont take cmake_target_name namespace as first component
-        # of the absolute target!
+        # If we don't specify the `cmake_target_name` property for the component it will 
+        # fallback to the pkg_name::comp_name, it wont use the root cpp_info cmake_target_name 
+        # property because that is also an absolute name (Greetings::Greetings), it is not a namespace 
+        # and we don't want to split and do tricks.
         return ret or self._get_target_default_name(req, component_name=comp_name)
