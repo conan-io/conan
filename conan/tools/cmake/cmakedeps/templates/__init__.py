@@ -92,19 +92,13 @@ class CMakeDepsFileTemplate(object):
         return ret or self._get_target_default_name(req, suffix=suffix)
 
     def get_component_alias(self, req, comp_name):
-        if comp_name not in req.cpp_info.components:
-            # foo::foo might be referencing the root cppinfo
-            if req.ref.name == comp_name:
-                return self.get_root_target_name(req)
-            raise ConanException("Component '{name}::{cname}' not found in '{name}' "
-                                 "package requirement".format(name=req.ref.name, cname=comp_name))
         if self.find_module_mode:
             ret = req.cpp_info.components[comp_name].get_property("cmake_module_target_name", "CMakeDeps")
             if ret:
                 return ret
         ret = req.cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
-        # If we don't specify the `cmake_target_name` property for the component it will 
-        # fallback to the pkg_name::comp_name, it wont use the root cpp_info cmake_target_name 
-        # property because that is also an absolute name (Greetings::Greetings), it is not a namespace 
+        # If we don't specify the `cmake_target_name` property for the component it will
+        # fallback to the pkg_name::comp_name, it wont use the root cpp_info cmake_target_name
+        # property because that is also an absolute name (Greetings::Greetings), it is not a namespace
         # and we don't want to split and do tricks.
         return ret or self._get_target_default_name(req, component_name=comp_name)
