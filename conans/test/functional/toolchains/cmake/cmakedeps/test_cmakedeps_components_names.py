@@ -783,6 +783,11 @@ def test_targets_declared_in_build_modules(check_components_exist):
 
 @pytest.mark.tool_cmake
 def test_cmakedeps_targets_no_namespace():
+    """
+    This test is checking that when we add targets with no namespace for the root cpp_info
+    and the components, the targets are correctly generated. Before Conan 1.43, Conan
+    only generated targets with namespace
+    """
     client = TestClient()
     my_pkg = textwrap.dedent("""
         from conans import ConanFile
@@ -842,3 +847,8 @@ def test_cmakedeps_targets_no_namespace():
 
     client.save({"consumer/conanfile.py": conanfile, "consumer/CMakeLists.txt": cmakelists})
     client.run("create consumer")
+    assert "Component target declared 'libcurl'" in client.out
+    assert "Component target declared 'libcurl2'" in client.out
+    assert "Target declared 'CURL'" in client.out
+    assert "Component target declared 'MYPKGCOMPNAME'" in client.out
+    assert "Target declared 'nonamespacepkg'" in client.out
