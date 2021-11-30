@@ -135,16 +135,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                 else:  # Points to a component of same package
                     public_comp_deps.append(self.get_component_alias(self.conanfile, require))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
-            if comp_name not in self.conanfile.cpp_info.components:
-                # foo::foo might be referencing the root cppinfo
-                if self.conanfile.ref.name == comp_name:
-                    component_target_name = self.get_root_target_name(self.conanfile)
-                else:
-                    raise ConanException("Component '{name}::{cname}' not found in '{name}' "
-                                         "package requirement".format(name=self.conanfile.ref.name,
-                                                                      cname=comp_name))
-            else:
-                component_target_name = self.get_component_alias(self.conanfile, comp_name)
+            component_target_name = self.get_component_alias(self.conanfile, comp_name)
             ret.append((component_target_name, deps_cpp_cmake))
         ret.reverse()
         return ret

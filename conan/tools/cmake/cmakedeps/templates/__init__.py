@@ -92,6 +92,12 @@ class CMakeDepsFileTemplate(object):
         return ret or self._get_target_default_name(req, suffix=suffix)
 
     def get_component_alias(self, req, comp_name):
+        if comp_name not in req.cpp_info.components:
+            # foo::foo might be referencing the root cppinfo
+            if req.ref.name == comp_name:
+                return self.get_root_target_name(req)
+            raise ConanException("Component '{name}::{cname}' not found in '{name}' "
+                                 "package requirement".format(name=req.ref.name, cname=comp_name))
         if self.find_module_mode:
             ret = req.cpp_info.components[comp_name].get_property("cmake_module_target_name", "CMakeDeps")
             if ret:
