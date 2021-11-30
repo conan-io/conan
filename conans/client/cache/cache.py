@@ -32,6 +32,7 @@ TEMPLATES_FOLDER = "templates"
 GENERATORS_FOLDER = "generators"
 
 
+# TODO: Rename this to ClientHome
 class ClientCache(object):
     """ Class to represent/store/compute all the paths involved in the execution
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
