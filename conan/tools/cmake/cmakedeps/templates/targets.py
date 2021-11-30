@@ -33,12 +33,13 @@ class TargetsTemplate(CMakeDepsFileTemplate):
 
         cmake_component_target_aliases = dict()
         for comp_name in self.conanfile.cpp_info.components:
-            aliases = \
-                self.conanfile.cpp_info.components[comp_name].\
-                get_property("cmake_target_aliases", "CMakeDeps") or dict()
+            if comp_name is not None:
+                aliases = \
+                    self.conanfile.cpp_info.components[comp_name].\
+                    get_property("cmake_target_aliases", "CMakeDeps") or dict()
 
-            target = self.get_component_alias(self.conanfile, comp_name)
-            cmake_component_target_aliases[comp_name] = {alias: target for alias in aliases}
+                target = self.get_component_alias(self.conanfile, comp_name)
+                cmake_component_target_aliases[comp_name] = {alias: target for alias in aliases}
 
         ret = {"pkg_name": self.pkg_name,
                "root_target_name": self.root_target_name,
@@ -66,12 +67,16 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             if(NOT TARGET ${_COMPONENT})
                 add_library(${_COMPONENT} INTERFACE IMPORTED)
                 conan_message(STATUS "Conan: Component target declared '${_COMPONENT}'")
+            else()
+                message(FATAL_ERROR "Component target name '${_COMPONENT}' already exists. Please rename your targets so their names don't collide.")
             endif()
         endforeach()
 
         if(NOT TARGET {{ root_target_name }})
             add_library({{ root_target_name }} INTERFACE IMPORTED)
             conan_message(STATUS "Conan: Target declared '{{ root_target_name }}'")
+        else()
+            message(FATAL_ERROR "Target name '{{root_target_name}}' already exists. Please rename your targets so their names don't collide.")
         endif()
 
         {%- for alias, target in cmake_target_aliases.items() %}
@@ -80,7 +85,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
         else()
-            message(FATAL_ERROR "Target: '{{alias}}' already exists. You can't create an alias with a target name that already exists!")
+            message(FATAL_ERROR "Target name '{{alias}}' already exists. You can't create an alias with a target name that already exists!")
         endif()
 
         {%- endfor %}
@@ -93,7 +98,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
         else()
-            message(FATAL_ERROR "Target: '{{alias}}' already exists. You can't create an alias with a target name that already exists!")
+            message(FATAL_ERROR "Target name '{{alias}}' already exists. You can't create an alias with a target name that already exists!")
         endif()
 
             {%- endfor %}
