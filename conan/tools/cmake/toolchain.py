@@ -8,7 +8,7 @@ from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
-from conan.tools.cmake.utils import is_multi_configuration, get_file_name
+from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
@@ -117,6 +117,8 @@ class VSRuntimeBlock(Block):
                 config_dict = dict(matches)
 
         build_type = settings.get_safe("build_type")  # FIXME: change for configuration
+        if build_type is None:
+            return None
         runtime = settings.get_safe("compiler.runtime")
         if compiler == "Visual Studio":
             config_dict[build_type] = {"MT": "MultiThreaded",

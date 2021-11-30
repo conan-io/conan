@@ -74,8 +74,8 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
         set({{ pkg_name }}_COMPONENTS {{ pkg_components }})
 
-        if({{ pkg_name }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
+        if({{ pkg_filename }}_FIND_COMPONENTS)
+            foreach(_FIND_COMPONENT {{ '${'+pkg_filename+'_FIND_COMPONENTS}' }})
                 list(FIND {{ pkg_name }}_COMPONENTS "{{ namespace }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
@@ -227,7 +227,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
             pkg_filename = self._get_filename(cpp_info)
             pkg_findname = self._get_name(cpp_info)
-            pkg_namespace = self._get_namespace(cpp_info) or pkg_findname
+            pkg_namespace = pkg_findname
             ret["Find%s.cmake" % pkg_filename] = self._find_for_dep(
                 pkg_name=pkg_name,
                 pkg_findname=pkg_findname,
