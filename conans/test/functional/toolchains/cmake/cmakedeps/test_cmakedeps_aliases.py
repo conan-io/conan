@@ -169,8 +169,6 @@ def test_collide_component_alias():
     cmake_minimum_required(VERSION 2.8)
 
     find_package(hello REQUIRED)
-    get_target_property(link_libraries hola::adios INTERFACE_LINK_LIBRARIES)
-    message("hola::adios link libraries: ${link_libraries}")
     """)
 
     client = TestClient()
