@@ -80,7 +80,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
         else()
-            message(WARNING "target '{{alias}}' already exists, alias for target '{{target}}' won't be created!")
+            message(FATAL_ERROR "Target: '{{alias}}' already exists. You can't create an alias with a target name that already exists!")
         endif()
 
         {%- endfor %}
@@ -93,7 +93,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
         else()
-            message(WARNING "target '{{alias}}' already exists, alias for target '{{target}}' won't be created!")
+            message(FATAL_ERROR "Target: '{{alias}}' already exists. You can't create an alias with a target name that already exists!")
         endif()
 
             {%- endfor %}
