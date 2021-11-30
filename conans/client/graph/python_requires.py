@@ -81,8 +81,8 @@ class PyRequireLoader(object):
             try:
                 py_require = self._cached_py_requires[py_requires_ref]
             except KeyError:
-                result = self._load_pyreq_conanfile(loader, graph_lock, py_requires_ref)
-                conanfile, module, new_ref, path, recipe_status = result
+                pyreq_conanfile = self._load_pyreq_conanfile(loader, graph_lock, py_requires_ref)
+                conanfile, module, new_ref, path, recipe_status = pyreq_conanfile
                 py_require = PyRequire(module, conanfile, new_ref, path, recipe_status)
                 self._cached_py_requires[py_requires_ref] = py_require
             result.add_pyrequire(py_require)
