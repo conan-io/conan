@@ -29,16 +29,12 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if not self.build_modules_activated:
             global_cpp.build_modules_paths = ""
 
-        components_target_name, cpp = zip(*self.get_required_components_cpp()) if self.get_required_components_cpp() else ([], [])
-
         # using the target names to name components, may change in the future?
-        components_names = " ".join([components_target_name for components_target_name in
-                                    reversed(components_target_name)])
+        components_names = " ".join([components_target_name for components_target_name, _ in
+                                    reversed(self.get_required_components_cpp())])
 
-        components_cmake_var_names = [cmake_target_name.replace("::", "_") for cmake_target_name in
-                                      components_target_name]
-
-        components_cpp = list(zip(components_cmake_var_names, components_target_name, cpp))
+        components_cpp = [(cmake_target_name.replace("::", "_"), cmake_target_name, cpp)
+                          for cmake_target_name, cpp in self.get_required_components_cpp()]
 
         # For the build requires, we don't care about the transitive (only runtime for the br)
         # so as the xxx-conf.cmake files won't be generated, don't include them as find_dependency
