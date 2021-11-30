@@ -8,18 +8,18 @@ if platform.system() == "Windows":
 else:
     conan_expand_user = os.path.expanduser
 
-DEFAULT_CONAN_USER_HOME = ".conan2"
+DEFAULT_CONAN_HOME = ".conan2"
 
 
 def get_conan_user_home():
-    user_home = os.getenv("CONAN_USER_HOME")
+    user_home = os.getenv("CONAN_HOME")
     if user_home is None:
         # the default, in the user home
-        user_home = os.path.join(conan_expand_user("~"), DEFAULT_CONAN_USER_HOME)
+        user_home = os.path.join(conan_expand_user("~"), DEFAULT_CONAN_HOME)
     else:  # Do an expansion, just in case the user is using ~/something/here
         user_home = conan_expand_user(user_home)
     if not os.path.isabs(user_home):
-        raise Exception("Invalid CONAN_USER_HOME value '%s', "
+        raise Exception("Invalid CONAN_HOME value '%s', "
                         "please specify an absolute or path starting with ~/ "
                         "(relative to user home)" % user_home)
     return user_home
