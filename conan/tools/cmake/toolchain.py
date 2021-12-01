@@ -271,13 +271,14 @@ class ParallelBlock(Block):
 
     def context(self):
         # TODO: Check this conf
+
         compiler = self._conanfile.settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc"):
+        if compiler not in ("Visual Studio", "msvc") or "Visual" not in self._toolchain.generator:
             return
 
-            jobs = build_jobs(self._conanfile)
-            if jobs:
-                return {"parallel": jobs}
+        jobs = build_jobs(self._conanfile)
+        if jobs:
+            return {"parallel": jobs}
 
 
 class AndroidSystemBlock(Block):
