@@ -50,8 +50,8 @@ class CppPackage(object):
                 # TODO: probably we want to revisit all this stuff with the new absolute
                 #  target names via set_property
                 conanfile.cpp_info.components[cname].set_property("cmake_target_name",
-                                                                  "{}::{}".format(conanfile.cpp_info.name, gname),
-                                                                  generator)
+                                                                  "{}::{}".format(conanfile.ref.name,
+                                                                                  gname), generator)
 
     def add_component(self, name):
         """
