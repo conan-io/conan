@@ -1,8 +1,6 @@
 import os
 import platform
 
-from conan.tools.env import Environment
-from conan.tools.env.environment import environment_wrap_command
 from conans.cli.output import ConanOutput, ScopedOutput
 from conans.errors import ConanException
 from conans.model.conf import Conf
@@ -59,7 +57,7 @@ class ConanFile:
 
         self.compatible_packages = []
         self._conan_requester = None
-
+        from conan.tools.env import Environment
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
@@ -128,6 +126,7 @@ class ConanFile:
     @property
     def buildenv(self):
         # Lazy computation of the package buildenv based on the profileone
+        from conan.tools.env import Environment
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
@@ -244,6 +243,7 @@ class ConanFile:
                 return run_in_windows_bash(self, command=command, cwd=cwd, env=env)
         if env is None:
             env = "conanbuild"
+        from conan.tools.env.environment import environment_wrap_command
         wrapped_cmd = environment_wrap_command(env, command, cwd=self.generators_folder)
         retcode = self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 

@@ -3,6 +3,7 @@ import textwrap
 from xml.dom import minidom
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars
 from conans.errors import ConanException
@@ -129,7 +130,7 @@ class MSBuildToolchain(object):
                      {};%(PreprocessorDefinitions)
                   </PreprocessorDefinitions>
                   <RuntimeLibrary>{}</RuntimeLibrary>
-                  <LanguageStandard>{}</LanguageStandard>{}
+                  <LanguageStandard>{}</LanguageStandard>{}{}
                 </ClCompile>
                 <ResourceCompile>
                   <PreprocessorDefinitions>
@@ -152,10 +153,17 @@ class MSBuildToolchain(object):
         if compile_options is not None:
             compile_options = eval(compile_options)
             self.compile_options.update(compile_options)
+        parallel = ""
+        njobs = build_jobs(self._conanfile)
+        if njobs:
+            parallel = "".join(
+                ["\n      <MultiProcessorCompilation>True</MultiProcessorCompilation>",
+                 "\n      <ProcessorNumber>{}</ProcessorNumber>".format(njobs)])
         compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
                                   for k, v in self.compile_options.items())
         config_props = toolchain_file.format(preprocessor_definitions, runtime_library, cppstd,
-                                             compile_options, preprocessor_definitions, toolset)
+                                             parallel, compile_options, preprocessor_definitions,
+                                             toolset)
         config_filepath = os.path.join(self._conanfile.generators_folder, config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)
