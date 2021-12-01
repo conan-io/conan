@@ -23,7 +23,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             if not self.conanfile.is_build_context else []
 
         components_targets_names = self.get_declared_components_targets_names()
-        components_names = [(components_target_name, components_target_name.replace("::", "_"))
+        components_names = [(components_target_name.replace("::", "_"), components_target_name)
                             for components_target_name in components_targets_names]
 
         return {"pkg_name": self.pkg_name,
@@ -87,7 +87,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         set(CMAKE_MODULE_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_PREFIX_PATH})
 
-        {%- for comp_target_name, comp_variable_name in components_names %}
+        {%- for comp_variable_name, comp_target_name in components_names %}
 
         ########## COMPONENT {{ comp_target_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
 
