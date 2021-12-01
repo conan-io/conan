@@ -29,6 +29,8 @@ class OnlySourceTest(unittest.TestCase):
         client.run("create . lasote/stable", assert_error=True)
         self.assertIn("Or try to build locally from sources with '--build=hello0 --build=hello1'",
                       client.out)
+        # Only 1 reference!
+        assert "Use 'conan search hello0/0.0@lasote/stable --table=table.html" in client.out
 
         # We generate the package for hello0/0.0
         client.run("install --reference=hello0/0.0@lasote/stable --build hello0")

@@ -365,6 +365,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     assert "Hello World Release!" in client.out
 
 
+@pytest.mark.tool_cmake(version="3.19")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
