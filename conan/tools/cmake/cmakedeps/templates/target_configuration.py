@@ -130,7 +130,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         ########## COMPONENTS TARGET PROPERTIES {{ configuration }} ########################################
 
-        {%- for comp_target_name, comp_variable_name in components_names %}
+        {%- for comp_variable_name, comp_target_name in components_names %}
 
         ########## COMPONENT {{ comp_target_name }} TARGET PROPERTIES ######################################
         set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_LINK_LIBRARIES
