@@ -126,6 +126,11 @@ class _PackageOptions:
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
+        current_value = self._data.get(field)
+        if self._freeze and current_value.value is not None:
+            raise ConanException(f"Incorrect attempt to remove option '{field}' "
+                                 f"with current value '{current_value}'")
+
         self._ensure_exists(field)
         del self._data[field]
 
@@ -247,10 +252,7 @@ class Options:
         return setattr(self._package_options, attr, value)
 
     def __delattr__(self, field):
-        try:
-            self._package_options.__delattr__(field)
-        except ConanException:
-            pass
+        self._package_options.__delattr__(field)
 
     def __getitem__(self, item):
         # To access dependencies options like ``options["mydep"]``. This will no longer be
