@@ -858,12 +858,6 @@ def test_cmakedeps_targets_no_namespace():
 def test_colliding_target_names():
     client = TestClient()
 
-    package_info = textwrap.dedent("""
-        self.cpp_info.set_property("cmake_target_name", "mypkg::name")
-        self.cpp_info.components["mycomponent"].set_property("cmake_target_name", "mypkg::name")
-        self.cpp_info.components["mycomponent2"].set_property("cmake_target_name", "collidetarget")
-        """)
-
     mypkg = textwrap.dedent("""
         from conans import ConanFile
         class MyPkg(ConanFile):
@@ -871,10 +865,12 @@ def test_colliding_target_names():
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
             def package_info(self):
-                {}
+                self.cpp_info.set_property("cmake_target_name", "mypkg::name")
+                self.cpp_info.components["mycomponent"].set_property("cmake_target_name", "mypkg::name")
+                self.cpp_info.components["mycomponent2"].set_property("cmake_target_name", "collidetarget")
         """)
 
-    client.save({"conanfile.py": mypkg.format("\n        ".join(package_info.splitlines()))})
+    client.save({"conanfile.py": mypkg})
     client.run("create .")
 
     cmakelists = textwrap.dedent("""
@@ -904,16 +900,3 @@ def test_colliding_target_names():
     client.run("create .")
 
     assert "Target name 'mypkg::name' already exists." in client.out
-
-    package_info = textwrap.dedent("""
-        self.cpp_info.components["mycomponent"].set_property("cmake_target_name", "componentname")
-        self.cpp_info.components["mycomponent2"].set_property("cmake_target_name", "componentname")
-        """)
-
-    client.save({"conanfile.py": mypkg.format("\n        ".join(package_info.splitlines()))})
-    client.run("create .")
-
-    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run("create .")
-
-    assert "Component target name 'componentname' already exists." in client.out
