@@ -624,7 +624,7 @@ def test_no_soname_flag():
                 LIBRARY DESTINATION lib
                 )
     """)
-    cpp = gen_function_cpp(name="nosoname", calls=["nosoname"])
+    cpp = gen_function_cpp(name="nosoname")
     h = gen_function_h(name="nosoname")
     client.save({"CMakeLists.txt": cmakelists_nosoname,
                  "src/nosoname.cpp": cpp,
@@ -663,11 +663,11 @@ def test_no_soname_flag():
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
 
-        include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+        include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
         conan_basic_setup()
 
-        set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
-        set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+        set(CMAKE_MODULE_PATH ${{CMAKE_BINARY_DIR}})
+        set(CMAKE_PREFIX_PATH ${{CMAKE_BINARY_DIR}})
 
         find_package(libB CONFIG REQUIRED)
 
@@ -679,6 +679,7 @@ def test_no_soname_flag():
         libB/1.0
 
         [generators]
+        cmake
         cmake_find_package_multi
     """)
     cpp = gen_function_cpp(name="main", includes=["libB"], calls=["libB"])
