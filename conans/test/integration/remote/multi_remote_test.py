@@ -1,13 +1,9 @@
 import unittest
 from collections import OrderedDict
-import time
 from time import sleep
-
-from mock import patch
 
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
-from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 

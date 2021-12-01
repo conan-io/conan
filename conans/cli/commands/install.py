@@ -6,6 +6,7 @@ from conans.cli.common import _add_common_install_arguments, _help_build_policie
     get_profiles_from_args, get_lockfile
 from conans.cli.output import ConanOutput
 from conans.client.conan_api import _make_abs_path
+from conans.client.graph.printer import print_graph
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 
@@ -139,6 +140,9 @@ def install(conan_api, parser, *args, **kwargs):
     out.highlight("\n-------- Computing necessary packages ----------")
     conan_api.graph.analyze_binaries(deps_graph, args.build, remote=remote, update=args.update)
     cli_format_graph_packages(deps_graph)
+    # TODO: Keeping old printing to avoid many tests fail: TO REMOVE
+    out.highlight("\nLegacy graph output (to be removed):")
+    print_graph(deps_graph)
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remote=remote, update=args.update)
