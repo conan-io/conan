@@ -59,5 +59,5 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         t.run("remove {} -f -sf".format(ref))  # Remove sources caching
 
         # Compile (it will clone the repo)
-        t.run("install {ref} --build=lib".format(ref=ref))
+        t.run("install --reference={ref} --build=lib".format(ref=ref))
         self.assertIn("lib/version@issue/testing: SCM: Getting sources from url:", t.out)

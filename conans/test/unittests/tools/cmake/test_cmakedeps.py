@@ -16,10 +16,11 @@ def test_cpp_info_name_cmakedeps():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.initialize()
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}))
+                                   "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -51,10 +52,11 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.initialize()
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release", "Debug"],
-                                   "arch": ["x86", "x64"]}))
+                                   "arch": ["x86", "x64"]})
     conanfile.settings.build_type = "Debug"
     conanfile.settings.arch = "x64"
 
@@ -92,10 +94,11 @@ def test_cmake_deps_links_flags():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.initialize()
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}))
+                                   "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -118,8 +121,8 @@ def test_cmake_deps_links_flags():
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
         data_cmake = files["mypkg-release-x86-data.cmake"]
-        assert "set(mypkg_SHARED_LINK_FLAGS_RELEASE -NODEFAULTLIB;-OTHERFLAG)" in data_cmake
-        assert "set(mypkg_EXE_LINK_FLAGS_RELEASE -OPT:NOICF)" in data_cmake
+        assert 'set(mypkg_SHARED_LINK_FLAGS_RELEASE "-NODEFAULTLIB;-OTHERFLAG")' in data_cmake
+        assert 'set(mypkg_EXE_LINK_FLAGS_RELEASE "-OPT:NOICF")' in data_cmake
         assert 'set(mypkg_OBJECTS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/myobject.o")' in data_cmake
 
 
@@ -132,10 +135,11 @@ def test_component_name_same_package():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.initialize()
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}))
+                                   "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 

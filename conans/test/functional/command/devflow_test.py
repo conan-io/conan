@@ -15,6 +15,10 @@ class ConanFileToolsTest(ConanFile):
     version = "0.1"
     exports_sources = "*"
 
+    def layout(self):
+        self.folders.build = "../build"
+        self.folders.source = "."
+
     def build(self):
         self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
         save("myartifact.lib", "artifact contents!")
@@ -41,10 +45,9 @@ class DevInSourceFlowTest(unittest.TestCase):
         client = TestClient()
         repo_folder = os.path.join(client.current_folder, "recipe")
         build_folder = os.path.join(client.current_folder, "build")
-        package_folder = os.path.join(client.current_folder, "pkg")
         mkdir(repo_folder)
         mkdir(build_folder)
-        mkdir(package_folder)
+
         client.current_folder = repo_folder  # equivalent to git clone recipe
         client.save({"conanfile.py": conanfile,
                      "file.h": "file_h_contents!"})
@@ -52,10 +55,9 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.current_folder = build_folder
         client.run("install ../recipe")
         client.run("build ../recipe")
-
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . pkg/0.1@lasote/testing -bf=../build")
+        client.run("export-pkg . pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
@@ -74,7 +76,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("build .")
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . pkg/0.1@lasote/testing -bf=.")
+        client.run("export-pkg . pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
@@ -95,7 +97,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("build ..")
 
         client.current_folder = build_folder
-        client.run("export-pkg .. pkg/0.1@lasote/testing --source-folder=.. ")
+        client.run("export-pkg .. pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
@@ -113,7 +115,7 @@ class ConanFileToolsTest(ConanFile):
     version = "0.1"
 
     def source(self):
-        save("file.h", "file_h_contents!")
+        save(os.path.join(self.source_folder, "file.h"), "file_h_contents!")
 
     def build(self):
         self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
@@ -136,24 +138,27 @@ class DevOutSourceFlowTest(unittest.TestCase):
         repo_folder = os.path.join(client.current_folder, "recipe")
         src_folder = os.path.join(client.current_folder, "src")
         build_folder = os.path.join(client.current_folder, "build")
-        package_folder = os.path.join(build_folder, "package")
         mkdir(repo_folder)
         mkdir(src_folder)
         mkdir(build_folder)
-        mkdir(package_folder)
         client.current_folder = repo_folder  # equivalent to git clone recipe
-        client.save({"conanfile.py": conanfile_out})
+        conanfile_final = conanfile_out + """
+    def layout(self):
+        self.folders.build = "../build"
+        self.folders.source = "../src"
+        """
+        client.save({"conanfile.py": conanfile_final})
 
         client.current_folder = build_folder
         client.run("install ../recipe")
-        client.current_folder = src_folder
-        client.run("install ../recipe")
+        client.current_folder = src_folder  # FIXME: Source layout not working
         client.run("source ../recipe")
+
         client.current_folder = build_folder
-        client.run("build ../recipe --source-folder=../src")
+        client.run("build ../recipe")
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . pkg/0.1@lasote/testing -bf=../build -sf=../src")
+        client.run("export-pkg . pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
@@ -163,8 +168,6 @@ class DevOutSourceFlowTest(unittest.TestCase):
     def test_insource_build(self):
         client = TestClient()
         repo_folder = client.current_folder
-        package_folder = os.path.join(client.current_folder, "pkg")
-        mkdir(package_folder)
         client.save({"conanfile.py": conanfile_out})
 
         client.run("install .")
@@ -173,7 +176,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
 
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . pkg/0.1@lasote/testing -bf=.")
+        client.run("export-pkg . pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
@@ -185,17 +188,21 @@ class DevOutSourceFlowTest(unittest.TestCase):
         repo_folder = client.current_folder
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
-        package_folder = os.path.join(build_folder, "package")
-        mkdir(package_folder)
-        client.save({"conanfile.py": conanfile_out})
+        conanfile_final = conanfile_out + """
+    def layout(self):
+        self.folders.build = "build"
+        """
+        client.save({"conanfile.py": conanfile_final})
 
         client.current_folder = build_folder
         client.run("install ..")
-        client.run("source ..")
-        client.run("build .. --source-folder=.")
+        client.current_folder = repo_folder  # FIXME: Source layout not working
+        client.run("source .")
+        client.current_folder = build_folder
+        client.run("build ..")
         client.current_folder = repo_folder
 
-        client.run("export-pkg . pkg/0.1@lasote/testing -bf=./build")
+        client.run("export-pkg . pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)

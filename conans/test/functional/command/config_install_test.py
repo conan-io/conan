@@ -14,7 +14,7 @@ from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.paths import DEFAULT_CONAN_USER_HOME
+from conans.paths import DEFAULT_CONAN_HOME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
@@ -680,6 +680,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.assertIn("config_install_interval defined, but no config_install file", self.client.out)
 
     @parameterized.expand([("1y",), ("2015t",), ("42",)])
+    @pytest.mark.xfail(reason="Will fail until we migrate config install to new CLI and the APIv2")
     def test_invalid_time_interval(self, internal):
         """ config_install_interval only accepts seconds, minutes, hours, days and weeks.
         """
@@ -751,7 +752,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
 
     def test_config_fails_git_folder(self):
         # https://github.com/conan-io/conan/issues/8594
-        folder = os.path.join(temp_folder(), ".gitlab-conan", DEFAULT_CONAN_USER_HOME)
+        folder = os.path.join(temp_folder(), ".gitlab-conan", DEFAULT_CONAN_HOME)
         client = TestClient(cache_folder=folder)
         with client.chdir(self.folder):
             client.run_command('git init .')
@@ -760,7 +761,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
             client.run_command('git config user.email myname@mycompany.com')
             client.run_command('git commit -m "mymsg"')
         assert ".gitlab-conan" in client.cache_folder
-        assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_USER_HOME
+        assert os.path.basename(client.cache_folder) == DEFAULT_CONAN_HOME
         client.run('config install "%s/.git" --type git' % self.folder)
         conf = load(client.cache.new_config_path)
         assert "core:config_install_interval=5m" in conf

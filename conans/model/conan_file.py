@@ -4,7 +4,7 @@ import platform
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
 from conans.cli.output import ConanOutput, ScopedOutput
-from conans.errors import ConanException, ConanInvalidConfiguration
+from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos
@@ -134,17 +134,10 @@ class ConanFile:
             self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
         return self._conan_buildenv
 
-    def initialize(self, settings, buildenv=None):
+    def initialize(self):
         # If we move this to constructor, the python_require inheritance in init fails
         # and "conan inspect" also breaks
         self.options = Options(self.options or {}, self.default_options)
-        self._conan_buildenv = buildenv
-        try:
-            settings.constrained(self.settings)
-        except Exception as e:
-            raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
-                self.display_name, str(e)))
-        self.settings = settings
 
     @property
     def cpp_info(self):

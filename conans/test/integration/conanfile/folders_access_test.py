@@ -145,7 +145,7 @@ class TestFoldersAccess(unittest.TestCase):
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("create . user/testing --build missing")
-        self.client.run("install lib/1.0@user/testing")  # Checks deploy
+        self.client.run("install --reference=lib/1.0@user/testing")  # Checks deploy
 
     def test_full_install(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
@@ -203,7 +203,7 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("INIT: MYFILE!", client.out)
         self.assertIn("SET_NAME: MYFILE!", client.out)
         client.save({}, clean_first=True)
-        client.run("install pkg/0.1@user/testing --build")
+        client.run("install --reference=pkg/0.1@user/testing --build")
         self.assertIn("pkg/0.1@user/testing: INIT: MYFILE!", client.out)
         self.assertNotIn("SET_NAME", client.out)
         self.assertIn("pkg/0.1@user/testing: CONFIGURE: MYFILE!", client.out)

@@ -127,7 +127,7 @@ class ConanLib(ConanFile):
         self.client.run("export . user/channel")
         self.assertIn("WARN: Repo origin looks like a local path", self.client.out)
         self.client.run("remove lib/0.1* -s -f")  # Remove the source folder, it will get from url
-        self.client.run("install lib/0.1@user/channel --build")
+        self.client.run("install --reference=lib/0.1@user/channel --build")
         self.assertIn("lib/0.1@user/channel: SCM: Getting sources from url:", self.client.out)
 
     def test_auto_git(self):
@@ -242,13 +242,13 @@ class ConanLib(ConanFile):
         new_curdir = temp_folder()
         self.client.current_folder = new_curdir
 
-        self.client.run("install lib/0.1@user/channel --build")
+        self.client.run("install --reference=lib/0.1@user/channel --build")
         self.assertNotIn("Getting sources from url: '%s'" % path.replace("\\", "/"),
                          self.client.out)
 
         # If the remove the source folder, then it is fetched from the "remote" doing an install
         self.client.run("remove lib/0.1@user/channel -f -s")
-        self.client.run("install lib/0.1@user/channel --build")
+        self.client.run("install --reference=lib/0.1@user/channel --build")
         self.assertIn("SCM: Getting sources from url: '%s'" % path.replace("\\", "/"),
                       self.client.out)
 
@@ -387,7 +387,7 @@ class ConanLib(ConanFile):
 
         # Take other client, the old client folder will be used as a remote
         client2 = TestClient(servers=self.servers)
-        client2.run("install lib/0.1@lasote/channel --build")
+        client2.run("install --reference=lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
     def test_source_removed_in_local_cache(self):
@@ -818,7 +818,7 @@ class ConanLib(ConanFile):
 
         # Take other client, the old client folder will be used as a remote
         client2 = TestClient(servers=self.servers)
-        client2.run("install lib/0.1@lasote/channel --build")
+        client2.run("install --reference=lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
     def test_source_removed_in_local_cache(self):

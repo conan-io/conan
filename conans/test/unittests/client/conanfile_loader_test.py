@@ -40,43 +40,8 @@ class BasePackage(ConanFile):
         conan_file = loader.load_basic(conanfile_path)
         self.assertEqual(conan_file.short_paths, True)
 
-        result = loader.load_consumer(conanfile_path, profile_host=create_profile())
+        result = loader.load_consumer(conanfile_path)
         self.assertEqual(result.short_paths, True)
-
-    def test_package_settings(self):
-        # CREATE A CONANFILE TO LOAD
-        tmp_dir = temp_folder()
-        conanfile_path = os.path.join(tmp_dir, "conanfile.py")
-        conanfile = """from conans import ConanFile
-class MyTest(ConanFile):
-    requires = {}
-    name = "MyPackage"
-    version = "1.0"
-    settings = "os"
-"""
-        save(conanfile_path, conanfile)
-
-        # Apply windows for MyPackage
-        profile = Profile()
-        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
-        profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
-        loader = ConanFileLoader(None)
-        recipe = loader.load_consumer(conanfile_path, profile)
-        self.assertEqual(recipe.settings.os, "Windows")
-
-        # Apply Linux for MyPackage
-        profile = Profile()
-        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
-        profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
-        recipe = loader.load_consumer(conanfile_path, profile)
-        self.assertEqual(recipe.settings.os, "Linux")
-
-        # If the package name is different from the conanfile one, it wont apply
-        profile = Profile()
-        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
-        profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}
-        recipe = loader.load_consumer(conanfile_path, profile)
-        self.assertIsNone(recipe.settings.os.value)
 
 
 class ConanLoaderTxtTest(unittest.TestCase):
@@ -206,7 +171,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, ex
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, None)
-        ret = loader.load_conanfile_txt(file_path, create_profile())
+        ret = loader.load_conanfile_txt(file_path)
 
         ret.copy = Mock()
         ret.imports()
@@ -230,7 +195,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, ex
         with self.assertRaisesRegex(ConanException,
                                    r"Error while parsing \[options\] in conanfile\n"
                                    "Options should be specified as 'pkg:option=value'"):
-            loader.load_conanfile_txt(file_path, create_profile())
+            loader.load_conanfile_txt(file_path)
 
 
 class ImportModuleLoaderTest(unittest.TestCase):

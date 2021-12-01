@@ -46,6 +46,7 @@ _t_default_settings_yml = textwrap.dedent("""
         Emscripten:
         Neutrino:
             version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
+        baremetal:
     arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
     compiler:
         sun-cc:
@@ -159,7 +160,7 @@ _t_default_client_conf = textwrap.dedent("""
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
-    # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
+    # path beginning with "~" (if the environment var CONAN_HOME is specified, this directory, even
     # with "~/", will be relative to the conan user home, not to the system user home)
     path = ./data
     """)

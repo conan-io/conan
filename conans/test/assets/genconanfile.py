@@ -1,5 +1,3 @@
-import copy
-
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -45,7 +43,6 @@ class GenConanfile(object):
         self._package_info = None
         self._package_id_lines = None
         self._test_lines = None
-        self._short_paths = None
         self._exports_sources = None
         self._exports = None
         self._cmake_build = False
@@ -53,10 +50,6 @@ class GenConanfile(object):
 
     def with_package_type(self, value):
         self._package_type = value
-        return self
-
-    def with_short_paths(self, value):
-        self._short_paths = value
         return self
 
     def with_name(self, name):
@@ -435,10 +428,6 @@ class GenConanfile(object):
         return "\n".join(lines)
 
     @property
-    def _short_paths_render(self):
-        return "short_paths = {}".format(str(self._short_paths))
-
-    @property
     def _exports_sources_render(self):
         line = ", ".join('"{}"'.format(e) for e in self._exports_sources)
         return "exports_sources = {}".format(line)
@@ -458,7 +447,7 @@ class GenConanfile(object):
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
 
-        for member in ("name", "version", "package_type", "provides", "deprecated", "short_paths",
+        for member in ("name", "version", "package_type", "provides", "deprecated",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
                        "tool_requires", "test_requires", "requirements", "scm",
                        "revision_mode", "settings", "options", "default_options", "build",

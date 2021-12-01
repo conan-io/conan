@@ -1,16 +1,13 @@
 import os
 
 from conans.cli.output import ConanOutput
-from conans.client import packager
 from conans.client.conanfile.package import run_package_method
-
-
 from conans.client.graph.graph import BINARY_INVALID
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.package_ref import PkgReference
 
 
-def export_pkg(app, ref, source_folder, build_folder, package_folder,
+def export_pkg(app, ref,
                profile_host, profile_build, graph_lock, root_ref, force,
                source_conanfile_path):
     cache, hook_manager = app.cache, app.hook_manager
@@ -51,25 +48,15 @@ def export_pkg(app, ref, source_folder, build_folder, package_folder,
 
     dest_package_folder = pkg_layout.package()
     conanfile.develop = True
-    if hasattr(conanfile, "layout"):
-        conanfile_folder = os.path.dirname(source_conanfile_path)
-        conanfile.folders.set_base_build(conanfile_folder)
-        conanfile.folders.set_base_source(conanfile_folder)
-        conanfile.folders.set_base_package(dest_package_folder)
-        conanfile.folders.set_base_install(conanfile_folder)
-        conanfile.folders.set_base_generators(conanfile_folder)
-    else:
-        conanfile.folders.set_base_build(build_folder)
-        conanfile.folders.set_base_source(source_folder)
-        conanfile.folders.set_base_package(dest_package_folder)
+    conanfile_folder = os.path.dirname(source_conanfile_path)
+    conanfile.folders.set_base_build(conanfile_folder)
+    conanfile.folders.set_base_source(conanfile_folder)
+    conanfile.folders.set_base_package(dest_package_folder)
+    conanfile.folders.set_base_install(conanfile_folder)
+    conanfile.folders.set_base_generators(conanfile_folder)
 
     with pkg_layout.set_dirty_context_manager():
-        if package_folder:
-            # FIXME: To be removed in 2.0
-            prev = packager.export_pkg(conanfile, package_id, package_folder, hook_manager,
-                                       conan_file_path, ref)
-        else:
-            prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
+        prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
 
     pref = PkgReference(pref.ref, pref.package_id, prev)
     pkg_layout.reference = pref

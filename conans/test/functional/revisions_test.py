@@ -50,7 +50,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         self.assertEqual(pref.ref.revision, pref2.ref.revision)
 
-        self.c_v2.run("install {}".format(self.ref))
+        self.c_v2.run("install --reference={}".format(self.ref))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.package_id),
                       self.c_v2.out)
@@ -108,7 +108,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.upload_all(RecipeReference.loads("lib/latest@conan/stable"))
         self.c_v2.remove_all()
 
-        self.c_v2.run("install lib/(latest)@conan/stable")
+        self.c_v2.run("install --reference=lib/(latest)@conan/stable")
         # Shouldn't be packages in the cache
         self.assertNotIn("doesn't belong to the installed recipe revision", self.c_v2.out)
 
@@ -126,7 +126,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.remove_all()
         assert len(self.c_v2.cache.get_recipe_revisions_references(self.ref)) == 0
 
-        self.c_v2.run("install {}".format(self.ref))
+        self.c_v2.run("install --reference={}".format(self.ref))
         local_rev = self.c_v2.recipe_revision(self.ref)
         local_prev = self.c_v2.package_revision(pref)
         self.assertEqual(local_rev, pref.ref.revision)
@@ -158,7 +158,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(rrev1_time_remote, rrev2_time_remote)
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)
 
-        client.run("install {} --update".format(self.ref))
+        client.run("install --reference={} --update".format(self.ref))
         self.assertIn("Package installed {}".format(pref2.package_id), client.out)
 
         rrev = client.recipe_revision(self.ref)
@@ -195,7 +195,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev2_time_remote = self.server.package_revision_time(pref2)
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)  # Two package revisions
 
-        client.run("install {} --update".format(self.ref))
+        client.run("install --reference={} --update".format(self.ref))
         self.assertIn("{} from 'default' - Cache (Updated date)".format(self.ref), client.out)
         self.assertIn("Retrieving package {}".format(pref.package_id), client.out)
 
@@ -219,7 +219,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(pref.ref.revision, ref2.revision)
 
         # Now we try to install the self.ref, the binary is missing when using revisions
-        command = "install {}".format(self.ref)
+        command = "install --reference={}".format(self.ref)
         client.run(command, assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for '{}'".format(self.ref), client.out)
 
@@ -228,10 +228,10 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # It fail and won't look the remotes unless --update
         client = self.c_v2
         ref = client.export(self.ref)
-        command = "install {}#fakerevision".format(ref)
+        command = "install --reference={}#fakerevision".format(ref)
         client.run(command, assert_error=True)
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
-        command = "install {}#fakerevision --update".format(ref)
+        command = "install --reference={}#fakerevision --update".format(ref)
         client.run(command, assert_error=True)
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
 
@@ -241,7 +241,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         new_client.upload_all(self.ref)
 
         # Repeat the install --update pointing to the new reference
-        client.run("install {} --update".format(repr(pref.ref)))
+        client.run("install --reference={} --update".format(repr(pref.ref)))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
 
     def test_revision_mismatch_packages_remote(self):
@@ -253,7 +253,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client = self.c_v2
         client.remove_all()
         client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
-        command = "install {}".format(self.ref)
+        command = "install --reference={}".format(self.ref)
 
         client.run(command, assert_error=True)
         self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
@@ -1037,6 +1037,6 @@ def test_touching_other_server():
     c.run("remove * -f")
 
     # This is OK, binary found
-    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Windows")
-    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
+    c.run("install --reference=pkg/0.1@conan/channel -r=remote1 -s os=Windows")
+    c.run("install --reference=pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
     assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out

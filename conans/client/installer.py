@@ -282,6 +282,8 @@ class BinaryInstaller(object):
             app.loader.load_generators(generator_path)
 
     def install(self, deps_graph, build_mode):
+        # build_mode is needed exclusively because the package_revision_mode requiring
+        # re-evaluating binaries
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
         self._out.info("\nInstalling (downloading, building) binaries...")
@@ -309,6 +311,7 @@ class BinaryInstaller(object):
                         downloads.append(package)
         if not downloads:
             return
+
         parallel = self._cache.new_config.get("core.download:parallel", int)
         if parallel is not None:
             self._out.info("Downloading binary packages in %s parallel threads" % parallel)

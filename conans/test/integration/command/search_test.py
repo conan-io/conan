@@ -1223,7 +1223,7 @@ class Test(ConanFile):
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
         client.run("remove -f lib*")
-        client.run("install lib/1.0@user/testing --build")  # To update the local time
+        client.run("install --reference=lib/1.0@user/testing --build")  # To update the local time
 
         client.run("search lib/1.0@user/testing -r default --revisions")
 
@@ -1282,12 +1282,12 @@ class Test(ConanFile):
         self.assertIn("%s (%s)" % (first_prev, time_str), client.out)
 
         # If we update, (no updates available) there also time
-        client.run("install lib/1.0@user/testing --update")
+        client.run("install --reference=lib/1.0@user/testing --update")
         client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
         self.assertIn("%s (%s)" % (first_prev, time_str),  client.out)
 
         client.run("remove lib/1.0@user/testing -f")
-        client.run("install lib/1.0@user/testing")
+        client.run("install --reference=lib/1.0@user/testing")
         # Now installed the package the time is ok
         client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
         self.assertIn("%s (%s)" % (first_prev, time_str), client.out)

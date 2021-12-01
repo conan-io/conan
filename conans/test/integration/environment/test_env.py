@@ -216,7 +216,7 @@ def test_profile_buildenv():
     assert "MYPATH=" in client.out
 
     # Now with pkg-specific env-var
-    client.run("install . mypkg/1.0@  -pr=myprofile")
+    client.run("install . --name=mypkg --version=1.0 -pr=myprofile")
     client.run_command(cmd)
     assert "MYCOMPILER2!!" in client.out
     assert "MYPATH2=" in client.out
@@ -391,7 +391,7 @@ def test_diamond_repeated():
     client.run("export pkgc pkgc/1.0@")
     client.run("export pkgd pkgd/1.0@")
 
-    client.run("install pkge --build")
+    client.run("install --reference=pkge --build")
     assert "MYVAR1: PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1!!!" in client.out
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
