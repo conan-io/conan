@@ -4,7 +4,7 @@ import pytest
 
 from conan.tools.gnu.pkgconfig import PkgConfig
 from conans.errors import ConanException
-from conans.model.new_build_info import NewCppInfo
+from conans.model.build_info import CppInfo
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
@@ -50,7 +50,7 @@ class TestPkgConfig:
         assert pkg_config.linkflags == ['-Wl,--whole-archive']
         assert pkg_config.variables['prefix'] == '/usr/local'
 
-        cpp_info = NewCppInfo()
+        cpp_info = CppInfo()
         pkg_config.fill_cpp_info(cpp_info, is_system=False, system_libs=["m"])
 
         assert cpp_info.includedirs == ['/usr/local/include/libastral']

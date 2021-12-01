@@ -83,52 +83,52 @@ def test_no_soname_flag():
                  "conanfile.py": conanfile.format(name="nosoname", requires="", generators="")})
     # Now, let's create both libraries
     client.run("create .")
-    cmakelists_libB = textwrap.dedent("""
-    cmake_minimum_required(VERSION 3.15)
-    project(libB CXX)
+    cmakelists_libb = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(libb CXX)
 
-    find_package(nosoname CONFIG REQUIRED)
+        find_package(nosoname CONFIG REQUIRED)
 
-    add_library(libB SHARED src/libB.cpp)
-    target_link_libraries(libB nosoname::nosoname)
+        add_library(libb SHARED src/libb.cpp)
+        target_link_libraries(libb nosoname::nosoname)
 
-    set_target_properties(libB PROPERTIES PUBLIC_HEADER "src/libB.h")
-    install(TARGETS libB DESTINATION "."
-            PUBLIC_HEADER DESTINATION include
-            RUNTIME DESTINATION bin
-            ARCHIVE DESTINATION lib
-            LIBRARY DESTINATION lib
-            )
-    """)
-    cpp = gen_function_cpp(name="libB", includes=["nosoname"], calls=["nosoname"])
-    h = gen_function_h(name="libB")
-    client.save({"CMakeLists.txt": cmakelists_libB,
-                 "src/libB.cpp": cpp,
-                 "src/libB.h": h,
-                 "conanfile.py": conanfile.format(name="libB", requires='requires = "nosoname/1.0"',
+        set_target_properties(libb PROPERTIES PUBLIC_HEADER "src/libb.h")
+        install(TARGETS libb DESTINATION "."
+                PUBLIC_HEADER DESTINATION include
+                RUNTIME DESTINATION bin
+                ARCHIVE DESTINATION lib
+                LIBRARY DESTINATION lib
+                )
+        """)
+    cpp = gen_function_cpp(name="libb", includes=["nosoname"], calls=["nosoname"])
+    h = gen_function_h(name="libb")
+    client.save({"CMakeLists.txt": cmakelists_libb,
+                 "src/libb.cpp": cpp,
+                 "src/libb.h": h,
+                 "conanfile.py": conanfile.format(name="libb", requires='requires = "nosoname/1.0"',
                                                   generators='generators = "CMakeDeps"')},
                 clean_first=True)
     # Now, let's create both libraries
     client.run("create .")
-    # Now, let's create the application consuming libB
+    # Now, let's create the application consuming libb
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
 
-        find_package(libB CONFIG REQUIRED)
+        find_package(libb CONFIG REQUIRED)
 
         add_executable(example src/example.cpp)
-        target_link_libraries(example libB::libB)
+        target_link_libraries(example libb::libb)
     """)
     conanfile = textwrap.dedent("""
         [requires]
-        libB/1.0
+        libb/1.0
 
         [generators]
         CMakeDeps
         CMakeToolchain
     """)
-    cpp = gen_function_cpp(name="main", includes=["libB"], calls=["libB"])
+    cpp = gen_function_cpp(name="main", includes=["libb"], calls=["libb"])
     client.save({"CMakeLists.txt": cmakelists.format(current_folder=client.current_folder),
                  "src/example.cpp": cpp,
                  "conanfile.txt": conanfile},
