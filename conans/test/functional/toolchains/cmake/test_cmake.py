@@ -188,8 +188,7 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.cache.new_config_path,
-             "tools.cmake.cmaketoolchain:msvc_parallel_compile=1")
+        save(self.client.cache.new_config_path, "tools.build:jobs=1")
         install_out = self._run_build(settings, options)
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 

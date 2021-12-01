@@ -8,7 +8,8 @@ def build_jobs(conanfile):
     njobs = conanfile.conf["tools.build:jobs"]
     if njobs is not None:
         result = int(njobs)
-        assert result > 0, "tools.build:jobs is 0"
+        if result == 0:
+            return None
         return result
     return _cpu_count()
 

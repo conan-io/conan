@@ -1,4 +1,3 @@
-from conan.tools.build import build_jobs
 from conans.errors import ConanException
 
 
@@ -37,8 +36,9 @@ class MSBuild(object):
         if verbosity:
             cmd += " {}".format(verbosity)
 
-        njobs = build_jobs(self._conanfile)
-        cmd += " /m:{}".format(njobs)
+        maxcpucount = self._conanfile.conf["tools.microsoft.msbuild:max_cpu_count"]
+        if maxcpucount:
+            cmd += " /m:{}".format(maxcpucount)
 
         return cmd
 

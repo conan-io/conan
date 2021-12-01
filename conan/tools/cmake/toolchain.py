@@ -8,6 +8,7 @@ from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
+from conan.tools.build import build_jobs
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import save_toolchain_args
 from conan.tools.intel import IntelCC
@@ -228,7 +229,7 @@ class ArchitectureBlock(Block):
 
 class CppStdBlock(Block):
     template = textwrap.dedent("""
-        message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
+        message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -250,7 +251,7 @@ class CppStdBlock(Block):
 
 class SharedLibBock(Block):
     template = textwrap.dedent("""
-        message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
+        message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS = {{ shared_libs }}")
         set(BUILD_SHARED_LIBS {{ shared_libs }})
         """)
 
@@ -270,9 +271,13 @@ class ParallelBlock(Block):
 
     def context(self):
         # TODO: Check this conf
-        msvc_parallel = self._conanfile.conf["tools.cmake.cmaketoolchain:msvc_parallel_compile"]
-        if msvc_parallel:
-            return {"parallel": msvc_parallel}
+        compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler not in ("Visual Studio", "msvc"):
+            return
+
+        jobs = build_jobs(self._conanfile)
+        if jobs:
+            return {"parallel": jobs}
 
 
 class AndroidSystemBlock(Block):
@@ -432,7 +437,7 @@ class FindConfigFiles(Block):
             cppinfo.aggregate_components()
             build_paths.extend([os.path.join(req.package_folder,
                                        p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
-                                 for p in cppinfo.builddirs])
+                                for p in cppinfo.builddirs])
 
         if self._toolchain.find_builddirs:
             build_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
@@ -694,7 +699,9 @@ class CMakeToolchain(object):
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
         include_guard()
 
-        message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
+        if(CMAKE_TOOLCHAIN_FILE)
+            message("Using Conan toolchain: ${CMAKE_TOOLCHAIN_FILE}.")
+        endif()
 
         {% for conan_block in conan_blocks %}
         {{ conan_block }}

@@ -41,7 +41,8 @@ class Autotools(object):
         jobs = ""
         if "-j" not in str_args and "nmake" not in make_program.lower():
             njobs = build_jobs(self._conanfile)
-            jobs = "-j{}".format(njobs)
+            if njobs:
+                jobs = "-j{}".format(njobs)
         command = join_arguments([make_program, target, str_args, jobs])
         self._conanfile.run(command)
 

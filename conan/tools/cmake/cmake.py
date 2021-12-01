@@ -5,8 +5,7 @@ from conan.tools.build import build_jobs
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import load_toolchain_args, chdir, mkdir
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
-from conans.client import tools
-from conans.client.tools.oss import cpu_count, args_to_string
+from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
 
 
@@ -17,19 +16,19 @@ def _validate_recipe(conanfile):
                              " or 'cmake_find_package_multi' generators")
 
 
-def _cmake_cmd_line_args(conanfile, generator, parallel):
+def _cmake_cmd_line_args(conanfile, generator):
     args = []
     if not generator:
         return args
 
     # Arguments related to parallel
-    if parallel:
-        njobs = build_jobs(conanfile)
-        if ("Makefiles" in generator or "Ninja" in generator) and "NMake" not in generator:
-            args.append("-j{}".format(njobs))
+    njobs = build_jobs(conanfile)
+    if njobs and ("Makefiles" in generator or "Ninja" in generator) and "NMake" not in generator:
+        args.append("-j{}".format(njobs))
 
-        if "Visual Studio" in generator:
-            args.append("/m:{}".format(njobs))
+    maxcpucount = conanfile.conf["tools.microsoft.msbuild:max_cpu_count"]
+    if maxcpucount and "Visual Studio" in generator:
+        args.append("/m:{}".format(njobs))
 
     # Arguments for verbosity
     if "Visual Studio" in generator:
@@ -47,12 +46,11 @@ class CMake(object):
     are passed to the command line, plus the ``--config Release`` for builds in multi-config
     """
 
-    def __init__(self, conanfile, parallel=True, namespace=None):
+    def __init__(self, conanfile, namespace=None):
         _validate_recipe(conanfile)
 
         # Store a reference to useful data
         self._conanfile = conanfile
-        self._parallel = parallel
         self._namespace = namespace
 
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder, namespace=self._namespace)
@@ -112,7 +110,7 @@ class CMake(object):
         if target is not None:
             args = ["--target", target]
 
-        cmd_line_args = _cmake_cmd_line_args(self._conanfile, self._generator, self._parallel)
+        cmd_line_args = _cmake_cmd_line_args(self._conanfile, self._generator)
         if cmd_line_args:
             args += ['--'] + cmd_line_args
 
@@ -147,16 +145,10 @@ class CMake(object):
         self._conanfile.run(command)
 
     def test(self, build_type=None, target=None, output_on_failure=False):
-        if not self._conanfile.should_test:
-            return
         if self._conanfile.conf["tools.build:skip_test"]:
             return
         if not target:
             is_multi = is_multi_configuration(self._generator)
             target = "RUN_TESTS" if is_multi else "test"
 
-        env = {'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
-        if self._parallel:
-            env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
-        with tools.environment_append(env):
-            self._build(build_type=build_type, target=target)
+        self._build(build_type=build_type, target=target)
