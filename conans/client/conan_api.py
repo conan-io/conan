@@ -154,8 +154,7 @@ class ConanAPIV1(object):
             try:
                 attr = getattr(conanfile, attribute)
                 if attribute == "options":
-                    result[attribute] = {k: v._possible_values
-                                         for k, v in attr._package_options._data.items()}
+                    result[attribute] = attr.possible_values
                 else:
                     result[attribute] = attr
             except AttributeError:

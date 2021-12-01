@@ -15,10 +15,10 @@ def test_cpp_info_name_cmakedeps():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}))
+                                   "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -50,10 +50,10 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release", "Debug"],
-                                   "arch": ["x86", "x64"]}))
+                                   "arch": ["x86", "x64"]})
     conanfile.settings.build_type = "Debug"
     conanfile.settings.arch = "x64"
 
@@ -91,10 +91,10 @@ def test_cmake_deps_links_flags():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}))
+                                   "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -131,10 +131,10 @@ def test_component_name_same_package():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}))
+                                   "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 

@@ -85,6 +85,10 @@ class _PackageOptions:
                           for option, possible_values in recipe_options_definition.items()}
         self._freeze = False
 
+    @property
+    def possible_values(self):
+        return {k: v._possible_values for k, v in self._data.items()}
+
     def update(self, options):
         """
         @type options: _PackageOptions
@@ -200,6 +204,10 @@ class Options:
 
     def __repr__(self):
         return self.dumps()
+
+    @property
+    def possible_values(self):
+        return self._package_options.possible_values
 
     def dumps(self):
         """ produces a multiline text representation of all values, first self then others.

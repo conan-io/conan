@@ -153,7 +153,6 @@ class Settings(object):
         self._parent_value = parent_value  # gcc, x86
         self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
-        self._unconstrained = False
 
     def get_safe(self, name, default=None):
         try:
@@ -255,9 +254,6 @@ class Settings(object):
            No additions allowed
         2. If the other defines {"compiler": None} means to keep the full specification
         """
-        if self._unconstrained:
-            return
-
         constraint_def = constraint_def or []
         if not isinstance(constraint_def, (list, tuple, set)):
             raise ConanException("Please defines settings as a list or tuple")

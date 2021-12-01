@@ -1,19 +1,10 @@
-import os
-
 from conans import ConanFile
 from conans.cli.api.subapi import api_method
-from conans.cli.common import get_lockfile
 from conans.cli.conan_app import ConanApp
-from conans.cli.output import ConanOutput
-from conans.client.conan_api import _make_abs_path
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import RECIPE_VIRTUAL
-from conans.client.graph.printer import print_graph
 from conans.client.importer import run_imports, run_deploy
 from conans.client.installer import BinaryInstaller, call_system_requirements
-from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
 
 
 class InstallAPI:
@@ -42,6 +33,10 @@ class InstallAPI:
     def install_consumer(deps_graph, install_folder, base_folder, conanfile_folder,
                          generators=None, reference=None, no_imports=False, create_reference=None,
                          test=None):
+        """ Once a dependency graph has been installed, there are things to be done, like invoking
+        generators for the root consumer, or calling imports()/deploy() to copy things to user space.
+        This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
+        """
         root_node = deps_graph.root
         conanfile = root_node.conanfile
 
@@ -55,11 +50,8 @@ class InstallAPI:
             conanfile.folders.set_base_generators(base_folder)
 
         if install_folder:
-            # Write generators
-            tmp = list(conanfile.generators)  # Add the command line specified generators
-            generators = set(generators) if generators else set()
-            tmp.extend([g for g in generators if g not in tmp])
-            conanfile.generators = tmp
+            # Add cli -g generators
+            conanfile.generators = list(set(conanfile.generators).union(generators or []))
             write_generators(conanfile)
 
             if not no_imports:
@@ -73,5 +65,3 @@ class InstallAPI:
                 deploy_conanfile = neighbours[0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                     run_deploy(deploy_conanfile, install_folder)
-
-        return deps_graph
