@@ -16,7 +16,7 @@ from conans import ConanFile, Settings
 def test_msbuild_cpu_count():
     c = ConfDefinition()
     c.loads(textwrap.dedent("""\
-        tools.build:jobs=23
+        tools.microsoft.msbuild:max_cpu_count=23
     """))
 
     settings = MockSettings({"build_type": "Release",
