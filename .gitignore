@@ -105,4 +105,5 @@ cacert.pem
 
 # add excluded
 !conans/client/build
+!conan/tools/build
 !conans/test/unittests/client/build

@@ -160,7 +160,7 @@ _t_default_client_conf = textwrap.dedent("""
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
-    # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
+    # path beginning with "~" (if the environment var CONAN_HOME is specified, this directory, even
     # with "~/", will be relative to the conan user home, not to the system user home)
     path = ./data
     """)
