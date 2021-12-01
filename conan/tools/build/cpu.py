@@ -22,7 +22,7 @@ def _cpu_count():
             cfs_period_us = int(load("/sys/fs/cgroup/cpu/cpu.cfs_period_us"))
             if cfs_quota_us > 0 and cfs_period_us > 0:
                 return int(math.ceil(cfs_quota_us / cfs_period_us))
-        except (OSError, TypeError):
+        except (EnvironmentError, TypeError):
             pass
         return multiprocessing.cpu_count()
     except NotImplementedError:
