@@ -328,15 +328,14 @@ class BuildRequirements:
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run)
 
 
-class BuildToolRequirements:
+class ToolRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
     def __init__(self, requires):
         self._requires = requires
 
     def __call__(self, ref, package_id_mode=None, visible=False, run=True):
         # TODO: Check which arguments could be user-defined
-        self._requires.build_tool_require(ref, package_id_mode=package_id_mode, visible=visible,
-                                          run=run)
+        self._requires.tool_require(ref, package_id_mode=package_id_mode, visible=visible, run=run)
 
 
 class TestRequirements:
@@ -441,8 +440,8 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
-    def build_tool_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                           run=True):
+    def tool_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
+                     run=True):
         """
          Represent a build tool like "cmake".
 

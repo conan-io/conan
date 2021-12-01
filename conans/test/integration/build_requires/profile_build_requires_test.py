@@ -35,13 +35,13 @@ class mylib(ConanFile):
 """
 
 profile = """
-[build_tool_requires]
+[tool_requires]
 tool/0.1@lasote/stable
 nonexistingpattern*: sometool/1.2@user/channel
 """
 
 profile2 = """
-[build_tool_requires]
+[tool_requires]
 tool/0.1@lasote/stable
 nonexistingpattern*: sometool/1.2@user/channel
 """
@@ -150,7 +150,7 @@ class mylib(ConanFile):
 
 """
         profile_patterns = """
-[build_tool_requires]
+[tool_requires]
 &: tool/0.1@lasote/stable
 nonexistingpattern*: sometool/1.2@user/channel
 """

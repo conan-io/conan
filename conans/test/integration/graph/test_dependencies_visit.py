@@ -99,7 +99,7 @@ def test_cmake_zlib(generates_line, assert_error, output_text):
     client.run("create . zlib/0.1@")
     client.run("create . zlib/0.2@")
 
-    client.save({"conanfile.py": GenConanfile().with_build_tool_requirement("zlib/0.1",
+    client.save({"conanfile.py": GenConanfile().with_tool_requirement("zlib/0.1",
                                                                             visible=True)})
     client.run("create . cmake/0.1@")
 

@@ -73,14 +73,14 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
         t.run("create . intermediate/1.0@PORT/stable")
 
         t.save({"conanfile.py": GenConanfile().with_requires("intermediate/1.0@PORT/stable")
-               .with_build_tool_requires("gtest/1.8.0@PORT/stable")})
+               .with_tool_requires("gtest/1.8.0@PORT/stable")})
         t.run("create . scubaclient/1.6@PORT/stable")
 
         # IMPORTANT: We need to override the private build-require in the profile too,
         # otherwise it will conflict, as it will not be overriden by regular requires
         t.save({"conanfile.py": GenConanfile().with_requires("gtest/1.8.1@bloomberg/stable",
                                                              "scubaclient/1.6@PORT/stable"),
-                "myprofile": "[build_tool_requires]\ngtest/1.8.1@bloomberg/stable"})
+                "myprofile": "[tool_requires]\ngtest/1.8.1@bloomberg/stable"})
 
         t.run("lock create conanfile.py --build -pr=myprofile")
         lock = t.load("conan.lock")

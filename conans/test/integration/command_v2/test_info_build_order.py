@@ -58,7 +58,7 @@ def test_info_build_order():
 def test_info_build_order_build_require():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
-            "pkg/conanfile.py": GenConanfile().with_build_tool_requires("dep/0.1"),
+            "pkg/conanfile.py": GenConanfile().with_tool_requires("dep/0.1"),
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep dep/0.1@")
     c.run("export pkg pkg/0.1@")
@@ -83,7 +83,7 @@ def test_info_build_order_build_require():
         ],
         [
             {
-                "ref": "pkg/0.1#7a8e9776f7216a0fabaf97d28a1cca9b",
+                "ref": "pkg/0.1#f487531dfe46620d4f64303baf2211fc",
                 "depends": [
                     "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
                 ],
@@ -107,9 +107,9 @@ def test_info_build_order_build_require():
 def test_info_build_order_options():
     c = TestClient()
     c.save({"tool/conanfile.py": GenConanfile().with_option("myopt", [1, 2, 3]),
-            "dep1/conanfile.py": GenConanfile().with_build_tool_requires("tool/0.1").
+            "dep1/conanfile.py": GenConanfile().with_tool_requires("tool/0.1").
            with_default_option("tool:myopt", 1),
-            "dep2/conanfile.py": GenConanfile().with_build_tool_requires("tool/0.1").
+            "dep2/conanfile.py": GenConanfile().with_tool_requires("tool/0.1").
            with_default_option("tool:myopt", 2),
             "consumer/conanfile.txt": "[requires]\ndep1/0.1\ndep2/0.1"})
     c.run("export tool tool/0.1@")
@@ -151,7 +151,7 @@ def test_info_build_order_options():
         ],
         [
             {
-                "ref": "dep1/0.1#4f93589729d403a79c72107096995dc3",
+                "ref": "dep1/0.1#56a8318e80ce85706b95baad0e14853c",
                 "depends": [
                     "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
                 ],
@@ -168,7 +168,7 @@ def test_info_build_order_options():
                 ]
             },
             {
-                "ref": "dep2/0.1#e850501253070d94d558a7b72fdd578c",
+                "ref": "dep2/0.1#0bf82914395fcd67ac96945ffe9dbe08",
                 "depends": [
                     "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
                 ],

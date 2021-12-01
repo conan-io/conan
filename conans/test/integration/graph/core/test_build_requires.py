@@ -31,7 +31,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe("cmake/0.1", GenConanfile())
         if build_require == "recipe":
             profile_build_requires = None
-            conanfile = GenConanfile("app", "0.1").with_build_tool_requires("cmake/0.1")
+            conanfile = GenConanfile("app", "0.1").with_tool_requires("cmake/0.1")
         else:
             profile_build_requires = {"*": [RecipeReference.loads("cmake/0.1")]}
             conanfile = GenConanfile("app", "0.1")
@@ -50,7 +50,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
     def test_lib_build_require(self):
         # app -> lib -(br)-> cmake
         self._cache_recipe("cmake/0.1", GenConanfile())
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_tool_requires("cmake/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
         self.assertEqual(3, len(deps_graph.nodes))
@@ -81,7 +81,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe("cmake/0.1", GenConanfile().with_settings("os").
                            with_requirement("cmakelib/0.1", run=run))
         self._cache_recipe("lib/0.1", GenConanfile().with_settings("os").
-                           with_build_tool_requires("cmake/0.1"))
+                           with_tool_requires("cmake/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_settings("os").
                                       with_require("lib/0.1"))
 
@@ -111,8 +111,8 @@ class BuildRequiresGraphTest(GraphManagerTest):
     def test_build_require_bootstrap(self):
         # app -> lib -(br)-> cmake/2 -(br)-> cmake/1
         self._cache_recipe("cmake/0.1", GenConanfile())
-        self._cache_recipe("cmake/0.2", GenConanfile().with_build_tool_requires("cmake/0.1"))
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_tool_requires("cmake/0.2"))
+        self._cache_recipe("cmake/0.2", GenConanfile().with_tool_requires("cmake/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.2"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
         self.assertEqual(4, len(deps_graph.nodes))
@@ -148,7 +148,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
 
         self._cache_recipe(mingw_ref, GenConanfile().with_name("mingw").with_version("0.1"))
         self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1"))
-        self._cache_recipe(lib_ref, GenConanfile().with_build_tool_requires(gtest_ref))
+        self._cache_recipe(lib_ref, GenConanfile().with_tool_requires(gtest_ref))
         profile_build_requires = {"*": [mingw_ref]}
         deps_graph = self.build_graph(GenConanfile("app", "0.1")
                                                     .with_require(lib_ref),
@@ -182,9 +182,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe(zlib_ref2, GenConanfile().with_name("zlib").with_version("0.2"))
 
         self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1")
-                                                    .with_build_tool_requires(zlib_ref2))
+                                                    .with_tool_requires(zlib_ref2))
         self._cache_recipe(lib_ref, GenConanfile().with_require(zlib_ref)
-                                                  .with_build_tool_requires(gtest_ref))
+                                                  .with_tool_requires(gtest_ref))
 
         graph = self.build_graph(GenConanfile("app", "0.1")
                                                .with_require(lib_ref))
@@ -210,7 +210,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
 
         self._cache_recipe(zlib_ref, GenConanfile().with_name("zlib").with_version("0.1"))
         self._cache_recipe(cmake_ref, GenConanfile().with_require(zlib_ref, private=True))
-        self._cache_recipe(lib_ref, GenConanfile().with_build_tool_requires(cmake_ref))
+        self._cache_recipe(lib_ref, GenConanfile().with_tool_requires(cmake_ref))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require(lib_ref))
 
         self.assertEqual(4, len(deps_graph.nodes))
@@ -237,7 +237,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._cache_recipe("zlib/0.2", GenConanfile().with_shared_option(False))
         self._cache_recipe("cmake/0.1", GenConanfile().with_require("zlib/0.1"))
         self._cache_recipe("mingw/0.1", GenConanfile().with_require("zlib/0.2"))
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_tool_requires("cmake/0.1",
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1",
                                                                               "mingw/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
@@ -268,7 +268,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._cache_recipe("zlib/0.2", GenConanfile().with_shared_option(True))
         self._cache_recipe("cmake/0.1", GenConanfile().with_require("zlib/0.1"))
         self._cache_recipe("mingw/0.1", GenConanfile().with_require("zlib/0.2"))
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_tool_requires("cmake/0.1",
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1",
                                                                               "mingw/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       install=False)
@@ -308,7 +308,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
 
         deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
                                            .with_require(gazelle_ref)
-                                           .with_build_tool_requires(grass02_ref))
+                                           .with_tool_requires(grass02_ref))
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -341,7 +341,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
 
         deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
                                                     .with_require(gazelle_ref)
-                                                    .with_build_tool_requires(grass01_ref))
+                                                    .with_tool_requires(grass01_ref))
 
         self.assertEqual(3, len(deps_graph.nodes))
         cheetah = deps_graph.root
@@ -464,7 +464,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
     def test_default_no_affect(self,):
         # app -> lib -(br)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
-        self.recipe_conanfile("lib/0.1", GenConanfile().with_build_tool_requires("cmake/0.1"))
+        self.recipe_conanfile("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
@@ -483,7 +483,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         # app -> lib -(br)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("lib/0.1", GenConanfile().
-                              with_build_tool_requirement("cmake/[*]", package_id_mode="minor_mode"))
+                              with_tool_requirement("cmake/[*]", package_id_mode="minor_mode"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer
@@ -516,7 +516,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # app -> lib -(br public)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("lib/0.1", GenConanfile()
-                              .with_build_tool_requirement("cmake/0.1", visible=True))
+                              .with_tool_requirement("cmake/0.1", visible=True))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
@@ -541,9 +541,9 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("cmake/0.2", GenConanfile())
         self.recipe_conanfile("libb/0.1",
-                              GenConanfile().with_build_tool_requirement("cmake/0.1", visible=True))
+                              GenConanfile().with_tool_requirement("cmake/0.1", visible=True))
         self.recipe_conanfile("libc/0.1",
-                              GenConanfile().with_build_tool_requirement("cmake/0.2", visible=True))
+                              GenConanfile().with_tool_requirement("cmake/0.2", visible=True))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1",
                                                                                "libc/0.1"),

@@ -325,7 +325,7 @@ class TestLinear(GraphManagerTest):
     def test_build_script_requirement(self):
         # app -> libb0.1 -br-> liba0.1 (build-scripts)
         self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("build-scripts"))
-        self.recipe_conanfile("libb/0.1", GenConanfile().with_build_tool_requirement("liba/0.1"))
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_tool_requirement("liba/0.1"))
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
 
         deps_graph = self.build_consumer(consumer)
@@ -891,7 +891,7 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("build-scripts"))
         self.recipe_conanfile("liba/0.2", GenConanfile())
         self.recipe_conanfile("libb/0.1",
-                              GenConanfile().with_build_tool_requirement("liba/0.1", run=False))
+                              GenConanfile().with_tool_requirement("liba/0.1", run=False))
         self.recipe_conanfile("libc/0.1", GenConanfile().with_requirement("liba/0.2"))
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
 

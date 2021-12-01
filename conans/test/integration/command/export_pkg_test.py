@@ -31,7 +31,7 @@ class ExportPkgTest(unittest.TestCase):
         client = TestClient(servers={"default": None},
                             requester_class=None, inputs=["admin", "password"])
         profile = dedent("""
-            [build_tool_requires]
+            [tool_requires]
             some/other@pkg/notexists
             """)
         client.save({"conanfile.py": GenConanfile(),

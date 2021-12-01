@@ -631,7 +631,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . tool_build/1.0@")
         client.run("create . tool_test/1.0@")
         conanfile = GenConanfile().with_requires("dep/1.0").\
-            with_build_tool_requires("tool_build/1.0").\
+            with_tool_requires("tool_build/1.0").\
             with_test_requires("tool_test/1.0")
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/1.0@")

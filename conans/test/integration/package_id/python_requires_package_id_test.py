@@ -87,7 +87,7 @@ class PythonRequiresForBuildRequiresPackageIDTest(unittest.TestCase):
 
         client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": conanfile,
-                     "myprofile": "[build_tool_requires]\ntool/[>=0.0]\n"})
+                     "myprofile": "[tool_requires]\ntool/[>=0.0]\n"})
 
         client2.run("create . pkg/0.1@ -pr=myprofile")
         self.assertIn("tool/1.1.1", client2.out)

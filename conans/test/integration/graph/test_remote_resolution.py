@@ -21,7 +21,7 @@ def test_build_requires_ranges():
         from conans import ConanFile
         class Pkg(ConanFile):
             {}
-            build_tool_requires = "cmake/{}"
+            tool_requires = "cmake/{}"
             def generate(self):
                 for r, d in self.dependencies.items():
                     self.output.info("REQUIRE {{}}: {{}}".format(r.ref, d))

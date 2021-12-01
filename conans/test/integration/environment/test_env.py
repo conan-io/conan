@@ -89,7 +89,7 @@ def test_complete(client, gtest_run_true):
 
         class Pkg(ConanFile):
             requires = "openssl/1.0"
-            build_tool_requires = "mycmake/1.0"
+            tool_requires = "mycmake/1.0"
 
             def build_requirements(self):
                 {}
@@ -237,7 +237,7 @@ def test_transitive_order():
         from conans import ConanFile
         class Pkg(ConanFile):
             settings = "os"
-            build_tool_requires = "gcc/1.0"
+            tool_requires = "gcc/1.0"
             package_type = "shared-library"
             def package_info(self):
                 self.runenv_info.append("MYVAR", "MyOpenSSL{}Value".format(self.settings.os))
@@ -246,7 +246,7 @@ def test_transitive_order():
         from conans import ConanFile
         class Pkg(ConanFile):
             requires = "openssl/1.0"
-            build_tool_requires = "gcc/1.0"
+            tool_requires = "gcc/1.0"
             def package_info(self):
                 self.runenv_info.append("MYVAR", "MyCMakeRunValue")
                 self.buildenv_info.append("MYVAR", "MyCMakeBuildValue")
@@ -265,7 +265,7 @@ def test_transitive_order():
         from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
         class Pkg(ConanFile):
             requires = "openssl/1.0"
-            build_tool_requires = "cmake/1.0", "gcc/1.0"
+            tool_requires = "cmake/1.0", "gcc/1.0"
             def generate(self):
                 buildenv = VirtualBuildEnv(self).vars()
                 self.output.info("BUILDENV: {}!!!".format(buildenv.get("MYVAR")))
@@ -408,7 +408,7 @@ def test_environment_scripts_generated_envvars(require_run):
         class Pkg(ConanFile):
             settings = "os"
             requires = "require_pkg/1.0"
-            build_tool_requires = "build_require_pkg/1.0"
+            tool_requires = "build_require_pkg/1.0"
             generators = "VirtualRunEnv", "VirtualBuildEnv"
         """)
 

@@ -341,7 +341,7 @@ class InfoTest2(unittest.TestCase):
         client.run("export . pkg/0.1@user/channel")
         client.run("export . pkg2/0.1@user/channel")
         client.save({"conanfile.txt": "[requires]\npkg/0.1@user/channel\npkg2/0.1@user/channel",
-                     "myprofile": "[build_tool_requires]\ntool/0.1@user/channel"}, clean_first=True)
+                     "myprofile": "[tool_requires]\ntool/0.1@user/channel"}, clean_first=True)
         client.run("info . -pr=myprofile --build=missing")
         # Check that there is only 1 output for tool, not repeated many times
         pkgs = [line for line in str(client.out).splitlines() if line.startswith("tool")]
@@ -531,7 +531,7 @@ class TestInfoContext:
     def test_context_build(self):
         client = TestClient()
         client.save({"cmake/conanfile.py": GenConanfile(),
-                     "pkg/conanfile.py": GenConanfile().with_build_tool_requires("cmake/1.0")})
+                     "pkg/conanfile.py": GenConanfile().with_tool_requires("cmake/1.0")})
 
         client.run("create cmake cmake/1.0@")
         client.run("export pkg pkg/1.0@")

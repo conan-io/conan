@@ -154,7 +154,7 @@ def test_create_build_requires():
 
 
 def test_build_require_conanfile_text(client):
-    client.save({"conanfile.txt": "[build_tool_requires]\nmycmake/1.0"}, clean_first=True)
+    client.save({"conanfile.txt": "[tool_requires]\nmycmake/1.0"}, clean_first=True)
     client.run("install . -g VirtualBuildEnv")
     ext = ".bat" if platform.system() == "Windows" else ".sh"
     cmd = environment_wrap_command("conanbuild", f"mycmake{ext}", cwd=client.current_folder)

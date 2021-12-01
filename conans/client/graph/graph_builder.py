@@ -155,18 +155,18 @@ class DepsGraphBuilder(object):
 
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
-        build_tool_requires = profile.build_tool_requires
+        tool_requires = profile.tool_requires
         str_ref = str(node.ref)
-        for pattern, build_tool_requires in build_tool_requires.items():
+        for pattern, tool_requires in tool_requires.items():
             if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                 (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                     fnmatch.fnmatch(str_ref, pattern)):
-                for build_tool_require in build_tool_requires:  # Do the override
-                    if str(build_tool_require) == str(node.ref):  # FIXME: Ugly str comparison
+                for tool_require in tool_requires:  # Do the override
+                    if str(tool_require) == str(node.ref):  # FIXME: Ugly str comparison
                         continue  # avoid self-loop of build-requires in build context
                     # FIXME: converting back to string?
-                    node.conanfile.requires.build_tool_require(str(build_tool_require),
-                                                               raise_if_duplicated=False)
+                    node.conanfile.requires.tool_require(str(tool_require),
+                                                         raise_if_duplicated=False)
 
     def _initialize_requires(self, node, graph, graph_lock):
         # Introduce the current requires to define overrides
