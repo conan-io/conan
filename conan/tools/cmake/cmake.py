@@ -60,10 +60,6 @@ class CMake(object):
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
     def configure(self, build_script_folder=None):
-        # TODO: environment?
-        if not self._conanfile.should_configure:
-            return
-
         cmakelist_folder = self._conanfile.source_folder
         if build_script_folder:
             cmakelist_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
@@ -121,13 +117,9 @@ class CMake(object):
         self._conanfile.run(command)
 
     def build(self, build_type=None, target=None):
-        if not self._conanfile.should_build:
-            return
         self._build(build_type, target)
 
     def install(self, build_type=None):
-        if not self._conanfile.should_install:
-            return
         mkdir(self._conanfile, self._conanfile.package_folder)
 
         bt = build_type or self._conanfile.settings.get_safe("build_type")

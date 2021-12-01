@@ -275,9 +275,9 @@ class ParallelBlock(Block):
         if compiler not in ("Visual Studio", "msvc"):
             return
 
-        jobs = build_jobs(self._conanfile)
-        if jobs:
-            return {"parallel": jobs}
+            jobs = build_jobs(self._conanfile)
+            if jobs:
+                return {"parallel": jobs}
 
 
 class AndroidSystemBlock(Block):

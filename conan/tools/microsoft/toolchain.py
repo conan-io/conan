@@ -158,7 +158,7 @@ class MSBuildToolchain(object):
         if njobs:
             parallel = "".join(
                 ["\n      <MultiProcessorCompilation>True</MultiProcessorCompilation>",
-                 "\n      <ProcessorNumber>{}</MultiProcessorCompilation>".format(njobs)])
+                 "\n      <ProcessorNumber>{}</ProcessorNumber>".format(njobs)])
         compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
                                   for k, v in self.compile_options.items())
         config_props = toolchain_file.format(preprocessor_definitions, runtime_library, cppstd,
