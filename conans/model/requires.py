@@ -11,7 +11,7 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=True, libs=True, build=False, run=None, visible=True,
                  transitive_headers=None, transitive_libs=None, test=False, package_id_mode=None,
-                 force=False, override=False, direct=True):
+                 force=False, override=False, direct=True, options=None):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -27,6 +27,7 @@ class Requirement:
         self.force = force
         self.override = override
         self.direct = direct
+        self.options = options
 
     def __repr__(self):
         return repr(self.__dict__)
@@ -184,9 +185,10 @@ class BuildRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, visible=False):
+    def __call__(self, ref, package_id_mode=None, visible=False, options=None):
         # TODO: Check which arguments could be user-defined
-        self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible)
+        self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible,
+                                     options=options)
 
 
 class TestRequirements:
@@ -233,11 +235,12 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
-    def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False):
+    def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
+                      options=None):
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=True, visible=visible,
-                          package_id_mode=package_id_mode)
+                          package_id_mode=package_id_mode, options=options)
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req

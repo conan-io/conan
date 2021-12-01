@@ -251,6 +251,8 @@ class DepsGraphBuilder(object):
 
         # FIXME
         down_options = node.conanfile.up_options
+        if require.options is not None:
+            down_options.update_options(Options(options_values=require.options))
         self._prepare_node(new_node, profile_host, profile_build, down_options)
 
         require.process_package_type(new_node)
