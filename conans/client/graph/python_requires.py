@@ -6,12 +6,13 @@ from conans.model.requires import Requirement
 
 
 class PyRequire(object):
-    def __init__(self, module, conanfile, ref, path, recipe_status):
+    def __init__(self, module, conanfile, ref, path, recipe_status, remote):
         self.module = module
         self.conanfile = conanfile
         self.ref = ref
         self.path = path
         self.recipe = recipe_status
+        self.remote = remote
 
 
 class PyRequires(object):
@@ -82,8 +83,8 @@ class PyRequireLoader(object):
                 py_require = self._cached_py_requires[py_requires_ref]
             except KeyError:
                 pyreq_conanfile = self._load_pyreq_conanfile(loader, graph_lock, py_requires_ref)
-                conanfile, module, new_ref, path, recipe_status = pyreq_conanfile
-                py_require = PyRequire(module, conanfile, new_ref, path, recipe_status)
+                conanfile, module, new_ref, path, recipe_status, remote = pyreq_conanfile
+                py_require = PyRequire(module, conanfile, new_ref, path, recipe_status, remote)
                 self._cached_py_requires[py_requires_ref] = py_require
             result.add_pyrequire(py_require)
         return result
@@ -105,7 +106,7 @@ class PyRequireLoader(object):
 
     def _load_pyreq_conanfile(self, loader, graph_lock, ref):
         recipe = self._proxy.get_recipe(ref)
-        path, recipe_status, _, new_ref = recipe
+        path, recipe_status, remote, new_ref = recipe
         conanfile, module = loader.load_basic_module(path, graph_lock)
         conanfile.name = new_ref.name
         # FIXME Conan 2.0 version should be a string, not a Version object
@@ -121,5 +122,5 @@ class PyRequireLoader(object):
             if alias is not None:
                 ref = alias
             alias_result = self._load_pyreq_conanfile(loader, graph_lock, ref)
-            conanfile, module, new_ref, path, recipe_status = alias_result
-        return conanfile, module, new_ref, os.path.dirname(path), recipe_status
+            conanfile, module, new_ref, path, recipe_status, remote = alias_result
+        return conanfile, module, new_ref, os.path.dirname(path), recipe_status, remote
