@@ -17,7 +17,6 @@ def test_msbuild_cpu_count():
     c = ConfDefinition()
     c.loads(textwrap.dedent("""\
         tools.microsoft.msbuild:max_cpu_count=23
-        tools.build:processes=10
     """))
 
     settings = MockSettings({"build_type": "Release",
