@@ -500,15 +500,19 @@ class TestComponentsCMakeGenerators:
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
 
-    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
-    def test_component_not_found_cmake(self, generator):
+    @pytest.mark.parametrize("generator, filename", [("cmake_find_package_multi", "greetings"),
+                                                     ("cmake_find_package_multi", "filegreetings"),
+                                                     ("cmake_find_package", "greetings"),
+                                                     ("cmake_find_package", "filegreetings")])
+    def test_component_not_found_cmake(self, generator, filename):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
             class GreetingsConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.components["hello"].libs = ["hello"]
-        """)
+                    self.cpp_info.filenames["{}"] = "{}"
+        """.format(generator, filename))
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . greetings/0.0.1@")
@@ -531,9 +535,9 @@ class TestComponentsCMakeGenerators:
             cmake_minimum_required(VERSION 3.0)
             project(Consumer CXX)
 
-            find_package(greetings COMPONENTS hello)
-            find_package(greetings COMPONENTS non-existent)
-            """)
+            find_package({filename} COMPONENTS hello)
+            find_package({filename} COMPONENTS non-existent)
+            """.format(filename=filename))
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .", assert_error=True)
