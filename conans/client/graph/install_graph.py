@@ -289,4 +289,4 @@ def raise_missing(missing, out):
        Or try to build locally from sources with '%s'
 
        More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-       ''' % (missing_pkgs, missing_pkgs, build_str)))
+       ''' % (missing_pkgs, ref, build_str)))
