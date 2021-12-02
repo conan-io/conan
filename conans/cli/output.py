@@ -1,7 +1,6 @@
 import logging
 import sys
 
-import tqdm
 from colorama import Fore, Style
 
 from conans.client.userio import color_enabled
