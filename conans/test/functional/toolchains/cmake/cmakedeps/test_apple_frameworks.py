@@ -392,8 +392,11 @@ class HelloConan(ConanFile):
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name", "HELLO")
         self.cpp_info.components["libhello"].set_property("cmake_target_name", "hello::libhello")
-
         self.cpp_info.components["libhello"].libs = ["hello"]
+        # We need to add the information about the lib/include directories to be able to find them
+        self.cpp_info.components["libhello"].libdirs = ["lib"]
+        self.cpp_info.components["libhello"].includedirs = ["include"]
+
         self.cpp_info.components["libhello"].frameworks.extend(["CoreFoundation"])
         """)
     hello_cpp = textwrap.dedent("""
@@ -448,8 +451,8 @@ class TestPackageConan(ConanFile):
         cmake.build()
 
     def test(self):
-        if not tools.cross_building(self.settings):
-            self.run("test_package", env="conanrunenv")
+        if not tools.cross_building(self):
+            self.run("./test_package", env="conanrunenv")
         """)
     test_test_package_cpp = textwrap.dedent("""
 #include "hello.h"
