@@ -1,5 +1,4 @@
 import os
-import os
 import shutil
 import time
 import traceback
@@ -15,7 +14,6 @@ from conans.errors import ConanConnectionError, ConanException, NotFoundExceptio
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util import progress_bar
 from conans.util.env import get_env
 from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
     rmdir
@@ -286,8 +284,8 @@ def check_compressed_files(tgz_name, files):
 def uncompress_file(src_path, dest_folder):
     t1 = time.time()
     try:
-        with progress_bar.open_binary(src_path, "Decompressing "
-                                                "%s" % os.path.basename(src_path)) as file_handler:
+        ConanOutput().info("Decompressing %s" % os.path.basename(src_path))
+        with open(src_path, mode='rb') as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\

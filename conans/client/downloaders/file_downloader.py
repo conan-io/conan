@@ -8,7 +8,6 @@ from conans.client.rest import response_to_str
 from conans.client.tools.files import check_md5, check_sha1, check_sha256
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
     ForbiddenException, ConanConnectionError, RequestErrorException
-from conans.util import progress_bar
 from conans.util.files import mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_download
@@ -125,16 +124,15 @@ class FileDownloader(object):
                 return int(total_size)
 
         try:
-            logger.debug("DOWNLOAD: %s" % url)
             total_length = get_total_length()
             action = "Downloading" if range_start == 0 else "Continuing download of"
             description = "{} {}".format(action, os.path.basename(file_path)) if file_path else None
-            progress = progress_bar.Progress(total_length, description)
-            progress.initial_value(range_start)
+            if description:
+                self._output.info(description)
 
             chunk_size = 1024 if not file_path else 1024 * 100
             written_chunks, total_downloaded_size = write_chunks(
-                progress.update(read_response(chunk_size)),
+                read_response(chunk_size),
                 file_path
             )
             gzip = (response.headers.get("content-encoding") == "gzip")
@@ -142,7 +140,7 @@ class FileDownloader(object):
             # it seems that if gzip we don't know the size, cannot resume and shouldn't raise
             if total_downloaded_size != total_length and not gzip:
                 if (file_path and total_length > total_downloaded_size > range_start
-                    and response.headers.get("Accept-Ranges") == "bytes"):
+                        and response.headers.get("Accept-Ranges") == "bytes"):
                     written_chunks = self._download_file(url, auth, headers, file_path,
                                                          try_resume=True)
                 else:
