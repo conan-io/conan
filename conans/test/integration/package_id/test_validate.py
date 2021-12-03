@@ -270,7 +270,7 @@ class TestValidate(unittest.TestCase):
                       raise ConanInvalidConfiguration("Windows not supported")
               """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . dep/0.1@")
+        client.run("export . --name=dep --version=0.1")
 
         client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")})
         error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)

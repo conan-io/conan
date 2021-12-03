@@ -25,7 +25,7 @@ class ForbiddenRemoveTest(unittest.TestCase):
         t = TestClient()
         t.save(files={'conanfile.py': conanfile,
                       "mylayout": "", })
-        t.run("export . lib/version@user/name")
+        t.run("export . --name=lib --version=version --user=user --channel=name")
         t.run('editable add . {}'.format(ref))
         self.assertTrue(t.cache.installed_as_editable(ref))
         t.run('remove {} --force'.format(ref), assert_error=True)

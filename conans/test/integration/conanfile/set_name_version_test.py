@@ -73,9 +73,9 @@ class SetVersionNameTest(unittest.TestCase):
                     self.version = "2.1"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . other/1.1@user/testing", assert_error=True)
+        client.run("export . --name=other --version=1.1 --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Package recipe with name other!=pkg", client.out)
-        client.run("export . 1.1@user/testing", assert_error=True)
+        client.run("export .  --version=1.1 --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=2.1", client.out)
         # These are checked but match and don't conflict
         client.run("export . --version=2.1 --user=user --channel=testing")
@@ -96,9 +96,9 @@ class SetVersionNameTest(unittest.TestCase):
                     self.version = self.version or "2.0"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . other/1.1@user/testing")
+        client.run("export . --name=other --version=1.1 --user=user --channel=testing")
         self.assertIn("other/1.1@user/testing: Exported", client.out)
-        client.run("export . 1.1@user/testing")
+        client.run("export .  --version=1.1 --user=user --channel=testing")
         self.assertIn("pkg/1.1@user/testing: Exported", client.out)
         client.run("export . --user=user --channel=testing")
         self.assertIn("pkg/2.0@user/testing: Exported", client.out)

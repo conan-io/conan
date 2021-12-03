@@ -23,7 +23,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.init_git_repo({"conanfile.py": conanfile}, branch="my_release")
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
 
         reuse = textwrap.dedent("""
             from conans import ConanFile
@@ -53,7 +53,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.init_git_repo({"conanfile.py": conanfile}, branch="my_release")
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         scm_info = client.scm_info("base/1.1@user/testing")
         self.assertEqual(scm_info.url, "somerepo")
 
@@ -91,7 +91,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         base_rev = client.init_git_repo({"conanfile.py": conanfile}, branch="my_release",
                                         folder="base")
-        client.run("export base base/1.1@user/testing")
+        client.run("export base --name=base --version=1.1 --user=user --channel=testing")
 
         reuse = textwrap.dedent("""
             from conans import ConanFile

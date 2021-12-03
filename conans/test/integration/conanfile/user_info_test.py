@@ -47,7 +47,7 @@ class UserInfoTest(unittest.TestCase):
                     assert self.dependencies["lib_c"].user_info.VAR1=="2"
                 """)
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("export . reuse/0.1@lasote/stable")
+        client.run("export . --name=reuse --version=0.1 --user=lasote --channel=stable")
         client.run('install --reference=reuse/0.1@lasote/stable --build')
         # Now try local command with a consumer
         client.run('install . --build')

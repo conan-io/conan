@@ -567,7 +567,7 @@ class ProfileAggregationTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_install(self):
-        self.client.run("export . lib/1.0@user/channel")
+        self.client.run("export . --name=lib --version=1.0 --user=user --channel=channel")
         # Install ref
         self.client.run("install --reference=lib/1.0@user/channel -pr profile1 -pr profile2 --build missing")
         self.assertIn(dedent("""
@@ -591,7 +591,7 @@ class ProfileAggregationTest(unittest.TestCase):
                        """), self.client.out)
 
     def test_export_pkg(self):
-        self.client.run("export-pkg . lib/1.0@user/channel -pr profile1 -pr profile2")
+        self.client.run("export-pkg . --name=lib --version=1.0 --user=user --channel=channel -pr profile1 -pr profile2")
         # ID for the expected settings applied: x86, Visual Studio 15,...
         self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
 

@@ -36,7 +36,7 @@ class ExportPkgTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": GenConanfile(),
                      "myprofile": profile})
-        client.run("export-pkg . pkg/0.1@user/testing -pr=myprofile")
+        client.run("export-pkg . --name=pkg --version=0.1 --user=user --channel=testing -pr=myprofile")
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
@@ -95,17 +95,17 @@ class helloPythonConan(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export-pkg . hello/0.1@lasote/stable")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable")
         client.run("search hello/0.1@lasote/stable")
         self.assertIn("optionOne: True", client.out)
         self.assertNotIn("optionOne: False", client.out)
         self.assertNotIn("optionOne: 123", client.out)
-        client.run("export-pkg . hello/0.1@lasote/stable -o optionOne=False")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable -o optionOne=False")
         client.run("search hello/0.1@lasote/stable")
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
         self.assertNotIn("optionOne: 123", client.out)
-        client.run("export-pkg . hello/0.1@lasote/stable -o hello:optionOne=123")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable -o hello:optionOne=123")
         client.run("search hello/0.1@lasote/stable")
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
@@ -421,13 +421,13 @@ class MyConan(ConanFile):
         self.client.save({"conanfile_dep.py": conanfile,
                           "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
         self.client.run("export conanfile_dep.py pkg1/1.0@danimtb/testing")
-        self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json")
+        self.client.run("export-pkg  .  --name=conanfile.py pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json")
         _check_json_output()
 
         # Error on missing dependency
         self.client.run("remove pkg1/1.0@danimtb/testing --force")
         self.client.run("remove pkg2/1.0@danimtb/testing --force")
-        self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json",
+        self.client.run("export-pkg  .  --name=conanfile.py pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json",
                         assert_error=True)
         _check_json_output(with_error=True)
 

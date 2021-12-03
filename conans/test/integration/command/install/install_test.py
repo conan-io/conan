@@ -205,7 +205,7 @@ def test_install_with_path_errors(client):
 @pytest.mark.xfail(reason="cache2.0: TODO: check this case for new cache")
 def test_install_broken_reference(client):
     client.save({"conanfile.py": GenConanfile()})
-    client.run("export . hello/0.1@lasote/stable")
+    client.run("export . --name=hello --version=0.1 --user=lasote --channel=stable")
     client.run("remote add_ref hello/0.1@lasote/stable default")
     ref = RecipeReference.loads("hello/0.1@lasote/stable")
     # Because the folder is removed, the metadata is removed and the

@@ -108,7 +108,7 @@ class TestConan(ConanFile):
         save(file2, "Hello2")
         os.symlink("version1", latest)
         os.symlink("latest", edge)
-        client.run("export-pkg ./recipe hello/0.1@lasote/stable")
+        client.run("export-pkg  .  --name=./recipe hello --version=0.1 --user=lasote --channel=stable")
         pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, pref, build=False)

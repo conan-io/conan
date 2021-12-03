@@ -93,7 +93,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_binary_not_existing(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . hello/0.1@lasote/testing")
+        client.run("export . --name=hello --version=0.1 --user=lasote --channel=testing")
         client.run("upload hello/0.1@lasote/testing:123 -r default", assert_error=True)
         self.assertIn("There is not package binary matching hello/0.1@lasote/testing:123",
                       client.out)

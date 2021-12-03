@@ -17,9 +17,9 @@ def test_basic(relative_path):
     client.save(files, path=source_folder)
     if relative_path:
         with client.chdir("current"):
-            client.run("export ../source --anme=hello --version=0.1 --user=lasote --channel=stable")
+            client.run("export ../source --name=hello --version=0.1 --user=lasote --channel=stable")
     else:
-        client.run("export source hello/0.1@lasote/stable")
+        client.run("export source --name=hello --version=0.1 --user=lasote --channel=stable")
 
     # The result should be the same in both cases
     ref = RecipeReference("hello", "0.1", "lasote", "stable")
@@ -46,12 +46,12 @@ def test_path(relative_path):
         client.save({"conan/conanfile.py": GenConanfile().with_exports("../source*"),
                      "source/main.cpp": "mymain"})
         with client.chdir("current"):
-            client.run("export ../conan hello/0.1@lasote/stable")
+            client.run("export ../conan --name=hello --version=0.1 --user=lasote --channel=stable")
     else:
         client.save({"current/conanfile.py": GenConanfile().with_exports("../source*"),
                      "source/main.cpp": "mymain"})
         with client.chdir("current"):
-            client.run("export . hello/0.1@lasote/stable")
+            client.run("export . --name=hello --version=0.1 --user=lasote --channel=stable")
 
     ref = RecipeReference("hello", "0.1", "lasote", "stable")
     latest_rrev = client.cache.get_latest_recipe_reference(ref)

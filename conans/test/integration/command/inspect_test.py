@@ -11,7 +11,7 @@ class ConanInspectTest(unittest.TestCase):
     def test_inspect_quiet(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("name")})
-        client.run("export . name/version@user/channel")
+        client.run("export . --name=name --version=version --user=user --channel=channel")
         client.run("upload name/version@user/channel --all -r default")
         client.run("remove * -f")
 

@@ -561,7 +561,7 @@ class TestInfoPythonRequires:
     def test_python_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . tool/0.1@")
+        client.run("export . --name=tool --version=0.1")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class pkg(ConanFile):

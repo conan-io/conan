@@ -1194,7 +1194,7 @@ class Test(ConanFile):
         time.sleep(1)
 
         client.save({"conanfile.py": conanfile})
-        client.run("export . lib/1.0@user/testing")
+        client.run("export . --name=lib --version=1.0 --user=user --channel=testing")
 
         # If the recipe doesn't have associated remote, there is no time
         client.run("search lib/1.0@user/testing --revisions")
@@ -1213,7 +1213,7 @@ class Test(ConanFile):
 
         # Create new revision and upload
         client.save({"conanfile.py": conanfile + "# force new rev"})
-        client.run("export . lib/1.0@user/testing")
+        client.run("export . --name=lib --version=1.0 --user=user --channel=testing")
 
         client.run("search lib/1.0@user/testing --revisions")
         self.assertNotIn("bd761686d5c57b31f4cd85fd0329751f", client.out)

@@ -21,7 +21,7 @@ def test_shallow_none_string():
                     "revision": "123456", "shallow": 'None' }
     """)})
 
-    client.run('export . name/version@', assert_error=True)
+    client.run('export . --name=name --version=version', assert_error=True)
     assert "ERROR: SCM value for 'shallow' must be of type 'bool' (found 'str')" in str(client.out)
 
 

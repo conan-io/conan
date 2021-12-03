@@ -27,7 +27,7 @@ class ExportSettingsTest(unittest.TestCase):
         self.assertIn("conanfile didn't specify version", client.out)
 
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . lib/1.0@lasote/channel")
+        client.run("export . --name=lib --version=1.0 --user=lasote --channel=channel")
         self.assertIn("lib/1.0@lasote/channel: A new conanfile.py version was exported", client.out)
 
         client.save({"conanfile.py": GenConanfile("lib", "1.0")})
@@ -432,7 +432,7 @@ class ExportMetadataTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 
-        client.run('export . lib/1.0@')
+        client.run('export . --name=lib --version=1.0')
         self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
 
     def test_export_with_only_user_channel(self):
@@ -440,7 +440,7 @@ class ExportMetadataTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
 
-        client.run('export . @user/channel')
+        client.run('export .  --version= --user=user --channel=channel')
         self.assertIn("lib/1.0@user/channel: A new conanfile.py version was exported", client.out)
 
     def test_export_conflict_no_user_channel(self):

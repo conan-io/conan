@@ -349,14 +349,14 @@ class PackageIDErrorTest(unittest.TestCase):
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . dep1/1.0@user/testing")
+        client.run("export . --name=dep1 --version=1.0 --user=user --channel=testing")
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")})
-        client.run("export . dep2/1.0@user/testing")
+        client.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         pkg_revision_mode = "self.info.requires.package_revision_mode()"
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")
                                                    .with_package_id(pkg_revision_mode)})
-        client.run("export . dep3/1.0@user/testing")
+        client.run("export . --name=dep3 --version=1.0 --user=user --channel=testing")
 
         client.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")
                                                    .with_require("dep3/1.0@user/testing")})
@@ -375,14 +375,14 @@ class PackageIDErrorTest(unittest.TestCase):
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         # This is mandatory, otherwise it doesn't work
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . dep1/1.0@user/testing")
+        client.run("export . --name=dep1 --version=1.0 --user=user --channel=testing")
 
         pkg_revision_mode = "self.info.requires.full_version_mode()"
         package_id_print = "self.output.info('PkgNames: %s' % sorted(self.info.requires.pkg_names))"
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")
                     .with_package_id(pkg_revision_mode)
                     .with_package_id(package_id_print)})
-        client.run("export . dep2/1.0@user/testing")
+        client.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         consumer = textwrap.dedent("""
             from conans import ConanFile
@@ -408,7 +408,7 @@ class PackageIDErrorTest(unittest.TestCase):
                 """.format())
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . dep1/1.0@user/testing")
+        client.run("export . --name=dep1 --version=1.0 --user=user --channel=testing")
         client.run("create . tool/1.0@user/testing")
 
         pkg_revision_mode = "self.info.requires.full_version_mode()"
@@ -417,7 +417,7 @@ class PackageIDErrorTest(unittest.TestCase):
                     .with_build_requires("tool/1.0@user/testing")
                     .with_package_id(pkg_revision_mode)
                     .with_package_id(package_id_print)})
-        client.run("export . dep2/1.0@user/testing")
+        client.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         consumer = textwrap.dedent("""
             from conans import ConanFile
@@ -450,7 +450,7 @@ class PackageIDErrorTest(unittest.TestCase):
 
         client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")})
-        client2.run("export . dep2/1.0@user/testing")
+        client2.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         client2.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")})
         client2.run('create . consumer/1.0@user/testing --build')
