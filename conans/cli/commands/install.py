@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.api.formatters.graph import cli_format_graph_basic, cli_format_graph_packages
+from conans.cli.formatters.graph import cli_format_graph_basic, cli_format_graph_packages
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile

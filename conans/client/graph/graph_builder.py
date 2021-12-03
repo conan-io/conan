@@ -52,6 +52,7 @@ class DepsGraphBuilder(object):
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
             check_graph_provides(dep_graph)
+            dep_graph.version_ranges = self._resolver.resolved
         except GraphError as e:
             dep_graph.error = e
         return dep_graph
