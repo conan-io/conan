@@ -21,8 +21,6 @@ def export_pkg(conan_api, parser, *args, **kwargs):
                         help='Provide a user')
     parser.add_argument("--channel", action=OnceArgument,
                         help='Provide a channel')
-    parser.add_argument('-f', '--force', default=False, action='store_true',
-                        help='Overwrite existing package if existing')
     parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                         help='Path to a json file where the install information will be '
                              'written')
@@ -40,7 +38,6 @@ def export_pkg(conan_api, parser, *args, **kwargs):
     lockfile_path = _make_abs_path(args.lockfile, cwd) if args.lockfile else None
     lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
-
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     ref = conan_api.export.export(path=path,
@@ -51,12 +48,20 @@ def export_pkg(conan_api, parser, *args, **kwargs):
                                   lockfile=lockfile,
                                   ignore_dirty=args.ignore_dirty)
 
-    conan_api.export.export_pkg(path=path,
-                                ref=ref,
-                                profile_host=profile_host,
-                                profile_build=profile_build,
-                                force=args.force,
-                                lockfile=lockfile)
+    # TODO: loading virtual->(ref from cache)
+    root_node = conan_api.graph.load_root_node(ref, None, profile_host, profile_build,
+                                               lockfile, None,
+                                               remote=None,
+                                               update=None)
+    deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
+                                            profile_build=profile_build,
+                                            lockfile=lockfile,
+                                            remote=None,
+                                            update=None)
+    conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name])
+    deps_graph.report_graph_error()
+
+    conan_api.export.export_pkg(deps_graph, path)
 
     if args.lockfile_out:
         lockfile_out = _make_abs_path(args.lockfile_out, cwd)
