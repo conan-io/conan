@@ -51,7 +51,7 @@ def cli_format_graph_basic(graph):
             output.info("    {}: {}".format(k, v), Color.BRIGHT_CYAN)
 
     _format_resolved("Resolved alias", graph.aliased)
-    _format_resolved("Resolved version ranges", graph.version_ranges)
+    _format_resolved("Resolved version ranges", graph.resolved_ranges)
 
     if deprecated:
         output.info("Deprecated", Color.BRIGHT_YELLOW)

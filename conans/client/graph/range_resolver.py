@@ -12,7 +12,7 @@ class RangeResolver(object):
         self._conan_app = conan_app
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
-        self.resolved_ranges = None
+        self.resolved_ranges = {}
 
     def _search_remote_recipes(self, remote, search_ref):
         pattern = str(search_ref)
