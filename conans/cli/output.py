@@ -80,20 +80,9 @@ class ConanOutput(object):
         if self._color and (fg or bg):
             data = "%s%s%s%s" % (fg or '', bg or '', data, Style.RESET_ALL)
 
-        # https://github.com/conan-io/conan/issues/4277
-        # Windows output locks produce IOErrors
-        for _ in range(3):
-            try:
-                if newline:
-                    data = "%s\n" % data
-                self.stream.write(data)
-                break
-            except IOError:
-                import time
-                time.sleep(0.02)
-            except UnicodeError:
-                data = data.encode("utf8").decode("ascii", "ignore")
-
+        if newline:
+            data = "%s\n" % data
+        self.stream.write(data)
         self.stream.flush()
 
     def rewrite_line(self, line):

@@ -43,16 +43,28 @@ class FileDownloader(object):
 
         if file_path and os.path.exists(file_path):
             if overwrite:
-                if self._output:
-                    self._output.warning("file '%s' already exists, overwriting" % file_path)
+                self._output.warning("file '%s' already exists, overwriting" % file_path)
             else:
                 # Should not happen, better to raise, probably we had to remove
                 # the dest folder before
                 raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
         try:
-            r = _call_with_retry(self._output, retry, retry_wait, self._download_file, url, auth,
-                                 headers, file_path)
+            r = None
+            for counter in range(retry + 1):
+                try:
+                    r = self._download_file(url, auth, headers, file_path)
+                    break
+                except (NotFoundException, ForbiddenException, AuthenticationException,
+                        RequestErrorException):
+                    raise
+                except ConanException as exc:
+                    if counter == retry:
+                        raise
+                    else:
+                        self._output.error(exc)
+                        self._output.info(f"Waiting {retry_wait} seconds to retry...")
+                        time.sleep(retry_wait)
             if file_path:
                 check_checksum(file_path, md5, sha1, sha256)
             return r
@@ -88,24 +100,19 @@ class FileDownloader(object):
                 raise AuthenticationException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
-        def read_response(size):
-            for chunk in response.iter_content(size):
-                yield chunk
-
-        def write_chunks(chunks, path):
+        def read_response(chunk_size, path=None):
             ret = None
             downloaded_size = range_start
             if path:
                 mkdir(os.path.dirname(path))
                 mode = "ab" if range_start else "wb"
                 with open(path, mode) as file_handler:
-                    for chunk in chunks:
-                        assert isinstance(chunk, bytes)
+                    for chunk in response.iter_content(chunk_size):
                         file_handler.write(chunk)
                         downloaded_size += len(chunk)
             else:
                 ret_data = bytearray()
-                for chunk in chunks:
+                for chunk in response.iter_content(chunk_size):
                     ret_data.extend(chunk)
                     downloaded_size += len(chunk)
                 ret = bytes(ret_data)
@@ -130,11 +137,8 @@ class FileDownloader(object):
             if description:
                 self._output.info(description)
 
-            chunk_size = 1024 if not file_path else 1024 * 100
-            written_chunks, total_downloaded_size = write_chunks(
-                read_response(chunk_size),
-                file_path
-            )
+            chunksize = 1024 if not file_path else 1024 * 100
+            written_chunks, total_downloaded_size = read_response(chunksize, file_path)
             gzip = (response.headers.get("content-encoding") == "gzip")
             response.close()
             # it seems that if gzip we don't know the size, cannot resume and shouldn't raise
@@ -157,20 +161,3 @@ class FileDownloader(object):
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))
-
-
-def _call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
-    for counter in range(retry + 1):
-        try:
-            return method(*args, **kwargs)
-        except (NotFoundException, ForbiddenException, AuthenticationException,
-                RequestErrorException):
-            raise
-        except ConanException as exc:
-            if counter == retry:
-                raise
-            else:
-                if out:
-                    out.error(exc)
-                    out.info(f"Waiting {retry_wait} seconds to retry...")
-                time.sleep(retry_wait)
