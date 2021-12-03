@@ -409,7 +409,7 @@ class ExportMetadataTest(unittest.TestCase):
         t.save({'conanfile.py': self.conanfile.format(revision_mode="hash")})
 
         ref = RecipeReference.loads("name/version@user/channel")
-        t.run("export . {}".format(ref))
+        t.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
         latest_rrev = t.cache.get_latest_recipe_reference(ref)
         self.assertEqual(latest_rrev.revision, self.summary_hash)
 

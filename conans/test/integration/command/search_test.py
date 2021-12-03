@@ -1434,7 +1434,7 @@ class SearchRemoteAllTestCase(unittest.TestCase):
 
         self.reference = "name/version@user/channel"
         self.client.save({'conanfile.py': conanfile})
-        self.client.run("export . {}".format(self.reference))
+        self.client.run(f"export . --name={self.reference.name} --version={self.reference.version} --user={self.reference.user} --channel={self.reference.channel}")
         self.client.run("upload --force -r {} {}".format(self.remote_name, self.reference))
 
     def test_search_by_name(self):

@@ -26,7 +26,7 @@ class TestListRecipeRevisionsBase:
 
     def _upload_recipe(self, remote, reference):
         self.client.save({'conanfile.py': GenConanfile()})
-        self.client.run("export . {}".format(reference))
+        self.client.run(f"export . --name={reference.name} --version={reference.version} --user={reference.user} --channel={reference.channel}")
         self.client.run("upload --force -r {} {}".format(remote, reference))
 
 

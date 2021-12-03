@@ -76,7 +76,7 @@ class GitShallowTestCase(unittest.TestCase):
         url, _ = create_local_git_repo(files=files)
         client.run_command('git clone "{}" .'.format(url))
 
-        client.run("export . {}".format(self.ref))
+        client.run(f"export . --name={self.ref.name} --version={self.ref.version} --user={self.ref.user} --channel={self.ref.channel}")
         content = load(client.get_latest_ref_layout(self.ref).conandata())
         if self.shallow in [None, True]:
             self.assertNotIn('shallow', content)
