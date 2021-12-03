@@ -12,7 +12,7 @@ class RangeResolver(object):
         self._conan_app = conan_app
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
-        self.resolved = {}
+        self.resolved_ranges = None
 
     def _search_remote_recipes(self, remote, search_ref):
         pattern = str(search_ref)
@@ -29,7 +29,7 @@ class RangeResolver(object):
             return require.ref
 
         # Check if this ref with version range was already solved
-        prev = self.resolved.get(require.ref)
+        prev = self.resolved_ranges.get(require.ref)
         if prev is not None:
             require.ref = prev
             return prev
@@ -45,12 +45,12 @@ class RangeResolver(object):
                                         resolved_ref.version < remote_resolved_ref.version):
                 resolved_ref = remote_resolved_ref
 
-        if resolved_ref:
-            self.resolved[require.ref] = resolved_ref
-            require.ref = resolved_ref
-        else:
+        if resolved_ref is None:
             raise ConanException("Version range '%s' from requirement '%s' required by '%s' "
                                  "could not be resolved" % (version_range, require, base_conanref))
+
+        self.resolved_ranges[require.ref] = resolved_ref
+        require.ref = resolved_ref
         return resolved_ref
 
     def _resolve_local(self, search_ref, version_range):

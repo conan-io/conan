@@ -28,6 +28,7 @@ class DepsGraphBuilder(object):
         assert isinstance(profile_build.options, Options)
         # print("Loading graph")
         dep_graph = DepsGraph()
+        self._resolver.resolved = dep_graph.version_ranges
 
         # TODO: Why assign here the settings_build and settings_target?
         root_node.conanfile.settings_build = profile_build.processed_settings.copy()
@@ -52,7 +53,6 @@ class DepsGraphBuilder(object):
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
             check_graph_provides(dep_graph)
-            dep_graph.version_ranges = self._resolver.resolved
         except GraphError as e:
             dep_graph.error = e
         return dep_graph
