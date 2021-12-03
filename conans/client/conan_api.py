@@ -214,7 +214,6 @@ class ConanAPIV1(object):
                                  ignore_dirty=ignore_dirty)
 
             profile_host.options.scope(new_ref.name)
-            app.range_resolver.clear_output()  # invalidate version range output
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [new_ref.name]
