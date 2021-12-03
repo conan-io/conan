@@ -3,9 +3,6 @@ import tarfile
 import unittest
 import zipfile
 
-from mock import Mock
-
-from conans.cli.output import ConanOutput
 from conans.client.tools import untargz, unzip
 from conans.client.tools.files import chdir, save
 from conans.errors import ConanException

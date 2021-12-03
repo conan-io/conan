@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 
 import pytest
@@ -11,7 +12,7 @@ from conans.test.utils.tools import TestServer, TurboTestClient
 
 class CompressSymlinksZeroSize(unittest.TestCase):
 
-    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="No Windows symlinks")
     def test_package_symlinks_zero_size(self):
         server = TestServer()
         client = TurboTestClient(servers={"default": server}, inputs=["admin", "password"])
@@ -55,3 +56,68 @@ lrw-r--r-- 0/0               0 1970-01-01 01:00 link.txt -> file.txt
                 self.assertEqual(int(size), 0)
             elif "file.txt":
                 self.assertGreater(int(size), 0)
+
+
+@pytest.mark.parametrize("package_files",
+     [{"files": ["foo/bar/file/file.txt"],
+       "symlinks": [("/usr/bin/", "foo/symlink_folder")]},  # absolute symlink
+     {"files": ["folder/file.txt"],
+       "symlinks": [("folder", "folder2"),
+                    ("file.txt", "folder/file2.txt")]},  # single level symlink
+      {"files": ["foo/bar/file/file.txt"],
+       "symlinks": [("bar/file", "foo/symlink_folder"),
+                    ("foo/symlink_folder/file.txt", "file2.txt")]},   # double level symlink
+     ])
+def test_package_with_symlinks(package_files):
+
+    client = TurboTestClient(default_server_user=True)
+    client2 = TurboTestClient(servers=client.servers)
+    conanfile = textwrap.dedent("""
+    from conans import ConanFile
+    class HelloConan(ConanFile):
+        exports_sources = "*"
+        def package(self):
+            self.copy("*")
+    """)
+    client.save({"conanfile.py": conanfile})
+
+    for path in package_files["files"]:
+        client.save({path: "foo contents"})
+
+    for link_dst, linked_file in package_files["symlinks"]:
+        os.symlink(link_dst, os.path.join(client.current_folder, linked_file))
+
+    pref = client.create(RecipeReference.loads("lib/1.0"), conanfile=False)
+
+    def assert_folder_symlinks(base_folder):
+        for link_dst, linked_file in package_files["symlinks"]:
+            symlink_package = os.path.join(base_folder, linked_file)
+            destination = os.readlink(symlink_package)
+            assert destination == link_dst
+            assert os.path.exists(symlink_package)
+            if os.path.isfile(symlink_package):
+                with open(symlink_package) as _f:
+                    assert "foo contents" == _f.read()
+
+    # Check exported sources are there
+    exports_sources_folder = client.get_latest_ref_layout(pref.ref).export_sources()
+    assert_folder_symlinks(exports_sources_folder)
+
+    # Check files have been copied to the build
+    build_folder = client.get_latest_pkg_layout(pref).build()
+    assert_folder_symlinks(build_folder)
+
+    # Check package files are there
+    package_folder = client.get_latest_pkg_layout(pref).package()
+    assert_folder_symlinks(package_folder)
+
+    # Zip and upload
+    client.run("upload '*' -c -r default --all")
+
+    # Client 2 install
+    client2.run("install --reference lib/1.0@")
+    # Check package files are there
+    package_folder = client2.get_latest_pkg_layout(pref).package()
+    assert_folder_symlinks(package_folder)
+
+

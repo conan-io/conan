@@ -349,7 +349,7 @@ def tar_extract(fileobj, destination_dir):
         base = realpath(abspath(destination_dir))
 
         for finfo in members:
-            if badpath(finfo.name, base) or finfo.islnk():
+            if badpath(finfo.name, base):
                 logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))
                 continue
             else:

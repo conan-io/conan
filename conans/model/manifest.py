@@ -1,9 +1,7 @@
 import os
 
-from conans.errors import ConanException
 from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import timestamp_now, timestamp_to_str
-from conans.util.env import get_env
 from conans.util.files import load, md5, md5sum, save, walk
 
 
@@ -17,30 +15,22 @@ def discarded_file(filename):
 
 def gather_files(folder):
     file_dict = {}
-    symlinks = {}
-    for root, dirs, files in walk(folder):
+    symlinked_folders = {}
+    for root, dirs, files in walk(folder, followlinks=True):
+        if os.path.islink(root):
+            dirs[:] = []
+            rel_path = root[len(folder) + 1:].replace("\\", "/")
+            symlinked_folders[rel_path] = root
+            continue
         dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
-        for d in dirs:
-            abs_path = os.path.join(root, d)
-            if os.path.islink(abs_path):
-                rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
-                symlinks[rel_path] = os.readlink(abs_path)
         for f in files:
             if discarded_file(f):
                 continue
             abs_path = os.path.join(root, f)
             rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
-            if os.path.exists(abs_path):
-                file_dict[rel_path] = abs_path
-            else:
-                if not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
-                    raise ConanException("The file is a broken symlink, verify that "
-                                         "you are packaging the needed destination files: '%s'."
-                                         "You can skip this check adjusting the "
-                                         "'general.skip_broken_symlinks_check' at the conan.conf "
-                                         "file."
-                                         % abs_path)
-    return file_dict, symlinks
+            file_dict[rel_path] = abs_path
+
+    return file_dict, symlinked_folders
 
 
 class FileTreeManifest(object):
@@ -108,17 +98,27 @@ class FileTreeManifest(object):
         from disk, and capturing current time
         """
         files, _ = gather_files(folder)
+        # The folders symlinks are discarded for the manifest
         for f in (PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME):
             files.pop(f, None)
 
         file_dict = {}
         for name, filepath in files.items():
-            file_dict[name] = md5sum(filepath)
+            if not os.path.exists(filepath):  # Broken symlink
+                # FIXME: What to hash? the path?
+                pass
+            else:
+                file_dict[name] = md5sum(filepath)
 
         if exports_sources_folder:
             export_files, _ = gather_files(exports_sources_folder)
+            # The folders symlinks are discarded for the manifest
             for name, filepath in export_files.items():
-                file_dict["export_source/%s" % name] = md5sum(filepath)
+                if not os.path.exists(filepath):  # Broken symlink
+                    # FIXME: What to hash? the path?
+                    pass
+                else:
+                    file_dict["export_source/%s" % name] = md5sum(filepath)
 
         date = timestamp_now()
 

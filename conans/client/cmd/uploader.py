@@ -270,16 +270,18 @@ class _PackagePreparator:
                 clean_dirty(tgz_path)
 
         export_folder = layout.export()
-        files, symlinks = gather_files(export_folder)
+        files, symlinked_folders = gather_files(export_folder)
+        files.update(symlinked_folders)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
         export_src_folder = layout.export_sources()
-        src_files, src_symlinks = gather_files(export_src_folder)
+        src_files, src_symlinked_folders = gather_files(export_src_folder)
+        src_files.update(src_symlinked_folders)
 
         result = {CONANFILE: files.pop(CONANFILE),
                   CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
 
-        def add_tgz(tgz_name, tgz_files, tgz_symlinks, msg):
+        def add_tgz(tgz_name, tgz_files, msg):
             tgz = os.path.join(download_export_folder, tgz_name)
             if os.path.isfile(tgz):
                 result[tgz_name] = tgz
@@ -287,12 +289,12 @@ class _PackagePreparator:
                 if self._output and not self._output.is_terminal:
                     self._output.info(msg)
                 compresslevel = self._cache.new_config.get("core.gzip:compresslevel", int)
-                tgz = compress_files(tgz_files, tgz_symlinks, tgz_name, download_export_folder,
+                tgz = compress_files(tgz_files, tgz_name, download_export_folder,
                                      compresslevel=compresslevel)
                 result[tgz_name] = tgz
 
-        add_tgz(EXPORT_TGZ_NAME, files, symlinks, "Compressing recipe...")
-        add_tgz(EXPORT_SOURCES_TGZ_NAME, src_files, src_symlinks, "Compressing recipe sources...")
+        add_tgz(EXPORT_TGZ_NAME, files, "Compressing recipe...")
+        add_tgz(EXPORT_SOURCES_TGZ_NAME, src_files, "Compressing recipe sources...")
         return result
 
     def prepare_package(self, package, integrity_check):
@@ -318,7 +320,8 @@ class _PackagePreparator:
         # Get all the files in that directory
         # existing package, will use short paths if defined
         package_folder = layout.package()
-        files, symlinks = gather_files(package_folder)
+        files, symlinked_folders = gather_files(package_folder)
+        files.update(symlinked_folders)
 
         if CONANINFO not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
@@ -329,7 +332,7 @@ class _PackagePreparator:
             tgz_files = {f: path for f, path in files.items() if
                          f not in [CONANINFO, CONAN_MANIFEST]}
             compresslevel = self._cache.new_config.get("core.gzip:compresslevel", int)
-            tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, download_pkg_folder,
+            tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
                                       compresslevel=compresslevel)
             assert tgz_path == package_tgz
             assert os.path.exists(package_tgz)
@@ -485,21 +488,13 @@ class _UploadExecutor:
                                    reference=pref.ref, package_id=pref.package_id, remote=remote)
 
 
-def compress_files(files, symlinks, name, dest_dir, compresslevel=None):
+def compress_files(files, name, dest_dir, compresslevel=None):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
                                         compresslevel=compresslevel)
-
-        for filename, dest in sorted(symlinks.items()):
-            info = tarfile.TarInfo(name=filename)
-            info.type = tarfile.SYMTYPE
-            info.linkname = dest
-            info.size = 0  # A symlink shouldn't have size
-            tgz.addfile(tarinfo=info)
-
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
         with progress_bar.iterate_list_with_progress(sorted(files.items()),
                                                      "Compressing %s" % name) as pg_file_list:
