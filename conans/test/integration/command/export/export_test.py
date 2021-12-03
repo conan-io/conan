@@ -31,9 +31,8 @@ class ExportSettingsTest(unittest.TestCase):
         self.assertIn("lib/1.0@lasote/channel: A new conanfile.py version was exported", client.out)
 
         client.save({"conanfile.py": GenConanfile("lib", "1.0")})
-        client.run("export . lasote", assert_error=True)
-        self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
-                      client.out)
+        client.run("export . --user=lasote")
+        self.assertIn("lib/1.0@lasote: Exporting package recipe", client.out)
 
     def test_export_read_only(self):
         client = TestClient()

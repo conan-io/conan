@@ -772,7 +772,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "name.txt": "MyPkg",
                      "version.txt": "MyVersion"})
-        client.run("export . --name=pkg --user=--version=1.0user --channel=channel")
+        client.run("export . --name=pkg --version=1.0 --user=user --channel=channel")
         self.assertIn("pkg/1.0@user/channel: A new conanfile.py version was exported", client.out)
         client.run("create . pkg/1.0@user/channel")
         self.assertIn("pkg/1.0@user/channel: Source: tool header: myheader", client.out)

@@ -225,7 +225,7 @@ class PackageRevisionModeTest(unittest.TestCase):
                 conanfile.with_require(RecipeReference.loads(dep))
             filename = "%s.py" % ref.name
             self.client.save({filename: conanfile})
-            self.client.run("export %s %s@" % (filename, ref))
+            self.client.run(f"export {filename} --name={ref.name} --version={ref.version}")
 
     def test_simple_dependency_graph(self):
         dependencies = {

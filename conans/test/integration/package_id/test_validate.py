@@ -295,5 +295,5 @@ class TestValidate(unittest.TestCase):
                     raise ConanInvalidConfiguration("never ever")
             """)
         c.save({"conanfile.py": conanfile})
-        c.run("export-pkg . test/1.0@", assert_error=True)
+        c.run("export-pkg . --name=test --version=1.0", assert_error=True)
         assert "Invalid: never ever" in c.out

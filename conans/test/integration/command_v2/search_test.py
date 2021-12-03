@@ -5,6 +5,7 @@ from unittest.mock import patch, Mock
 import pytest
 
 from conans.errors import ConanConnectionError, ConanException
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -69,6 +70,7 @@ class TestRemotes:
             """)
 
         self.client.save({'conanfile.py': conanfile})
+        reference = RecipeReference.loads(str(reference))
         self.client.run(f"export . --name={reference.name} --version={reference.version} --user={reference.user} --channel={reference.channel}")
         self.client.run("upload --force -r {} {}".format(remote, reference))
 
