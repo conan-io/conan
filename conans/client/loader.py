@@ -1,4 +1,4 @@
-import imp
+from importlib import machinery, invalidate_caches
 import inspect
 import os
 import sys
@@ -9,8 +9,7 @@ import yaml
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
-from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration, \
-    conanfile_exception_formatter
+from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
@@ -25,6 +24,7 @@ class ConanFileLoader:
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
         self._requester = requester
+        invalidate_caches()
 
     def load_basic(self, conanfile_path, graph_lock=None, display=""):
         """ loads a conanfile basic object without evaluating anything
@@ -317,7 +317,7 @@ def _parse_conanfile(conan_file_path):
         with chdir(current_dir):
             old_dont_write_bytecode = sys.dont_write_bytecode
             sys.dont_write_bytecode = True
-            loaded = imp.load_source(module_id, conan_file_path)
+            loaded = machinery.SourceFileLoader(module_id, conan_file_path).load_module()
             sys.dont_write_bytecode = old_dont_write_bytecode
 
         required_conan_version = getattr(loaded, "required_conan_version", None)
