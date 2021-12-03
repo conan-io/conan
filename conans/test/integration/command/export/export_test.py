@@ -167,7 +167,7 @@ class TestConan(ConanFile):
     def test_filename(self, filename):
         client = TestClient()
         client.save({filename: GenConanfile("hello", "1.2")})
-        client.run("export %s user/stable" % filename)
+        client.run("export %s --user=user --channel=stable" % filename)
         self.assertIn("hello/1.2@user/stable: A new conanfile.py version was exported", client.out)
         ref = RecipeReference("hello", "1.2", "user", "stable")
         latest_rrev = client.cache.get_latest_recipe_reference(ref)

@@ -328,8 +328,8 @@ def test_package_revision_mode_full_transitive_package_id():
                  "pkga/conanfile.py": GenConanfile(),
                  "pkgb/conanfile.py": GenConanfile().with_requires("tool/0.1", "pkga/0.1"),
                  "profile": profile})
-    client.run("export tool tool/0.1@")
-    client.run("export pkga pkga/0.1@")
+    client.run("export tool --name=tool --version=0.1")
+    client.run("export pkga --name=pkga --version=0.1")
     client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
     assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
     assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out

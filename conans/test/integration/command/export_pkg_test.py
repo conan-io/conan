@@ -420,14 +420,14 @@ class MyConan(ConanFile):
         self.client = TestClient()
         self.client.save({"conanfile_dep.py": conanfile,
                           "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
-        self.client.run("export conanfile_dep.py pkg1/1.0@danimtb/testing")
-        self.client.run("export-pkg  .  --name=conanfile.py pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json")
+        self.client.run("export conanfile_dep.py --name=pkg1 --version=1.0 --user=danimtb --channel=testing")
+        self.client.run("export-pkg conanfile.py --name=pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json")
         _check_json_output()
 
         # Error on missing dependency
         self.client.run("remove pkg1/1.0@danimtb/testing --force")
         self.client.run("remove pkg2/1.0@danimtb/testing --force")
-        self.client.run("export-pkg  .  --name=conanfile.py pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json",
+        self.client.run("export-pkg conanfile.py --name=pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json",
                         assert_error=True)
         _check_json_output(with_error=True)
 

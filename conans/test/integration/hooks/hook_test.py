@@ -198,7 +198,7 @@ class HookTest(unittest.TestCase):
         client.run("build .")
         self._check_build(conanfile_path, client.out)
 
-        client.run("export . danimtb/testing")
+        client.run("export . --user=danimtb --channel=testing")
 
         conanfile_cache_path = client.get_latest_ref_layout(
             RecipeReference("basic", "0.1", "danimtb", "testing")).conanfile()
@@ -434,6 +434,6 @@ class HookTest(unittest.TestCase):
         """.format())
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
-        client.run("export . danimtb/testing")
+        client.run("export . --user=danimtb --channel=testing")
         self.assertIn("[HOOK - my_hook/my_hook.py] pre_export(): my_printer(): CUSTOM MODULE",
                       client.out)

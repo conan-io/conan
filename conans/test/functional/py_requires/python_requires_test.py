@@ -104,8 +104,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                                           folder="reuse1")
         reuse2_rev = client.init_git_repo({"conanfile.py": reuse % "reuse2"}, branch="release",
                                           folder="reuse2")
-        client.run("export reuse1 reuse1/1.1@user/testing")
-        client.run("export reuse2 reuse2/1.1@user/testing")
+        client.run("export reuse1 --name=reuse1 --version=1.1 --user=user --channel=testing")
+        client.run("export reuse2 --name=reuse2 --version=1.1 --user=user --channel=testing")
 
         base = client.scm_info("base/1.1@user/testing")
         reuse1 = client.scm_info("reuse1/1.1@user/testing")

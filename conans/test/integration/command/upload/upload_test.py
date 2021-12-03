@@ -257,7 +257,7 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": "int i=0"})
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertIn("Uploading conanmanifest.txt", client.out)
         assert "Uploading hello0/1.2.1@frodo/stable" in client.out
@@ -265,7 +265,7 @@ class UploadTest(unittest.TestCase):
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile + "\r\n#end",
                       "hello.cpp": "int i=1"})
-        client2.run("export . frodo/stable")
+        client2.run("export . --user=frodo --channel=stable")
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         latest_rrev = client2.cache.get_latest_recipe_reference(ref)
         manifest = client2.cache.ref_layout(latest_rrev).recipe_manifest()
@@ -285,14 +285,14 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertIn("Uploading conanmanifest.txt", client.out)
         assert "Uploading hello0/1.2.1@frodo/stable" in client.out
 
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save(files)
-        client2.run("export . frodo/stable")
+        client2.run("export . --user=frodo --channel=stable")
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         rrev = client2.cache.get_latest_recipe_reference(ref)
         manifest = client2.cache.ref_layout(rrev).recipe_manifest()

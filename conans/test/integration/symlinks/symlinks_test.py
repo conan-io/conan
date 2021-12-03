@@ -108,7 +108,7 @@ class TestConan(ConanFile):
         save(file2, "Hello2")
         os.symlink("version1", latest)
         os.symlink("latest", edge)
-        client.run("export-pkg  .  --name=./recipe hello --version=0.1 --user=lasote --channel=stable")
+        client.run("export-pkg  ./recipe  --name=hello --version=0.1 --user=lasote --channel=stable")
         pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, pref, build=False)
@@ -185,7 +185,7 @@ class ConanSymlink(ConanFile):
             self.assertFalse(os.path.exists(symlink_path))
             self.assertTrue(os.path.exists(symlinked_path))
             os.symlink(symlinked_path, symlink_path)
-            client.run("export . danimtb/testing")
+            client.run("export . --user=danimtb --channel=testing")
             ref = RecipeReference("ConanSymlink", "3.0.0", "danimtb", "testing")
             export_sources = client.get_latest_ref_layout(ref).export_sources()
             cache_other_dir = os.path.join(export_sources, "another_other_directory")

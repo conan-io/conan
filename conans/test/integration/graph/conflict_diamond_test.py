@@ -71,12 +71,12 @@ class Pkg(ConanFile):
 pass
     """})
     client.run("export . --name=LibA --version=0.1 --user=user --channel=channel")
-    client.run("export conanfile.py LibA/0.2@user/channel")
+    client.run("export conanfile.py --name=LibA --version=0.2 --user=user --channel=channel")
     client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
 requires = "LibA/0.1@user/channel"
     """})
-    client.run("export ./ LibB/0.1@user/channel")
+    client.run("export ./ --name=LibB --version=0.1 --user=user --channel=channel")
     client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
 requires = "LibA/0.2@user/channel"

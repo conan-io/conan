@@ -28,7 +28,7 @@ class PackageIDTest(unittest.TestCase):
                 conanfile = conanfile.with_require(RecipeReference.loads(require))
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
-        self.client.run("export . %s" % (channel or "lasote/stable"))
+        self.client.run("export . %s" % (channel or --user="lasote --channel=stable"))
 
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_version_semver_schema(self):

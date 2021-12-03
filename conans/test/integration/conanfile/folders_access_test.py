@@ -110,7 +110,7 @@ class TestFoldersAccess(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         self.client.save({"conanfile.py": conanfile_parent})
-        self.client.run("export . conan/stable")
+        self.client.run("export . --user=conan --channel=stable")
 
     def test_source_local_command(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,

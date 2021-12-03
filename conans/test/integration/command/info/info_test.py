@@ -366,7 +366,7 @@ class InfoTest2(unittest.TestCase):
         client = TestClient()
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"subfolder/conanfile.py": conanfile})
-        client.run("export ./subfolder lasote/testing")
+        client.run("export ./subfolder --user=lasote --channel=testing")
 
         client.run("info ./subfolder")
         self.assertIn("conanfile.py (pkg/0.1)", client.out)
@@ -388,7 +388,7 @@ class InfoTest2(unittest.TestCase):
 
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"subfolder/conanfile.py": conanfile})
-        client.run("export ./subfolder lasote/testing")
+        client.run("export ./subfolder --user=lasote --channel=testing")
 
         client.run("info ./subfolder")
 
@@ -419,7 +419,7 @@ class InfoTest2(unittest.TestCase):
         """)
 
         client.save({"subfolder/conanfile.py": conanfile})
-        client.run("export ./subfolder lasote/testing")
+        client.run("export ./subfolder --user=lasote --channel=testing")
         client.run("info ./subfolder")
 
         self.assertIn("conanfile.py (pkg/0.2)", client.out)
@@ -534,7 +534,7 @@ class TestInfoContext:
                      "pkg/conanfile.py": GenConanfile().with_build_requires("cmake/1.0")})
 
         client.run("create cmake cmake/1.0@")
-        client.run("export pkg pkg/1.0@")
+        client.run("export pkg --name=pkg --version=1.0")
 
         client.run("info pkg/1.0@ -pr:b=default -pr:h=default --build")
         assert "cmake/1.0\n"\

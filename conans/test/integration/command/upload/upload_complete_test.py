@@ -52,7 +52,7 @@ class FailPairFilesUploader(BadConnectionUploader):
 def test_try_upload_bad_recipe():
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
-    client.run("export . frodo/stable")
+    client.run("export . --user=frodo --channel=stable")
     ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
     latest_rrev = client.cache.get_latest_recipe_reference(ref)
     os.unlink(os.path.join(client.cache.ref_layout(latest_rrev).export(), CONAN_MANIFEST))
@@ -64,7 +64,7 @@ def test_upload_with_pattern():
     client = TestClient(default_server_user=True)
     for num in range(3):
         client.save({"conanfile.py": GenConanfile("hello{}".format(num), "1.2.1")})
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
 
     client.run("upload hello* --confirm -r default")
     for num in range(3):
@@ -81,13 +81,13 @@ def test_check_upload_confirm_question():
     server = TestServer()
     client = TestClient(servers={"default": server}, inputs=["yes", "admin", "password", "n", "n"])
     client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
-    client.run("export . frodo/stable")
+    client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
     assert "Uploading hello1/1.2.1@frodo/stable" in client.out
 
     client.save({"conanfile.py": GenConanfile("hello2", "1.2.1")})
-    client.run("export . frodo/stable")
+    client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
     assert "Uploading hello2/1.2.1@frodo/stable" not in client.out
@@ -160,7 +160,7 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(BadConnectionUploader)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         client.run("upload hello* --confirm -r default")
         self.assertIn("Can't connect because of the evil mock", client.out)
         self.assertIn("Waiting 5 seconds to retry...", client.out)
@@ -170,7 +170,7 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(BadConnectionUploader)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         client.run("upload hello* --confirm --retry-wait=0 -r default")
         self.assertIn("Can't connect because of the evil mock", client.out)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
@@ -180,7 +180,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*"),
                  "somefile.txt": ""}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         client.run("upload hello* --confirm --retry 0 --retry-wait=1 -r default", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.out)
         self.assertIn("ERROR: hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
@@ -191,7 +191,7 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(TerribleConnectionUploader)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         client.run("upload hello* --confirm --retry 10 --retry-wait=0 -r default", assert_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.out)
         self.assertIn("ERROR: hello0/1.2.1@frodo/stable: Upload recipe to 'default' failed: "
@@ -201,7 +201,7 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(FailPairFilesUploader)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         client.run("install --reference=hello0/1.2.1@frodo/stable --build -r default")
         client.run("upload hello* --confirm --retry 3 --retry-wait=0 --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
@@ -214,7 +214,7 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(BadConnectionUploader)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         conan_conf = textwrap.dedent("""
                                     [storage]
                                     path = ./data
@@ -232,7 +232,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*"),
                  "somefile.txt": ""}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
 
         conan_conf = textwrap.dedent("""
                                     [storage]
@@ -252,7 +252,7 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(TerribleConnectionUploader)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         conan_conf = textwrap.dedent("""
                                     [storage]
                                     path = ./data
@@ -270,7 +270,7 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(FailPairFilesUploader)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
-        client.run("export . frodo/stable")
+        client.run("export . --user=frodo --channel=stable")
         client.run("install --reference=hello0/1.2.1@frodo/stable --build")
         conan_conf = textwrap.dedent("""
                                     [storage]
