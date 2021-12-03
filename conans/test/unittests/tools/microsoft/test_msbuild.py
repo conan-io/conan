@@ -5,12 +5,12 @@ import pytest
 from mock import Mock
 
 from conan.tools.microsoft import MSBuild, MSBuildToolchain
-from conans.model.settings import Settings
+from conans import ConanFile
 from conans.model.conf import ConfDefinition, Conf
+from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.tools import load
-from conans import ConanFile
 
 
 def test_msbuild_cpu_count():
@@ -36,7 +36,7 @@ def test_msbuild_cpu_count():
 
 def test_msbuild_toolset():
     settings = Settings({"build_type": ["Release"],
-                         "compiler": {"msvc": {"version": ["19.3"]}},
+                         "compiler": {"msvc": {"version": ["193"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
     conanfile = ConanFile(None)
@@ -45,7 +45,7 @@ def test_msbuild_toolset():
     conanfile.settings = settings
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
-    conanfile.settings.compiler.version = "19.3"
+    conanfile.settings.compiler.version = "193"
     conanfile.settings.os = "Windows"
     conanfile.settings.arch = "x86_64"
 
@@ -64,7 +64,7 @@ def test_msbuild_toolset_for_intel_cc(mode, expected_toolset):
     conanfile.initialize()
     conanfile.settings = Settings({"build_type": ["Release"],
                          "compiler": {"intel-cc": {"version": ["2021.3"], "mode": [mode]},
-                                      "msvc": {"version": ["19.3"], "cppstd": ["20"]}},
+                                      "msvc": {"version": ["193"], "cppstd": ["20"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
     conanfile.settings.build_type = "Release"
@@ -88,13 +88,13 @@ def test_msbuild_standard():
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.initialize()
     conanfile.settings = Settings({"build_type": ["Release"],
-                         "compiler": {"msvc": {"version": ["19.3"], "cppstd": ["20"]}},
-                         "os": ["Windows"],
-                         "arch": ["x86_64"]})
+                                   "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
+                                   "os": ["Windows"],
+                                   "arch": ["x86_64"]})
     conanfile.settings_build = conanfile.settings
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
-    conanfile.settings.compiler.version = "19.3"
+    conanfile.settings.compiler.version = "193"
     conanfile.settings.compiler.cppstd = "20"
     conanfile.settings.os = "Windows"
     conanfile.settings.arch = "x86_64"
@@ -109,7 +109,7 @@ def test_resource_compile():
     test_folder = temp_folder()
 
     settings = Settings({"build_type": ["Release"],
-                         "compiler": {"msvc": {"version": ["19.3"], "cppstd": ["20"]}},
+                         "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
     conanfile = ConanFile(Mock(), None)
@@ -123,7 +123,7 @@ def test_resource_compile():
     conanfile.initialize()
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
-    conanfile.settings.compiler.version = "19.3"
+    conanfile.settings.compiler.version = "193"
     conanfile.settings.compiler.cppstd = "20"
     conanfile.settings.os = "Windows"
     conanfile.settings.arch = "x86_64"
@@ -152,7 +152,7 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
     test_folder = temp_folder()
     settings = Settings({"build_type": ["Release"],
                          "compiler": {"intel-cc": {"version": ["2021.3"], "mode": [mode]},
-                                      "msvc": {"version": ["19.3"], "cppstd": ["20"]}},
+                                      "msvc": {"version": ["193"], "cppstd": ["20"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
     conanfile = ConanFile(Mock(), None)
