@@ -7,8 +7,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.package_ref import PkgReference
 
 
-def export_pkg(app, ref,
-               profile_host, profile_build, graph_lock, root_ref, force,
+def export_pkg(app, ref, profile_host, profile_build, graph_lock, force,
                source_conanfile_path):
     cache, hook_manager = app.cache, app.hook_manager
     graph_manager = app.graph_manager
@@ -22,7 +21,7 @@ def export_pkg(app, ref,
     # because the "package()" method is in develop=True already
 
     deps_graph = graph_manager.load_graph(ref, ref, profile_host, profile_build, graph_lock,
-                                          root_ref, build_mode=[ref.name])
+                                          root_ref=None, build_mode=[ref.name])
     deps_graph.report_graph_error()
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg

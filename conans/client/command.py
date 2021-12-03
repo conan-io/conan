@@ -779,18 +779,6 @@ class Command(object):
                                  "(if name and version are not declared in the "
                                  "conanfile.py)")
 
-        parser.add_argument('-f', '--force', default=False, action='store_true',
-                            help='Overwrite existing package if existing')
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='Path to a json file where the install information will be '
-                            'written')
-        parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                            help="Path to a lockfile.")
-        parser.add_argument("--lockfile-out", action=OnceArgument,
-                            help="Filename of the updated lockfile")
-        parser.add_argument("--ignore-dirty", default=False, action='store_true',
-                            help='When using the "scm" feature with "auto" values, capture the'
-                                 ' revision and url even if there are uncommitted changes')
         _add_profile_arguments(parser)
 
         args = parser.parse_args(*args)
@@ -829,49 +817,6 @@ class Command(object):
         finally:
             if args.json and info:
                 CommandOutputer().json_output(info, args.json, cwd)
-
-    def export(self, *args):
-        """
-        Copies the recipe (conanfile.py & associated files) to your local cache.
-
-        Use the 'reference' param to specify a user and channel where to export
-        it. Once the recipe is in the local cache it can be shared and reused
-        with any remote with the 'conan upload' command.
-        """
-        parser = argparse.ArgumentParser(description=self.export.__doc__,
-                                         prog="conan export",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference", nargs='?', default=None,
-                            help="user/channel, pkg/version@user/channel (if name "
-                                 "and version are not declared in the conanfile.py) "
-                                 "pkg/version@ if user/channel is not relevant.")
-        parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                            help="Path to a lockfile file.")
-        parser.add_argument("--lockfile-out", action=OnceArgument,
-                            help="Filename of the updated lockfile")
-        parser.add_argument("--ignore-dirty", default=False, action='store_true',
-                            help='When using the "scm" feature with "auto" values, capture the'
-                                 ' revision and url even if there are uncommitted changes')
-
-        args = parser.parse_args(*args)
-        self._warn_python_version()
-        if args.lockfile_out and not args.lockfile:
-            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
-
-        name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                               user_channel_input=True)
-
-        if any([user, channel]) and not all([user, channel]):
-            # Or user/channel or nothing, but not partial
-            raise ConanException("Invalid parameter '%s', "
-                                 "specify the full reference or user/channel" % args.reference)
-
-        return self._conan_api.export(path=args.path,
-                                  name=name, version=version, user=user, channel=channel,
-                                  lockfile=args.lockfile,
-                                  lockfile_out=args.lockfile_out,
-                                  ignore_dirty=args.ignore_dirty)
 
     def remove(self, *args):
         """

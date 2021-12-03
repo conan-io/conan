@@ -1,6 +1,7 @@
 import sys
 
 from conans import __version__ as client_version
+from conans.cli.api.subapi.export import ExportAPI
 from conans.cli.api.subapi.install import InstallAPI
 from conans.cli.api.subapi.graph import GraphAPI
 from conans.cli.api.subapi.profiles import ProfilesAPI
@@ -44,6 +45,8 @@ class ConanAPIV2(object):
         self.install = InstallAPI(self)
 
         self.graph = GraphAPI(self)
+
+        self.export = ExportAPI(self)
 
 
 ConanAPI = ConanAPIV2

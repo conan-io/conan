@@ -13,7 +13,6 @@ from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
 from conans.client.cmd.export import cmd_export, export_alias
-from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
@@ -25,7 +24,7 @@ from conans.client.profile_loader import ProfileLoader
 from conans.client.remover import ConanRemover
 from conans.client.source import config_source_local
 from conans.errors import (ConanException, RecipeNotFoundException,
-                           PackageNotFoundException, NotFoundException)
+                           NotFoundException)
 from conans.model.graph_lock import LOCKFILE, Lockfile
 from conans.model.manifest import discarded_file
 from conans.model.package_ref import PkgReference
@@ -230,38 +229,6 @@ class ConanAPIV1(object):
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock.save(lockfile_out)
         except ConanException as exc:
-            raise
-
-    @api_method
-    def export_pkg(self, conanfile_path, name, channel, profile_names=None, settings=None,
-                   options=None, env=None, force=False, user=None, version=None, cwd=None,
-                   lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
-                   conf=None):
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
-        app = ConanApp(self.cache_folder)
-        cwd = cwd or os.getcwd()
-
-        try:
-            conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
-            lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-            # Checks that no both settings and info files are specified
-            profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
-                                                                               profile_build, cwd,
-                                                                               app.cache,
-                                                                               lockfile=lockfile)
-
-            new_ref = cmd_export(app, conanfile_path, name, version, user, channel,
-                                 graph_lock=graph_lock, ignore_dirty=ignore_dirty)
-            # new_ref has revision
-            export_pkg(app, new_ref,
-                       profile_host=profile_host, profile_build=profile_build,
-                       graph_lock=graph_lock, root_ref=root_ref, force=force,
-                       source_conanfile_path=conanfile_path)
-            if lockfile_out:
-                lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock.save(lockfile_out)
-        except ConanException:
             raise
 
     @api_method
@@ -487,24 +454,6 @@ class ConanAPIV1(object):
         cwd = os.getcwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
         undo_imports(manifest_path)
-
-    @api_method
-    def export(self, path, name, version, user, channel, cwd=None,
-               lockfile=None, lockfile_out=None, ignore_dirty=False):
-
-        app = ConanApp(self.cache_folder)
-        conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        graph_lock = None
-        if lockfile:
-            lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock = Lockfile.load(lockfile)
-            ConanOutput().info("Using lockfile: '{}'".format(lockfile))
-        cmd_export(app, conanfile_path, name, version, user, channel,
-                   graph_lock=graph_lock, ignore_dirty=ignore_dirty)
-
-        if lockfile_out and graph_lock:
-            lockfile_out = _make_abs_path(lockfile_out, cwd)
-            graph_lock.save(lockfile_out)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
