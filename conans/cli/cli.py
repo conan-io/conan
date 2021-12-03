@@ -28,7 +28,7 @@ CLI_V1_COMMANDS = [
 ]
 
 
-class Cli(object):
+class Cli:
     """A single command of the conan application, with all the first level commands. Manages the
     parsing of parameters and delegates functionality to the conan python api. It can also show the
     help of the tool.
@@ -98,10 +98,6 @@ class Cli(object):
         methods
         """
         output = ConanOutput()
-        version = sys.version_info
-        if version.major == 2 or version.minor <= 4:
-            raise ConanException(
-                "Unsupported Python version. Minimum required version is Python 3.5")
         try:
             try:
                 command_argument = args[0][0]

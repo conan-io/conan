@@ -33,19 +33,13 @@ class ConanAPIV2(object):
 
         # Remotes management
         self.remotes = RemotesAPI(self)
-
         # Search recipes by wildcard and packages filtering by configuracion
         self.search = SearchAPI(self)
-
         # Get latest refs and list refs of recipes and packages
         self.list = ListAPI(self)
-
         self.profiles = ProfilesAPI(self)
-
         self.install = InstallAPI(self)
-
         self.graph = GraphAPI(self)
-
         self.export = ExportAPI(self)
 
 
