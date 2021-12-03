@@ -100,7 +100,7 @@ def test_cppstd():
         {"build_type": "Release",
          "arch": "x86",
          "compiler": "msvc",
-         "compiler.version": "19.3",
+         "compiler.version": "193",
          "compiler.cppstd": "17"})
     be = AutotoolsToolchain(conanfile)
     env = be.vars()
