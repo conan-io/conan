@@ -82,7 +82,7 @@ class ProfileTest(unittest.TestCase):
     @pytest.mark.xfail(reason="New environment changed")
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
         profile = '''
         [settings
@@ -173,7 +173,7 @@ class ProfileTest(unittest.TestCase):
                        package_env={"hello0": [("OTHER_VAR", "2")]})
 
         self.client.save({"conanfile.py": conanfile_scope_env})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
         self.client.run("install --reference=hello0/0.1@lasote/stable --build missing -pr envs")
         self._assert_env_variable_printed("PREPEND_VAR",
                                           os.pathsep.join(["new_path", "other_path"]))
@@ -213,7 +213,7 @@ class ProfileTest(unittest.TestCase):
                               "compiler.libcxx", "#compiler.libcxx", strict=False)
 
         self.client.save({"conanfile.py": conanfile_scope_env})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
         self.client.run("install . --build missing -pr vs_12_86")
         info = self.client.out
         for setting, value in profile_settings.items():
@@ -352,7 +352,7 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.cache.profiles_path, "scopes_env", settings={},
                        env=[("CXX", "/path/tomy/g++"), ("CC", "/path/tomy/gcc")])
         self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
         self.client.run("install --reference=hello0/0.1@lasote/stable --build missing -pr scopes_env")
 
         self._assert_env_variable_printed("CC", "/path/tomy/gcc")
@@ -453,7 +453,7 @@ class winrequireDefaultNameConan(ConanFile):
 
         files = {"conanfile.py": winreq_conanfile}
         self.client.save(files)
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
         # Now require the first recipe depending on OS=windows
         conanfile = '''from conans.model.conan_file import ConanFile
@@ -471,7 +471,7 @@ class DefaultNameConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile}
         self.client.save(files)
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
         # Create a profile that doesn't activate the require
         create_profile(self.client.cache.profiles_path, "scopes_env",

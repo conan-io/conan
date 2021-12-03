@@ -27,7 +27,7 @@ class Pkg(ConanFile):
                      "myprofile": ""})
 
         # This won't fail, as it has a build_type=None, which is allowed
-        client.run("export . pkg/0.1@lasote/testing")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("install --reference=pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
 
@@ -39,7 +39,7 @@ class Pkg(ConanFile):
                      "test_package/conanfile.py": test_conanfile,
                      "myprofile": "[settings]\nbuild_type=Release"})
 
-        client.run("export . pkg/0.1@lasote/testing")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("install --reference=pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Release"))
 
@@ -52,7 +52,7 @@ class Pkg(ConanFile):
                      "myprofile": "[settings]\nbuild_type=None"})
 
         # This won't fail, as it has a build_type=None, which is allowed
-        client.run("export . pkg/0.1@lasote/testing")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("install --reference=pkg/0.1@lasote/testing -pr=myprofile --build")
         self.assertEqual(1, str(client.out).count("BUILD TYPE: Not defined"))
 

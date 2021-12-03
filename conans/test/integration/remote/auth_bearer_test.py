@@ -62,7 +62,7 @@ class AuthorizeBearerTest(unittest.TestCase):
         if artifacts_properties:
             save(client.cache.artifacts_properties_path, "key=value")
         client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         errors = client.run("upload hello/0.1@lasote/stable -r default")
         self.assertFalse(errors)
 

@@ -256,7 +256,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def test_export(self, mode):
         self._create_code(mode)
 
-        self.client.run("export . lasote/testing")
+        self.client.run("export . --user=lasote --channel=testing")
         self._get_folders()
         self._check_export_folder(mode)
 
@@ -288,7 +288,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def test_export_upload(self, mode):
         self._create_code(mode)
 
-        self.client.run("export . lasote/testing")
+        self.client.run("export . --user=lasote --channel=testing")
         self._get_folders()
 
         self.client.run("upload hello/0.1@lasote/testing -r default")
@@ -314,7 +314,7 @@ class ExportsSourcesTest(unittest.TestCase):
         """
         self._create_code(mode)
 
-        self.client.run("export . lasote/testing")
+        self.client.run("export . --user=lasote --channel=testing")
         self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
         self.client.run("upload hello/0.1@lasote/testing --all -r default")
         self.client.run('remove hello/0.1@lasote/testing -f')
@@ -335,7 +335,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def test_update(self, mode):
         self._create_code(mode)
 
-        self.client.run("export . lasote/testing")
+        self.client.run("export . --user=lasote --channel=testing")
         self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
         self.client.run("upload hello/0.1@lasote/testing --all -r default")
         self.client.run('remove hello/0.1@lasote/testing -f')

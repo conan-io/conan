@@ -50,7 +50,7 @@ class SetVersionNameTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "name.txt": "pkg",
                      "version.txt": "2.1"})
-        client.run("export . user/testing")
+        client.run("export . --user=user --channel=testing")
         self.assertIn("pkg/2.1@user/testing: A new conanfile.py version was exported", client.out)
         client.run("install --reference=pkg/2.1@user/testing --build=missing")
         self.assertIn(f"pkg/2.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Build",
@@ -78,8 +78,8 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("export . 1.1@user/testing", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=2.1", client.out)
         # These are checked but match and don't conflict
-        client.run("export . 2.1@user/testing")
-        client.run("export . pkg/2.1@user/testing")
+        client.run("export . --version=2.1 --user=user --channel=testing")
+        client.run("export . --name=pkg --version=2.1 --user=user --channel=testing")
 
         # Local flow should also fail
         client.run("install . --name=other --version=1.2", assert_error=True)
@@ -100,7 +100,7 @@ class SetVersionNameTest(unittest.TestCase):
         self.assertIn("other/1.1@user/testing: Exported", client.out)
         client.run("export . 1.1@user/testing")
         self.assertIn("pkg/1.1@user/testing: Exported", client.out)
-        client.run("export . user/testing")
+        client.run("export . --user=user --channel=testing")
         self.assertIn("pkg/2.0@user/testing: Exported", client.out)
 
         # Local flow should also work

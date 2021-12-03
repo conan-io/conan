@@ -46,7 +46,7 @@ class AuthorizeTest(unittest.TestCase):
                                                               "bad2", "2",
                                                               "nacho@gmail.com", "nachopass"])
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
-        self.conan.run("export . lasote/testing")
+        self.conan.run("export . --user=lasote --channel=testing")
         errors = self.conan.run("upload %s -r default" % str(self.ref))
         # Check that return was  ok
         self.assertFalse(errors)
@@ -64,7 +64,7 @@ class AuthorizeTest(unittest.TestCase):
         def _upload_with_credentials(credentials):
             cli = TestClient(servers=self.servers)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
-            cli.run("export . lasote/testing")
+            cli.run("export . --user=lasote --channel=testing")
             with environment_update(credentials):
                 cli.run("upload %s -r default" % str(self.ref))
             return cli
@@ -99,7 +99,7 @@ class AuthorizeTest(unittest.TestCase):
                                                           "baduser", "badpass2",
                                                           "baduser3", "badpass3"])
         save(os.path.join(client.current_folder, CONANFILE), conan_content)
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         errors = client.run("upload %s -r default" % str(self.ref), assert_error=True)
         # Check that return was not ok
         self.assertTrue(errors)
@@ -119,7 +119,7 @@ class AuthorizeTest(unittest.TestCase):
                                                           "nacho@gmail.com", "nachopass"])
 
         save(os.path.join(client.current_folder, CONANFILE), conan_content)
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         client.run("upload %s -r default" % str(self.ref))
 
         # Check that upload was granted

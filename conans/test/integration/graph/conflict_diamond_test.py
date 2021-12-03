@@ -27,7 +27,7 @@ class ConflictDiamondTest(unittest.TestCase):
         files = {CONANFILE: conanfile}
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export . lasote/stable")
+            self.client.run("export . --user=lasote --channel=stable")
 
     def setUp(self):
         self.client = TestClient()

@@ -56,7 +56,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("install ../recipe")
         client.run("build ../recipe")
         client.current_folder = repo_folder
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         client.run("export-pkg . pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
@@ -75,7 +75,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         client.current_folder = repo_folder
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         client.run("export-pkg . pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
@@ -157,7 +157,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.current_folder = build_folder
         client.run("build ../recipe")
         client.current_folder = repo_folder
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         client.run("export-pkg . pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
@@ -175,7 +175,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("build . ")
 
         client.current_folder = repo_folder
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         client.run("export-pkg . pkg/0.1@lasote/testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")

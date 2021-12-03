@@ -309,7 +309,7 @@ class UploadTest(unittest.TestCase):
                 settings = "os"
             """)
         self.client.save({CONANFILE: conanfile})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
         self.client.run("upload hello/1.2@lasote/stable")
         self.assertIn("Uploading conanmanifest.txt", self.client.out)
 

@@ -77,7 +77,7 @@ class SymLinksTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
 
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install conanfile.txt --build")
         pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
@@ -126,7 +126,7 @@ class TestConan(ConanFile):
         pre_export_link = os.path.join(client.current_folder, link_name)
         os.symlink(lib_name, pre_export_link)
 
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install conanfile.txt --build")
         ref = RecipeReference.loads("hello/0.1@lasote/stable")
         pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
@@ -155,7 +155,7 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
 
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install conanfile.txt --build")
         pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 

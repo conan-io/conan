@@ -21,7 +21,7 @@ class ConanLib(ConanFile):
 
         files = {"conanfile.py": zlib}
         client.save(files)
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
 
         boost = """from conans import ConanFile
 from conans import tools

@@ -17,7 +17,7 @@ def test_basic(relative_path):
     client.save(files, path=source_folder)
     if relative_path:
         with client.chdir("current"):
-            client.run("export ../source hello/0.1@lasote/stable")
+            client.run("export ../source --anme=hello --version=0.1 --user=lasote --channel=stable")
     else:
         client.run("export source hello/0.1@lasote/stable")
 

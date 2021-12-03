@@ -25,7 +25,7 @@ class UserInfoTest(unittest.TestCase):
                     """)
             requires = "'{}'".format(requires) if requires else "None"
             client.save({CONANFILE: base % (name, requires, infolines)}, clean_first=True)
-            client.run("export . lasote/stable")
+            client.run("export . --user=lasote --channel=stable")
 
         export_lib("lib_a", "", "self.user_info.VAR1=2")
         export_lib("lib_b", "lib_a/0.1@lasote/stable", "self.user_info.VAR1=2\n        "

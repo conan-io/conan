@@ -156,7 +156,7 @@ class TestRemotes(TestListPackageIdsBase):
         self.client.save({
             "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
         })
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
         self.client.run(f"list packages {rrev.repr_notime()}")
         expected_output = textwrap.dedent(f"""\

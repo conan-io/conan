@@ -199,7 +199,7 @@ class RecipeFolderTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": self.recipe_conanfile,
                      "file.txt": "MYFILE!"})
-        client.run("export . pkg/0.1@user/testing")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("INIT: MYFILE!", client.out)
         self.assertIn("SET_NAME: MYFILE!", client.out)
         client.save({}, clean_first=True)

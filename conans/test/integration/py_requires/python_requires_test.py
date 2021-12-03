@@ -197,7 +197,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg1/1.0@user/channel")
+        client.run("export . --name=pkg1 --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -208,7 +208,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg2/1.0@user/channel")
+        client.run("export . --name=pkg2 --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -772,7 +772,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "name.txt": "MyPkg",
                      "version.txt": "MyVersion"})
-        client.run("export . pkg/1.0@user/channel")
+        client.run("export . --name=pkg --version=1.0user/channel")
         self.assertIn("pkg/1.0@user/channel: A new conanfile.py version was exported", client.out)
         client.run("create . pkg/1.0@user/channel")
         self.assertIn("pkg/1.0@user/channel: Source: tool header: myheader", client.out)
@@ -884,7 +884,7 @@ def test_transitive_python_requires():
                 self.output.info("%s, %s" % (v, f))
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("export . user/channel")
+    client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -939,7 +939,7 @@ def test_transitive_diamond_python_requires():
                 self.output.info("%s, %s" % (v, f))
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("export . user/channel")
+    client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -954,7 +954,7 @@ def test_transitive_diamond_python_requires():
                 self.output.info("%s, %s" % (v, f))
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("export . user/channel")
+    client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile

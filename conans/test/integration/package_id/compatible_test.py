@@ -78,7 +78,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
-        client.run("export . pkg/0.1@user/stable")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=stable")
         self.assertIn("pkg/0.1@user/stable: Exported revision: b27c975bb0d9e40c328bd02bc529b6f8",
                       client.out)
 

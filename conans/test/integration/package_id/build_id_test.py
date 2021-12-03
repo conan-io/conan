@@ -126,7 +126,7 @@ class BuildIdTest(unittest.TestCase):
         client = TestClient()
 
         client.save({"conanfile.py": conanfile})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
         if python_consumer:
             client.save({"conanfile.py": consumer_py}, clean_first=True)
         else:
@@ -253,7 +253,7 @@ class BuildIdTest(unittest.TestCase):
     def test_info(self, python_consumer):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
         if python_consumer:
             client.save({"conanfile.py": consumer_py}, clean_first=True)
         else:
@@ -282,7 +282,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn(f"ID: {package_id_windows_debug}", client.out)
 
         if python_consumer:
-            client.run("export . user/channel")
+            client.run("export . --user=user --channel=channel")
             client.run("info mytest/0.1@user/channel -s os=Windows -s build_type=Debug")
             _check()
             self.assertNotIn(f"ID: {package_id_windows_release}", client.out)

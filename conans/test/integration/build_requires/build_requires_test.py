@@ -469,10 +469,10 @@ Tool/0.1@lasote/stable
     def test_build_requires(self, conanfile):
         client = TestClient()
         client.save({CONANFILE: tool_conanfile})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         client.run("install --reference=MyLib/0.1@lasote/stable --build missing")
         self.assertIn("Tool/0.1@lasote/stable: Generating the package", client.out)
@@ -486,12 +486,12 @@ Tool/0.1@lasote/stable
     def test_profile_override(self, conanfile):
         client = TestClient()
         client.save({CONANFILE: tool_conanfile2}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         client.save({CONANFILE: conanfile,
                      "profile.txt": profile,
                      "profile2.txt": profile.replace("0.3", "[>0.2]")}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         client.run("install --reference=MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertNotIn("Tool/0.1", client.out)
@@ -521,7 +521,7 @@ class package(ConanFile):
     """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         consumer = """from conans import ConanFile
 

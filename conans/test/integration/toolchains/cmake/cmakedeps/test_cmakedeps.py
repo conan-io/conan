@@ -49,7 +49,7 @@ def test_test_package():
     client.save({"conanfile.py": GenConanfile().with_build_requires("cmake/1.0").
                 with_test_requires("gtest/1.0")})
 
-    client.run("export . pkg/1.0@")
+    client.run("export . --name=pkg --version=1.0")
 
     consumer = textwrap.dedent(r"""
         from conans import ConanFile
