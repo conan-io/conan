@@ -761,63 +761,6 @@ class Command(object):
                             profile_names=args.profile_host, profile_build=profile_build,
                             lockfile=args.lockfile)
 
-    def export_pkg(self, *args):
-        """
-        Exports a recipe, then creates a package from local source and build folders.
-
-        If '--package-folder' is provided it will copy the files from there, otherwise, it
-        will execute package() method over '--source-folder' and '--build-folder' to create
-        the binary package.
-        """
-
-        parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
-                                         prog="conan export-pkg",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference", nargs='?', default=None,
-                            help="user/channel or pkg/version@user/channel "
-                                 "(if name and version are not declared in the "
-                                 "conanfile.py)")
-
-        _add_profile_arguments(parser)
-
-        args = parser.parse_args(*args)
-        self._warn_python_version()
-
-        name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                               user_channel_input=True)
-        cwd = os.getcwd()
-        info = None
-
-        try:
-            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build,
-                                        conf=args.conf_build)
-            # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
-            #       to the API
-
-            info = self._conan_api.export_pkg(conanfile_path=args.path,
-                                          name=name,
-                                          version=version,
-                                          profile_names=args.profile_host,
-                                          env=args.env_host,
-                                          settings=args.settings_host,
-                                          options=args.options_host,
-                                          conf=args.conf_host,
-                                          profile_build=profile_build,
-                                          force=args.force,
-                                          user=user,
-                                          channel=channel,
-                                          lockfile=args.lockfile,
-                                          lockfile_out=args.lockfile_out,
-                                          ignore_dirty=args.ignore_dirty)
-        except ConanException as exc:
-            info = exc.info
-            raise
-        finally:
-            if args.json and info:
-                CommandOutputer().json_output(info, args.json, cwd)
-
     def remove(self, *args):
         """
         Removes packages or binaries matching pattern from local cache or remote.
