@@ -417,8 +417,7 @@ class ExportMetadataTest(unittest.TestCase):
 
         t = TestClient()
         t.save({'conanfile.py': conanfile})
-        ref = RecipeReference.loads("name/version@user/channel")
-        t.run("export . {}".format(ref), assert_error=True)
+        t.run("export . --name=name --version=version", assert_error=True)
         self.assertIn("ERROR: Revision mode should be one of 'hash' (default) or 'scm'", t.out)
 
     def test_export_no_params(self):
@@ -448,7 +447,7 @@ class ExportMetadataTest(unittest.TestCase):
 
         client.run('export . --name=pkg --version=0.1 --user=user --channel=channel')
         self.assertIn("pkg/0.1@user/channel: A new conanfile.py version was exported", client.out)
-        client.run('export . --name=pkg --version=0.1 --user=other --channel=stableer/stable')
+        client.run('export . --name=pkg --version=0.1 --user=other --channel=stable')
         self.assertIn("pkg/0.1@other/stable: A new conanfile.py version was exported", client.out)
         client.run('export . --name=pkg --version=0.1')
         self.assertIn("pkg/0.1: A new conanfile.py version was exported", client.out)

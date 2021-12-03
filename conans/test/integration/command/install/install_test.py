@@ -47,7 +47,7 @@ def test_install_system_requirements(client):
         """)})
     client.run(" install .")
     assert "Running system requirements!!" in client.out
-    client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
+    client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run(" install --reference=pkg/0.1@lasote/testing --build")
     assert "Running system requirements!!" in client.out
     client.run("upload * --all --confirm -r default")

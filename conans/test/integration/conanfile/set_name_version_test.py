@@ -22,7 +22,8 @@ class SetVersionNameTest(unittest.TestCase):
                     self.version = "2.1"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . %s" % user_channel)
+        user_channel_arg = "--user=user --channel=channel" if user_channel else ""
+        client.run("export . %s" % user_channel_arg)
         self.assertIn("pkg/2.1%s: A new conanfile.py version was exported" % user_channel,
                       client.out)
         # installing it doesn't break

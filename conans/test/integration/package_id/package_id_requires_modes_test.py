@@ -83,8 +83,8 @@ class PackageIDTest(unittest.TestCase):
                       self.client.out)
 
     def test_version_full_version_schema(self):
-        self._export("hello", "1.2.0", package_id_text=None, requires=None)
-        self._export("hello2", "2.3.8",
+        self._export("hello", "1.2.0", package_id_text=None, requires=None, channel="lasote/stable")
+        self._export("hello2", "2.3.8", channel="lasote/stable",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -97,7 +97,7 @@ class PackageIDTest(unittest.TestCase):
         self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
         self.client.run("install --reference=hello/1.2.0@memsharded/testing --build missing")
-        self._export("hello2", "2.3.8",
+        self._export("hello2", "2.3.8", channel="lasote/stable",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.2.0@memsharded/testing"])
 
@@ -111,9 +111,9 @@ class PackageIDTest(unittest.TestCase):
 
         # Now change the Hello version and build it, if we install out requires is
         # needed the --build needed because hello2 needs to be build
-        self._export("hello", "1.5.0", package_id_text=None, requires=None)
+        self._export("hello", "1.5.0", package_id_text=None, requires=None, channel="lasote/stable")
         self.client.run("install --reference=hello/1.5.0@lasote/stable --build missing")
-        self._export("hello2", "2.3.8",
+        self._export("hello2", "2.3.8", channel="lasote/stable",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.5.0@lasote/stable"])
 
@@ -169,8 +169,8 @@ class PackageIDTest(unittest.TestCase):
         self.assertIn("hello2/2.3.8@lasote/stable:{}".format(pkg_id), self.client.out)
 
     def test_version_full_package_schema(self):
-        self._export("hello", "1.2.0", package_id_text=None, requires=None)
-        self._export("hello2", "2.3.8",
+        self._export("hello", "1.2.0", package_id_text=None, requires=None, channel="lasote/stable")
+        self._export("hello2", "2.3.8", channel="lasote/stable",
                      package_id_text='self.info.requires["hello"].full_package_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -181,7 +181,7 @@ class PackageIDTest(unittest.TestCase):
 
         # If we change only the package ID from hello (one more defaulted option
         #  to True) should affect
-        self._export("hello", "1.2.0", package_id_text=None, requires=None,
+        self._export("hello", "1.2.0", package_id_text=None, requires=None, channel="lasote/stable",
                      default_option_value='"on"')
         self.client.run("install --reference=hello/1.2.0@lasote/stable --build missing")
         self.client.save({"conanfile.txt": "[requires]\nhello2/2.3.8@lasote/stable"},
