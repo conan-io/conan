@@ -24,7 +24,7 @@ def test_cpp_info_name_cmakedeps():
     conanfile.settings.arch = "x86"
 
     cpp_info = CppInfo("mypkg")
-    cpp_info.set_property("cmake_target_name", "MySuperPkg1")
+    cpp_info.set_property("cmake_target_name", "MySuperPkg1::MySuperPkg1")
     cpp_info.set_property("cmake_file_name", "ComplexFileName1")
 
     conanfile_dep = ConanFile(None)
@@ -60,10 +60,10 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile.settings.arch = "x64"
 
     cpp_info = CppInfo()
-    cpp_info.set_property("cmake_target_name", "GlobakPkgName1")
-    cpp_info.components["mycomp"].set_property("cmake_target_name", "MySuperPkg1")
-    cpp_info.components["mycomp"].includedirs = ["include"]
     cpp_info.set_property("cmake_file_name", "ComplexFileName1")
+    cpp_info.set_property("cmake_target_name", "GlobakPkgName1::GlobakPkgName1")
+    cpp_info.components["mycomp"].includedirs = ["include"]
+    cpp_info.components["mycomp"].set_property("cmake_target_name", "GlobakPkgName1::MySuperPkg1")
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
@@ -82,7 +82,7 @@ def test_cpp_info_name_cmakedeps_components():
         assert 'set(OriginalDepName_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
-        assert 'set(OriginalDepName_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
+        assert 'set(OriginalDepName_GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
 
@@ -161,8 +161,8 @@ def test_component_name_same_package():
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
         target_cmake = files["mypkg-Target-release.cmake"]
-        assert "$<$<CONFIG:Release>:${mypkg_mypkg_INCLUDE_DIRS_RELEASE}> APPEND)" in target_cmake
+        assert "$<$<CONFIG:Release>:${mypkg_mypkg_mypkg_INCLUDE_DIRS_RELEASE}> APPEND)" in target_cmake
 
         data_cmake = files["mypkg-release-x86-data.cmake"]
-        assert 'set(mypkg_mypkg_INCLUDE_DIRS_RELEASE ' \
+        assert 'set(mypkg_mypkg_mypkg_INCLUDE_DIRS_RELEASE ' \
                '"${mypkg_PACKAGE_FOLDER_RELEASE}/includedirs1")' in data_cmake
