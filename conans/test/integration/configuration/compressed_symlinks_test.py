@@ -7,12 +7,14 @@ import pytest
 
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import PACKAGE_TGZ_NAME
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestServer, TurboTestClient
+from tools import temp_folder
 
 
 class CompressSymlinksZeroSize(unittest.TestCase):
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="No Windows symlinks")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
     def test_package_symlinks_zero_size(self):
         server = TestServer()
         client = TurboTestClient(servers={"default": server}, inputs=["admin", "password"])
@@ -60,10 +62,10 @@ lrw-r--r-- 0/0               0 1970-01-01 01:00 link.txt -> file.txt
 
 @pytest.mark.parametrize("package_files",
      [{"files": ["foo/bar/file/file.txt"],
-       "symlinks": [("/usr/bin/", "foo/symlink_folder")]},  # absolute symlink
+       "symlinks": [(temp_folder(), "foo/symlink_folder")]},  # absolute symlink
      {"files": ["folder/file.txt"],
-       "symlinks": [("folder", "folder2"),
-                    ("file.txt", "folder/file2.txt")]},  # single level symlink
+      "symlinks": [("folder", "folder2"),
+                   ("file.txt", "folder/file2.txt")]},  # single level symlink
       {"files": ["foo/bar/file/file.txt"],
        "symlinks": [("bar/file", "foo/symlink_folder"),
                     ("foo/symlink_folder/file.txt", "file2.txt")]},   # double level symlink
@@ -72,14 +74,8 @@ def test_package_with_symlinks(package_files):
 
     client = TurboTestClient(default_server_user=True)
     client2 = TurboTestClient(servers=client.servers)
-    conanfile = textwrap.dedent("""
-    from conans import ConanFile
-    class HelloConan(ConanFile):
-        exports_sources = "*"
-        def package(self):
-            self.copy("*")
-    """)
-    client.save({"conanfile.py": conanfile})
+    client.save({"conanfile.py": GenConanfile().with_package('self.copy("*")')
+                .with_exports_sources("*")})
 
     for path in package_files["files"]:
         client.save({path: "foo contents"})
@@ -119,5 +115,3 @@ def test_package_with_symlinks(package_files):
     # Check package files are there
     package_folder = client2.get_latest_pkg_layout(pref).package()
     assert_folder_symlinks(package_folder)
-
-

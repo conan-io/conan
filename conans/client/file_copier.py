@@ -50,7 +50,7 @@ class FileCopier(object):
         return report_copied_files(self._copied, scoped_output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, excludes=None, ignore_case=True,
-                 copy_symlink_folders=True, excluded=None):
+                 copy_symlink_folders=True):
         """
         It will copy the files matching the pattern from the src folder to the dst, including the
         symlinks to files. If a folder from "src" doesn't contain any file to be copied, it won't be
@@ -71,7 +71,7 @@ class FileCopier(object):
         param excludes: Single pattern or a tuple of patterns to be excluded from the copy
         param ignore_case: will do a case-insensitive pattern matching when True
         param copy_symlink_folders: Copy the symlink folders at the "dst" folder.
-        param excluded: List of paths excluded to be copied
+
         return: list of copied files
         """
 
@@ -101,6 +101,8 @@ class FileCopier(object):
 
         src = os.path.join(base_src, src)
         dst = os.path.join(self._dst_folder, dst)
+        if src == dst:
+            return []
 
         files_to_copy, symlinked_folders = self._filter_files(src, pattern, excludes, ignore_case,
                                                               excluded_folders)
@@ -156,16 +158,6 @@ class FileCopier(object):
                 # This is a symlink folder, the symlink will be copied, so stop iterating this folder
                 subfolders[:] = []
                 continue
-            basename = os.path.basename(root)
-            # Skip git or svn subfolders
-            if basename in [".git", ".svn"]:
-                subfolders[:] = []
-                continue
-            if basename == "test_package":  # DO NOT export test_package/build folder
-                try:
-                    subfolders.remove("build")
-                except ValueError:
-                    pass
 
             relative_path = os.path.relpath(root, src)
             compare_relative_path = relative_path.lower() if ignore_case else relative_path
