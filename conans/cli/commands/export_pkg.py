@@ -43,16 +43,20 @@ def export_pkg(conan_api, parser, *args, **kwargs):
 
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
-    conan_api.export.export_pkg(conanfile_path=path,
-                                name=args.name,
-                                version=args.version,
+    ref = conan_api.export.export(path=path,
+                                  name=args.name,
+                                  version=args.version,
+                                  user=args.user,
+                                  channel=args.channel,
+                                  lockfile=lockfile,
+                                  ignore_dirty=args.ignore_dirty)
+
+    conan_api.export.export_pkg(path=path,
+                                ref=ref,
                                 profile_host=profile_host,
                                 profile_build=profile_build,
                                 force=args.force,
-                                user=args.user,
-                                channel=args.channel,
-                                lockfile=args.lockfile,
-                                ignore_dirty=args.ignore_dirty)
+                                lockfile=lockfile)
 
     if args.lockfile_out:
         lockfile_out = _make_abs_path(args.lockfile_out, cwd)

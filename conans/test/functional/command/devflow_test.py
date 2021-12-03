@@ -95,9 +95,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.current_folder = build_folder
         client.run("install ..")
         client.run("build ..")
-
-        client.current_folder = build_folder
-        client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
+        client.run("export-pkg .. --name=pkg --version=0.1 --user=lasote --channel=testing")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
