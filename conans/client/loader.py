@@ -83,7 +83,7 @@ class ConanFileLoader:
             to the provided generator list
             @param conanfile_module: the module to be processed
             """
-        conanfile_module, module_id = _parse_conanfile(conanfile_path)
+        conanfile_module, module_id = load_python_file(conanfile_path)
         for name, attr in conanfile_module.__dict__.items():
             if (name.startswith("_") or not inspect.isclass(attr) or
                     attr.__dict__.get("__module__") != module_id):
@@ -294,7 +294,7 @@ def _parse_module(conanfile_module, module_id):
 
 
 def parse_conanfile(conanfile_path):
-    module, filename = _parse_conanfile(conanfile_path)
+    module, filename = load_python_file(conanfile_path)
     try:
         conanfile = _parse_module(module, filename)
         return module, conanfile
@@ -302,7 +302,7 @@ def parse_conanfile(conanfile_path):
         raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
 
-def _parse_conanfile(conan_file_path):
+def load_python_file(conan_file_path):
     """ From a given path, obtain the in memory python import module
     """
 
