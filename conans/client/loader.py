@@ -52,7 +52,7 @@ class ConanFileLoader:
 
             # If the scm is inherited, create my own instance
             if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
-                assert isinstance(conanfile.scm, dict)
+                assert isinstance(conanfile.scm, dict), "'scm' attribute must be a dictionary"
                 conanfile.scm = conanfile.scm.copy()
 
             # Load and populate dynamic fields from the data file
