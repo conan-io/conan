@@ -66,14 +66,14 @@ def compute_package_id(node, new_config):
             conanfile.compatible_packages.append(msvc_compatible)
 
     # Once we are done, call package_id() to narrow and change possible values
-    with conanfile_exception_formatter(str(conanfile), "package_id"):
+    with conanfile_exception_formatter(conanfile, "package_id"):
         with conan_v2_property(conanfile, 'cpp_info',
                                "'self.cpp_info' access in package_id() method is deprecated"):
             conanfile.package_id()
 
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate") and callable(conanfile.validate):
-        with conanfile_exception_formatter(str(conanfile), "validate"):
+        with conanfile_exception_formatter(conanfile, "validate"):
             try:
                 conanfile.validate()
             except ConanInvalidConfiguration as e:

@@ -34,7 +34,7 @@ def build_id(conan_file):
         build_id_info = conan_file.info.copy()
         conan_file.info_build = build_id_info
         # effectively call the user function to change the package values
-        with conanfile_exception_formatter(str(conan_file), "build_id"):
+        with conanfile_exception_formatter(conan_file, "build_id"):
             conan_file.build_id()
         # compute modified ID
         return build_id_info.package_id()
@@ -458,7 +458,7 @@ class BinaryInstaller(object):
         conanfile.user_info = UserInfo()
 
         with chdir(package_folder):
-            with conanfile_exception_formatter(str(conanfile), "package_info"):
+            with conanfile_exception_formatter(conanfile, "package_info"):
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                            reference=ref)
 

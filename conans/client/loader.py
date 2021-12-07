@@ -9,8 +9,7 @@ import yaml
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
-from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration, \
-    conanfile_exception_formatter
+from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
@@ -39,7 +38,7 @@ class ConanFileLoader:
             conanfile = cached[0](self._runner, display)
             conanfile._conan_requester = self._requester
             if hasattr(conanfile, "init") and callable(conanfile.init):
-                with conanfile_exception_formatter(str(conanfile), "init"):
+                with conanfile_exception_formatter(conanfile, "init"):
                     conanfile.init()
             return conanfile, cached[1]
 
@@ -53,8 +52,8 @@ class ConanFileLoader:
 
             # If the scm is inherited, create my own instance
             if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
-                if isinstance(conanfile.scm, dict):
-                    conanfile.scm = conanfile.scm.copy()
+                assert isinstance(conanfile.scm, dict), "'scm' attribute must be a dictionary"
+                conanfile.scm = conanfile.scm.copy()
 
             # Load and populate dynamic fields from the data file
             conan_data = self._load_data(conanfile_path)
@@ -69,7 +68,7 @@ class ConanFileLoader:
 
             result._conan_requester = self._requester
             if hasattr(result, "init") and callable(result.init):
-                with conanfile_exception_formatter(str(result), "init"):
+                with conanfile_exception_formatter(result, "init"):
                     result.init()
             return result, module
         except ConanException as e:

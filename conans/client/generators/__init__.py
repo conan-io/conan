@@ -97,7 +97,7 @@ def write_generators(conanfile):
         conanfile.output.highlight("Calling generate()")
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
-            with conanfile_exception_formatter(str(conanfile), "generate"):
+            with conanfile_exception_formatter(conanfile, "generate"):
                 conanfile.generate()
 
     if conanfile.virtualbuildenv:

@@ -10,8 +10,7 @@ from conans.assets.templates import dict_loader
 from conans.cli.output import ConanOutput
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
-    get_default_settings_yml
+from conans.client.conf import ConanClientConfigParser, get_default_client_conf, default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
@@ -291,7 +290,9 @@ class ClientCache(object):
 
     def initialize_settings(self):
         if not os.path.exists(self.settings_path):
-            save(self.settings_path, normalize(get_default_settings_yml()))
+            settings_yml = default_settings_yml
+            save(self.settings_path, settings_yml)
+            save(self.settings_path + ".orig", settings_yml)  # stores a copy, to check migrations
 
     def reset_settings(self):
         if os.path.exists(self.settings_path):
