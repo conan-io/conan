@@ -690,7 +690,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         client = TestClient()
         os.remove(client.cache.remotes_path)
         client.run("search nonexist/1.0@lasote/stable -r=myremote", assert_error=True)
-        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
 
     def test_search_json(self):
@@ -1099,7 +1098,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         client = TestClient()
         os.remove(client.cache.remotes_path)
         client.run("search my_pkg")
-        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
 
