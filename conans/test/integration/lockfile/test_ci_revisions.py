@@ -68,6 +68,14 @@ def client_setup():
 
 
 def test_single_config_centralized(client_setup):
+    """ app1 -> pkgc/0.1 -> pkgb/0.1 -> pkgawin/0.1 or pkganix/0.1
+    all versions are "0.1" exact (without pinning revision)
+    lock app1.lock to lock graph including pkgawin/0.1#rev1 and pkganix/0.1#rev1
+    changes in pkgawin/0.1#rev2 and pkganix/0.1#rev2 are excluded by lockfile
+    a change in pkgb produces a new pkgb/0.1#rev2 that we want to test if works in app1 lockfile
+    the app1 can be built in a single node, including all necessary dependencies
+    the final lockfile will include pkgb/0.1#rev2, and not pkgb/0.1#rev1
+    """
     c = client_setup
     # capture the initial lockfile of our product
     c.run("lock create --reference=app1/0.1@  --lockfile-out=app1.lock -s os=Windows")
@@ -105,6 +113,11 @@ def test_single_config_centralized(client_setup):
 
 
 def test_single_config_centralized_out_range(client_setup):
+    """ same scenario as "test_single_config_centralized()"
+    but pkgc pin the exact revision of pkgb/0.1#rev1
+    But pkgb/0.1 change produces pkgb/0.1#rev2, which doesn't match the pinned revisions rev1
+    Nothing to build in the app1, and the final lockfile doesn't change at all
+    """
     # Out of range in revisions means a pinned revision, new revision will not match
     c = client_setup
     c.save({"pkgc/conanfile.py":
@@ -151,6 +164,9 @@ def test_single_config_centralized_out_range(client_setup):
 
 
 def test_single_config_centralized_change_dep(client_setup):
+    """ same scenario as "test_single_config_centralized()".
+    But pkgb/0.1 change producing pkgb/0.1#rev2, and changes dependency from pkgA=>pkgJ
+    """
     c = client_setup
     c.run("lock create --reference=app1/0.1@ --lockfile-out=app1.lock -s os=Windows")
 
@@ -194,6 +210,13 @@ def test_single_config_centralized_change_dep(client_setup):
 
 
 def test_multi_config_centralized(client_setup):
+    """ same scenario as above, but now we want to manage 2 configurations Windows & Linux
+    When pkgB is changed, it is built for both, and produces app1_win.lock and app2_linux.lock
+    With those, app1 can be built in a single node for both configurations. After building
+    app1, the 2 lockfiles can be cleaned (removing the old pkgb/0.1#rev1, leaving pkgb/0.1#rev2
+    in the lock)
+    The 2 final lockfiles can be "merged" in a single one for next iteration
+    """
     c = client_setup
     # capture the initial lockfile of our product
     c.run("lock create --reference=app1/0.1@ --lockfile-out=app1.lock -s os=Windows")
@@ -258,6 +281,9 @@ def test_multi_config_centralized(client_setup):
 
 
 def test_single_config_decentralized(client_setup):
+    """ same scenario as "test_single_config_centralized()", but distributing the build in
+    different build servers, using the "build-order"
+    """
     c = client_setup
     # capture the initial lockfile of our product
     c.run("lock create --reference=app1/0.1@  --lockfile-out=app1.lock -s os=Windows")
@@ -316,6 +342,9 @@ def test_single_config_decentralized(client_setup):
 
 
 def test_multi_config_decentralized(client_setup):
+    """ same scenario as "test_multi_config_centralized()", but distributing the build in
+    different build servers, using the "build-order"
+    """
     c = client_setup
     # capture the initial lockfile of our product
     c.run("lock create --reference=app1/0.1@ --lockfile-out=app1.lock -s os=Windows")
