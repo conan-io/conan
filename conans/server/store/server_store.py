@@ -4,10 +4,11 @@ from os.path import join, normpath, relpath
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 
 REVISIONS_FILE = "revisions.txt"
+EXPORT_FOLDER = "export"
+PACKAGES_FOLDER = "package"
 
 
 def ref_dir_repr(ref):
