@@ -9,7 +9,7 @@ from parameterized.parameterized import parameterized
 
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.server.revision_list import RevisionList
 from conans.test.utils.test_files import scan_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer

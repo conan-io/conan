@@ -7,8 +7,8 @@ from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
 
 REVISIONS_FILE = "revisions.txt"
-EXPORT_FOLDER = "export"
-PACKAGES_FOLDER = "package"
+SERVER_EXPORT_FOLDER = "export"
+SERVER_PACKAGES_FOLDER = "package"
 
 
 def ref_dir_repr(ref):
@@ -36,7 +36,7 @@ class ServerStore(object):
         return normpath(join(self.store, ref_dir_repr(ref)))
 
     def packages(self, ref):
-        return join(self.base_folder(ref), PACKAGES_FOLDER)
+        return join(self.base_folder(ref), SERVER_PACKAGES_FOLDER)
 
     def package_revisions_root(self, pref):
         assert pref.revision is None, "BUG: server store doesn't need PREV to " \
@@ -52,7 +52,7 @@ class ServerStore(object):
         return join(tmp, pref.revision)
 
     def export(self, ref):
-        return join(self.base_folder(ref), EXPORT_FOLDER)
+        return join(self.base_folder(ref), SERVER_EXPORT_FOLDER)
 
     def get_conanfile_file_path(self, ref, filename):
         abspath = join(self.export(ref), filename)
@@ -284,7 +284,7 @@ class ServerStore(object):
     def _package_revisions_file(self, pref):
         tmp = normpath(join(self._store_folder, ref_dir_repr(pref.ref)))
         revision = {None: ""}.get(pref.ref.revision, pref.ref.revision)
-        p_folder = join(tmp, revision, PACKAGES_FOLDER, pref.package_id)
+        p_folder = join(tmp, revision, SERVER_PACKAGES_FOLDER, pref.package_id)
         return join(p_folder, REVISIONS_FILE)
 
     def get_revision_time(self, ref):

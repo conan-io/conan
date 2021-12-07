@@ -4,7 +4,7 @@ import shutil
 from conans import DEFAULT_REVISION_V1
 from conans.migrations import Migrator
 from conans.server.revision_list import RevisionList
-from conans.server.store.server_store import REVISIONS_FILE, PACKAGES_FOLDER
+from conans.server.store.server_store import REVISIONS_FILE, SERVER_PACKAGES_FOLDER
 from conans.util.files import list_folder_subdirs, mkdir, save
 from conans.util.log import logger
 
@@ -57,7 +57,7 @@ class ServerMigrator(Migrator):
             save(os.path.join(base_dir, REVISIONS_FILE), rev_list.dumps())
 
             packages_dir = os.path.join(self.store_path, subdir, DEFAULT_REVISION_V1,
-                                        PACKAGES_FOLDER)
+                                        SERVER_PACKAGES_FOLDER)
 
             if not os.path.exists(packages_dir):
                 print("NO PACKAGES")
