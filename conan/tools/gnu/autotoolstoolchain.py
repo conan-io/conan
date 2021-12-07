@@ -49,8 +49,9 @@ class AutotoolsToolchain:
         self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
-            self._host = _get_gnu_triplet(os_host, arch_host)
-            self._build = _get_gnu_triplet(os_build, arch_build)
+            compiler = self._conanfile.settings.get_safe("compiler")
+            self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+            self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
             # Apple Stuff
             if os_build == "Macos":
