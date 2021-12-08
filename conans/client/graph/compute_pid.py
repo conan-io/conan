@@ -13,6 +13,7 @@ def compute_package_id(node, new_config):
     Compute the binary package ID of this node
     """
     conanfile = node.conanfile
+    # Todo: revise this default too. Should have been defined by requirement traits?
     default_package_id_mode = new_config["core.package_id:default_mode"] or "semver_mode"
     default_python_requires_id_mode = new_config["core.package_id:python_default_mode"] or "minor_mode"
 
