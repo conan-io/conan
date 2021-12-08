@@ -1,24 +1,24 @@
 from conans.util.files import save
-from conans.model.build_info import CppInfo
+from conans.model.new_build_info import NewCppInfo
 from conans.paths import BUILD_INFO_PREMAKE
 
 class PremakeTemplate(object):
     def __init__(self, deps_cpp_info):
         self.includedirs = ",\n".join('"%s"' % p.replace("\\", "/")
-                                        for p in deps_cpp_info.includedirs)
+                                    for p in deps_cpp_info.includedirs) if deps_cpp_info.includedirs else ""
         self.libdirs = ",\n".join('"%s"' % p.replace("\\", "/")
-                                    for p in deps_cpp_info.libdirs)
+                                    for p in deps_cpp_info.libdirs) if deps_cpp_info.libdirs else ""
         self.bindirs = ",\n".join('"%s"' % p.replace("\\", "/")
-                                    for p in deps_cpp_info.bindirs)
-        self.libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.libs)
-        self.system_libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.system_libs)
-        self.defines = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.defines)
-        self.cxxflags = ", ".join('"%s"' % p for p in deps_cpp_info.cxxflags)
-        self.cflags = ", ".join('"%s"' % p for p in deps_cpp_info.cflags)
-        self.sharedlinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.sharedlinkflags)
-        self.exelinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.exelinkflags)
-        self.frameworks = ", ".join('"%s.framework"' % p.replace('"', '\\"') for p in deps_cpp_info.frameworks)
-        self.sysroot = "%s" % deps_cpp_info.sysroot.replace("\\", "/")
+                                    for p in deps_cpp_info.bindirs) if deps_cpp_info.bindirs else ""
+        self.libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.libs) if deps_cpp_info.libs else ""
+        self.system_libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.system_libs) if deps_cpp_info.system_libs else ""
+        self.defines = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.defines) if deps_cpp_info.defines else ""
+        self.cxxflags = ", ".join('"%s"' % p for p in deps_cpp_info.cxxflags) if deps_cpp_info.cxxflags else ""
+        self.cflags = ", ".join('"%s"' % p for p in deps_cpp_info.cflags) if deps_cpp_info.cflags else ""
+        self.sharedlinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.sharedlinkflags) if deps_cpp_info.sharedlinkflags else ""
+        self.exelinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.exelinkflags) if deps_cpp_info.exelinkflags else ""
+        self.frameworks = ", ".join('"%s.framework"' % p.replace('"', '\\"') for p in deps_cpp_info.frameworks) if deps_cpp_info.frameworks else ""
+        self.sysroot = "%s" % deps_cpp_info.sysroot.replace("\\", "/") if deps_cpp_info.sysroot else ""
 
 class PremakeDeps(object):
 
@@ -32,12 +32,11 @@ class PremakeDeps(object):
             save(generator_file, content)
 
     def _get_cpp_info(self):
-        ret = CppInfo('','')
+        ret = NewCppInfo()
         for dep in self._conanfile.dependencies.host.values():
             dep_cppinfo = dep.cpp_info.copy()
             dep_cppinfo.set_relative_base_folder(dep.package_folder)
-            # In case we have components, aggregate them, we do not support isolated
-            # "targets" with autotools
+            # In case we have components, aggregate them, we do not support isolated "targets"
             dep_cppinfo.aggregate_components()
             ret.merge(dep_cppinfo)
         return ret
@@ -47,7 +46,6 @@ class PremakeDeps(object):
         ret = {} # filename -> file content
 
         host_req = self._conanfile.dependencies.host
-        build_req = self._conanfile.dependencies.direct_build
         test_req = self._conanfile.dependencies.test
 
         template = ('conan_includedirs{dep} = {{{deps.includedirs}}}\n'
@@ -89,7 +87,7 @@ class PremakeDeps(object):
         template_deps = template + 'conan_sysroot{dep} = "{deps.sysroot}"\n'
 
         # Iterate all the transitive requires
-        for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
+        for require, dep in list(host_req.items()) + list(test_req.items()):
             deps = PremakeTemplate(dep.cpp_info)
             dep_name = dep.ref.name.replace("-", "_")
             dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
