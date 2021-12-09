@@ -373,7 +373,7 @@ class BinaryInstaller(object):
             Or try to build locally from sources with '%s'
 
             More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-            ''' % (missing_pkgs, missing_pkgs, build_str)))
+            ''' % (missing_pkgs, ref, build_str)))
 
     def _download(self, downloads, processed_package_refs):
         """ executes the download of packages (both download and update), only once for a given

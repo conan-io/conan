@@ -101,4 +101,4 @@ class DetectTest(unittest.TestCase):
                                               profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual('msvc', result['compiler'])
-            self.assertEqual('19.3', result['compiler.version'])
+            self.assertEqual('193', result['compiler.version'])

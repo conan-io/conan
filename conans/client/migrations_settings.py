@@ -2908,10 +2908,8 @@ compiler:
                   llvm, ClangCL, v143]
         cppstd: [None, 14, 17, 20, 23]
     msvc:
-        version: ["19.0",
-                  "19.1X", "19.10", "19.11", "19.12", "19.13", "19.14", "19.15", "19.16",
-                  "19.2X", "19.20", "19.21", "19.22", "19.23", "19.24", "19.25", "19.26", "19.27", "19.28", "19.29",
-                  "19.3X", "19.30"]
+        version: [190, 191, 192, 193]
+        update: [None, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         runtime: [static, dynamic]
         runtime_type: [Debug, Release]
         cppstd: [14, 17, 20, 23]
@@ -2963,3 +2961,5 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]  # Deprecated, use compiler.cppstd
 """
+
+settings_1_44_0 = settings_1_43_0

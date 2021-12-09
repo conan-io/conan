@@ -1,5 +1,6 @@
 import os
 
+from conan.tools.microsoft.visual import msvc_version_to_vs_ide_version
 from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
@@ -587,12 +588,8 @@ class ConanInfo(object):
         runtime_type = compatible.settings.compiler.runtime_type
 
         compatible.settings.compiler = "Visual Studio"
-        version = str(version)[:4]
-        _visuals = {'19.0': '14',
-                    '19.1': '15',
-                    '19.2': '16',
-                    '19.3': '17'}
-        compatible.settings.compiler.version = _visuals[version]
+        visual_version = msvc_version_to_vs_ide_version(version)
+        compatible.settings.compiler.version = visual_version
         runtime = "MT" if runtime == "static" else "MD"
         if  runtime_type == "Debug":
             runtime = "{}d".format(runtime)
