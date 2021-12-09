@@ -161,7 +161,7 @@ short_paths: False
 build_policy: None
 revision_mode: hash
 settings: None
-options: None
+options:
 default_options: None
 deprecated: None
 """, client.out)
@@ -206,8 +206,8 @@ build_policy: None
 revision_mode: scm
 settings: ('os', 'arch', 'build_type', 'compiler')
 options:
-    bar: [True, False]
-    foo: [True, False]
+    bar: ['True', 'False']
+    foo: ['True', 'False']
 default_options:
     bar: False
     foo: True
@@ -275,7 +275,7 @@ class InspectRawTest(unittest.TestCase):
         # The output is a dictionary, no order guaranteed, we need to compare as dict
         import ast
         output = ast.literal_eval(str(client.out))
-        self.assertDictEqual(output, {'bar': [True, False], 'foo': [True, False]})
+        self.assertDictEqual(output, {'bar': ['True', 'False'], 'foo': ['True', 'False']})
 
     def test_default_options_list(self):
         client = TestClient()
@@ -289,6 +289,7 @@ class InspectRawTest(unittest.TestCase):
             from conans import ConanFile
 
             class Lib(ConanFile):
+                options = {"dict": [True, False], "list": [True, False]}
                 default_options = {"dict": True, "list": False}
             """)
         client.save({"conanfile.py": conanfile})

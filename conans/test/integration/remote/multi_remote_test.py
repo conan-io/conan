@@ -1,13 +1,9 @@
 import unittest
 from collections import OrderedDict
-import time
 from time import sleep
-
-from mock import patch
 
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
-from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -88,7 +84,8 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Now try to update the package with install -u
         client_b.run("install --reference=hello0/0.0@lasote/stable -u --build")
-        self.assertIn("hello0/0.0@lasote/stable from 'local' - Updated", client_b.out)
+        self.assertIn("hello0/0.0@lasote/stable#cb66bb1fce212f164814bdc96d32f708 - Updated",
+                      client_b.out)
 
         # Upload a new version from client A, but only to the default server (not the ref-listed)
         # Upload hello0 to local and default from client_a
@@ -134,12 +131,15 @@ class MultiRemotesTest(unittest.TestCase):
 
         client.run("install --reference=hello0/0.0@lasote/stable")
         # If we don't set a remote we find between all remotes and get the first match
-        self.assertIn("hello0/0.0@lasote/stable from 'default' - Downloaded", client.out)
+        self.assertIn("hello0/0.0@lasote/stable#49464040202fe1507696a4fc6035b856 - Downloaded",
+                      client.out)
         client.run("install --reference=hello0/0.0@lasote/stable --update")
-        self.assertIn("hello0/0.0@lasote/stable from 'local' - Updated", client.out)
+        self.assertIn("hello0/0.0@lasote/stable#4963e851819c02f9578b9d6bcecd01aa - Updated",
+                      client.out)
 
         client.run("install --reference=hello0/0.0@lasote/stable --update -r default")
-        self.assertIn("hello0/0.0@lasote/stable from 'default' - Cache", client.out)
+        self.assertIn("hello0/0.0@lasote/stable#4963e851819c02f9578b9d6bcecd01aa - Cache",
+                      client.out)
 
         sleep(1)  # For timestamp and updates checks
         # Check that it really updates in case of newer package uploaded to the associated remote
@@ -148,7 +148,8 @@ class MultiRemotesTest(unittest.TestCase):
         client_b.run("install --reference=hello0/0.0@lasote/stable --build missing")
         client_b.run("upload hello0/0.0@lasote/stable --all -r local")
         client.run("install --reference=hello0/0.0@lasote/stable --update")
-        self.assertIn("hello0/0.0@lasote/stable from 'local' - Updated", client.out)
+        self.assertIn("hello0/0.0@lasote/stable#63f23b4c9afec3ea44dbec2f9ffab49b - Updated",
+                      client.out)
 
 
 class MultiRemoteTest(unittest.TestCase):

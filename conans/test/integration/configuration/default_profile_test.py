@@ -216,7 +216,7 @@ def test_conf_default_two_profiles():
     save(client.cache.new_config_path, global_conf)
     client.save({"conanfile.txt": ""})
     client.run("install .")
-    assert "Configuration (profile_host):" in client.out
+    assert "Profile host:" in client.out
     assert "os=FreeBSD" in client.out
-    assert "Configuration (profile_build):" in client.out
+    assert "Profile build:" in client.out
     assert "os=Android" in client.out

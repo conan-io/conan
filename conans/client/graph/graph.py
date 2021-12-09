@@ -200,6 +200,7 @@ class DepsGraph(object):
     def __init__(self):
         self.nodes = []
         self.aliased = {}
+        self.resolved_ranges = {}
         self.error = False
 
     def __repr__(self):

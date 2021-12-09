@@ -54,7 +54,7 @@ class Pkg(ConanFile):
         client.run("install . --build=missing")
 
         self.assertIn("hello/0.1@lasote/channel from local", client.out)
-        self.assertNotIn("hello/0.X@lasote/channel", client.out)
+        assert "hello/0.X@lasote/channel: hello/0.1@lasote/channel" in client.out
 
         ref = RecipeReference.loads("chat/1.0@lasote/channel")
         pref = client.get_latest_package_reference(ref)

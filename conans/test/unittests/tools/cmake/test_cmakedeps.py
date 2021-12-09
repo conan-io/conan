@@ -16,7 +16,6 @@ def test_cpp_info_name_cmakedeps():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
@@ -52,7 +51,6 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release", "Debug"],
@@ -94,7 +92,6 @@ def test_cmake_deps_links_flags():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
@@ -135,7 +132,6 @@ def test_component_name_same_package():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],

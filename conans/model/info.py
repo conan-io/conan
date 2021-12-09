@@ -9,6 +9,7 @@ from conans.model.dependencies import UserRequirementsDict
 from conans.model.options import Options
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, Version
+from conans.model.settings import undefined_value
 from conans.model.values import Values
 from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
@@ -586,6 +587,11 @@ class ConanInfo(object):
         version = compatible.settings.compiler.version
         runtime = compatible.settings.compiler.runtime
         runtime_type = compatible.settings.compiler.runtime_type
+
+        if version is None:
+            raise undefined_value('settings.compiler.version')
+        if runtime is None:
+            raise undefined_value('settings.compiler.runtime')
 
         compatible.settings.compiler = "Visual Studio"
         visual_version = msvc_version_to_vs_ide_version(version)

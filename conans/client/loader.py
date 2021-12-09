@@ -174,7 +174,6 @@ class ConanFileLoader:
         conanfile.in_local_cache = False
         try:
             conanfile.develop = True
-            conanfile.initialize()
 
             if require_overrides is not None:
                 for req_override in require_overrides:
@@ -199,12 +198,7 @@ class ConanFileLoader:
         conanfile.version = ref.version
         conanfile.user = ref.user
         conanfile.channel = ref.channel
-
-        try:
-            conanfile.initialize()
-            return conanfile
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+        return conanfile
 
     def load_conanfile_txt(self, conan_txt_path, ref=None, require_overrides=None):
         if not os.path.exists(conan_txt_path):
@@ -264,7 +258,6 @@ class ConanFileLoader:
                 req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
-        conanfile.initialize()
         conanfile.generators = []  # remove the default txt generator
         return conanfile
 

@@ -7,14 +7,13 @@ from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain import Block, GenericSystemBlock
 from conans import ConanFile
 from conans.model.conf import Conf
+from conans.model.options import Options
 from conans.model.settings import Settings
 
 
 @pytest.fixture
 def conanfile():
     c = ConanFile(None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize()
     settings = Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
@@ -149,8 +148,6 @@ def test_user_toolchain(conanfile):
 @pytest.fixture
 def conanfile_apple():
     c = ConanFile(None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize()
     c.settings = Settings({"os": {"Macos": {"version": ["10.15"]}},
                            "compiler": {"apple-clang": {"libcxx": ["libc++"]}},
                            "build_type": ["Release"],
@@ -179,7 +176,6 @@ def test_osx_deployment_target(conanfile_apple):
 @pytest.fixture
 def conanfile_msvc():
     c = ConanFile(None)
-    c.initialize()
     c.settings = Settings({"os": ["Windows"],
                            "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"],
                                                  "update": [None]}},
@@ -209,8 +205,6 @@ def test_toolset(conanfile_msvc):
 @pytest.fixture
 def conanfile_linux():
     c = ConanFile(Mock(), None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize()
     c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
@@ -239,13 +233,9 @@ def test_no_fpic_when_not_an_option(conanfile_linux):
 @pytest.fixture
 def conanfile_linux_shared():
     c = ConanFile(Mock(), None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.options = {
-        "fPIC": [True, False],
-        "shared": [True, False],
-    }
-    c.default_options = {"fPIC": False, "shared": True, }
-    c.initialize()
+    c.options = Options({"fPIC": [True, False],
+                         "shared": [True, False]},
+                        {"fPIC": False, "shared": True, })
     c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
@@ -285,9 +275,8 @@ def test_fpic_when_not_shared(conanfile_linux_shared):
 def conanfile_windows_fpic():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.options = {"fPIC": [True, False], }
-    c.default_options = {"fPIC": True, }
-    c.initialize()
+    c.options = Options({"fPIC": [True, False]},
+                        {"fPIC": True})
     c.settings = Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
@@ -316,9 +305,8 @@ def test_no_fpic_on_windows(conanfile_windows_fpic):
 def conanfile_linux_fpic():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.options = {"fPIC": [True, False], }
-    c.default_options = {"fPIC": False, }
-    c.initialize()
+    c.options = Options({"fPIC": [True, False]},
+                        {"fPIC": False,})
     c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
