@@ -223,7 +223,7 @@ def _detect_compiler_version(result, output, profile_path):
     except Exception:
         compiler, version = None, None
     if not compiler or not version:
-        output.error("Unable to find a working compiler")
+        output.info("No compiler was detected (one may not be needed)")
         return
 
     # Visual Studio 2022 onwards, detect as a new compiler "msvc"
