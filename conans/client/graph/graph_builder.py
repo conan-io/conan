@@ -249,10 +249,18 @@ class DepsGraphBuilder(object):
         new_node.recipe = recipe_status
         new_node.remote = remote
 
-        # FIXME
-        down_options = node.conanfile.up_options
+        # The consumer "up_options" are the options that come from downstream to this node
         if require.options is not None:
-            down_options.update_options(Options(options_values=require.options))
+            # If the consumer has specified requires(options=xxx), we need to use it
+            # It will have less priority than downstream consumers
+            down_options = Options(options_values=require.options)
+            down_options.scope(new_ref.name)
+            # TODO: discuss, together with build_require override, if it is "build" or "visible"
+            if not require.build:  # Build-requirements do NOT propagate options from downstream
+                down_options.update_options(node.conanfile.up_options)
+        else:
+            down_options = Options() if require.build else node.conanfile.up_options
+
         self._prepare_node(new_node, profile_host, profile_build, down_options)
 
         require.process_package_type(new_node)

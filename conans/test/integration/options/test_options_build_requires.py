@@ -1,5 +1,7 @@
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -76,8 +78,8 @@ def test_different_options_values_profile():
     assert "protobuf/1.0: MYOPTION: build-True" in c.out
 
 
-# TODO: Make possible to work for direct dependencies without having to specify the protobuf:
-def test_different_options_values_recipe():
+@pytest.mark.parametrize("scope", ["protobuf:", ""])
+def test_different_options_values_recipe(scope):
     """
     consumer -> protobuf (library)
         \\--(build)-> protobuf (protoc)
@@ -98,9 +100,9 @@ def test_different_options_values_recipe():
         from conans import ConanFile
         class Consumer(ConanFile):
             def requirements(self):
-                self.requires("protobuf/1.0", options={{"protobuf:shared": {host}}})
+                self.requires("protobuf/1.0", options={{"{scope}shared": {host}}})
             def build_requirements(self):
-                self.build_requires("protobuf/1.0", options={{"protobuf:shared": {build}}})
+                self.build_requires("protobuf/1.0", options={{"{scope}shared": {build}}})
         """)
     c.save({"conanfile.py": protobuf})
 
@@ -108,7 +110,47 @@ def test_different_options_values_recipe():
     c.run("create . protobuf/1.0@ -o protobuf:shared=True")
 
     for host, build in ((True, True), (True, False), (False, True), (False, False)):
-        c.save({"conanfile.py": consumer_recipe.format(host=host, build=build)})
+        c.save({"conanfile.py": consumer_recipe.format(host=host, build=build, scope=scope)})
         c.run("install .")
         assert f"protobuf/1.0: MYOPTION: host-{host}" in c.out
         assert f"protobuf/1.0: MYOPTION: build-{build}" in c.out
+
+
+def test_different_options_values_recipe_priority():
+    """
+    consumer ---> mypkg ---> protobuf (library)
+                  \\--(build)-> protobuf (protoc)
+    protobuf by default is a static library (shared=1)
+    "consumer" defines a protobuf:shared=3 value, that must be respected for HOST context
+    But build context, it is assigned by "mypkg", and build-require is private
+    """
+    c = TestClient()
+    protobuf = textwrap.dedent("""
+        from conans import ConanFile
+        class Proto(ConanFile):
+            options = {"shared": [1, 2, 3]}
+            default_options = {"shared": 1}
+
+            def package_id(self):
+                self.output.info("MYOPTION: {}-{}".format(self.context, self.options.shared))
+        """)
+    my_pkg = textwrap.dedent("""
+        from conans import ConanFile
+        class Consumer(ConanFile):
+            def requirements(self):
+                self.requires("protobuf/1.0", options={"shared": 2})
+            def build_requirements(self):
+                self.build_requires("protobuf/1.0", options={"shared": 2})
+        """)
+    c.save({"protobuf/conanfile.py": protobuf,
+            "mypkg/conanfile.py": my_pkg,
+            "consumer/conanfile.py": GenConanfile().with_requires("mypkg/1.0")
+           .with_default_option("protobuf:shared", 3)})
+
+    c.run("create protobuf protobuf/1.0@ -o protobuf:shared=2")
+    c.run("create protobuf protobuf/1.0@ -o protobuf:shared=3")
+    c.run("create mypkg mypkg/1.0@")
+
+    c.run("install consumer")
+    assert f"protobuf/1.0: MYOPTION: host-3" in c.out
+    assert f"protobuf/1.0: MYOPTION: build-2" in c.out
