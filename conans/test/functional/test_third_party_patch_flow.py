@@ -176,7 +176,7 @@ def test_third_party_git_overwrite_build_file():
             def source(self):
                 # git clone: WILL FAIL because folder not empty, because UGLY local exports already
                 self.output.info("CWD: {{}}!".format(os.getcwd()))
-                self.output.info("FILES: {{}}!".format(os.listdir(".")))
+                self.output.info("FILES: {{}}!".format(sorted(os.listdir("."))))
                 [shutil.rmtree(t) if os.path.isdir(t) else os.remove(t) for t in os.listdir(".")]
                 self.run('git clone "{}" .')
                 # Now I fix it with one of the exported files
