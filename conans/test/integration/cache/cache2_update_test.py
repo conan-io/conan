@@ -362,8 +362,7 @@ class TestUpdateFlows:
         # |                | 1.2 REV0 (1000)|                |                |                |
 
         self.client.run("install --reference=liba/[>0.9.0]@")
-        assert "Version range '>0.9.0' required by 'None' resolved to 'liba/1.0.0' " \
-               "in local cache" in self.client.out
+        assert "liba/[>0.9.0]: liba/1.0.0" in self.client.out
         assert "liba/1.0.0: Already installed!" in self.client.out
 
         self.client.run("remove * -f")
@@ -379,8 +378,7 @@ class TestUpdateFlows:
         # will not find versions for the recipe in cache -> search remotes by order and install the
         # first match that is 1.0 from server0
         # --> result: install 1.0 from server0
-        assert "Version range '>0.9.0' required by 'None' resolved to 'liba/1.0.0' " \
-               "in remote 'server0'" in self.client.out
+        assert "liba/[>0.9.0]: liba/1.0.0" in self.client.out
         assert "liba/1.0.0 from 'server0' - Downloaded" in self.client.out
 
         latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("liba/1.0.0@"))
@@ -395,8 +393,7 @@ class TestUpdateFlows:
         self.client.run("install --reference=liba/[>1.0.0]@")
         # first match that is 1.1 from server1
         # --> result: install 1.1 from server1
-        assert "Version range '>1.0.0' required by 'None' resolved to 'liba/1.1.0' " \
-               "in remote 'server1'" in self.client.out
+        assert "liba/[>1.0.0]: liba/1.1.0" in self.client.out
         assert "liba/1.1.0 from 'server1' - Downloaded" in self.client.out
 
         # | CLIENT         | CLIENT2        | SERVER0        | SERVER1        | SERVER2        |
@@ -408,8 +405,7 @@ class TestUpdateFlows:
         self.client.run("install --reference=liba/[>1.0.0]@ --update")
         # check all servers
         # --> result: install 1.2 from server2
-        assert "Version range '>1.0.0' required by 'None' resolved to 'liba/1.2.0' " \
-               "in remote 'server2'" in self.client.out
+        assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
         assert "liba/1.2.0 from 'server2' - Downloaded" in self.client.out
 
         # If we have multiple revisions with different names for the same version and we
@@ -435,9 +431,7 @@ class TestUpdateFlows:
         self.client.run("create .")
 
         self.client.run("install --reference=liba/[>1.0.0]@ --update")
-        assert "liba/* versions found in 'server0' remote" in self.client.out
-        assert "Version range '>1.0.0' required by 'None' resolved to 'liba/1.2.0' " \
-               "in remote 'server0'" in self.client.out
+        assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
         assert "liba/1.2.0 from 'server2' - Downloaded" in self.client.out
         assert f"liba/1.2.0: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
                "from remote 'server2' " in self.client.out

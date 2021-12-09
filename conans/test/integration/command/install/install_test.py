@@ -151,7 +151,7 @@ def test_install_cwd(client):
     client.save({"conanfile.txt": "[requires]\nhello/0.1@lasote/stable"}, clean_first=True)
 
     client.run("install . --build=missing -s os_build=Windows --install-folder=win_dir")
-    assert "hello/0.1@lasote/stable from local cache" in client.out
+    assert "hello/0.1@lasote/stable#a44254cfa891c2fe4d98ee6aff203222 - Cache" in client.out
 
 
 def test_install_reference_not_conanbuildinfo(client):
@@ -333,9 +333,9 @@ def test_install_version_range_reference(client):
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . pkg/0.1@user/channel")
     client.run("install --reference=pkg/[*]@user/channel")
-    assert "pkg/0.1@user/channel from local cache - Cache" in client.out
+    assert "pkg/0.1@user/channel: Already installed!" in client.out
     client.run("install --reference=pkg/[>0]@user/channel")
-    assert "pkg/0.1@user/channel from local cache - Cache" in client.out
+    assert "pkg/0.1@user/channel: Already installed!" in client.out
 
 
 def test_install_error_never(client):

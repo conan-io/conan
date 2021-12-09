@@ -6,11 +6,13 @@ from conans.model.requires import Requirement
 
 
 class PyRequire(object):
-    def __init__(self, module, conanfile, ref, path):
+    def __init__(self, module, conanfile, ref, path, recipe_status, remote):
         self.module = module
         self.conanfile = conanfile
         self.ref = ref
         self.path = path
+        self.recipe = recipe_status
+        self.remote = remote
 
 
 class PyRequires(object):
@@ -80,10 +82,9 @@ class PyRequireLoader(object):
             try:
                 py_require = self._cached_py_requires[py_requires_ref]
             except KeyError:
-                conanfile, module, new_ref, path = self._load_pyreq_conanfile(loader,
-                                                                              graph_lock,
-                                                                              py_requires_ref)
-                py_require = PyRequire(module, conanfile, new_ref, path)
+                pyreq_conanfile = self._load_pyreq_conanfile(loader, graph_lock, py_requires_ref)
+                conanfile, module, new_ref, path, recipe_status, remote = pyreq_conanfile
+                py_require = PyRequire(module, conanfile, new_ref, path, recipe_status, remote)
                 self._cached_py_requires[py_requires_ref] = py_require
             result.add_pyrequire(py_require)
         return result
@@ -105,7 +106,7 @@ class PyRequireLoader(object):
 
     def _load_pyreq_conanfile(self, loader, graph_lock, ref):
         recipe = self._proxy.get_recipe(ref)
-        path, _, _, new_ref = recipe
+        path, recipe_status, remote, new_ref = recipe
         conanfile, module = loader.load_basic_module(path, graph_lock)
         conanfile.name = new_ref.name
         # FIXME Conan 2.0 version should be a string, not a Version object
@@ -120,7 +121,6 @@ class PyRequireLoader(object):
             alias = requirement.alias
             if alias is not None:
                 ref = alias
-            conanfile, module, new_ref, path = self._load_pyreq_conanfile(loader,
-                                                                          graph_lock,
-                                                                          ref)
-        return conanfile, module, new_ref, os.path.dirname(path)
+            alias_result = self._load_pyreq_conanfile(loader, graph_lock, ref)
+            conanfile, module, new_ref, path, recipe_status, remote = alias_result
+        return conanfile, module, new_ref, os.path.dirname(path), recipe_status, remote
