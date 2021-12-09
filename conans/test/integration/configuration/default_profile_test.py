@@ -60,7 +60,7 @@ class MyConanfile(ConanFile):
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({CONANFILE: br})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run('install --reference=mylib/0.1@lasote/stable --build')
 
         # Now use a name, in the default profile folder
@@ -68,7 +68,7 @@ class MyConanfile(ConanFile):
         save(os.path.join(client.cache.profiles_path, "other"), "[buildenv]\nValue1=A")
         save(client.cache.new_config_path, "core:default_profile=other")
         client.save({CONANFILE: br})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run('install --reference=mylib/0.1@lasote/stable --build')
 
     @pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
@@ -102,7 +102,7 @@ mypackage:option1=2
         save(client.cache.default_profile_path, default_profile)
 
         client.save({CONANFILE: br})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         cf = '''
 import os, platform
@@ -141,7 +141,7 @@ class MyConanfile(ConanFile):
 br/1.0@lasote/stable"""
         client.save({CONANFILE: cf,
                      "profile_host": profile_host}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run('install --reference=mypackage/0.1@lasote/stable -pr=profile_host --build missing')
         assert "from_build_require" in client.out
 
@@ -150,7 +150,7 @@ br/1.0@lasote/stable"""
         save(client.cache.default_profile_path, default_profile_2)
         client.save({CONANFILE: cf,
                      "profile_host": profile_host}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run('install --reference=mypackage/0.1@lasote/stable  -pr=profile_host --build')
         assert "23" in client.out
 

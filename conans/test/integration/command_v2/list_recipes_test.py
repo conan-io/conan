@@ -5,6 +5,7 @@ from unittest.mock import patch, Mock
 import pytest
 
 from conans.errors import ConanConnectionError, ConanException
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -25,8 +26,9 @@ class TestListRecipesBase:
         self.client.run("create . {}".format(reference))
 
     def _upload_recipe(self, remote, reference):
+        reference = RecipeReference.loads(str(reference))
         self.client.save({'conanfile.py': GenConanfile()})
-        self.client.run("export . {}".format(reference))
+        self.client.run(f"export . --name={reference.name} --version={reference.version} --user={reference.user} --channel={reference.channel}")
         self.client.run("upload --force -r {} {}".format(remote, reference))
 
 

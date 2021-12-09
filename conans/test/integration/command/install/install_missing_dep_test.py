@@ -43,8 +43,8 @@ class InstallMissingDependency(unittest.TestCase):
 
         dep1_conanfile = GenConanfile()
         client.save({"conanfile.py": dep1_conanfile}, clean_first=True)
-        client.run("export . dep1/1.0@")
-        client.run("export . dep2/1.0@")
+        client.run("export . --name=dep1 --version=1.0")
+        client.run("export . --name=dep2 --version=1.0")
 
         conanfile = GenConanfile().with_require("dep1/1.0").with_require("dep2/1.0")
         client.save({"conanfile.py": conanfile}, clean_first=True)

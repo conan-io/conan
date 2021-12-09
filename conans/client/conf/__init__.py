@@ -3,7 +3,6 @@ import textwrap
 from configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
-from conans.util.dates import timedelta_from_text
 from conans.util.env import get_env
 from conans.util.files import load
 

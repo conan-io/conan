@@ -13,7 +13,7 @@ def test_cmake_lib_template():
     client.run("install . -if=install")
     client.run("build . -if=install")
 
-    client.run("export-pkg . hello/0.1@")
+    client.run("export-pkg .")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("hello/0.1")
     ref = client.cache.get_latest_recipe_reference(ref)

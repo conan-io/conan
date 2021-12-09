@@ -29,12 +29,12 @@ def test_transitive_py_requires_revisions():
                  "pkg/conanfile.py": conanfile,
                  "consumer/conanfile.py": consumer})
 
-    client.run("export dep dep/0.1@user/channel")
-    client.run("export pkg pkg/0.1@user/channel")
+    client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
+    client.run("export pkg --name=pkg --version=0.1 --user=user --channel=channel")
     client.run("lock create consumer/conanfile.py --lockfile-out=conan.lock")
 
     client.save({"dep/conanfile.py": python_req.format("123")})
-    client.run("export dep dep/0.1@user/channel")
+    client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
 
     client.run("install consumer/conanfile.py --lockfile=conan.lock")
     assert "conanfile.py: VAR=42!!!" in client.out
@@ -72,17 +72,17 @@ def test_transitive_matching_revisions():
                  "pkgb/conanfile.py": pkg.format("toolb"),
                  "app/conanfile.py": GenConanfile().with_requires("pkga/0.1", "pkgb/0.1")})
 
-    client.run("export dep dep/0.1@")
-    client.run("export dep dep/0.2@")
-    client.run("export toola toola/0.1@")
-    client.run("export toolb toolb/0.1@")
+    client.run("export dep --name=dep --version=0.1")
+    client.run("export dep --name=dep --version=0.2")
+    client.run("export toola --name=toola --version=0.1")
+    client.run("export toolb --name=toolb --version=0.1")
     client.run("create pkga pkga/0.1@")
     client.run("create pkgb pkgb/0.1@")
     client.run("lock create app/conanfile.py --lockfile-out=conan.lock")
 
     client.save({"dep/conanfile.py": dep.format(123)})
-    client.run("export dep dep/0.1@")
-    client.run("export dep dep/0.2@")
+    client.run("export dep --name=dep --version=0.1")
+    client.run("export dep --name=dep --version=0.2")
 
     client.run("install app/conanfile.py --lockfile=conan.lock")
     assert "pkga/0.1: VAR=42!!!" in client.out

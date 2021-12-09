@@ -210,7 +210,7 @@ def _detect_compiler_version(result):
     except Exception:
         compiler, version = None, None
     if not compiler or not version:
-        ConanOutput().error("Unable to find a working compiler")
+        ConanOutput().info("No compiler was detected (one may not be needed)")
         return
 
     version = Version(version)

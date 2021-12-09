@@ -23,13 +23,13 @@ from conans.util.log import logger
 
 
 CLI_V1_COMMANDS = [
-    'config', 'get', 'info', 'new', 'create', 'upload', 'export', 'export-pkg',
+    'config', 'get', 'info', 'new', 'create', 'upload',
     'test', 'source', 'build', 'editable', 'imports', 'remove', 'alias',
     'download', 'inspect', 'lock', 'frogarian', 'graph'
 ]
 
 
-class Cli(object):
+class Cli:
     """A single command of the conan application, with all the first level commands. Manages the
     parsing of parameters and delegates functionality to the conan python api. It can also show the
     help of the tool.

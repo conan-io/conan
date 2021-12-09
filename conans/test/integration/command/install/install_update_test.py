@@ -60,7 +60,7 @@ def test_update_not_date():
     client = TestClient(default_server_user=True)
     # Regression for https://github.com/conan-io/conan/issues/949
     client.save({"conanfile.py": GenConanfile("hello0", "1.0")})
-    client.run("export . lasote/stable")
+    client.run("export . --user=lasote --channel=stable")
     client.save({"conanfile.py": GenConanfile("hello1", "1.0").
                 with_requirement("hello0/1.0@lasote/stable")},
                 clean_first=True)
@@ -78,7 +78,7 @@ def test_update_not_date():
 
     # Change and rebuild package
     client.save({"conanfile.py": GenConanfile("hello0", "1.0").with_test("pass")}, clean_first=True)
-    client.run("export . lasote/stable")
+    client.run("export . --user=lasote --channel=stable")
     client.run("install --reference=hello0/1.0@lasote/stable --build")
 
     rebuild_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_recipe_reference(ref))
@@ -108,7 +108,7 @@ def test_reuse():
     conanfile = GenConanfile("hello0", "1.0").with_exports("*").with_package("self.copy('*')")
     client.save({"conanfile.py": conanfile,
                  "header.h": "content1"})
-    client.run("export . lasote/stable")
+    client.run("export . --user=lasote --channel=stable")
     client.run("install --reference=hello0/1.0@lasote/stable --build")
     client.run("upload hello0/1.0@lasote/stable --all -r default")
 
@@ -119,7 +119,7 @@ def test_reuse():
 
     client.save({"header.h": "//EMPTY!"})
     sleep(1)
-    client.run("export . lasote/stable")
+    client.run("export . --user=lasote --channel=stable")
     client.run("install --reference=hello0/1.0@lasote/stable --build")
     client.run("upload hello0/1.0@lasote/stable --all -r default")
 

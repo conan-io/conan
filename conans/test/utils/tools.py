@@ -593,7 +593,10 @@ class TestClient(object):
         """
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(repr(ref), args or ""))
+        if ref:
+            self.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
+        else:
+            self.run("export .")
         tmp = copy.copy(ref)
         tmp.revision = None
         rrev = self.cache.get_latest_recipe_reference(tmp).revision

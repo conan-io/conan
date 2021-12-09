@@ -69,7 +69,7 @@ class InfoFoldersTest(unittest.TestCase):
                     self.info_build.options.myOption = "Any"
             """)
         client.save({CONANFILE: conanfile})
-        client.run("export . pkg/0.1@user/testing")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("info pkg/0.1@user/testing --paths -o pkg:myOption=True")
         out = str(client.out).replace("\\", "/")
         self.assertIn("ID: 75f77640a42abb05cd36235484f164c96ace0952", out)

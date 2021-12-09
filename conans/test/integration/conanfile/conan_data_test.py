@@ -30,7 +30,7 @@ class ConanDataTest(unittest.TestCase):
                      "myfile.txt": "bar",
                      "conandata.yml": conandata})
         ref = RecipeReference.loads("lib/0.1@user/testing")
-        client.run("export . {}".format(ref))
+        client.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
         export_folder = client.get_latest_ref_layout(ref).export()
         exported_data = os.path.join(export_folder, "conandata.yml")
         data = yaml.safe_load(load(exported_data))
@@ -198,5 +198,5 @@ class Lib(ConanFile):
         client.run("install . -if tmp/install")
         client.run("build . -if tmp/install -bf tmp/build")
         self.assertIn("My URL: this url", client.out)
-        client.run("export-pkg . name/version@")
+        client.run("export-pkg . --name=name --version=version")
         self.assertIn("My URL: this url", client.out)

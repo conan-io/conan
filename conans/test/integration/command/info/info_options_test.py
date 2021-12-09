@@ -17,7 +17,7 @@ class InfoOptionsTest(unittest.TestCase):
                          GenConanfile("my-package", "1.3").with_option("shared", [True, False])
                                                           .with_default_option("shared", False)})
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("My-Package/1.3@myuser/testing", client.out)
 

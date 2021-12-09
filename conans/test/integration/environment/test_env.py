@@ -68,9 +68,9 @@ def client():
                  "gtest/conanfile.py": gtest,
                  "openssl/conanfile.py": openssl})
 
-    client.run("export openssl openssl/1.0@")
-    client.run("export cmake mycmake/1.0@")
-    client.run("export gtest mygtest/1.0@")
+    client.run("export openssl --name=openssl --version=1.0")
+    client.run("export cmake --name=mycmake --version=1.0")
+    client.run("export gtest --name=mygtest --version=1.0")
 
     myrunner_bat = "@echo off\necho MYGTESTVAR=%MYGTESTVAR%!!\n"
     myrunner_sh = "echo MYGTESTVAR=$MYGTESTVAR!!\n"
@@ -248,9 +248,9 @@ def test_transitive_order():
                  "cmake/conanfile.py": cmake,
                  "openssl/conanfile.py": openssl})
 
-    client.run("export gcc gcc/1.0@")
-    client.run("export openssl openssl/1.0@")
-    client.run("export cmake cmake/1.0@")
+    client.run("export gcc --name=gcc --version=1.0")
+    client.run("export openssl --name=openssl --version=1.0")
+    client.run("export cmake --name=cmake --version=1.0")
 
     consumer = textwrap.dedent(r"""
         from conans import ConanFile
@@ -298,8 +298,8 @@ def test_buildenv_from_requires():
     client.save({"poco/conanfile.py": poco,
                  "openssl/conanfile.py": openssl})
 
-    client.run("export openssl openssl/1.0@")
-    client.run("export poco poco/1.0@")
+    client.run("export openssl --name=openssl --version=1.0")
+    client.run("export poco --name=poco --version=1.0")
 
     consumer = textwrap.dedent(r"""
         from conans import ConanFile
@@ -378,10 +378,10 @@ def test_diamond_repeated():
                  "pkgd/conanfile.py": pkgd,
                  "pkge/conanfile.py": pkge})
 
-    client.run("export pkga pkga/1.0@")
-    client.run("export pkgb pkgb/1.0@")
-    client.run("export pkgc pkgc/1.0@")
-    client.run("export pkgd pkgd/1.0@")
+    client.run("export pkga --name=pkga --version=1.0")
+    client.run("export pkgb --name=pkgb --version=1.0")
+    client.run("export pkgc --name=pkgc --version=1.0")
+    client.run("export pkgd --name=pkgd --version=1.0")
 
     client.run("install --reference=pkge --build")
     assert "MYVAR1: PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1!!!" in client.out
@@ -409,8 +409,8 @@ def test_environment_scripts_generated_envvars():
                  "require_pkg/conanfile.py": conanfile,
                  "consumer_pkg/conanfile.py": consumer_pkg})
 
-    client.run("export build_require_pkg build_require_pkg/1.0@")
-    client.run("export require_pkg require_pkg/1.0@")
+    client.run("export build_require_pkg --name=build_require_pkg --version=1.0")
+    client.run("export require_pkg --name=require_pkg --version=1.0")
 
     client.run("install consumer_pkg --build")
     if platform.system() == "Windows":

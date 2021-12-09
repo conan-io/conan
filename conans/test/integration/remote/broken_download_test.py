@@ -16,7 +16,7 @@ class BrokenDownloadTest(unittest.TestCase):
         servers = {"default": server}
         client = TestClient(servers=servers, inputs=["admin", "password"])
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         ref = RecipeReference.loads("hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).export()))
         client.run("upload hello/0.1@lasote/stable -r default")

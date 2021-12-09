@@ -689,7 +689,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         client = TestClient()
         os.remove(client.cache.remotes_path)
         client.run("search nonexist/1.0@lasote/stable -r=myremote", assert_error=True)
-        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
 
     def test_search_json(self):
@@ -1098,7 +1097,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         client = TestClient()
         os.remove(client.cache.remotes_path)
         client.run("search my_pkg")
-        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
 
@@ -1193,7 +1191,7 @@ class Test(ConanFile):
         time.sleep(1)
 
         client.save({"conanfile.py": conanfile})
-        client.run("export . lib/1.0@user/testing")
+        client.run("export . --name=lib --version=1.0 --user=user --channel=testing")
 
         # If the recipe doesn't have associated remote, there is no time
         client.run("search lib/1.0@user/testing --revisions")
@@ -1212,7 +1210,7 @@ class Test(ConanFile):
 
         # Create new revision and upload
         client.save({"conanfile.py": conanfile + "# force new rev"})
-        client.run("export . lib/1.0@user/testing")
+        client.run("export . --name=lib --version=1.0 --user=user --channel=testing")
 
         client.run("search lib/1.0@user/testing --revisions")
         self.assertNotIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
@@ -1433,7 +1431,7 @@ class SearchRemoteAllTestCase(unittest.TestCase):
 
         self.reference = "name/version@user/channel"
         self.client.save({'conanfile.py': conanfile})
-        self.client.run("export . {}".format(self.reference))
+        self.client.run(f"export . --name={self.reference.name} --version={self.reference.version} --user={self.reference.user} --channel={self.reference.channel}")
         self.client.run("upload --force -r {} {}".format(self.remote_name, self.reference))
 
     def test_search_by_name(self):

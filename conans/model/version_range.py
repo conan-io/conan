@@ -38,7 +38,7 @@ class _ConditionSet:
         if operator == "~":  # tilde minor
             v = Version(version)
             index = 1 if len(v.main) > 1 else 0
-            return [_Condition(">=", v), _Condition("<", v.bump(index))]
+            return [_Condition(">=", v), _Condition("<", v.upper_bound(index))]
         elif operator == "^":  # caret major
             v = Version(version)
 
@@ -49,7 +49,7 @@ class _ConditionSet:
                 return len(main)
 
             initial_index = first_non_zero(v.main)
-            return [_Condition(">=", v), _Condition("<", v.bump(initial_index))]
+            return [_Condition(">=", v), _Condition("<", v.upper_bound(initial_index))]
         else:
             return [_Condition(operator, Version(version))]
 

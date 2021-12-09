@@ -28,8 +28,8 @@ def test_options():
 
     client.save({"ffmepg/conanfile.py": ffmpeg,
                  "variant/conanfile.py": variant})
-    client.run("export ffmepg ffmpeg/1.0@")
-    client.run("export variant nano/1.0@")
+    client.run("export ffmepg --name=ffmpeg --version=1.0")
+    client.run("export variant --name=nano --version=1.0")
 
     client.run("lock create --reference=nano/1.0@ --build --lockfile-out=conan.lock")
     lockfile = client.load("conan.lock")
