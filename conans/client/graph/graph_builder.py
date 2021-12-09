@@ -260,7 +260,7 @@ class DepsGraphBuilder(object):
             if require.visible:  # Only visible requirements propagate options from downstream
                 down_options.update_options(node.conanfile.up_options)
         else:
-            down_options = Options() if require.build else node.conanfile.up_options
+            down_options = node.conanfile.up_options if require.visible else Options()
 
         self._prepare_node(new_node, profile_host, profile_build, down_options)
 
