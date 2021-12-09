@@ -38,7 +38,8 @@ v = [("1", "2"),
      ("1.1-alpha.1", "1.1"),
      ("1.1", "1.2-alpha1"),
      ("1.1-alpha.1", "1.1.0"),  # pre to the generic 1.1 is earlier than 1.1.0
-     ]
+     ("1.0.0-", "1.0.0-alpha1")
+]
 
 
 @pytest.mark.parametrize("v1, v2", v)
