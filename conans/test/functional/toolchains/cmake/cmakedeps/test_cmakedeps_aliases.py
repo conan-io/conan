@@ -148,7 +148,7 @@ def test_collide_global_alias():
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     client.run("create .")
 
-    assert "Target name 'hello::hello' already exists." not in client.out
+    assert "Target name 'hello::hello' already exists." in client.out
 
 
 @pytest.mark.tool_cmake
@@ -178,4 +178,4 @@ def test_collide_component_alias():
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     client.run("create .")
 
-    assert "Target name 'hello::buy' already exists." not in client.out
+    assert "Target name 'hello::buy' already exists." in client.out
