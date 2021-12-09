@@ -273,7 +273,7 @@ class ConanFileToolsTest(ConanFile):
         with environment_update({'CONAN_LOGIN_ENCRYPTION_KEY': 'secret!', 'OTHER_VAR': 'other_var'}):
             client = TestClient()
             client.save({"conanfile.py": conanfile})
-            client.run("export . name/version@")
+            client.run("export . --name=name --version=version")
             self.assertIn("name/version: >> key: secret!<<", client.out)
             self.assertIn("name/version: >> var: other_var<<", client.out)
             if platform.system() == 'Windows':

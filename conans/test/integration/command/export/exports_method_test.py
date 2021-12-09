@@ -21,7 +21,7 @@ class ExportsMethodTest(unittest.TestCase):
                     self.copy("LICENSE.md")
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license", "file.txt": "file"})
-        client.run("export . pkg/0.1@")
+        client.run("export . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1: Calling export()", client.out)
         self.assertIn("pkg/0.1 exports: Copied 1 '.txt' file: file.txt", client.out)
         self.assertIn("pkg/0.1 export() method: Copied 1 '.md' file: LICENSE.md", client.out)
@@ -46,7 +46,7 @@ class ExportsMethodTest(unittest.TestCase):
                     self.copy("*.txt", src="../subdir")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg/0.1@")
+        client.run("export . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1 export() method: Copied 2 '.txt' files: file1.txt, file2.txt",
                       client.out)
 
@@ -68,7 +68,7 @@ class ExportsMethodTest(unittest.TestCase):
                         self.copy("LICENSE.md")
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license"})
-        client.run("export . pkg/0.1@", assert_error=True)
+        client.run("export . --name=pkg --version=0.1", assert_error=True)
         self.assertIn("ERROR: pkg/0.1: Error in export() method, line 7", client.out)
 
         conanfile = textwrap.dedent("""
@@ -82,7 +82,7 @@ class ExportsMethodTest(unittest.TestCase):
                         self.copy("LICENSE.md")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg/0.1@", assert_error=True)
+        client.run("export . --name=pkg --version=0.1", assert_error=True)
         self.assertIn("ERROR: pkg/0.1: Error in export() method, line 8", client.out)
 
         conanfile = textwrap.dedent("""
@@ -115,12 +115,12 @@ class ExportsMethodTest(unittest.TestCase):
                    save(os.path.join(self.export_folder, "myfile.txt"), content)
            """)
         client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
-        client.run("export recipe pkg/0.1@")
+        client.run("export recipe --name=pkg --version=0.1")
         latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("pkg/0.1"))
         layout = client.cache.ref_layout(latest_rrev)
         self.assertEqual("mycontent", load(os.path.join(layout.export(), "myfile.txt")))
         client.current_folder = os.path.join(client.current_folder, "recipe")
-        client.run("export . pkg/0.1@")
+        client.run("export . --name=pkg --version=0.1")
         latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("pkg/0.1"))
         layout = client.cache.ref_layout(latest_rrev)
         self.assertEqual("mycontent", load(os.path.join(layout.export(), "myfile.txt")))
@@ -133,7 +133,7 @@ class ExportsMethodTest(unittest.TestCase):
                 export = "file.txt"
             """)
         client.save({"conanfile.py": conanfile, "file.txt": "file"})
-        client.run("export . pkg/0.1@", assert_error=True)
+        client.run("export . --name=pkg --version=0.1", assert_error=True)
         self.assertIn("ERROR: conanfile 'export' must be a method", client.out)
 
     def test_exports_method_error(self):
@@ -145,7 +145,7 @@ class ExportsMethodTest(unittest.TestCase):
                     pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg/0.1@", assert_error=True)
+        client.run("export . --name=pkg --version=0.1", assert_error=True)
         self.assertIn("ERROR: conanfile 'exports' shouldn't be a method, use 'export()' instead",
                       client.out)
 
@@ -163,7 +163,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
                     self.copy("LICENSE.md")
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license", "file.txt": "file"})
-        client.run("export . pkg/0.1@")
+        client.run("export . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1 exports_sources: Copied 1 '.txt' file: file.txt", client.out)
         self.assertIn("pkg/0.1 export_sources() method: Copied 1 '.md' file: LICENSE.md", client.out)
 
@@ -187,12 +187,12 @@ class ExportsSourcesMethodTest(unittest.TestCase):
                    save(os.path.join(self.export_sources_folder, "myfile.txt"), content)
            """)
         client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
-        client.run("export recipe pkg/0.1@")
+        client.run("export recipe --name=pkg --version=0.1")
         latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("pkg/0.1"))
         layout = client.cache.ref_layout(latest_rrev)
         self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
         client.current_folder = os.path.join(client.current_folder, "recipe")
-        client.run("export . pkg/0.1@")
+        client.run("export . --name=pkg --version=0.1")
         latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("pkg/0.1"))
         layout = client.cache.ref_layout(latest_rrev)
         self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
@@ -205,7 +205,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
                 export_sources = "file.txt"
             """)
         client.save({"conanfile.py": conanfile, "file.txt": "file"})
-        client.run("export . pkg/0.1@", assert_error=True)
+        client.run("export . --name=pkg --version=0.1", assert_error=True)
         self.assertIn("ERROR: conanfile 'export_sources' must be a method", client.out)
 
     def test_exports_sources_method_error(self):
@@ -217,7 +217,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
                     pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg/0.1@", assert_error=True)
+        client.run("export . --name=pkg --version=0.1", assert_error=True)
         self.assertIn("ERROR: conanfile 'exports_sources' shouldn't be a method, "
                       "use 'export_sources()' instead", client.out)
 
@@ -235,7 +235,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "mycontent"})
-        client.run("export . pkg/0.1@")
+        client.run("export . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1 export_sources() method: Copied 1 '.txt' file: myfile.txt",
                       client.out)
         client.run("upload pkg/0.1@ -r default")

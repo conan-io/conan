@@ -61,7 +61,7 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        client.run("export . user/testing")
+        client.run("export . --user=user --channel=testing")
         client.run("install --reference=Test/0.1@user/testing --build missing")
         package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
         self.assertIn("*+Running system requirements+*", client.out)
@@ -109,7 +109,7 @@ class SystemReqsTest(unittest.TestCase):
                                                    "self.global_system_requirements=True")
         }
         client.save(files)
-        client.run("export . user/testing")
+        client.run("export . --user=user --channel=testing")
         client.run("install --reference=Test/0.1@user/testing --build missing")
         self.assertIn("*+Running system requirements+*", client.out)
         ref = RecipeReference.loads("Test/0.1@user/testing")
@@ -153,7 +153,7 @@ class SystemReqsTest(unittest.TestCase):
             base_conanfile.replace("%GLOBAL%", "").replace('"Installed my stuff"', 'None')
         }
         client.save(files)
-        client.run("export . user/testing")
+        client.run("export . --user=user --channel=testing")
         client.run("install --reference=Test/0.1@user/testing --build missing")
         package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
 

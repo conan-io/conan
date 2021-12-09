@@ -57,7 +57,7 @@ class MultiRemotesTest(unittest.TestCase):
     def _create(client, number, version, modifier=""):
         files = {CONANFILE: str(GenConanfile(number, version)) + modifier}
         client.save(files, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
     def test_conan_install_build_flag(self):
         """
@@ -193,7 +193,7 @@ class MultiRemoteTest(unittest.TestCase):
         for i in range(3):
             ref = RecipeReference.loads("hello%d/0.1@lasote/stable" % i)
             self.client.save({"conanfile.py": GenConanfile("hello%d" % i, "0.1")})
-            self.client.run("export . lasote/stable")
+            self.client.run("export . --user=lasote --channel=stable")
             self.client.run("upload %s -r=remote%d" % (str(ref), i))
 
         # Now install it in other machine from remote 0

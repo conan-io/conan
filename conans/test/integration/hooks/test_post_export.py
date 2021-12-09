@@ -41,5 +41,5 @@ def test_called_before_digest(self):
         hook_manager.hooks["post_export"] = [("_", mocked_post_export)]
 
     with patch.object(HookManager, "load_hooks", new=mocked_load_hooks):
-        t.run("export . {}".format(ref))
+        t.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
     self.assertTrue(os.path.exists(os.path.join(ref_layout.export(), CONAN_MANIFEST)))

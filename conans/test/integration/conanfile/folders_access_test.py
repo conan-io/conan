@@ -110,7 +110,7 @@ class TestFoldersAccess(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         self.client.save({"conanfile.py": conanfile_parent})
-        self.client.run("export . conan/stable")
+        self.client.run("export . --user=conan --channel=stable")
 
     def test_source_local_command(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
@@ -199,7 +199,7 @@ class RecipeFolderTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": self.recipe_conanfile,
                      "file.txt": "MYFILE!"})
-        client.run("export . pkg/0.1@user/testing")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("INIT: MYFILE!", client.out)
         self.assertIn("SET_NAME: MYFILE!", client.out)
         client.save({}, clean_first=True)

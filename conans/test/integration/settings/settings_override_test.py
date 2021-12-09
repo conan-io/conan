@@ -18,11 +18,11 @@ def client():
         self.output.warning("COMPILER=> %s %s" % (self.name, str(self.settings.compiler)))
     """
     client.save({"conanfile.py": str(conanfile) + build_msg})
-    client.run("export . lasote/testing")
+    client.run("export . --user=lasote --channel=testing")
     conanfile = GenConanfile("visual", "0.1").with_requires("mingw/0.1@lasote/testing")
     conanfile.with_settings("compiler")
     client.save({"conanfile.py": str(conanfile) + build_msg})
-    client.run("export . lasote/testing")
+    client.run("export . --user=lasote --channel=testing")
     return client
 
 
