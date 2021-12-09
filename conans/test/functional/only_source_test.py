@@ -13,10 +13,10 @@ class OnlySourceTest(unittest.TestCase):
         # Checks --build in test command
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("hello0", "0.0")})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.save({"conanfile.py": GenConanfile("hello1", "1.1").
                     with_require("hello0/0.0@lasote/stable")})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         # Now test out Hello2
         client.save({"conanfile.py": GenConanfile("hello2", "2.2").
@@ -71,7 +71,7 @@ class MyPackage(ConanFile):
 
         files = {CONANFILE: conanfile}
         client.save(files, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install --reference=test/1.9@lasote/stable")
         self.assertIn("Getting sources", client.out)
         self.assertIn("Building sources", client.out)
@@ -85,7 +85,7 @@ class MyPackage(ConanFile):
         base = GenConanfile("hello0", "1.0").with_exports("*")
         conanfile = str(base) + "\n    build_policy = 'missing'"
         client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         # Install, it will build automatically if missing (without the --build missing option)
         client.run("install --reference=hello0/1.0@lasote/stable")
@@ -101,7 +101,7 @@ class MyPackage(ConanFile):
         #  --- Build policy to always ---
         conanfile = str(base) + "\n    build_policy = 'always'"
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         # Install, it will build automatically if missing (without the --build missing option)
         client.run("install --reference=hello0/1.0@lasote/stable")
@@ -123,7 +123,7 @@ class MyPackage(ConanFile):
         client = TestClient(default_server_user=True)
         ref = RecipeReference.loads("hello0/0.1@lasote/stable")
         client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install --reference=%s --build missing" % str(ref))
         pref = client.get_latest_package_reference(ref)
         self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).build()))

@@ -25,7 +25,7 @@ class UserInfoTest(unittest.TestCase):
                     """)
             requires = "'{}'".format(requires) if requires else "None"
             client.save({CONANFILE: base % (name, requires, infolines)}, clean_first=True)
-            client.run("export . lasote/stable")
+            client.run("export . --user=lasote --channel=stable")
 
         export_lib("lib_a", "", "self.user_info.VAR1=2")
         export_lib("lib_b", "lib_a/0.1@lasote/stable", "self.user_info.VAR1=2\n        "
@@ -47,7 +47,7 @@ class UserInfoTest(unittest.TestCase):
                     assert self.dependencies["lib_c"].user_info.VAR1=="2"
                 """)
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("export . reuse/0.1@lasote/stable")
+        client.run("export . --name=reuse --version=0.1 --user=lasote --channel=stable")
         client.run('install --reference=reuse/0.1@lasote/stable --build')
         # Now try local command with a consumer
         client.run('install . --build')

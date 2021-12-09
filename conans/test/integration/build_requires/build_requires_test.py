@@ -395,7 +395,7 @@ class App(ConanFile):
         client.save({CONANFILE: mingw})
         client.run("create . mingw/0.1@lasote/stable")
         client.save({CONANFILE: gtest})
-        client.run("export . gtest/0.1@lasote/stable")
+        client.run("export . --name=gtest --version=0.1 --user=lasote --channel=stable")
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
         client.run("create . app/0.1@lasote/stable --build=missing -pr=myprofile -pr:b=myprofile")
@@ -469,10 +469,10 @@ Tool/0.1@lasote/stable
     def test_build_requires(self, conanfile):
         client = TestClient()
         client.save({CONANFILE: tool_conanfile})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         client.run("install --reference=MyLib/0.1@lasote/stable --build missing")
         self.assertIn("Tool/0.1@lasote/stable: Generating the package", client.out)
@@ -486,12 +486,12 @@ Tool/0.1@lasote/stable
     def test_profile_override(self, conanfile):
         client = TestClient()
         client.save({CONANFILE: tool_conanfile2}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         client.save({CONANFILE: conanfile,
                      "profile.txt": profile,
                      "profile2.txt": profile.replace("0.3", "[>0.2]")}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         client.run("install --reference=MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertNotIn("Tool/0.1", client.out)
@@ -521,7 +521,7 @@ class package(ConanFile):
     """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         consumer = """from conans import ConanFile
 
@@ -539,7 +539,7 @@ class package(ConanFile):
         # https://github.com/conan-io/conan/issues/5685
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . common/1.0@test/test")
+        client.run("export . --name=common --version=1.0 --user=test --channel=test")
 
         req = textwrap.dedent("""
             from conans import ConanFile
@@ -547,8 +547,8 @@ class package(ConanFile):
                 requires = "common/1.0@test/test"
             """)
         client.save({"conanfile.py": req})
-        client.run("export . req/1.0@test/test")
-        client.run("export . build_req/1.0@test/test")
+        client.run("export . --name=req --version=1.0 --user=test --channel=test")
+        client.run("export . --name=build_req --version=1.0 --user=test --channel=test")
 
         build_req_req = textwrap.dedent("""
             from conans import ConanFile
@@ -557,7 +557,7 @@ class package(ConanFile):
                 build_requires = "build_req/1.0@test/test"
         """)
         client.save({"conanfile.py": build_req_req})
-        client.run("export . build_req_req/1.0@test/test")
+        client.run("export . --name=build_req_req --version=1.0 --user=test --channel=test")
 
         consumer = textwrap.dedent("""
                     [requires]
@@ -581,12 +581,12 @@ class package(ConanFile):
                     self.cpp_info.libs = ["myzlib"]
             """)
         client.save({"conanfile.py": zlib})
-        client.run("export . zlib/1.0@test/test")
+        client.run("export . --name=zlib --version=1.0 --user=test --channel=test")
 
         client.save({"conanfile.py": GenConanfile().with_require("zlib/1.0@test/test")})
-        client.run("export . freetype/1.0@test/test")
+        client.run("export . --name=freetype --version=1.0 --user=test --channel=test")
         client.save({"conanfile.py": GenConanfile().with_require("freetype/1.0@test/test")})
-        client.run("export . fontconfig/1.0@test/test")
+        client.run("export . --name=fontconfig --version=1.0 --user=test --channel=test")
         harfbuzz = textwrap.dedent("""
             from conans import ConanFile
             class harfbuzz(ConanFile):
@@ -595,7 +595,7 @@ class package(ConanFile):
                      self.output.info("ZLIBS LIBS: %s" %self.deps_cpp_info["zlib"].libs)
             """)
         client.save({"conanfile.py": harfbuzz})
-        client.run("export . harfbuzz/1.0@test/test")
+        client.run("export . --name=harfbuzz --version=1.0 --user=test --channel=test")
 
         client.save({"conanfile.py": GenConanfile()
                     .with_tool_requires("fontconfig/1.0@test/test")

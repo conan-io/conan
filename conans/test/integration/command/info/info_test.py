@@ -33,7 +33,7 @@ class InfoTest(unittest.TestCase):
 
         self.client.save({"conanfile.py": conanfile}, clean_first=True)
         if export:
-            self.client.run("export . lasote/stable")
+            self.client.run("export . --user=lasote --channel=stable")
 
     def test_graph(self):
         self.client = TestClient()
@@ -293,7 +293,7 @@ class InfoTest2(unittest.TestCase):
         self.assertEqual(os.listdir(client.cache.store), [])
         # This used to fail in Windows, because of the different case
         client.save({"conanfile.py": GenConanfile().with_name("Nothing").with_version("0.1")})
-        client.run("export . user/testing")
+        client.run("export . --user=user --channel=testing")
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_failed_info(self):
@@ -338,8 +338,8 @@ class InfoTest2(unittest.TestCase):
         client.run("create . dep/0.1@user/channel")
         conanfile = GenConanfile().with_require("dep/0.1@user/channel")
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg/0.1@user/channel")
-        client.run("export . pkg2/0.1@user/channel")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=channel")
+        client.run("export . --name=pkg2 --version=0.1 --user=user --channel=channel")
         client.save({"conanfile.txt": "[requires]\npkg/0.1@user/channel\npkg2/0.1@user/channel",
                      "myprofile": "[tool_requires]\ntool/0.1@user/channel"}, clean_first=True)
         client.run("info . -pr=myprofile --build=missing")
@@ -366,7 +366,7 @@ class InfoTest2(unittest.TestCase):
         client = TestClient()
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"subfolder/conanfile.py": conanfile})
-        client.run("export ./subfolder lasote/testing")
+        client.run("export ./subfolder --user=lasote --channel=testing")
 
         client.run("info ./subfolder")
         self.assertIn("conanfile.py (pkg/0.1)", client.out)
@@ -388,7 +388,7 @@ class InfoTest2(unittest.TestCase):
 
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"subfolder/conanfile.py": conanfile})
-        client.run("export ./subfolder lasote/testing")
+        client.run("export ./subfolder --user=lasote --channel=testing")
 
         client.run("info ./subfolder")
 
@@ -419,7 +419,7 @@ class InfoTest2(unittest.TestCase):
         """)
 
         client.save({"subfolder/conanfile.py": conanfile})
-        client.run("export ./subfolder lasote/testing")
+        client.run("export ./subfolder --user=lasote --channel=testing")
         client.run("info ./subfolder")
 
         self.assertIn("conanfile.py (pkg/0.2)", client.out)
@@ -455,7 +455,7 @@ class InfoTest2(unittest.TestCase):
 
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
 
         # Topics as tuple
         client.run("info pkg/0.2@lasote/testing --graph file.html")
@@ -466,7 +466,7 @@ class InfoTest2(unittest.TestCase):
         # Topics as a string
         conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         client.run("info pkg/0.2@lasote/testing --graph file.html")
         html_content = client.load("file.html")
         self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
@@ -497,7 +497,7 @@ def test_scm_info():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("export . pkg/0.1@")
+    client.run("export . --name=pkg --version=0.1")
 
     client.run("info .")
     assert "'revision': 'some commit hash'" in client.out
@@ -534,7 +534,7 @@ class TestInfoContext:
                      "pkg/conanfile.py": GenConanfile().with_tool_requires("cmake/1.0")})
 
         client.run("create cmake cmake/1.0@")
-        client.run("export pkg pkg/1.0@")
+        client.run("export pkg --name=pkg --version=1.0")
 
         client.run("info pkg/1.0@ -pr:b=default -pr:h=default --build")
         assert "cmake/1.0\n"\
@@ -561,7 +561,7 @@ class TestInfoPythonRequires:
     def test_python_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . tool/0.1@")
+        client.run("export . --name=tool --version=0.1")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class pkg(ConanFile):

@@ -5,7 +5,7 @@ import unittest
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import save
+
 
 tool_conanfile = """
 import os
@@ -54,7 +54,7 @@ class BuildRequiresTest(unittest.TestCase):
         client.save({CONANFILE: tool_conanfile,
                      name: "echo Hello World!"}, clean_first=True)
         os.chmod(os.path.join(client.current_folder, name), 0o777)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
     def test_profile_requires(self):
         client = TestClient()
@@ -63,7 +63,7 @@ class BuildRequiresTest(unittest.TestCase):
         client.save({CONANFILE: lib_conanfile,
                      "profile.txt": profile,
                      "profile2.txt": profile2}, clean_first=True)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         client.run("install --reference=mylib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertIn("Hello World!", client.out)
@@ -164,7 +164,7 @@ nonexistingpattern*: sometool/1.2@user/channel
     def test_build_requires_options(self):
         client = TestClient()
         client.save({CONANFILE: GenConanfile("mytool", "0.1")})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         conanfile = """
 from conans import ConanFile, tools

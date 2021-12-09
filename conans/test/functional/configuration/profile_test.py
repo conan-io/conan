@@ -82,7 +82,7 @@ class ProfileTest(unittest.TestCase):
     @pytest.mark.xfail(reason="New environment changed")
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
         profile = '''
         [settings
@@ -173,7 +173,7 @@ class ProfileTest(unittest.TestCase):
                        package_env={"hello0": [("OTHER_VAR", "2")]})
 
         self.client.save({"conanfile.py": conanfile_scope_env})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
         self.client.run("install --reference=hello0/0.1@lasote/stable --build missing -pr envs")
         self._assert_env_variable_printed("PREPEND_VAR",
                                           os.pathsep.join(["new_path", "other_path"]))
@@ -213,7 +213,7 @@ class ProfileTest(unittest.TestCase):
                               "compiler.libcxx", "#compiler.libcxx", strict=False)
 
         self.client.save({"conanfile.py": conanfile_scope_env})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
         self.client.run("install . --build missing -pr vs_12_86")
         info = self.client.out
         for setting, value in profile_settings.items():
@@ -352,7 +352,7 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.cache.profiles_path, "scopes_env", settings={},
                        env=[("CXX", "/path/tomy/g++"), ("CC", "/path/tomy/gcc")])
         self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
         self.client.run("install --reference=hello0/0.1@lasote/stable --build missing -pr scopes_env")
 
         self._assert_env_variable_printed("CC", "/path/tomy/gcc")
@@ -453,7 +453,7 @@ class winrequireDefaultNameConan(ConanFile):
 
         files = {"conanfile.py": winreq_conanfile}
         self.client.save(files)
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
         # Now require the first recipe depending on OS=windows
         conanfile = '''from conans.model.conan_file import ConanFile
@@ -471,7 +471,7 @@ class DefaultNameConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile}
         self.client.save(files)
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
         # Create a profile that doesn't activate the require
         create_profile(self.client.cache.profiles_path, "scopes_env",
@@ -567,7 +567,7 @@ class ProfileAggregationTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_install(self):
-        self.client.run("export . lib/1.0@user/channel")
+        self.client.run("export . --name=lib --version=1.0 --user=user --channel=channel")
         # Install ref
         self.client.run("install --reference=lib/1.0@user/channel -pr profile1 -pr profile2 --build missing")
         self.assertIn(dedent("""
@@ -591,7 +591,7 @@ class ProfileAggregationTest(unittest.TestCase):
                        """), self.client.out)
 
     def test_export_pkg(self):
-        self.client.run("export-pkg . lib/1.0@user/channel -pr profile1 -pr profile2")
+        self.client.run("export-pkg . --name=lib --version=1.0 --user=user --channel=channel -pr profile1 -pr profile2")
         # ID for the expected settings applied: x86, Visual Studio 15,...
         self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
 

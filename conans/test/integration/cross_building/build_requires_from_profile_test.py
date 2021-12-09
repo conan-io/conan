@@ -49,9 +49,9 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
                 'br1.py': GenConanfile(),
                 'br2.py': GenConanfile(),
                 'br3.py': GenConanfile()})
-        t.run("export br1.py br1/version@")
-        t.run("export br2.py br2/version@")
-        t.run("export br3.py br3/version@")
+        t.run("export br1.py --name=br1 --version=version")
+        t.run("export br2.py --name=br2 --version=version")
+        t.run("export br3.py --name=br3 --version=version")
         t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build")
 
 

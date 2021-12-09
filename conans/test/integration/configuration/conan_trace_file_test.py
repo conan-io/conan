@@ -86,7 +86,7 @@ class ConanTraceTest(unittest.TestCase):
             client.save({"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
                          "file.txt": "content"})
             client.run("remote login default lasote -p mypass")
-            client.run("export . lasote/stable")
+            client.run("export . --user=lasote --channel=stable")
             client.run("install --reference=%s --build missing" % str(ref))
             client.run("upload %s --all -r default" % str(ref))
 

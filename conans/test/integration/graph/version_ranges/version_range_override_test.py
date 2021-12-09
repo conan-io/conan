@@ -16,10 +16,10 @@ class VersionRangeOverrideTestCase(unittest.TestCase):
         self.t.save({"libb/conanfile.py": GenConanfile(),
                      "libC/conanfile.py":
                          GenConanfile().with_require("libb/[<=2.0]@user/channel")})
-        self.t.run("export libB libb/1.0@user/channel")
-        self.t.run("export libB libb/2.0@user/channel")
-        self.t.run("export libB libb/3.0@user/channel")
-        self.t.run("export libC libC/1.0@user/channel")
+        self.t.run("export libB --name=libb --version=1.0 --user=user --channel=channel")
+        self.t.run("export libB --name=libb --version=2.0 --user=user --channel=channel")
+        self.t.run("export libB --name=libb --version=3.0 --user=user --channel=channel")
+        self.t.run("export libC --name=libC --version=1.0 --user=user --channel=channel")
 
         # Use the version range
         self.t.save({"conanfile.py": GenConanfile().with_require("libC/1.0@user/channel")})

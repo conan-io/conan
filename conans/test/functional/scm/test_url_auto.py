@@ -32,5 +32,5 @@ class RemoveCredentials(unittest.TestCase):
         expected_url = 'https://myrepo.com.git'
         origin_url = 'https://username:password@myrepo.com.git'
         self.client.run_command("git remote set-url origin {}".format(origin_url))
-        self.client.run("export . {}".format(self.ref))
+        self.client.run(f"export . --name={self.ref.name} --version={self.ref.version} --user={self.ref.user} --channel={self.ref.channel}")
         self.assertIn("Repo origin deduced by 'auto': {}".format(expected_url), self.client.out)

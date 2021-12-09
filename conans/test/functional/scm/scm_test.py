@@ -77,14 +77,11 @@ class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
     scm = ["Other stuff"]
-
-    def build(self):
-        self.output.info("scm: {}".format(self.scm))
 '''
         self.client.save({"conanfile.py": conanfile})
         # nothing breaks
-        self.client.run("create . user/channel")
-        self.assertIn("['Other stuff']", self.client.out)
+        self.client.run("create . user/channel", assert_error=True)
+        self.assertIn("'scm' attribute must be a dictionary", self.client.out)
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
@@ -124,7 +121,7 @@ class ConanLib(ConanFile):
             self.client.run_command("git add .")
             self.client.run_command('git commit -m  "commiting"')
         self.client.run_command('git clone "%s" .' % repo)
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
         self.assertIn("WARN: Repo origin looks like a local path", self.client.out)
         self.client.run("remove lib/0.1* -s -f")  # Remove the source folder, it will get from url
         self.client.run("install --reference=lib/0.1@user/channel --build")
@@ -135,7 +132,7 @@ class ConanLib(ConanFile):
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self.client.init_git_repo()
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
         self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced",
                       self.client.out)
 
@@ -235,7 +232,7 @@ class ConanLib(ConanFile):
         self.client.init_git_repo()
         self.client.run_command('git remote add origin "%s"' % path.replace("\\", "/"))
         self.client.run_command('git push origin master')
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
 
         # delete old source, but it doesn't matter because the sources are in the cache
         rmdir(self.client.current_folder)
@@ -382,7 +379,7 @@ class ConanLib(ConanFile):
         self.client.init_git_repo()
         cmd = 'git remote add origin "%s"' % curdir
         self.client.run_command(cmd)
-        self.client.run("export . lasote/channel")
+        self.client.run("export . --user=lasote --channel=channel")
         self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
@@ -591,7 +588,7 @@ class ConanLib(ConanFile):
             """)
         commit = self.client.init_git_repo({"conanfile.py": conanfile})
 
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
         scm_info = self.client.scm_info_cache("issue/3831@user/channel")
         self.assertEqual(commit, scm_info.revision)
 
@@ -602,23 +599,6 @@ class SVNSCMTest(SVNLocalRepoTestCase):
     def setUp(self):
         self.ref = RecipeReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
-
-    def test_scm_other_type_ignored(self):
-        conanfile = '''
-from conans import ConanFile, tools
-
-class ConanLib(ConanFile):
-    name = "lib"
-    version = "0.1"
-    scm = ["Other stuff"]
-
-    def build(self):
-        self.output.info("scm: {}".format(self.scm))
-'''
-        self.client.save({"conanfile.py": conanfile})
-        # nothing breaks
-        self.client.run("create . user/channel")
-        self.assertIn("['Other stuff']", self.client.out)
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
@@ -813,7 +793,7 @@ class ConanLib(ConanFile):
         project_url = project_url.replace(" ", "%20")
         self.client.run_command('svn co "{url}" "{path}"'.format(url=project_url,
                                                                  path=self.client.current_folder))
-        self.client.run("export . lasote/channel")
+        self.client.run("export . --user=lasote --channel=channel")
         self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
@@ -969,7 +949,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
             client.run_command('svn propset svn:needs-lock yes {}'.format(item))
         client.run_command('svn commit -m "lock some files"')
 
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
 
 
 @pytest.mark.tool_git
@@ -1007,7 +987,7 @@ class SCMBlockUploadTest(unittest.TestCase):
                 }
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg/0.1@user/channel", assert_error=True)
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: SCM not supported: None", client.out)
 
     def test_create_blocking_url_none(self):

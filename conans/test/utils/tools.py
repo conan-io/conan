@@ -31,7 +31,6 @@ from conans.cli.cli import Cli, CLI_V1_COMMANDS
 from conans.client.cache.cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
-from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
 from conans.util.env import environment_update
 from conans.client.tools.files import replace_in_file
@@ -214,12 +213,8 @@ class TestRequester:
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)
             if "data" in kwargs:
-                if isinstance(kwargs["data"], IterableToFileAdapter):
-                    data_accum = b""
-                    for tmp in kwargs["data"]:
-                        data_accum += tmp
-                    kwargs["data"] = data_accum
-                kwargs["params"] = kwargs["data"]
+                total_data = kwargs["data"].read()
+                kwargs["params"] = total_data
                 del kwargs["data"]  # Parameter in test app is called "params"
             if kwargs.get("json"):
                 # json is a high level parameter of requests, not a generic one
@@ -598,7 +593,10 @@ class TestClient(object):
         """
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(repr(ref), args or ""))
+        if ref:
+            self.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
+        else:
+            self.run("export .")
         tmp = copy.copy(ref)
         tmp.revision = None
         rrev = self.cache.get_latest_recipe_reference(tmp).revision

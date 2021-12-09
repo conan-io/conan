@@ -743,7 +743,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
 
             last_change = os.path.getmtime(self.client.cache.config_install_file)
             # without a config in configs file, scheduler only emits a warning
-            self.client.run("help")
+            self.client.run("remote list")
             self.assertIn("WARN: Skipping scheduled config install, "
                           "no config listed in config_install file", self.client.out)
             self.assertNotIn("Repo cloned!", self.client.out)

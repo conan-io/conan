@@ -46,7 +46,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "file.h": "myfile.h",
                      "otherfile.cpp": "C++code"})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         ref = RecipeReference.loads("pkg/0.1@lasote/stable")
         client.run("upload pkg/0.1@lasote/stable -r default")
@@ -61,7 +61,7 @@ class Pkg(ConanFile):
     def test_download_reference_without_packages(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
-        client.run("export . user/stable")
+        client.run("export . --user=user --channel=stable")
         client.run("upload pkg/0.1@user/stable -r default")
         client.run("remove pkg/0.1@user/stable -f")
 

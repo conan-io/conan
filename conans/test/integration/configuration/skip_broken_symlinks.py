@@ -85,5 +85,5 @@ class HelloConan(ConanFile):
         self.assertFalse(os.path.exists(broken_symlink))
         self.assertFalse(os.path.exists(os.path.realpath(broken_symlink)))
 
-        t.run("export . user/channel", assert_error=True)
+        t.run("export . --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: The file is a broken symlink", t.out)

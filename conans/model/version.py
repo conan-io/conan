@@ -98,6 +98,18 @@ class Version:
         result = Version(v)
         return result
 
+    def upper_bound(self, index):
+        items = list(self._items[:index])
+        try:
+            items.append(self._items[index] + 1)
+        except TypeError:
+            raise ConanException(f"Cannot bump '{self._value} version index {index}, not an int")
+        items.extend([0] * (len(items) - index - 1))
+        v = ".".join(str(i) for i in items)
+        v += "-"  # Exclude prereleases
+        result = Version(v)
+        return result
+
     @property
     def pre(self):
         return self._pre

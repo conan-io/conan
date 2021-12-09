@@ -80,7 +80,7 @@ class DevelopTest(unittest.TestCase):
         self.assertNotIn("package!", client.out)
         self.assertNotIn("package_info!", client.out)
 
-        client.run("export-pkg . pkg/0.1@user/channel")
+        client.run("export-pkg . --name=pkg --version=0.1 --user=user --channel=channel")
         self.assertIn("Develop True configure!", client.out)
         self.assertIn("Develop True requirements!", client.out)
         self.assertNotIn("source!", client.out)

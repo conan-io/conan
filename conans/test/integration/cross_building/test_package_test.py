@@ -55,9 +55,9 @@ class TestPackageTestCase(unittest.TestCase):
                 'test_package/conanfile.py': self.conanfile_test,
                 'profile_host': '[settings]\nos=Host',
                 'profile_build': '[settings]\nos=Build', })
-        t.run("export br.py br1/version@")
-        t.run("export br.py br2/version@")
-        t.run("export conanfile.py name/version@")
+        t.run("export br.py --name=br1 --version=version")
+        t.run("export br.py --name=br2 --version=version")
+        t.run("export conanfile.py --name=name --version=version")
 
         # Execute the actual command we are testing
         t.run(command + " --build=missing --profile:host=profile_host --profile:build=profile_build")

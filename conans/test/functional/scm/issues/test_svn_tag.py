@@ -1,5 +1,3 @@
-# coding=utf-8
-
 import os
 import textwrap
 
@@ -7,7 +5,7 @@ import pytest
 
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.scm import SVNLocalRepoTestCase
-from conans.test.utils.tools import TestClient, load
+from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool_svn
@@ -49,7 +47,7 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         t.run_command('svn co "{url}" "{path}"'.format(url=url, path=t.current_folder))
 
         # Export the recipe (be sure sources are retrieved from the repository)
-        t.run("export . {ref}".format(ref=ref))
+        t.run("export . --name=lib --version=version --user=issue --channel=testing")
 
         scm_info = t.scm_info_cache(ref)
         self.assertEqual(scm_info.revision, '3')

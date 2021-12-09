@@ -47,7 +47,7 @@ def cmd_build(app, conanfile_path, conan_file, base_path, source_folder, build_f
         if test:
             with no_op():  # TODO: Remove this in a later refactor
                 conan_file.output.highlight("Running test()")
-                with conanfile_exception_formatter(str(conan_file), "test"):
+                with conanfile_exception_formatter(conan_file, "test"):
                     with chdir(conan_file.build_folder):
                         conan_file.test()
 
