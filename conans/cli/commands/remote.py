@@ -271,7 +271,7 @@ def remote_logout(conan_api, parser, subparser, *args):
 
 
 @conan_command()
-def remote(conan_api, parser, *args, **kwargs):
+def remote(conan_api, parser, *args):
     """
     Manages the remote list and the users authenticated on them.
     """

@@ -14,7 +14,6 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_recipes
-from conans.util import progress_bar
 from conans.util.files import (clean_dirty, is_dirty,
                                gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
@@ -369,7 +368,7 @@ class CmdUpload(object):
     def __init__(self, app):
         self._app = app
         self._cache = app.cache
-        self._progress_output = progress_bar.ProgressOutput(ConanOutput())
+        self._output = ConanOutput()
         self._remote_manager = app.remote_manager
         self._loader = app.loader
         self._hook_manager = app.hook_manager
@@ -385,7 +384,7 @@ class CmdUpload(object):
         collecter = _UploadCollecter(self._cache)
         upload_data = collecter.collect(reference_or_pattern, confirm, all_packages)
 
-        checker = _UploadChecker(self._remote_manager, self._progress_output)
+        checker = _UploadChecker(self._remote_manager, self._output)
         checker.check(upload_data, remote, policy)
 
         preparator = _PackagePreparator(self._cache, self._remote_manager, self._hook_manager,
@@ -398,7 +397,7 @@ class CmdUpload(object):
 
         self._remote_manager.check_credentials(remote)
         executor = _UploadExecutor(self._remote_manager, self._cache, self._hook_manager,
-                                   self._progress_output)
+                                   self._output)
         executor.upload(upload_data, retry, retry_wait, remote, policy)
         # TODO: Implement concurrent upload
 
@@ -485,10 +484,13 @@ class _UploadExecutor:
                                    reference=pref.ref, package_id=pref.package_id, remote=remote)
 
 
-def compress_files(files, symlinks, name, dest_dir, compresslevel=None):
+def compress_files(files, symlinks, name, dest_dir, compresslevel=None, ref=None):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
+    if name in (PACKAGE_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME) and len(files) > 100:
+        ref_name = f"{ref}:" or ""
+        ConanOutput().info(f"Compressing {ref_name}{name}")
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
                                         compresslevel=compresslevel)
@@ -501,20 +503,18 @@ def compress_files(files, symlinks, name, dest_dir, compresslevel=None):
             tgz.addfile(tarinfo=info)
 
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
-        with progress_bar.iterate_list_with_progress(sorted(files.items()),
-                                                     "Compressing %s" % name) as pg_file_list:
-            for filename, abs_path in pg_file_list:
-                info = tarfile.TarInfo(name=filename)
-                info.size = os.stat(abs_path).st_size
-                info.mode = os.stat(abs_path).st_mode & mask
-                if os.path.islink(abs_path):
-                    info.type = tarfile.SYMTYPE
-                    info.size = 0  # A symlink shouldn't have size
-                    info.linkname = os.readlink(abs_path)  # @UndefinedVariable
-                    tgz.addfile(tarinfo=info)
-                else:
-                    with open(abs_path, 'rb') as file_handler:
-                        tgz.addfile(tarinfo=info, fileobj=file_handler)
+        for filename, abs_path in sorted(files.items()):
+            info = tarfile.TarInfo(name=filename)
+            info.size = os.stat(abs_path).st_size
+            info.mode = os.stat(abs_path).st_mode & mask
+            if os.path.islink(abs_path):
+                info.type = tarfile.SYMTYPE
+                info.size = 0  # A symlink shouldn't have size
+                info.linkname = os.readlink(abs_path)  # @UndefinedVariable
+                tgz.addfile(tarinfo=info)
+            else:
+                with open(abs_path, 'rb') as file_handler:
+                    tgz.addfile(tarinfo=info, fileobj=file_handler)
         tgz.close()
 
     duration = time.time() - t1

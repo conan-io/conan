@@ -13,7 +13,7 @@ search_formatters = {
 
 # FIXME: "conan search" == "conan list recipes -r="*" -c" --> implement @conan_alias_command??
 @conan_command(group=COMMAND_GROUPS['consumer'], formatters=search_formatters)
-def search(conan_api: ConanAPIV2, parser, *args, **kwargs):
+def search(conan_api: ConanAPIV2, parser, *args):
     """
     Searches for package recipes in a remote or remotes
     """

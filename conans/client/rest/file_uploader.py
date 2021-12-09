@@ -6,7 +6,6 @@ from conans.cli.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException
-from conans.util import progress_bar
 from conans.util.files import sha1sum
 
 
@@ -84,21 +83,10 @@ class FileUploader(object):
         post_description = "Uploaded {}".format(
             file_name) if not display_name else "Uploaded {} -> {}".format(file_name, display_name)
 
-        def load_in_chunks(_file):
-            """Lazy function (generator) to read a file piece by piece.
-            Default chunk size: 1k."""
-            while True:
-                chunk = _file.read(1024)
-                if not chunk:
-                    break
-                yield chunk
-
+        self._output.info(description)
         with open(abs_path, mode='rb') as file_handler:
-            progress = progress_bar.Progress(file_size, description, post_description)
-            data = progress.update(load_in_chunks(file_handler))
-            iterable_to_file = IterableToFileAdapter(data, file_size)
             try:
-                response = self._requester.put(url, data=iterable_to_file, verify=self._verify_ssl,
+                response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,
                                                headers=headers, auth=auth)
                 self._handle_400_response(response, auth)
                 response.raise_for_status()  # Raise HTTPError for bad http response status
@@ -107,18 +95,3 @@ class FileUploader(object):
                 raise
             except Exception as exc:
                 raise ConanException(exc)
-
-
-class IterableToFileAdapter(object):
-    def __init__(self, iterable, total_size):
-        self.iterator = iter(iterable)
-        self.total_size = total_size
-
-    def read(self, size=-1):  # @UnusedVariable
-        return next(self.iterator, b'')
-
-    def __len__(self):
-        return self.total_size
-
-    def __iter__(self):
-        return self.iterator.__iter__()

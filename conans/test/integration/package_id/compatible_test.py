@@ -539,7 +539,7 @@ def test_msvc_visual_incompatible():
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.1X
+        compiler.version=191
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release

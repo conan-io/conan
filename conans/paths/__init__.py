@@ -29,10 +29,8 @@ def get_conan_user_home():
 CONANFILE = 'conanfile.py'
 CONANFILE_TXT = "conanfile.txt"
 CONAN_MANIFEST = "conanmanifest.txt"
-BUILD_INFO_PREMAKE = 'conanbuildinfo.premake.lua'
 BUILD_INFO_DEPLOY = 'deploy_manifest.txt'
 CONANINFO = "conaninfo.txt"
-CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
 ARTIFACTS_PROPERTIES_FILE = "artifacts.properties"
 ARTIFACTS_PROPERTIES_PUT_PREFIX = "artifact_property_"
@@ -41,15 +39,5 @@ EXPORT_TGZ_NAME = "conan_export.tgz"
 EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
 RUN_LOG_NAME = "conan_run.log"
 DEFAULT_PROFILE_NAME = "default"
-PACKAGE_METADATA = "metadata.json"
-CACERT_FILE = "cacert.pem"  # Server authorities file
 DATA_YML = "conandata.yml"
 
-# Directories
-EXPORT_FOLDER = "export"
-EXPORT_SRC_FOLDER = "export_source"
-SRC_FOLDER = "source"
-BUILD_FOLDER = "build"
-PACKAGES_FOLDER = "package"
-SYSTEM_REQS_FOLDER = "system_reqs"
-SCM_SRC_FOLDER = "scm_source"
