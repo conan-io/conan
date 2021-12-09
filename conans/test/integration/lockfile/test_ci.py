@@ -82,8 +82,8 @@ def test_single_config_centralized(client_setup):
     c.save({"pkga/myfile.txt": "ByeA World!!",
             "pkgb/myfile.txt": "ByeB World!!",
             "pkgc/myfile.txt": "ByeC World!!"})
-    c.run("export pkga pkgawin/0.2@")  # this will never be used
-    c.run("export pkgc pkgc/0.2@")  # this will never be used
+    c.run("export pkga --name=pkgawin --version=0.2")  # this will never be used
+    c.run("export pkgc --name=pkgc --version=0.2")  # this will never be used
 
     # Test that pkgb/0.2 works
     c.run("create pkgb pkgb/0.2@ -s os=Windows "
