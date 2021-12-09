@@ -186,13 +186,10 @@ class RestV2Methods(RestCommonMethods):
     def _download_and_save_files(self, urls, dest_folder, files, use_cache):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        output = ConanOutput()
         retry = self._config.get("core.download:retry", int)
         retry_wait = self._config.get("core.download:retry_wait", int)
         download_cache = False if not use_cache else self._config["core.download:download_cache"]
         for filename in sorted(files, reverse=True):
-            if output and not output.is_terminal:
-                output.info("Downloading %s" % filename)
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             run_downloader(self.requester,  self.verify_ssl, retry=retry,
