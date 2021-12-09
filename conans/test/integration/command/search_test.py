@@ -1,4 +1,3 @@
-# coding=utf-8
 import json
 import os
 import shutil
@@ -13,7 +12,7 @@ from mock import patch
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
+from conans.paths import CONANINFO
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601

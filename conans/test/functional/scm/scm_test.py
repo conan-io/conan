@@ -77,14 +77,11 @@ class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
     scm = ["Other stuff"]
-
-    def build(self):
-        self.output.info("scm: {}".format(self.scm))
 '''
         self.client.save({"conanfile.py": conanfile})
         # nothing breaks
-        self.client.run("create . user/channel")
-        self.assertIn("['Other stuff']", self.client.out)
+        self.client.run("create . user/channel", assert_error=True)
+        self.assertIn("'scm' attribute must be a dictionary", self.client.out)
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
@@ -602,23 +599,6 @@ class SVNSCMTest(SVNLocalRepoTestCase):
     def setUp(self):
         self.ref = RecipeReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
-
-    def test_scm_other_type_ignored(self):
-        conanfile = '''
-from conans import ConanFile, tools
-
-class ConanLib(ConanFile):
-    name = "lib"
-    version = "0.1"
-    scm = ["Other stuff"]
-
-    def build(self):
-        self.output.info("scm: {}".format(self.scm))
-'''
-        self.client.save({"conanfile.py": conanfile})
-        # nothing breaks
-        self.client.run("create . user/channel")
-        self.assertIn("['Other stuff']", self.client.out)
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''

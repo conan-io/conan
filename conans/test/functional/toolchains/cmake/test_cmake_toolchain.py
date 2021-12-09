@@ -12,14 +12,15 @@ from conans.util.files import save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-@pytest.mark.parametrize("compiler, version, runtime",
-                         [("msvc", "19.2X", "dynamic"),
-                          ("msvc", "19.26", "static"),
-                          ("msvc", "19.28", "static")])
-def test_cmake_toolchain_win_toolset(compiler, version, runtime):
+@pytest.mark.parametrize("compiler, version, update, runtime",
+                         [("msvc", "192", None, "dynamic"),
+                          ("msvc", "192", "6", "static"),
+                          ("msvc", "192", "8", "static")])
+def test_cmake_toolchain_win_toolset(compiler, version, update, runtime):
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": compiler,
                 "compiler.version": version,
+                "compiler.update": update,
                 "compiler.cppstd": "17",
                 "compiler.runtime": runtime,
                 "build_type": "Release",
@@ -34,11 +35,10 @@ def test_cmake_toolchain_win_toolset(compiler, version, runtime):
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
     toolchain = client.load("conan_toolchain.cmake")
-    if "X" not in version:  # Fullversion
-        minor = version.split(".")[1]
-        value = "version=14.{}".format(minor)
+    if update is not None:  # Fullversion
+        value = "version=14.{}{}".format(version[-1], update)
     else:
-        value = "v142"
+        value = "v14{}".format(version[-1])
     assert 'set(CMAKE_GENERATOR_TOOLSET "{}" CACHE STRING "" FORCE)'.format(value) in toolchain
 
 
@@ -101,3 +101,17 @@ def test_cmake_toolchain_user_toolchain_from_dep():
                  "CMakeLists.txt": gen_cmakelists()}, clean_first=True)
     client.run("create . pkg/0.1@")
     assert "mytoolchain.cmake !!!running!!!" in client.out
+
+
+def test_cmake_toolchain_without_build_type():
+    # If "build_type" is not defined, toolchain will still be generated, it will not crash
+    # Main effect is CMAKE_MSVC_RUNTIME_LIBRARY not being defined
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "compiler", "arch").\
+        with_generator("CMakeToolchain")
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "CMAKE_MSVC_RUNTIME_LIBRARY" not in toolchain
+    assert "CMAKE_BUILD_TYPE" not in toolchain

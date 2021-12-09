@@ -228,7 +228,7 @@ class GraphBinariesAnalyzer(object):
         # package_id, we can run it
         conanfile = node.conanfile
         if hasattr(conanfile, "layout"):
-            with conanfile_exception_formatter(str(conanfile), "layout"):
+            with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
     def evaluate_graph(self, deps_graph, build_mode):

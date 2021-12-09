@@ -177,13 +177,14 @@ def test_osx_deployment_target(conanfile_apple):
 def conanfile_msvc():
     c = ConanFile(None)
     c.settings = Settings({"os": ["Windows"],
-                           "compiler": {"msvc": {"version": ["19.3X"], "cppstd": ["20"]}},
+                           "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"],
+                                                 "update": [None]}},
                            "build_type": ["Release"],
                            "arch": ["x86"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "msvc"
-    c.settings.compiler.version = "19.3X"
+    c.settings.compiler.version = "193"
     c.settings.compiler.cppstd = "20"
     c.settings.os = "Windows"
     c.conf = Conf()

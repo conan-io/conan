@@ -1,12 +1,9 @@
 import os
-import sys
-import traceback
-import uuid
 from collections import defaultdict
 from threading import Lock
 
 from conans.cli.output import ScopedOutput, ConanOutput
-from conans.client.tools.files import chdir
+from conans.client.loader import load_python_file
 from conans.errors import ConanException, NotFoundException
 
 valid_hook_methods = ["pre_export", "post_export",
@@ -34,6 +31,7 @@ class HookManager(object):
     def execute(self, method_name, **kwargs):
         # It is necessary to protect the lazy loading of hooks with a mutex, because it can be
         # concurrent (e.g. upload --parallel)
+        # TODO: This reads a bit insane, simplify it?
         self._mutex.acquire()
         try:
             if not self.hooks:
@@ -59,7 +57,7 @@ class HookManager(object):
             hook_name = "%s.py" % hook_name
         hook_path = os.path.normpath(os.path.join(self._hooks_folder, hook_name))
         try:
-            hook = HookManager._load_module_from_file(hook_path)
+            hook, _ = load_python_file(hook_path)
             for method in valid_hook_methods:
                 hook_method = getattr(hook, method, None)
                 if hook_method:
@@ -70,48 +68,3 @@ class HookManager(object):
                                                                          self._hooks_folder))
         except Exception as e:
             raise ConanException("Error loading hook '%s': %s" % (hook_path, str(e)))
-
-    @staticmethod
-    def _load_module_from_file(hook_path):
-        """ From a given path, obtain the in memory python import module
-        """
-        if not os.path.exists(hook_path):
-            raise NotFoundException
-        filename = os.path.splitext(os.path.basename(hook_path))[0]
-        current_dir = os.path.dirname(hook_path)
-
-        old_dont_write_bytecode = sys.dont_write_bytecode
-        try:
-            sys.path.append(current_dir)
-            old_modules = list(sys.modules.keys())
-            with chdir(current_dir):
-                sys.dont_write_bytecode = True
-                loaded = __import__(filename)
-            # Put all imported files under a new package name
-            module_id = uuid.uuid1()
-            added_modules = set(sys.modules).difference(old_modules)
-            for added in added_modules:
-                module = sys.modules[added]
-                if module:
-                    try:
-                        try:
-                            # Most modules will have __file__ != None
-                            folder = os.path.dirname(module.__file__)
-                        except (AttributeError, TypeError):
-                            # But __file__ might not exist or equal None
-                            # Like some builtins and Namespace packages py3
-                            folder = module.__path__._path[0]
-                    except AttributeError:  # In case the module.__path__ doesn't exist
-                        pass
-                    else:
-                        if folder.startswith(current_dir):
-                            module = sys.modules.pop(added)
-                            sys.modules["%s.%s" % (module_id, added)] = module
-        except Exception:
-            trace = traceback.format_exc().split('\n')
-            raise ConanException("Unable to load Hook in %s\n%s" % (hook_path,
-                                                                    '\n'.join(trace[3:])))
-        finally:
-            sys.dont_write_bytecode = old_dont_write_bytecode
-            sys.path.pop()
-        return loaded

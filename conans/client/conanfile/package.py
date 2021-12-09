@@ -34,7 +34,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
     folders = [conanfile.source_folder, conanfile.build_folder] \
         if conanfile.source_folder != conanfile.build_folder else [conanfile.build_folder]
     conanfile.copy = FileCopier(folders, conanfile.package_folder)
-    with conanfile_exception_formatter(str(conanfile), "package"):
+    with conanfile_exception_formatter(conanfile, "package"):
         with chdir(conanfile.build_folder):
             with conan_v2_property(conanfile, 'info',
                                    "'self.info' access in package() method is deprecated"):

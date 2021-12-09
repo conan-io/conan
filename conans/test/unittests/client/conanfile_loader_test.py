@@ -2,19 +2,15 @@ import os
 import sys
 import textwrap
 import unittest
-from collections import OrderedDict
 
 import pytest
 from mock import Mock, call
 from parameterized import parameterized
 
-from conans.client.loader import ConanFileLoader, ConanFileTextLoader, _parse_conanfile
+from conans.client.loader import ConanFileLoader, ConanFileTextLoader, load_python_file
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.options import Options
-from conans.model.profile import Profile
-from conans.model.requires import Requirements
-from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import create_profile
 from conans.util.files import save
@@ -234,7 +230,7 @@ class ImportModuleLoaderTest(unittest.TestCase):
                 save("__init__.py", "")
                 save("{}/__init__.py".format(subdir_name), "")
 
-        loaded, module_id = _parse_conanfile(os.path.join(tmp, "conanfile.py"))
+        loaded, module_id = load_python_file(os.path.join(tmp, "conanfile.py"))
         return loaded, module_id, expected_return
 
     @parameterized.expand([(True, False), (False, True), (False, False)])
@@ -288,8 +284,8 @@ def append(data):
 
         try:
             sys.path.append(temp)
-            loaded1, _ = _parse_conanfile(os.path.join(temp1, "conanfile.py"))
-            loaded2, _ = _parse_conanfile(os.path.join(temp2, "conanfile.py"))
+            loaded1, _ = load_python_file(os.path.join(temp1, "conanfile.py"))
+            loaded2, _ = load_python_file(os.path.join(temp2, "conanfile.py"))
             self.assertIs(loaded1.myconanlogger, loaded2.myconanlogger)
             self.assertIs(loaded1.myconanlogger.value, loaded2.myconanlogger.value)
         finally:

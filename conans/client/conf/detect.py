@@ -163,9 +163,8 @@ def _get_profile_compiler_version(compiler, version):
     elif compiler == "intel" and (major < 19 or (major == 19 and minor == 0)):
         return major
     elif compiler == "msvc":
-        # by default, drop the last digit of the minor (19.30 -> 19.3)
-        if len(str(minor)) == 2:
-            version = str(version)[:-1]
+        return major
+
     return version
 
 
@@ -219,7 +218,7 @@ def _detect_compiler_version(result):
     if compiler == "Visual Studio":
         if version == "17":
             compiler = "msvc"
-            version = Version("19.3")
+            version = Version("193")
 
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version)))

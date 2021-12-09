@@ -28,7 +28,7 @@ class RequiredVersionTest(unittest.TestCase):
         client = TestClient()
         client.save({"global.conf": f"core:required_conan_version={required_version}"},
                     path=client.cache.cache_folder)
-        client.run("help")
+        client.run("--help")
 
     @mock.patch("conans.client.conf.required_version.client_version", "2.1.0")
     def test_lesser_version(self):
@@ -36,7 +36,7 @@ class RequiredVersionTest(unittest.TestCase):
         client = TestClient()
         client.save({"global.conf": f"core:required_conan_version={required_version}"},
                     path=client.cache.cache_folder)
-        client.run("help")
+        client.run("--help")
 
     @mock.patch("conans.client.conf.required_version.client_version", "1.0.0")
     def test_greater_version(self):
@@ -44,7 +44,7 @@ class RequiredVersionTest(unittest.TestCase):
         client = TestClient()
         client.save({"global.conf": f"core:required_conan_version={required_version}"},
                     path=client.cache.cache_folder)
-        client.run("help")
+        client.run("--help")
 
     def test_bad_format(self):
         required_version = "1.0.0.0-foobar"

@@ -13,6 +13,7 @@ def compute_package_id(node, new_config):
     Compute the binary package ID of this node
     """
     conanfile = node.conanfile
+    # Todo: revise this default too. Should have been defined by requirement traits?
     default_package_id_mode = new_config["core.package_id:default_mode"] or "semver_mode"
     default_python_requires_id_mode = new_config["core.package_id:python_default_mode"] or "minor_mode"
 
@@ -66,14 +67,14 @@ def compute_package_id(node, new_config):
             conanfile.compatible_packages.append(msvc_compatible)
 
     # Once we are done, call package_id() to narrow and change possible values
-    with conanfile_exception_formatter(str(conanfile), "package_id"):
+    with conanfile_exception_formatter(conanfile, "package_id"):
         with conan_v2_property(conanfile, 'cpp_info',
                                "'self.cpp_info' access in package_id() method is deprecated"):
             conanfile.package_id()
 
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate") and callable(conanfile.validate):
-        with conanfile_exception_formatter(str(conanfile), "validate"):
+        with conanfile_exception_formatter(conanfile, "validate"):
             try:
                 conanfile.validate()
             except ConanInvalidConfiguration as e:

@@ -321,7 +321,7 @@ def _run_method(conanfile, method, origin_folder, destination_folder):
             conanfile.default_options = None
             conanfile.options = None
             with chdir(origin_folder):
-                with conanfile_exception_formatter(str(conanfile), method):
+                with conanfile_exception_formatter(conanfile, method):
                     export_method()
         finally:
             conanfile.default_options = default_options

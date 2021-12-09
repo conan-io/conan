@@ -45,7 +45,7 @@ def _get_conanfile_path(path, cwd, py):
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
-def install(conan_api, parser, *args, **kwargs):
+def install(conan_api, parser, *args):
     """
     Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
 

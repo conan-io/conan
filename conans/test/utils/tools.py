@@ -31,7 +31,6 @@ from conans.cli.cli import Cli, CLI_V1_COMMANDS
 from conans.client.cache.cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
-from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
 from conans.util.env import environment_update
 from conans.client.tools.files import replace_in_file
@@ -214,12 +213,8 @@ class TestRequester:
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)
             if "data" in kwargs:
-                if isinstance(kwargs["data"], IterableToFileAdapter):
-                    data_accum = b""
-                    for tmp in kwargs["data"]:
-                        data_accum += tmp
-                    kwargs["data"] = data_accum
-                kwargs["params"] = kwargs["data"]
+                total_data = kwargs["data"].read()
+                kwargs["params"] = total_data
                 del kwargs["data"]  # Parameter in test app is called "params"
             if kwargs.get("json"):
                 # json is a high level parameter of requests, not a generic one
