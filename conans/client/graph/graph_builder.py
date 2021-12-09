@@ -54,6 +54,7 @@ class DepsGraphBuilder(object):
             check_graph_provides(dep_graph)
         except GraphError as e:
             dep_graph.error = e
+        dep_graph.resolved_ranges = self._resolver.resolved_ranges
         return dep_graph
 
     def _expand_require(self, require, node, graph, profile_host, profile_build, graph_lock):
