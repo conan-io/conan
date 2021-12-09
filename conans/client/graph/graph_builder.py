@@ -256,7 +256,7 @@ class DepsGraphBuilder(object):
             down_options = Options(options_values=require.options)
             down_options.scope(new_ref.name)
             # TODO: discuss, together with build_require override, if it is "build" or "visible"
-            if not require.build:  # Build-requirements do NOT propagate options from downstream
+            if require.visible:  # Only visible requirements propagate options from downstream
                 down_options.update_options(node.conanfile.up_options)
         else:
             down_options = Options() if require.build else node.conanfile.up_options

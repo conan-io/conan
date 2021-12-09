@@ -285,7 +285,7 @@ class GenConanfile(object):
     def _build_requirements_render(self):
         lines = []
         for ref, kwargs in self._build_requirements:
-            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, bool) else v)
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
                              for k, v in kwargs.items())
             lines.append('        self.build_requires("{}", {})'.format(ref, args))
         return "def build_requirements(self):\n{}\n".format("\n".join(lines))
