@@ -27,6 +27,10 @@ def test_build_requires_options_different():
     client.run("create openssl_3_0_0.py")
     client.run("create conanfile_cmake.py")
     client.run("install conanfile.py")
+    # This test used to crash, not crashing means ok
+    assert "openssl/1.1.1" in client.out
+    assert "openssl/3.0.0: Already installed!" in client.out
+    assert "cmake/0.1: Already installed!" in client.out
 
 
 def test_different_options_values():
