@@ -56,7 +56,7 @@ class TestPackageTest(unittest.TestCase):
         client = TestClient()
         other_conanfile = GenConanfile().with_name("other").with_version("0.2")
         client.save({CONANFILE: other_conanfile})
-        client.run("export . user2/channel2")
+        client.run("export . --user=user2 --channel=channel2")
         client.run("install --reference=other/0.2@user2/channel2 --build")
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
@@ -227,7 +227,7 @@ class HelloTestConan(ConanFile):
 '''
 
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         client.run("test test_package hello/0.1@lasote/testing --build missing")
 
     def test_fail_test_package(self):

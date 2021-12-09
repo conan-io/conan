@@ -29,7 +29,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("My cool package_info!")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
 
     def test_reuse(self):
         client = TestClient(default_server_user=True)
@@ -65,7 +65,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("My cool build!")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . my.base/1.1@user/testing")
+        client.run("export . --name=my.base --version=1.1 --user=user --channel=testing")
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class PkgTest(ConanFile):
@@ -125,7 +125,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("My cool build!")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . sourcebuild/1.0@user/channel")
+        client.run("export . --name=sourcebuild --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -136,7 +136,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("My cool package_info!")
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . packageinfo/1.0@user/channel")
+        client.run("export . --name=packageinfo --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -155,7 +155,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_transitive_access():
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . base/1.0@user/channel")
+        client.run("export . --name=base --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -163,7 +163,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "base/1.0@user/channel"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . helper/1.0@user/channel")
+        client.run("export . --name=helper --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -197,7 +197,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg1/1.0@user/channel")
+        client.run("export . --name=pkg1 --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -208,7 +208,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg2/1.0@user/channel")
+        client.run("export . --name=pkg2 --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -259,7 +259,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "mydata.py": mydata})
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class PkgTest(ConanFile):
@@ -297,7 +297,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "header.h": "some content"})
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
 
         reuse = textwrap.dedent("""
             from conans import ConanFile
@@ -341,7 +341,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                    self.output.info("My system_requirements %s being called!" % self.name)
            """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class PkgTest(ConanFile):
@@ -362,7 +362,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 settings = "os", # tuple!
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
 
         reuse = textwrap.dedent("""
             from conans import ConanFile
@@ -403,7 +403,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": base})
-        client.run("export . base/1.0@")
+        client.run("export . --name=base --version=1.0")
         derived = textwrap.dedent("""
             from conans import ConanFile
             class DerivedConan(ConanFile):
@@ -439,9 +439,9 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "myhelper.py": helper})
-        client.run("export . base1/1.0@user/channel")
+        client.run("export . --name=base1 --version=1.0 --user=user --channel=channel")
         client.save({"myhelper.py": helper.replace("MyHelperOutput!", "MyOtherHelperOutput!")})
-        client.run("export . base2/1.0@user/channel")
+        client.run("export . --name=base2 --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -474,7 +474,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 
         client2 = TestClient(servers=client.servers, inputs=["user", "password"])
@@ -494,7 +494,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile.replace("42", "143")})
         time.sleep(1)  # guarantee time offset
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 
         client2.run("install . --update")
@@ -511,7 +511,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . base/1.1@user/testing")
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 
         client2 = TestClient(servers=client.servers, inputs=["user", "password"])
@@ -531,7 +531,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile.replace("42", "143")})
         # Make sure to bump the version!
-        client.run("export . base/1.2@user/testing")
+        client.run("export . --name=base --version=1.2 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 
         client2.run("install . --update")
@@ -545,8 +545,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
         """)
         t.save({"conanfile.py": conanfile})
-        t.run("export . pyreq/1.0@user/channel")
-        t.run("export . pyreq/2.0@user/channel")
+        t.run("export . --name=pyreq --version=1.0 --user=user --channel=channel")
+        t.run("export . --name=pyreq --version=2.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -561,7 +561,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_local_build(self):
         client = TestClient()
         client.save({"conanfile.py": "var=42\n"+str(GenConanfile())})
-        client.run("export . tool/0.1@user/channel")
+        client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class MyConanfileBase(ConanFile):
@@ -579,7 +579,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         self.assertIn("conanfile.py: Pkg1 build: 42", client.out)
-        client.run("export-pkg . pkg1/0.1@user/testing")
+        client.run("export-pkg . --name=pkg1 --version=0.1 --user=user --channel=testing")
 
     def test_reuse_name_version(self):
         client = TestClient()
@@ -599,7 +599,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . tool/0.1@user/channel")
+        client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class MyConanfileBase(ConanFile):
@@ -636,7 +636,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     super(PythonRequires0, self).build()
                     self.output.info("PythonRequires0::build")
                     """)})
-        client.run("export . python_requires0/1.0@user/test")
+        client.run("export . --name=python_requires0 --version=1.0 --user=user --channel=test")
         client.run("alias python_requires0/latest@user/test python_requires0/1.0@user/test")
         client.run("alias python_requires0/latest2@user/test python_requires0/latest@user/test")
 
@@ -650,7 +650,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     super(PythonRequires1, self).build()
                     self.output.info("PythonRequires1::build")
             """).format(v=version_str)})
-        client.run("export . python_requires1/1.0@user/test")
+        client.run("export . --name=python_requires1 --version=1.0 --user=user --channel=test")
         client.run("alias python_requires1/latest@user/test python_requires1/1.0@user/test")
         client.run("alias python_requires1/latest2@user/test python_requires1/latest@user/test")
 
@@ -662,7 +662,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     super(PythonRequires11, self).build()
                     self.output.info("PythonRequires11::build")
                     """)})
-        client.run("export . python_requires11/1.0@user/test")
+        client.run("export . --name=python_requires11 --version=1.0 --user=user --channel=test")
         client.run("alias python_requires11/latest@user/test python_requires11/1.0@user/test")
         client.run("alias python_requires11/latest2@user/test python_requires11/latest@user/test")
 
@@ -676,7 +676,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     super(PythonRequires22, self).build()
                     self.output.info("PythonRequires22::build")
                     """).format(v=version_str)})
-        client.run("export . python_requires22/1.0@user/test")
+        client.run("export . --name=python_requires22 --version=1.0 --user=user --channel=test")
         client.run("alias python_requires22/latest@user/test python_requires22/1.0@user/test")
         client.run("alias python_requires22/latest2@user/test python_requires22/latest@user/test")
 
@@ -691,7 +691,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     super(PythonRequires2, self).build()
                     self.output.info("PythonRequires2::build")
                     """).format(v=version_str)})
-        client.run("export . python_requires2/1.0@user/test")
+        client.run("export . --name=python_requires2 --version=1.0 --user=user --channel=test")
         client.run("alias python_requires2/latest@user/test python_requires2/1.0@user/test")
         client.run("alias python_requires2/latest2@user/test python_requires2/latest@user/test")
 
@@ -744,7 +744,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "file.h": "myheader",
                      "folder/other.h": "otherheader"})
-        client.run("export . tool/0.1@user/channel")
+        client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
             import os
@@ -772,7 +772,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "name.txt": "MyPkg",
                      "version.txt": "MyVersion"})
-        client.run("export . pkg/1.0@user/channel")
+        client.run("export . --name=pkg --version=1.0 --user=user --channel=channel")
         self.assertIn("pkg/1.0@user/channel: A new conanfile.py version was exported", client.out)
         client.run("create . pkg/1.0@user/channel")
         self.assertIn("pkg/1.0@user/channel: Source: tool header: myheader", client.out)
@@ -869,7 +869,7 @@ def test_transitive_python_requires():
             version = "1.0"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("export . @user/channel")
+    client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -884,7 +884,7 @@ def test_transitive_python_requires():
                 self.output.info("%s, %s" % (v, f))
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("export . user/channel")
+    client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -912,7 +912,7 @@ def test_transitive_diamond_python_requires():
             version = "1.0"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("export . @user/channel")
+    client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -924,7 +924,7 @@ def test_transitive_diamond_python_requires():
             version = "1.0"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("export . @user/channel")
+    client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -939,7 +939,7 @@ def test_transitive_diamond_python_requires():
                 self.output.info("%s, %s" % (v, f))
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("export . user/channel")
+    client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -954,7 +954,7 @@ def test_transitive_diamond_python_requires():
                 self.output.info("%s, %s" % (v, f))
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("export . user/channel")
+    client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile

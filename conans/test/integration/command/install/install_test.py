@@ -47,7 +47,7 @@ def test_install_system_requirements(client):
         """)})
     client.run(" install .")
     assert "Running system requirements!!" in client.out
-    client.run("export . pkg/0.1@lasote/testing")
+    client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run(" install --reference=pkg/0.1@lasote/testing --build")
     assert "Running system requirements!!" in client.out
     client.run("upload * --all --confirm -r default")
@@ -147,7 +147,7 @@ def test_install_package_folder(client):
 
 def test_install_cwd(client):
     client.save({"conanfile.py": GenConanfile("hello", "0.1").with_setting("os")})
-    client.run("export . lasote/stable")
+    client.run("export . --user=lasote --channel=stable")
     client.save({"conanfile.txt": "[requires]\nhello/0.1@lasote/stable"}, clean_first=True)
 
     client.run("install . --build=missing -s os_build=Windows --install-folder=win_dir")
@@ -205,7 +205,7 @@ def test_install_with_path_errors(client):
 @pytest.mark.xfail(reason="cache2.0: TODO: check this case for new cache")
 def test_install_broken_reference(client):
     client.save({"conanfile.py": GenConanfile()})
-    client.run("export . hello/0.1@lasote/stable")
+    client.run("export . --name=hello --version=0.1 --user=lasote --channel=stable")
     client.run("remote add_ref hello/0.1@lasote/stable default")
     ref = RecipeReference.loads("hello/0.1@lasote/stable")
     # Because the folder is removed, the metadata is removed and the

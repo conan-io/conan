@@ -37,7 +37,7 @@ class Pkg(ConanFile):
         client = TestClient(default_server_user=True)
         for i in (1, 2):
             client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.%s" % i)})
-            client.run("export . lasote/channel")
+            client.run("export . --user=lasote --channel=channel")
 
         client.run("alias hello/0.X@lasote/channel hello/0.1@lasote/channel")
         conanfile_chat = textwrap.dedent("""
@@ -48,7 +48,7 @@ class Pkg(ConanFile):
                 requires = "hello/(0.X)@lasote/channel"
                 """)
         client.save({"conanfile.py": conanfile_chat}, clean_first=True)
-        client.run("export . lasote/channel")
+        client.run("export . --user=lasote --channel=channel")
         client.save({"conanfile.txt": "[requires]\nchat/1.0@lasote/channel"}, clean_first=True)
 
         client.run("install . --build=missing")
@@ -92,11 +92,11 @@ class Pkg(ConanFile):
         # Create two packages
         reference1 = "pkga/0.1@user/testing"
         t.save({"conanfile.py": conanfile.format(reference1)})
-        t.run("export . {}".format(reference1))
+        t.run("export . --name=pkga --version=0.1 --user=user --channel=testing")
 
         reference2 = "pkga/0.2@user/testing"
         t.save({"conanfile.py": conanfile.format(reference2)})
-        t.run("export . {}".format(reference2))
+        t.run("export . --name=pkga --version=0.2 --user=user --channel=testing")
 
         # Now create an alias overriding one of them
         alias = reference2

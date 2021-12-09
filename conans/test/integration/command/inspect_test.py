@@ -11,7 +11,7 @@ class ConanInspectTest(unittest.TestCase):
     def test_inspect_quiet(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("name")})
-        client.run("export . name/version@user/channel")
+        client.run("export . --name=name --version=version --user=user --channel=channel")
         client.run("upload name/version@user/channel --all -r default")
         client.run("remove * -f")
 
@@ -27,10 +27,10 @@ class ConanInspectTest(unittest.TestCase):
     def test_inspect_remote(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
         client.run("upload pkg/0.1@user/channel -r default")
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "arch")})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
 
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: ('os', 'arch')", client.out)
@@ -47,7 +47,7 @@ class ConanInspectTest(unittest.TestCase):
     def test_inspect_not_in_remote(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
 
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: ['os']", client.out)
@@ -74,7 +74,7 @@ class ConanInspectTest(unittest.TestCase):
         self.assertIn('"version": "1.2.3"', contents)
         self.assertIn('"name": "mypkg"', contents)
 
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         client.run("inspect mypkg/1.2.3@lasote/testing -a=name")
         self.assertIn("name: mypkg", client.out)
         client.run("inspect mypkg/1.2.3@lasote/testing -a=version")
@@ -298,7 +298,7 @@ class InspectRawTest(unittest.TestCase):
     def test_initial_inspect_without_registry(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
         os.remove(client.cache.remotes_path)
         client.run("inspect mypkg/1.2.3@user/channel --raw=version")
         self.assertEqual("1.2.3", client.out)
@@ -318,7 +318,7 @@ class InspectRawTest(unittest.TestCase):
     def test_inspect_alias(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . pkg/0.1@")
+        client.run("export . --name=pkg --version=0.1")
         client.run("alias pkg/latest@ pkg/0.1@")
         client.run("inspect pkg/latest@ -a alias")
         assert "alias: pkg/0.1" in client.out

@@ -94,7 +94,7 @@ class EqualerrorConan(ConanFile):
         self.output.warning("OPTION %s" % self.options.opt)
 '''
         client.save({"conanfile.py": conanfile})
-        client.run("export . user/testing")
+        client.run("export . --user=user --channel=testing")
         conanfile = '''
 [requires]
 equal/1.0.0@user/testing

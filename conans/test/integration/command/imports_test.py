@@ -63,7 +63,7 @@ class ImportsTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
     def test_imports_global_path_removed(self):
         """ Ensure that when importing files in a global path, outside the package build,
@@ -83,7 +83,7 @@ class ConanLib(ConanFile):
 ''' % dst_global_folder
 
         self.client.save({"conanfile.py": conanfile2}, clean_first=True)
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
         self.client.current_folder = temp_folder()
         self.client.run("install --reference=say/0.1@lasote/stable --build=missing")

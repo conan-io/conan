@@ -13,14 +13,14 @@ def build_all():
     """
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_setting("build_type")})
-    client.run("export . foo/1.0@user/testing")
+    client.run("export . --name=foo --version=1.0 --user=user --channel=testing")
     client.save({"conanfile.py": GenConanfile().with_require("foo/1.0@user/testing")
                 .with_setting("build_type")})
-    client.run("export . bar/1.0@user/testing")
+    client.run("export . --name=bar --version=1.0 --user=user --channel=testing")
     client.save({"conanfile.py": GenConanfile().with_require("foo/1.0@user/testing")
                 .with_require("bar/1.0@user/testing")
                 .with_setting("build_type")})
-    client.run("export . foobar/1.0@user/testing")
+    client.run("export . --name=foobar --version=1.0 --user=user --channel=testing")
     client.run("install --reference=foobar/1.0@user/testing --build")
 
     return client

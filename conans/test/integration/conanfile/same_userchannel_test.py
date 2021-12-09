@@ -45,11 +45,11 @@ class SayConan(ConanFile):
     build_policy = "missing"
 
     def build(self):
-        self.output.info("Building %s")
+        self.output.info("Building %s/%s")
 """
-        for channel in ("lasote/stable", "other/testing"):
-            self.client.save({"conanfile.py": conanfile % channel})
-            self.client.run("export . %s" % channel)
+        for user, channel in ("lasote", "stable"), ("other", "testing"):
+            self.client.save({"conanfile.py": conanfile % (user, channel)})
+            self.client.run(f"export . --user={user} --channel={channel}")
 
         self.conanfile = """
 from conans import ConanFile

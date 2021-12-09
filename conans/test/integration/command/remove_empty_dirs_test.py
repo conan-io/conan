@@ -11,7 +11,7 @@ class RemoveEmptyDirsTest(unittest.TestCase):
     def test_basic(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/0.1@lasote/stable"))
         ref_layout = client.cache.ref_layout(rrev)
         self.assertTrue(os.path.exists(ref_layout.base_folder))
@@ -21,11 +21,11 @@ class RemoveEmptyDirsTest(unittest.TestCase):
     def test_shared_folder(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/0.1@lasote/stable"))
         ref_layout = client.cache.ref_layout(rrev)
         self.assertTrue(os.path.exists(ref_layout.base_folder))
-        client.run("export . lasote2/stable")
+        client.run("export . --user=lasote2 --channel=stable")
         rrev2 = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/0.1@lasote2/stable"))
         ref_layout2 = client.cache.ref_layout(rrev2)
         self.assertTrue(os.path.exists(ref_layout2.base_folder))

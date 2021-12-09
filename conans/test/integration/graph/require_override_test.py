@@ -24,15 +24,15 @@ class RequireOverrideTest(unittest.TestCase):
 
     def test_override(self):
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("export . liba/1.0@user/channel")
+        self.client.run("export . --name=liba --version=1.0 --user=user --channel=channel")
         # It is necessary to create liba/2.0 to have a conflict, otherwise it is missing
-        self.client.run("export . liba/2.0@user/channel")
+        self.client.run("export . --name=liba --version=2.0 --user=user --channel=channel")
 
         for req_method in (False, True):
             self._save(req_method, ["liba/1.0@user/channel"])
-            self.client.run("export . libb/1.0@user/channel")
+            self.client.run("export . --name=libb --version=1.0 --user=user --channel=channel")
             self._save(req_method, ["liba/2.0@user/channel"])
-            self.client.run("export . libC/1.0@user/channel")
+            self.client.run("export . --name=libC --version=1.0 --user=user --channel=channel")
             self._save(req_method, ["libb/1.0@user/channel", "libC/1.0@user/channel"])
             self.client.run("info .", assert_error=True)
             self.assertIn("Conflict in libC/1.0@user/channel:\n"

@@ -302,7 +302,7 @@ def test_apple_own_framework_cmake_deps():
                  "src/hello.h": hello_h,
                  "src/hello.cpp": hello_cpp,
                  "src/Info.plist": infoplist})
-    client.run("export . mylibrary/1.0@")
+    client.run("export . --name=mylibrary --version=1.0")
     client.run("create . mylibrary/1.0@ -s build_type=Debug")
     client.run("create . mylibrary/1.0@ -s build_type=Release")
 

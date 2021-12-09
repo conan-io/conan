@@ -21,11 +21,11 @@ def test_transitive_py_requires():
                  "pkg/conanfile.py": conanfile,
                  "consumer/conanfile.py": consumer})
 
-    client.run("export dep dep/0.1@user/channel")
-    client.run("export pkg pkg/0.1@user/channel")
+    client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
+    client.run("export pkg --name=pkg --version=0.1 --user=user --channel=channel")
     client.run("lock create consumer/conanfile.py --lockfile-out=conan.lock")
 
-    client.run("export dep dep/0.2@user/channel")
+    client.run("export dep --name=dep --version=0.2 --user=user --channel=channel")
 
     client.run("install consumer/conanfile.py --lockfile=conan.lock")
     assert "dep/0.1@user/channel" in client.out
@@ -58,16 +58,16 @@ def test_transitive_matching_ranges():
                  "pkgb/conanfile.py": pkg.format("[>0.0]"),
                  "app/conanfile.py": GenConanfile().with_requires("pkga/[*]", "pkgb/[*]")})
 
-    client.run("export dep dep/0.1@")
-    client.run("export dep dep/0.2@")
-    client.run("export tool1 tool/0.1@")
-    client.run("export tool2 tool/0.2@")
+    client.run("export dep --name=dep --version=0.1")
+    client.run("export dep --name=dep --version=0.2")
+    client.run("export tool1 --name=tool --version=0.1")
+    client.run("export tool2 --name=tool --version=0.2")
     client.run("create pkga pkga/0.1@")
     client.run("create pkgb pkgb/0.1@")
     client.run("lock create app/conanfile.py --lockfile-out=conan.lock")
 
-    client.run("export dep dep/0.2@")
-    client.run("export tool2 tool/0.3@")
+    client.run("export dep --name=dep --version=0.2")
+    client.run("export tool2 --name=tool --version=0.3")
     client.run("create pkga pkga/0.2@")
     client.run("create pkgb pkgb/0.2@")
 
