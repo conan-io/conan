@@ -6,6 +6,7 @@ from conans.test.utils.tools import TestClient
 
 def test_build_requires_options_different():
     # copied from https://github.com/conan-io/conan/pull/9839
+    # This is a test that crashed in 1.X, because of conflicting options
     client = TestClient()
 
     conanfile_openssl_1_1_1 = GenConanfile("openssl", "1.1.1")
@@ -33,7 +34,13 @@ def test_build_requires_options_different():
     assert "cmake/0.1: Already installed!" in client.out
 
 
-def test_different_options_values():
+def test_different_options_values_profile():
+    """
+    consumer -> protobuf (library)
+        \\--(build)-> protobuf (protoc)
+    protobuf by default is a static library (shared=False)
+    The profile or CLI args can select for each one (library and protoc) the "shared" value
+    """
     c = TestClient()
     protobuf = textwrap.dedent("""
         from conans import ConanFile
@@ -69,7 +76,14 @@ def test_different_options_values():
     assert "protobuf/1.0: MYOPTION: build-True" in c.out
 
 
+# TODO: Make possible to work for direct dependencies without having to specify the protobuf:
 def test_different_options_values_recipe():
+    """
+    consumer -> protobuf (library)
+        \\--(build)-> protobuf (protoc)
+    protobuf by default is a static library (shared=False)
+    The "consumer" conanfile.py can use ``self.requires(...,options=)`` to define protobuf:shared
+    """
     c = TestClient()
     protobuf = textwrap.dedent("""
         from conans import ConanFile
