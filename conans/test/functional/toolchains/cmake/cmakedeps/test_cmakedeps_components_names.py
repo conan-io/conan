@@ -899,4 +899,4 @@ def test_colliding_target_names():
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     client.run("create .")
 
-    assert "Target name 'mypkg::name' already exists." in client.out
+    assert "Target name 'mypkg::name' already exists." not in client.out
