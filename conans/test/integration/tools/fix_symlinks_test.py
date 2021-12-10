@@ -17,8 +17,10 @@ class FixSymlinksTestCase(unittest.TestCase):
         import os
         import shutil
         from conan import ConanFile
-        from conan.tools.files import (absolute_to_relative_symlinks, remove_external_symlinks,
-                                       remove_broken_symlinks, save)
+        from conan.tools.files import save
+        from conan.tools.files.symlinks import (absolute_to_relative_symlinks,
+                                                remove_external_symlinks,
+                                                remove_broken_symlinks)
 
         class Recipe(ConanFile):
             options = {"raise_if_error": [True, False]}

@@ -39,7 +39,7 @@ def test_absolute_to_relative_symlinks(folders):
 
     folder, outside_folder = folders
     # Transform the absolute symlinks to relative
-    tools.files.absolute_to_relative_symlinks(None, folder)
+    tools.files.symlinks.absolute_to_relative_symlinks(None, folder)
 
     # Check the results
     linked_to = os.readlink(os.path.join(folder, "foo/var/other/absolute.txt"))
