@@ -247,9 +247,6 @@ def _classify_patterns(patterns):
         else:
             included.append(p)
 
-    # FIXME: This is weird, as the test_package folder could be named different... do we want it?
-    #        it was previously hardcoded at FileCopier
-    excluded.append("test_package*")
     return included, excluded
 
 
