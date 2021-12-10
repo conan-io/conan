@@ -30,7 +30,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         """)
         t = TestClient()
         t.save({'conanfile.py': conanfile})
-        t.run("export . name/version@")
+        t.run("export . --name=name --version=version")
 
         # Check exported files
         ref_layout = t.get_latest_ref_layout(self.ref)
@@ -62,7 +62,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         """)
         t = TestClient()
         t.save({'conanfile.py': conanfile})
-        t.run("export . name/version@")
+        t.run("export . --name=name --version=version")
 
         # Check exported files
         ref_layout = t.get_latest_ref_layout(self.ref)
@@ -94,7 +94,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t = TestClient()
         commit = t.init_git_repo({'conanfile.py': conanfile})
         t.run_command('git remote add origin https://myrepo.com.git')
-        t.run("export . name/version@")
+        t.run("export . --name=name --version=version")
 
         # Check exported files
         ref_layout = t.get_latest_ref_layout(self.ref)
@@ -125,7 +125,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
                 DATA_YML: yaml.safe_dump({'.conan': {'scm_data': {}}}, default_flow_style=False)})
 
         # It fails with it activated
-        t.run("export . name/version@", assert_error=True)
+        t.run("export . --name=name --version=version", assert_error=True)
         self.assertIn("ERROR: Field '.conan' inside 'conandata.yml' file is"
                       " reserved to Conan usage.", t.out)
 
@@ -142,7 +142,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         commit = t.init_git_repo({'conanfile.py': conanfile,
                                   'conandata.yml': ""})
         t.run_command('git remote add origin https://myrepo.com.git')
-        t.run("export . name/version@")
+        t.run("export . --name=name --version=version")
 
         # Check exported files
         ref_layout = t.get_latest_ref_layout(self.ref)
@@ -198,7 +198,7 @@ def test_auto_can_be_automated():
     commit = t.init_git_repo({'conanfile.py': conanfile,
                               'conandata.yml': ""})
     t.run_command('git remote add origin https://myrepo.com.git')
-    t.run("export . pkg/1.0@")
+    t.run("export . --name=pkg --version=1.0")
 
     def _check(client):
         # Check exported files
@@ -218,7 +218,7 @@ def test_auto_can_be_automated():
     t.save({"conanfile.py": conanfile})
     with environment_update({"USER_EXTERNAL_URL": "https://myrepo.com.git",
                              "USER_EXTERNAL_COMMIT": commit}):
-        t.run("export . pkg/1.0@")
+        t.run("export . --name=pkg --version=1.0")
     _check(t)
 
     t.run("upload * -c -r default")

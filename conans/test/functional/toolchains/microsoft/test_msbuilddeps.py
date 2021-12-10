@@ -398,7 +398,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
-vs_versions = [{"vs_version": "15", "msvc_version": "19.1", "ide_year": "2017", "toolset": "v141"}]
+vs_versions = [{"vs_version": "15", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
     vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
@@ -630,7 +630,8 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . dep/1.0@")
         client.run("create . tool_build/1.0@")
         client.run("create . tool_test/1.0@")
-        conanfile = GenConanfile().with_requires("dep/1.0").with_build_requires("tool_build/1.0").\
+        conanfile = GenConanfile().with_requires("dep/1.0").\
+            with_tool_requires("tool_build/1.0").\
             with_test_requires("tool_test/1.0")
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/1.0@")
@@ -819,7 +820,7 @@ def check_build_vs_project_with_test_requires(vs_version):
             settings = "os", "build_type", "compiler", "arch"
             generators = "MSBuildDeps", "MSBuildToolchain"
 
-            def build_requirements(self):
+            def requirements(self):
                 self.test_requires("mydep.pkg.team/0.1")
 
             def build(self):

@@ -49,7 +49,6 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 build_env.compose_env(build_require.runenv_info)
             # Then the implicit
-
             if hasattr(self._conanfile, "settings_build"):
                 os_name = self._conanfile.settings_build.get_safe("os")
             else:

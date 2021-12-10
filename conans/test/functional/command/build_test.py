@@ -47,7 +47,7 @@ class ConanBuildTest(unittest.TestCase):
         """
         client = TestClient()
         client.save({CONANFILE: conanfile_dep})
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
 
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         client.run("install . --build=missing")
@@ -186,7 +186,7 @@ class AConan(ConanFile):
 
 """
         client.save({CONANFILE: conanfile})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         conanfile = """
 from conans import ConanFile

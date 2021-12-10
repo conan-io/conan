@@ -22,11 +22,11 @@ def client():
             .with_default_option("language", 0).with_settings("os")
 
     c.save({"conanfile.py": base_conanfile("hello0")})
-    c.run("export . lasote/stable")
+    c.run("export . --user=lasote --channel=stable")
     c.save({"conanfile.py": base_conanfile("hello1").with_requires("hello0/0.1@lasote/stable")})
-    c.run("export . lasote/stable")
+    c.run("export . --user=lasote --channel=stable")
     c.save({"conanfile.py": base_conanfile("hello2").with_requires("hello1/0.1@lasote/stable")})
-    c.run("export . lasote/stable")
+    c.run("export . --user=lasote --channel=stable")
     return c
 
 

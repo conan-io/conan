@@ -319,14 +319,17 @@ def _run_method(conanfile, method, origin_folder, destination_folder):
         folder_name = "%s_folder" % method
         setattr(conanfile, folder_name, destination_folder)
         default_options = conanfile.default_options
+        options = conanfile.options
         try:
             # TODO: Poor man attribute control access. Convert to nice decorator
             conanfile.default_options = None
+            conanfile.options = None
             with chdir(origin_folder):
-                with conanfile_exception_formatter(str(conanfile), method):
+                with conanfile_exception_formatter(conanfile, method):
                     export_method()
         finally:
             conanfile.default_options = default_options
+            conanfile.options = options
             delattr(conanfile, folder_name)
         export_method_output = ScopedOutput("%s %s() method" % (conanfile.output.scope, method),
                                             conanfile.output)

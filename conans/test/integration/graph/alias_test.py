@@ -41,7 +41,7 @@ class Pkg(ConanFile):
 
         def export_alias(name, conanfile):
             client.save({"conanfile.py": conanfile})
-            client.run("export . %s/0.1@user/testing" % name)
+            client.run("export . --name=%s --version=0.1 --user=user --channel=testing" % name)
             client.run("alias %s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
 
         for name, conanfile in [
@@ -146,7 +146,7 @@ class Pkg(ConanFile):
 
         def export_alias(name, conanfile):
             client.save({"conanfile.py": conanfile})
-            client.run("export . %s/0.1@user/testing" % name)
+            client.run("export . --name=%s --version=0.1 --user=user --channel=testing" % name)
             client.run("alias %s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
 
         export_alias("CH", conanfile0)
@@ -208,19 +208,19 @@ class Pkg(ConanFile):
 """
 
         client.save({"conanfile.py": conanfile % ""}, clean_first=True)
-        client.run("export . LibD/0.1@user/testing")
+        client.run("export . --name=LibD --version=0.1 --user=user --channel=testing")
         client.run("alias LibD/latest@user/testing LibD/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibD/latest@user/testing"})
-        client.run("export . LibC/0.1@user/testing")
+        client.run("export . --name=LibC --version=0.1 --user=user --channel=testing")
         client.run("alias LibC/latest@user/testing LibC/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
-        client.run("export . LibB/0.1@user/testing")
+        client.run("export . --name=LibB --version=0.1 --user=user --channel=testing")
         client.run("alias LibB/latest@user/testing LibB/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
-        client.run("export . LibA/0.1@user/testing")
+        client.run("export . --name=LibA --version=0.1 --user=user --channel=testing")
         client.run("alias LibA/latest@user/testing LibA/0.1@user/testing")
 
         client.save(
@@ -264,22 +264,22 @@ class Pkg(ConanFile):
 """
 
         client.save({"conanfile.py": conanfile % ""}, clean_first=True)
-        client.run("export . LibD/0.1@user/testing")
+        client.run("export . --name=LibD --version=0.1 --user=user --channel=testing")
         client.run("alias LibD/latest@user/testing LibD/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibD/latest@user/testing"})
-        client.run("export . LibC/0.1@user/testing")
+        client.run("export . --name=LibC --version=0.1 --user=user --channel=testing")
         client.run("alias LibC/latest@user/testing LibC/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         '"myoption=True"',
                         '"myoption=True", "LibD:myoption=False"')
-        client.run("export . LibB/0.1@user/testing")
+        client.run("export . --name=LibB --version=0.1 --user=user --channel=testing")
         client.run("alias LibB/latest@user/testing LibB/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
-        client.run("export . LibA/0.1@user/testing")
+        client.run("export . --name=LibA --version=0.1 --user=user --channel=testing")
         client.run("alias LibA/latest@user/testing LibA/0.1@user/testing")
 
         client.save({"conanfile.txt": "[requires]\nLibA/latest@user/testing\nLibB/latest@user/testing"},
@@ -316,19 +316,19 @@ class Pkg(ConanFile):
 """
 
         client.save({"conanfile.py": conanfile % ""}, clean_first=True)
-        client.run("export . LibD/sha1@user/testing")
+        client.run("export . --name=LibD --version=sha1 --user=user --channel=testing")
         client.run("alias LibD/0.1@user/testing LibD/sha1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibD/[~0.1]@user/testing"})
-        client.run("export . LibC/sha1@user/testing")
+        client.run("export . --name=LibC --version=sha1 --user=user --channel=testing")
         client.run("alias LibC/0.1@user/testing LibC/sha1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/[~0.1]@user/testing"})
-        client.run("export . LibB/sha1@user/testing")
+        client.run("export . --name=LibB --version=sha1 --user=user --channel=testing")
         client.run("alias LibB/0.1@user/testing LibB/sha1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/[~0.1]@user/testing"})
-        client.run("export . LibA/sha1@user/testing")
+        client.run("export . --name=LibA --version=sha1 --user=user --channel=testing")
         client.run("alias LibA/0.1@user/testing LibA/sha1@user/testing")
 
         client.save({"conanfile.txt": "[requires]\nLibA/[~0.1]@user/testing\nLibB/[~0.1]@user/testing"},
@@ -347,7 +347,7 @@ class Pkg(ConanFile):
         client = TestClient(servers=servers, inputs=["admin", "password"])
         for i in (1, 2):
             client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.%s" % i)})
-            client.run("export . lasote/channel")
+            client.run("export . --user=lasote --channel=channel")
 
         client.run("alias hello/0.X@lasote/channel hello/0.1@lasote/channel")
         conanfile_chat = textwrap.dedent("""
@@ -358,7 +358,7 @@ class Pkg(ConanFile):
                 requires = "hello/0.X@lasote/channel"
                 """)
         client.save({"conanfile.py": conanfile_chat}, clean_first=True)
-        client.run("export . lasote/channel")
+        client.run("export . --user=lasote --channel=channel")
         client.save({"conanfile.txt": "[requires]\nChat/1.0@lasote/channel"}, clean_first=True)
 
         client.run("install . --build=missing")

@@ -24,19 +24,19 @@ class ExportPkgTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
         client.run("install .")
-        client.run("export-pkg . pkg/0.1@user/testing")
+        client.run("export-pkg . --user=lasote --channel=stable ")
 
     @pytest.mark.xfail(reason="Build-requires are expanded now, so this is expected to fail atm")
     def test_dont_touch_server_build_require(self):
         client = TestClient(servers={"default": None},
                             requester_class=None, inputs=["admin", "password"])
         profile = dedent("""
-            [build_requires]
+            [tool_requires]
             some/other@pkg/notexists
             """)
         client.save({"conanfile.py": GenConanfile(),
                      "myprofile": profile})
-        client.run("export-pkg . pkg/0.1@user/testing -pr=myprofile")
+        client.run("export-pkg . --name=pkg --version=0.1 --user=user --channel=testing -pr=myprofile")
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
@@ -59,7 +59,8 @@ class PkgA(ConanFile):
         client.save({CONANFILE: conanfile})
         client.run("install . -if=build")
         client.run("build . -bf=build")
-        client.run("export-pkg . pkga/0.1@user/testing -pr=default")
+        client.run("export-pkg . --name=pkga --version=0.1 --user=user --channel=testing "
+                   "-pr=default")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         self.assertIn(f"pkga/0.1@user/testing: Package '{package_id}' created", client.out)
 
@@ -67,7 +68,7 @@ class PkgA(ConanFile):
         # https://github.com/conan-io/conan/issues/2350
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
-        client.run("export-pkg . hello/0.1@lasote/stable")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable")
         self.assertIn("hello/0.1@lasote/stable package(): WARN: No files in this package!",
                       client.out)
 
@@ -80,7 +81,7 @@ class helloPythonConan(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export-pkg . hello/0.1@lasote/stable")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable ")
         self.assertIn("hello/0.1@lasote/stable: DEVELOP IS: True!", client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
@@ -94,17 +95,17 @@ class helloPythonConan(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export-pkg . hello/0.1@lasote/stable")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable")
         client.run("search hello/0.1@lasote/stable")
         self.assertIn("optionOne: True", client.out)
         self.assertNotIn("optionOne: False", client.out)
         self.assertNotIn("optionOne: 123", client.out)
-        client.run("export-pkg . hello/0.1@lasote/stable -o optionOne=False")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable -o optionOne=False")
         client.run("search hello/0.1@lasote/stable")
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
         self.assertNotIn("optionOne: 123", client.out)
-        client.run("export-pkg . hello/0.1@lasote/stable -o hello:optionOne=123")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable -o hello:optionOne=123")
         client.run("search hello/0.1@lasote/stable")
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
@@ -129,7 +130,8 @@ class helloPythonConan(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile,
                      "myprofile": profile})
-        client.run("export-pkg . hello/0.1@lasote/stable -pr=myprofile")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable "
+                   " -pr=myprofile")
         self.assertIn("hello/0.1@lasote/stable: ENV-VALUE: MYCUSTOMVALUE!!!", client.out)
 
     def _consume(self, client, install_args):
@@ -149,7 +151,7 @@ class TestConan(ConanFile):
         client.save({"lib/libmycoollib.a": ""})
         settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
                     '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("export-pkg . hello/0.1@lasote/stable %s" % settings)
+        client.run("export-pkg . --user=lasote --channel=stable  %s" % settings)
         self.assertIn("hello/0.1@lasote/stable: A new conanfile.py version was exported",
                       client.out)
         self.assertNotIn("hello/0.1@lasote/stable package(): WARN: No files in this package!",
@@ -179,7 +181,7 @@ class TestConan(ConanFile):
                      "libs/what": "",
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
-        client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows")
+        client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
         pref = PkgReference.loads(f"hello/0.1@lasote/stable#9583c5d0a62cd7afe4f83f821bf37be2:{package_id}#{prev}")
@@ -203,7 +205,8 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents",
                      "build/lib/hello.lib": "My Lib"})
-        client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows")
+        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable "
+                   "-s os=Windows")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
         pref = PkgReference.loads(f"hello/0.1@lasote/stable#cd0221af3af8be9e3d7e7b6ae56ce0b6:{package_id}#{prev}")
@@ -220,6 +223,8 @@ class TestConan(ConanFile):
         conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
     settings = "os"
+    name = "hello"
+    version = "0.1"
 
     def layout(self):
         self.folders.build = "build"
@@ -235,7 +240,7 @@ class TestConan(ConanFile):
                      "build/libs/what": "",
                      "build/lib/hello.lib": "My Lib",
                      "build/lib/bye.txt": ""})
-        client.run("export-pkg . hello/0.1@lasote/stable -s os=Windows")
+        client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
         rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
@@ -262,15 +267,15 @@ class TestConan(ConanFile):
 """
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
-        client.run("export-pkg . conan/stable")
+        client.run("export-pkg . --user=conan --channel=stable ")
         self.assertIn("hello/0.1@conan/stable package(): Packaged 1 '.txt' file: file.txt",
                       client.out)
 
         # Specify different name or version is not working
-        client.run("export-pkg . lib/1.0@conan/stable -f", assert_error=True)
+        client.run("export-pkg . --name=lib", assert_error=True)
         self.assertIn("ERROR: Package recipe with name lib!=hello", client.out)
 
-        client.run("export-pkg . hello/1.1@conan/stable -f", assert_error=True)
+        client.run("export-pkg . --version=1.1", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=0.1", client.out)
 
         conanfile = """
@@ -283,7 +288,7 @@ class TestConan(ConanFile):
 """
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
-        client.run("export-pkg . anyname/1.222@conan/stable")
+        client.run("export-pkg . --name=anyname --version=1.222 --user=conan --channel=stable")
         self.assertIn("anyname/1.222@conan/stable package(): Packaged 1 '.txt' file: file.txt",
                       client.out)
 
@@ -306,7 +311,8 @@ class TestConan(ConanFile):
         client.save({"Release_x86/lib/libmycoollib.a": ""})
         settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
                     '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("export-pkg . hello1/0.1@lasote/stable %s" % settings)
+        client.run("export-pkg . --name=hello1 --version=0.1 --user=lasote --channel=stable %s"
+                   % settings)
 
         # consumer
         consumer = """
@@ -414,14 +420,14 @@ class MyConan(ConanFile):
         self.client = TestClient()
         self.client.save({"conanfile_dep.py": conanfile,
                           "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
-        self.client.run("export conanfile_dep.py pkg1/1.0@danimtb/testing")
-        self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json")
+        self.client.run("export conanfile_dep.py --name=pkg1 --version=1.0 --user=danimtb --channel=testing")
+        self.client.run("export-pkg conanfile.py --name=pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json")
         _check_json_output()
 
         # Error on missing dependency
         self.client.run("remove pkg1/1.0@danimtb/testing --force")
         self.client.run("remove pkg2/1.0@danimtb/testing --force")
-        self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json",
+        self.client.run("export-pkg conanfile.py --name=pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json",
                         assert_error=True)
         _check_json_output(with_error=True)
 
@@ -484,7 +490,7 @@ def test_build_policy_never():
         """)
     client.save({CONANFILE: conanfile,
                  "src/header.h": "contents"})
-    client.run("export-pkg . pkg/1.0@")
+    client.run("export-pkg . --name=pkg --version=1.0")
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
 
     client.run("install --reference=pkg/1.0@ --build")
@@ -497,10 +503,11 @@ def test_build_policy_never_missing():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_class_attribute('build_policy = "never"'),
                  "consumer.txt": "[requires]\npkg/1.0"})
-    client.run("export . pkg/1.0@")
+    client.run("export . --name=pkg --version=1.0")
 
     client.run("install --reference=pkg/1.0@ --build", assert_error=True)
     assert "ERROR: Missing binary: pkg/1.0" in client.out
 
     client.run("install --reference=pkg/1.0@ --build=missing", assert_error=True)
+    print(client.out)
     assert "ERROR: Missing binary: pkg/1.0" in client.out

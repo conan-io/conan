@@ -77,7 +77,7 @@ class SymLinksTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
 
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install conanfile.txt --build")
         pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
@@ -108,7 +108,7 @@ class TestConan(ConanFile):
         save(file2, "Hello2")
         os.symlink("version1", latest)
         os.symlink("latest", edge)
-        client.run("export-pkg ./recipe hello/0.1@lasote/stable")
+        client.run("export-pkg  ./recipe  --name=hello --version=0.1 --user=lasote --channel=stable")
         pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
         self._check(client, pref, build=False)
@@ -126,7 +126,7 @@ class TestConan(ConanFile):
         pre_export_link = os.path.join(client.current_folder, link_name)
         os.symlink(lib_name, pre_export_link)
 
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install conanfile.txt --build")
         ref = RecipeReference.loads("hello/0.1@lasote/stable")
         pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
@@ -155,7 +155,7 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
 
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install conanfile.txt --build")
         pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
@@ -185,7 +185,7 @@ class ConanSymlink(ConanFile):
             self.assertFalse(os.path.exists(symlink_path))
             self.assertTrue(os.path.exists(symlinked_path))
             os.symlink(symlinked_path, symlink_path)
-            client.run("export . danimtb/testing")
+            client.run("export . --user=danimtb --channel=testing")
             ref = RecipeReference("ConanSymlink", "3.0.0", "danimtb", "testing")
             export_sources = client.get_latest_ref_layout(ref).export_sources()
             cache_other_dir = os.path.join(export_sources, "another_other_directory")

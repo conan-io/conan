@@ -63,18 +63,8 @@ class GraphAPI:
         assert profile_host is not None
         assert profile_build is not None
 
-        out = ConanOutput()
-
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
-        # FIXME: this ugly ouput doesn't belong here
-        version_ranges_output = app.range_resolver.output
-        if version_ranges_output:
-            out.success("Version ranges solved")
-            for msg in version_ranges_output:
-                out.info("    %s" % msg)
-            out.writeln("")
-            app.range_resolver.clear_output()
 
         if lockfile:
             lockfile.update_lock(deps_graph)

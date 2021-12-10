@@ -118,7 +118,7 @@ class ConanLib(ConanFile):
 '''
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("upload lib/0.1@lasote/stable -r default")
         client.run("remote list-users")
         assert 'default:\n  Username: admin\n  authenticated: True' in client.out

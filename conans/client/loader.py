@@ -1,4 +1,4 @@
-import imp
+from importlib import invalidate_caches, util as imp_util
 import inspect
 import os
 import sys
@@ -9,8 +9,7 @@ import yaml
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
-from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration, \
-    conanfile_exception_formatter
+from conans.errors import ConanException, NotFoundException, conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
@@ -25,6 +24,7 @@ class ConanFileLoader:
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
         self._requester = requester
+        invalidate_caches()
 
     def load_basic(self, conanfile_path, graph_lock=None, display=""):
         """ loads a conanfile basic object without evaluating anything
@@ -39,7 +39,7 @@ class ConanFileLoader:
             conanfile = cached[0](self._runner, display)
             conanfile._conan_requester = self._requester
             if hasattr(conanfile, "init") and callable(conanfile.init):
-                with conanfile_exception_formatter(str(conanfile), "init"):
+                with conanfile_exception_formatter(conanfile, "init"):
                     conanfile.init()
             return conanfile, cached[1]
 
@@ -53,8 +53,8 @@ class ConanFileLoader:
 
             # If the scm is inherited, create my own instance
             if hasattr(conanfile, "scm") and "scm" not in conanfile.__class__.__dict__:
-                if isinstance(conanfile.scm, dict):
-                    conanfile.scm = conanfile.scm.copy()
+                assert isinstance(conanfile.scm, dict), "'scm' attribute must be a dictionary"
+                conanfile.scm = conanfile.scm.copy()
 
             # Load and populate dynamic fields from the data file
             conan_data = self._load_data(conanfile_path)
@@ -69,7 +69,7 @@ class ConanFileLoader:
 
             result._conan_requester = self._requester
             if hasattr(result, "init") and callable(result.init):
-                with conanfile_exception_formatter(str(result), "init"):
+                with conanfile_exception_formatter(result, "init"):
                     result.init()
             return result, module
         except ConanException as e:
@@ -83,7 +83,7 @@ class ConanFileLoader:
             to the provided generator list
             @param conanfile_module: the module to be processed
             """
-        conanfile_module, module_id = _parse_conanfile(conanfile_path)
+        conanfile_module, module_id = load_python_file(conanfile_path)
         for name, attr in conanfile_module.__dict__.items():
             if (name.startswith("_") or not inspect.isclass(attr) or
                     attr.__dict__.get("__module__") != module_id):
@@ -174,7 +174,6 @@ class ConanFileLoader:
         conanfile.in_local_cache = False
         try:
             conanfile.develop = True
-            conanfile.initialize()
 
             if require_overrides is not None:
                 for req_override in require_overrides:
@@ -199,12 +198,7 @@ class ConanFileLoader:
         conanfile.version = ref.version
         conanfile.user = ref.user
         conanfile.channel = ref.channel
-
-        try:
-            conanfile.initialize()
-            return conanfile
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+        return conanfile
 
     def load_conanfile_txt(self, conan_txt_path, ref=None, require_overrides=None):
         if not os.path.exists(conan_txt_path):
@@ -231,9 +225,9 @@ class ConanFileLoader:
             raise ConanException("%s:\n%s" % (path, str(e)))
         for reference in parser.requirements:
             conanfile.requires(reference)
-        for build_reference in parser.build_requirements:
+        for build_reference in parser.tool_requirements:
             # TODO: Improve this interface
-            conanfile.requires.build_require(build_reference)
+            conanfile.requires.tool_require(build_reference)
 
         conanfile.generators = parser.generators
 
@@ -264,7 +258,6 @@ class ConanFileLoader:
                 req_override = RecipeReference.loads(req_override)
                 conanfile.requires.override(req_override)
 
-        conanfile.initialize()
         conanfile.generators = []  # remove the default txt generator
         return conanfile
 
@@ -294,7 +287,7 @@ def _parse_module(conanfile_module, module_id):
 
 
 def parse_conanfile(conanfile_path):
-    module, filename = _parse_conanfile(conanfile_path)
+    module, filename = load_python_file(conanfile_path)
     try:
         conanfile = _parse_module(module, filename)
         return module, conanfile
@@ -302,7 +295,7 @@ def parse_conanfile(conanfile_path):
         raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
 
-def _parse_conanfile(conan_file_path):
+def load_python_file(conan_file_path):
     """ From a given path, obtain the in memory python import module
     """
 
@@ -317,7 +310,9 @@ def _parse_conanfile(conan_file_path):
         with chdir(current_dir):
             old_dont_write_bytecode = sys.dont_write_bytecode
             sys.dont_write_bytecode = True
-            loaded = imp.load_source(module_id, conan_file_path)
+            spec = imp_util.spec_from_file_location(module_id, conan_file_path)
+            loaded = imp_util.module_from_spec(spec)
+            spec.loader.exec_module(loaded)
             sys.dont_write_bytecode = old_dont_write_bytecode
 
         required_conan_version = getattr(loaded, "required_conan_version", None)

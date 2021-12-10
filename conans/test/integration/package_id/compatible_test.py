@@ -78,7 +78,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
-        client.run("export . pkg/0.1@user/stable")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=stable")
         self.assertIn("pkg/0.1@user/stable: Exported revision: b27c975bb0d9e40c328bd02bc529b6f8",
                       client.out)
 
@@ -476,7 +476,7 @@ class CompatibleIDsTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/6609
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . tool/0.1@")
+        client.run("export . --name=tool --version=0.1")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -539,7 +539,7 @@ def test_msvc_visual_incompatible():
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.1X
+        compiler.version=191
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release

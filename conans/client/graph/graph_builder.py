@@ -54,6 +54,7 @@ class DepsGraphBuilder(object):
             check_graph_provides(dep_graph)
         except GraphError as e:
             dep_graph.error = e
+        dep_graph.resolved_ranges = self._resolver.resolved_ranges
         return dep_graph
 
     def _expand_require(self, require, node, graph, profile_host, profile_build, graph_lock):
@@ -148,35 +149,35 @@ class DepsGraphBuilder(object):
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 
-        pro_options = profile_host.options if node.context == CONTEXT_HOST else profile_build.options
-        assert isinstance(pro_options, Options), type(pro_options)
-        run_configure_method(conanfile, down_options, pro_options, ref)
+        profile_options = profile_host.options if node.context == CONTEXT_HOST else profile_build.options
+        assert isinstance(profile_options, Options), type(profile_options)
+        run_configure_method(conanfile, down_options, profile_options, ref)
 
-        # Apply build_requires from profile, overrriding the declared ones
+        # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
-        build_requires = profile.build_requires
+        tool_requires = profile.tool_requires
         str_ref = str(node.ref)
-        for pattern, build_requires in build_requires.items():
+        for pattern, tool_requires in tool_requires.items():
             if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                 (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                     fnmatch.fnmatch(str_ref, pattern)):
-                for build_require in build_requires:  # Do the override
-                    if str(build_require) == str(node.ref):  # FIXME: Ugly str comparison
+                for tool_require in tool_requires:  # Do the override
+                    if str(tool_require) == str(node.ref):  # FIXME: Ugly str comparison
                         continue  # avoid self-loop of build-requires in build context
                     # FIXME: converting back to string?
-                    node.conanfile.requires.build_require(str(build_require),
-                                                          raise_if_duplicated=False)
+                    node.conanfile.requires.tool_require(str(tool_require),
+                                                         raise_if_duplicated=False)
 
     def _initialize_requires(self, node, graph, graph_lock):
         # Introduce the current requires to define overrides
-        # This is the first pass over one recip requires
+        # This is the first pass over one recipe requires
         if graph_lock is not None:
             for require in node.conanfile.requires.values():
                 graph_lock.resolve_locked(node, require)
 
         for require in node.conanfile.requires.values():
             self._resolve_alias(node, require, graph)
-            node.transitive_deps[require] = TransitiveRequirement(require, None)
+            node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, graph):
         alias = require.alias
@@ -252,7 +253,6 @@ class DepsGraphBuilder(object):
         # FIXME
         down_options = node.conanfile.up_options
         self._prepare_node(new_node, profile_host, profile_build, down_options)
-
         require.process_package_type(new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)

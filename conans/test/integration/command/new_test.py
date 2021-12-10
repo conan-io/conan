@@ -134,7 +134,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
@@ -170,7 +170,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("{}/1.3@myuser/testing".format(package_name), client.out)
 
@@ -189,7 +189,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
@@ -207,7 +207,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertNotIn('homepage', content)
         self.assertNotIn('source()', content)
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
@@ -223,7 +223,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn('topics = (', content)
         self.assertNotIn('homepage', content)
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 

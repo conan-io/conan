@@ -85,6 +85,18 @@ class _PackageOptions:
                           for option, possible_values in recipe_options_definition.items()}
         self._freeze = False
 
+    @property
+    def possible_values(self):
+        return {k: v._possible_values for k, v in self._data.items()}
+
+    def update(self, options):
+        """
+        @type options: _PackageOptions
+        """
+        # Necessary for init() extending of options for python_requires_extend
+        for k, v in options._data.items():
+            self._data[k] = v
+
     def clear(self):
         # for header_only() clearing
         if self._freeze:
@@ -193,6 +205,10 @@ class Options:
     def __repr__(self):
         return self.dumps()
 
+    @property
+    def possible_values(self):
+        return self._package_options.possible_values
+
     def dumps(self):
         """ produces a multiline text representation of all values, first self then others.
         In alphabetical order, skipping real None (not string "None") values:
@@ -275,6 +291,13 @@ class Options:
         for pkg_pattern, pkg_option in sorted(self._deps_package_options.items()):
             result._deps_package_options[pkg_pattern] = pkg_option.copy_conaninfo_options()
         return result
+
+    def update(self, options=None, options_values=None):
+        # Necessary for init() extending of options for python_requires_extend
+        new_options = Options(options, options_values)
+        self._package_options.update(new_options._package_options)
+        for pkg, pkg_option in new_options._deps_package_options.items():
+            self._deps_package_options.setdefault(pkg, _PackageOptions()).update(pkg_option)
 
     def update_options(self, other):
         """

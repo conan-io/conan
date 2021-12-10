@@ -1,8 +1,8 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_SKIP
+from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
-from conans.model.requires import Requirement
 from conans.model.conanfile_interface import ConanFileInterface
 
 
@@ -25,29 +25,43 @@ class UserRequirementsDict(object):
     def __bool__(self):
         return bool(self._data)
 
-    def _get_require(self, ref, **kwargs):
-        assert isinstance(ref, str)
+    def get(self, ref, build=None, **kwargs):
+        if build is None:
+            current_filters = self._require_filter or {}
+            if "build" not in current_filters:
+                # By default we search in the "host" context
+                kwargs["build"] = False
+        else:
+            kwargs["build"] = build
+        data = self.filter(kwargs)
+        ret = []
         if "/" in ref:
             # FIXME: Validate reference
             ref = RecipeReference.loads(ref)
+            for require, value in data.items():
+                if require.ref == ref:
+                    ret.append((require, value))
         else:
-            ref = RecipeReference(ref, "unknown", "unknown", "unknown")
+            name = ref
+            for require, value in data.items():
+                if require.ref.name == name:
+                    ret.append((require, value))
+        if len(ret) > 1:
+            current_filters = data._require_filter or "{}"
+            requires = "\n".join(["- {}".format(require) for require, _ in ret])
+            raise ConanException("There are more than one requires matching the specified filters:"
+                                 " {}\n{}".format(current_filters, requires))
+        if not ret:
+            raise KeyError("'{}' not found in the dependency set".format(ref))
 
-        if self._require_filter:
-            kwargs.update(self._require_filter)
-        r = Requirement(ref, **kwargs)
-        return r
-
-    def get(self, ref, **kwargs):
-        r = self._get_require(ref, **kwargs)
-        return self._data.get(r)
+        _, value = ret[0]
+        return value
 
     def __getitem__(self, name):
-        r = self._get_require(name)
-        return self._data[r]
+        return self.get(name)
 
     def __delitem__(self, name):
-        r = self._get_require(name)
+        r = self.get(name)
         del self._data[r]
 
     def items(self):
@@ -103,7 +117,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_build(self):
-        return self.filter({"build": True, "direct": True, "run": True})
+        return self.filter({"build": True, "direct": True})
 
     @property
     def host(self):
@@ -111,8 +125,10 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def test(self):
+        # Not needed a direct_test because they are visible=False so only the direct consumer
+        # will have them in the graph
         return self.filter({"build": False, "test": True})
 
     @property
     def build(self):
-        return self.filter({"build": True, "run": True})
+        return self.filter({"build": True})

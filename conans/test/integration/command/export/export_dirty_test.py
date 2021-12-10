@@ -65,7 +65,7 @@ class ExportDirtyTest(unittest.TestCase):
 
         self.client.save({"conanfile.py": GenConanfile().with_exports("main.cpp", "other.h"),
                           "main.cpp": ""})
-        self.client.run("export . pkg/0.1@user/stable")
+        self.client.run("export . --name=pkg --version=0.1 --user=user --channel=stable")
         self.assertIn("ERROR: Unable to delete source folder. "
                       "Will be marked as corrupted for deletion",
                       self.client.out)
@@ -76,7 +76,7 @@ class ExportDirtyTest(unittest.TestCase):
     def test_export_remove(self):
         # export is able to remove dirty source folders
         self.f.close()
-        self.client.run("export . pkg/0.1@user/stable")
+        self.client.run("export . --name=pkg --version=0.1 --user=user --channel=stable")
         self.assertIn("Source folder is corrupted, forcing removal", self.client.out)
         self.client.run("install --reference=pkg/0.1@user/stable --build")
         self.assertNotIn("WARN: Trying to remove corrupted source folder", self.client.out)

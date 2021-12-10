@@ -25,7 +25,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
     scoped_output = conanfile.output
     # Make the copy of all the patterns
     scoped_output.info("Generating the package")
-    scoped_output.info("Package folder %s" % conanfile.package_folder)
+    scoped_output.info("Temporary package folder %s" % conanfile.package_folder)
 
     hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
@@ -34,7 +34,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
     folders = [conanfile.source_folder, conanfile.build_folder] \
         if conanfile.source_folder != conanfile.build_folder else [conanfile.build_folder]
     conanfile.copy = FileCopier(folders, conanfile.package_folder)
-    with conanfile_exception_formatter(str(conanfile), "package"):
+    with conanfile_exception_formatter(conanfile, "package"):
         with chdir(conanfile.build_folder):
             with conan_v2_property(conanfile, 'info',
                                    "'self.info' access in package() method is deprecated"):

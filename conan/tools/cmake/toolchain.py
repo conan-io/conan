@@ -541,14 +541,12 @@ class GenericSystemBlock(Block):
             return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
             compiler_version = str(settings.compiler.version)
-            version_components = compiler_version.split(".")
-            if len(version_components) >= 2:  # there is a 19.XX
-                minor = version_components[1]
-                if len(minor) >= 2 and "X" not in minor:  # It is full one(19.28), not generic 19.2X
-                    # The equivalent of compiler 19.26 is toolset 14.26
-                    return "version=14.{}".format(minor)
-                else:
-                    return "v14{}".format(minor[0])
+            compiler_update = str(settings.compiler.update)
+            if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
+                # The equivalent of compiler 19.26 is toolset 14.26
+                return "version=14.{}{}".format(compiler_version[-1], compiler_update)
+            else:
+                return "v14{}".format(compiler_version[-1])
         elif compiler == "clang":
             if generator and "Visual" in generator:
                 if "Visual Studio 16" in generator:

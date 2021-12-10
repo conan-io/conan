@@ -107,7 +107,7 @@ class GraphManagerTest(unittest.TestCase):
         self._put_in_cache(ref, conanfile)
 
     @staticmethod
-    def recipe_consumer(reference=None, requires=None, build_requires=None):
+    def recipe_consumer(reference=None, requires=None, build_requires=None, tool_requires=None):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         conanfile = GenConanfile()
@@ -120,6 +120,9 @@ class GraphManagerTest(unittest.TestCase):
         if build_requires:
             for r in build_requires:
                 conanfile.with_build_requires(r)
+        if tool_requires:
+            for r in tool_requires:
+                conanfile.with_tool_requires(r)
         save(path, str(conanfile))
         return path
 
@@ -145,7 +148,7 @@ class GraphManagerTest(unittest.TestCase):
         profile_build = Profile()
         profile_build.settings["os"] = "Windows"
         if profile_build_requires:
-            profile_host.build_requires = profile_build_requires
+            profile_host.tool_requires = profile_build_requires
         if options_build:
             profile_build.options = Options(options_values=options_build)
         profile_host.process_settings(self.cache)

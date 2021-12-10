@@ -61,4 +61,4 @@ class DetectTest(unittest.TestCase):
             result = detect_defaults_settings()
             result = dict(result)
             self.assertEqual('msvc', result['compiler'])
-            self.assertEqual('19.3', result['compiler.version'])
+            self.assertEqual('193', result['compiler.version'])
