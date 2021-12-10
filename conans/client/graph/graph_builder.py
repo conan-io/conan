@@ -252,11 +252,14 @@ class DepsGraphBuilder(object):
 
         # The consumer "up_options" are the options that come from downstream to this node
         if require.options is not None:
-            # If the consumer has specified requires(options=xxx), we need to use it
+            # If the consumer has specified "requires(options=xxx)", we need to use it
             # It will have less priority than downstream consumers
             down_options = Options(options_values=require.options)
             down_options.scope(new_ref.name)
-            # TODO: discuss, together with build_require override, if it is "build" or "visible"
+            # At the moment, the behavior is the most restrictive one: default_options and
+            # options["dep"].opt=value only propagate to visible and host dependencies
+            # we will evaluate if necessary a potential "build_options", but recall that it is
+            # now possible to do "self.build_requires(..., options={k:v})" to specify it
             if require.visible and context == CONTEXT_HOST:
                 # Only visible requirements in the host context propagate options from downstream
                 down_options.update_options(node.conanfile.up_options)
