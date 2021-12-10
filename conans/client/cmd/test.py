@@ -11,7 +11,8 @@ from conans.util.files import rmdir
 def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                            remotes, update, build_modes=None, manifest_folder=None,
                            manifest_verify=False, manifest_interactive=False, keep_build=False,
-                           test_build_folder=None, recorder=None, require_overrides=None):
+                           test_build_folder=None, layout_base_folder=None, recorder=None,
+                           require_overrides=None):
     """
     Installs the reference (specified by the parameters or extracted from the test conanfile)
     and builds the test_package/conanfile.py running the test() method.
@@ -53,7 +54,8 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
         cmd_build(app, conanfile_abs_path, test_build_folder,
                   source_folder=base_folder, build_folder=test_build_folder,
                   package_folder=os.path.join(test_build_folder, "package"),
-                  install_folder=test_build_folder, test=reference)
+                  install_folder=test_build_folder, layout_base_folder=layout_base_folder,
+                  test=reference)
     finally:
         if delete_after_build:
             # Required for windows where deleting the cwd is not possible.

@@ -10,8 +10,8 @@ from conans.util.log import logger
 
 
 def cmd_build(app, conanfile_path, base_path, source_folder, build_folder, package_folder,
-              install_folder, test=False, should_configure=True, should_build=True,
-              should_install=True, should_test=True):
+              install_folder, layout_base_folder, test=False, should_configure=True,
+              should_build=True, should_install=True, should_test=True):
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
@@ -43,7 +43,7 @@ def cmd_build(app, conanfile_path, base_path, source_folder, build_folder, packa
         # FIXME: Conan 2.0 all these build_folder, source_folder will disappear
         #  Only base_path and conanfile_path will remain
         if hasattr(conan_file, "layout"):
-            conanfile_folder = os.path.dirname(conanfile_path)
+            conanfile_folder = layout_base_folder or os.path.dirname(conanfile_path)
             conan_file.folders.set_base_build(conanfile_folder)
             conan_file.folders.set_base_source(conanfile_folder)
             conan_file.folders.set_base_package(conanfile_folder)

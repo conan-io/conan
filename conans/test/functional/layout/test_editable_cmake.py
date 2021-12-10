@@ -21,13 +21,13 @@ def editable_cmake(generator):
            path=os.path.join(c.current_folder, "pkg"))
 
     def build_dep():
-        c.run("install . -if=install_release")
-        c.run("build . -if=install_release")
-        c.run("install . -s build_type=Debug -if=install_debug")
-        c.run("build . -if=install_debug")
+        c.run("install . -if=install_release --layout-base=mybase")
+        c.run("build . -if=install_release --layout-base=mybase")
+        c.run("install . -s build_type=Debug -if=install_debug --layout-base=mybase")
+        c.run("build . -if=install_debug --layout-base=mybase")
 
     with c.chdir("dep"):
-        c.run("editable add . dep/0.1@")
+        c.run("editable add . dep/0.1@ --layout-base=mybase")
         build_dep()
 
     def build_pkg(msg):

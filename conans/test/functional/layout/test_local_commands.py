@@ -48,6 +48,18 @@ def test_local_static_generators_folder():
     assert not os.path.exists(cmake_generator_path)
     assert os.path.exists(cmake_toolchain_generator_path)
 
+    client.run("install . -if=my_install --layout-base=my_base")
+    build_folder = os.path.join(client.current_folder, "my_base", "build-Release")
+    generators_folder = os.path.join(build_folder, "generators")
+    conaninfo = os.path.join(generators_folder, "conaninfo.txt")
+    conanbuildinfo = os.path.join(generators_folder, "conanbuildinfo.txt")
+    cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
+    cmake_toolchain_generator_path = os.path.join(generators_folder, "conan_toolchain.cmake")
+    assert not os.path.exists(conaninfo)
+    assert not os.path.exists(conanbuildinfo)
+    assert not os.path.exists(cmake_generator_path)
+    assert os.path.exists(cmake_toolchain_generator_path)
+
 
 def test_local_dynamic_generators_folder():
     """If we configure a generators folder in the layout, the generator files:

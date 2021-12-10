@@ -105,6 +105,7 @@ class ClientCache(object):
         if edited_ref:
             conanfile_path = edited_ref["path"]
             layout_file = edited_ref["layout"]
+            layout_base_folder = edited_ref.get("layout_base")
             return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
                                          conanfile_path)
         else:

@@ -458,7 +458,7 @@ class BinaryInstaller(object):
         conanfile = node.conanfile
         ref = node.ref
         package_layout = self._cache.package_layout(ref)
-        base_path = package_layout.base_folder()
+        base_path = package_layout.layout_base_folder or package_layout.base_folder()
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
         # New editables mechanism based on Folders
