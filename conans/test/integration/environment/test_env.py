@@ -42,6 +42,7 @@ def client():
 
             def package_info(self):
                 # Custom buildenv not defined by cpp_info
+                self.buildenv_info.prepend_path("PATH", self.package_folder)
                 self.buildenv_info.define("MYCMAKEVAR", "MYCMAKEVALUE!!")
             """)
 
