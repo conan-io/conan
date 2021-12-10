@@ -370,7 +370,7 @@ def test_test_package_not_copied():
     client.save({"conanfile.py":
                      GenConanfile().with_exports("*").with_exports_sources("*"),
                  "test_package/foo.txt": "bar"})
-    client.run("export . foo/1.0@")
+    client.run("export . --name foo --version 1.0")
     assert "Copied 1 '.txt' file" not in client.out
 
 
