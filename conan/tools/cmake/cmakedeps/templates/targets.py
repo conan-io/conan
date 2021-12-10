@@ -75,8 +75,6 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         if(NOT TARGET {{ root_target_name }})
             add_library({{ root_target_name }} INTERFACE IMPORTED)
             conan_message(STATUS "Conan: Target declared '{{ root_target_name }}'")
-        else()
-            message(WARNING "Target name '{{root_target_name}}' already exists.")
         endif()
 
         {%- for alias, target in cmake_target_aliases.items() %}
