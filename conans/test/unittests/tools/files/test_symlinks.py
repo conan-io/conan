@@ -65,7 +65,7 @@ def test_remove_external_symlinks(folders):
 
     folder, outside_folder = folders
     # Remove the external symlinks
-    tools.files.remove_external_symlinks(None, folder)
+    tools.files.symlinks.remove_external_symlinks(None, folder)
 
     # Check the results, these are kept the same
     linked_to = os.readlink(os.path.join(folder, "foo/var/other/absolute.txt"))
@@ -95,7 +95,7 @@ def test_remove_external_symlinks(folders):
 def test_remove_broken_symlinks(folders):
     folder, outside_folder = folders
     # Remove the external symlinks
-    tools.files.remove_broken_symlinks(None, folder)
+    tools.files.symlinks.remove_broken_symlinks(None, folder)
 
     # Check the results, these are kept the same
     linked_to = os.readlink(os.path.join(folder, "foo/var/other/absolute.txt"))

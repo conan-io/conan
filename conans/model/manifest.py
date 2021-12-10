@@ -16,7 +16,7 @@ def discarded_file(filename):
 def gather_files(folder):
     file_dict = {}
     symlinked_folders = {}
-    for root, dirs, files in walk(folder, followlinks=True):
+    for root, dirs, files in walk(folder):
         if os.path.islink(root):
             dirs[:] = []
             rel_path = root[len(folder) + 1:].replace("\\", "/")
