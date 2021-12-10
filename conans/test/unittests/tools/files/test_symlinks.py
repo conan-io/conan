@@ -4,7 +4,7 @@ import pytest
 
 from conan import tools
 from conan.tools.files import mkdir
-from tools import temp_folder
+from conans.test.utils.test_files import temp_folder
 
 
 @pytest.fixture
