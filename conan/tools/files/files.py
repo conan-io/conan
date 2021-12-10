@@ -244,9 +244,7 @@ def get_symlinks(base_folder):
     for (root, dirnames, filenames) in os.walk(base_folder):
         for el in filenames + dirnames:
             fullpath = os.path.join(root, el)
-            if not os.path.islink(fullpath):
-                continue
-            else:
+            if os.path.islink(fullpath):
                 yield fullpath
 
 
@@ -259,7 +257,7 @@ def _path_inside(base, folder):
 def absolute_to_relative_symlinks(conanfile, base_folder):
     """Convert the symlinks with absolute paths to relative if they are pointing to a file or
     directory inside the 'base_folder'. Any absolute symlink pointing outside the 'base_folder'
-    will be discarded."""
+    will be ignored"""
     for fullpath in get_symlinks(base_folder):
         link_target = os.readlink(fullpath)
         if not os.path.isabs(link_target):
