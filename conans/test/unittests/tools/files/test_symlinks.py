@@ -3,7 +3,7 @@ import os
 import pytest
 
 from conan import tools
-from conan.tools.files import mkdir, load
+from conan.tools.files import mkdir
 from tools import temp_folder
 
 
