@@ -7,7 +7,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conanfile_txt_deps_revisions(requires):
     """
     conanfile.txt locking it dependencies (with revisions)
@@ -32,7 +32,7 @@ def test_conanfile_txt_deps_revisions(requires):
     assert "REV1!!!" not in client.out
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 @pytest.mark.parametrize("req_version", ["0.1", "[>=0.0]"])
 def test_conanfile_txt_deps_revisions_transitive(requires, req_version):
     """
@@ -63,7 +63,7 @@ def test_conanfile_txt_deps_revisions_transitive(requires, req_version):
     assert "REV1!!!" not in client.out
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conanfile_txt_strict_revisions(requires):
     """
     conanfile.txt locking it dependencies (with version ranges)
@@ -86,7 +86,7 @@ def test_conanfile_txt_strict_revisions(requires):
     assert f"Requirement 'pkg/0.1@user/testing#{rrev}' not in lockfile" in client.out
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conditional_os(requires):
     """
     conanfile.txt can lock conditional dependencies (conditional on OS for example),
@@ -149,7 +149,7 @@ def test_conditional_os(requires):
     assert "win" not in client.out
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conditional_same_package_revisions(requires):
     # What happens when a conditional requires different versions of the same package?
     client = TestClient()

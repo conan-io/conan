@@ -71,10 +71,12 @@ class VirtualRunEnv:
 
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-        for _, dep in list(host_req.items()) + list(test_req.items()):
+        for require, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
                 runenv.compose_env(dep.runenv_info)
-            runenv.compose_env(runenv_from_cpp_info(dep, self._conanfile.settings.get_safe("os")))
+            if require.run:  # Only if the require is run (shared or application to be run)
+                _os = self._conanfile.settings.get_safe("os")
+                runenv.compose_env(runenv_from_cpp_info(dep, _os))
 
         return runenv
 

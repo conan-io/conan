@@ -225,9 +225,9 @@ class ConanFileLoader:
             raise ConanException("%s:\n%s" % (path, str(e)))
         for reference in parser.requirements:
             conanfile.requires(reference)
-        for build_reference in parser.build_requirements:
+        for build_reference in parser.tool_requirements:
             # TODO: Improve this interface
-            conanfile.requires.build_require(build_reference)
+            conanfile.requires.tool_require(build_reference)
 
         conanfile.generators = parser.generators
 

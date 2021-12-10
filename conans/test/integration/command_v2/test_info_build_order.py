@@ -58,7 +58,7 @@ def test_info_build_order():
 def test_info_build_order_build_require():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
-            "pkg/conanfile.py": GenConanfile().with_build_requires("dep/0.1"),
+            "pkg/conanfile.py": GenConanfile().with_tool_requires("dep/0.1"),
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
@@ -67,7 +67,7 @@ def test_info_build_order_build_require():
     result = [
         [
             {
-                "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97',
                 "depends": [],
                 "packages": [
                     {
@@ -83,7 +83,7 @@ def test_info_build_order_build_require():
         ],
         [
             {
-                "ref": "pkg/0.1#1364f701b47130c7e38f04c5e5fab985",
+                "ref": "pkg/0.1#f487531dfe46620d4f64303baf2211fc",
                 "depends": [
                     "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
                 ],
@@ -107,10 +107,10 @@ def test_info_build_order_build_require():
 def test_info_build_order_options():
     c = TestClient()
     c.save({"tool/conanfile.py": GenConanfile().with_option("myopt", [1, 2, 3]),
-            "dep1/conanfile.py": GenConanfile().with_build_requires("tool/0.1").with_default_option(
-                "tool:myopt", 1),
-            "dep2/conanfile.py": GenConanfile().with_build_requires("tool/0.1").with_default_option(
-                "tool:myopt", 2),
+            "dep1/conanfile.py": GenConanfile().with_tool_requires("tool/0.1").
+           with_default_option("tool:myopt", 1),
+            "dep2/conanfile.py": GenConanfile().with_tool_requires("tool/0.1").
+           with_default_option("tool:myopt", 2),
             "consumer/conanfile.txt": "[requires]\ndep1/0.1\ndep2/0.1"})
     c.run("export tool --name=tool --version=0.1")
     c.run("export dep1 --name=dep1 --version=0.1")
@@ -151,7 +151,7 @@ def test_info_build_order_options():
         ],
         [
             {
-                "ref": "dep1/0.1#36716458443ac8c76bf2e905323b331c",
+                "ref": "dep1/0.1#56a8318e80ce85706b95baad0e14853c",
                 "depends": [
                     "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
                 ],
@@ -168,7 +168,7 @@ def test_info_build_order_options():
                 ]
             },
             {
-                "ref": "dep2/0.1#d7154a7eee8e107438768c1542ca1b70",
+                "ref": "dep2/0.1#0bf82914395fcd67ac96945ffe9dbe08",
                 "depends": [
                     "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
                 ],

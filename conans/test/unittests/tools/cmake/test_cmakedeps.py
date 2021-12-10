@@ -4,9 +4,10 @@ from mock import Mock
 from conan.tools.cmake import CMakeDeps
 from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
-from conans.model.dependencies import ConanFileDependencies, Requirement
+from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo
 from conans.model.recipe_ref import RecipeReference
+from conans.model.requires import Requirement
 from conans.model.settings import Settings
 
 

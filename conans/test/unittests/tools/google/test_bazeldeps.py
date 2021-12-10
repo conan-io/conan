@@ -6,9 +6,10 @@ import re
 from conan.tools.google import BazelDeps
 from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
-from conans.model.dependencies import Requirement, ConanFileDependencies
+from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo
 from conans.model.recipe_ref import RecipeReference
+from conans.model.requires import Requirement
 
 
 def test_bazeldeps_dependency_buildfiles():
