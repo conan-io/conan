@@ -58,7 +58,7 @@ def test_info_build_order():
 def test_info_build_order_build_require():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
-            "pkg/conanfile.py": GenConanfile().with_build_requires("dep/0.1"),
+            "pkg/conanfile.py": GenConanfile().with_tool_requires("dep/0.1"),
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
@@ -67,7 +67,7 @@ def test_info_build_order_build_require():
     result = [
         [
             {
-                "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97',
                 "depends": [],
                 "packages": [
                     {
@@ -83,7 +83,7 @@ def test_info_build_order_build_require():
         ],
         [
             {
-                "ref": "pkg/0.1#1364f701b47130c7e38f04c5e5fab985",
+                "ref": "pkg/0.1#f487531dfe46620d4f64303baf2211fc",
                 "depends": [
                     "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
                 ],
@@ -109,10 +109,10 @@ def test_info_build_order_options():
     # The normal default_options do NOT propagate to build_requires, it is necessary to use
     # self.requires(..., options=xxx)
     c.save({"tool/conanfile.py": GenConanfile().with_option("myopt", [1, 2, 3]),
-            "dep1/conanfile.py": GenConanfile().with_build_requirement("tool/0.1",
-                                                                       options={"myopt": 1}),
-            "dep2/conanfile.py": GenConanfile().with_build_requirement("tool/0.1",
-                                                                       options={"myopt": 2}),
+            "dep1/conanfile.py": GenConanfile().with_tool_requirement("tool/0.1",
+                                                                      options={"myopt": 1}),
+            "dep2/conanfile.py": GenConanfile().with_tool_requirement("tool/0.1",
+                                                                      options={"myopt": 2}),
             "consumer/conanfile.txt": "[requires]\ndep1/0.1\ndep2/0.1"})
     c.run("export tool --name=tool --version=0.1")
     c.run("export dep1 --name=dep1 --version=0.1")
@@ -153,7 +153,7 @@ def test_info_build_order_options():
         ],
         [
             {
-                "ref": "dep1/0.1#7a778ad1b2527b6de9fc16575086cc24",
+                "ref": "dep1/0.1#eeabd1fa65a6f7ccc227816a507bb966",
                 "depends": [
                     "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
                 ],
@@ -170,7 +170,7 @@ def test_info_build_order_options():
                 ]
             },
             {
-                "ref": "dep2/0.1#e02c590340355284e2febc6edb210c24",
+                "ref": "dep2/0.1#d878e5a90ac7bd8fbb14ce899456cc74",
                 "depends": [
                     "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
                 ],

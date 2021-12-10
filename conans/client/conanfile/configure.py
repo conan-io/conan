@@ -1,6 +1,6 @@
 from conans.errors import conanfile_exception_formatter
 from conans.model.pkg_type import PackageType
-from conans.model.requires import BuildRequirements, TestRequirements
+from conans.model.requires import BuildRequirements, TestRequirements, ToolRequirements
 from conans.util.env import no_op
 
 
@@ -25,6 +25,10 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         conanfile.up_options = up_options
 
         PackageType.compute_package_type(conanfile)
+
+        conanfile.build_requires = BuildRequirements(conanfile.requires)
+        conanfile.test_requires = TestRequirements(conanfile.requires)
+        conanfile.tool_requires = ToolRequirements(conanfile.requires)
 
         if hasattr(conanfile, "requirements"):
             with conanfile_exception_formatter(conanfile, "requirements"):

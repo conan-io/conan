@@ -37,6 +37,8 @@ class GenConanfile(object):
         self._requirements = None
         self._build_requires = None
         self._build_requirements = None
+        self._tool_requires = None
+        self._tool_requirements = None
         self._test_requires = None
         self._revision_mode = None
         self._package_info = None
@@ -125,6 +127,13 @@ class GenConanfile(object):
             self._build_requires.append(ref_str)
         return self
 
+    def with_tool_requires(self, *refs):
+        self._tool_requires = self._tool_requires or []
+        for ref in refs:
+            ref_str = self._get_full_ref_str(ref)
+            self._tool_requires.append(ref_str)
+        return self
+
     def with_test_requires(self, *refs):
         self._test_requires = self._test_requires or []
         for ref in refs:
@@ -136,6 +145,12 @@ class GenConanfile(object):
         self._build_requirements = self._build_requirements or []
         ref_str = self._get_full_ref_str(ref)
         self._build_requirements.append((ref_str, kwargs))
+        return self
+
+    def with_tool_requirement(self, ref, **kwargs):
+        self._tool_requirements = self._tool_requirements or []
+        ref_str = self._get_full_ref_str(ref)
+        self._tool_requirements.append((ref_str, kwargs))
         return self
 
     def with_import(self, i):
@@ -297,6 +312,12 @@ class GenConanfile(object):
         return tmp
 
     @property
+    def _tool_requires_render(self):
+        line = ", ".join(['"{}"'.format(r) for r in self._tool_requires])
+        tmp = "tool_requires = %s" % line
+        return tmp
+
+    @property
     def _requires_render(self):
         items = []
         for ref, private, override in self._requires:
@@ -317,10 +338,21 @@ class GenConanfile(object):
     @property
     def _requirements_render(self):
         lines = ["", "    def requirements(self):"]
-        for ref, kwargs in self._requirements:
+        for ref, kwargs in self._requirements or []:
             args = ", ".join("{}={}".format(k, f'"{v}"' if isinstance(v, str) else v)
                              for k, v in kwargs.items())
             lines.append('        self.requires("{}", {})'.format(ref, args))
+
+        for ref, kwargs in self._build_requirements or []:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.build_requires("{}", {})'.format(ref, args))
+
+        for ref, kwargs in self._tool_requirements or []:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.tool_requires("{}", {})'.format(ref, args))
+
         return "\n".join(lines)
 
     @property
@@ -427,11 +459,15 @@ class GenConanfile(object):
 
         for member in ("name", "version", "package_type", "provides", "deprecated",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
-                       "test_requires", "requirements", "build_requirements", "scm", "revision_mode",
-                       "settings", "options", "default_options", "build", "package_method",
-                       "package_info", "package_id_lines", "test_lines"
+                       "tool_requires", "test_requires", "requirements", "scm",
+                       "revision_mode", "settings", "options", "default_options", "build",
+                       "package_method", "package_info", "package_id_lines", "test_lines"
                        ):
-            v = getattr(self, "_{}".format(member), None)
+            if member == "requirements":
+                # FIXME: This seems exclusive, but we could mix them?
+                v = self._requirements or self._tool_requirements or self._build_requirements
+            else:
+                v = getattr(self, "_{}".format(member), None)
             if v is not None:
                 ret.append("    {}".format(getattr(self, "_{}_render".format(member))))
 

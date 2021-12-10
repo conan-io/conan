@@ -224,13 +224,14 @@ class _ProfileValueParser(object):
     """
     @staticmethod
     def get_profile(profile_text, base_profile=None):
-        doc = ConfigParser(profile_text, allowed_fields=["build_requires", "settings", "env",
+        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+                                                         "settings", "env",
                                                          "options", "conf", "buildenv"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
         options = Options.loads(doc.options) if doc.options else None
-        build_requires = _ProfileValueParser._parse_build_requires(doc)
+        tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
         if doc.conf:
             conf = ConfDefinition()
@@ -244,8 +245,8 @@ class _ProfileValueParser(object):
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
             base_profile.package_settings[pkg_name].update(values_dict)
-        for pattern, refs in build_requires.items():
-            base_profile.build_requires.setdefault(pattern, []).extend(refs)
+        for pattern, refs in tool_requires.items():
+            base_profile.tool_requires.setdefault(pattern, []).extend(refs)
         if options is not None:
             base_profile.options.update_options(options)
 
@@ -256,11 +257,11 @@ class _ProfileValueParser(object):
         return base_profile
 
     @staticmethod
-    def _parse_build_requires(doc):
+    def _parse_tool_requires(doc):
         result = OrderedDict()
-        if doc.build_requires:
+        if doc.tool_requires:
             # FIXME CHECKS OF DUPLICATED?
-            for br_line in doc.build_requires.splitlines():
+            for br_line in doc.tool_requires.splitlines():
                 tokens = br_line.split(":", 1)
                 if len(tokens) == 1:
                     pattern, req_list = "*", br_line

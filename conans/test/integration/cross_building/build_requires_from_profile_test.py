@@ -14,7 +14,7 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         compiler=Visual Studio
         compiler.version=16
 
-        [build_requires]
+        [tool_requires]
         br2/version
     """)
 
@@ -27,7 +27,7 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         compiler.libcxx=libc++
         build_type=Release
 
-        [build_requires]
+        [tool_requires]
         br3/version
     """)
 
@@ -99,7 +99,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
     profile_host = textwrap.dedent("""
         [settings]
         os = Linux
-        [build_requires]
+        [tool_requires]
         mytoolchain/1.0
         """)
     profile_build = textwrap.dedent("""
@@ -203,13 +203,13 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
     profile_host = textwrap.dedent("""
         [settings]
         os = Linux
-        [build_requires]
+        [tool_requires]
         mytoolchain/1.0
         """)
     profile_build = textwrap.dedent("""
         [settings]
         os = Windows
-        [build_requires]
+        [tool_requires]
         creator/1.0
         """)
 

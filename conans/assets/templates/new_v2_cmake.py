@@ -230,6 +230,7 @@ from conan.tools.layout import cmake_layout
 class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
+    package_type = "application"
 
     # Optional metadata
     license = "<Put the package license here>"

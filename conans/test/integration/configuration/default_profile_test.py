@@ -137,7 +137,7 @@ class MyConanfile(ConanFile):
 
         # First apply just the default profile, we should get the env MYVAR="from_build_require"
         profile_host = """include(default)
-[build_requires]
+[tool_requires]
 br/1.0@lasote/stable"""
         client.save({CONANFILE: cf,
                      "profile_host": profile_host}, clean_first=True)

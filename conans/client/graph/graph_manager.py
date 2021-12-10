@@ -9,7 +9,6 @@ from conans.client.graph.profile_node_definer import txt_definer, virtual_define
     initialize_conanfile_profile
 from conans.client.profile_loader import ProfileLoader
 from conans.model.options import Options
-from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -62,8 +61,7 @@ class GraphManager(object):
                                          graph_lock,
                                          root_ref, is_build_require,
                                          require_overrides)
-
-        profile_host_build_requires = profile_host.build_requires
+        profile_host_tool_requires = profile_host.tool_requires
         builder = DepsGraphBuilder(self._proxy, self._loader, self._range_resolver)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, graph_lock)
 
