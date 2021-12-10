@@ -2,8 +2,10 @@ import configparser
 import errno
 import os
 import platform
+import shutil
 import subprocess
 from contextlib import contextmanager
+from pathlib import Path
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.cli.output import ConanOutput
@@ -237,3 +239,52 @@ def chdir(conanfile, newdir):
         yield
     finally:
         os.chdir(old_path)
+
+
+def get_symlinks(base_folder):
+    """Return the absolute Path's to the symlink files in base_folder"""
+    for (root, dirnames, filenames) in os.walk(base_folder):
+        for el in filenames + dirnames:
+            fullpath = Path(root, el)
+            if not fullpath.is_symlink():
+                continue
+            else:
+                yield fullpath
+
+
+def absolute_to_relative_symlinks(conanfile, base_folder):
+    """Convert the symlinks with absolute paths to relative if they are pointing to a file or
+    directory inside the 'base_folder'. Any absolute symlink pointing outside the 'base_folder'
+    will be discarded."""
+    base_folder = Path(base_folder)
+    for fullpath in get_symlinks(base_folder):
+        link_target = Path.readlink(fullpath)
+        if not link_target.is_absolute():
+            continue
+        folder_of_symlink = os.path.dirname(fullpath)
+        if link_target.resolve().is_relative_to(base_folder.resolve()):
+            os.unlink(fullpath)
+            new_link = os.path.relpath(link_target, folder_of_symlink)
+            os.symlink(new_link, fullpath)
+
+
+def remove_external_symlinks(conanfile, base_folder=None):
+    """Remove the symlinks to files that point outside the 'base_folder', no matter if relative or
+    absolute"""
+    base_folder = Path(base_folder)
+    for fullpath in get_symlinks(base_folder):
+        link_target = Path.readlink(fullpath)
+        if not link_target.is_absolute():
+            link_target = Path(base_folder, link_target)
+        if not link_target.resolve().is_relative_to(base_folder.resolve()):
+            os.unlink(fullpath)
+
+
+def remove_broken_symlinks(conanfile, base_folder=None):
+    """Remove the broken symlinks, no matter if relative or absolute"""
+    for fullpath in get_symlinks(base_folder):
+        link_target = Path.readlink(fullpath)
+        if not link_target.is_absolute():
+            link_target = Path(base_folder, link_target)
+        if not os.path.exists(link_target):
+            os.unlink(fullpath)

@@ -1,6 +1,5 @@
 import os
 import platform
-import textwrap
 import unittest
 
 import pytest
@@ -9,6 +8,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestServer, TurboTestClient
+from conans.util.files import rmdir
 from tools import temp_folder
 
 
@@ -61,10 +61,12 @@ lrw-r--r-- 0/0               0 1970-01-01 01:00 link.txt -> file.txt
 
 
 @pytest.mark.parametrize("package_files",
-     [{"files": ["foo/bar/file/file.txt"],
+     [{"files": ["foo/bar/folder/file.txt", "foo/bar/folder/other/other_file.txt"],
+       "symlinks": [("../file.txt", "foo/bar/folder/other/file2.txt")]},  # relative ../ symlink
+      {"files": ["foo/bar/file/file.txt"],
        "symlinks": [(temp_folder(), "foo/symlink_folder")]},  # absolute symlink
-     {"files": ["folder/file.txt"],
-      "symlinks": [("folder", "folder2"),
+      {"files": ["folder/file.txt"],
+       "symlinks": [("folder", "folder2"),
                    ("file.txt", "folder/file2.txt")]},  # single level symlink
       {"files": ["foo/bar/file/file.txt"],
        "symlinks": [("bar/file", "foo/symlink_folder"),

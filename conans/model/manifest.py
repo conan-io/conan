@@ -104,21 +104,17 @@ class FileTreeManifest(object):
 
         file_dict = {}
         for name, filepath in files.items():
-            if not os.path.exists(filepath):  # Broken symlink
-                # FIXME: What to hash? the path?
-                pass
-            else:
-                file_dict[name] = md5sum(filepath)
+            # For a symlink: md5 of the pointing path, no matter if broken, relative or absolute.
+            value = md5(os.readlink(filepath)) if os.path.islink(filepath) else md5sum(filepath)
+            file_dict[name] = value
 
         if exports_sources_folder:
             export_files, _ = gather_files(exports_sources_folder)
             # The folders symlinks are discarded for the manifest
             for name, filepath in export_files.items():
-                if not os.path.exists(filepath):  # Broken symlink
-                    # FIXME: What to hash? the path?
-                    pass
-                else:
-                    file_dict["export_source/%s" % name] = md5sum(filepath)
+                # For a symlink: md5 of the pointing path, no matter if broken, relative or absolute.
+                value = md5(os.readlink(filepath)) if os.path.islink(filepath) else md5sum(filepath)
+                file_dict["export_source/%s" % name] = value
 
         date = timestamp_now()
 

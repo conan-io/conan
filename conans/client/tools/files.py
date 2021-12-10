@@ -334,56 +334,6 @@ def remove_files_by_mask(directory, pattern):
     return removed_names
 
 
-# FIXME: remove, just for reference of what we were doing copying files
-"""
-
-    @staticmethod
-    def _link_folders(src, dst, symlinked_folders):
-        created_links = []
-        for symlinked_folder in symlinked_folders:
-            src_link = os.path.join(src, symlinked_folder)
-            # Discard symlinks that go out of the src folder
-            abs_path = os.path.realpath(src_link)
-            relpath = os.path.relpath(abs_path, os.path.realpath(src))
-            if relpath.startswith("."):
-                continue
-
-            link = os.readlink(src_link)
-            # Absoluted path symlinks are a problem, convert it to relative
-            if os.path.isabs(link):
-                try:
-                    link = os.path.relpath(link, os.path.dirname(src_link))
-                except ValueError as e:
-                    # https://github.com/conan-io/conan/issues/6197 fails if Windows and other Drive
-                    raise ConanException("Symlink '%s' pointing to '%s' couldn't be made relative:"
-                                         " %s" % (src_link, link, str(e)))
-
-            dst_link = os.path.join(dst, symlinked_folder)
-            try:
-                # Remove the previous symlink
-                os.remove(dst_link)
-            except OSError:
-                pass
-            # link is a string relative to linked_folder
-            # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link
-            # to foo/test/bar in ./foo/test_link
-            mkdir(os.path.dirname(dst_link))
-            os.symlink(link, dst_link)
-            created_links.append(dst_link)
-        # Remove empty links
-        for dst_link in created_links:
-            abs_path = os.path.realpath(dst_link)
-            if not os.path.exists(abs_path):
-                base_path = os.path.dirname(dst_link)
-                os.remove(dst_link)
-                while base_path.startswith(dst):
-                    try:  # Take advantage that os.rmdir does not delete non-empty dirs
-                        os.rmdir(base_path)
-                    except OSError:
-                        break  # not empty
-                    base_path = os.path.dirname(base_path)
-"""
-
 def fix_symlinks(conanfile, raise_if_error=False):
     """ Fix the symlinks in the conanfile.package_folder: make symlinks relative and remove
         those links to files outside the package (it will print an error, or raise
