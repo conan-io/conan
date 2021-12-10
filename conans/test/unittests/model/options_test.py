@@ -78,6 +78,42 @@ class TestOptions:
             static=True""")
         assert text == expected
 
+    def test_freeze(self):
+        assert self.sut.static
+
+        self.sut.freeze()
+        # Should be freezed now
+        # same value should not raise
+        self.sut.static = True
+
+        # Different value should raise
+        with pytest.raises(ConanException) as e:
+            self.sut.static = False
+        assert "Incorrect attempt to modify option 'static'" in str(e.value)
+        assert "static=True" in self.sut.dumps()
+
+        # Removal of options with values should rais
+        with pytest.raises(ConanException) as e:
+            del self.sut.static
+        assert "Incorrect attempt to remove option 'static'" in str(e.value)
+        assert "static" in self.sut.dumps()
+
+        # Test None is possible to change
+        sut2 = Options({"static": [True, False],
+                        "other": [True, False]})
+        sut2.freeze()
+        sut2.static = True
+        assert "static=True" in sut2.dumps()
+        # But not twice
+        with pytest.raises(ConanException) as e:
+            sut2.static = False
+        assert "Incorrect attempt to modify option 'static'" in str(e.value)
+        assert "static=True" in sut2.dumps()
+
+        # can remove other, not assigned yet
+        del sut2.other
+        assert "other" not in sut2.dumps()
+
 
 class TestOptionsLoad:
     def test_load(self):
@@ -117,7 +153,7 @@ class TestOptionsPropagate:
         # Should be freezed now
         with pytest.raises(ConanException) as e:
             sut.static = True
-        assert "Incorrect attempt to modify options 'static'" in str(e.value)
+        assert "Incorrect attempt to modify option 'static'" in str(e.value)
 
         self_options, up_options = sut.get_upstream_options(down_options, ref)
         assert up_options.dumps() == "zlib:other=1"

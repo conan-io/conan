@@ -99,8 +99,6 @@ class _PackageOptions:
 
     def clear(self):
         # for header_only() clearing
-        if self._freeze:
-            raise ConanException(f"Incorrect attempt to modify options.clear()")
         self._data.clear()
 
     def freeze(self):
@@ -140,8 +138,11 @@ class _PackageOptions:
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        if self._freeze:
-            raise ConanException(f"Incorrect attempt to modify options '{field}'")
+        current_value = self._data.get(field)
+        if self._freeze and current_value.value is not None:
+            raise ConanException(f"Incorrect attempt to remove option '{field}' "
+                                 f"with current value '{current_value}'")
+
         self._ensure_exists(field)
         del self._data[field]
 
@@ -155,8 +156,10 @@ class _PackageOptions:
 
     def _set(self, item, value):
         # programmatic way to define values, for Conan codebase
-        if self._freeze:
-            raise ConanException(f"Incorrect attempt to modify options '{item}'")
+        current_value = self._data.get(item)
+        if self._freeze and current_value.value is not None and current_value != value:
+            raise ConanException(f"Incorrect attempt to modify option '{item}' "
+                                 f"from '{current_value}' to '{value}'")
         self._ensure_exists(item)
         self._data.setdefault(item, _PackageOption(item, None)).value = value
 
@@ -265,10 +268,7 @@ class Options:
         return setattr(self._package_options, attr, value)
 
     def __delattr__(self, field):
-        try:
-            self._package_options.__delattr__(field)
-        except ConanException:
-            pass
+        self._package_options.__delattr__(field)
 
     def __getitem__(self, item):
         # To access dependencies options like ``options["mydep"]``. This will no longer be
