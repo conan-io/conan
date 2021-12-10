@@ -364,14 +364,16 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_export_installed_folder(mode, updated=True)
 
 
-def test_test_package_not_copied():
+def test_test_package_copied():
+    """The exclusion of the test_package folder have been removed so now we test that indeed is
+    exported"""
 
     client = TestClient()
     client.save({"conanfile.py":
                      GenConanfile().with_exports("*").with_exports_sources("*"),
                  "test_package/foo.txt": "bar"})
     client.run("export . --name foo --version 1.0")
-    assert "Copied 1 '.txt' file" not in client.out
+    assert "Copied 1 '.txt' file" in client.out
 
 
 def absolute_existing_folder():
