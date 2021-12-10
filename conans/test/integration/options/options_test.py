@@ -257,3 +257,35 @@ equal:opt=a=b
         client.save({"conanfile.py": consumer})
         client.run("create . pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: Created package ", client.out)
+
+    def test_define_nested_option_not_freeze(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                options = {"without_stacktrace": [True, False],
+                           "with_stacktrace_backtrace": [True, False]}
+                default_options = {"without_stacktrace": True}
+                def configure(self):
+                    if self.options.without_stacktrace:
+                        del self.options.with_stacktrace_backtrace
+                    else:
+                        self.options.with_stacktrace_backtrace = True
+
+                def build(self):
+                    s = self.options.without_stacktrace
+                    self.output.info("without_stacktrace: {}".format(s))
+
+                    if "with_stacktrace_backtrace" in self.options:
+                        ss = self.options.get_safe("with_stacktrace_backtrace")
+                        self.output.info("with_stacktrace_backtrace: {}".format(ss))
+                    else:
+                        self.output.info("with_stacktrace_backtrace success deleted!")
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . pkg/0.1@")
+        assert "pkg/0.1: without_stacktrace: True" in c.out
+        assert "pkg/0.1: with_stacktrace_backtrace success deleted!" in c.out
+        c.run("create . pkg/0.1@ -o pkg:without_stacktrace=False")
+        assert "pkg/0.1: without_stacktrace: True" in c.out
+        assert "pkg/0.1: with_stacktrace_backtrace: True" in c.out
