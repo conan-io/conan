@@ -7,9 +7,9 @@ import pytest
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestServer, TurboTestClient
-from conans.util.files import rmdir
-from tools import temp_folder
+
 
 
 class CompressSymlinksZeroSize(unittest.TestCase):
