@@ -31,7 +31,7 @@ class DiamondTest(unittest.TestCase):
         files = cpp_hello_conan_files(name, version, deps, need_patch=True,
                                       cmake_targets=cmake_targets, with_exe=False)
         self.client.save(files, clean_first=True)
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
     def _check_individual_deps(self):
         self.assertIn("INCLUDE [", self.client.out)

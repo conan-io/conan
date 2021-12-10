@@ -25,7 +25,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref)
     scoped_output = conanfile.output
     # Make the copy of all the patterns
     scoped_output.info("Generating the package")
-    scoped_output.info("Package folder %s" % conanfile.package_folder)
+    scoped_output.info("Temporary package folder %s" % conanfile.package_folder)
 
     hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)

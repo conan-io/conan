@@ -92,12 +92,12 @@ def test_generator_files():
                                            .with_package_info(cpp_info={"libs": ["hello"],
                                                                         "frameworks": ['framework_hello']},
                                                               env_info={})})
-    client.run("export hello.py hello/0.1@")
+    client.run("export hello.py --name=hello --version=0.1")
     client.save({"goodbye.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
                                              .with_package_info(cpp_info={"libs": ["goodbye"],
                                                                           "frameworks": ['framework_goodbye']},
                                                                 env_info={})})
-    client.run("export goodbye.py goodbye/0.1@")
+    client.run("export goodbye.py --name=goodbye --version=0.1")
     client.save({"conanfile.txt": "[requires]\nhello/0.1\ngoodbye/0.1\n"}, clean_first=True)
 
     for build_type in ["Release", "Debug"]:

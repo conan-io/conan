@@ -1,5 +1,6 @@
 import os
 
+from conans.cli.formatters.graph import cli_format_graph_basic, cli_format_graph_packages
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile
@@ -45,7 +46,7 @@ def _get_conanfile_path(path, cwd, py):
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
-def install(conan_api, parser, *args, **kwargs):
+def install(conan_api, parser, *args):
     """
     Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
 
@@ -113,9 +114,10 @@ def install(conan_api, parser, *args, **kwargs):
                                user=args.user, channel=args.channel)
 
     out = ConanOutput()
-    out.info("Configuration (profile_host):")
+    out.highlight("-------- Input profiles ----------")
+    out.info("Profile host:")
     out.info(profile_host.dumps())
-    out.info("Configuration (profile_build):")
+    out.info("Profile build:")
     out.info(profile_build.dumps())
 
     # decoupling the most complex part, which is loading the root_node, this is the point where
@@ -127,18 +129,28 @@ def install(conan_api, parser, *args, **kwargs):
                                                require_overrides=args.require_override,
                                                remote=remote,
                                                update=args.update)
+
+    out.highlight("-------- Computing dependency graph ----------")
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
                                             remote=remote,
                                             update=args.update)
+    cli_format_graph_basic(deps_graph)
+    out.highlight("\n-------- Computing necessary packages ----------")
     conan_api.graph.analyze_binaries(deps_graph, args.build, remote=remote, update=args.update)
+    cli_format_graph_packages(deps_graph)
+    # TODO: Keeping old printing to avoid many tests fail: TO REMOVE
+    out.highlight("\nLegacy graph output (to be removed):")
     print_graph(deps_graph)
+    out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remote=remote, update=args.update)
+    out.highlight("\n-------- Finalizing install (imports, deploy, generators) ----------")
     conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd, reference=reference,
                                        install_folder=install_folder, generators=args.generator,
                                        no_imports=args.no_imports, conanfile_folder=conanfile_folder)
     if args.lockfile_out:
         lockfile_out = _make_abs_path(args.lockfile_out, cwd)
+        out.info(f"Saving lockfile: {lockfile_out}")
         lockfile.save(lockfile_out)

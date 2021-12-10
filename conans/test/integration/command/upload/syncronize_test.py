@@ -23,7 +23,7 @@ class SynchronizeTest(unittest.TestCase):
         remote_paths = client.servers["default"].server_store
 
         client.save(files)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         # Upload conan file
         client.run("upload %s -r default" % str(ref))
@@ -37,7 +37,7 @@ class SynchronizeTest(unittest.TestCase):
 
         # Now delete local files export and upload and check that they are not in server
         os.remove(os.path.join(client.current_folder, "to_be_deleted.txt"))
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         client.run("upload %s -r default" % str(ref))
         server_conan_path = remote_paths.export(ref_with_rev)
@@ -52,7 +52,7 @@ class SynchronizeTest(unittest.TestCase):
         files["new_file.lib"] = "new file"
         del files["to_be_deleted.txt"]
         client.save(files)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         client.run("upload %s -r default" % str(ref))
 

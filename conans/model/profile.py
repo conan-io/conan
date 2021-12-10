@@ -20,7 +20,7 @@ class Profile(object):
         self.settings = OrderedDict()
         self.package_settings = defaultdict(OrderedDict)
         self.options = Options()
-        self.build_requires = OrderedDict()  # ref pattern: list of ref
+        self.tool_requires = OrderedDict()  # ref pattern: list of ref
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
 
@@ -51,9 +51,6 @@ class Profile(object):
         self.settings = OrderedDict(self.processed_settings.values.as_list())
         # Per-package settings cannot be processed here, until composed not possible
 
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
-
     def dumps(self):
         result = ["[settings]"]
         for name, value in self.settings.items():
@@ -65,8 +62,8 @@ class Profile(object):
         result.append("[options]")
         result.append(self.options.dumps())
 
-        result.append("[build_requires]")
-        for pattern, req_list in self.build_requires.items():
+        result.append("[tool_requires]")
+        for pattern, req_list in self.tool_requires.items():
             result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
 
         result.append("[env]")
@@ -87,8 +84,8 @@ class Profile(object):
         self.update_package_settings(other.package_settings)
         self.options.update_options(other.options)
         # It is possible that build_requires are repeated, or same package but different versions
-        for pattern, req_list in other.build_requires.items():
-            existing_build_requires = self.build_requires.get(pattern)
+        for pattern, req_list in other.tool_requires.items():
+            existing_build_requires = self.tool_requires.get(pattern)
             existing = OrderedDict()
             if existing_build_requires is not None:
                 for br in existing_build_requires:
@@ -100,7 +97,7 @@ class Profile(object):
                 r = RecipeReference.loads(req) \
                      if not isinstance(req, RecipeReference) else req
                 existing[r.name] = req
-            self.build_requires[pattern] = list(existing.values())
+            self.tool_requires[pattern] = list(existing.values())
 
         self.conf.update_conf_definition(other.conf)
         self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority

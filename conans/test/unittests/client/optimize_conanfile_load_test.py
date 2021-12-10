@@ -30,7 +30,7 @@ class Pkg(ConanFile):
 
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": conanfile + "    def test(self): pass",
-                     "myprofile": "[build_requires]\nbuild/0.1@user/testing"})
+                     "myprofile": "[tool_requires]\nbuild/0.1@user/testing"})
 
         client.run("create . pkg/0.1@user/testing -pr=myprofile")
         self.assertIn("build/0.1@user/testing: MyCounter1 2, MyCounter2 1", client.out)

@@ -150,8 +150,8 @@ class TestPackageInfo(unittest.TestCase):
         client.save({"conanfile_dep.py": dep,
                      "conanfile_intermediate.py": intermediate,
                      "conanfile_consumer.py": consumer})
-        client.run("export conanfile_dep.py dep/1.0@us/ch")
-        client.run("export conanfile_intermediate.py intermediate/1.0@us/ch")
+        client.run("export conanfile_dep.py --name=dep --version=1.0 --user=us --channel=ch")
+        client.run("export conanfile_intermediate.py --name=intermediate --version=1.0 --user=us --channel=ch")
         client.run("create conanfile_consumer.py consumer/1.0@us/ch --build missing")
 
         self.assertIn("deps_cpp_info.libs: ['libint1', 'libint2', 'libdep1', 'libdep2']", client.out)

@@ -32,6 +32,6 @@ class CPUCountTest(unittest.TestCase):
                         cpu_count=5
                 """.format())
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("install --reference=hello0/0.1@lasote/stable --build missing")
         self.assertIn("CPU COUNT=> 5", client.out)

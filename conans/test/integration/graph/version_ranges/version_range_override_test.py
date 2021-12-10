@@ -16,10 +16,10 @@ class VersionRangeOverrideTestCase(unittest.TestCase):
         self.t.save({"libb/conanfile.py": GenConanfile(),
                      "libC/conanfile.py":
                          GenConanfile().with_require("libb/[<=2.0]@user/channel")})
-        self.t.run("export libB libb/1.0@user/channel")
-        self.t.run("export libB libb/2.0@user/channel")
-        self.t.run("export libB libb/3.0@user/channel")
-        self.t.run("export libC libC/1.0@user/channel")
+        self.t.run("export libB --name=libb --version=1.0 --user=user --channel=channel")
+        self.t.run("export libB --name=libb --version=2.0 --user=user --channel=channel")
+        self.t.run("export libB --name=libb --version=3.0 --user=user --channel=channel")
+        self.t.run("export libC --name=libC --version=1.0 --user=user --channel=channel")
 
         # Use the version range
         self.t.save({"conanfile.py": GenConanfile().with_require("libC/1.0@user/channel")})
@@ -73,14 +73,14 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
         t.run("create . intermediate/1.0@PORT/stable")
 
         t.save({"conanfile.py": GenConanfile().with_requires("intermediate/1.0@PORT/stable")
-               .with_build_requires("gtest/1.8.0@PORT/stable")})
+               .with_tool_requires("gtest/1.8.0@PORT/stable")})
         t.run("create . scubaclient/1.6@PORT/stable")
 
         # IMPORTANT: We need to override the private build-require in the profile too,
         # otherwise it will conflict, as it will not be overriden by regular requires
         t.save({"conanfile.py": GenConanfile().with_requires("gtest/1.8.1@bloomberg/stable",
                                                              "scubaclient/1.6@PORT/stable"),
-                "myprofile": "[build_requires]\ngtest/1.8.1@bloomberg/stable"})
+                "myprofile": "[tool_requires]\ngtest/1.8.1@bloomberg/stable"})
 
         t.run("lock create conanfile.py --build -pr=myprofile")
         lock = t.load("conan.lock")

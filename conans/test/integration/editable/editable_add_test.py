@@ -32,7 +32,7 @@ class CreateEditablePackageTest(unittest.TestCase):
     def test_install_wrong_reference(self):
         t = TestClient()
         t.save({'conanfile.py': GenConanfile("lib", "version")})
-        t.run('export  . lib/version@user/name')
+        t.run('export  . --name=lib --version=version --user=user --channel=name')
         t.run('editable add . wrong/version@user/channel', assert_error=True)
         self.assertIn("ERROR: Name and version from reference (wrong/version@user/channel) and "
                       "target conanfile.py (lib/version) must match", t.out)

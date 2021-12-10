@@ -27,7 +27,7 @@ class ConflictDiamondTest(unittest.TestCase):
         files = {CONANFILE: conanfile}
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export . lasote/stable")
+            self.client.run("export . --user=lasote --channel=stable")
 
     def setUp(self):
         self.client = TestClient()
@@ -70,18 +70,18 @@ def test_create_werror():
 class Pkg(ConanFile):
 pass
     """})
-    client.run("export . LibA/0.1@user/channel")
-    client.run("export conanfile.py LibA/0.2@user/channel")
+    client.run("export . --name=LibA --version=0.1 --user=user --channel=channel")
+    client.run("export conanfile.py --name=LibA --version=0.2 --user=user --channel=channel")
     client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
 requires = "LibA/0.1@user/channel"
     """})
-    client.run("export ./ LibB/0.1@user/channel")
+    client.run("export ./ --name=LibB --version=0.1 --user=user --channel=channel")
     client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
 requires = "LibA/0.2@user/channel"
     """})
-    client.run("export . LibC/0.1@user/channel")
+    client.run("export . --name=LibC --version=0.1 --user=user --channel=channel")
     client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
 requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"

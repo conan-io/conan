@@ -26,7 +26,7 @@ class TestOptions(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb], options={"shared": "True"})
 
         # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, None),
+        _check_transitive(app, [(libb, True, True, False, False),
                                 (liba, True, True, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
@@ -51,7 +51,7 @@ class TestOptions(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb], options={"shared": "False"})
 
         # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, None),
+        _check_transitive(app, [(libb, True, True, False, False),
                                 (liba, True, True, False, False)])
         _check_transitive(libb, [(liba, True, True, False, False)])
 
@@ -78,7 +78,7 @@ class TestBuildRequireOptions(GraphManagerTest):
         self._cache_recipe("zlib/0.1", GenConanfile().with_shared_option(True))
         self._cache_recipe("protobuf/0.1", GenConanfile().with_require("zlib/0.1"))
         self._cache_recipe("lib/0.1", GenConanfile().with_requires("protobuf/0.1").
-                           with_build_requires("protobuf/0.1"))
+                           with_tool_requires("protobuf/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       options_build={"zlib:shared": False})
 
@@ -100,9 +100,9 @@ class TestBuildRequireOptions(GraphManagerTest):
         assert zlib_shared.conanfile.options.shared
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None),
-                                (protobuf_host, True, True, False, None),
+        _check_transitive(app, [(lib, True, True, False, False),
+                                (protobuf_host, True, True, False, False),
                                 (zlib_shared, True, True, False, True)])
-        _check_transitive(lib, [(protobuf_host, True, True, False, None),
+        _check_transitive(lib, [(protobuf_host, True, True, False, False),
                                 (zlib_shared, True, True, False, True),
                                 (protobuf_build, False, False, True, True)])

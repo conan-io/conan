@@ -21,7 +21,7 @@ def test_shallow_none_string():
                     "revision": "123456", "shallow": 'None' }
     """)})
 
-    client.run('export . name/version@', assert_error=True)
+    client.run('export . --name=name --version=version', assert_error=True)
     assert "ERROR: SCM value for 'shallow' must be of type 'bool' (found 'str')" in str(client.out)
 
 
@@ -76,7 +76,7 @@ class GitShallowTestCase(unittest.TestCase):
         url, _ = create_local_git_repo(files=files)
         client.run_command('git clone "{}" .'.format(url))
 
-        client.run("export . {}".format(self.ref))
+        client.run(f"export . --name={self.ref.name} --version={self.ref.version} --user={self.ref.user} --channel={self.ref.channel}")
         content = load(client.get_latest_ref_layout(self.ref).conandata())
         if self.shallow in [None, True]:
             self.assertNotIn('shallow', content)

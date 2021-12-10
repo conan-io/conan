@@ -41,7 +41,6 @@ def test_msbuild_toolset():
                          "arch": ["x86_64"]})
     conanfile = ConanFile(None)
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = settings
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
@@ -61,7 +60,6 @@ def test_msbuild_toolset():
 def test_msbuild_toolset_for_intel_cc(mode, expected_toolset):
     conanfile = ConanFile(Mock(), None)
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"build_type": ["Release"],
                          "compiler": {"intel-cc": {"version": ["2021.3"], "mode": [mode]},
                                       "msvc": {"version": ["193"], "cppstd": ["20"]}},
@@ -86,7 +84,6 @@ def test_msbuild_standard():
     conanfile.conf = Conf()
     conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"build_type": ["Release"],
                                    "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
                                    "os": ["Windows"],
@@ -120,7 +117,6 @@ def test_resource_compile():
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = settings
     conanfile.settings_build = settings
-    conanfile.initialize()
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
     conanfile.settings.compiler.version = "193"
@@ -162,7 +158,6 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
     conanfile.conf["tools.intel:installation_path"] = "my/intel/oneapi/path"
     conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = settings
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "intel-cc"

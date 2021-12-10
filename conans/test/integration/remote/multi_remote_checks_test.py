@@ -24,7 +24,7 @@ class Pkg(ConanFile):
         client.run("remove * -f")
 
         # Exported recipe gets binary from default remote
-        client.run("export . pkg/0.1@lasote/testing")
+        client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=pkg/0.1@lasote/testing")
         self.assertIn("pkg/0.1@lasote/testing from local cache - Cache", client.out)
         self.assertIn("pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID,
@@ -34,7 +34,7 @@ class Pkg(ConanFile):
 
         # Explicit remote also defines the remote
         client.run("remove * -f")
-        client.run("export . pkg/0.1@lasote/testing")
+        client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=pkg/0.1@lasote/testing -r=server2")
         self.assertIn("pkg/0.1@lasote/testing from local cache - Cache", client.out)
         self.assertIn("pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID,
@@ -45,7 +45,7 @@ class Pkg(ConanFile):
         # Ordered search of binary works
         client.run("remove * -f")
         client.run("remove * -f -r=server1")
-        client.run("export . pkg/0.1@lasote/testing")
+        client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=pkg/0.1@lasote/testing")
         self.assertIn("pkg/0.1@lasote/testing from local cache - Cache", client.out)
         self.assertIn("pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID, client.out)

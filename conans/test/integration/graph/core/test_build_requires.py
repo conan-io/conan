@@ -31,7 +31,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe("cmake/0.1", GenConanfile())
         if build_require == "recipe":
             profile_build_requires = None
-            conanfile = GenConanfile("app", "0.1").with_build_requires("cmake/0.1")
+            conanfile = GenConanfile("app", "0.1").with_tool_requires("cmake/0.1")
         else:
             profile_build_requires = {"*": [RecipeReference.loads("cmake/0.1")]}
             conanfile = GenConanfile("app", "0.1")
@@ -50,7 +50,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
     def test_lib_build_require(self):
         # app -> lib -(br)-> cmake
         self._cache_recipe("cmake/0.1", GenConanfile())
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_requires("cmake/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
         self.assertEqual(3, len(deps_graph.nodes))
@@ -63,7 +63,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(app, [(lib, True, True, False, False)])  # TODO: Check run=None
         _check_transitive(lib, [(cmake, False, False, True, True)])
 
     @parameterized.expand([("shared", ), ("static", ), ("notrun", ), ("run", )])
@@ -81,7 +81,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe("cmake/0.1", GenConanfile().with_settings("os").
                            with_requirement("cmakelib/0.1", run=run))
         self._cache_recipe("lib/0.1", GenConanfile().with_settings("os").
-                           with_build_requires("cmake/0.1"))
+                           with_tool_requires("cmake/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_settings("os").
                                       with_require("lib/0.1"))
 
@@ -100,7 +100,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
                          settings={"os": "Windows"})
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(app, [(lib, True, True, False, False)])
 
         if cmakelib_type in ("static", "notrun"):
             _check_transitive(lib, [(cmake, False, False, True, True)])
@@ -111,8 +111,8 @@ class BuildRequiresGraphTest(GraphManagerTest):
     def test_build_require_bootstrap(self):
         # app -> lib -(br)-> cmake/2 -(br)-> cmake/1
         self._cache_recipe("cmake/0.1", GenConanfile())
-        self._cache_recipe("cmake/0.2", GenConanfile().with_build_requires("cmake/0.1"))
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_requires("cmake/0.2"))
+        self._cache_recipe("cmake/0.2", GenConanfile().with_tool_requires("cmake/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.2"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
         self.assertEqual(4, len(deps_graph.nodes))
@@ -127,7 +127,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[cmake2])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(cmake2, False, False, True, True)])
         _check_transitive(cmake2, [(cmake1, False, False, True, True)])
 
@@ -148,8 +148,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
 
         self._cache_recipe(mingw_ref, GenConanfile().with_name("mingw").with_version("0.1"))
         self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1"))
-        self._cache_recipe(lib_ref, GenConanfile()
-                                                  .with_build_requires(gtest_ref))
+        self._cache_recipe(lib_ref, GenConanfile().with_tool_requires(gtest_ref))
         profile_build_requires = {"*": [mingw_ref]}
         deps_graph = self.build_graph(GenConanfile("app", "0.1")
                                                     .with_require(lib_ref),
@@ -183,10 +182,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe(zlib_ref2, GenConanfile().with_name("zlib").with_version("0.2"))
 
         self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1")
-                                                    .with_build_requires(zlib_ref2))
-        self._cache_recipe(lib_ref, GenConanfile()
-                                                  .with_require(zlib_ref)
-                                                  .with_build_requires(gtest_ref))
+                                                    .with_tool_requires(zlib_ref2))
+        self._cache_recipe(lib_ref, GenConanfile().with_require(zlib_ref)
+                                                  .with_tool_requires(gtest_ref))
 
         graph = self.build_graph(GenConanfile("app", "0.1")
                                                .with_require(lib_ref))
@@ -211,12 +209,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
         lib_ref = RecipeReference.loads("lib/0.1@user/testing")
 
         self._cache_recipe(zlib_ref, GenConanfile().with_name("zlib").with_version("0.1"))
-        self._cache_recipe(cmake_ref, GenConanfile()
-                                                   .with_require(zlib_ref, private=True))
-        self._cache_recipe(lib_ref, GenConanfile()
-                                                  .with_build_requires(cmake_ref))
-        deps_graph = self.build_graph(GenConanfile("app", "0.1")
-                                                    .with_require(lib_ref))
+        self._cache_recipe(cmake_ref, GenConanfile().with_require(zlib_ref, private=True))
+        self._cache_recipe(lib_ref, GenConanfile().with_tool_requires(cmake_ref))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require(lib_ref))
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -242,7 +237,8 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._cache_recipe("zlib/0.2", GenConanfile().with_shared_option(False))
         self._cache_recipe("cmake/0.1", GenConanfile().with_require("zlib/0.1"))
         self._cache_recipe("mingw/0.1", GenConanfile().with_require("zlib/0.2"))
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_requires("cmake/0.1", "mingw/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1",
+                                                                              "mingw/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
         self.assertEqual(6, len(deps_graph.nodes))
@@ -261,7 +257,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._check_node(zlib2, "zlib/0.2#123", deps=[], dependents=[mingw])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(cmake, False, False, True, True),
                                 (mingw, False, False, True, True)])
 
@@ -272,7 +268,8 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._cache_recipe("zlib/0.2", GenConanfile().with_shared_option(True))
         self._cache_recipe("cmake/0.1", GenConanfile().with_require("zlib/0.1"))
         self._cache_recipe("mingw/0.1", GenConanfile().with_require("zlib/0.2"))
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_requires("cmake/0.1", "mingw/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1",
+                                                                              "mingw/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       install=False)
 
@@ -311,7 +308,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
 
         deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
                                            .with_require(gazelle_ref)
-                                           .with_build_requires(grass02_ref))
+                                           .with_tool_requires(grass02_ref))
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -344,7 +341,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
 
         deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
                                                     .with_require(gazelle_ref)
-                                                    .with_build_requires(grass01_ref))
+                                                    .with_tool_requires(grass01_ref))
 
         self.assertEqual(3, len(deps_graph.nodes))
         cheetah = deps_graph.root
@@ -375,7 +372,7 @@ class TestTestRequire(GraphManagerTest):
         self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[app])
 
         # node, include, link, build, run
-        _check_transitive(app, [(gtest, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(app, [(gtest, True, True, False, False)])
 
     def test_lib_build_require(self):
         # app -> lib -(tr)-> gtest
@@ -393,8 +390,8 @@ class TestTestRequire(GraphManagerTest):
         self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
-        _check_transitive(lib, [(gtest, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, False)])
+        _check_transitive(lib, [(gtest, True, True, False, False)])
 
     def test_lib_build_require_transitive(self):
         # app -> lib -(tr)-> gtest
@@ -412,8 +409,8 @@ class TestTestRequire(GraphManagerTest):
         self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
-        _check_transitive(lib, [(gtest, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, False)])
+        _check_transitive(lib, [(gtest, True, True, False, False)])
 
     @parameterized.expand([("shared",), ("static",), ("notrun",), ("run",)])
     def test_test_require_transitive(self, gtestlib_type):
@@ -449,17 +446,17 @@ class TestTestRequire(GraphManagerTest):
                          settings={"os": "Linux"})
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(app, [(lib, True, True, False, False)])  # TODO: Check run=None
 
         if gtestlib_type in ("shared", "run"):
-            _check_transitive(lib, [(gtest, True, True, False, None),
+            _check_transitive(lib, [(gtest, True, True, False, False),
                                     (gtestlib, True, True, False, True)])
         elif gtestlib_type == "static":
-            _check_transitive(lib, [(gtest, True, True, False, None),
+            _check_transitive(lib, [(gtest, True, True, False, False),
                                     (gtestlib, True, True, False, False)])
         elif gtestlib_type == "notrun":
-            _check_transitive(lib, [(gtest, True, True, False, None),
-                                    (gtestlib, True, True, False, None)])
+            _check_transitive(lib, [(gtest, True, True, False, False),
+                                    (gtestlib, True, True, False, False)])
 
 
 class BuildRequiresPackageIDTest(GraphManagerTest):
@@ -467,7 +464,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
     def test_default_no_affect(self,):
         # app -> lib -(br)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
-        self.recipe_conanfile("lib/0.1", GenConanfile().with_build_requires("cmake/0.1"))
+        self.recipe_conanfile("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
@@ -486,7 +483,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         # app -> lib -(br)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("lib/0.1", GenConanfile().
-                              with_build_requirement("cmake/[*]", package_id_mode="minor_mode"))
+                              with_tool_requirement("cmake/[*]", package_id_mode="minor_mode"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer
@@ -518,8 +515,8 @@ class PublicBuildRequiresTest(GraphManagerTest):
     def test_simple(self):
         # app -> lib -(br public)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
-        self.recipe_conanfile("lib/0.1", GenConanfile().with_build_requirement("cmake/0.1",
-                                                                               visible=True))
+        self.recipe_conanfile("lib/0.1", GenConanfile()
+                              .with_tool_requirement("cmake/0.1", visible=True))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
@@ -533,8 +530,9 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
+        # node, include, link, build, run
         _check_transitive(lib, [(cmake, False, False, True, True)])
-        _check_transitive(app, [(lib, True, True, False, None),
+        _check_transitive(app, [(lib, True, True, False, False),
                                 (cmake, False, False, True, False)])
 
     def test_conflict_diamond(self):
@@ -542,10 +540,10 @@ class PublicBuildRequiresTest(GraphManagerTest):
         #   \--> libc -(br public)-> cmake/0.2
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("cmake/0.2", GenConanfile())
-        self.recipe_conanfile("libb/0.1", GenConanfile().with_build_requirement("cmake/0.1",
-                                                                                visible=True))
-        self.recipe_conanfile("libc/0.1", GenConanfile().with_build_requirement("cmake/0.2",
-                                                                                visible=True))
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_tool_requirement("cmake/0.1", visible=True))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_tool_requirement("cmake/0.2", visible=True))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1",
                                                                                "libc/0.1"),

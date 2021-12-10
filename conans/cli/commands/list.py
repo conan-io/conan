@@ -309,7 +309,7 @@ def list_packages(conan_api, parser, subparser, *args):
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
-def list(conan_api, parser, *args, **kwargs):
+def list(conan_api, parser, *args):
     """
     Gets information about a recipe or package reference
     """

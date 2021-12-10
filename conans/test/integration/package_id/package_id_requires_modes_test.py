@@ -28,7 +28,11 @@ class PackageIDTest(unittest.TestCase):
                 conanfile = conanfile.with_require(RecipeReference.loads(require))
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
-        self.client.run("export . %s" % (channel or "lasote/stable"))
+        if channel:
+            user, channel = channel.split("/")
+            self.client.run(f"export . --user={user} --channel={channel}")
+        else:
+            self.client.run("export .")
 
     @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_version_semver_schema(self):
@@ -79,8 +83,8 @@ class PackageIDTest(unittest.TestCase):
                       self.client.out)
 
     def test_version_full_version_schema(self):
-        self._export("hello", "1.2.0", package_id_text=None, requires=None)
-        self._export("hello2", "2.3.8",
+        self._export("hello", "1.2.0", package_id_text=None, requires=None, channel="lasote/stable")
+        self._export("hello2", "2.3.8", channel="lasote/stable",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -93,7 +97,7 @@ class PackageIDTest(unittest.TestCase):
         self._export("hello", "1.2.0", package_id_text=None, requires=None,
                      channel="memsharded/testing")
         self.client.run("install --reference=hello/1.2.0@memsharded/testing --build missing")
-        self._export("hello2", "2.3.8",
+        self._export("hello2", "2.3.8", channel="lasote/stable",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.2.0@memsharded/testing"])
 
@@ -107,9 +111,9 @@ class PackageIDTest(unittest.TestCase):
 
         # Now change the Hello version and build it, if we install out requires is
         # needed the --build needed because hello2 needs to be build
-        self._export("hello", "1.5.0", package_id_text=None, requires=None)
+        self._export("hello", "1.5.0", package_id_text=None, requires=None, channel="lasote/stable")
         self.client.run("install --reference=hello/1.5.0@lasote/stable --build missing")
-        self._export("hello2", "2.3.8",
+        self._export("hello2", "2.3.8", channel="lasote/stable",
                      package_id_text='self.info.requires["hello"].full_version_mode()',
                      requires=["hello/1.5.0@lasote/stable"])
 
@@ -165,8 +169,8 @@ class PackageIDTest(unittest.TestCase):
         self.assertIn("hello2/2.3.8@lasote/stable:{}".format(pkg_id), self.client.out)
 
     def test_version_full_package_schema(self):
-        self._export("hello", "1.2.0", package_id_text=None, requires=None)
-        self._export("hello2", "2.3.8",
+        self._export("hello", "1.2.0", package_id_text=None, requires=None, channel="lasote/stable")
+        self._export("hello2", "2.3.8", channel="lasote/stable",
                      package_id_text='self.info.requires["hello"].full_package_mode()',
                      requires=["hello/1.2.0@lasote/stable"])
 
@@ -177,7 +181,7 @@ class PackageIDTest(unittest.TestCase):
 
         # If we change only the package ID from hello (one more defaulted option
         #  to True) should affect
-        self._export("hello", "1.2.0", package_id_text=None, requires=None,
+        self._export("hello", "1.2.0", package_id_text=None, requires=None, channel="lasote/stable",
                      default_option_value='"on"')
         self.client.run("install --reference=hello/1.2.0@lasote/stable --build missing")
         self.client.save({"conanfile.txt": "[requires]\nhello2/2.3.8@lasote/stable"},
@@ -349,14 +353,14 @@ class PackageIDErrorTest(unittest.TestCase):
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . dep1/1.0@user/testing")
+        client.run("export . --name=dep1 --version=1.0 --user=user --channel=testing")
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")})
-        client.run("export . dep2/1.0@user/testing")
+        client.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         pkg_revision_mode = "self.info.requires.package_revision_mode()"
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")
                                                    .with_package_id(pkg_revision_mode)})
-        client.run("export . dep3/1.0@user/testing")
+        client.run("export . --name=dep3 --version=1.0 --user=user --channel=testing")
 
         client.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")
                                                    .with_require("dep3/1.0@user/testing")})
@@ -375,14 +379,14 @@ class PackageIDErrorTest(unittest.TestCase):
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         # This is mandatory, otherwise it doesn't work
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . dep1/1.0@user/testing")
+        client.run("export . --name=dep1 --version=1.0 --user=user --channel=testing")
 
         pkg_revision_mode = "self.info.requires.full_version_mode()"
         package_id_print = "self.output.info('PkgNames: %s' % sorted(self.info.requires.pkg_names))"
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")
                     .with_package_id(pkg_revision_mode)
                     .with_package_id(package_id_print)})
-        client.run("export . dep2/1.0@user/testing")
+        client.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         consumer = textwrap.dedent("""
             from conans import ConanFile
@@ -408,16 +412,16 @@ class PackageIDErrorTest(unittest.TestCase):
                 """.format())
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . dep1/1.0@user/testing")
+        client.run("export . --name=dep1 --version=1.0 --user=user --channel=testing")
         client.run("create . tool/1.0@user/testing")
 
         pkg_revision_mode = "self.info.requires.full_version_mode()"
         package_id_print = "self.output.info('PkgNames: %s' % sorted(self.info.requires.pkg_names))"
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")
-                    .with_build_requires("tool/1.0@user/testing")
+                    .with_tool_requires("tool/1.0@user/testing")
                     .with_package_id(pkg_revision_mode)
                     .with_package_id(package_id_print)})
-        client.run("export . dep2/1.0@user/testing")
+        client.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         consumer = textwrap.dedent("""
             from conans import ConanFile
@@ -450,7 +454,7 @@ class PackageIDErrorTest(unittest.TestCase):
 
         client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")})
-        client2.run("export . dep2/1.0@user/testing")
+        client2.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         client2.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")})
         client2.run('create . consumer/1.0@user/testing --build')

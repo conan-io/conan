@@ -4,9 +4,10 @@ from mock import Mock
 from conan.tools.cmake import CMakeDeps
 from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
-from conans.model.dependencies import ConanFileDependencies, Requirement
+from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo
 from conans.model.recipe_ref import RecipeReference
+from conans.model.requires import Requirement
 from conans.model.settings import Settings
 
 
@@ -15,7 +16,6 @@ def test_cpp_info_name_cmakedeps():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
@@ -51,7 +51,6 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release", "Debug"],
@@ -93,7 +92,6 @@ def test_cmake_deps_links_flags():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
@@ -134,7 +132,6 @@ def test_component_name_same_package():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize()
     conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
