@@ -1,7 +1,6 @@
 import os
 
 from conan.tools.microsoft.visual import msvc_version_to_vs_ide_version
-from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.graph.graph import BINARY_INVALID
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
@@ -475,7 +474,6 @@ class ConanInfo(object):
         result.build_requires = build_requires_info
         result.full_requires = _PackageReferenceList()
         result.vs_toolset_compatible()
-        result.default_std_matching()
         result.python_requires = PythonRequiresInfo(python_requires, default_python_requires_id_mode)
         return result
 
@@ -620,27 +618,6 @@ class ConanInfo(object):
             return
         self.settings.compiler.version = self.full_settings.compiler.version
         self.settings.compiler.toolset = self.full_settings.compiler.toolset
-
-    def default_std_matching(self):
-        """
-        If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
-        same as specifying None, packages are the same
-        """
-        if self.full_settings.compiler == "msvc":
-            # This post-processing of package_id was a hack to introduce this in a non-breaking way
-            # This whole function will be removed in Conan 2.0, and the responsibility will be
-            # of the input profile
-            return
-        if (self.full_settings.compiler and
-                self.full_settings.compiler.version):
-            default = cppstd_default(self.full_settings)
-
-            if str(self.full_settings.compiler.cppstd) == default:
-                self.settings.compiler.cppstd = None
-
-    def default_std_non_matching(self):
-        if self.full_settings.compiler.cppstd:
-            self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
 
     def parent_compatible(self, *_, **kwargs):
         """If a built package for Intel has to be compatible for a Visual/GCC compiler

@@ -283,20 +283,6 @@ class PackageIDTest(unittest.TestCase):
                         ' -s compiler.version=7.2 -s compiler.cppstd=gnu14', assert_error=True)
         self.assertIn("Missing prebuilt package for 'hello/1.2.0@user/testing'", self.client.out)
 
-    def test_std_matching_with_compiler_cppstd(self):
-        self._export("hello", "1.2.0", package_id_text="self.info.default_std_matching()",
-                     channel="user/testing",
-                     settings=["compiler", ]
-                     )
-        self.client.run('install --reference=hello/1.2.0@user/testing '
-                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                        ' -s compiler.version=7.2 --build')
-
-        self.client.run('install --reference=hello/1.2.0@user/testing '
-                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                        ' -s compiler.version=7.2 -s compiler.cppstd=gnu14')
-        self.assertIn("hello/1.2.0@user/testing: Already installed!", self.client.out)
-
     def test_package_id_requires_patch_mode(self):
         """ Requirements shown in build missing error, must contains transitive packages
             For this test the follow graph has been used:
