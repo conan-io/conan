@@ -2,7 +2,6 @@ import unittest
 
 import conan.tools.qbs.qbs as qbs
 
-from conans.client import tools
 from conans.errors import ConanException
 from conans.test.utils.mocks import MockConanfile, MockSettings
 from conans.test.utils.test_files import temp_folder
@@ -51,7 +50,6 @@ class QbsTest(unittest.TestCase):
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
         conanfile.source_folder = '.'
         build_helper = qbs.Qbs(conanfile)
-        self.assertEqual(build_helper.jobs, tools.cpu_count())
         self.assertEqual(build_helper._project_file, conanfile.source_folder)
 
     def test_construct_build_helper_with_project_file(self):
