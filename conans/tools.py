@@ -13,9 +13,9 @@
 import requests
 
 # Tools from conans.client.tools
-from conans.client.tools import files as tools_files, oss as tools_oss, \
+from conans.client.tools import files as tools_files, \
     system_pm as tools_system_pm
-from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
+
 from conans.client.tools.scm import *  # pylint: disable=unused-import
 from conans.client.tools.settings import *  # pylint: disable=unused-import
 from conans.client.tools.apple import *
@@ -82,17 +82,6 @@ def replace_path_in_file(*args, **kwargs):
     return tools_files.replace_path_in_file(*args, **kwargs)
 
 
-# from conans.client.tools.oss
-args_to_string = tools_oss.args_to_string
-OSInfo = tools_oss.OSInfo
-cross_building = tools_oss.cross_building
-get_cross_building_settings = tools_oss.get_cross_building_settings
-
-
-def cpu_count(*args, **kwargs):
-    return tools_oss.cpu_count(*args, **kwargs)
-
-
 # from conans.client.tools.system_pm
 class SystemPackageTool(tools_system_pm.SystemPackageTool):
     def __init__(self, *args, **kwargs):
@@ -147,10 +136,3 @@ class PacManTool(tools_system_pm.PacManTool):
 class ZypperTool(tools_system_pm.ZypperTool):
     def __init__(self, *args, **kwargs):
         super(ZypperTool, self).__init__(*args, **kwargs)
-
-
-# Ready to use objects.
-try:
-    os_info = OSInfo()
-except Exception as exc:
-    ConanOutput().error("Error detecting os_info")

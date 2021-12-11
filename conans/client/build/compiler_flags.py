@@ -11,7 +11,6 @@
 """
 
 from conans.client.tools.apple import to_apple_arch
-from conans.client.tools.oss import cpu_count
 
 
 GCC_LIKE = ['clang', 'apple-clang', 'gcc']

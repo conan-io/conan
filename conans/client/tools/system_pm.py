@@ -1,7 +1,8 @@
 import os
 import sys
 
-from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
+from conan.tools.cross_building import cross_building, get_cross_building_settings
+from conans.client.tools.oss import OSInfo
 from conans.client.tools.files import which
 from conans.errors import ConanException, ConanInvalidSystemRequirements
 
