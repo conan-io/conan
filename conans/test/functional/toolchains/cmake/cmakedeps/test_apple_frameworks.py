@@ -211,6 +211,7 @@ def test_apple_own_framework_cross_build(settings):
     test_conanfile = textwrap.dedent("""
         from conans import ConanFile, tools
         from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
+        from conan.tools.build import cross_building
 
         class TestPkg(ConanFile):
             generators = "CMakeToolchain"
@@ -231,7 +232,7 @@ def test_apple_own_framework_cross_build(settings):
                 cmake.build()
 
             def test(self):
-                if not tools.cross_building(self):
+                if not cross_building(self):
                     self.run("timer", env="conanrunenv")
         """)
 
@@ -433,6 +434,8 @@ install(TARGETS ${PROJECT_NAME}
 import os
 from conans import ConanFile, tools
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
+from conan.tools.build import cross_building
+
 
 class TestPackageConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
@@ -452,7 +455,7 @@ class TestPackageConan(ConanFile):
         cmake.build()
 
     def test(self):
-        if not tools.cross_building(self):
+        if not cross_building(self):
             self.run("./test_package", env="conanrunenv")
         """)
     test_test_package_cpp = textwrap.dedent("""

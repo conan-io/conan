@@ -5,7 +5,7 @@ from jinja2 import Template
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
 from conans.client.build.cppstd_flags import cppstd_from_settings
-from conan.tools.cross_building import cross_building, get_cross_building_settings
+from conan.tools.build.cross_building import cross_building
 from conans.util.files import save
 
 
@@ -304,7 +304,11 @@ class MesonToolchain(object):
 
     @property
     def _cross_content(self):
-        os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
+        os_host = self._conanfile.settings.get_safe("os")
+        arch_host = self._conanfile.settings.get_safe("arch")
+        os_build = self._conanfile.settings_build.get_safe('os')
+        arch_build = self._conanfile.settings_build.get_safe('arch')
+
         os_target, arch_target = os_host, arch_host  # TODO: assume target the same as a host for now?
 
         build_machine = self._to_meson_machine(os_build, arch_build)

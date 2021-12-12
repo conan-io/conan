@@ -1,7 +1,7 @@
 import os
 import sys
 
-from conan.tools.cross_building import cross_building, get_cross_building_settings
+from conan.tools.build.cross_building import cross_building
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.files import which
 from conans.errors import ConanException, ConanInvalidSystemRequirements
@@ -189,7 +189,8 @@ class SystemPackageTool(object):
         :return: list with all parsed names e.g. ["libusb-dev:armhf libfoobar-dev:armhf"]
         """
         if self._conanfile and self._conanfile.settings and cross_building(self._conanfile):
-            _, build_arch, _, host_arch = get_cross_building_settings(self._conanfile)
+            host_arch = self._conanfile.settings.get_safe("arch")
+            build_arch = self._conanfile.settings_build.get_safe('arch')
             arch = host_arch or build_arch
             parsed_packages = []
             for package in packages:
