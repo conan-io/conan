@@ -51,7 +51,7 @@ class Version:
     This is NOT an implementation of semver, as users may use any pattern in their versions.
     It is just a helper to parse "." or "-" and compare taking into account integers when possible
     """
-    def __init__(self, value):
+    def __init__(self, value: str):
         assert isinstance(value, str)
         self._value = value
 
@@ -159,7 +159,7 @@ class Version:
     def __eq__(self, other):
         if other is None:
             return False
-        if not isinstance(other, Version):
+        if isinstance(other, str):
             other = Version(other)
 
         return (self._nonzero_items, self._pre, self._build) ==\

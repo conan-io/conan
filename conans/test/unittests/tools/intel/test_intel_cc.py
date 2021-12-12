@@ -4,7 +4,7 @@ import textwrap
 import pytest
 from mock import patch
 
-from conan.tools._compilers import architecture_flag, cppstd_flag
+from conan.tools.build.flags import architecture_flag, cppstd_flag
 from conan.tools.intel import IntelCC
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
