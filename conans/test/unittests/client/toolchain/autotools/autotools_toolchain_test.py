@@ -153,7 +153,6 @@ def test_ndebug():
     ("clang", 'libstdc++11', '-stdlib=libstdc++'),
     ("clang", 'libc++', '-stdlib=libc++'),
     ("apple-clang", 'libstdc++', '-stdlib=libstdc++'),
-    ("apple-clang", 'libstdc++11', '-stdlib=libstdc++'),
     ("apple-clang", 'libc++', '-stdlib=libc++'),
     ("sun-cc", 'libCstd', '-library=Cstd'),
     ("sun-cc", 'libstdcxx', '-library=stdcxx4'),
