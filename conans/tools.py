@@ -66,7 +66,6 @@ check_sha256 = tools_files.check_sha256
 replace_prefix_in_pc_file = tools_files.replace_prefix_in_pc_file
 collect_libs = tools_files.collect_libs
 which = tools_files.which
-fix_symlinks = tools_files.fix_symlinks
 remove_files_by_mask = tools_files.remove_files_by_mask
 
 
