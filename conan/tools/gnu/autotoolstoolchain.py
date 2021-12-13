@@ -72,7 +72,7 @@ class AutotoolsToolchain:
             return
 
         compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-        if compiler == "gcc":
+        if compiler in ['clang', 'apple-clang', 'gcc']:
             if libcxx == 'libstdc++':
                 return '_GLIBCXX_USE_CXX11_ABI=0'
 
