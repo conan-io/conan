@@ -224,7 +224,7 @@ class _ProfileValueParser(object):
     """
     @staticmethod
     def get_profile(profile_text, base_profile=None):
-        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+        doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "deferred_requires",
                                                          "settings", "env",
                                                          "options", "conf", "buildenv"])
 
@@ -232,6 +232,12 @@ class _ProfileValueParser(object):
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
         options = Options.loads(doc.options) if doc.options else None
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
+
+        if doc.deferred_requires:
+            deferred_requires = [RecipeReference.loads(r.strip())
+                                 for r in doc.deferred_requires.splitlines() if r.strip()]
+        else:
+            deferred_requires = []
 
         if doc.conf:
             conf = ConfDefinition()
@@ -242,6 +248,7 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
+        base_profile.deferred_requires = deferred_requires
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
             base_profile.package_settings[pkg_name].update(values_dict)

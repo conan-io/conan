@@ -9,7 +9,7 @@ from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_UPDATE, BINARY_UNKNOWN
+    BINARY_MISSING, BINARY_UPDATE, BINARY_UNKNOWN, BINARY_DEFERRED
 from conans.client.graph.install_graph import InstallGraph, raise_missing
 from conans.client.importer import remove_imports, run_imports
 from conans.client.source import retrieve_exports_sources, config_source
@@ -330,6 +330,8 @@ class BinaryInstaller(object):
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
     def _handle_package(self, package, install_reference, build_mode):
+        if package.binary == BINARY_DEFERRED:
+            return
         if package.binary == BINARY_EDITABLE:
             self._handle_node_editable(package)
             return

@@ -2,9 +2,10 @@ import copy
 import fnmatch
 from collections import deque
 
+from conans import ConanFile
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
-    CONTEXT_BUILD, RECIPE_CONSUMER, TransitiveRequirement
+    CONTEXT_BUILD, RECIPE_CONSUMER, TransitiveRequirement, RECIPE_DEFERRED
 from conans.client.graph.graph_error import GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
@@ -227,25 +228,37 @@ class DepsGraphBuilder(object):
 
         return new_ref, dep_conanfile, recipe_status, remote
 
-    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
-        try:
-            # TODO: If it is locked not resolve range
-            #  if not require.locked_id:  # if it is locked, nothing to resolved
-            # TODO: This range-resolve might resolve in a given remote or cache
-            # Make sure next _resolve_recipe use it
-            resolved_ref = self._resolver.resolve(require, str(node.ref))
+    @staticmethod
+    def _resolved_deferred(node, require, profile_build, profile_host):
+        deferred = profile_build.deferred_requires if node.context == CONTEXT_BUILD \
+            else profile_host.deferred_requires
+        if deferred:
+            for d in deferred:
+                if require.ref == d:
+                    return d, ConanFile(None, str(d)), RECIPE_DEFERRED, None
 
-            # This accounts for alias too
-            resolved = self._resolve_recipe(resolved_ref, graph_lock)
-        except ConanException as e:
-            raise GraphError.missing(node, require, str(e))
+    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
+        context = CONTEXT_BUILD if require.build else node.context
+
+        resolved = self._resolved_deferred(node, require, profile_build, profile_host)
+        if resolved is None:
+            try:
+                # TODO: If it is locked not resolve range
+                #  if not require.locked_id:  # if it is locked, nothing to resolved
+                # TODO: This range-resolve might resolve in a given remote or cache
+                # Make sure next _resolve_recipe use it
+                resolved_ref = self._resolver.resolve(require, str(node.ref))
+
+                # This accounts for alias too
+                resolved = self._resolve_recipe(resolved_ref, graph_lock)
+            except ConanException as e:
+                raise GraphError.missing(node, require, str(e))
 
         new_ref, dep_conanfile, recipe_status, remote = resolved
 
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
                                      require.build, new_ref)
 
-        context = CONTEXT_BUILD if require.build else node.context
         new_node = Node(new_ref, dep_conanfile, context=context)
         new_node.recipe = recipe_status
         new_node.remote = remote

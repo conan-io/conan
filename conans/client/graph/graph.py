@@ -14,6 +14,7 @@ RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
 RECIPE_MISSING = "Missing recipe"  # Impossible to find a recipe for this reference
+RECIPE_DEFERRED = "Deferred"
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -25,6 +26,7 @@ BINARY_EDITABLE = "Editable"
 BINARY_UNKNOWN = "Unknown"
 BINARY_INVALID = "Invalid"
 BINARY_ERROR = "ConfigurationError"
+BINARY_DEFERRED = "Deferred"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"

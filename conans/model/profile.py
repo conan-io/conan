@@ -21,6 +21,7 @@ class Profile(object):
         self.package_settings = defaultdict(OrderedDict)
         self.options = Options()
         self.tool_requires = OrderedDict()  # ref pattern: list of ref
+        self.deferred_requires = []
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
 
@@ -99,6 +100,7 @@ class Profile(object):
                 existing[r.name] = req
             self.tool_requires[pattern] = list(existing.values())
 
+        self.deferred_requires = self.deferred_requires + other.deferred_requires # FIXME repetitions
         self.conf.update_conf_definition(other.conf)
         self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority
 

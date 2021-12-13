@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import BINARY_SKIP
+from conans.client.graph.graph import BINARY_SKIP, BINARY_DEFERRED
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.conanfile_interface import ConanFileInterface
@@ -78,7 +78,8 @@ class ConanFileDependencies(UserRequirementsDict):
         # TODO: Probably the BINARY_SKIP should be filtered later at the user level, not forced here
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
                         for require, transitive in node.transitive_deps.items()
-                        if transitive.node.binary != BINARY_SKIP)
+                        if transitive.node.binary != BINARY_SKIP and
+                        transitive.node.binary != BINARY_DEFERRED)
         return ConanFileDependencies(d)
 
     def filter(self, require_filter):
