@@ -280,6 +280,17 @@ class HelloReuseConan(ConanFile):
 
 
 def test_testing_package_reference():
+    """
+    At the test_package/conanfile the variable `self.testing_package_reference` is injected with the
+    str of the reference being tested. It is available in all the methods.
+
+    Compatibility with Conan 2.0:
+    If the 'test_type' is set to "explicit" the require won't be automatically injected and has to
+    be the user the one injecting the require or the build require using the
+    `self.testing_package_reference`. This 'test_type' can be removed in 2.0 if we consider it has
+    to be always explicit. The recipes will still work in Conan 2.0 because the 'test_type' will be
+    ignored.
+    """
     client = TestClient()
     test_conanfile = textwrap.dedent("""
     from conans import ConanFile, CMake
@@ -287,8 +298,18 @@ def test_testing_package_reference():
 
     class HelloReuseConan(ConanFile):
 
+        test_type = "explicit"
+
+        def generate(self):
+            self.output.warn("At generate: {}".format(self.testing_package_reference))
+            assert len(self.dependencies.values()) == 1
+            assert len(self.dependencies.build.values()) == 1
+
+        def build(self):
+            self.output.warn("At build: {}".format(self.testing_package_reference))
+
         def build_requirements(self):
-            self.output.warn("At requirements: {}".format(self.testing_package_reference))
+            self.output.warn("At build_requirements: {}".format(self.testing_package_reference))
             self.build_requires(self.testing_package_reference)
 
         def test(self):
@@ -297,7 +318,8 @@ def test_testing_package_reference():
 
     client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": test_conanfile})
     client.run("create . foo/1.0@")
-    assert "kk" in client.out
+    for method in ("generate", "build", "build_requirements", "test"):
+        assert "At {}: foo/1.0".format(method) in client.out
 
 
 def test_testing_package_reference2():
