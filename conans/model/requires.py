@@ -11,13 +11,13 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None):
+                 force=None, override=None, direct=None, options=None):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
         self._headers = headers  # This dependent node has headers that must be -I<headers-path>
         self._libs = libs
-        self._build = build  # This dependent node is a build tool that is executed at build time only
+        self._build = build  # This dependent node is a build tool that runs at build time only
         self._run = run  # node contains executables, shared libs or data necessary at host run time
         self._visible = visible  # Even if not libsed or visible, the node is unique, can conflict
         self._transitive_headers = transitive_headers
@@ -27,6 +27,7 @@ class Requirement:
         self._force = force
         self._override = override
         self._direct = direct
+        self.options = options
 
     @staticmethod
     def _default_if_none(field, default_value):
@@ -322,9 +323,10 @@ class BuildRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, visible=False, run=None):
+    def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None):
         # TODO: Check which arguments could be user-defined
-        self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run)
+        self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
+                                     options=options)
 
 
 class ToolRequirements:
@@ -332,9 +334,10 @@ class ToolRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, visible=False, run=True):
+    def __call__(self, ref, package_id_mode=None, visible=False, run=True, options=None):
         # TODO: Check which arguments could be user-defined
-        self._requires.tool_require(ref, package_id_mode=package_id_mode, visible=visible, run=run)
+        self._requires.tool_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
+                                    options=options)
 
 
 class TestRequirements:
@@ -388,7 +391,7 @@ class Requirements:
         self._requires[req] = req
 
     def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                      run=None):
+                      run=None,options=None):
         """
              Represent a generic build require, could be a tool, like "cmake" or a bundle of build
              scripts.
@@ -402,7 +405,8 @@ class Requirements:
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode)
+                          package_id_mode=package_id_mode, options=options)
+
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
@@ -418,7 +422,7 @@ class Requirements:
             req.override = True
             self._requires[req] = req
 
-    def test_require(self, ref, run=None):
+    def test_require(self, ref, run=None, options=None):
         """
              Represent a testing framework like gtest
 
@@ -434,13 +438,13 @@ class Requirements:
         # libs = True => We need to link with it
         # headers = True => We need to include it
         req = Requirement(ref, headers=True, libs=True, build=False, run=run, visible=False,
-                          test=True, package_id_mode=None)
+                          test=True, package_id_mode=None, options=options)
         if self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
     def tool_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                     run=True):
+                     run=True, options=None):
         """
          Represent a build tool like "cmake".
 
@@ -452,7 +456,7 @@ class Requirements:
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode)
+                          package_id_mode=package_id_mode, options=options)
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req

@@ -955,6 +955,33 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         app = deps_graph.root
         dep1 = app.dependencies[0].dst
         dep2 = app.dependencies[1].dst
+        self._check_node(app, "app/0.1", deps=[dep1, dep2])
+        self._check_node(dep1, "dep1/2.0#123", deps=[], dependents=[app])
+        # dep2 no dependency, it was not resolved due to conflict
+        self._check_node(dep2, "dep2/1.0#123", deps=[], dependents=[app])
+
+    def test_invisible_not_forced(self):
+        # app -> libb0.1 -(visible=False)----> liba0.1 (NOT forced to lib0.2)
+        #    \-> -----(force not used)-------> liba0.2
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_requirement("liba/0.1",
+                                                                          visible=False))
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_require("libb/0.1")
+                                           .with_requirement("liba/0.2", force=True))
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba2 = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[libb, liba2])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+        self._check_node(liba2, "liba/0.2#123", dependents=[app])
 
 
 class PureOverrideTest(GraphManagerTest):
@@ -989,6 +1016,26 @@ class PureOverrideTest(GraphManagerTest):
         app = deps_graph.root
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[])
+
+    def test_invisible_not_overriden(self):
+        # app -> libb0.1 -(visible=False)----> liba0.1 (NOT overriden to lib0.2)
+        #    \-> -----(override not used)------->/
+        self.recipe_cache("liba/0.1")
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_requirement("liba/0.1",
+                                                                          visible=False))
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_require("libb/0.1")
+                                           .with_requirement("liba/0.2", override=True))
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
 
 class PackageIDDeductions(GraphManagerTest):
