@@ -115,6 +115,9 @@ class TestLinear(GraphManagerTest):
         libb = app.dependencies[0].dst
         liba = libb.dependencies[0].dst
 
+        for r, t in libb.transitive_deps.items():
+            assert r.package_id_mode == "minor_mode"
+
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb])

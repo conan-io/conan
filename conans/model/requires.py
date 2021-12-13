@@ -296,27 +296,25 @@ class Requirement:
             downstream_require.test = True
 
         downstream_require.direct = False
-
-        # If the requirement doesn't declare package_id, try to guess it with the types
-        package_id_mode = require.package_id_mode
-        if package_id_mode is None:
-            if require.headers or require.libs:  # linked
-                if pkg_type in (PackageType.SHARED, PackageType.APP):
-                    if dep_pkg_type is PackageType.SHARED:
-                        package_id_mode = "minor_mode"
-                    else:
-                        package_id_mode = "recipe_revision_mode"
-                elif pkg_type is PackageType.STATIC:
-                    if dep_pkg_type is PackageType.HEADER:
-                        package_id_mode = "recipe_revision_mode"
-                    else:
-                        package_id_mode = "minor_mode"
-                elif pkg_type is PackageType.HEADER:
-                    package_id_mode = "unrelated_mode"
-
-        downstream_require.package_id_mode = package_id_mode
-
         return downstream_require
+
+    def deduce_package_id_mode(self, pkg_type, dep_pkg_type):
+        # If the requirement doesn't declare package_id, try to guess it with the types
+        if self.package_id_mode is not None:
+            return
+
+        if self.headers or self.libs:  # only if linked
+            if pkg_type in (PackageType.SHARED, PackageType.APP):
+                if dep_pkg_type is PackageType.SHARED:
+                    self.package_id_mode = "minor_mode"
+                else:
+                    self.package_id_mode = "recipe_revision_mode"
+            elif pkg_type is PackageType.STATIC:
+                if dep_pkg_type is PackageType.HEADER:
+                    self.package_id_mode = "recipe_revision_mode"
+                else:
+                    self.package_id_mode = "minor_mode"
+            # HEADER-ONLY is automatically cleared in compute_package_id()
 
 
 class BuildRequirements:
