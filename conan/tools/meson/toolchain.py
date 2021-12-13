@@ -3,10 +3,10 @@ import textwrap
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
 from conans.client.build.cppstd_flags import cppstd_from_settings
-from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conans.util.files import save
 
 
@@ -69,21 +69,49 @@ class MesonToolchain(object):
 
     def __init__(self, conanfile, backend=None):
         self._conanfile = conanfile
-        self._backend = self._get_backend(backend)
-        self._build_type = self._conanfile.settings.get_safe("build_type")
-        self._base_compiler = self._conanfile.settings.get_safe("compiler.base") or \
-                              self._conanfile.settings.get_safe("compiler")
-        self._vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
-                      self._conanfile.settings.get_safe("compiler.runtime")
+        # Values are kept as Python built-ins so users can modify them more easily, and they are
+        # only converted to Meson file syntax for rendering
+        # priority: first user conf, then recipe, last one is default "ninja"
+        backend_conf = conanfile.conf["tools.meson.mesontoolchain:backend"]
+        self.backend = backend_conf or backend or 'ninja'
+
+        build_type = self._conanfile.settings.get_safe("build_type")
+        self.buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
+                          "Release": "release",
+                          "MinSizeRel": "minsize",
+                          "RelWithDebInfo": "debugoptimized"}.get(build_type, build_type)
+
+        compiler = self._conanfile.settings.get_safe("compiler.base") or \
+                    self._conanfile.settings.get_safe("compiler")
+
+        if compiler == "Visual Studio":
+            vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
+                    self._conanfile.settings.get_safe("compiler.runtime")
+            self.b_vscrt = {"MD": "md",
+                            "MDd": "mdd",
+                            "MT": "mt",
+                            "MTd": "mtd"}.get(vscrt, "none")
+        elif compiler == "msvc":
+            # TODO: Fill here the msvc model
+            pass
+        else:
+            self.b_vscrt = None
+
+
+
         self._cppstd = cppstd_from_settings(self._conanfile.settings)
         self._shared = self._conanfile.options.get_safe("shared")
         self._fpic = self._conanfile.options.get_safe("fPIC")
+        # It sounds it would be better to keep the `Environment` instead of `EnvVars`
+        # For manipulation, and only convert to `vars()` at the very last minute, for rendering
+        # TODO: Change to `Environment()`
         self._build_env = VirtualBuildEnv(self._conanfile).vars()
 
         self.definitions = dict()
         self.preprocessor_definitions = dict()
 
         def from_build_env(name):
+            # TODO: Do not transform to meson value here, but at the very end
             return self._to_meson_value(self._build_env.get(name, None))
 
         self.c = from_build_env("CC")
@@ -98,13 +126,10 @@ class MesonToolchain(object):
 
         # https://mesonbuild.com/Builtin-options.html#core-options
         # Do not adjust "debug" if already adjusted "buildtype"
-        self.buildtype = self._to_meson_build_type(self._build_type) if self._build_type else None
         self.default_library = self._to_meson_shared(self._shared) \
             if self._shared is not None else None
-        self.backend = self._to_meson_value(self._backend)
 
         # https://mesonbuild.com/Builtin-options.html#base-options
-        self.b_vscrt = self._to_meson_vscrt(self._vscrt)
         self.b_staticpic = self._to_meson_value(self._fpic) \
             if (self._shared is False and self._fpic is not None) else None
         self.b_ndebug = self._to_meson_value(self._ndebug) if self._build_type else None
@@ -119,19 +144,6 @@ class MesonToolchain(object):
         self.pkg_config_path = "'%s'" % self._conanfile.generators_folder
 
         check_using_build_profile(self._conanfile)
-
-    def _get_backend(self, recipe_backend):
-        # Returns the name of the backend used by Meson
-        conanfile = self._conanfile
-        # Downstream consumer always higher priority
-        backend_conf = conanfile.conf["tools.meson.mesontoolchain:backend"]
-        if backend_conf:
-            return backend_conf
-        # second priority: the recipe one:
-        if recipe_backend:
-            return recipe_backend
-        # if not defined, deduce automatically the default one (ninja)
-        return 'ninja'
 
     @staticmethod
     def _to_meson_value(value):
@@ -153,30 +165,11 @@ class MesonToolchain(object):
             return '[%s]' % ', '.join([str(MesonToolchain._to_meson_value(v)) for v in value])
         return value
 
-    @staticmethod
-    def _to_meson_build_type(build_type):
-        return {"Debug": "'debug'",
-                "Release": "'release'",
-                "MinSizeRel": "'minsize'",
-                "RelWithDebInfo": "'debugoptimized'"}.get(build_type, "'%s'" % build_type)
-    # FIXME : use 'custom' otherwise? or use just None?
-
-    @property
-    def _debug(self):
-        return self._build_type == "Debug"
-
     @property
     def _ndebug(self):
         # ERROR: Value "True" (of type "boolean") for combo option "Disable asserts" is not one of
         # the choices. Possible choices are (as string): "true", "false", "if-release".
         return "true" if self._build_type != "Debug" else "false"
-
-    @staticmethod
-    def _to_meson_vscrt(vscrt):
-        return {"MD": "'md'",
-                "MDd": "'mdd'",
-                "MT": "'mt'",
-                "MTd": "'mtd'"}.get(vscrt, "'none'")
 
     @staticmethod
     def _to_meson_shared(shared):
@@ -193,16 +186,14 @@ class MesonToolchain(object):
                 '17': "'c++17'", 'gnu17': "'gnu++17'",
                 '20': "'c++1z'", 'gnu20': "'gnu++1z'"}.get(cppstd, "'none'")
 
-    @staticmethod
-    def _none_if_empty(value):
-        return "'%s'" % value if value.strip() else None
-
     def _env_array(self, name):
+        # Most likely this can be avoided, split not necessary if Environment is used
         import shlex
         return shlex.split(self._build_env.get(name, ''))
 
     @property
     def _context(self):
+        # Formatting specifics to Meson should happen here in the rendering, not in constructor
         project_options = []
         for k, v in self.definitions.items():
             project_options.append("%s = %s" % (k, self._to_meson_value(v)))
@@ -225,11 +216,11 @@ class MesonToolchain(object):
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
-            "buildtype": self.buildtype,
+            "buildtype": self._to_meson_value(self.buildtype),
             "default_library": self.default_library,
-            "backend": self.backend,
+            "backend": self._to_meson_value(self.backend),
             # https://mesonbuild.com/Builtin-options.html#base-options
-            "b_vscrt": self.b_vscrt,
+            "b_vscrt": self._to_meson_value(self.b_vscrt),
             "b_staticpic": self.b_staticpic,
             "b_ndebug": self.b_ndebug,
             # https://mesonbuild.com/Builtin-options.html#compiler-options
@@ -242,15 +233,6 @@ class MesonToolchain(object):
             "preprocessor_definitions": self.preprocessor_definitions
         }
         return context
-
-    @staticmethod
-    def _render(template, context):
-        t = Template(template)
-        return t.render(context)
-
-    @property
-    def _native_content(self):
-        return self._render(self._native_file_template, self._context)
 
     def _to_meson_machine(self, machine_os, machine_arch):
         # https://mesonbuild.com/Reference-tables.html#operating-system-names
@@ -275,7 +257,7 @@ class MesonToolchain(object):
                           'armv7': ('arm', 'armv7', 'little'),
                           'armv7hf': ('arm', 'armv7hf', 'little'),
                           'armv7s': ('arm', 'armv7s', 'little'),
-                          'armv7k':('arm', 'armv7k', 'little'),
+                          'armv7k': ('arm', 'armv7k', 'little'),
                           'armv8': ('aarch64', 'armv8', 'little'),
                           'armv8_32': ('aarch64', 'armv8_32', 'little'),
                           'armv8.3': ('aarch64', 'armv8.3', 'little'),
@@ -304,7 +286,7 @@ class MesonToolchain(object):
             'cpu': self._to_meson_value(cpu),
             'endian': self._to_meson_value(endian),
         }
-        return self._render(self._machine_template, context)
+        return Template(self._machine_template).render(context)
 
     @property
     def _cross_content(self):
@@ -319,17 +301,12 @@ class MesonToolchain(object):
         context['build_machine'] = build_machine
         context['host_machine'] = host_machine
         context['target_machine'] = target_machine
-        return self._render(self._cross_file_template, context)
-
-    def _write_native_file(self):
-        save(self.native_filename, self._native_content)
-
-    def _write_cross_file(self):
-        save(self.cross_filename, self._cross_content)
+        return Template(self._cross_file_template).render(context)
 
     def generate(self):
         if cross_building(self._conanfile):
-            self._write_cross_file()
+            save(self.cross_filename, self._cross_content)
         else:
-            self._write_native_file()
+            native_content = Template(self._native_file_template).render(self._context)
+            save(self.native_filename, native_content)
         VCVars(self._conanfile).generate()
