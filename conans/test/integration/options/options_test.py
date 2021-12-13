@@ -287,5 +287,5 @@ equal:opt=a=b
         assert "pkg/0.1: without_stacktrace: True" in c.out
         assert "pkg/0.1: with_stacktrace_backtrace success deleted!" in c.out
         c.run("create . pkg/0.1@ -o pkg:without_stacktrace=False")
-        assert "pkg/0.1: without_stacktrace: True" in c.out
+        assert "pkg/0.1: without_stacktrace: False" in c.out
         assert "pkg/0.1: with_stacktrace_backtrace: True" in c.out
