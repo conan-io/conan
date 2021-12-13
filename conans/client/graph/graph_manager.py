@@ -157,8 +157,9 @@ class GraphManager(object):
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
-            return self._load_root_test_package(path, create_reference, graph_lock, profile_host,
+            ret = self._load_root_test_package(path, create_reference, graph_lock, profile_host,
                                                 require_overrides)
+            return ret
 
         # It is a path to conanfile.py or conanfile.txt
         root_node = self._load_root_consumer(path, graph_lock, profile_host, root_ref,
@@ -246,6 +247,7 @@ class GraphManager(object):
                                                )
         conanfile.display_name = "%s (test package)" % str(test)
         conanfile.output.scope = conanfile.display_name
+        conanfile.testing_package_reference = create_reference
 
         # Injection of the tested reference
         test_type = getattr(conanfile, "test_type", ("requires", ))
@@ -266,6 +268,7 @@ class GraphManager(object):
                 require.ref = require.range_ref = create_reference
             else:
                 conanfile.requires.add_ref(create_reference)
+
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)

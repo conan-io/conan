@@ -277,3 +277,48 @@ class HelloReuseConan(ConanFile):
         client.run("create . lasote/stable")  # create rebuild the package
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
+
+
+def test_testing_package_reference():
+    client = TestClient()
+    test_conanfile = textwrap.dedent("""
+    from conans import ConanFile, CMake
+    import os
+
+    class HelloReuseConan(ConanFile):
+
+        def build_requirements(self):
+            self.output.warn("At requirements: {}".format(self.testing_package_reference))
+            self.build_requires(self.testing_package_reference)
+
+        def test(self):
+            self.output.warn("At test: {}".format(self.testing_package_reference))
+    """)
+
+    client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": test_conanfile})
+    client.run("create . foo/1.0@")
+    assert "kk" in client.out
+
+
+def test_testing_package_reference2():
+    client = TestClient()
+    test_conanfile = textwrap.dedent("""
+    from conans import ConanFile, CMake
+    import os
+
+    class HelloReuseConan(ConanFile):
+
+        def build_requirements(self):
+            self.build_requires("foo/1.0")
+
+        def requirements(self):
+            self.requires("foo/1.0")
+
+        def test(self):
+            pass
+
+    """)
+
+    client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": test_conanfile})
+    client.run("create . foo/1.0@ -pr:h=default -pr:b=default")
+    assert "kk" in client.out
