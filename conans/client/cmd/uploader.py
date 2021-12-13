@@ -8,13 +8,12 @@ from conans.cli.output import ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.client.userio import UserInput
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
-from conans.model.manifest import gather_files
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_recipes
-from conans.util.files import (clean_dirty, is_dirty,
+from conans.util.files import (clean_dirty, is_dirty, gather_files,
                                gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
 

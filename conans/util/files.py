@@ -390,3 +390,32 @@ def merge_directories(src, dst, excluded=None):
     copier = FileCopier([src], dst)
     copier(pattern="*", excludes=excluded)
     return
+
+
+def discarded_file(filename):
+    """
+    # The __conan pattern is to be prepared for the future, in case we want to manage our
+    own files that shouldn't be uploaded
+    """
+    return filename == ".DS_Store" or filename.startswith("__conan")
+
+
+def gather_files(folder):
+    file_dict = {}
+    symlinked_folders = {}
+    for root, dirs, files in walk(folder):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
+        for d in dirs:
+            abs_path = os.path.join(root, d)
+            if os.path.islink(abs_path):
+                rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
+                symlinked_folders[rel_path] = abs_path
+                continue
+        for f in files:
+            if discarded_file(f):
+                continue
+            abs_path = os.path.join(root, f)
+            rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
+            file_dict[rel_path] = abs_path
+
+    return file_dict, symlinked_folders

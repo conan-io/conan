@@ -2,35 +2,7 @@ import os
 
 from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import timestamp_now, timestamp_to_str
-from conans.util.files import load, md5, md5sum, save, walk
-
-
-def discarded_file(filename):
-    """
-    # The __conan pattern is to be prepared for the future, in case we want to manage our
-    own files that shouldn't be uploaded
-    """
-    return filename == ".DS_Store" or filename.startswith("__conan")
-
-
-def gather_files(folder):
-    file_dict = {}
-    symlinked_folders = {}
-    for root, dirs, files in walk(folder):
-        if os.path.islink(root):
-            dirs[:] = []
-            rel_path = root[len(folder) + 1:].replace("\\", "/")
-            symlinked_folders[rel_path] = root
-            continue
-        dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
-        for f in files:
-            if discarded_file(f):
-                continue
-            abs_path = os.path.join(root, f)
-            rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
-            file_dict[rel_path] = abs_path
-
-    return file_dict, symlinked_folders
+from conans.util.files import load, md5, md5sum, save, gather_files
 
 
 class FileTreeManifest(object):
