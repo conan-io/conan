@@ -11,7 +11,7 @@ from conans.util.files import rmdir
 def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                            remotes, update, build_modes=None, manifest_folder=None,
                            manifest_verify=False, manifest_interactive=False, keep_build=False,
-                           test_build_folder=None, layout_base_folder=None, recorder=None,
+                           test_build_folder=None, recorder=None,
                            require_overrides=None):
     """
     Installs the reference (specified by the parameters or extracted from the test conanfile)

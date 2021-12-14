@@ -404,8 +404,7 @@ class ConanAPIV1(object):
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
-                   package_folder=None, install_folder=None,
-                   profile_names=None, settings=None,
+                   package_folder=None, install_folder=None, profile_names=None, settings=None,
                    options=None, env=None, force=False, user=None, version=None, cwd=None,
                    lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
                    conf=None):
@@ -771,18 +770,18 @@ class ConanAPIV1(object):
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
-              install_folder=None, should_configure=True, should_build=True,
-              should_install=True, should_test=True, cwd=None):
+              install_folder=None, should_configure=True, should_build=True, should_install=True,
+              should_test=True, cwd=None):
         self.app.load_remotes()
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+        layout_build_folder = _make_abs_path(build_folder, cwd) if build_folder else None
+        layout_source_folder = _make_abs_path(source_folder, cwd) if source_folder else None
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
-        layout_build_folder = _make_abs_path(build_folder, cwd) if build_folder else None
-        layout_source_folder = _make_abs_path(source_folder, cwd) if source_folder else None
 
         cmd_build(self.app, conanfile_path, base_path=cwd,
                   source_folder=source_folder, build_folder=build_folder,
@@ -823,21 +822,25 @@ class ConanAPIV1(object):
                            copy_info=True)
 
     @api_method
-    def source(self, path, source_folder=None, info_folder=None, layout_base_folder=None, cwd=None):
+    def source(self, path, source_folder=None, info_folder=None, cwd=None):
         self.app.load_remotes()
 
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        source_folder = _make_abs_path(source_folder, cwd)
+
         info_folder = _make_abs_path(info_folder, cwd)
 
-        mkdir(source_folder)
         if not os.path.exists(info_folder):
             raise ConanException("Specified info-folder doesn't exist")
 
         # only infos if exist
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
-        conanfile.folders.set_base_source(layout_base_folder or source_folder)
+        if hasattr(conanfile, "layout") and source_folder is None:
+            source_folder = os.path.dirname(conanfile_path)
+        else:
+            source_folder = _make_abs_path(source_folder, cwd)
+        mkdir(source_folder)
+        conanfile.folders.set_base_source(source_folder)
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
