@@ -1,5 +1,6 @@
 import os
 import traceback
+from collections import OrderedDict
 from os.path import join
 
 from conan.tools.env import VirtualRunEnv
@@ -72,7 +73,7 @@ class GeneratorManager(object):
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                                 "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-                                "VCVars", "IntelCC", "XcodeDeps"]
+                                "VCVars", "IntelCC", "XcodeDeps", "ConfAggregator"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -140,6 +141,9 @@ class GeneratorManager(object):
         elif generator_name == "XcodeDeps":
             from conan.tools.apple import XcodeDeps
             return XcodeDeps
+        elif generator_name == "ConfAggregator":
+            from conan.tools.conf import ConfAggregator
+            return ConfAggregator
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -149,7 +153,9 @@ class GeneratorManager(object):
         """
         _receive_conf(conanfile)
 
-        for generator_name in set(conanfile.generators):
+        # Remove duplicated elements in generators keeping the order
+        unique_generators = list(OrderedDict.fromkeys(conanfile.generators))
+        for generator_name in unique_generators:
             generator_class = self._new_generator(generator_name, output)
             if generator_class:
                 if generator_name == "msbuild":

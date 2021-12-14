@@ -115,3 +115,43 @@ def test_cmake_toolchain_without_build_type():
     toolchain = client.load("conan_toolchain.cmake")
     assert "CMAKE_MSVC_RUNTIME_LIBRARY" not in toolchain
     assert "CMAKE_BUILD_TYPE" not in toolchain
+
+
+def test_cmake_toolchain_multiple_user_toolchain():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            exports_sources = "*"
+            def package(self):
+                self.copy("*")
+            def package_info(self):
+                f = os.path.join(self.package_folder, "mytoolchain.cmake")
+                self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"] = f
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "mytoolchain.cmake": 'message(STATUS "mytoolchain1.cmake !!!running!!!")'})
+    client.run("create . toolchain1/0.1@")
+    client.save({"conanfile.py": conanfile,
+                 "mytoolchain.cmake": 'message(STATUS "mytoolchain2.cmake !!!running!!!")'})
+    client.run("create . toolchain2/0.1@")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "CMakeLists.txt"
+            build_requires = "toolchain1/0.1", "toolchain2/0.1"
+            generators = "ConfAggregator", "CMakeToolchain"
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": gen_cmakelists()}, clean_first=True)
+    client.run("create . pkg/0.1@")
+    assert "mytoolchain1.cmake !!!running!!!" in client.out
+    assert "mytoolchain2.cmake !!!running!!!" in client.out
