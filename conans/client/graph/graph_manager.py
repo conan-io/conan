@@ -21,12 +21,14 @@ from conans.util.files import load
 class _RecipeBuildRequires(OrderedDict):
     def __init__(self, conanfile, default_context):
         super(_RecipeBuildRequires, self).__init__()
-        build_requires = getattr(conanfile, "build_requires", [])
-        if not isinstance(build_requires, (list, tuple)):
-            build_requires = [build_requires]
-        self._default_context = default_context
-        for build_require in build_requires:
-            self.add(build_require, context=self._default_context)
+        # "tool_requires" is an alias for 2.0 compatibility
+        for require_type in ("build_requires", "tool_requires"):
+            build_requires = getattr(conanfile, require_type, [])
+            if not isinstance(build_requires, (list, tuple)):
+                build_requires = [build_requires]
+            self._default_context = default_context
+            for build_require in build_requires:
+                self.add(build_require, context=self._default_context)
 
     def add(self, build_require, context, force_host_context=False):
         if not isinstance(build_require, ConanFileReference):
@@ -298,6 +300,7 @@ class GraphManager(object):
     @staticmethod
     def _get_recipe_build_requires(conanfile, default_context):
         conanfile.build_requires = _RecipeBuildRequires(conanfile, default_context)
+        conanfile.tool_requires = conanfile.build_requires
 
         class TestRequirements:
             def __init__(self, build_requires):
