@@ -1,9 +1,13 @@
+import sys
 import textwrap
+
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Output adds u() in output in Py27")
 def test_cpp_info_editable():
 
     client = TestClient()
@@ -94,6 +98,7 @@ def test_cpp_info_editable():
     assert "**frameworkdirs:[]**" in client2.out
 
 
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Output adds u() in output in Py27")
 def test_cpp_info_components_editable():
 
     client = TestClient()
@@ -182,7 +187,7 @@ def test_cpp_info_components_editable():
     client2.run("create . lib/1.0@")
     assert "**FOO includedirs:['package_include_foo']**" in client2.out
     assert "**FOO libdirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**FOO builddirs:[]**" in client2.out # The components don't have default dirs
+    assert "**FOO builddirs:[]**" in client2.out  # The components don't have default dirs
     assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in client2.out
     assert "**FOO cxxflags:['my_cxx_flag2_foo']**" in client2.out
     assert "**FOO cflags:['my_c_flag_foo']**" in client2.out
@@ -218,4 +223,3 @@ def test_cpp_info_components_editable():
     assert "**VAR libs:['hello_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
-
