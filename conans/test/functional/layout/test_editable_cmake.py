@@ -21,13 +21,13 @@ def editable_cmake(generator):
            path=os.path.join(c.current_folder, "pkg"))
 
     def build_dep():
-        c.run("install . -if=install_release --layout-base=mybase")
-        c.run("build . -if=install_release --layout-base=mybase")
-        c.run("install . -s build_type=Debug -if=install_debug --layout-base=mybase")
-        c.run("build . -if=install_debug --layout-base=mybase")
+        c.run("install . -if=install_release --build-folder=mybase")
+        c.run("build . -if=install_release --build-folder=mybase")
+        c.run("install . -s build_type=Debug -if=install_debug --build-folder=mybase")
+        c.run("build . -if=install_debug --build-folder=mybase")
 
     with c.chdir("dep"):
-        c.run("editable add . dep/0.1@ --layout-base=mybase")
+        c.run("editable add . dep/0.1@ --build-folder=mybase")
         build_dep()
 
     def build_pkg(msg):
@@ -44,7 +44,9 @@ def editable_cmake(generator):
 
     with c.chdir("pkg"):
         c.run("install . -if=install_release")
+        print(c.out)
         c.run("install . -if=install_debug -s build_type=Debug")
+        print(c.out)
         build_pkg("dep")
 
     # Do a source change in the editable!

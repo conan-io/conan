@@ -486,8 +486,9 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
                                  'files. e.g., conaninfo/conanbuildinfo.txt')
-        parser.add_argument("--layout-base",
-                            help='The folder used as base reference for the layout()')
+        parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
+        parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
+
         _add_manifests_arguments(parser)
 
         parser.add_argument("--no-imports", action='store_true', default=False,
@@ -535,7 +536,8 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           layout_base_folder=args.layout_base,
+                                           source_folder=args.source_folder,
+                                           build_folder=args.build_folder,
                                            lockfile=args.lockfile,
                                            lockfile_out=args.lockfile_out,
                                            require_overrides=args.require_override)
@@ -907,7 +909,6 @@ class Command(object):
                                  package_folder=args.package_folder,
                                  build_folder=args.build_folder,
                                  install_folder=args.install_folder,
-                                 layout_base_folder=args.layout_base,
                                  should_configure=config,
                                  should_build=build,
                                  should_install=install,
@@ -1898,8 +1899,8 @@ class Command(object):
                                 help='Relative or absolute path to a file containing the layout.'
                                 ' Relative paths will be resolved first relative to current dir, '
                                 'then to local cache "layouts" folder')
-        add_parser.add_argument("--layout-base",
-                                help='The folder used as base reference for the layout()')
+        add_parser.add_argument("-bf", "--build-folder", help='The root build folder')
+        add_parser.add_argument("-sf", "--source-folder", help='The root source folder')
         remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
         remove_parser.add_argument('reference',
                                    help='Package reference e.g.: mylib/1.X@user/channel')
@@ -1910,8 +1911,8 @@ class Command(object):
         self._warn_python_version()
 
         if args.subcommand == "add":
-            self._conan.editable_add(args.path, args.reference, args.layout, args.layout_base,
-                                     cwd=os.getcwd())
+            self._conan.editable_add(args.path, args.reference, args.layout, args.source_folder,
+                                     args.build_folder, cwd=os.getcwd())
             self._out.success("Reference '{}' in editable mode".format(args.reference))
         elif args.subcommand == "remove":
             ret = self._conan.editable_remove(args.reference)

@@ -585,7 +585,7 @@ class ConanAPIV1(object):
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None,
-                layout_base_folder=None, cwd=None,
+                source_folder=None, build_folder=None, cwd=None,
                 lockfile=None, lockfile_out=None, profile_build=None, conf=None,
                 require_overrides=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
@@ -603,13 +603,16 @@ class ConanAPIV1(object):
                                         lockfile=lockfile)
 
             install_folder = _make_abs_path(install_folder, cwd)
+            build_folder = _make_abs_path(build_folder, cwd) if build_folder is not None else None
+            source_folder = _make_abs_path(source_folder, cwd) if source_folder is not None else None
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(app=self.app,
                          ref_or_path=conanfile_path,
                          install_folder=install_folder,
-                         layout_base_folder=layout_base_folder,
+                         source_folder=source_folder,
+                         build_folder=build_folder,
                          base_folder=cwd,
                          remotes=remotes,
                          graph_info=graph_info,
@@ -765,7 +768,7 @@ class ConanAPIV1(object):
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
-              install_folder=None, layout_base_folder=None, should_configure=True, should_build=True,
+              install_folder=None, should_configure=True, should_build=True,
               should_install=True, should_test=True, cwd=None):
         self.app.load_remotes()
         cwd = cwd or os.getcwd()
@@ -775,14 +778,16 @@ class ConanAPIV1(object):
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
-        layout_base_folder = _make_abs_path(layout_base_folder, cwd)
+        layout_build_folder = _make_abs_path(build_folder, cwd) if build_folder else None
+        layout_source_folder = _make_abs_path(source_folder, cwd) if source_folder else None
 
         cmd_build(self.app, conanfile_path, base_path=cwd,
                   source_folder=source_folder, build_folder=build_folder,
                   package_folder=package_folder, install_folder=install_folder,
-                  layout_base_folder=layout_base_folder,
                   should_configure=should_configure, should_build=should_build,
-                  should_install=should_install, should_test=should_test)
+                  should_install=should_install, should_test=should_test,
+                  layout_source_folder=layout_source_folder,
+                  layout_build_folder=layout_build_folder)
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None,
@@ -1300,11 +1305,13 @@ class ConanAPIV1(object):
             return self.app.remote_manager.get_package_revisions(pref, remote=remote)
 
     @api_method
-    def editable_add(self, path, reference, layout, layout_base_folder, cwd):
+    def editable_add(self, path, reference, layout, source_folder, build_folder, cwd):
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
-        if layout_base_folder is not None:
-            layout_base_folder = _make_abs_path(layout_base_folder)
+        if source_folder is not None:
+            source_folder = _make_abs_path(source_folder)
+        if build_folder is not None:
+            build_folder = _make_abs_path(build_folder)
 
         self.app.load_remotes()
 
@@ -1320,7 +1327,8 @@ class ConanAPIV1(object):
         layout_abs_path = get_editable_abs_path(layout, cwd, self.app.cache.cache_folder)
         if layout_abs_path:
             self.app.out.success("Using layout file: %s" % layout_abs_path)
-        self.app.cache.editable_packages.add(ref, target_path, layout_abs_path, layout_base_folder)
+        self.app.cache.editable_packages.add(ref, target_path, layout_abs_path, source_folder,
+                                             build_folder)
 
     @api_method
     def editable_remove(self, reference):

@@ -105,9 +105,10 @@ class ClientCache(object):
         if edited_ref:
             conanfile_path = edited_ref["path"]
             layout_file = edited_ref["layout"]
-            layout_base_folder = edited_ref.get("layout_base")
+            source_folder = edited_ref.get("source_folder")
+            build_folder = edited_ref.get("build_folder")
             return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
-                                         conanfile_path)
+                                         conanfile_path, source_folder, build_folder)
         else:
             _check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))

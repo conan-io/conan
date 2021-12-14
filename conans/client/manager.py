@@ -23,7 +23,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None,
                  is_build_require=False, add_txt_generator=True, require_overrides=None,
-                 conanfile_path=None, test=None, layout_base_folder=None):
+                 conanfile_path=None, test=None, source_folder=None, build_folder=None):
 
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
@@ -40,7 +40,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
     @param add_txt_generator: Add the txt to the list of generators
 
     """
-
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
     remote_manager, hook_manager = app.remote_manager, app.hook_manager
 
@@ -96,9 +95,10 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
         manifest_manager.print_log()
 
     if hasattr(conanfile, "layout") and not test:
-        conanfile.folders.set_base_install(layout_base_folder or conanfile_path)
-        conanfile.folders.set_base_imports(layout_base_folder or conanfile_path)
-        conanfile.folders.set_base_generators(layout_base_folder or conanfile_path)
+        conanfile.folders.set_base_source(source_folder or conanfile_path)
+        conanfile.folders.set_base_install(build_folder or conanfile_path)
+        conanfile.folders.set_base_imports(build_folder or conanfile_path)
+        conanfile.folders.set_base_generators(build_folder or conanfile_path)
     else:
         conanfile.folders.set_base_install(install_folder)
         conanfile.folders.set_base_imports(install_folder)
