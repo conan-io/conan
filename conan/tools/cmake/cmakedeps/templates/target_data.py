@@ -169,7 +169,7 @@ class DepsCppCmake(object):
             ret = []
             for p in paths:
                 norm_path = p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-                if os.path.isabs(p):
+                if os.path.isabs(p):  # They will be abs for editables
                     ret.append('"{}"'.format(norm_path))
                 else:
                     # Prepend the {{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }}

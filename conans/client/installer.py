@@ -460,8 +460,7 @@ class BinaryInstaller(object):
         package_layout = self._cache.package_layout(ref)
         base_path = package_layout.base_folder()
         if hasattr(conanfile, "layout"):
-            print("DEFINING BUILD FOLDER LAYOUT()!!!!!!!!", package_layout.build_folder)
-            conanfile.folders.set_base_package(base_path)
+            conanfile.folders.set_base_package(package_layout.build_folder or base_path)
             conanfile.folders.set_base_source(package_layout.source_folder or base_path)
             conanfile.folders.set_base_build(package_layout.build_folder or base_path)
             conanfile.folders.set_base_generators(package_layout.build_folder or base_path)
@@ -474,6 +473,8 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_install(None)
 
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
+        print("CALLED PACKAEG_INFO WITH BUILD", conanfile.build_folder)
+        print("CALLED PACKAEG_INFO WITH PACKAGE", conanfile.package_folder)
 
         # New editables mechanism based on Folders
         if hasattr(conanfile, "layout"):
@@ -683,11 +684,13 @@ class BinaryInstaller(object):
                     if hasattr(conanfile, "layout") and is_editable:
                         # convert directory entries to be relative to the declared folders.build
                         build_cppinfo = conanfile.cpp.build.copy()
-                        build_cppinfo.set_relative_base_folder(conanfile.folders.build)
+                        # Make it absolute
+                        build_cppinfo.set_relative_base_folder(conanfile.build_folder)
 
                         # convert directory entries to be relative to the declared folders.source
                         source_cppinfo = conanfile.cpp.source.copy()
-                        source_cppinfo.set_relative_base_folder(conanfile.folders.source)
+                        # Make it absolute
+                        source_cppinfo.set_relative_base_folder(conanfile.source_folder)
 
                         full_editable_cppinfo = NewCppInfo()
                         full_editable_cppinfo.merge(source_cppinfo)

@@ -404,7 +404,7 @@ class ConanAPIV1(object):
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
-                   package_folder=None, install_folder=None, layout_base_folder=None,
+                   package_folder=None, install_folder=None,
                    profile_names=None, settings=None,
                    options=None, env=None, force=False, user=None, version=None, cwd=None,
                    lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
@@ -425,6 +425,8 @@ class ConanAPIV1(object):
                 package_folder = _make_abs_path(package_folder, cwd)
 
             build_folder = _make_abs_path(build_folder, cwd)
+            layout_build_folder = _make_abs_path(build_folder, cwd) if build_folder else None
+            layout_source_folder = _make_abs_path(source_folder, cwd) if source_folder else None
             if install_folder:
                 install_folder = _make_abs_path(install_folder, cwd)
             else:
@@ -453,7 +455,8 @@ class ConanAPIV1(object):
             recorder.add_recipe_being_developed(ref)
             export_pkg(self.app, recorder, new_ref, source_folder=source_folder,
                        build_folder=build_folder, package_folder=package_folder,
-                       install_folder=install_folder, layout_base_folder=layout_base_folder,
+                       install_folder=install_folder, layout_source_folder=layout_source_folder,
+                       layout_build_folder=layout_build_folder,
                        graph_info=graph_info, force=force,
                        remotes=remotes, source_conanfile_path=conanfile_path)
             if lockfile_out:

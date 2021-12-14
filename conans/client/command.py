@@ -887,8 +887,6 @@ class Command(object):
                             "--configure/--build/--install specified")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
-        parser.add_argument("--layout-base",
-                            help='The folder used as base reference for the layout()')
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="Directory to install the package (when the build system or "
                             "build() method does it). Defaulted to the '{build_folder}/package' "
