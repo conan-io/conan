@@ -255,9 +255,7 @@ class GraphManager(object):
         if not isinstance(test_type, (list, tuple)):
             test_type = (test_type, )
 
-        if "explicit" in test_type:  # 2.0 mode, not automatically add the require, always explicit
-            pass
-        else:
+        if "explicit" not in test_type:  # 2.0 mode, not automatically add the require, always explicit
             if "build_requires" in test_type:
                 if getattr(conanfile, "build_requires", None):
                     # Injecting the tested reference
