@@ -338,4 +338,5 @@ def migrate_editables_use_conanfile_name(cache):
         path = data["path"]
         if os.path.isdir(path):
             path = os.path.join(path, CONANFILE)
-        cache.editable_packages.add(ref, path, layout=data["layout"])
+        cache.editable_packages.add(ref, path, layout=data["layout"],
+                                    source_folder=None, build_folder=None)

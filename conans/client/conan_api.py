@@ -423,8 +423,8 @@ class ConanAPIV1(object):
                                          "and source folders")
                 package_folder = _make_abs_path(package_folder, cwd)
 
-            build_folder = _make_abs_path(build_folder, cwd)
             layout_build_folder = _make_abs_path(build_folder, cwd) if build_folder else None
+            build_folder = _make_abs_path(build_folder, cwd)
             layout_source_folder = _make_abs_path(source_folder, cwd) if source_folder else None
             if install_folder:
                 install_folder = _make_abs_path(install_folder, cwd)
