@@ -473,8 +473,6 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_install(None)
 
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
-        print("CALLED PACKAEG_INFO WITH BUILD", conanfile.build_folder)
-        print("CALLED PACKAEG_INFO WITH PACKAGE", conanfile.package_folder)
 
         # New editables mechanism based on Folders
         if hasattr(conanfile, "layout"):

@@ -54,7 +54,7 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
         cmd_build(app, conanfile_abs_path, test_build_folder,
                   source_folder=base_folder, build_folder=test_build_folder,
                   package_folder=os.path.join(test_build_folder, "package"),
-                  install_folder=test_build_folder, layout_base_folder=layout_base_folder,
+                  install_folder=test_build_folder,
                   test=reference)
     finally:
         if delete_after_build:
