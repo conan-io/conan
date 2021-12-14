@@ -11,7 +11,6 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestServer, TurboTestClient
 
 
-
 class CompressSymlinksZeroSize(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
@@ -60,6 +59,7 @@ lrw-r--r-- 0/0               0 1970-01-01 01:00 link.txt -> file.txt
                 self.assertGreater(int(size), 0)
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 @pytest.mark.parametrize("package_files",
      [{"files": ["foo/bar/folder/file.txt", "foo/bar/folder/other/other_file.txt"],
        "symlinks": [("../file.txt", "foo/bar/folder/other/file2.txt")]},  # relative ../ symlink
