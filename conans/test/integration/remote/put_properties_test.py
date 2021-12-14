@@ -14,8 +14,8 @@ class PutPropertiesTest(unittest.TestCase):
 
     def test_create_empty_property_file(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
-        client.run("export . lasote/stable")
+        client.save({"conanfile.py": GenConanfile("hello", "0.1")})
+        client.run("export . --user=lasote --channel=stable")
         props_file = client.cache.artifacts_properties_path
         self.assertTrue(os.path.exists(props_file))
 
@@ -50,9 +50,9 @@ class PutPropertiesTest(unittest.TestCase):
                             servers=servers, inputs=["admin", "password"])
         _create_property_files(client, wanted_vars)
 
-        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
-        client.run("export . lasote/stable")
-        client.run("upload Hello0/0.1@lasote/stable -c -r default")
+        client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
+        client.run("export . --user=lasote --channel=stable")
+        client.run("upload hello0/0.1@lasote/stable -c -r default")
 
     def test_matrix_params(self):
         test_server = TestServer(server_capabilities=[MATRIX_PARAMS, ])
@@ -90,9 +90,9 @@ class PutPropertiesTest(unittest.TestCase):
                             servers=servers, inputs=["admin", "password"])
         _create_property_files(client, wanted_vars)
 
-        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
-        client.run("export . lasote/stable")
-        client.run("upload Hello0/0.1@lasote/stable -c -r default")
+        client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
+        client.run("export . --user=lasote --channel=stable")
+        client.run("upload hello0/0.1@lasote/stable -c -r default")
 
 
 def _create_property_files(client, values):

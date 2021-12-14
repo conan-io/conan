@@ -57,8 +57,7 @@ class GraphBinariesAnalyzer(object):
         if remote:
             try:
                 info = node.conanfile.info
-                pref_rev = self._remote_manager.get_latest_package_revision_with_time(pref, remote,
-                                                                                      info=info)
+                pref_rev = self._remote_manager.get_latest_package_reference(pref, remote, info=info)
                 pref.revision = pref_rev.revision
                 pref.timestamp = pref_rev.timestamp
                 return remote
@@ -69,8 +68,8 @@ class GraphBinariesAnalyzer(object):
         results = []
         for r in self._app.enabled_remotes:
             try:
-                latest_pref, latest_time = self._remote_manager.get_latest_package_revision(pref, r)
-                results.append({'pref': latest_pref, 'time': latest_time, 'remote': r})
+                latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
+                results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not self._app.update:
                     break
             except NotFoundException:
@@ -80,10 +79,10 @@ class GraphBinariesAnalyzer(object):
             node.conanfile.output.warning("Can't update, there are no remotes configured or enabled")
 
         if len(results) > 0:
-            remotes_results = sorted(results, key=lambda k: k['time'], reverse=True)
+            remotes_results = sorted(results, key=lambda k: k['pref'].timestamp, reverse=True)
             result = remotes_results[0]
             pref.revision = result.get("pref").revision
-            pref.timestamp = result.get("time")
+            pref.timestamp = result.get("pref").timestamp
             return result.get('remote')
         else:
             raise PackageNotFoundException(pref)
@@ -174,10 +173,9 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_build(node, build_mode):
             return
 
-        cache_latest_prev = self._cache.get_latest_prev(pref)
-        output = node.conanfile.output
+        cache_latest_prev = self._cache.get_latest_package_reference(pref)
 
-        if not cache_latest_prev:
+        if not cache_latest_prev:  # This binary does NOT exist in the cache
             try:
                 remote = self._get_package_from_remotes(node, pref)
             except NotFoundException:
@@ -187,11 +185,13 @@ class GraphBinariesAnalyzer(object):
             else:
                 node.binary = BINARY_DOWNLOAD
                 node.prev = pref.revision
+                node.pref_timestamp = pref.timestamp
                 node.binary_remote = remote
-        else:
+        else:  # This binary already exists in the cache
             package_layout = self._cache.pkg_layout(cache_latest_prev)
             self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
             if self._app.update:
+                output = node.conanfile.output
                 try:
                     remote = self._get_package_from_remotes(node, pref)
                 except NotFoundException:
@@ -204,12 +204,14 @@ class GraphBinariesAnalyzer(object):
                     if cache_time < pref.timestamp and cache_latest_prev != pref:
                         node.binary = BINARY_UPDATE
                         node.prev = pref.revision
+                        node.pref_timestamp = pref.timestamp
                         node.binary_remote = remote
                         output.info("Current package revision is older than the remote one")
                     else:
                         node.binary = BINARY_CACHE
                         node.binary_remote = None
                         node.prev = cache_latest_prev.revision
+                        node.pref_timestamp = pref.timestamp
                         output.info("Current package revision is newer than the remote one")
 
             if not node.binary:
@@ -226,7 +228,7 @@ class GraphBinariesAnalyzer(object):
         # package_id, we can run it
         conanfile = node.conanfile
         if hasattr(conanfile, "layout"):
-            with conanfile_exception_formatter(str(conanfile), "layout"):
+            with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
     def evaluate_graph(self, deps_graph, build_mode):

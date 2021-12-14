@@ -4,33 +4,31 @@ import unittest
 
 import pytest
 
-from conans.client import tools
 from conans.client.cache.cache import PROFILES_FOLDER
 from conans.paths import CONANFILE
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.util.env import environment_update
 from conans.util.files import save
 
 
 class DefaultProfileTest(unittest.TestCase):
 
     def test_conanfile_txt_incomplete_profile(self):
-        conanfile = '''from conans import ConanFile
-class MyConanfile(ConanFile):
-    pass
-'''
+        conanfile = GenConanfile()
 
         client = TestClient()
         save(client.cache.default_profile_path, "[env]\nValue1=A")
 
         client.save({CONANFILE: conanfile})
-        client.run("create . Pkg/0.1@lasote/stable")
-        self.assertIn("Pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
+        client.run("create . pkg/0.1@lasote/stable")
+        self.assertIn("pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-        client.save({"conanfile.txt": "[requires]\nPkg/0.1@lasote/stable"}, clean_first=True)
+        client.save({"conanfile.txt": "[requires]\npkg/0.1@lasote/stable"}, clean_first=True)
         client.run('install .')
-        self.assertIn("Pkg/0.1@lasote/stable: Already installed!", client.out)
+        self.assertIn("pkg/0.1@lasote/stable: Already installed!", client.out)
 
     def test_change_default_profile(self):
         br = '''
@@ -62,16 +60,16 @@ class MyConanfile(ConanFile):
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({CONANFILE: br})
-        client.run("export . lasote/stable")
-        client.run('install mylib/0.1@lasote/stable --build')
+        client.run("export . --user=lasote --channel=stable")
+        client.run('install --reference=mylib/0.1@lasote/stable --build')
 
         # Now use a name, in the default profile folder
         os.unlink(default_profile_path)
         save(os.path.join(client.cache.profiles_path, "other"), "[buildenv]\nValue1=A")
         save(client.cache.new_config_path, "core:default_profile=other")
         client.save({CONANFILE: br})
-        client.run("export . lasote/stable")
-        client.run('install mylib/0.1@lasote/stable --build')
+        client.run("export . --user=lasote --channel=stable")
+        client.run('install --reference=mylib/0.1@lasote/stable --build')
 
     @pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
     def test_profile_applied_ok(self):
@@ -104,7 +102,7 @@ mypackage:option1=2
         save(client.cache.default_profile_path, default_profile)
 
         client.save({CONANFILE: br})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
         cf = '''
 import os, platform
@@ -139,12 +137,12 @@ class MyConanfile(ConanFile):
 
         # First apply just the default profile, we should get the env MYVAR="from_build_require"
         profile_host = """include(default)
-[build_requires]
+[tool_requires]
 br/1.0@lasote/stable"""
         client.save({CONANFILE: cf,
                      "profile_host": profile_host}, clean_first=True)
-        client.run("export . lasote/stable")
-        client.run('install mypackage/0.1@lasote/stable -pr=profile_host --build missing')
+        client.run("export . --user=lasote --channel=stable")
+        client.run('install --reference=mypackage/0.1@lasote/stable -pr=profile_host --build missing')
         assert "from_build_require" in client.out
 
         # Then declare in the default profile the var, it should be prioritized from the br
@@ -152,8 +150,8 @@ br/1.0@lasote/stable"""
         save(client.cache.default_profile_path, default_profile_2)
         client.save({CONANFILE: cf,
                      "profile_host": profile_host}, clean_first=True)
-        client.run("export . lasote/stable")
-        client.run('install mypackage/0.1@lasote/stable  -pr=profile_host --build')
+        client.run("export . --user=lasote --channel=stable")
+        client.run('install --reference=mypackage/0.1@lasote/stable  -pr=profile_host --build')
         assert "23" in client.out
 
     def test_env_default_profile(self):
@@ -184,7 +182,7 @@ class MyConanfile(ConanFile):
         env_variable = "env_variable=profile_environment"
         default_profile_path = os.path.join(tmp, 'env_profile')
         save(default_profile_path, "[buildenv]\n" + env_variable)
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': default_profile_path}):
+        with environment_update({'CONAN_DEFAULT_PROFILE': default_profile_path}):
             client.run("create . name/version@user/channel")
             self.assertIn(">>> " + env_variable, client.out)
 
@@ -195,14 +193,14 @@ class MyConanfile(ConanFile):
         default_profile_path = os.path.join(client.cache_folder,
                                             PROFILES_FOLDER, rel_path)
         save(default_profile_path, "[buildenv]\n" + env_variable)
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': rel_path}):
+        with environment_update({'CONAN_DEFAULT_PROFILE': rel_path}):
             client.run("create . name/version@user/channel")
             self.assertIn(">>> " + env_variable, client.out)
 
         # Use non existing path
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
-        with tools.environment_append({'CONAN_DEFAULT_PROFILE': profile_path}):
+        with environment_update({'CONAN_DEFAULT_PROFILE': profile_path}):
             client.run("create . name/version@user/channel", assert_error=True)
             self.assertIn("The default profile file doesn't exist", client.out)
 
@@ -218,7 +216,7 @@ def test_conf_default_two_profiles():
     save(client.cache.new_config_path, global_conf)
     client.save({"conanfile.txt": ""})
     client.run("install .")
-    assert "Configuration (profile_host):" in client.out
+    assert "Profile host:" in client.out
     assert "os=FreeBSD" in client.out
-    assert "Configuration (profile_build):" in client.out
+    assert "Profile build:" in client.out
     assert "os=Android" in client.out

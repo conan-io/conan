@@ -13,6 +13,7 @@ from conans.client.tools.scm import Git
 from conans.errors import ConanException
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import temp_folder, TestClient
+from conans.util.env import environment_update
 from conans.util.files import save
 
 
@@ -256,12 +257,12 @@ def get_version():
         return None
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = get_version()
 
     def build(self):
-        assert("r3le_ase__" in self.version)
-        assert(len(self.version) == 50)
+        assert("r3le_ase__" in str(self.version))
+        assert(len(str(self.version)) == 50)
 """
         path, _ = create_local_git_repo({"conanfile.py": conanfile}, branch="r3le-ase-")
         client = TestClient()
@@ -285,7 +286,7 @@ import os
 from conans import ConanFile, tools
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "other"
 
@@ -305,7 +306,7 @@ import os
 from conans import ConanFile, tools
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "other"
 
@@ -327,7 +328,7 @@ import os
 from conans import ConanFile, tools
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "other"
 
@@ -408,6 +409,6 @@ class GitToolsTests(unittest.TestCase):
         folder = temp_folder()
         save(os.path.join(folder, "file"), "some contents")
         git = Git(folder)
-        with tools.environment_append({"PATH": ""}):
+        with environment_update({"PATH": ""}):
             excluded = git.excluded_files()
             self.assertEqual(excluded, [])

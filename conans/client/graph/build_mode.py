@@ -35,7 +35,7 @@ class BuildMode(object):
                 elif param == "cascade":
                     self.cascade = True
                 else:
-                    # Remove the @ at the end, to match for "conan install pkg/0.1@ --build=pkg/0.1@"
+                    # Remove the @ at the end, to match for "conan install --reference=pkg/0.1@ --build=pkg/0.1@"
                     clean_pattern = param[:-1] if param.endswith("@") else param
                     clean_pattern = clean_pattern.replace("@#", "#")
                     if clean_pattern and clean_pattern[0] == "!":
@@ -50,8 +50,8 @@ class BuildMode(object):
     def forced(self, conan_file, ref, with_deps_to_build=False):
         def pattern_match(pattern_):
             return (fnmatch.fnmatchcase(ref.name, pattern_) or
-                    fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern_) or
-                    fnmatch.fnmatchcase(repr(ref), pattern_))
+                    fnmatch.fnmatchcase(str(ref), pattern_) or
+                    fnmatch.fnmatchcase(ref.repr_notime(), pattern_))
 
         for pattern in self._excluded_patterns:
             if pattern_match(pattern):

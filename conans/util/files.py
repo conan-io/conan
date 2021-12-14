@@ -87,6 +87,16 @@ def _detect_encoding(text):
     return None, 0
 
 
+@contextmanager
+def chdir(newdir):
+    old_path = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)
+
+
 def decode_text(text, encoding="auto"):
     bom_length = 0
     if encoding == "auto":
@@ -295,17 +305,17 @@ def path_exists(path, basedir):
     return True
 
 
-def gzopen_without_timestamps(name, mode="r", fileobj=None, **kwargs):
+def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
     """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
         setted in Gzip file causing md5 to change. Not possible using the
         previous tarfile open because arguments are not passed to GzipFile constructor
     """
-    compresslevel = int(os.getenv("CONAN_COMPRESSION_LEVEL", 9))
 
     if mode not in ("r", "w"):
         raise ValueError("mode must be 'r' or 'w'")
 
     try:
+        compresslevel = compresslevel if compresslevel is not None else 9  # default Gzip = 9
         fileobj = gzip.GzipFile(name, mode, compresslevel, fileobj, mtime=0)
     except OSError:
         if fileobj is not None and mode == 'r':
@@ -339,7 +349,7 @@ def tar_extract(fileobj, destination_dir):
         base = realpath(abspath(destination_dir))
 
         for finfo in members:
-            if badpath(finfo.name, base) or finfo.islnk():
+            if badpath(finfo.name, base):
                 logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))
                 continue
             else:
@@ -376,55 +386,35 @@ def exception_message_safe(exc):
 
 
 def merge_directories(src, dst, excluded=None):
-    src = os.path.normpath(src)
-    dst = os.path.normpath(dst)
-    excluded = excluded or []
-    excluded = [os.path.normpath(entry) for entry in excluded]
+    from conans.client.file_copier import FileCopier
+    copier = FileCopier([src], dst)
+    copier(pattern="*", excludes=excluded)
+    return
 
-    def is_excluded(origin_path):
-        if origin_path == dst:
-            return True
-        rel_path = os.path.normpath(os.path.relpath(origin_path, src))
-        if rel_path in excluded:
-            return True
-        return False
 
-    def link_to_rel(pointer_src):
-        linkto = os.readlink(pointer_src)
-        if not os.path.isabs(linkto):
-            linkto = os.path.join(os.path.dirname(pointer_src), linkto)
+def discarded_file(filename):
+    """
+    # The __conan pattern is to be prepared for the future, in case we want to manage our
+    own files that shouldn't be uploaded
+    """
+    return filename == ".DS_Store" or filename.startswith("__conan")
 
-        # Check if it is outside the sources
-        out_of_source = os.path.relpath(linkto, os.path.realpath(src)).startswith(".")
-        if out_of_source:
-            # May warn about out of sources symlink
-            return
 
-        # Create the symlink
-        linkto_rel = os.path.relpath(linkto, os.path.dirname(pointer_src))
-        pointer_dst = os.path.normpath(os.path.join(dst, os.path.relpath(pointer_src, src)))
-        os.symlink(linkto_rel, pointer_dst)
+def gather_files(folder):
+    file_dict = {}
+    symlinked_folders = {}
+    for root, dirs, files in walk(folder):
+        for d in dirs:
+            abs_path = os.path.join(root, d)
+            if os.path.islink(abs_path):
+                rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
+                symlinked_folders[rel_path] = abs_path
+                continue
+        for f in files:
+            if discarded_file(f):
+                continue
+            abs_path = os.path.join(root, f)
+            rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
+            file_dict[rel_path] = abs_path
 
-    for src_dir, dirs, files in walk(src, followlinks=True):
-        if is_excluded(src_dir):
-            dirs[:] = []
-            continue
-
-        if os.path.islink(src_dir):
-            link_to_rel(src_dir)
-            dirs[:] = []  # Do not enter subdirectories
-            continue
-
-        # Overwriting the dirs will prevents walk to get into them
-        files[:] = [d for d in files if not is_excluded(os.path.join(src_dir, d))]
-
-        dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
-        if not os.path.exists(dst_dir):
-            os.makedirs(dst_dir)
-        for file_ in files:
-            src_file = os.path.join(src_dir, file_)
-            dst_file = os.path.join(dst_dir, file_)
-            if os.path.islink(src_file):
-                link_to_rel(src_file)
-            else:
-                shutil.copy2(src_file, dst_file)
+    return file_dict, symlinked_folders

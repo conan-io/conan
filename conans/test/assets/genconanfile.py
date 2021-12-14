@@ -1,5 +1,4 @@
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference
 
 
 class GenConanfile(object):
@@ -16,8 +15,9 @@ class GenConanfile(object):
         with_package_file("file2.txt", "hola")
     """
 
-    def __init__(self, name=None, version=None):
-        self._imports = ["from conans import ConanFile"]
+    def __init__(self, name=None, version=None, new_import=False):
+        self._imports = ["from conans import ConanFile" if not new_import
+                         else "from conan import ConanFile"]
         self._name = name
         self._version = version
         self._package_type = None
@@ -37,12 +37,13 @@ class GenConanfile(object):
         self._requirements = None
         self._build_requires = None
         self._build_requirements = None
+        self._tool_requires = None
+        self._tool_requirements = None
         self._test_requires = None
         self._revision_mode = None
         self._package_info = None
         self._package_id_lines = None
         self._test_lines = None
-        self._short_paths = None
         self._exports_sources = None
         self._exports = None
         self._cmake_build = False
@@ -50,10 +51,6 @@ class GenConanfile(object):
 
     def with_package_type(self, value):
         self._package_type = value
-        return self
-
-    def with_short_paths(self, value):
-        self._short_paths = value
         return self
 
     def with_name(self, name):
@@ -111,10 +108,8 @@ class GenConanfile(object):
 
     @staticmethod
     def _get_full_ref_str(ref):
-        if isinstance(ref, ConanFileReference):
-            ref_str = ref.full_str()
-        elif isinstance(ref, RecipeReference):
-            ref_str = repr(ref)
+        if isinstance(ref, RecipeReference):
+            ref_str = ref.repr_notime()
         else:
             ref_str = ref
         return ref_str
@@ -132,6 +127,13 @@ class GenConanfile(object):
             self._build_requires.append(ref_str)
         return self
 
+    def with_tool_requires(self, *refs):
+        self._tool_requires = self._tool_requires or []
+        for ref in refs:
+            ref_str = self._get_full_ref_str(ref)
+            self._tool_requires.append(ref_str)
+        return self
+
     def with_test_requires(self, *refs):
         self._test_requires = self._test_requires or []
         for ref in refs:
@@ -143,6 +145,12 @@ class GenConanfile(object):
         self._build_requirements = self._build_requirements or []
         ref_str = self._get_full_ref_str(ref)
         self._build_requirements.append((ref_str, kwargs))
+        return self
+
+    def with_tool_requirement(self, ref, **kwargs):
+        self._tool_requirements = self._tool_requirements or []
+        ref_str = self._get_full_ref_str(ref)
+        self._tool_requirements.append((ref_str, kwargs))
         return self
 
     def with_import(self, i):
@@ -292,7 +300,7 @@ class GenConanfile(object):
     def _build_requirements_render(self):
         lines = []
         for ref, kwargs in self._build_requirements:
-            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, bool) else v)
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
                              for k, v in kwargs.items())
             lines.append('        self.build_requires("{}", {})'.format(ref, args))
         return "def build_requirements(self):\n{}\n".format("\n".join(lines))
@@ -301,6 +309,12 @@ class GenConanfile(object):
     def _build_requires_render(self):
         line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
         tmp = "build_requires = %s" % line
+        return tmp
+
+    @property
+    def _tool_requires_render(self):
+        line = ", ".join(['"{}"'.format(r) for r in self._tool_requires])
+        tmp = "tool_requires = %s" % line
         return tmp
 
     @property
@@ -324,10 +338,21 @@ class GenConanfile(object):
     @property
     def _requirements_render(self):
         lines = ["", "    def requirements(self):"]
-        for ref, kwargs in self._requirements:
+        for ref, kwargs in self._requirements or []:
             args = ", ".join("{}={}".format(k, f'"{v}"' if isinstance(v, str) else v)
                              for k, v in kwargs.items())
             lines.append('        self.requires("{}", {})'.format(ref, args))
+
+        for ref, kwargs in self._build_requirements or []:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.build_requires("{}", {})'.format(ref, args))
+
+        for ref, kwargs in self._tool_requirements or []:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.tool_requires("{}", {})'.format(ref, args))
+
         return "\n".join(lines)
 
     @property
@@ -413,10 +438,6 @@ class GenConanfile(object):
         return "\n".join(lines)
 
     @property
-    def _short_paths_render(self):
-        return "short_paths = {}".format(str(self._short_paths))
-
-    @property
     def _exports_sources_render(self):
         line = ", ".join('"{}"'.format(e) for e in self._exports_sources)
         return "exports_sources = {}".format(line)
@@ -436,13 +457,17 @@ class GenConanfile(object):
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
 
-        for member in ("name", "version", "package_type", "provides", "deprecated", "short_paths",
+        for member in ("name", "version", "package_type", "provides", "deprecated",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
-                       "test_requires", "requirements", "build_requirements", "scm", "revision_mode",
-                       "settings", "options", "default_options", "build", "package_method",
-                       "package_info", "package_id_lines", "test_lines"
+                       "tool_requires", "test_requires", "requirements", "scm",
+                       "revision_mode", "settings", "options", "default_options", "build",
+                       "package_method", "package_info", "package_id_lines", "test_lines"
                        ):
-            v = getattr(self, "_{}".format(member), None)
+            if member == "requirements":
+                # FIXME: This seems exclusive, but we could mix them?
+                v = self._requirements or self._tool_requirements or self._build_requirements
+            else:
+                v = getattr(self, "_{}".format(member), None)
             if v is not None:
                 ret.append("    {}".format(getattr(self, "_{}_render".format(member))))
 

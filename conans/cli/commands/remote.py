@@ -217,7 +217,7 @@ def remote_login(conan_api, parser, subparser, *args):
         # FIXME: It is not nice to instance here a ConanApp, a command should only use the api
         from conans.cli.conan_app import ConanApp
         app = ConanApp(conan_api.cache_folder)
-        ui = UserInput(app.cache.config.non_interactive)
+        ui = UserInput(app.cache.new_config["core:non_interactive"])
         _, password = ui.request_login(remote_name=args.remote, username=args.username)
 
     ret = OrderedDict()
@@ -271,7 +271,7 @@ def remote_logout(conan_api, parser, subparser, *args):
 
 
 @conan_command()
-def remote(conan_api, parser, *args, **kwargs):
+def remote(conan_api, parser, *args):
     """
     Manages the remote list and the users authenticated on them.
     """

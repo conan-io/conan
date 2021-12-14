@@ -5,7 +5,6 @@ from jinja2 import Template
 
 from conans import __version__ as client_version
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, get_reference_fields
 from conans.util.files import load
 
 
@@ -158,65 +157,6 @@ class {package_name}Conan(ConanFile):
 """
 
 
-test_conanfile = """import os
-
-from conans import ConanFile, CMake, tools
-
-
-class {package_name}TestConan(ConanFile):
-    settings = "os", "compiler", "build_type", "arch"
-    generators = "cmake"
-
-    def build(self):
-        cmake = CMake(self)
-        # Current dir is "test_package/build/<build_id>" and CMakeLists.txt is
-        # in "test_package"
-        cmake.configure()
-        cmake.build()
-
-    def imports(self):
-        self.copy("*.dll", dst="bin", src="bin")
-        self.copy("*.dylib*", dst="bin", src="lib")
-        self.copy('*.so*', dst='bin', src='lib')
-
-    def test(self):
-        if not tools.cross_building(self):
-            os.chdir("bin")
-            self.run(".%sexample" % os.sep)
-"""
-
-test_cmake = """cmake_minimum_required(VERSION 3.1)
-project(PackageTest CXX)
-
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
-
-add_executable(example example.cpp)
-target_link_libraries(example ${CONAN_LIBS})
-
-# CTest is a testing tool that can be used to test your project.
-# enable_testing()
-# add_test(NAME example
-#          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-#          COMMAND example)
-"""
-
-test_cmake_pure_c = """cmake_minimum_required(VERSION 3.1)
-project(PackageTest C)
-
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
-
-add_executable(example example.c)
-target_link_libraries(example ${CONAN_LIBS})
-
-# CTest is a testing tool that can be used to test your project.
-# enable_testing()
-# add_test(NAME example
-#          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-#          COMMAND example)
-"""
-
 test_main = """#include "{name}.h"
 
 int main() {{
@@ -315,18 +255,11 @@ def _get_files_from_template_dir(template_dir, name, version, package_name, defi
     return out_files
 
 
-def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
+def cmd_new(name, version, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
             gitignore=None, template=None, cache=None, defines=None):
-    try:
-        name, version, user, channel, revision = get_reference_fields(ref, user_channel_input=False)
-        # convert "package_name" -> "PackageName"
-        package_name = re.sub(r"(?:^|[\W_])(\w)", lambda x: x.group(1).upper(), name)
-    except ValueError:
-        raise ConanException("Bad parameter, please use full package name,"
-                             "e.g.: MyLib/1.2.3@user/testing")
 
-    # Validate it is a valid reference
-    ConanFileReference(name, version, user, channel)
+    # convert "package_name" -> "PackageName"
+    package_name = re.sub(r"(?:^|[\W_])(\w)", lambda x: x.group(1).upper(), name)
 
     if header and exports_sources:
         raise ConanException("'header' and 'sources' are incompatible options")
@@ -402,18 +335,6 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
     else:
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}
-
-    if test:
-        files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
-                                                                   user=user, channel=channel,
-                                                                   package_name=package_name)
-        if pure_c:
-            files["test_package/example.c"] = test_main.format(name=name)
-            files["test_package/CMakeLists.txt"] = test_cmake_pure_c
-        else:
-            include_name = name if exports_sources else "hello"
-            files["test_package/example.cpp"] = test_main.format(name=include_name)
-            files["test_package/CMakeLists.txt"] = test_cmake
 
     if gitignore:
         files[".gitignore"] = gitignore_template

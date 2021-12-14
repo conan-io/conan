@@ -45,6 +45,7 @@ class Node(object):
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
+        self.pref_timestamp = None
         if conanfile is not None:
             conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
@@ -136,17 +137,18 @@ class Node(object):
         if not self.dependants:
             return
         assert len(self.dependants) == 1
-        d = self.dependants[0]
+        dependant = self.dependants[0]
 
         # TODO: Implement an optimization where the requires is checked against a graph global
         # print("    Lets check_downstream one more")
-        down_require = d.require.transform_downstream(self.conanfile.package_type, require, None)
+        down_require = dependant.require.transform_downstream(self.conanfile.package_type,
+                                                              require, None)
 
         if down_require is None:
-            # print("    No need to check dowstream more")
+            # print("    No need to check downstream more")
             return
 
-        source_node = d.src
+        source_node = dependant.src
         return source_node.check_downstream_exists(down_require)
 
     @property
@@ -165,7 +167,7 @@ class Node(object):
     @property
     def pref(self):
         assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
-        return PkgReference(self.ref, self.package_id, self.prev)
+        return PkgReference(self.ref, self.package_id, self.prev, self.pref_timestamp)
 
     def add_edge(self, edge):
         if edge.src == self:
@@ -198,6 +200,7 @@ class DepsGraph(object):
     def __init__(self):
         self.nodes = []
         self.aliased = {}
+        self.resolved_ranges = {}
         self.error = False
 
     def __repr__(self):

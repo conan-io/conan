@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -122,8 +122,8 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile, "my-module.cmake": my_module,
                      "FindFindModule.cmake": find_module})
         client.run("create .")
-        ref = ConanFileReference("test", "1.0", None, None)
-        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
+        ref = RecipeReference("test", "1.0", None, None)
+        pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         package_path = client.get_latest_pkg_layout(pref).package()
         modules_path = os.path.join(package_path, "share", "cmake")
         self.assertEqual(set(os.listdir(modules_path)),
@@ -249,8 +249,8 @@ class TestNoNamespaceTarget:
     def test_multi_generator_windows(self):
         t = self.t
         with t.chdir('multi_windows'):
-            t.run('install library/version@ -g CMakeDeps -s build_type=Release')
-            t.run('install library/version@ -g CMakeDeps -s build_type=Debug')
+            t.run('install --reference=library/version@ -g CMakeDeps -s build_type=Release')
+            t.run('install --reference=library/version@ -g CMakeDeps -s build_type=Debug')
             generator = '-G "Visual Studio 15 Win64"'
             t.run_command(
                 'cmake .. {} -DCMAKE_PREFIX_PATH:PATH="{}"'.format(generator, t.current_folder))
@@ -264,8 +264,8 @@ class TestNoNamespaceTarget:
     def test_multi_generator_macos(self):
         t = self.t
         with t.chdir('multi_macos'):
-            t.run('install library/version@ -g CMakeDeps -s build_type=Release')
-            t.run('install library/version@ -g CMakeDeps -s build_type=Debug')
+            t.run('install --reference=library/version@ -g CMakeDeps -s build_type=Release')
+            t.run('install --reference=library/version@ -g CMakeDeps -s build_type=Debug')
             t.run_command('cmake .. -G Xcode -DCMAKE_PREFIX_PATH:PATH="{}"'.format(t.current_folder))
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
             assert '>> nonamespace libs: library::library' in t.out

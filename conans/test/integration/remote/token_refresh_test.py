@@ -1,5 +1,4 @@
 import unittest
-from collections import namedtuple
 
 import mock
 from mock import Mock
@@ -8,7 +7,8 @@ from conans.client.cache.remote_registry import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.userio import UserInput
-from conans.model.ref import ConanFileReference
+from conans.model.conf import ConfDefinition
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import LocalDBMock
 
 common_headers = {"X-Conan-Server-Capabilities": "oauth_token,revisions",
@@ -78,17 +78,16 @@ class TestTokenRefresh(unittest.TestCase):
 
     def setUp(self):
         requester = RequesterWithTokenMock()
-        config = namedtuple("ConfigMock", "revisions_enabled download_cache retry retry_wait")\
-            (False, None, None, None)
+        config = ConfDefinition()
         self.rest_client_factory = RestApiClientFactory(requester, config=config,
                                                         artifacts_properties=None)
         self.localdb = LocalDBMock()
         cache = Mock()
-        cache.config.non_interactive = False
         cache.localdb = self.localdb
+        cache.new_config = config
         self.auth_manager = ConanApiAuthManager(self.rest_client_factory, cache)
         self.remote = Remote("myremote", "myurl", True, True)
-        self.ref = ConanFileReference.loads("lib/1.0@conan/stable#myreciperev")
+        self.ref = RecipeReference.loads("lib/1.0@conan/stable#myreciperev")
 
     def test_auth_with_token(self):
         """Test that if the capability is there, then we use the new endpoint"""

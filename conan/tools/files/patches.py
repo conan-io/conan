@@ -98,7 +98,7 @@ def apply_conandata_patches(conanfile):
 
     if isinstance(patches, dict):
         assert conanfile.version, "Can only be applied if conanfile.version is already defined"
-        entries = patches.get(conanfile.version, [])
+        entries = patches.get(str(conanfile.version), [])
     elif isinstance(patches, Iterable):
         entries = patches
     else:

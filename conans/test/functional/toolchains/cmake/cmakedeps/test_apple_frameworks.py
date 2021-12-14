@@ -4,14 +4,14 @@ import textwrap
 import pytest
 
 from conans.client.tools.apple import XCRun, to_apple_arch
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture
 def client():
-    lib_ref = ConanFileReference.loads("foolib/1.0")
+    lib_ref = RecipeReference.loads("foolib/1.0")
     lib_conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -302,7 +302,7 @@ def test_apple_own_framework_cmake_deps():
                  "src/hello.h": hello_h,
                  "src/hello.cpp": hello_cpp,
                  "src/Info.plist": infoplist})
-    client.run("export . mylibrary/1.0@")
+    client.run("export . --name=mylibrary --version=1.0")
     client.run("create . mylibrary/1.0@ -s build_type=Debug")
     client.run("create . mylibrary/1.0@ -s build_type=Release")
 
@@ -365,7 +365,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     assert "Hello World Release!" in client.out
 
 
-@pytest.mark.xfail(reason="run_environment=True no longer works")
+@pytest.mark.tool_cmake(version="3.19")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
@@ -392,10 +392,12 @@ class HelloConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name", "HELLO")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
-
+        self.cpp_info.components["libhello"].set_property("cmake_target_name", "hello::libhello")
         self.cpp_info.components["libhello"].libs = ["hello"]
+        # We need to add the information about the lib/include directories to be able to find them
+        self.cpp_info.components["libhello"].libdirs = ["lib"]
+        self.cpp_info.components["libhello"].includedirs = ["include"]
+
         self.cpp_info.components["libhello"].frameworks.extend(["CoreFoundation"])
         """)
     hello_cpp = textwrap.dedent("""
@@ -450,8 +452,8 @@ class TestPackageConan(ConanFile):
         cmake.build()
 
     def test(self):
-        if not tools.cross_building(self.settings):
-            self.run("test_package", env="conanrunenv")
+        if not tools.cross_building(self):
+            self.run("./test_package", env="conanrunenv")
         """)
     test_test_package_cpp = textwrap.dedent("""
 #include "hello.h"

@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -31,7 +31,7 @@ class EmptyCacheTestMixin(object):
         self.servers = {"default": TestServer()}
         self.t = TestClient(servers=self.servers,  inputs=["admin", "password"],
                             path_with_spaces=False)
-        self.ref = ConanFileReference.loads('lib/version@user/channel')
+        self.ref = RecipeReference.loads('lib/version@user/channel')
         self.assertFalse(os.path.exists(self.t.get_latest_ref_layout(self.ref).base_folder))
 
     def tearDown(self):
@@ -45,7 +45,7 @@ class ExistingCacheTestMixin(object):
         self.servers = {"default": TestServer()}
         self.t = TestClient(servers=self.servers, inputs=["admin", "password"],
                             path_with_spaces=False)
-        self.ref = ConanFileReference.loads('lib/version@user/channel')
+        self.ref = RecipeReference.loads('lib/version@user/channel')
         self.t.save(files={'conanfile.py': conanfile})
         self.t.run('create . {}'.format(self.ref))
         self.assertTrue(os.path.exists(self.t.get_latest_ref_layout(self.ref).base_folder))
@@ -76,7 +76,7 @@ class RelatedToGraphBehavior(object):
                               "TODO: cache2.0 fix with editables")
     def test_install_requirements(self, update):
         # Create a parent and remove it from cache
-        ref_parent = ConanFileReference.loads("parent/version@lasote/channel")
+        ref_parent = RecipeReference.loads("parent/version@lasote/channel")
         self.t.save(files={'conanfile.py': conanfile})
         self.t.run('create . {}'.format(ref_parent))
         self.t.run('upload {} --all -r default'.format(ref_parent))
@@ -91,7 +91,7 @@ class RelatedToGraphBehavior(object):
 
         # Install our project and check that everything is in place
         update = ' --update' if update else ''
-        self.t.run('install {}{}'.format(self.ref, update))
+        self.t.run('install --reference={}{}'.format(self.ref, update))
         self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
                       self.t.out)
@@ -102,7 +102,7 @@ class RelatedToGraphBehavior(object):
                               "TODO: cache2.0 fix with editables")
     def test_middle_graph(self, update):
         # Create a parent and remove it from cache
-        ref_parent = ConanFileReference.loads("parent/version@lasote/channel")
+        ref_parent = RecipeReference.loads("parent/version@lasote/channel")
         self.t.save(files={'conanfile.py': conanfile})
         self.t.run('create . {}'.format(ref_parent))
         self.t.run('upload {} --all'.format(ref_parent))
@@ -119,7 +119,7 @@ class RelatedToGraphBehavior(object):
 
         # Create a child an install it (in other folder, do not override the link!)
         path_to_child = os.path.join(self.t.current_folder, 'child')
-        ref_child = ConanFileReference.loads("child/version@lasote/channel")
+        ref_child = RecipeReference.loads("child/version@lasote/channel")
         self.t.save(files={'conanfile.py': conanfile_base.
                     format(body='requires = "{}"'.format(self.ref)), },
                     path=path_to_child)

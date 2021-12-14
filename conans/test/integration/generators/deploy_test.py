@@ -7,7 +7,7 @@ import unittest
 import pytest
 
 from conans import load
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile, TurboTestClient, NO_SETTINGS_PACKAGE_ID
@@ -25,10 +25,10 @@ class DeployGeneratorTest(unittest.TestCase):
         conanfile.with_package_file("file.config", "whatever")
 
         self.client = TurboTestClient()
-        ref = ConanFileReference("name", "version", "user", "channel")
+        ref = RecipeReference("name", "version", "user", "channel")
         self.client.create(ref, conanfile)
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % ref.full_str())
+        self.client.run("install --reference=%s -g deploy" % repr(ref))
 
     def test_deploy_folder_path(self):
         base_path = os.path.join(self.client.current_folder, "name")
@@ -75,20 +75,20 @@ class DeployGeneratorGraphTest(unittest.TestCase):
         conanfile1.with_package_file("include/header1.h", "whatever")
         conanfile1.with_package_file("my_libs/file1.lib", "whatever")
         conanfile1.with_package_file("file1.config", "whatever")
-        ref1 = ConanFileReference("name1", "version", "user", "channel")
+        ref1 = RecipeReference("name1", "version", "user", "channel")
 
         conanfile2 = GenConanfile()
         conanfile2.with_requirement(ref1)
         conanfile2.with_package_file("include_files/header2.h", "whatever")
         conanfile2.with_package_file("my_other_libs/file2.lib", "whatever")
         conanfile2.with_package_file("build/file2.config", "whatever")
-        ref2 = ConanFileReference("name2", "version", "user", "channel")
+        ref2 = RecipeReference("name2", "version", "user", "channel")
 
         self.client = TurboTestClient()
         self.client.create(ref1, conanfile1)
         self.client.create(ref2, conanfile2)
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % ref2.full_str())
+        self.client.run("install --reference=%s -g deploy" % repr(ref2))
 
     def get_expected_paths(self):
         base1_path = os.path.join(self.client.current_folder, "name1")
@@ -122,11 +122,11 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
     def setUp(self):
         conanfile1 = GenConanfile()
         conanfile1.with_package_file("include/header1.h", "whatever")
-        self.ref1 = ConanFileReference("name1", "version", "user", "channel")
+        self.ref1 = RecipeReference("name1", "version", "user", "channel")
 
         self.client = TurboTestClient()
         self.client.create(self.ref1, conanfile1)
-        pref = self.client.get_latest_prev(self.ref1, NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_package_reference(self.ref1, NO_SETTINGS_PACKAGE_ID)
         package_folder = self.client.get_latest_pkg_layout(pref).package()
         self.header_path = os.path.join(package_folder, "include", "header1.h")
         self.assertTrue(os.path.exists(self.header_path))
@@ -137,7 +137,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.assertFalse(stat_info.st_mode & stat.S_IXUSR)
         os.chmod(self.header_path, stat_info.st_mode | stat.S_IXUSR)
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % self.ref1.full_str())
+        self.client.run("install --reference=%s -g deploy" % repr(self.ref1))
         base1_path = os.path.join(self.client.current_folder, "name1")
         header1_path = os.path.join(base1_path, "include", "header1.h")
         stat_info = os.stat(header1_path)
@@ -150,18 +150,18 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
     def setUp(self):
         conanfile = GenConanfile()
         conanfile.with_package_file("include/header.h", "whatever", link="include/header.h.lnk")
-        self.ref = ConanFileReference("name", "version", "user", "channel")
+        self.ref = RecipeReference("name", "version", "user", "channel")
 
         self.client = TurboTestClient()
         self.client.create(self.ref, conanfile)
-        pref = self.client.get_latest_prev(self.ref, NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_package_reference(self.ref, NO_SETTINGS_PACKAGE_ID)
         package_folder = self.client.get_latest_pkg_layout(pref).package()
         self.header_path = os.path.join(package_folder, "include", "header.h")
         self.link_path = os.path.join(package_folder, "include", "header.h.lnk")
 
     def test_symbolic_links(self):
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install --reference=%s -g deploy" % repr(self.ref))
         base_path = os.path.join(self.client.current_folder, "name")
         header_path = os.path.join(base_path, "include", "header.h")
         link_path = os.path.join(base_path, "include", "header.h.lnk")
@@ -176,7 +176,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         header_path = os.path.join(base_path, "include", "header.h")
         link_path = os.path.join(base_path, "include", "header.h.lnk")
         save(link_path, "")
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install --reference=%s -g deploy" % repr(self.ref))
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
@@ -189,7 +189,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         link_path = os.path.join(base_path, "include", "header.h.lnk")
         save(header_path, "")
         os.symlink(header_path, link_path)
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install --reference=%s -g deploy" % repr(self.ref))
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
@@ -203,7 +203,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         save(header_path, "")
         os.symlink(header_path, link_path)
         os.remove(header_path)  # This will make it a broken symlink
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install --reference=%s -g deploy" % repr(self.ref))
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
@@ -215,7 +215,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         header_path = os.path.join(base_path, "include", "header.h")
         link_path = os.path.join(base_path, "include", "header.h.lnk")
         save(header_path, "")
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install --reference=%s -g deploy" % repr(self.ref))
         self.assertTrue(os.path.islink(link_path))
         self.assertFalse(os.path.islink(header_path))
         linkto = os.path.join(os.path.dirname(link_path), os.readlink(link_path))
@@ -239,13 +239,13 @@ class DeployGeneratorSymbolicLinkFolderTest(unittest.TestCase):
                     with tools.chdir(os.path.dirname(folder_path)):
                         os.symlink(os.path.basename(folder_path), link_folder_path)
         """)
-        self.ref = ConanFileReference("name", "version", "user", "channel")
+        self.ref = RecipeReference("name", "version", "user", "channel")
         self.client = TurboTestClient()
         self.client.create(self.ref, conanfile)
 
     def test_symbolic_links(self):
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % self.ref.full_str())
+        self.client.run("install --reference=%s -g deploy" % repr(self.ref))
         base_path = os.path.join(self.client.current_folder, "name")
         folder_path = os.path.join(base_path, "one_folder")
         link_folder_path = os.path.join(base_path, "other_folder")

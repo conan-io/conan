@@ -13,7 +13,7 @@ import sys
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello0"
+    name = "hello0"
     version = "0.1"
 
     def build(self):

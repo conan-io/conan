@@ -6,7 +6,7 @@ from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SK
     BINARY_MISSING, BINARY_INVALID, BINARY_ERROR
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 
 
@@ -129,17 +129,17 @@ class _InstallRecipeReference:
                 self.depends.append(dep.dst.ref)
 
     def serialize(self):
-        return {"ref": repr(self.ref),
-                "depends": [repr(ref) for ref in self.depends],
+        return {"ref": self.ref.repr_notime(),
+                "depends": [ref.repr_notime() for ref in self.depends],
                 "packages": [p.serialize() for p in self.packages],
                 }
 
     @staticmethod
     def deserialize(data, filename):
         result = _InstallRecipeReference()
-        result.ref = ConanFileReference.loads(data["ref"])
+        result.ref = RecipeReference.loads(data["ref"])
         for d in data["depends"]:
-            result.depends.append(ConanFileReference.loads(d))
+            result.depends.append(RecipeReference.loads(d))
         for p in data["packages"]:
             install_node = _InstallPackageReference.deserialize(p, filename)
             result.packages.append(install_node)
@@ -285,7 +285,8 @@ def raise_missing(missing, out):
 
     raise ConanException(textwrap.dedent('''\
        Missing prebuilt package for '%s'
-       Try to build from sources with '%s'
-       Use 'conan search <reference> --table table.html'
-       Or read 'http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-       ''' % (missing_pkgs, build_str)))
+       Use 'conan search %s --table=table.html -r=remote' and open the table.html file to see available packages
+       Or try to build locally from sources with '%s'
+
+       More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
+       ''' % (missing_pkgs, ref, build_str)))

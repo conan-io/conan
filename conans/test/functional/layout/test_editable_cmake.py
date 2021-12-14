@@ -6,7 +6,6 @@ import pytest
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 
 
@@ -112,8 +111,8 @@ def editable_cmake_exe(generator):
         assert "{}: Debug!".format(msg) in c.out
 
     with c.chdir("pkg"):
-        c.run("install dep/0.1@ -o dep:shared=True -g VirtualRunEnv")
-        c.run("install dep/0.1@ -o dep:shared=True -s build_type=Debug -g VirtualRunEnv")
+        c.run("install --reference=dep/0.1@ -o dep:shared=True -g VirtualRunEnv")
+        c.run("install --reference=dep/0.1@ -o dep:shared=True -s build_type=Debug -g VirtualRunEnv")
         run_pkg("dep")
 
     # Do a source change in the editable!

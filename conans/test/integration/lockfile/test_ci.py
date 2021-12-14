@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 conanfile = textwrap.dedent("""
@@ -31,13 +32,6 @@ conanfile = textwrap.dedent("""
 @pytest.fixture()
 def client_setup():
     c = TestClient()
-    conan_conf = textwrap.dedent("""
-        [storage]
-        path = ./data
-        [general]
-        default_package_id_mode=full_package_mode'
-        """.format())
-    c.save({"conan.conf": conan_conf}, path=c.cache.cache_folder)
     pkb_requirements = """
     def requirements(self):
         if self.settings.os == "Windows":
@@ -72,16 +66,24 @@ def client_setup():
 
 
 def test_single_config_centralized(client_setup):
+    """ app1 -> pkgc/0.1 -> pkgb/0.1 -> pkgawin/0.1 or pkganix/0.1
+    all version-ranges [>0 <1.0]
+    lock app1.lock to lock graph including pkgawin/0.1 and pkganix/0.1
+    changes in pkgawin/0.2 and pkganix/0.2 are excluded by lockfile
+    a change in pkgb produces a new pkgb/0.2 that we want to test if works in app1 lockfile
+    the app1 can be built in a single node, including all necessary dependencies
+    the final lockfile will include pkgb/0.2, and not pkgb/0.1
+    """
     c = client_setup
     # capture the initial lockfile of our product
     c.run("lock create --reference=app1/0.1@  --lockfile-out=app1.lock -s os=Windows")
 
     # Do an unrelated change in A, should not be used, this is not the change we are testing
-    c.save({"pkga/myfile.txt": "ByeA World!!"})
-    c.run("create pkga pkgawin/0.2@ -s os=Windows")
-
-    # Do a change in B, this is the change that we want to test
-    c.save({"pkgb/myfile.txt": "ByeB World!!"})
+    c.save({"pkga/myfile.txt": "ByeA World!!",
+            "pkgb/myfile.txt": "ByeB World!!",
+            "pkgc/myfile.txt": "ByeC World!!"})
+    c.run("export pkga --name=pkgawin --version=0.2")  # this will never be used
+    c.run("export pkgc --name=pkgc --version=0.2")  # this will never be used
 
     # Test that pkgb/0.2 works
     c.run("create pkgb pkgb/0.2@ -s os=Windows "
@@ -89,7 +91,7 @@ def test_single_config_centralized(client_setup):
     assert "pkgb/0.2: DEP FILE pkgawin: HelloA" in c.out
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_b_changed.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_b_changed.lock "
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
     assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in c.out
@@ -110,6 +112,11 @@ def test_single_config_centralized(client_setup):
 
 
 def test_single_config_centralized_out_range(client_setup):
+    """ same scenario as "test_single_config_centralized()"
+    But pkgb/0.1 change version is bumped to pkgb/1.0, which doesn't fit in the consumers
+    version range, so it is not used.
+    Nothing to build in the app1, and the final lockfile doesn't change at all
+    """
     c = client_setup
     c.run("lock create --reference=app1/0.1@ --lockfile-out=app1.lock -s os=Windows")
 
@@ -126,7 +133,7 @@ def test_single_config_centralized_out_range(client_setup):
     assert "pkgb/1.0: DEP FILE pkgawin: HelloA" in c.out
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_b_changed.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_b_changed.lock "
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
     # Nothing changed, the change is outside the range, app1 not affected!!
@@ -147,6 +154,9 @@ def test_single_config_centralized_out_range(client_setup):
 
 
 def test_single_config_centralized_change_dep(client_setup):
+    """ same scenario as "test_single_config_centralized()".
+    But pkgb/0.1 change version is bumped to pkgb/0.2, and changes dependency from pkgA=>pkgJ
+    """
     c = client_setup
     c.run("lock create --reference=app1/0.1@ --lockfile-out=app1.lock -s os=Windows")
 
@@ -169,7 +179,7 @@ def test_single_config_centralized_change_dep(client_setup):
     c.run("create pkgj pkgj/0.2@ -s os=Windows")
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_b_changed.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_b_changed.lock "
           "--lockfile-out=app1_b_integrated.lock "
           "--build=missing  -s os=Windows")
     assert "pkga" not in c.out
@@ -190,6 +200,12 @@ def test_single_config_centralized_change_dep(client_setup):
 
 
 def test_multi_config_centralized(client_setup):
+    """ same scenario as above, but now we want to manage 2 configurations Windows & Linux
+    When pkgB is changed, it is built for both, and produces app1_win.lock and app2_linux.lock
+    With those, app1 can be built in a single node for both configurations. After building
+    app1, the 2 lockfiles can be cleaned (removing the old pkgb/0.1, leaving pkgb/0.2 in the lock)
+    The 2 final lockfiles can be "merged" in a single one for next iteration
+    """
     c = client_setup
     # capture the initial lockfile of our product
     c.run("lock create --reference=app1/0.1@ --lockfile-out=app1.lock -s os=Windows")
@@ -213,7 +229,7 @@ def test_multi_config_centralized(client_setup):
     assert "pkgb/0.2: DEP FILE pkganix: HelloA" in c.out
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_win.lock --lockfile-out=app1_win.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_win.lock --lockfile-out=app1_win.lock "
           "--build=missing  -s os=Windows")
     assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in c.out
     assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in c.out
@@ -225,7 +241,7 @@ def test_multi_config_centralized(client_setup):
     assert "app1/0.1: DEP FILE pkgb: ByeB World!!" in c.out
 
     # Now lets build the application, to see everything ok
-    c.run("install app1/0.1@  --lockfile=app1_nix.lock --lockfile-out=app1_nix.lock "
+    c.run("install --reference=app1/0.1@  --lockfile=app1_nix.lock --lockfile-out=app1_nix.lock "
           "--build=missing  -s os=Linux")
     assert "pkganix/0.1:02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8 - Cache" in c.out
     assert "pkgb/0.2:d169a8a97fd0ef581801b24d7c61a9afb933aa13 - Cache" in c.out
@@ -267,6 +283,9 @@ def test_multi_config_centralized(client_setup):
 
 
 def test_single_config_decentralized(client_setup):
+    """ same scenario as "test_single_config_centralized()", but distributing the build in
+    different build servers, using the "build-order"
+    """
     c = client_setup
     # capture the initial lockfile of our product
     c.run("lock create --reference=app1/0.1@  --lockfile-out=app1.lock -s os=Windows")
@@ -302,19 +321,16 @@ def test_single_config_decentralized(client_setup):
 
     for level in to_build:
         for elem in level:
-            ref = elem["ref"]
-            ref_without_rev = ref.split("#")[0]
-            if "@" not in ref:
-                ref = ref.replace("#", "@#")
+            ref = RecipeReference.loads(elem["ref"])
             for package in elem["packages"]:
                 binary = package["binary"]
                 package_id = package["package_id"]
                 if binary != "Build":
                     continue
                 # TODO: The options are completely missing
-                c.run("install %s --build=%s --lockfile=app1_b_changed.lock  -s os=Windows"
+                c.run("install --reference=%s@ --build=%s@ --lockfile=app1_b_changed.lock  -s os=Windows"
                       % (ref, ref))
-                assert "{}:{} - Build".format(ref_without_rev, package_id) in c.out
+                assert "{}:{} - Build".format(str(ref), package_id) in c.out
 
                 assert "pkgawin/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb - Cache" in c.out
                 assert "pkgb/0.2:bf0518650d942fd1fad0c359bcba1d832682e64b - Cache" in c.out
@@ -328,6 +344,9 @@ def test_single_config_decentralized(client_setup):
 
 
 def test_multi_config_decentralized(client_setup):
+    """ same scenario as "test_multi_config_centralized()", but distributing the build in
+    different build servers, using the "build-order"
+    """
     c = client_setup
     # capture the initial lockfile of our product
     c.run("lock create --reference=app1/0.1@ --lockfile-out=app1.lock -s os=Windows")
@@ -389,7 +408,7 @@ def test_multi_config_decentralized(client_setup):
                 filenames = package["filenames"]
                 lockfile = filenames[0] + ".lock"
                 the_os = "Windows" if "win" in lockfile else "Linux"
-                c.run("install %s --build=%s --lockfile=%s -s os=%s"
+                c.run("install --reference=%s --build=%s --lockfile=%s -s os=%s"
                       % (ref, ref, lockfile, the_os))
                 assert "{}:{} - Build".format(ref_without_rev, package_id) in c.out
 

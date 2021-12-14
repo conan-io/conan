@@ -15,7 +15,7 @@ from conans import ConanFile
 from conans.util.files import save
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     build_policy = "missing"
 
@@ -29,7 +29,7 @@ class HelloConan(ConanFile):
 """
 
 test1 = """[requires]
-Hello/0.1@lasote/stable
+hello/0.1@lasote/stable
 
 [imports]
 ., file* -> .
@@ -40,7 +40,7 @@ from conans import ConanFile
 from conans.util.files import save
 
 class HelloReuseConan(ConanFile):
-    requires = "Hello/0.1@lasote/stable"
+    requires = "hello/0.1@lasote/stable"
 
     def imports(self):
         self.copy("*1.txt")
@@ -51,7 +51,7 @@ from conans import ConanFile
 from conans.util.files import save
 
 class HelloReuseConan(ConanFile):
-    requires = "Hello/0.1@lasote/stable"
+    requires = "hello/0.1@lasote/stable"
 
     def imports(self):
         self.copy("*2.txt")
@@ -63,7 +63,7 @@ class ImportsTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
     def test_imports_global_path_removed(self):
         """ Ensure that when importing files in a global path, outside the package build,
@@ -74,19 +74,19 @@ class ImportsTest(unittest.TestCase):
 from conans import ConanFile
 
 class ConanLib(ConanFile):
-    name = "Say"
+    name = "say"
     version = "0.1"
-    requires = "Hello/0.1@lasote/stable"
+    requires = "hello/0.1@lasote/stable"
 
     def imports(self):
         self.copy("file*.txt", dst="%s")
 ''' % dst_global_folder
 
         self.client.save({"conanfile.py": conanfile2}, clean_first=True)
-        self.client.run("export . lasote/stable")
+        self.client.run("export . --user=lasote --channel=stable")
 
         self.client.current_folder = temp_folder()
-        self.client.run("install Say/0.1@lasote/stable --build=missing")
+        self.client.run("install --reference=say/0.1@lasote/stable --build=missing")
         for filename in ["file1.txt", "file2.txt"]:
             self.assertFalse(os.path.exists(os.path.join(dst_global_folder, filename)))
 
@@ -97,7 +97,7 @@ from conans import ConanFile
 import os
 
 class ConanLib(ConanFile):
-    requires = "Hello/0.1@lasote/stable"
+    requires = "hello/0.1@lasote/stable"
 
     def imports(self):
         self.copy("file*.txt", dst=os.environ["MY_IMPORT_PATH"])

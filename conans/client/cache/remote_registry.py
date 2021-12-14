@@ -137,8 +137,6 @@ class RemoteRegistry(object):
 
     def initialize_remotes(self):
         if not os.path.exists(self._filename):
-            self._output.warning("Remotes registry file missing, "
-                                 "creating default one in %s" % self._filename)
             remotes = _Remotes()
             remote = Remote(CONAN_CENTER_REMOTE_NAME, "https://center.conan.io", True, False)
             remotes.add(remote)

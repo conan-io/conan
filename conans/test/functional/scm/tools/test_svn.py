@@ -556,7 +556,7 @@ import os
 from conans import ConanFile, tools
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "other"
 

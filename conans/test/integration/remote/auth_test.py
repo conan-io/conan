@@ -1,18 +1,19 @@
+import copy
 import os
 import textwrap
 import unittest
 
 from requests.models import Response
 
-from conans.client import tools
 from conans.errors import AuthenticationException
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestRequester
+from conans.test.utils.tools import TestRequester
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer
+from conans.util.env import environment_update
 from conans.util.files import save
 
 conan_content = """
@@ -29,7 +30,7 @@ class AuthorizeTest(unittest.TestCase):
 
     def setUp(self):
         self.servers = {}
-        self.ref = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
+        self.ref = RecipeReference.loads("openssl/2.0.1@lasote/testing")
         # Create a default remote. R/W is not authorized for ref,
         # just for pepe, nacho and owner
         self.test_server = TestServer([(str(self.ref), "pepe,nacho@gmail.com")],  # read permissions
@@ -45,13 +46,14 @@ class AuthorizeTest(unittest.TestCase):
                                                               "bad2", "2",
                                                               "nacho@gmail.com", "nachopass"])
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
-        self.conan.run("export . lasote/testing")
+        self.conan.run("export . --user=lasote --channel=testing")
         errors = self.conan.run("upload %s -r default" % str(self.ref))
         # Check that return was  ok
         self.assertFalse(errors)
         # Check that upload was granted
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
-        ref = self.ref.copy_with_rev(rev)
+        ref = copy.copy(self.ref)
+        ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
         self.assertIn('Please enter a password for "bad"', self.conan.out)
         self.assertIn('Please enter a password for "bad2"', self.conan.out)
@@ -62,8 +64,8 @@ class AuthorizeTest(unittest.TestCase):
         def _upload_with_credentials(credentials):
             cli = TestClient(servers=self.servers)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
-            cli.run("export . lasote/testing")
-            with tools.environment_append(credentials):
+            cli.run("export . --user=lasote --channel=testing")
+            with environment_update(credentials):
                 cli.run("upload %s -r default" % str(self.ref))
             return cli
 
@@ -97,7 +99,7 @@ class AuthorizeTest(unittest.TestCase):
                                                           "baduser", "badpass2",
                                                           "baduser3", "badpass3"])
         save(os.path.join(client.current_folder, CONANFILE), conan_content)
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         errors = client.run("upload %s -r default" % str(self.ref), assert_error=True)
         # Check that return was not ok
         self.assertTrue(errors)
@@ -117,12 +119,13 @@ class AuthorizeTest(unittest.TestCase):
                                                           "nacho@gmail.com", "nachopass"])
 
         save(os.path.join(client.current_folder, CONANFILE), conan_content)
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         client.run("upload %s -r default" % str(self.ref))
 
         # Check that upload was granted
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
-        ref = self.ref.copy_with_rev(rev)
+        ref = copy.copy(self.ref)
+        ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
         self.assertIn('Please enter a password for "some_random.special!characters"', client.out)
 
@@ -201,15 +204,10 @@ def test_token_expired():
     import time
     time.sleep(3)
     c.users = {}
-    conan_conf = textwrap.dedent("""
-                                        [storage]
-                                        path = ./data
-                                        [general]
-                                        non_interactive=True
-                                    """)
-    c.save({"conan.conf": conan_conf}, path=c.cache.cache_folder)
+    conan_conf = "core:non_interactive=True"
+    c.save({"global.conf": conan_conf}, path=c.cache.cache_folder)
     c.run("remove * -f")
-    c.run("install pkg/0.1@user/stable")
+    c.run("install --reference=pkg/0.1@user/stable")
     user, token, _ = c.cache.localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is None

@@ -28,8 +28,8 @@ def test_options():
 
     client.save({"ffmepg/conanfile.py": ffmpeg,
                  "variant/conanfile.py": variant})
-    client.run("export ffmepg ffmpeg/1.0@")
-    client.run("export variant nano/1.0@")
+    client.run("export ffmepg --name=ffmpeg --version=1.0")
+    client.run("export variant --name=nano --version=1.0")
 
     client.run("lock create --reference=nano/1.0@ --build --lockfile-out=conan.lock")
     lockfile = client.load("conan.lock")
@@ -42,6 +42,6 @@ def test_options():
     to_build = json.loads(json_file)
     f = to_build[0]
 
-    cmd = "install {} --build={} {} --lockfile=conan.lock".format(f[0], f[0], f[3])
+    cmd = "install --reference={} --build={} {} --lockfile=conan.lock".format(f[0], f[0], f[3])
     client.run(cmd)
     assert "ffmpeg/1.0: Variation nano!!" in client.out

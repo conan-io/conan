@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer, TurboTestClient
 
@@ -32,7 +32,7 @@ class HelloConan(ConanFile):
         os.unlink(os.path.join(self.package_folder, "file.txt"))
 
 """
-        ref = ConanFileReference.loads("lib/1.0@conan/stable")
+        ref = RecipeReference.loads("lib/1.0@conan/stable")
         # By default it is not allowed
         client.create(ref, conanfile=conanfile, assert_error=True)
         self.assertIn("The file is a broken symlink", client.out)
@@ -60,7 +60,7 @@ class HelloConan(ConanFile):
         # We can upload the package and reuse it
         client.upload_all(ref)
 
-        client2.run("install {}".format(ref))
+        client2.run("install --reference={}".format(ref))
         self.assertIn("Downloaded package", client2.out)
 
     def test_broken_in_local_sources(self):
@@ -85,5 +85,5 @@ class HelloConan(ConanFile):
         self.assertFalse(os.path.exists(broken_symlink))
         self.assertFalse(os.path.exists(os.path.realpath(broken_symlink)))
 
-        t.run("export . user/channel", assert_error=True)
+        t.run("export . --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: The file is a broken symlink", t.out)

@@ -8,7 +8,7 @@ from mock import patch
 
 from conans.client.hook_manager import HookManager
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONAN_MANIFEST
 from conans.test.utils.tools import TestClient
 
@@ -19,7 +19,7 @@ def test_called_before_digest(self):
         exported folders
     """
 
-    ref = ConanFileReference.loads("name/version@user/channel")
+    ref = RecipeReference.loads("name/version@user/channel")
     conanfile = textwrap.dedent("""\
         from conans import ConanFile
 
@@ -41,5 +41,5 @@ def test_called_before_digest(self):
         hook_manager.hooks["post_export"] = [("_", mocked_post_export)]
 
     with patch.object(HookManager, "load_hooks", new=mocked_load_hooks):
-        t.run("export . {}".format(ref))
+        t.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
     self.assertTrue(os.path.exists(os.path.join(ref_layout.export(), CONAN_MANIFEST)))

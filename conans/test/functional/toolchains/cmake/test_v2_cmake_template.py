@@ -2,7 +2,7 @@ import os
 import re
 
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -13,12 +13,12 @@ def test_cmake_lib_template():
     client.run("install . -if=install")
     client.run("build . -if=install")
 
-    client.run("export-pkg . hello/0.1@")
+    client.run("export-pkg .")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    ref = ConanFileReference.loads("hello/0.1")
-    ref = client.cache.get_latest_rrev(ref)
+    ref = RecipeReference.loads("hello/0.1")
+    ref = client.cache.get_latest_recipe_reference(ref)
     pref = PkgReference(ref, package_id)
-    pref = client.cache.get_latest_prev(pref)
+    pref = client.cache.get_latest_package_reference(pref)
     package_folder = client.get_latest_pkg_layout(pref).package()
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 

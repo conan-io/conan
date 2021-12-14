@@ -85,10 +85,20 @@ class _PackageOptions:
                           for option, possible_values in recipe_options_definition.items()}
         self._freeze = False
 
+    @property
+    def possible_values(self):
+        return {k: v._possible_values for k, v in self._data.items()}
+
+    def update(self, options):
+        """
+        @type options: _PackageOptions
+        """
+        # Necessary for init() extending of options for python_requires_extend
+        for k, v in options._data.items():
+            self._data[k] = v
+
     def clear(self):
         # for header_only() clearing
-        if self._freeze:
-            raise ConanException(f"Incorrect attempt to modify options.clear()")
         self._data.clear()
 
     def freeze(self):
@@ -128,8 +138,11 @@ class _PackageOptions:
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        if self._freeze:
-            raise ConanException(f"Incorrect attempt to modify options '{field}'")
+        current_value = self._data.get(field)
+        if self._freeze and current_value.value is not None:
+            raise ConanException(f"Incorrect attempt to remove option '{field}' "
+                                 f"with current value '{current_value}'")
+
         self._ensure_exists(field)
         del self._data[field]
 
@@ -143,8 +156,10 @@ class _PackageOptions:
 
     def _set(self, item, value):
         # programmatic way to define values, for Conan codebase
-        if self._freeze:
-            raise ConanException(f"Incorrect attempt to modify options '{item}'")
+        current_value = self._data.get(item)
+        if self._freeze and current_value.value is not None and current_value != value:
+            raise ConanException(f"Incorrect attempt to modify option '{item}' "
+                                 f"from '{current_value}' to '{value}'")
         self._ensure_exists(item)
         self._data.setdefault(item, _PackageOption(item, None)).value = value
 
@@ -192,6 +207,10 @@ class Options:
 
     def __repr__(self):
         return self.dumps()
+
+    @property
+    def possible_values(self):
+        return self._package_options.possible_values
 
     def dumps(self):
         """ produces a multiline text representation of all values, first self then others.
@@ -249,10 +268,7 @@ class Options:
         return setattr(self._package_options, attr, value)
 
     def __delattr__(self, field):
-        try:
-            self._package_options.__delattr__(field)
-        except ConanException:
-            pass
+        self._package_options.__delattr__(field)
 
     def __getitem__(self, item):
         # To access dependencies options like ``options["mydep"]``. This will no longer be
@@ -275,6 +291,13 @@ class Options:
         for pkg_pattern, pkg_option in sorted(self._deps_package_options.items()):
             result._deps_package_options[pkg_pattern] = pkg_option.copy_conaninfo_options()
         return result
+
+    def update(self, options=None, options_values=None):
+        # Necessary for init() extending of options for python_requires_extend
+        new_options = Options(options, options_values)
+        self._package_options.update(new_options._package_options)
+        for pkg, pkg_option in new_options._deps_package_options.items():
+            self._deps_package_options.setdefault(pkg, _PackageOptions()).update(pkg_option)
 
     def update_options(self, other):
         """

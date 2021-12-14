@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.client.conf import get_default_settings_yml
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.test.utils.tools import TestClient
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.client.cache.cache import CONAN_SETTINGS
@@ -17,5 +17,5 @@ class ConanV2ModeTestCase(unittest.TestCase):
         return t
 
     def run(self, *args, **kwargs):
-        with environment_append({CONAN_V2_MODE_ENVVAR: "1"}):
+        with environment_update({CONAN_V2_MODE_ENVVAR: "1"}):
             super(ConanV2ModeTestCase, self).run(*args, **kwargs)

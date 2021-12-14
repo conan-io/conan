@@ -46,10 +46,10 @@ def test_test_package():
     client.run("create . gtest/1.0@")
     client.run("create . cmake/1.0@")
 
-    client.save({"conanfile.py": GenConanfile().with_build_requires("cmake/1.0").
+    client.save({"conanfile.py": GenConanfile().with_tool_requires("cmake/1.0").
                 with_test_requires("gtest/1.0")})
 
-    client.run("export . pkg/1.0@")
+    client.run("export . --name=pkg --version=1.0")
 
     consumer = textwrap.dedent(r"""
         from conans import ConanFile
@@ -100,20 +100,18 @@ def test_cpp_info_component_objects():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@ -s arch=x86_64 -s build_type=Release")
-    client.run("install hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
+    client.run("install --reference=hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
     with open(os.path.join(client.current_folder, "hello-Target-release.cmake")) as f:
         content = f.read()
         assert """set_property(TARGET hello::say PROPERTY INTERFACE_LINK_LIBRARIES
-             $<$<CONFIG:Release>:${hello_say_LINK_LIBS_RELEASE}
-             ${hello_say_LINKER_FLAGS_RELEASE}
-             ${hello_say_OBJECTS_RELEASE}> APPEND)""" in content
+             $<$<CONFIG:Release>:${hello_hello_say_LINK_LIBS_RELEASE}
+             ${hello_hello_say_OBJECTS_RELEASE}> APPEND)""" in content
         assert """set_property(TARGET hello::hello
              PROPERTY INTERFACE_LINK_LIBRARIES
              $<$<CONFIG:Release>:${hello_LIBRARIES_TARGETS_RELEASE}
-                                           ${hello_LINKER_FLAGS_RELEASE}
                                            ${hello_OBJECTS_RELEASE}> APPEND)""" in content
 
     with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
         content = f.read()
         assert 'set(hello_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content
-        assert 'set(hello_say_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content
+        assert 'set(hello_hello_say_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content

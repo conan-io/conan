@@ -33,7 +33,7 @@ class DevelopTest(unittest.TestCase):
         else:
             client.save({"conanfile.py": conanfile,
                          "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
         self.assertIn("Develop True configure!", client.out)
         self.assertIn("Develop True requirements!", client.out)
         self.assertIn("Develop True source!", client.out)
@@ -42,11 +42,11 @@ class DevelopTest(unittest.TestCase):
         self.assertIn("Develop True package_info!", client.out)
         self.assertIn("Develop True package_id!", client.out)
 
-        client.run("install Pkg/0.1@user/testing --build")
+        client.run("install --reference=pkg/0.1@user/testing --build")
         self.assertNotIn("Develop True", client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require("Pkg/0.1@user/testing")})
-        client.run("create . Other/1.0@user/testing")
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
+        client.run("create . other/1.0@user/testing")
         self.assertNotIn("Develop True", client.out)
 
     def test_local_commands(self):
@@ -80,7 +80,7 @@ class DevelopTest(unittest.TestCase):
         self.assertNotIn("package!", client.out)
         self.assertNotIn("package_info!", client.out)
 
-        client.run("export-pkg . pkg/0.1@user/channel")
+        client.run("export-pkg . --name=pkg --version=0.1 --user=user --channel=channel")
         self.assertIn("Develop True configure!", client.out)
         self.assertIn("Develop True requirements!", client.out)
         self.assertNotIn("source!", client.out)

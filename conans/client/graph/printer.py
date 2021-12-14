@@ -1,3 +1,4 @@
+import copy
 from collections import OrderedDict
 
 
@@ -62,7 +63,7 @@ def print_graph(deps_graph):
     if python_requires:
         out.info("Python requires", Color.BRIGHT_YELLOW)
         for p in python_requires:
-            out.info("    %s" % repr(p.copy_clear_rev()), Color.BRIGHT_CYAN)
+            out.info("    %s" % str(p), Color.BRIGHT_CYAN)
     out.info("Packages", Color.BRIGHT_YELLOW)
 
     def _packages(nodes):

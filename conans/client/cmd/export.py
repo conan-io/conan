@@ -1,16 +1,16 @@
+import copy
 import os
 import shutil
 
 import yaml
 
-from conan.cache.conan_reference import ConanReference
-from conans.cli.output import Color, ConanOutput
+from conans.cli.output import ConanOutput
 from conans.cli.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 from conans.client.tools import chdir
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, mkdir, \
@@ -26,7 +26,7 @@ from conans import ConanFile
 class AliasConanfile(ConanFile):
     alias = "%s"
     revision_mode = "%s"
-""" % (target_ref.full_str(), revision_mode)
+""" % (repr(target_ref), revision_mode)
 
     alias_layout = cache.create_export_recipe_layout(alias_ref)
 
@@ -36,9 +36,9 @@ class AliasConanfile(ConanFile):
 
     rrev = calc_revision(scoped_output=ConanOutput(),
                          path=None, manifest=manifest, revision_mode=revision_mode)
-
-    ref_with_rrev = alias_ref.copy_with_rev(rrev)
-    alias_layout.reference = ConanReference(ref_with_rrev)
+    ref_with_rrev = copy.copy(alias_ref)
+    ref_with_rrev.revision = rrev
+    alias_layout.reference = ref_with_rrev
     cache.assign_rrev(alias_layout)
 
 
@@ -51,7 +51,10 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     loader, cache, hook_manager = app.loader, app.cache, app.hook_manager
     conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock)
 
-    ref = ConanFileReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
+    ref = RecipeReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
+    if str(ref) != str(ref).lower():
+        raise ConanException(f"Conan packages names '{ref}' must be all lowercase")
+
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
@@ -100,8 +103,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
                              manifest=manifest,
                              revision_mode=conanfile.revision_mode)
 
-    ref = ref.copy_with_rev(revision=revision)
-    recipe_layout.reference = ConanReference(ref)
+    ref.revision = revision
+    recipe_layout.reference = ref
     cache.assign_rrev(recipe_layout)
     # TODO: cache2.0 check if this is the message we want to output
     scoped_output.success('A new %s version was exported' % CONANFILE)
@@ -243,6 +246,7 @@ def _classify_patterns(patterns):
             excluded.append(p[1:])
         else:
             included.append(p)
+
     return included, excluded
 
 
@@ -267,7 +271,7 @@ def export_source(conanfile, origin_folder, destination_source_folder):
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
     copier = FileCopier([origin_folder], destination_source_folder)
     for pattern in included_sources:
-        copier(pattern, links=True, excludes=excluded_sources)
+        copier(pattern, excludes=excluded_sources)
     output = conanfile.output
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
     copier.report(package_output)
@@ -295,7 +299,7 @@ def export_recipe(conanfile, origin_folder, destination_folder):
 
     copier = FileCopier([origin_folder], destination_folder)
     for pattern in included_exports:
-        copier(pattern, links=True, excludes=excluded_exports)
+        copier(pattern, excludes=excluded_exports)
     copier.report(package_output)
 
     _run_method(conanfile, "export", origin_folder, destination_folder)
@@ -312,14 +316,17 @@ def _run_method(conanfile, method, origin_folder, destination_folder):
         folder_name = "%s_folder" % method
         setattr(conanfile, folder_name, destination_folder)
         default_options = conanfile.default_options
+        options = conanfile.options
         try:
             # TODO: Poor man attribute control access. Convert to nice decorator
             conanfile.default_options = None
+            conanfile.options = None
             with chdir(origin_folder):
-                with conanfile_exception_formatter(str(conanfile), method):
+                with conanfile_exception_formatter(conanfile, method):
                     export_method()
         finally:
             conanfile.default_options = default_options
+            conanfile.options = options
             delattr(conanfile, folder_name)
         export_method_output = ScopedOutput("%s %s() method" % (conanfile.output.scope, method),
                                             conanfile.output)

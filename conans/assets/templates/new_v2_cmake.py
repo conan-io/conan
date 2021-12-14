@@ -56,9 +56,7 @@ from conan.tools.layout import cmake_layout
 
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    # VirtualBuildEnv and VirtualRunEnv can be avoided if "tools.env.virtualenv:auto_use" is defined
-    # (it will be defined in Conan 2.0)
-    generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
+    generators = "CMakeDeps", "CMakeToolchain"
 
     def build(self):
         cmake = CMake(self)
@@ -232,6 +230,7 @@ from conan.tools.layout import cmake_layout
 class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
+    package_type = "application"
 
     # Optional metadata
     license = "<Put the package license here>"
@@ -281,10 +280,6 @@ from conans import ConanFile, tools
 
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    # VirtualRunEnv can be avoided if "tools.env.virtualenv:auto_use" is defined
-    # (it will be defined in Conan 2.0)
-    generators = "VirtualRunEnv"
-    apply_env = False
 
     def test(self):
         if not tools.cross_building(self):

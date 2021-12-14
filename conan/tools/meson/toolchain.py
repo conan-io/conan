@@ -6,7 +6,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
 from conans.client.build.cppstd_flags import cppstd_from_settings
-from conans.client.tools.oss import cross_building, get_cross_building_settings
+from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conans.util.files import save
 
 
@@ -41,6 +41,7 @@ class MesonToolchain(object):
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
     {% if cpp_std %}cpp_std = {{cpp_std}}{% endif %}
+    {% if backend %}backend = {{backend}}{% endif %}
     c_args = {{c_args}} + preprocessor_definitions
     c_link_args = {{c_link_args}}
     cpp_args = {{cpp_args}} + preprocessor_definitions
@@ -66,8 +67,9 @@ class MesonToolchain(object):
     endian = {{endian}}
     """)
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, backend=None):
         self._conanfile = conanfile
+        self._backend = self._get_backend(backend)
         self._build_type = self._conanfile.settings.get_safe("build_type")
         self._base_compiler = self._conanfile.settings.get_safe("compiler.base") or \
                               self._conanfile.settings.get_safe("compiler")
@@ -99,6 +101,7 @@ class MesonToolchain(object):
         self.buildtype = self._to_meson_build_type(self._build_type) if self._build_type else None
         self.default_library = self._to_meson_shared(self._shared) \
             if self._shared is not None else None
+        self.backend = self._to_meson_value(self._backend)
 
         # https://mesonbuild.com/Builtin-options.html#base-options
         self.b_vscrt = self._to_meson_vscrt(self._vscrt)
@@ -116,6 +119,19 @@ class MesonToolchain(object):
         self.pkg_config_path = "'%s'" % self._conanfile.generators_folder
 
         check_using_build_profile(self._conanfile)
+
+    def _get_backend(self, recipe_backend):
+        # Returns the name of the backend used by Meson
+        conanfile = self._conanfile
+        # Downstream consumer always higher priority
+        backend_conf = conanfile.conf["tools.meson.mesontoolchain:backend"]
+        if backend_conf:
+            return backend_conf
+        # second priority: the recipe one:
+        if recipe_backend:
+            return recipe_backend
+        # if not defined, deduce automatically the default one (ninja)
+        return 'ninja'
 
     @staticmethod
     def _to_meson_value(value):
@@ -210,6 +226,7 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Builtin-options.html#core-options
             "buildtype": self.buildtype,
             "default_library": self.default_library,
+            "backend": self.backend,
             # https://mesonbuild.com/Builtin-options.html#base-options
             "b_vscrt": self.b_vscrt,
             "b_staticpic": self.b_staticpic,

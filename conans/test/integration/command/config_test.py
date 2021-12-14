@@ -6,7 +6,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save_append
 from conans.test.utils.test_files import temp_folder
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.model.conf import DEFAULT_CONFIGURATION
 
 
@@ -34,10 +34,10 @@ def test_config_home_default():
 
 
 def test_config_home_custom_home_dir():
-    """ config home MUST accept CONAN_USER_HOME as custom home path
+    """ config home MUST accept CONAN_HOME as custom home path
     """
     cache_folder = os.path.join(temp_folder(), "custom")
-    with environment_append({"CONAN_USER_HOME": cache_folder}):
+    with environment_update({"CONAN_HOME": cache_folder}):
         client = TestClient(cache_folder=cache_folder)
         client.run("config home")
         assert cache_folder in client.out
@@ -46,14 +46,14 @@ def test_config_home_custom_home_dir():
 
 
 def test_config_home_custom_install():
-    """ config install MUST accept CONAN_USER_HOME as custom home path
+    """ config install MUST accept CONAN_HOME as custom home path
     """
     cache_folder = os.path.join(temp_folder(), "custom")
-    with environment_append({"CONAN_USER_HOME": cache_folder}):
+    with environment_update({"CONAN_HOME": cache_folder}):
         client = TestClient(cache_folder=cache_folder)
         client.save({"conanfile.py": GenConanfile()})
         client.run("install .")
-        assert "conanfile.py: Installing package" in client.out
+        assert "Installing (downloading, building) binaries" in client.out
 
 
 def test_init():

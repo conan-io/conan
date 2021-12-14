@@ -26,7 +26,7 @@ class TestlinksConan(ConanFile):
         os.symlink("test/bar", "foo/test_link")
 
     def package(self):
-        self.copy("*", src=".", dst=".", links=True)
+        self.copy("*", src=".", dst=".")
 """
         test_package = """from conans import ConanFile
 from conans.errors import ConanException

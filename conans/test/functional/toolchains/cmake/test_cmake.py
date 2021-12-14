@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized.parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
@@ -173,8 +173,8 @@ class Base(unittest.TestCase):
 class WinTest(Base):
     @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
                            ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False),
-                           ("msvc", "Debug", "static", "19.1", "14", "x86", None, True),
-                           ("msvc", "Release", "dynamic", "19.1", "17", "x86_64", None, False)]
+                           ("msvc", "Debug", "static", "191", "14", "x86", None, True),
+                           ("msvc", "Release", "dynamic", "191", "17", "x86_64", None, False)]
                           )
     def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
                            shared):
@@ -187,8 +187,7 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.cache.new_config_path,
-             "tools.cmake.cmaketoolchain:msvc_parallel_compile=1")
+        save(self.client.cache.new_config_path, "tools.build:jobs=1")
         install_out = self._run_build(settings, options)
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
@@ -243,7 +242,7 @@ class WinTest(Base):
         if compiler == "msvc":
             visual_version = version
         else:
-            visual_version = "19.0" if toolset == "v140" else "19.1"
+            visual_version = "190" if toolset == "v140" else "191"
         check_exe_run(self.client.out, "main", "msvc", visual_version, "Release", arch, cppstd,
                       {"MYVAR": "MYVAR_VALUE",
                        "MYVAR_CONFIG": "MYVAR_RELEASE",
@@ -447,8 +446,8 @@ class AppleTest(Base):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.parametrize("version, vs_version",
-                         [("19.0", "15"),
-                          ("19.1", "15")])
+                         [("190", "15"),
+                          ("191", "15")])
 def test_msvc_vs_versiontoolset(version, vs_version):
     settings = {"compiler": "msvc",
                 "compiler.version": version,
@@ -538,8 +537,8 @@ class CMakeInstallTest(unittest.TestCase):
         # The create flow must work
         client.run("create . pkg/0.1@")
         self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
-        ref = ConanFileReference.loads("pkg/0.1")
-        pref = client.get_latest_prev(ref)
+        ref = RecipeReference.loads("pkg/0.1")
+        pref = client.get_latest_package_reference(ref)
         package_folder = client.get_latest_pkg_layout(pref).package()
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 

@@ -4,10 +4,7 @@ import os
 import platform
 import subprocess
 import sys
-import warnings
-from collections import namedtuple
 
-from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import CalledProcessErrorWithStderr, ConanException
 from conans.model.version import Version
@@ -110,7 +107,7 @@ class OSInfo(object):
             self.os_version_name = self.get_solaris_version_name(self.os_version)
         elif self.is_aix:
             self.os_version = self.get_aix_version()
-            self.os_version_name = "AIX %s" % self.os_version.minor(fill=False)
+            self.os_version_name = "AIX %s.%s" % (self.os_version.major, self.os_version.minor)
 
     def _get_linux_distro_info(self):
         import distro
@@ -205,69 +202,71 @@ class OSInfo(object):
     def get_debian_version_name(version):
         if not version:
             return None
-        elif version.major() == "8.Y.Z":
+        elif version.major == 8:
             return "jessie"
-        elif version.major() == "7.Y.Z":
+        elif version.major == 7:
             return "wheezy"
-        elif version.major() == "6.Y.Z":
+        elif version.major == 6:
             return "squeeze"
-        elif version.major() == "5.Y.Z":
+        elif version.major == 5:
             return "lenny"
-        elif version.major() == "4.Y.Z":
+        elif version.major == 4:
             return "etch"
-        elif version.minor() == "3.1.Z":
+        elif (version.major, version.minor) == (3, 1):
             return "sarge"
-        elif version.minor() == "3.0.Z":
+        elif (version.major, version.minor) == (3, 0):
             return "woody"
 
     @staticmethod
     def get_win_version_name(version):
         if not version:
             return None
-        elif version.major() == "5.Y.Z":
+        elif version.major == 5:
             return "Windows XP"
-        elif version.minor() == "6.0.Z":
+        elif version.major == 6 and version.minor == 0:
             return "Windows Vista"
-        elif version.minor() == "6.1.Z":
+        elif version.major == 6 and version.minor == 1:
             return "Windows 7"
-        elif version.minor() == "6.2.Z":
+        elif version.major == 6 and version.minor == 2:
             return "Windows 8"
-        elif version.minor() == "6.3.Z":
+        elif version.major == 6 and version.minor == 3:
             return "Windows 8.1"
-        elif version.minor() == "10.0.Z":
+        elif version.major == 10:
             return "Windows 10"
+        elif version.major == 11:
+            return "Windows 11"
 
     @staticmethod
     def get_osx_version_name(version):
         if not version:
             return None
-        elif version.minor() == "10.13.Z":
+        elif version.minor == 13:
             return "High Sierra"
-        elif version.minor() == "10.12.Z":
+        elif version.minor == 12:
             return "Sierra"
-        elif version.minor() == "10.11.Z":
+        elif version.minor == 11:
             return "El Capitan"
-        elif version.minor() == "10.10.Z":
+        elif version.minor == 10:
             return "Yosemite"
-        elif version.minor() == "10.9.Z":
+        elif version.minor == 9:
             return "Mavericks"
-        elif version.minor() == "10.8.Z":
+        elif version.minor == 8:
             return "Mountain Lion"
-        elif version.minor() == "10.7.Z":
+        elif version.minor == 7:
             return "Lion"
-        elif version.minor() == "10.6.Z":
+        elif version.minor == 6:
             return "Snow Leopard"
-        elif version.minor() == "10.5.Z":
+        elif version.minor == 5:
             return "Leopard"
-        elif version.minor() == "10.4.Z":
+        elif version.minor == 4:
             return "Tiger"
-        elif version.minor() == "10.3.Z":
+        elif version.minor == 3:
             return "Panther"
-        elif version.minor() == "10.2.Z":
+        elif version.minor == 2:
             return "Jaguar"
-        elif version.minor() == "10.1.Z":
+        elif version.minor == 1:
             return "Puma"
-        elif version.minor() == "10.0.Z":
+        elif version.minor == 0:
             return "Cheetha"
 
     @staticmethod
@@ -278,9 +277,9 @@ class OSInfo(object):
     def get_solaris_version_name(version):
         if not version:
             return None
-        elif version.minor() == "5.10":
+        elif version.major == "5" and version.minor == "10":
             return "Solaris 10"
-        elif version.minor() == "5.11":
+        elif version.major == "5" and version.minor == "11":
             return "Solaris 11"
 
     @staticmethod
@@ -319,104 +318,6 @@ def get_cross_building_settings(conanfile, self_os=None, self_arch=None):
     arch_host = conanfile.settings.get_safe("arch")
 
     return os_build, arch_build, os_host, arch_host
-
-
-def get_gnu_triplet(os_, arch, compiler=None):
-    """
-    Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
-
-    :param os_: os to be used to create the triplet
-    :param arch: arch to be used to create the triplet
-    :param compiler: compiler used to create the triplet (only needed fo windows)
-    """
-
-    if os_ == "Windows" and compiler is None:
-        raise ConanException("'compiler' parameter for 'get_gnu_triplet()' is not specified and "
-                             "needed for os=Windows")
-
-    # Calculate the arch
-    machine = {"x86": "i686" if os_ != "Linux" else "x86",
-               "x86_64": "x86_64",
-               "armv8": "aarch64",
-               "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
-               "armv8.3": "aarch64",
-               "asm.js": "asmjs",
-               "wasm": "wasm32",
-               }.get(arch, None)
-
-    if not machine:
-        # https://wiki.debian.org/Multiarch/Tuples
-        if os_ == "AIX":
-            if "ppc32" in arch:
-                machine = "rs6000"
-            elif "ppc64" in arch:
-                machine = "powerpc"
-        elif "arm" in arch:
-            machine = "arm"
-        elif "ppc32be" in arch:
-            machine = "powerpcbe"
-        elif "ppc64le" in arch:
-            machine = "powerpc64le"
-        elif "ppc64" in arch:
-            machine = "powerpc64"
-        elif "ppc32" in arch:
-            machine = "powerpc"
-        elif "mips64" in arch:
-            machine = "mips64"
-        elif "mips" in arch:
-            machine = "mips"
-        elif "sparcv9" in arch:
-            machine = "sparc64"
-        elif "sparc" in arch:
-            machine = "sparc"
-        elif "s390x" in arch:
-            machine = "s390x-ibm"
-        elif "s390" in arch:
-            machine = "s390-ibm"
-        elif "sh4" in arch:
-            machine = "sh4"
-        elif "e2k" in arch:
-            # https://lists.gnu.org/archive/html/config-patches/2015-03/msg00000.html
-            machine = "e2k-unknown"
-
-    if machine is None:
-        raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
-                             "translate it to the GNU triplet, please report at "
-                             " https://github.com/conan-io/conan/issues" % arch)
-
-    # Calculate the OS
-    if compiler == "gcc":
-        windows_op = "w64-mingw32"
-    elif compiler == "Visual Studio":
-        windows_op = "windows-msvc"
-    else:
-        windows_op = "windows"
-
-    op_system = {"Windows": windows_op,
-                 "Linux": "linux-gnu",
-                 "Darwin": "apple-darwin",
-                 "Android": "linux-android",
-                 "Macos": "apple-darwin",
-                 "iOS": "apple-ios",
-                 "watchOS": "apple-watchos",
-                 "tvOS": "apple-tvos",
-                 # NOTE: it technically must be "asmjs-unknown-emscripten" or
-                 # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
-                 "Emscripten": "local-emscripten",
-                 "AIX": "ibm-aix",
-                 "Neutrino": "nto-qnx"}.get(os_, os_.lower())
-
-    if os_ in ("Linux", "Android"):
-        if "arm" in arch and "armv8" not in arch:
-            op_system += "eabi"
-
-        if (arch == "armv5hf" or arch == "armv7hf") and os_ == "Linux":
-            op_system += "hf"
-
-        if arch == "armv8_32" and os_ == "Linux":
-            op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
-
-    return "%s-%s" % (machine, op_system)
 
 
 def get_build_os_arch(conanfile):

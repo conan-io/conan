@@ -1,10 +1,8 @@
 import os
 import platform
 
-from conan.tools.env import Environment
-from conan.tools.env.environment import environment_wrap_command
 from conans.cli.output import ConanOutput, ScopedOutput
-from conans.errors import ConanException, ConanInvalidConfiguration
+from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos
@@ -59,7 +57,7 @@ class ConanFile:
 
         self.compatible_packages = []
         self._conan_requester = None
-
+        from conan.tools.env import Environment
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
@@ -73,7 +71,9 @@ class ConanFile:
             self.settings = [self.settings]
         self.requires = Requirements(getattr(self, "requires", None),
                                      getattr(self, "build_requires", None),
-                                     getattr(self, "test_requires", None))
+                                     getattr(self, "test_requires", None),
+                                     getattr(self, "tool_requires", None))
+        self.options = Options(self.options or {}, self.default_options)
 
         # user declared variables
         self.user_info = None
@@ -89,13 +89,6 @@ class ConanFile:
         # layout() method related variables:
         self.folders = Folders()
         self.cpp = Infos()
-
-        self.cpp.package.includedirs = ["include"]
-        self.cpp.package.libdirs = ["lib"]
-        self.cpp.package.bindirs = ["bin"]
-        self.cpp.package.resdirs = ["res"]
-        self.cpp.package.builddirs = [""]
-        self.cpp.package.frameworkdirs = ["Frameworks"]
 
     @property
     def output(self):
@@ -127,23 +120,12 @@ class ConanFile:
     @property
     def buildenv(self):
         # Lazy computation of the package buildenv based on the profileone
+        from conan.tools.env import Environment
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
             self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
         return self._conan_buildenv
-
-    def initialize(self, settings, buildenv=None):
-        # If we move this to constructor, the python_require inheritance in init fails
-        # and "conan inspect" also breaks
-        self.options = Options(self.options or {}, self.default_options)
-        self._conan_buildenv = buildenv
-        try:
-            settings.constrained(self.settings)
-        except Exception as e:
-            raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
-                self.display_name, str(e)))
-        self.settings = settings
 
     @property
     def cpp_info(self):
@@ -250,6 +232,7 @@ class ConanFile:
                 return run_in_windows_bash(self, command=command, cwd=cwd, env=env)
         if env is None:
             env = "conanbuild"
+        from conan.tools.env.environment import environment_wrap_command
         wrapped_cmd = environment_wrap_command(env, command, cwd=self.generators_folder)
         retcode = self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 

@@ -88,7 +88,7 @@ class PkgConfigTest(unittest.TestCase):
             class LibAConan(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
                 exports_sources = "*.cpp"
-                requires = "libB/1.0@conan/stable"
+                requires = "libb/1.0@conan/stable"
 
                 def build(self):
                     lib_b_path = self.deps_cpp_info["libB"].rootpath
@@ -96,7 +96,7 @@ class PkgConfigTest(unittest.TestCase):
                     # Patch copied file with the libB path
                     tools.replace_prefix_in_pc_file("libB.pc", lib_b_path)
 
-                    with tools.environment_append({"PKG_CONFIG_PATH": os.getcwd()}):
+                    with tools.environment_update({"PKG_CONFIG_PATH": os.getcwd()}):
                         # Windows is not able to catch the output, "$()" does not exist in cmd
                         self.run("pkg-config libB --libs --cflags > output.txt")
                         with open("output.txt") as f:
@@ -115,7 +115,7 @@ class PkgConfigTest(unittest.TestCase):
             class LibAConan(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
                 exports_sources = "*.cpp"
-                requires = "libB/1.0@conan/stable"
+                requires = "libb/1.0@conan/stable"
 
                 def build(self):
                     args = ('--define-variable package_root_path_lib_b=%s'
@@ -125,7 +125,7 @@ class PkgConfigTest(unittest.TestCase):
                     vars = {'PKG_CONFIG': pkgconfig_exec, # Used in autotools, not in gcc directly
                             'PKG_CONFIG_PATH': "%s" % self.deps_cpp_info["libB"].rootpath}
 
-                    with tools.environment_append(vars):
+                    with tools.environment_update(vars):
                         # Windows is not able to catch the output, "$()" does not exist in cmd
                         self.run("pkg-config %s libB --libs --cflags > output.txt" % args)
                         with open("output.txt") as f:

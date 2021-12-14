@@ -1,13 +1,13 @@
 # coding=utf-8
-
+import copy
 import unittest
 
 import pytest
 
 from conans.client.cache.cache import ClientCache
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.model.package_ref import PkgReference
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 
@@ -17,7 +17,7 @@ class CacheTest(unittest.TestCase):
     def setUp(self):
         tmp_dir = temp_folder()
         self.cache = ClientCache(tmp_dir)
-        self.ref = ConanFileReference.loads("lib/1.0@conan/stable")
+        self.ref = RecipeReference.loads("lib/1.0@conan/stable")
 
     @pytest.mark.xfail(reason="cache2.0")
     def test_recipe_exists(self):
@@ -31,7 +31,8 @@ class CacheTest(unittest.TestCase):
         with layout.update_metadata() as metadata:
             metadata.clear()
 
-        ref2 = self.ref.copy_with_rev("revision")
+        ref2 = copy.copy(self.ref)
+        ref2.revision = "revision"
         layout2 = self.cache.package_layout(ref2)
         self.assertFalse(layout2.recipe_exists())
 
@@ -53,7 +54,8 @@ class CacheTest(unittest.TestCase):
         self.assertTrue(layout.package_exists(pref))
 
         # But if ref has revision and it doesn't match, it doesn't exist
-        ref2 = self.ref.copy_with_rev("revision")
+        ref2 = copy.copy(self.ref)
+        ref2.revision = "revision"
         pref2 = PkgReference(ref2, "999", "prevision")
         layout2 = self.cache.package_layout(ref2)
         self.assertFalse(layout2.package_exists(pref2))
@@ -69,7 +71,7 @@ class CacheTest(unittest.TestCase):
         localdb = self.cache.localdb
         self.assertIsNone(localdb.encryption_key)
 
-        with environment_append({"CONAN_LOGIN_ENCRYPTION_KEY": "key"}):
+        with environment_update({"CONAN_LOGIN_ENCRYPTION_KEY": "key"}):
             localdb = self.cache.localdb
             self.assertIsNotNone(localdb.encryption_key)
             self.assertEqual(localdb.encryption_key, "key")

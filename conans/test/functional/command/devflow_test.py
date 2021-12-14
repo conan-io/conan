@@ -1,12 +1,9 @@
 import os
 import unittest
 
-import pytest
-
-from conans.client import tools
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
-from conans.util.files import load, mkdir, rmdir
+from conans.util.files import load, mkdir
 
 conanfile = '''
 from conans import ConanFile
@@ -14,9 +11,13 @@ from conans.util.files import save, load
 import os
 
 class ConanFileToolsTest(ConanFile):
-    name = "Pkg"
+    name = "pkg"
     version = "0.1"
     exports_sources = "*"
+
+    def layout(self):
+        self.folders.build = "../build"
+        self.folders.source = "."
 
     def build(self):
         self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
@@ -44,10 +45,9 @@ class DevInSourceFlowTest(unittest.TestCase):
         client = TestClient()
         repo_folder = os.path.join(client.current_folder, "recipe")
         build_folder = os.path.join(client.current_folder, "build")
-        package_folder = os.path.join(client.current_folder, "pkg")
         mkdir(repo_folder)
         mkdir(build_folder)
-        mkdir(package_folder)
+
         client.current_folder = repo_folder  # equivalent to git clone recipe
         client.save({"conanfile.py": conanfile,
                      "file.h": "file_h_contents!"})
@@ -55,13 +55,12 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.current_folder = build_folder
         client.run("install ../recipe")
         client.run("build ../recipe")
-
         client.current_folder = repo_folder
-        client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build")
+        client.run("export . --user=lasote --channel=testing")
+        client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
@@ -76,11 +75,11 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         client.current_folder = repo_folder
-        client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
+        client.run("export . --user=lasote --channel=testing")
+        client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
@@ -96,12 +95,10 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.current_folder = build_folder
         client.run("install ..")
         client.run("build ..")
+        client.run("export-pkg .. --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        client.current_folder = build_folder
-        client.run("export-pkg .. Pkg/0.1@lasote/testing --source-folder=.. ")
-
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
@@ -112,11 +109,11 @@ from conans.util.files import save, load
 import os
 
 class ConanFileToolsTest(ConanFile):
-    name = "Pkg"
+    name = "pkg"
     version = "0.1"
 
     def source(self):
-        save("file.h", "file_h_contents!")
+        save(os.path.join(self.source_folder, "file.h"), "file_h_contents!")
 
     def build(self):
         self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
@@ -139,35 +136,36 @@ class DevOutSourceFlowTest(unittest.TestCase):
         repo_folder = os.path.join(client.current_folder, "recipe")
         src_folder = os.path.join(client.current_folder, "src")
         build_folder = os.path.join(client.current_folder, "build")
-        package_folder = os.path.join(build_folder, "package")
         mkdir(repo_folder)
         mkdir(src_folder)
         mkdir(build_folder)
-        mkdir(package_folder)
         client.current_folder = repo_folder  # equivalent to git clone recipe
-        client.save({"conanfile.py": conanfile_out})
+        conanfile_final = conanfile_out + """
+    def layout(self):
+        self.folders.build = "../build"
+        self.folders.source = "../src"
+        """
+        client.save({"conanfile.py": conanfile_final})
 
         client.current_folder = build_folder
         client.run("install ../recipe")
-        client.current_folder = src_folder
-        client.run("install ../recipe")
+        client.current_folder = src_folder  # FIXME: Source layout not working
         client.run("source ../recipe")
-        client.current_folder = build_folder
-        client.run("build ../recipe --source-folder=../src")
-        client.current_folder = repo_folder
-        client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build -sf=../src")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        client.current_folder = build_folder
+        client.run("build ../recipe")
+        client.current_folder = repo_folder
+        client.run("export . --user=lasote --channel=testing")
+        client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
+
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
     def test_insource_build(self):
         client = TestClient()
         repo_folder = client.current_folder
-        package_folder = os.path.join(client.current_folder, "pkg")
-        mkdir(package_folder)
         client.save({"conanfile.py": conanfile_out})
 
         client.run("install .")
@@ -175,11 +173,11 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("build . ")
 
         client.current_folder = repo_folder
-        client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
+        client.run("export . --user=lasote --channel=testing")
+        client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)
 
@@ -188,19 +186,23 @@ class DevOutSourceFlowTest(unittest.TestCase):
         repo_folder = client.current_folder
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
-        package_folder = os.path.join(build_folder, "package")
-        mkdir(package_folder)
-        client.save({"conanfile.py": conanfile_out})
+        conanfile_final = conanfile_out + """
+    def layout(self):
+        self.folders.build = "build"
+        """
+        client.save({"conanfile.py": conanfile_final})
 
         client.current_folder = build_folder
         client.run("install ..")
-        client.run("source ..")
-        client.run("build .. --source-folder=.")
+        client.current_folder = repo_folder  # FIXME: Source layout not working
+        client.run("source .")
+        client.current_folder = build_folder
+        client.run("build ..")
         client.current_folder = repo_folder
 
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./build")
+        client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        pref = client.get_latest_prev(ref)
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
+        pref = client.get_latest_package_reference(ref)
         cache_package_folder = client.get_latest_pkg_layout(pref).package()
         self._assert_pkg(cache_package_folder)

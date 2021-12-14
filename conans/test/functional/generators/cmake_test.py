@@ -6,7 +6,7 @@ import unittest
 import pytest
 
 from conans.client.tools import replace_in_file
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
@@ -167,13 +167,13 @@ class CMakeGeneratorTest(unittest.TestCase):
                                                  env_info={})\
             .with_package_file("lib/lib1.lib", " ").with_package_file("lib/liblib1.a", " ")\
             .with_package_file("lib/lib11.lib", " ").with_package_file("lib/liblib11.a", " ")
-        mylib_ref = ConanFileReference("mylib", "1.0", "us", "ch")
+        mylib_ref = RecipeReference("mylib", "1.0", "us", "ch")
 
         myotherlib = GenConanfile().with_package_info(cpp_info={"libs": ["lib2"],
                                                                 "system_libs": ["sys2"]},
                                                       env_info={}).with_require(mylib_ref) \
             .with_package_file("lib/lib2.lib", " ").with_package_file("lib/liblib2.a", " ")
-        myotherlib_ref = ConanFileReference("myotherlib", "1.0", "us", "ch")
+        myotherlib_ref = RecipeReference("myotherlib", "1.0", "us", "ch")
 
         client = TurboTestClient()
         client.create(mylib_ref, mylib)

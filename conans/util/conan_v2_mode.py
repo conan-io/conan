@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager
 
-from conans.errors import ConanV2Exception
+from conans.errors import ConanException
 
 CONAN_V2_MODE_ENVVAR = "CONAN_V2_MODE"
 
@@ -24,7 +24,7 @@ def _conan_v2_property(inst, name, msg):
 
     try:
         def _property_method(_):
-            raise ConanV2Exception(msg)
+            raise ConanException(msg)
 
         new_class = type(original_class.__name__, (original_class, ), {})
         inst.__class__ = new_class

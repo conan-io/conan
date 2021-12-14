@@ -7,7 +7,7 @@ import pytest
 import yaml
 from bottle import static_file
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.test_files import tgz_with_contents
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import md5sum, sha1sum, sha256sum, load
@@ -29,8 +29,8 @@ class ConanDataTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "bar",
                      "conandata.yml": conandata})
-        ref = ConanFileReference.loads("Lib/0.1@user/testing")
-        client.run("export . {}".format(ref))
+        ref = RecipeReference.loads("lib/0.1@user/testing")
+        client.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
         export_folder = client.get_latest_ref_layout(ref).export()
         exported_data = os.path.join(export_folder, "conandata.yml")
         data = yaml.safe_load(load(exported_data))
@@ -73,7 +73,7 @@ sources:
     url: "the url"
     other: "field"
 """})
-        ref = ConanFileReference.loads("Lib/0.1@user/testing")
+        ref = RecipeReference.loads("lib/0.1@user/testing")
         client.run("create . {}".format(ref))
         self.assertIn("File 'conandata.yml' found. Exporting it...", client.out)
         self.assertIn("My URL:", client.out)
@@ -137,11 +137,11 @@ sources:
         client.save({"conanfile.py": conanfile,
                      "conandata.yml": conandata.format(thread.port, md5_value, sha1_value,
                                                        sha256_value)})
-        ref = ConanFileReference.loads("Lib/0.1@user/testing")
+        ref = RecipeReference.loads("lib/0.1@user/testing")
         client.run("create . {}".format(ref))
         self.assertIn("OK!", client.out)
 
-        latest_rrev = client.cache.get_latest_rrev(ref)
+        latest_rrev = client.cache.get_latest_recipe_reference(ref)
         ref_layout = client.cache.ref_layout(latest_rrev)
         source_folder = ref_layout.source()
         downloaded_file = os.path.join(source_folder, "foo.txt")
@@ -156,7 +156,7 @@ class Lib(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "conandata.yml": ">>>> ::"})
-        ref = ConanFileReference.loads("Lib/0.1@user/testing")
+        ref = RecipeReference.loads("lib/0.1@user/testing")
         client.run("create . {}".format(ref), assert_error=True)
         self.assertIn("ERROR: Error loading conanfile at", client.out)
         self.assertIn(": Invalid yml format at conandata.yml: while scanning a block scalar",
@@ -168,6 +168,8 @@ class Lib(ConanFile):
             from conans import ConanFile
 
             class Lib(ConanFile):
+                def layout(self):
+                    self.folders.build = "tmp/build"
 
                 def _assert_data(self):
                     assert(self.conan_data["sources"]["all"]["url"] == "this url")
@@ -196,5 +198,5 @@ class Lib(ConanFile):
         client.run("install . -if tmp/install")
         client.run("build . -if tmp/install -bf tmp/build")
         self.assertIn("My URL: this url", client.out)
-        client.run("export-pkg . name/version@ -sf tmp/source -bf tmp/build")
+        client.run("export-pkg . --name=name --version=version")
         self.assertIn("My URL: this url", client.out)

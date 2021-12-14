@@ -10,7 +10,7 @@ from conans.model.conf import ConfDefinition
 from conans.model.env_info import unquote
 from conans.model.options import Options
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
@@ -20,34 +20,42 @@ class ProfileLoader:
     def __init__(self, cache):
         self._cache = cache
 
-    def from_cli_args(self, profiles, settings, options, env, conf, cwd, build_profile=False):
+    def get_default_host(self):
+        cache = self._cache
+
+        default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
+        if default_profile is None:
+            default_profile = cache.new_config["core:default_profile"] or DEFAULT_PROFILE_NAME
+
+        default_profile = os.path.join(cache.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default profile file doesn't exist:\n"
+                   "{}\n"
+                   "You need to create a default profile or specify your own profile")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
+
+    def get_default_build(self):
+        cache = self._cache
+        default_profile = cache.new_config["core:default_build_profile"] or DEFAULT_PROFILE_NAME
+        default_profile = os.path.join(cache.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default profile file doesn't exist:\n"
+                   "{}\n"
+                   "You need to create a default profile or specify your own profile")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
+
+    def from_cli_args(self, profiles, settings, options, env, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
-        cache = self._cache
-        if profiles is None:
-            if build_profile:
-                default_profile = cache.new_config[
-                                      "core:default_build_profile"] or DEFAULT_PROFILE_NAME
-            else:
-                default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
-                if default_profile is None:
-                    default_profile = cache.new_config[
-                                          "core:default_profile"] or DEFAULT_PROFILE_NAME
-
-            default_profile = os.path.join(cache.profiles_path, default_profile)
-            if not os.path.exists(default_profile):
-                msg = ("The default profile file doesn't exist:\n"
-                       "{}\n"
-                       "You need to create a default profile or specify your own profile")
-                # TODO: Add detailed instructions when cli is improved
-                raise ConanException(msg.format(default_profile))
-            result = self.load_profile(default_profile, cwd)
-        else:
-            result = Profile()
-            for p in profiles:
-                tmp = self.load_profile(p, cwd)
-                result.compose_profile(tmp)
+        result = Profile()
+        for p in profiles:
+            tmp = self.load_profile(p, cwd)
+            result.compose_profile(tmp)
 
         args_profile = _profile_parse_args(settings, options, env, conf)
         result.compose_profile(args_profile)
@@ -56,6 +64,7 @@ class ProfileLoader:
         return result
 
     def load_profile(self, profile_name, cwd=None):
+        # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
         profile, _ = self._load_profile(profile_name, cwd)
         return profile
@@ -215,13 +224,14 @@ class _ProfileValueParser(object):
     """
     @staticmethod
     def get_profile(profile_text, base_profile=None):
-        doc = ConfigParser(profile_text, allowed_fields=["build_requires", "settings", "env",
+        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+                                                         "settings", "env",
                                                          "options", "conf", "buildenv"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
         options = Options.loads(doc.options) if doc.options else None
-        build_requires = _ProfileValueParser._parse_build_requires(doc)
+        tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
         if doc.conf:
             conf = ConfDefinition()
@@ -235,8 +245,8 @@ class _ProfileValueParser(object):
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
             base_profile.package_settings[pkg_name].update(values_dict)
-        for pattern, refs in build_requires.items():
-            base_profile.build_requires.setdefault(pattern, []).extend(refs)
+        for pattern, refs in tool_requires.items():
+            base_profile.tool_requires.setdefault(pattern, []).extend(refs)
         if options is not None:
             base_profile.options.update_options(options)
 
@@ -247,17 +257,17 @@ class _ProfileValueParser(object):
         return base_profile
 
     @staticmethod
-    def _parse_build_requires(doc):
+    def _parse_tool_requires(doc):
         result = OrderedDict()
-        if doc.build_requires:
+        if doc.tool_requires:
             # FIXME CHECKS OF DUPLICATED?
-            for br_line in doc.build_requires.splitlines():
+            for br_line in doc.tool_requires.splitlines():
                 tokens = br_line.split(":", 1)
                 if len(tokens) == 1:
                     pattern, req_list = "*", br_line
                 else:
                     pattern, req_list = tokens
-                refs = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
+                refs = [RecipeReference.loads(r.strip()) for r in req_list.split(",")]
                 result.setdefault(pattern, []).extend(refs)
         return result
 

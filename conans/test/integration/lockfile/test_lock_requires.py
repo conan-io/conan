@@ -6,7 +6,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conanfile_txt_deps_ranges(requires):
     """
     conanfile.txt locking it dependencies (with version ranges)
@@ -28,7 +28,7 @@ def test_conanfile_txt_deps_ranges(requires):
     assert "pkg/0.1" not in client.out
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conanfile_txt_deps_ranges_transitive(requires):
     """
     conanfile.txt locking it dependencies and its transitive dependencies (with version ranges)
@@ -54,7 +54,7 @@ def test_conanfile_txt_deps_ranges_transitive(requires):
     assert "dep/0.1" not in client.out
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conanfile_txt_strict(requires):
     """
     conanfile.txt locking it dependencies (with version ranges)
@@ -76,7 +76,7 @@ def test_conanfile_txt_strict(requires):
     assert "Requirement 'pkg/[>1.0]@user/testing' not in lockfile" in client.out
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conditional_os(requires):
     """
     conanfile.txt can lock conditional dependencies (conditional on OS for example),
@@ -135,7 +135,7 @@ def test_conditional_os(requires):
     assert "win" not in client.out
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conditional_same_package(requires):
     # What happens when a conditional requires different versions of the same package?
     client = TestClient()
@@ -232,7 +232,7 @@ def test_conditional_incompatible_range(requires):
     assert "dep/0.1" not in client.out
 
 
-@pytest.mark.parametrize("requires", ["requires", "build_requires"])
+@pytest.mark.parametrize("requires", ["requires", "tool_requires"])
 def test_conditional_compatible_range(requires):
     client = TestClient()
 

@@ -23,7 +23,6 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
-from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import load, REVISIONS
 from conans.cli.api.conan_api import ConanAPIV2
@@ -32,16 +31,14 @@ from conans.cli.cli import Cli, CLI_V1_COMMANDS
 from conans.client.cache.cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
-from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.client.tools.files import replace_in_file
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
@@ -53,22 +50,22 @@ from conans.test.utils.scm import create_local_git_repo, create_local_svn_checko
     create_remote_svn_repo
 from conans.test.utils.server_launcher import (TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import mkdir, save_files, save
 
 NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
-    ref = ConanFileReference.loads(reference)
-    path = cache.get_latest_rrev(ref).export()
+    ref = RecipeReference.loads(reference)
+    path = cache.get_latest_recipe_reference(ref).export()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
 
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
-    path = cache.get_latest_prev(package_reference).package()
+    path = cache.get_latest_package_reference(package_reference).package()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -216,12 +213,8 @@ class TestRequester:
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)
             if "data" in kwargs:
-                if isinstance(kwargs["data"], IterableToFileAdapter):
-                    data_accum = b""
-                    for tmp in kwargs["data"]:
-                        data_accum += tmp
-                    kwargs["data"] = data_accum
-                kwargs["params"] = kwargs["data"]
+                total_data = kwargs["data"].read()
+                kwargs["params"] = total_data
                 del kwargs["data"]  # Parameter in test app is called "params"
             if kwargs.get("json"):
                 # json is a high level parameter of requests, not a generic one
@@ -309,8 +302,8 @@ class TestServer(object):
             return False
 
     def latest_recipe(self, ref):
-        rev, _ = self.test_server.server_store.get_last_revision(ref)
-        return ref.copy_with_rev(rev)
+        ref = self.test_server.server_store.get_last_revision(ref)
+        return ref
 
     def recipe_revision_time(self, ref):
         if not ref.revision:
@@ -477,6 +470,12 @@ class TestClient(object):
         finally:
             self.current_folder = old_dir
 
+    @contextmanager
+    def mocked_servers(self, requester=None):
+        _req = requester or TestRequester(self.servers)
+        with mock.patch("conans.client.rest.conan_requester.requests", _req):
+            yield
+
     def get_conan_api(self, args=None):
         if self.is_conan_cli_v2_command(args):
             return ConanAPIV2(cache_folder=self.cache_folder)
@@ -527,7 +526,7 @@ class TestClient(object):
             tuple if required
         """
         from conans.test.utils.mocks import RedirectedTestOutput
-        with environment_append({"NO_COLOR": "1"}):  # Not initialize colorama in testing
+        with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.out = RedirectedTestOutput()  # Initialize each command
             with redirect_output(self.out):
                 with redirect_input(self.user_inputs):
@@ -541,8 +540,7 @@ class TestClient(object):
                             http_requester = TestRequester(self.servers)
 
                     if http_requester:
-                        with mock.patch("conans.client.rest.conan_requester.requests",
-                                        http_requester):
+                        with self.mocked_servers(http_requester):
                             return self.run_cli(command_line, assert_error=assert_error)
                     else:
                         return self.run_cli(command_line, assert_error=assert_error)
@@ -595,9 +593,16 @@ class TestClient(object):
         """
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(ref.full_str(), args or ""))
-        rrev = self.cache.get_latest_rrev(ref).revision
-        return ref.copy_with_rev(rrev)
+        if ref:
+            self.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
+        else:
+            self.run("export .")
+        tmp = copy.copy(ref)
+        tmp.revision = None
+        rrev = self.cache.get_latest_recipe_reference(tmp).revision
+        tmp = copy.copy(ref)
+        tmp.revision = rrev
+        return tmp
 
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
         if folder is not None:
@@ -640,8 +645,8 @@ class TestClient(object):
     def scm_info_cache(self, reference):
         import yaml
 
-        if not isinstance(reference, ConanFileReference):
-            reference = ConanFileReference.loads(reference)
+        if not isinstance(reference, RecipeReference):
+            reference = RecipeReference.loads(reference)
         layout = self.get_latest_ref_layout(reference)
         content = load(layout.conandata())
         data = yaml.safe_load(content)
@@ -650,10 +655,10 @@ class TestClient(object):
         else:
             return self._create_scm_info(dict())
 
-    def get_latest_prev(self, ref: ConanReference or str, package_id=None) -> PkgReference:
+    def get_latest_package_reference(self, ref, package_id=None) -> PkgReference:
         """Get the latest PkgReference given a ConanReference"""
-        ref_ = ConanFileReference.loads(ref) if isinstance(ref, str) else ref
-        latest_rrev = self.cache.get_latest_rrev(ref_)
+        ref_ = RecipeReference.loads(ref) if isinstance(ref, str) else ref
+        latest_rrev = self.cache.get_latest_recipe_reference(ref_)
         if package_id:
             pref = PkgReference(latest_rrev, package_id)
         else:
@@ -662,18 +667,18 @@ class TestClient(object):
             assert len(package_ids) == 1, f"There are several packages for {latest_rrev}, please, " \
                                           f"provide a single package_id instead"
             pref = package_ids[0]
-        return self.cache.get_latest_prev(pref)
+        return self.cache.get_latest_package_reference(pref)
 
     def get_latest_pkg_layout(self, pref: PkgReference) -> PackageLayout:
         """Get the latest PackageLayout given a file reference"""
         # Let's make it easier for all the test clients
-        latest_prev = self.cache.get_latest_prev(pref)
+        latest_prev = self.cache.get_latest_package_reference(pref)
         pkg_layout = self.cache.pkg_layout(latest_prev)
         return pkg_layout
 
-    def get_latest_ref_layout(self, ref: ConanReference) -> RecipeLayout:
+    def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
-        latest_rrev = self.cache.get_latest_rrev(ref)
+        latest_rrev = self.cache.get_latest_recipe_reference(ref)
         ref_layout = self.cache.ref_layout(latest_rrev)
         return ref_layout
 
@@ -686,65 +691,71 @@ class TurboTestClient(TestClient):
     def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        full_str = "{}@".format(ref.full_str()) if not ref.user else ref.full_str()
+        full_str = "{}@".format(repr(ref)) if not ref.user else repr(ref)
         self.run("create . {} {}".format(full_str, args or ""),
                  assert_error=assert_error)
 
-        ref = self.cache.get_latest_rrev(ref)
+        tmp = copy.copy(ref)
+        tmp.revision = None
+        ref = self.cache.get_latest_recipe_reference(tmp)
 
         if assert_error:
             return None
 
         package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
         package_ref = PkgReference(ref, package_id)
-        prevs = self.cache.get_package_revisions(package_ref, only_latest_prev=True)
+        tmp = copy.copy(package_ref)
+        tmp.revision = None
+        prevs = self.cache.get_package_revisions_references(tmp, only_latest_prev=True)
         prev = prevs[0]
 
         return prev
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(str(ref), remote, args or ""),
+        self.run("upload {} -c --all -r {} {}".format(ref.repr_notime(), remote, args or ""),
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
-            # FIXME: remove this when ConanFileReference disappears
-            if isinstance(ref, RecipeReference):
-                ref.revision = remote_rrev
-                return ref
-            return ref.copy_with_rev(remote_rrev)
-        return
+            _tmp = copy.copy(ref)
+            _tmp.revision = remote_rrev
+            return _tmp
 
     def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        self.run("export-pkg . {} {}".format(ref.full_str(),  args or ""),
+        self.run("export-pkg . {} {}".format(repr(ref),  args or ""),
                  assert_error=assert_error)
-        rrev = self.cache.get_latest_rrev(ref)
+        # FIXME: What is this line? rrev is not used, is it checking existance or something?
+        rrev = self.cache.get_latest_recipe_reference(ref)
 
         if assert_error:
             return None
         package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
         package_ref = PkgReference(ref, package_id)
-        prev = self.cache.get_latest_prev(package_ref)
+        prev = self.cache.get_latest_package_reference(package_ref)
         _tmp = copy.copy(package_ref)
         _tmp.revision = prev
         return _tmp
 
     def recipe_exists(self, ref):
-        rrev = self.cache.get_recipe_revisions(ref)
+        rrev = self.cache.get_recipe_revisions_references(ref)
         return True if rrev else False
 
     def package_exists(self, pref):
-        prev = self.cache.get_package_revisions(pref)
+        prev = self.cache.get_package_revisions_references(pref)
         return True if prev else False
 
     def recipe_revision(self, ref):
-        latest_rrev = self.cache.get_latest_rrev(ref)
+        tmp = copy.copy(ref)
+        tmp.revision = None
+        latest_rrev = self.cache.get_latest_recipe_reference(tmp)
         return latest_rrev.revision
 
     def package_revision(self, pref):
-        latest_prev = self.cache.get_latest_prev(pref)
+        tmp = copy.copy(pref)
+        tmp.revision = None
+        latest_prev = self.cache.get_latest_package_reference(tmp)
         return latest_prev.revision
 
     def search(self, pattern, remote=None, assert_error=False, args=None):
@@ -776,7 +787,7 @@ class TurboTestClient(TestClient):
                 for k in range(num_prev):
                     args = " ".join(["-s {}={}".format(key, value)
                                      for key, value in settings.items()])
-                    with environment_append({"MY_VAR": str(k)}):
+                    with environment_update({"MY_VAR": str(k)}):
                         pref = self.create(ref, conanfile=conanfile_gen, args=args)
                         self.upload_all(ref, remote=remote)
                         tmp.append(pref)

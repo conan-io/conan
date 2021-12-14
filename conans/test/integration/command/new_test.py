@@ -134,7 +134,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
@@ -170,7 +170,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("{}/1.3@myuser/testing".format(package_name), client.out)
 
@@ -189,7 +189,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
@@ -207,7 +207,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertNotIn('homepage', content)
         self.assertNotIn('source()', content)
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
@@ -223,7 +223,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn('topics = (', content)
         self.assertNotIn('homepage', content)
         # assert they are correct at least
-        client.run("export . myuser/testing")
+        client.run("export . --user=myuser --channel=testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
@@ -235,14 +235,6 @@ class NewCommandTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/conanfile.py")))
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/example.cpp")))
-
-    def test_new_test_package_custom_name(self):
-        # https://github.com/conan-io/conan/issues/8164
-        client = TestClient()
-        client.run("new mypackage/0.1 -t")
-        source = client.load("test_package/example.cpp")
-        self.assertIn('#include "hello.h"', source)
-        self.assertIn("hello();", source)
 
     def test_new_cmake_lib(self):
         client = TestClient()
