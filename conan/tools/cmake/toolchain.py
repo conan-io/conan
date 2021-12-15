@@ -434,8 +434,7 @@ class FindConfigFiles(Block):
         # Read the buildirs
         build_paths = []
         for req in host_req:
-            cppinfo = req.cpp_info.copy()
-            cppinfo.aggregate_components()
+            cppinfo = req.cpp_info.aggregated_components()
             build_paths.extend([os.path.join(req.package_folder,
                                        p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
                                 for p in cppinfo.builddirs])

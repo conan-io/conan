@@ -62,9 +62,7 @@ def test_component_aggregation():
     cppinfo.components["c1"].set_property("my_foo", "jander")
     cppinfo.components["c1"].set_property("my_foo2", "bar2", "other_gen")
 
-
-    ret = cppinfo.copy()
-    ret.aggregate_components()
+    ret = cppinfo.aggregated_components()
 
     assert ret.includedirs == ["includedir_c1", "includedir_c2"]
     assert ret.libdirs == ["libdir_c1", "libdir_c2"]
@@ -85,8 +83,8 @@ def test_component_aggregation():
     cppinfo.components["c1"].requires = []
     cppinfo.components["c2"].requires = ["c1"]
 
-    ret = cppinfo.copy()
-    ret.aggregate_components()
+    cppinfo._aggregated = None  # Dirty, just to force recomputation
+    ret = cppinfo.aggregated_components()
 
     assert ret.includedirs == ["includedir_c2", "includedir_c1"]
     assert ret.libdirs == ["libdir_c2", "libdir_c1"]
@@ -130,8 +128,8 @@ def test_cpp_info_merge_aggregating_components_first(aggregate_first):
     other.components["boo"].requires = ["boo2"]  # Deterministic order
 
     if aggregate_first:
-        cppinfo.aggregate_components()
-        other.aggregate_components()
+        cppinfo = cppinfo.aggregated_components()
+        other = other.aggregated_components()
 
     cppinfo.merge(other)
 
