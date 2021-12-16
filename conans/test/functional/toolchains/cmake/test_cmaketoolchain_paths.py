@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 import pytest
@@ -12,7 +13,7 @@ def test_cmaketoolchain_path_find(package, find_package):
     """Test with user "Hello" and also ZLIB one, to check that package ZLIB
     has priority over the CMake system one
 
-    Also, that user cmake files in the root are accessible via CMake include()
+    Also, that user cmake files in builddirs -except root- are accessible via CMake include() or find_package()
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -22,7 +23,9 @@ def test_cmaketoolchain_path_find(package, find_package):
             def layout(self):
                 pass
             def package(self):
-                self.copy(pattern="*", keep_path=False)
+                self.copy(pattern="*")
+            def package_info(self):
+                self.cpp_info.builddirs.append("cmake")
         """)
     find = textwrap.dedent("""
         SET({package}_FOUND 1)
@@ -34,9 +37,10 @@ def test_cmaketoolchain_path_find(package, find_package):
 
     filename = "{}Config.cmake" if find_package == "config" else "Find{}.cmake"
     filename = filename.format(package)
-    client.save({"conanfile.py": conanfile,
-                 "{}".format(filename): find,
-                 "myowncmake.cmake": myowncmake})
+    client.save({"conanfile.py": conanfile})
+    client.save({"{}".format(filename): find,
+                 "myowncmake.cmake": myowncmake},
+                os.path.join(client.current_folder, "cmake"))
     client.run("create . {}/0.1@".format(package))
 
     consumer = textwrap.dedent("""
@@ -73,6 +77,7 @@ def test_cmaketoolchain_path_find_real_config():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.cmake import CMake
+        import os
         class TestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             exports = "*"
@@ -88,6 +93,9 @@ def test_cmaketoolchain_path_find_real_config():
             def package(self):
                 cmake = CMake(self)
                 cmake.install()
+
+            def package_info(self):
+                self.cpp_info.builddirs.append(os.path.join("hello", "cmake"))
         """)
     cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
