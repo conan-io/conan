@@ -802,9 +802,6 @@ class CMakeToolchain(object):
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock)])
 
-        # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
-        self.find_builddirs = True
-
         check_using_build_profile(self._conanfile)
 
     def _context(self):
