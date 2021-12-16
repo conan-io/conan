@@ -428,18 +428,10 @@ class FindFiles(Block):
         {% endif %}
 
         # To support cross building
-        if(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM STREQUAL "ONLY")
-            set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
-        endif()
-        if(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY STREQUAL "ONLY")
-            set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
-        endif()
-        if(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE STREQUAL "ONLY")
-            set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
-        endif()
-        if(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE STREQUAL "ONLY")
-            set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
-        endif()
+        set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
+        set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
+        set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
+        set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
         """)
 
     def context(self):
