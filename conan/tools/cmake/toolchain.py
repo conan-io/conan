@@ -423,9 +423,6 @@ class FindFiles(Block):
         # To support find_file() and file_path() of headers from host context
         set(CMAKE_INCLUDE_PATH {{ cmake_include_path }} ${CMAKE_INCLUDE_PATH})
         {% endif %}
-        {% if android_prefix_path %}
-        set(CMAKE_FIND_ROOT_PATH {{ android_prefix_path }} ${CMAKE_FIND_ROOT_PATH})
-        {% endif %}
 
         # To support cross building
         set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
@@ -441,9 +438,6 @@ class FindFiles(Block):
         prefer_config = self._conanfile.conf["tools.cmake.cmaketoolchain:find_package_prefer_config"]
         if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
             find_package_prefer_config = "OFF"
-
-        os_ = self._conanfile.settings.get_safe("os")
-        android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
 
         module_paths = []
 
@@ -499,7 +493,6 @@ class FindFiles(Block):
             "cmake_library_path": lib_paths,
             "cmake_framework_path": framework_paths,
             "cmake_include_path": include_paths,
-            "android_prefix_path": android_prefix,
         }
 
 
