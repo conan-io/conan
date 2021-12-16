@@ -405,30 +405,29 @@ class FindFiles(Block):
         {% endif %}
         {% if generators_folder or cmake_prefix_path %}
         # To support find_package() of CMake config Files from host context
+        set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
         set(CMAKE_PREFIX_PATH {{ generators_folder }} {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
         {% endif %}
         {% if cmake_program_path %}
         # To support find_program() of executables from build context
+        set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
         set(CMAKE_PROGRAM_PATH {{ cmake_program_path }} ${CMAKE_PROGRAM_PATH})
         {% endif %}
+        {% if cmake_library_path or cmake_framework_path %}
+        # To support find_library() of libraries/frameworks from host context
+        set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
         {% if cmake_library_path %}
-        # To support find_library() of libraries from host context
         set(CMAKE_LIBRARY_PATH {{ cmake_library_path }} ${CMAKE_LIBRARY_PATH})
         {% endif %}
         {% if cmake_framework_path %}
-        # To support find_framework() of frameworks from host context
         set(CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }} ${CMAKE_FRAMEWORK_PATH})
+        {% endif %}
         {% endif %}
         {% if cmake_include_path %}
         # To support find_file() and file_path() of headers from host context
+        set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
         set(CMAKE_INCLUDE_PATH {{ cmake_include_path }} ${CMAKE_INCLUDE_PATH})
         {% endif %}
-
-        # To support cross building
-        set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
-        set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
-        set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
-        set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
         """)
 
     def context(self):
