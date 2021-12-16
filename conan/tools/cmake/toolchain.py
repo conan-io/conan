@@ -394,27 +394,52 @@ class AppleSystemBlock(Block):
         return ctxt_toolchain
 
 
-class FindConfigFiles(Block):
+class FindFiles(Block):
     template = textwrap.dedent("""
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
-        # To support the generators based on find_package()
-        {% if cmake_module_path %}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        {% if generators_folder or cmake_module_path %}
+        # To support find_package() of CMake Find files (host context), and include() of CMake modules (host & build context)
+        set(CMAKE_MODULE_PATH {{ generators_folder }} {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
         {% endif %}
-        {% if cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        {% if generators_folder or cmake_prefix_path %}
+        # To support find_package() of CMake config Files from host context
+        set(CMAKE_PREFIX_PATH {{ generators_folder }} {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        {% endif %}
+        {% if cmake_program_path %}
+        # To support find_program() of executables from build context
+        set(CMAKE_PROGRAM_PATH {{ cmake_program_path }} ${CMAKE_PROGRAM_PATH})
+        {% endif %}
+        {% if cmake_library_path %}
+        # To support find_library() of libraries from host context
+        set(CMAKE_LIBRARY_PATH {{ cmake_library_path }} ${CMAKE_LIBRARY_PATH})
+        {% endif %}
+        {% if cmake_framework_path %}
+        # To support find_framework() of frameworks from host context
+        set(CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }} ${CMAKE_FRAMEWORK_PATH})
+        {% endif %}
+        {% if cmake_include_path %}
+        # To support find_file() and file_path() of headers from host context
+        set(CMAKE_INCLUDE_PATH {{ cmake_include_path }} ${CMAKE_INCLUDE_PATH})
         {% endif %}
         {% if android_prefix_path %}
         set(CMAKE_FIND_ROOT_PATH {{ android_prefix_path }} ${CMAKE_FIND_ROOT_PATH})
         {% endif %}
 
-        # To support cross building to iOS, watchOS and tvOS where CMake looks for config files
-        # only in the system frameworks unless you declare the XXX_DIR variables
-        {% if cross_ios %}
-            set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
-        {% endif %}
+        # To support cross building
+        if(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM STREQUAL "ONLY")
+            set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
+        endif()
+        if(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY STREQUAL "ONLY")
+            set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
+        endif()
+        if(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE STREQUAL "ONLY")
+            set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
+        endif()
+        if(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE STREQUAL "ONLY")
+            set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
+        endif()
         """)
 
     def context(self):
@@ -428,31 +453,62 @@ class FindConfigFiles(Block):
         os_ = self._conanfile.settings.get_safe("os")
         android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
 
-        host_req = self._conanfile.dependencies.host.values()
-        cross_ios = os_ in ('iOS', "watchOS", "tvOS")
+        module_paths = []
 
-        # Read the buildirs
-        build_paths = []
+        # Read information from host context
+        host_req = self._conanfile.dependencies.host.values()
+        prefix_paths = []
+        lib_paths = []
+        framework_paths = []
+        include_paths = []
         for req in host_req:
             cppinfo = req.cpp_info.copy()
             cppinfo.aggregate_components()
-            build_paths.extend([os.path.join(req.package_folder,
-                                       p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
-                                for p in cppinfo.builddirs])
+            module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            lib_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.libdirs])
+            framework_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.frameworkdirs])
+            include_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.includedirs])
 
-        if self._toolchain.find_builddirs:
-            build_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
+        # Read information from build context
+        build_req = self._conanfile.dependencies.build.values()
+        bin_paths = []
+        for req in build_req:
+            cppinfo = req.cpp_info.copy()
+            cppinfo.aggregate_components()
+            module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
+
+        module_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
+                                                .replace('$', '\\$')
+                                                .replace('"', '\\"')) for b in module_paths])
+        prefix_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
+                                                .replace('$', '\\$')
+                                                .replace('"', '\\"')) for b in prefix_paths])
+        bin_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
+                                             .replace('$', '\\$')
+                                             .replace('"', '\\"')) for b in bin_paths])
+        lib_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
+                                             .replace('$', '\\$')
+                                             .replace('"', '\\"')) for b in lib_paths])
+        framework_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
                                                    .replace('$', '\\$')
-                                                   .replace('"', '\\"')) for b in build_paths])
-        else:
-            build_paths = ""
+                                                   .replace('"', '\\"')) for b in framework_paths])
+        include_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
+                                                 .replace('$', '\\$')
+                                                 .replace('"', '\\"')) for b in include_paths])
 
-        return {"find_package_prefer_config": find_package_prefer_config,
-                "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
-                "cmake_module_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
-                "android_prefix_path": android_prefix,
-                "cross_ios": cross_ios,
-                "generators_folder": "${CMAKE_CURRENT_LIST_DIR}"}
+        return {
+            "find_package_prefer_config": find_package_prefer_config,
+            "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
+            "cmake_module_path": module_paths,
+            "cmake_prefix_path": prefix_paths,
+            "cmake_program_path": bin_paths,
+            "cmake_library_path": lib_paths,
+            "cmake_framework_path": framework_paths,
+            "cmake_include_path": include_paths,
+            "android_prefix_path": android_prefix,
+        }
 
 
 class UserToolchain(Block):
@@ -742,7 +798,7 @@ class CMakeToolchain(object):
                                        ("parallel", ParallelBlock),
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
                                        ("try_compile", TryCompileBlock),
-                                       ("find_paths", FindConfigFiles),
+                                       ("find_paths", FindFiles),
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock)])
 
