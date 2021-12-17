@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 import unittest
 
@@ -41,6 +42,9 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
+        expected_rpaths = ""
+        if platform.system() in ("Linux", "Darwin"):
+            expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir2}"'
         expected_content = """libdir=/my_absoulte_path/fake/mylib/lib
 libdir2=${prefix}/lib2
 includedir=/my_absoulte_path/fake/mylib/include
@@ -48,9 +52,9 @@ includedir=/my_absoulte_path/fake/mylib/include
 Name: MyLib
 Description: Conan package: MyLib
 Version: 0.1
-Libs: -L"${libdir}" -L"${libdir2}"
+Libs: -L"${libdir}" -L"${libdir2}"%s
 Cflags: -I"${includedir}"\
-"""
+""" % expected_rpaths
         self.assertEqual("\n".join(pc_content.splitlines()[1:]), expected_content)
 
         def assert_is_abs(path):
@@ -97,6 +101,42 @@ class PkgConfigConan(ConanFile):
             Cflags: """ % " ")  # ugly hack for trailing whitespace removed by IDEs
         self.assertEqual("\n".join(pc_content.splitlines()[1:]), expected)
 
+    def test_pkg_config_rpaths(self):
+        # rpath flags are only generated for gcc and clang
+        profile = """
+[settings]
+os=Linux
+compiler=gcc
+compiler.version=7
+compiler.libcxx=libstdc++
+"""
+        conanfile = """
+from conans import ConanFile
+
+class PkgConfigConan(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    settings = "os", "compiler"
+    exports = "mylib.so"
+
+    def package(self):
+        self.copy("mylib.so", dst="lib")
+
+    def package_info(self):
+        self.cpp_info.libs = ["mylib"]
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "linux_gcc": profile,
+                     "mylib.so": "fake lib content"})
+        client.run("create . danimtb/testing -pr=linux_gcc")
+        client.run("install MyLib/0.1@danimtb/testing -g pkg_config -pr=linux_gcc")
+
+        pc_path = os.path.join(client.current_folder, "MyLib.pc")
+        self.assertTrue(os.path.exists(pc_path))
+        pc_content = load(pc_path)
+        self.assertIn("-Wl,-rpath,\"${libdir}\"", pc_content)
+
     def test_system_libs(self):
         conanfile = """
 from conans import ConanFile
@@ -120,7 +160,7 @@ class PkgConfigConan(ConanFile):
         client.run("install MyLib/0.1@ -g pkg_config")
 
         pc_content = client.load("MyLib.pc")
-        self.assertIn('Libs: -L"${libdir}" -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2',
+        self.assertIn('Libs: -L"${libdir}" -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ',
                       pc_content)
 
     def test_multiple_include(self):
