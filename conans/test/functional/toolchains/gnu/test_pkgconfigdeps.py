@@ -13,7 +13,6 @@ def get_requires_from_content(content):
     return ""
 
 
-# Without compiler, def rpath_flags(settings, os_build, lib_paths): doesn't append the -Wl...etc
 def test_pkg_config_dirs():
     # https://github.com/conan-io/conan/issues/2756
     conanfile = textwrap.dedent("""
