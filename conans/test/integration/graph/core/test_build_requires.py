@@ -131,12 +131,6 @@ class BuildRequiresGraphTest(GraphManagerTest):
         _check_transitive(lib, [(cmake2, False, False, True, True)])
         _check_transitive(cmake2, [(cmake1, False, False, True, True)])
 
-
-
-
-
-
-
     @pytest.mark.xfail(reason="Not updated yet")
     def test_transitive_build_require_recipe_profile(self):
         # app -> lib -(br)-> gtest
@@ -585,3 +579,44 @@ class PublicBuildRequiresTest(GraphManagerTest):
 
         self._check_node(app, "app/0.1@", deps=[tool], dependents=[])
         self._check_node(tool, "gtest/0.1#123", deps=[], dependents=[app])
+
+
+class TestLoops(GraphManagerTest):
+
+    def test_direct_loop_error(self):
+        # app -(br)-> cmake/0.1 -(br itself)-> cmake/0.1....
+        # causing an infinite loop
+        self._cache_recipe("cmake/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_build_requires("cmake/0.1"),
+                                      install=False)
+
+        assert deps_graph.error.kind == GraphError.LOOP
+
+        # Build requires always apply to the consumer
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        tool = app.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[tool], dependents=[])
+        self._check_node(tool, "cmake/0.1#123", deps=[], dependents=[app])
+
+    def test_indirect_loop_error(self):
+        # app -(br)-> gtest/0.1 -(br)-> cmake/0.1 -(br)->gtest/0.1 ....
+        # causing an infinite loop
+        self._cache_recipe("gtest/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
+        self._cache_recipe("cmake/0.1", GenConanfile().with_test_requires("gtest/0.1"))
+
+        deps_graph = self.build_graph(GenConanfile().with_build_requires("cmake/0.1"),
+                                      install=False)
+
+        assert deps_graph.error.kind == GraphError.LOOP
+
+        # Build requires always apply to the consumer
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        cmake = app.dependencies[0].dst
+        gtest = cmake.dependencies[0].dst
+        cmake2 = gtest.dependencies[0].dst
+
+        assert deps_graph.error.ancestor == cmake
+        assert deps_graph.error.node == cmake2

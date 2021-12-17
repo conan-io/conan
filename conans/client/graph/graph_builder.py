@@ -273,6 +273,10 @@ class DepsGraphBuilder(object):
         if node.propagate_downstream(require, new_node):
             raise GraphError.runtime(node, new_node)
 
+        ancestor = node.check_loops(new_node)
+        if ancestor is not None:
+            raise GraphError.loop(new_node, require, ancestor)
+
         return new_node
 
     @staticmethod
