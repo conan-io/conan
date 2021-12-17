@@ -439,10 +439,9 @@ class FindFiles(Block):
         if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
             find_package_prefer_config = "OFF"
 
-        module_paths = []
-
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
+        module_host_paths = []
         prefix_paths = []
         bin_host_paths = []
         lib_paths = []
@@ -451,7 +450,7 @@ class FindFiles(Block):
         for req in host_req:
             cppinfo = req.cpp_info.copy()
             cppinfo.aggregate_components()
-            module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            module_host_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
             prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
             if not cross_building(self._conanfile):
                 bin_host_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
@@ -461,16 +460,17 @@ class FindFiles(Block):
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
+        module_build_paths = []
         bin_build_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.copy()
             cppinfo.aggregate_components()
-            module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            module_build_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
             bin_build_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
 
         module_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
                                                 .replace('$', '\\$')
-                                                .replace('"', '\\"')) for b in module_paths])
+                                                .replace('"', '\\"')) for b in module_host_paths + module_build_paths])
         prefix_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
                                                 .replace('$', '\\$')
                                                 .replace('"', '\\"')) for b in prefix_paths])
