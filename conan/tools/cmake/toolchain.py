@@ -10,6 +10,7 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.build import build_jobs
 from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.cross_building import cross_building
 from conan.tools.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
@@ -409,7 +410,7 @@ class FindFiles(Block):
         set(CMAKE_PREFIX_PATH {{ generators_folder }} {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
         {% endif %}
         {% if cmake_program_path %}
-        # To support find_program() of executables from build context
+        # To support find_program() of executables from build context (and host context if not cross-building)
         set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
         set(CMAKE_PROGRAM_PATH {{ cmake_program_path }} ${CMAKE_PROGRAM_PATH})
         {% endif %}
@@ -443,6 +444,7 @@ class FindFiles(Block):
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
         prefix_paths = []
+        bin_host_paths = []
         lib_paths = []
         framework_paths = []
         include_paths = []
@@ -451,18 +453,20 @@ class FindFiles(Block):
             cppinfo.aggregate_components()
             module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
             prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            if not cross_building(self._conanfile):
+                bin_host_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
             lib_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.libdirs])
             framework_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.frameworkdirs])
             include_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.includedirs])
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
-        bin_paths = []
+        bin_build_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.copy()
             cppinfo.aggregate_components()
             module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
-            bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
+            bin_build_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
 
         module_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
                                                 .replace('$', '\\$')
@@ -472,7 +476,7 @@ class FindFiles(Block):
                                                 .replace('"', '\\"')) for b in prefix_paths])
         bin_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
                                              .replace('$', '\\$')
-                                             .replace('"', '\\"')) for b in bin_paths])
+                                             .replace('"', '\\"')) for b in bin_build_paths + bin_host_paths])
         lib_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
                                              .replace('$', '\\$')
                                              .replace('"', '\\"')) for b in lib_paths])
