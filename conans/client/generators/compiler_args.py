@@ -2,7 +2,7 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
                                                 build_type_flags, format_defines,
                                                 format_include_paths, format_libraries,
                                                 format_library_paths, libcxx_define, libcxx_flag,
-                                                rpath_flags, sysroot_flag,
+                                                sysroot_flag,
                                                 visual_linker_option_separator, visual_runtime,
                                                 format_frameworks, format_framework_paths)
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag
@@ -67,7 +67,6 @@ class CompilerArgsGenerator(Generator):
         if not hasattr(self.conanfile, 'settings_build'):
             os_build = os_build or self.conanfile.settings.get_safe("os")
 
-        flags.extend(rpath_flags(self._settings, os_build, self._deps_build_info.lib_paths))
         flags.extend(format_library_paths(self._deps_build_info.lib_paths, self._settings))
         flags.extend(format_libraries(self._deps_build_info.libs, self._settings))
         flags.extend(format_libraries(self._deps_build_info.system_libs, self._settings))
