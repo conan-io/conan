@@ -447,42 +447,42 @@ class FindFiles(Block):
 
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
-        module_host_paths = []
-        prefix_paths = []
-        bin_host_paths = []
-        lib_paths = []
-        framework_paths = []
-        include_paths = []
+        host_module_paths = []
+        host_prefix_paths = []
+        host_bin_paths = []
+        host_lib_paths = []
+        host_framework_paths = []
+        host_include_paths = []
         for req in host_req:
             cppinfo = req.cpp_info.copy()
             cppinfo.aggregate_components()
-            module_host_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
-            prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            host_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            host_prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
             if not cross_building(self._conanfile):
-                bin_host_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
-            lib_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.libdirs])
-            framework_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.frameworkdirs])
-            include_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.includedirs])
+                host_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
+            host_lib_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.libdirs])
+            host_framework_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.frameworkdirs])
+            host_include_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.includedirs])
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
-        module_build_paths = []
-        bin_build_paths = []
+        build_module_paths = []
+        build_bin_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.copy()
             cppinfo.aggregate_components()
-            module_build_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
-            bin_build_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
+            build_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            build_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
 
         return {
             "find_package_prefer_config": find_package_prefer_config,
             "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
-            "cmake_module_path": self._join_paths(module_host_paths + module_build_paths),
-            "cmake_prefix_path": self._join_paths(prefix_paths),
-            "cmake_program_path": self._join_paths(bin_build_paths + bin_host_paths),
-            "cmake_library_path": self._join_paths(lib_paths),
-            "cmake_framework_path": self._join_paths(framework_paths),
-            "cmake_include_path": self._join_paths(include_paths),
+            "cmake_module_path": self._join_paths(host_module_paths + build_module_paths),
+            "cmake_prefix_path": self._join_paths(host_prefix_paths),
+            "cmake_program_path": self._join_paths(build_bin_paths + host_bin_paths),
+            "cmake_library_path": self._join_paths(host_lib_paths),
+            "cmake_framework_path": self._join_paths(host_framework_paths),
+            "cmake_include_path": self._join_paths(host_include_paths),
         }
 
 
