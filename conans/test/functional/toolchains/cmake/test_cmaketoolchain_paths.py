@@ -13,7 +13,8 @@ def test_cmaketoolchain_path_find(package, find_package):
     """Test with user "Hello" and also ZLIB one, to check that package ZLIB
     has priority over the CMake system one
 
-    Also, that user cmake files in builddirs -except root- are accessible via CMake include() or find_package()
+    Also, that user cmake files in builddirs are accessible via CMake include() or find_package()
+    CMake config files at root package folder are not accessible
     """
     client = TestClient()
     conanfile = textwrap.dedent("""

@@ -456,7 +456,7 @@ class FindFiles(Block):
         for req in host_req:
             cppinfo = req.cpp_info.copy()
             cppinfo.aggregate_components()
-            host_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            host_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
             host_prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
             if not cross_building(self._conanfile):
                 host_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
@@ -471,7 +471,7 @@ class FindFiles(Block):
         for req in build_req:
             cppinfo = req.cpp_info.copy()
             cppinfo.aggregate_components()
-            build_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            build_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
             build_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
 
         return {
