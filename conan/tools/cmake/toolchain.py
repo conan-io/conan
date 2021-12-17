@@ -431,6 +431,12 @@ class FindFiles(Block):
         {% endif %}
         """)
 
+    @staticmethod
+    def _join_paths(paths):
+        return " ".join(['"{}"'.format(p.replace('\\', '/')
+                                        .replace('$', '\\$')
+                                        .replace('"', '\\"')) for p in paths])
+
     def context(self):
         # To find the generated cmake_find_package finders
         # TODO: Change this for parameterized output location of CMakeDeps
@@ -468,34 +474,15 @@ class FindFiles(Block):
             module_build_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
             bin_build_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
 
-        module_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
-                                                .replace('$', '\\$')
-                                                .replace('"', '\\"')) for b in module_host_paths + module_build_paths])
-        prefix_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
-                                                .replace('$', '\\$')
-                                                .replace('"', '\\"')) for b in prefix_paths])
-        bin_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
-                                             .replace('$', '\\$')
-                                             .replace('"', '\\"')) for b in bin_build_paths + bin_host_paths])
-        lib_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
-                                             .replace('$', '\\$')
-                                             .replace('"', '\\"')) for b in lib_paths])
-        framework_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
-                                                   .replace('$', '\\$')
-                                                   .replace('"', '\\"')) for b in framework_paths])
-        include_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
-                                                 .replace('$', '\\$')
-                                                 .replace('"', '\\"')) for b in include_paths])
-
         return {
             "find_package_prefer_config": find_package_prefer_config,
             "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
-            "cmake_module_path": module_paths,
-            "cmake_prefix_path": prefix_paths,
-            "cmake_program_path": bin_paths,
-            "cmake_library_path": lib_paths,
-            "cmake_framework_path": framework_paths,
-            "cmake_include_path": include_paths,
+            "cmake_module_path": self._join_paths(module_host_paths + module_build_paths),
+            "cmake_prefix_path": self._join_paths(prefix_paths),
+            "cmake_program_path": self._join_paths(bin_build_paths + bin_host_paths),
+            "cmake_library_path": self._join_paths(lib_paths),
+            "cmake_framework_path": self._join_paths(framework_paths),
+            "cmake_include_path": self._join_paths(include_paths),
         }
 
 
