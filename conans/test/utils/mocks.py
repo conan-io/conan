@@ -138,8 +138,6 @@ class MockConanfile(ConanFile):
         self.should_install = True
         self.should_test = True
 
-        self.package_folder = None
-
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None
