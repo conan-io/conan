@@ -1,6 +1,6 @@
 import os
 
-from conans.client.build.compiler_flags import rpath_flags, format_frameworks, format_framework_paths
+from conans.client.build.compiler_flags import format_frameworks, format_framework_paths
 from conans.client.tools.oss import get_build_os_arch
 from conans.model import Generator
 from conans.model.conan_generator import GeneratorComponentsMixin
@@ -16,7 +16,7 @@ includedir=${prefix}/include
 Name: my-project
 Description: Some brief but informative description
 Version: 1.2.3
-Libs: -L${libdir} -lmy-project-1 -linkerflag -Wl,-rpath=${libdir}
+Libs: -L${libdir} -lmy-project-1 -linkerflag
 Cflags: -I${includedir}/my-project-1
 Requires: glib-2.0 >= 2.40 gio-2.0 >= 2.42 nice >= 0.1.6
 Requires.private: gthread-2.0 >= 2.40
@@ -98,15 +98,12 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         if not hasattr(self.conanfile, 'settings_build'):
             os_build = os_build or self.conanfile.settings.get_safe("os")
 
-        rpaths = rpath_flags(self.conanfile.settings, os_build,
-                             ["${%s}" % libdir for libdir in libdir_vars])
         frameworks = format_frameworks(cpp_info.frameworks, self.conanfile.settings)
         framework_paths = format_framework_paths(cpp_info.framework_paths, self.conanfile.settings)
 
         lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
                                                         libnames_flags,
                                                         shared_flags,
-                                                        rpaths,
                                                         frameworks,
                                                         framework_paths]))
         include_dirs_flags = ['-I"${%s}"' % name for name in includedir_vars]
