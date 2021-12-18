@@ -187,12 +187,12 @@ class GLibCXXBlock(Block):
                    }.get(libcxx)
             if lib:
                 lib = "-library={}".format(lib)
-        elif compiler == "gcc":
-            # we might want to remove this "1", it is the default in most distros
-            if libcxx == "libstdc++11":
-                glib = "1"
-            elif libcxx == "libstdc++":
+
+        if compiler in ['clang', 'apple-clang', 'gcc']:
+            if libcxx == "libstdc++":
                 glib = "0"
+            elif libcxx == "libstdc++11" and self._conanfile.conf["tools.gnu:define_libcxx11_abi"]:
+                glib = "1"
         return {"set_libcxx": lib, "glibcxx": glib}
 
 
@@ -434,8 +434,7 @@ class FindConfigFiles(Block):
         # Read the buildirs
         build_paths = []
         for req in host_req:
-            cppinfo = req.cpp_info.copy()
-            cppinfo.aggregate_components()
+            cppinfo = req.cpp_info.aggregated_components()
             build_paths.extend([os.path.join(req.package_folder,
                                        p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
                                 for p in cppinfo.builddirs])
