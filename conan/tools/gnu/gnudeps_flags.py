@@ -44,7 +44,8 @@ class GnuDepsFlags(object):
                     for x in lib_paths if x]
         return []
 
-    def _format_defines(self, defines):
+    @staticmethod
+    def _format_defines(defines):
         return ["-D%s" % define for define in defines] if defines else []
 
     def _format_frameworks(self, frameworks):

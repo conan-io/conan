@@ -80,6 +80,8 @@ class NewCppInfo(object):
         # Main package is a component with None key
         self.components[None] = _NewComponent()
         self._aggregated = None  # A _NewComponent object with all the components aggregated
+        self._sorted_components = None  # Caching the sorted components
+        self._defined_base_folder = False  # To prevent errors and double definition
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
@@ -143,28 +145,33 @@ class NewCppInfo(object):
 
     def set_relative_base_folder(self, folder):
         """Prepend the folder to all the directories"""
-        for cname, c in self.components.items():
+        assert self._defined_base_folder is False
+        for component in self.components.values():
             for varname in _DIRS_VAR_NAMES:
-                origin = getattr(self.components[cname], varname)
+                origin = getattr(component, varname)
                 if origin is not None:
                     origin[:] = [os.path.join(folder, el) for el in origin]
+        self._defined_base_folder = True
 
     def get_sorted_components(self):
         """Order the components taking into account if they depend on another component in the
         same package (not scoped with ::). First less dependant
         return:  {component_name: component}
         """
-        processed = []  # Names of the components ordered
-        # FIXME: Cache the sort
-        while (len(self.components) - 1) > len(processed):
-            for name, c in self.components.items():
-                if name is None:
-                    continue
-                req_processed = [n for n in c.required_component_names if n not in processed]
-                if not req_processed and name not in processed:
-                    processed.append(name)
+        if self._sorted_components is None:
+            processed = []  # Names of the components ordered
+            # FIXME: Cache the sort
+            while (len(self.components) - 1) > len(processed):
+                for name, c in self.components.items():
+                    if name is None:
+                        continue
+                    req_processed = [n for n in c.required_component_names if n not in processed]
+                    if not req_processed and name not in processed:
+                        processed.append(name)
 
-        return OrderedDict([(cname,  self.components[cname]) for cname in processed])
+            self._sorted_components = OrderedDict([(cname,  self.components[cname])
+                                                   for cname in processed])
+        return self._sorted_components
 
     def aggregated_components(self):
         """Aggregates all the components as global values, returning a new NewCppInfo"""
@@ -193,15 +200,6 @@ class NewCppInfo(object):
             self._aggregated = NewCppInfo()
             self._aggregated.components[None] = result
         return self._aggregated
-
-    def copy(self):
-        # Only used at the moment by layout() editable merging build+source .cpp data
-        ret = NewCppInfo()
-        ret._generator_properties = copy.copy(self._generator_properties)
-        ret.components = DefaultOrderedDict(lambda: _NewComponent())
-        for comp_name in self.components:
-            ret.components[comp_name] = copy.copy(self.components[comp_name])
-        return ret
 
     @property
     def required_components(self):
