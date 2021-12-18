@@ -50,13 +50,13 @@ def test_foo():
     dep1.cpp_info = get_cpp_info("dep1")
     dep1._conan_node = Mock()
     dep1._conan_node.ref = ConanFileReference.loads("dep1/1.0")
-    dep1.package_folder = "/path/to/folder_dep1"
+    dep1.folders.set_base_package("/path/to/folder_dep1")
 
     dep2 = ConanFile(Mock(), None)
     dep2.cpp_info = get_cpp_info("dep2")
     dep2._conan_node = Mock()
     dep2._conan_node.ref = ConanFileReference.loads("dep2/1.0")
-    dep2.package_folder = "/path/to/folder_dep2"
+    dep2.folders.set_base_package("/path/to/folder_dep2")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req1 = Requirement(ConanFileReference.loads("dep1/1.0"))

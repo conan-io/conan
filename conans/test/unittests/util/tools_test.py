@@ -787,12 +787,11 @@ class CollectLibTestCase(unittest.TestCase):
     def test_collect_libs(self):
         conanfile = ConanFileMock()
         # Without package_folder
-        conanfile.package_folder = None
         result = tools.collect_libs(conanfile)
         self.assertEqual([], result)
 
         # Default behavior
-        conanfile.package_folder = temp_folder()
+        conanfile.folders.set_base_package(temp_folder())
         mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(mylib_path, "")
         conanfile.cpp_info = CppInfo("", "")
@@ -822,7 +821,7 @@ class CollectLibTestCase(unittest.TestCase):
 
         # Warn same lib different folders
         conanfile = ConanFileMock()
-        conanfile.package_folder = temp_folder()
+        conanfile.folders.set_base_package(temp_folder())
         conanfile.cpp_info = CppInfo(conanfile.name, "")
         custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
@@ -837,7 +836,7 @@ class CollectLibTestCase(unittest.TestCase):
 
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
-        conanfile.package_folder = temp_folder()
+        conanfile.folders.set_base_package(temp_folder())
         conanfile.cpp_info = CppInfo(conanfile.name, "")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(lib_mylib_path, "")
@@ -851,12 +850,11 @@ class CollectLibTestCase(unittest.TestCase):
     def test_self_collect_libs(self):
         conanfile = ConanFileMock()
         # Without package_folder
-        conanfile.package_folder = None
         result = conanfile.collect_libs()
         self.assertEqual([], result)
 
         # Default behavior
-        conanfile.package_folder = temp_folder()
+        conanfile.folders.set_base_package(temp_folder())
         mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(mylib_path, "")
         conanfile.cpp_info = CppInfo("", "")
@@ -886,7 +884,7 @@ class CollectLibTestCase(unittest.TestCase):
 
         # Warn same lib different folders
         conanfile = ConanFileMock()
-        conanfile.package_folder = temp_folder()
+        conanfile.folders.set_base_package(temp_folder())
         conanfile.cpp_info = CppInfo("", "")
         custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
@@ -901,7 +899,7 @@ class CollectLibTestCase(unittest.TestCase):
 
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
-        conanfile.package_folder = temp_folder()
+        conanfile.folders.set_base_package(temp_folder())
         conanfile.cpp_info = CppInfo("", "")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(lib_mylib_path, "")

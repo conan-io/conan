@@ -3,7 +3,6 @@ import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.cmake.utils import get_file_name
-from conans.errors import ConanException
 
 """
 
@@ -25,16 +24,17 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
-        global_cpp = self.get_global_cpp_cmake()
+        global_cpp = self._get_global_cpp_cmake()
         if not self.build_modules_activated:
             global_cpp.build_modules_paths = ""
 
+        components = self._get_required_components_cpp()
         # using the target names to name components, may change in the future?
         components_names = " ".join([components_target_name for components_target_name, _ in
-                                    reversed(self.get_required_components_cpp())])
+                                    reversed(components)])
 
         components_cpp = [(cmake_target_name.replace("::", "_"), cmake_target_name, cpp)
-                          for cmake_target_name, cpp in self.get_required_components_cpp()]
+                          for cmake_target_name, cpp in components]
 
         # For the build requires, we don't care about the transitive (only runtime for the br)
         # so as the xxx-conf.cmake files won't be generated, don't include them as find_dependency
@@ -110,13 +110,12 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
           """)
         return ret
 
-    def get_global_cpp_cmake(self):
-        global_cppinfo = self.conanfile.cpp_info.copy()
-        global_cppinfo.aggregate_components()
+    def _get_global_cpp_cmake(self):
+        global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        return DepsCppCmake(global_cppinfo, pfolder_var_name)
+        return _TargetDataContext(global_cppinfo, pfolder_var_name)
 
-    def get_required_components_cpp(self):
+    def _get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
@@ -125,7 +124,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                                                                   "direct": True})
         for comp_name, comp in sorted_comps.items():
             pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-            deps_cpp_cmake = DepsCppCmake(comp, pfolder_var_name)
+            deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name)
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
@@ -157,7 +156,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return ret
 
 
-class DepsCppCmake(object):
+class _TargetDataContext(object):
 
     def __init__(self, cpp_info, pfolder_var_name):
 

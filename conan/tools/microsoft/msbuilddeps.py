@@ -283,8 +283,7 @@ class MSBuildDeps(object):
         for dep in host_req + test_req:
             dep_name = dep.ref.name
             dep_name = dep_name.replace(".", "_")
-            cpp_info = dep.cpp_info.copy()
-            cpp_info.aggregate_components()
+            cpp_info = dep.cpp_info.aggregated_components()
             public_deps = [d.ref.name.replace(".", "_")
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
             # One file per configuration, with just the variables
@@ -302,8 +301,7 @@ class MSBuildDeps(object):
         for dep in build_req:
             dep_name = dep.ref.name
             dep_name = dep_name.replace(".", "_") + "_build"
-            cpp_info = dep.cpp_info.copy()
-            cpp_info.aggregate_components()
+            cpp_info = dep.cpp_info.aggregated_components()
             public_deps = [d.ref.name.replace(".", "_")
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
             # One file per configuration, with just the variables
