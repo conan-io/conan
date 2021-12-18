@@ -345,6 +345,7 @@ class GraphManager(object):
                     continue
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
+                        (pattern.startswith("!") and not fnmatch.fnmatch(str_ref, pattern[1:])) or
                         fnmatch.fnmatch(str_ref, pattern)):
                     for build_require in build_requires:
                         br_key = (build_require.name, default_context)
