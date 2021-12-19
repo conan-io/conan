@@ -9,12 +9,9 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.tool_cmake
 @pytest.mark.parametrize("package", ["hello", "ZLIB"])
 @pytest.mark.parametrize("find_package", ["module", "config"])
-def test_cmaketoolchain_path_find(package, find_package):
+def test_cmaketoolchain_path_find_package(package, find_package):
     """Test with user "Hello" and also ZLIB one, to check that package ZLIB
     has priority over the CMake system one
-
-    Also, that user cmake files in builddirs are accessible via CMake include() or find_package()
-    CMake config files at root package folder are not accessible
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -32,26 +29,20 @@ def test_cmaketoolchain_path_find(package, find_package):
         SET({package}_FOUND 1)
         MESSAGE("HELLO FROM THE {package} FIND PACKAGE!")
         """).format(package=package)
-    myowncmake = textwrap.dedent("""
-        MESSAGE("MYOWNCMAKE FROM {package}!")
-        """).format(package=package)
 
     filename = "{}Config.cmake" if find_package == "config" else "Find{}.cmake"
     filename = filename.format(package)
     client.save({"conanfile.py": conanfile})
-    client.save({"{}".format(filename): find,
-                 "myowncmake.cmake": myowncmake},
+    client.save({"{}".format(filename): find},
                 os.path.join(client.current_folder, "cmake"))
     client.run("create . {}/0.1@".format(package))
 
     consumer = textwrap.dedent("""
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        project(MyHello CXX)
         cmake_minimum_required(VERSION 3.15)
-
+        project(MyHello CXX)
         find_package({package} REQUIRED)
-        include(myowncmake)
         """).format(package=package)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
@@ -60,16 +51,60 @@ def test_cmaketoolchain_path_find(package, find_package):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared" not in client.out
     assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) in client.out
-    assert "MYOWNCMAKE FROM {package}!".format(package=package) in client.out
 
     # If using the CMakeDeps generator, the in-package .cmake will be ignored
-    # But it is still possible to include(owncmake)
     client.run("install {}/0.1@ -g CMakeToolchain -g CMakeDeps".format(package))
     with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared '{package}::{package}'".format(package=package) in client.out
     assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) not in client.out
-    assert "MYOWNCMAKE FROM {package}!".format(package=package) in client.out
+
+
+@pytest.mark.tool_cmake
+@pytest.mark.parametrize("require_type", ["requires", "build_requires"])
+def test_cmaketoolchain_path_include_cmake_modules(require_type):
+    """Test that cmake module files in builddirs of requires and build_requires
+    are accessible with include() in consumer CMakeLists
+    """
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            exports = "*"
+            def layout(self):
+                pass
+            def package(self):
+                self.copy(pattern="*")
+            def package_info(self):
+                self.cpp_info.builddirs.append("cmake")
+    """)
+    myowncmake = textwrap.dedent("""
+        MESSAGE("MYOWNCMAKE FROM hello!")
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.save({"myowncmake.cmake": myowncmake},
+                os.path.join(client.current_folder, "cmake"))
+    client.run("create . hello/0.1@")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            {require_type} = "hello/0.1"
+    """.format(require_type=require_type))
+    consumer = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyHello)
+        include(myowncmake)
+    """)
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": consumer}, clean_first=True)
+    client.run("install . pkg/0.1@ -g CMakeToolchain")
+    with client.chdir("build"):
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
+    assert "MYOWNCMAKE FROM hello!" in client.out
 
 
 @pytest.mark.tool_cmake
