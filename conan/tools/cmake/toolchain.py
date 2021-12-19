@@ -401,7 +401,6 @@ class FindFiles(Block):
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
         {% if generators_folder or cmake_module_path %}
-        # To support find_package() of CMake Find files (host context), and include() of CMake modules (host & build context)
         set(CMAKE_MODULE_PATH {{ generators_folder }} {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
         {% endif %}
         {% if generators_folder or cmake_prefix_path %}
@@ -410,12 +409,10 @@ class FindFiles(Block):
         set(CMAKE_PREFIX_PATH {{ generators_folder }} {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
         {% endif %}
         {% if cmake_program_path %}
-        # To support find_program() of executables from build context (and host context if not cross-building)
         set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
         set(CMAKE_PROGRAM_PATH {{ cmake_program_path }} ${CMAKE_PROGRAM_PATH})
         {% endif %}
         {% if cmake_library_path or cmake_framework_path %}
-        # To support find_library() of libraries/frameworks from host context
         set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
         {% if cmake_library_path %}
         set(CMAKE_LIBRARY_PATH {{ cmake_library_path }} ${CMAKE_LIBRARY_PATH})
@@ -425,9 +422,11 @@ class FindFiles(Block):
         {% endif %}
         {% endif %}
         {% if cmake_include_path %}
-        # To support find_file() and file_path() of headers from host context
         set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
         set(CMAKE_INCLUDE_PATH {{ cmake_include_path }} ${CMAKE_INCLUDE_PATH})
+        {% endif %}
+        {% if cmake_ignore_path %}
+        set(CMAKE_IGNORE_PATH {{ cmake_ignore_path }} ${CMAKE_IGNORE_PATH})
         {% endif %}
         """)
 
@@ -456,9 +455,8 @@ class FindFiles(Block):
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
             host_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
-            host_prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
-            if not cross_building(self._conanfile):
-                host_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
+            host_prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
+            host_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
             host_lib_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.libdirs])
             host_framework_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.frameworkdirs])
             host_include_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.includedirs])
@@ -466,21 +464,33 @@ class FindFiles(Block):
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
         build_module_paths = []
+        build_prefix_paths = []
         build_bin_paths = []
+        build_lib_paths = []
+        build_framework_paths = []
+        build_include_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.aggregated_components()
             build_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
+            build_prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
             build_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
+            build_lib_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.libdirs])
+            build_framework_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.frameworkdirs])
+            build_include_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.includedirs])
 
         return {
             "find_package_prefer_config": find_package_prefer_config,
             "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
             "cmake_module_path": self._join_paths(host_module_paths + build_module_paths),
-            "cmake_prefix_path": self._join_paths(host_prefix_paths),
-            "cmake_program_path": self._join_paths(build_bin_paths + host_bin_paths),
+            "cmake_prefix_path": self._join_paths(host_prefix_paths + build_prefix_paths),
+            "cmake_program_path": self._join_paths(build_bin_paths),
             "cmake_library_path": self._join_paths(host_lib_paths),
             "cmake_framework_path": self._join_paths(host_framework_paths),
             "cmake_include_path": self._join_paths(host_include_paths),
+            "cmake_ignore_path": self._join_paths(
+                host_bin_paths + build_lib_paths +
+                build_framework_paths + build_include_paths
+            ),
         }
 
 

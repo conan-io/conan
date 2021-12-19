@@ -21,9 +21,7 @@ def test_cmaketoolchain_path_find_package(package, find_package):
             def layout(self):
                 pass
             def package(self):
-                self.copy(pattern="*")
-            def package_info(self):
-                self.cpp_info.builddirs.append("cmake")
+                self.copy(pattern="*", keep_path=False)
         """)
     find = textwrap.dedent("""
         SET({package}_FOUND 1)
@@ -32,14 +30,10 @@ def test_cmaketoolchain_path_find_package(package, find_package):
 
     filename = "{}Config.cmake" if find_package == "config" else "Find{}.cmake"
     filename = filename.format(package)
-    client.save({"conanfile.py": conanfile})
-    client.save({"{}".format(filename): find},
-                os.path.join(client.current_folder, "cmake"))
+    client.save({"conanfile.py": conanfile, "{}".format(filename): find})
     client.run("create . {}/0.1@".format(package))
 
     consumer = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello CXX)
         find_package({package} REQUIRED)
@@ -77,15 +71,11 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type):
                 pass
             def package(self):
                 self.copy(pattern="*")
-            def package_info(self):
-                self.cpp_info.builddirs.append("cmake")
     """)
     myowncmake = textwrap.dedent("""
         MESSAGE("MYOWNCMAKE FROM hello!")
     """)
-    client.save({"conanfile.py": conanfile})
-    client.save({"myowncmake.cmake": myowncmake},
-                os.path.join(client.current_folder, "cmake"))
+    client.save({"conanfile.py": conanfile, "myowncmake.cmake": myowncmake})
     client.run("create . hello/0.1@")
 
     conanfile = textwrap.dedent("""
@@ -186,7 +176,6 @@ def test_cmaketoolchain_path_find_library():
 def test_cmaketoolchain_path_find_program():
     """Test that executables in bindirs of build_requires can be found with
     find_program() in consumer CMakeLists.
-    Moreover, they must be found before any other executable of requires.
     """
     client = TestClient()
 
@@ -201,10 +190,11 @@ def test_cmaketoolchain_path_find_program():
             def package(self):
                 self.copy(pattern="*", dst="bin")
             def package_info(self):
-                self.cpp_info.bindirs = [os.path.join("bin", "require_host")]
+                self.cpp_info.bindirs = [os.path.join("bin", "require_host", "bin")]
+                self.cpp_info.builddirs.append(os.path.join("bin", "require_host"))
     """)
     client.save({"conanfile.py": conanfile,
-                 "require_host/hello": "", "require_host/hello.exe": ""})
+                 "require_host/bin/hello": "", "require_host/bin/hello.exe": ""})
     client.run("create . hello_host/0.1@")
 
     conanfile = textwrap.dedent("""
@@ -218,10 +208,11 @@ def test_cmaketoolchain_path_find_program():
             def package(self):
                 self.copy(pattern="*", dst="bin")
             def package_info(self):
-                self.cpp_info.bindirs = [os.path.join("bin", "require_build")]
+                self.cpp_info.bindirs = [os.path.join("bin", "require_build", "bin")]
+                self.cpp_info.builddirs.append(os.path.join("bin", "require_build"))
     """)
     client.save({"conanfile.py": conanfile,
-                 "require_build/hello": "", "require_build/hello.exe": ""},
+                 "require_build/bin/hello": "", "require_build/bin/hello.exe": ""},
                 clean_first=True)
     client.run("create . hello_build/0.1@")
 
@@ -246,8 +237,8 @@ def test_cmaketoolchain_path_find_program():
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found hello prog" in client.out
-    assert "require_host/hello" not in client.out
-    assert "require_build/hello" in client.out
+    assert "require_host/bin/hello" not in client.out
+    assert "require_build/bin/hello" in client.out
 
 
 @pytest.mark.tool_cmake
@@ -256,7 +247,6 @@ def test_cmaketoolchain_path_find_real_config():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.cmake import CMake
-        import os
         class TestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             exports = "*"
@@ -272,9 +262,6 @@ def test_cmaketoolchain_path_find_real_config():
             def package(self):
                 cmake = CMake(self)
                 cmake.install()
-
-            def package_info(self):
-                self.cpp_info.builddirs.append(os.path.join("hello", "cmake"))
         """)
     cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
