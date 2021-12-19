@@ -5,9 +5,9 @@ from collections import OrderedDict
 from conans.model.build_info import DefaultOrderedDict
 
 _DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
-                   "frameworkdirs"]
+                   "frameworkdirs", "objects"]
 _FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "cxxflags",
-                    "sharedlinkflags", "exelinkflags", "objects"]
+                    "sharedlinkflags", "exelinkflags"]
 _ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
 
 
@@ -151,6 +151,10 @@ class NewCppInfo(object):
                 origin = getattr(component, varname)
                 if origin is not None:
                     origin[:] = [os.path.join(folder, el) for el in origin]
+        if self._generator_properties is not None:
+            for prop_name, value in self._generator_properties.items():
+                if prop_name == "cmake_build_modules":  # FIXME: Hardcoded, avoid
+                    value[:] = [os.path.join(folder, v) for v in value]
         self._defined_base_folder = True
 
     def get_sorted_components(self):
