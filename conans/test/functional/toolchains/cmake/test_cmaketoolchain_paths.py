@@ -1,4 +1,3 @@
-import os
 import textwrap
 
 import pytest
@@ -32,9 +31,7 @@ def test_cmaketoolchain_path_find_package(package, find_package):
 
     filename = "{}Config.cmake" if find_package == "config" else "Find{}.cmake"
     filename = filename.format(package)
-    client.save({"conanfile.py": conanfile})
-    client.save({"{}".format(filename): find},
-                os.path.join(client.current_folder, "cmake"))
+    client.save({"conanfile.py": conanfile, "cmake/{}".format(filename): find})
     client.run("create . {}/0.1@".format(package))
 
     consumer = textwrap.dedent("""
@@ -80,12 +77,8 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type):
             def package_info(self):
                 self.cpp_info.builddirs.append("cmake")
     """)
-    myowncmake = textwrap.dedent("""
-        MESSAGE("MYOWNCMAKE FROM hello!")
-    """)
-    client.save({"conanfile.py": conanfile})
-    client.save({"myowncmake.cmake": myowncmake},
-                os.path.join(client.current_folder, "cmake"))
+    myowncmake = 'MESSAGE("MYOWNCMAKE FROM hello!")'
+    client.save({"conanfile.py": conanfile, "cmake/myowncmake.cmake": myowncmake})
     client.run("create . hello/0.1@")
 
     conanfile = textwrap.dedent("""
@@ -99,8 +92,7 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type):
         project(MyHello)
         include(myowncmake)
     """)
-    client.save({"conanfile.py": conanfile,
-                 "CMakeLists.txt": consumer}, clean_first=True)
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
     client.run("install . pkg/0.1@ -g CMakeToolchain")
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
@@ -303,4 +295,3 @@ def test_cmaketoolchain_path_find_real_config():
     with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared 'hello::hello'" in client.out
-
