@@ -200,11 +200,8 @@ def test_cmaketoolchain_path_find_program():
                 pass
             def package(self):
                 self.copy(pattern="*", dst="bin")
-            def package_info(self):
-                self.cpp_info.bindirs = [os.path.join("bin", "require_host")]
     """)
-    client.save({"conanfile.py": conanfile,
-                 "require_host/hello": "", "require_host/hello.exe": ""})
+    client.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""})
     client.run("create . hello_host/0.1@")
 
     conanfile = textwrap.dedent("""
@@ -217,11 +214,8 @@ def test_cmaketoolchain_path_find_program():
                 pass
             def package(self):
                 self.copy(pattern="*", dst="bin")
-            def package_info(self):
-                self.cpp_info.bindirs = [os.path.join("bin", "require_build")]
     """)
-    client.save({"conanfile.py": conanfile,
-                 "require_build/hello": "", "require_build/hello.exe": ""},
+    client.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""},
                 clean_first=True)
     client.run("create . hello_build/0.1@")
 
@@ -246,8 +240,8 @@ def test_cmaketoolchain_path_find_program():
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found hello prog" in client.out
-    assert "require_host/hello" not in client.out
-    assert "require_build/hello" in client.out
+    assert "hello_host/0.1/" not in client.out
+    assert "hello_build/0.1/" in client.out
 
 
 @pytest.mark.tool_cmake
