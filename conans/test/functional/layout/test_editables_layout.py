@@ -1,10 +1,14 @@
 import textwrap
 
+import pytest
+import six
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
+@pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_cpp_info_editable():
 
     client = TestClient()
@@ -18,11 +22,13 @@ def test_cpp_info_editable():
         self.cpp.build.includedirs = ["my_include"]
         self.cpp.build.libdirs = ["my_libdir"]
         self.cpp.build.libs = ["hello"]
+        self.cpp.build.objects = ["myobjs/myobject.o"]
         self.cpp.build.frameworkdirs = []  # Empty list is also explicit priority declaration
 
         self.cpp.source.cxxflags = ["my_cxx_flag"]
         self.cpp.source.includedirs = ["my_include_source"]
         self.cpp.source.builddirs = ["my_builddir_source"]
+        self.cpp.source.set_property("cmake_build_modules", ["mypath/mybuildmodule"])
 
         self.cpp.package.libs = ["lib_when_package"]
 
@@ -32,6 +38,9 @@ def test_cpp_info_editable():
 
         # when editable: This one will be discarded because declared in build
         self.cpp_info.libs.append("lib_when_package2")
+
+        self.cpp_info.objects = ["myobject.o"]
+        self.cpp_info.set_property("cmake_build_modules", ["mymodules/mybuildmodule"])
 
         # when editable: This one will be discarded because declared in source
         self.cpp_info.cxxflags.append("my_cxx_flag2")
@@ -64,6 +73,8 @@ def test_cpp_info_editable():
             self.output.warn("**builddirs:{}**".format(info.builddirs))
             self.output.warn("**frameworkdirs:{}**".format(info.frameworkdirs))
             self.output.warn("**libs:{}**".format(info.libs))
+            self.output.warn("**objects:{}**".format(info.objects))
+            self.output.warn("**build_modules:{}**".format(info.get_property("cmake_build_modules")))
             self.output.warn("**cxxflags:{}**".format(info.cxxflags))
             self.output.warn("**cflags:{}**".format(info.cflags))
     """)
@@ -77,6 +88,8 @@ def test_cpp_info_editable():
     assert "**builddirs:['']**" in out
     assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in out
     assert "**libs:['lib_when_package', 'lib_when_package2']**" in out
+    assert "**objects:['myobject.o']**" in out
+    assert "**build_modules:['mymodules/mybuildmodule']**" in out
     assert "**cxxflags:['my_cxx_flag2']**" in out
     assert "**cflags:['my_c_flag']**" in out
 
@@ -92,11 +105,14 @@ def test_cpp_info_editable():
     assert "**libdirs:['my_build/my_libdir']**" in out
     assert "**builddirs:['my_sources/my_builddir_source']**" in out
     assert "**libs:['hello']**" in out
+    assert "**objects:['my_build/myobjs/myobject.o']**" in out
+    assert "**build_modules:['my_sources/mypath/mybuildmodule']**" in out
     assert "**cxxflags:['my_cxx_flag']**" in out
     assert "**cflags:['my_c_flag']**" in out
     assert "**frameworkdirs:[]**" in out
 
 
+@pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_cpp_info_components_editable():
 
     client = TestClient()
@@ -110,6 +126,7 @@ def test_cpp_info_components_editable():
         self.cpp.build.components["foo"].includedirs = ["my_include_foo"]
         self.cpp.build.components["foo"].libdirs = ["my_libdir_foo"]
         self.cpp.build.components["foo"].libs = ["hello_foo"]
+        self.cpp.build.components["foo"].objects = ["myobject.o"]
 
         self.cpp.build.components["var"].includedirs = ["my_include_var"]
         self.cpp.build.components["var"].libdirs = ["my_libdir_var"]
@@ -118,7 +135,8 @@ def test_cpp_info_components_editable():
         self.cpp.source.components["foo"].cxxflags = ["my_cxx_flag_foo"]
         self.cpp.source.components["foo"].includedirs = ["my_include_source_foo"]
         self.cpp.source.components["foo"].builddirs = ["my_builddir_source_foo"]
-
+        self.cpp.source.components["foo"].set_property("cmake_build_modules",
+                                                      ["mymodules/mybuildmodule"])
         self.cpp.source.components["var"].cxxflags = ["my_cxx_flag_var"]
         self.cpp.source.components["var"].includedirs = ["my_include_source_var"]
         self.cpp.source.components["var"].builddirs = ["my_builddir_source_var"]
@@ -132,6 +150,10 @@ def test_cpp_info_components_editable():
 
         # when editable: This one will be discarded because declared in build
         self.cpp_info.components["foo"].libs.append("lib_when_package2_foo")
+
+        self.cpp_info.components["foo"].objects = ["myobject.o"]
+        self.cpp_info.components["foo"].set_property("cmake_build_modules",
+                                                    ["mymodules/mybuildmodule"])
 
         # when editable: This one will be discarded because declared in source
         self.cpp_info.components["foo"].cxxflags.append("my_cxx_flag2_foo")
@@ -174,6 +196,9 @@ def test_cpp_info_components_editable():
             self.output.warn("**FOO libs:{}**".format(info.components["foo"].libs))
             self.output.warn("**FOO cxxflags:{}**".format(info.components["foo"].cxxflags))
             self.output.warn("**FOO cflags:{}**".format(info.components["foo"].cflags))
+            self.output.warn("**FOO objects:{}**".format(info.components["foo"].objects))
+            self.output.warn("**FOO build_modules:{}**".format(
+                                        info.components["foo"].get_property("cmake_build_modules")))
 
             self.output.warn("**VAR includedirs:{}**".format(info.components["var"].includedirs))
             self.output.warn("**VAR libdirs:{}**".format(info.components["var"].libdirs))
