@@ -15,19 +15,6 @@ def test_components_order():
     assert sorted_c == ["c2", "c3", "c4", "c1"]
 
 
-def test_generator_properties_copy():
-    cppinfo = NewCppInfo()
-    cppinfo.set_property("foo", "foo_value", "generator1")
-    cppinfo.set_property("foo", "var_value", "generator2")
-    cppinfo.set_property("foo2", "foo2_value", "generator1")
-
-    copied = cppinfo.copy()
-
-    assert copied.get_property("foo") is None
-    assert copied.get_property("foo", "generator1") == "foo_value"
-    assert copied.get_property("foo", "generator2") == "var_value"
-
-
 def test_component_aggregation():
     cppinfo = NewCppInfo()
 
@@ -84,6 +71,7 @@ def test_component_aggregation():
     cppinfo.components["c2"].requires = ["c1"]
 
     cppinfo._aggregated = None  # Dirty, just to force recomputation
+    cppinfo._sorted_components = None
     ret = cppinfo.aggregated_components()
 
     assert ret.includedirs == ["includedir_c2", "includedir_c1"]

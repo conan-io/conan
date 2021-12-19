@@ -1,7 +1,8 @@
 import textwrap
 
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 def test_cpp_info_editable():
@@ -40,11 +41,13 @@ def test_cpp_info_editable():
 
         # when editable: This one WONT be discarded as has not been declared in the editables layout
         self.cpp_info.cflags.append("my_c_flag")
-
      """
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@")
+    ref = ConanFileReference.loads("hello/1.0")
+    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+    package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
     import os
@@ -68,13 +71,14 @@ def test_cpp_info_editable():
     client2 = TestClient(client.cache_folder)
     client2.save({"conanfile.py": conan_consumer})
     client2.run("create . lib/1.0@")
-    assert "**includedirs:['package_include']**" in client2.out
-    assert "**libdirs:['lib']**" in client2.out
-    assert "**builddirs:['']**" in client2.out
-    assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in client2.out
-    assert "**libs:['lib_when_package', 'lib_when_package2']**" in client2.out
-    assert "**cxxflags:['my_cxx_flag2']**" in client2.out
-    assert "**cflags:['my_c_flag']**" in client2.out
+    out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
+    assert "**includedirs:['package_include']**" in out
+    assert "**libdirs:['lib']**" in out
+    assert "**builddirs:['']**" in out
+    assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in out
+    assert "**libs:['lib_when_package', 'lib_when_package2']**" in out
+    assert "**cxxflags:['my_cxx_flag2']**" in out
+    assert "**cflags:['my_c_flag']**" in out
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
@@ -82,14 +86,15 @@ def test_cpp_info_editable():
 
     # Create the consumer again, now it will use the hello editable
     client2.run("create . lib/1.0@")
-    out = str(client2.out).replace("\\", "/").replace("//", "/")
+    base_folder = client.current_folder.replace("\\", "/") + "/"
+    out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
     assert "**includedirs:['my_sources/my_include_source', 'my_build/my_include']**" in out
     assert "**libdirs:['my_build/my_libdir']**" in out
     assert "**builddirs:['my_sources/my_builddir_source']**" in out
     assert "**libs:['hello']**" in out
     assert "**cxxflags:['my_cxx_flag']**" in out
     assert "**cflags:['my_c_flag']**" in out
-    assert "**frameworkdirs:[]**" in client2.out
+    assert "**frameworkdirs:[]**" in out
 
 
 def test_cpp_info_components_editable():
@@ -149,6 +154,9 @@ def test_cpp_info_components_editable():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@")
+    ref = ConanFileReference.loads("hello/1.0")
+    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+    package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
     import os
@@ -178,19 +186,20 @@ def test_cpp_info_components_editable():
     client2 = TestClient(client.cache_folder)
     client2.save({"conanfile.py": conan_consumer})
     client2.run("create . lib/1.0@")
-    assert "**FOO includedirs:['package_include_foo']**" in client2.out
-    assert "**FOO libdirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**FOO builddirs:[]**" in client2.out # The components don't have default dirs
-    assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in client2.out
-    assert "**FOO cxxflags:['my_cxx_flag2_foo']**" in client2.out
-    assert "**FOO cflags:['my_c_flag_foo']**" in client2.out
+    out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
+    assert "**FOO includedirs:['package_include_foo']**" in out
+    assert "**FOO libdirs:[]**" in out  # The components don't have default dirs
+    assert "**FOO builddirs:[]**" in out  # The components don't have default dirs
+    assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in out
+    assert "**FOO cxxflags:['my_cxx_flag2_foo']**" in out
+    assert "**FOO cflags:['my_c_flag_foo']**" in out
 
-    assert "**VAR includedirs:['package_include_var']**" in client2.out
-    assert "**VAR libdirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**VAR builddirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**VAR libs:['lib_when_package_var', 'lib_when_package2_var']**" in client2.out
-    assert "**VAR cxxflags:['my_cxx_flag2_var']**" in client2.out
-    assert "**VAR cflags:['my_c_flag_var']**" in client2.out
+    assert "**VAR includedirs:['package_include_var']**" in out
+    assert "**VAR libdirs:[]**" in out  # The components don't have default dirs
+    assert "**VAR builddirs:[]**" in out  # The components don't have default dirs
+    assert "**VAR libs:['lib_when_package_var', 'lib_when_package2_var']**" in out
+    assert "**VAR cxxflags:['my_cxx_flag2_var']**" in out
+    assert "**VAR cflags:['my_c_flag_var']**" in out
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
@@ -198,7 +207,8 @@ def test_cpp_info_components_editable():
 
     # Create the consumer again, now it will use the hello editable
     client2.run("create . lib/1.0@")
-    out = str(client2.out).replace("\\", "/").replace("//", "/")
+    base_folder = client.current_folder.replace("\\", "/") + "/"
+    out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
     assert "**FOO includedirs:['my_sources/my_include_source_foo', " \
            "'my_build/my_include_foo']**" in out
     assert "**FOO libdirs:['my_build/my_libdir_foo']**" in out
@@ -214,4 +224,3 @@ def test_cpp_info_components_editable():
     assert "**VAR libs:['hello_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
-
