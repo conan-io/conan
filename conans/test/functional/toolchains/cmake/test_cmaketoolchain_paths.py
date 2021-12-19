@@ -35,8 +35,6 @@ def test_cmaketoolchain_path_find_package(package, find_package):
     client.run("create . {}/0.1@".format(package))
 
     consumer = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello CXX)
         find_package({package} REQUIRED)
@@ -83,7 +81,7 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type):
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        class Pkg(ConanFile):
+        class PkgConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             {require_type} = "hello/0.1"
     """.format(require_type=require_type))
@@ -162,7 +160,7 @@ def test_cmaketoolchain_path_find_library():
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        class TestConan(ConanFile):
+        class PkgConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello_host/0.1"
             build_requires = "hello_build/0.1"
@@ -192,7 +190,6 @@ def test_cmaketoolchain_path_find_program():
     client = TestClient()
 
     conanfile = textwrap.dedent("""
-        import os
         from conans import ConanFile
         class TestConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -208,7 +205,7 @@ def test_cmaketoolchain_path_find_program():
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        class TestConan(ConanFile):
+        class PkgConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello_host/0.1"
             build_requires = "hello_build/0.1"
