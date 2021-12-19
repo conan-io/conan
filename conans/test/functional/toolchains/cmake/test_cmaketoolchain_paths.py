@@ -246,8 +246,8 @@ def test_cmaketoolchain_path_find_program():
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found hello prog" in client.out
-    assert os.path.join("require_host", "hello") not in client.out
-    assert os.path.join("require_build", "hello") in client.out
+    assert "require_host/hello" not in client.out
+    assert "require_build/hello" in client.out
 
 
 @pytest.mark.tool_cmake
