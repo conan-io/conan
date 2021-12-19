@@ -165,28 +165,37 @@ def test_cmaketoolchain_path_find_library():
                 self.copy(pattern="*", dst="lib")
     """)
     client.save({"conanfile.py": conanfile, "libhello.a": "", "hello.lib": ""})
-    client.run("create . hello/0.1@")
+    client.run("create . hello_host/0.1@")
+    client.run("create . hello_build/0.1@")
 
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class TestConan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            requires = "hello_host/0.1"
+            build_requires = "hello_build/0.1"
+    """)
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(MyHello)
         find_library(HELLOLIB hello)
         if(HELLOLIB)
-            message("Found hello lib")
+            message("Found hello lib: ${HELLOLIB}")
         endif()
     """)
-    client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install hello/0.1@ -g CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
+    client.run("install . pkg/0.1@ -g CMakeToolchain")
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found hello lib" in client.out
+    assert "hello_host/0.1/" in client.out
+    assert "hello_build/0.1/" not in client.out
 
 
 @pytest.mark.tool_cmake
 def test_cmaketoolchain_path_find_program():
     """Test that executables in bindirs of build_requires can be found with
     find_program() in consumer CMakeLists.
-    Moreover, they must be found before any other executable of requires.
     """
     client = TestClient()
 
@@ -203,20 +212,6 @@ def test_cmaketoolchain_path_find_program():
     """)
     client.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""})
     client.run("create . hello_host/0.1@")
-
-    conanfile = textwrap.dedent("""
-        import os
-        from conans import ConanFile
-        class TestConan(ConanFile):
-            settings = "os", "arch", "compiler", "build_type"
-            exports = "*"
-            def layout(self):
-                pass
-            def package(self):
-                self.copy(pattern="*", dst="bin")
-    """)
-    client.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""},
-                clean_first=True)
     client.run("create . hello_build/0.1@")
 
     conanfile = textwrap.dedent("""
@@ -234,8 +229,7 @@ def test_cmaketoolchain_path_find_program():
             message("Found hello prog: ${HELLOPROG}")
         endif()
     """)
-    client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer},
-                clean_first=True)
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
     client.run("install . pkg/0.1@ -g CMakeToolchain")
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
