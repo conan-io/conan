@@ -18,12 +18,6 @@ def _get_pc_file_template():
         {%- for shared_flag in (cpp_info.sharedlinkflags + cpp_info.exelinkflags) -%}
         {{  shared_flag + " " }}
         {%- endfor -%}
-        {%- for _ in libdirs -%}
-        {%- set flag = gnudeps_flags._rpath_flags(["${libdir%s}" % loop.index]) -%}
-        {%- if flag|length -%}
-        {{ flag[0] + " " }}
-        {%- endif -%}
-        {%- endfor -%}
         {%- for framework in (gnudeps_flags.frameworks + gnudeps_flags.framework_paths) -%}
         {{ framework + " " }}
         {%- endfor -%}

@@ -91,8 +91,6 @@ def test_foo():
                                  '-F /path/to/folder_dep2/one/framework/path/dep2 ' \
                                  '-L/path/to/folder_dep1/one/lib/path/dep1 ' \
                                  '-L/path/to/folder_dep2/one/lib/path/dep2 ' \
-                                 '-Wl,-rpath,"/path/to/folder_dep1/one/lib/path/dep1" ' \
-                                 '-Wl,-rpath,"/path/to/folder_dep2/one/lib/path/dep2" ' \
                                  '--sysroot=/path/to/folder/dep1 OtherSuperStuff'
 
         assert env["CXXFLAGS"] == 'dep1_a_cxx_flag dep2_a_cxx_flag --sysroot=/path/to/folder/dep1'
