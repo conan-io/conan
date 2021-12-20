@@ -142,9 +142,6 @@ class ConanFile(object):
     # Run in windows bash
     win_bash = None
 
-    # For test_package, reference being tested
-    tested_reference_str = None
-
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
