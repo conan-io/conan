@@ -247,29 +247,6 @@ def from_old_cppinfo(old):
     ret = NewCppInfo()
     ret.merge(old)
     ret.clear_none()
-
-    def _copy_build_modules_to_property(origin, dest):
-        current_value = dest.get_property("cmake_build_modules") or []
-        if isinstance(origin.build_modules, list):
-            current_value.extend([v for v in origin.build_modules if v not in current_value])
-        else:
-            multi = origin.build_modules.get("cmake_find_package_multi")
-            no_multi = origin.build_modules.get("cmake_find_package")
-            if multi:
-                current_value.extend([v for v in multi if v not in current_value])
-            if no_multi:
-                current_value.extend([v for v in no_multi if v not in current_value])
-        dest.set_property("cmake_build_modules", current_value, path=True)
-
-    # Copy the build modules as the new recommended property
-    if old.build_modules:
-        _copy_build_modules_to_property(old, ret)
-
-    for cname, c in old.components.items():
-        if c.build_modules:
-            # The build modules properties are applied to the root cppinfo, not per component
-            # because it is something global that makes no sense to be set at a component
-            _copy_build_modules_to_property(c, ret)
     return ret
 
 

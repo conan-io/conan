@@ -126,7 +126,7 @@ def test_cpp_info_components_editable():
         self.cpp.build.components["foo"].includedirs = ["my_include_foo"]
         self.cpp.build.components["foo"].libdirs = ["my_libdir_foo"]
         self.cpp.build.components["foo"].libs = ["hello_foo"]
-        self.cpp.build.components["foo"].objects = ["myobject.o"]
+        self.cpp.build.components["foo"].objects = ["myobjs/myobject.o"]
 
         self.cpp.build.components["var"].includedirs = ["my_include_var"]
         self.cpp.build.components["var"].libdirs = ["my_libdir_var"]
@@ -136,7 +136,7 @@ def test_cpp_info_components_editable():
         self.cpp.source.components["foo"].includedirs = ["my_include_source_foo"]
         self.cpp.source.components["foo"].builddirs = ["my_builddir_source_foo"]
         self.cpp.source.components["foo"].set_property("cmake_build_modules",
-                                                      ["mymodules/mybuildmodule"])
+                                                      ["mypath/mybuildmodule"], path=True)
         self.cpp.source.components["var"].cxxflags = ["my_cxx_flag_var"]
         self.cpp.source.components["var"].includedirs = ["my_include_source_var"]
         self.cpp.source.components["var"].builddirs = ["my_builddir_source_var"]
@@ -153,7 +153,7 @@ def test_cpp_info_components_editable():
 
         self.cpp_info.components["foo"].objects = ["myobject.o"]
         self.cpp_info.components["foo"].set_property("cmake_build_modules",
-                                                    ["mymodules/mybuildmodule"])
+                                                    ["mymodules/mybuildmodule"], path=True)
 
         # when editable: This one will be discarded because declared in source
         self.cpp_info.components["foo"].cxxflags.append("my_cxx_flag2_foo")
@@ -216,6 +216,8 @@ def test_cpp_info_components_editable():
     assert "**FOO libdirs:[]**" in out  # The components don't have default dirs
     assert "**FOO builddirs:[]**" in out  # The components don't have default dirs
     assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in out
+    assert "**FOO objects:['myobject.o']**" in out
+    assert "**FOO build_modules:['mymodules/mybuildmodule']**" in out
     assert "**FOO cxxflags:['my_cxx_flag2_foo']**" in out
     assert "**FOO cflags:['my_c_flag_foo']**" in out
 
@@ -239,6 +241,8 @@ def test_cpp_info_components_editable():
     assert "**FOO libdirs:['my_build/my_libdir_foo']**" in out
     assert "**FOO builddirs:['my_sources/my_builddir_source_foo']**" in out
     assert "**FOO libs:['hello_foo']**" in out
+    assert "**FOO objects:['my_build/myobjs/myobject.o']**" in out
+    assert "**FOO build_modules:['my_sources/mypath/mybuildmodule']**" in out
     assert "**FOO cxxflags:['my_cxx_flag_foo']**" in out
     assert "**FOO cflags:['my_c_flag_foo']**" in out
 
