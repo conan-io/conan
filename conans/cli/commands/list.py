@@ -10,7 +10,6 @@ from conans.errors import ConanException, InvalidNameException, PackageNotFoundE
     NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.util.dates import from_timestamp_to_iso8601
 
 remote_color = Color.BRIGHT_BLUE
 recipe_color = Color.BRIGHT_WHITE
@@ -55,8 +54,7 @@ def list_recipe_revisions_cli_formatter(results):
             cli_out_write(f"There are no matching recipe references", indentation=2)
         else:
             for ref in result.elements:
-                date = from_timestamp_to_iso8601(ref.timestamp)
-                cli_out_write(f"{ref.repr_notime()} ({date})", fg=recipe_color, indentation=2)
+                cli_out_write(ref.repr_humantime(), fg=recipe_color, indentation=2)
 
 
 def list_package_revisions_cli_formatter(results):
@@ -69,8 +67,7 @@ def list_package_revisions_cli_formatter(results):
             cli_out_write(f"There are no matching package references", indentation=2)
         else:
             for pref in result.elements:
-                date = from_timestamp_to_iso8601(pref.timestamp)
-                cli_out_write(f"{pref.repr_notime()} ({date})", fg=recipe_color, indentation=2)
+                cli_out_write(pref.repr_humantime(), fg=recipe_color, indentation=2)
 
 
 def list_package_ids_cli_formatter(results: List[CommandResult]):
