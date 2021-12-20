@@ -1,4 +1,3 @@
-from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.model.build_info import CppInfo
@@ -8,7 +7,6 @@ class AutotoolsDeps:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._environment = None
-        check_using_build_profile(self._conanfile)
 
     def _get_cpp_info(self):
         ret = CppInfo()

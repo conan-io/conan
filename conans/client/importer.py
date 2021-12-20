@@ -182,6 +182,6 @@ class _FileImporter(object):
                             src_dirs += src_dir
 
             for src_dir in src_dirs:
-                files = file_copier(pattern, src=src_dir, links=True, ignore_case=ignore_case,
+                files = file_copier(pattern, src=src_dir, ignore_case=ignore_case,
                                     excludes=excludes, keep_path=keep_path)
                 self.copied_files.update(files)

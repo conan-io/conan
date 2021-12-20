@@ -1,12 +1,11 @@
-from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
-from conan.tools.cross_building import cross_building, get_cross_building_settings
+from conan.tools import args_to_string
+from conan.tools.build.cross_building import cross_building
 from conan.tools.env import Environment
 from conan.tools.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conans.tools import args_to_string
 
 
 class AutotoolsToolchain:
@@ -48,7 +47,10 @@ class AutotoolsToolchain:
 
         self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
         if cross_building(self._conanfile):
-            os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
+            os_host = conanfile.settings.get_safe("os")
+            arch_host = conanfile.settings.get_safe("arch")
+            os_build = conanfile.settings_build.get_safe('os')
+            arch_build = conanfile.settings_build.get_safe('arch')
             compiler = self._conanfile.settings.get_safe("compiler")
             self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
@@ -61,8 +63,6 @@ class AutotoolsToolchain:
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
                 self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
-
-        check_using_build_profile(self._conanfile)
 
     def _cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
