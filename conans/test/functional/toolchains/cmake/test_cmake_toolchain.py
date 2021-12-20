@@ -117,8 +117,7 @@ def test_cmake_toolchain_without_build_type():
     assert "CMAKE_BUILD_TYPE" not in toolchain
 
 
-@pytest.mark.parametrize("with_context", ["False", "True"])
-def test_cmake_toolchain_multiple_user_toolchain(with_context):
+def test_cmake_toolchain_multiple_user_toolchain():
     """ A consumer consuming two packages that declare:
             self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"]
         The consumer wants to use apply both toolchains in the CMakeToolchain.
@@ -161,20 +160,17 @@ def test_cmake_toolchain_multiple_user_toolchain(with_context):
                 for dep in self.dependencies.direct_build.values():
                     ut = dep.conf_info["tools.cmake.cmaketoolchain:user_toolchain"]
                     if ut:
-                        user_toolchains.append(ut)
+                        user_toolchains.append(ut.replace('\\\\', '/'))
 
                 # Modify the context of the user_toolchain block
                 t = CMakeToolchain(self)
-                if {}:
-                    t.blocks["user_toolchain"].values["paths"] = user_toolchains
-                else:
-                    t.blocks["user_toolchain"].user_toolchains = user_toolchains
+                t.blocks["user_toolchain"].values["paths"] = user_toolchains
                 t.generate()
 
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
-        """).format(with_context)
+        """)
 
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": gen_cmakelists()}, clean_first=True)

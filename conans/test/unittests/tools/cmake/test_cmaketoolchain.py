@@ -134,8 +134,7 @@ def test_extend_block(conanfile):
 
 def test_user_toolchain(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.blocks["user_toolchain"].user_toolchains = ["myowntoolchain.cmake"]
-    # toolchain.blocks["user_toolchain"].values["paths"] = ["myowntoolchain.cmake"]
+    toolchain.blocks["user_toolchain"].values["paths"] = ["myowntoolchain.cmake"]
     content = toolchain.content
     assert 'include("myowntoolchain.cmake")' in content
 

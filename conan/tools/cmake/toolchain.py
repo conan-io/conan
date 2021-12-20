@@ -463,16 +463,10 @@ class UserToolchain(Block):
         {% endfor %}
         """)
 
-    user_toolchains = None
-
     def context(self):
-        # Priority "self.user_toolchains", otherwise it will take a single conf value if set
-        toolchains = self.user_toolchains
-        if not toolchains:
-            # This is global [conf] injection of extra toolchain files
-            user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
-            toolchains = [user_toolchain.replace("\\", "/")] if user_toolchain else []
-
+        # This is global [conf] injection of extra toolchain files
+        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
+        toolchains = [user_toolchain.replace("\\", "/")] if user_toolchain else []
         return {"paths": toolchains if toolchains else []}
 
 
