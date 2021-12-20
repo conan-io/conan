@@ -458,18 +458,22 @@ class FindConfigFiles(Block):
 
 class UserToolchain(Block):
     template = textwrap.dedent("""
-        {% for user_toolchain in toolchain_paths %}
+        {% for user_toolchain in paths %}
         include("{{user_toolchain}}")
         {% endfor %}
         """)
 
-    def context(self):
-        # This is global [conf] injection of extra toolchain files
-        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
-        if user_toolchain:
-            user_toolchain = user_toolchain.replace("\\", "/")
+    user_toolchains = None
 
-        return {"toolchain_paths": [user_toolchain] if user_toolchain else []}
+    def context(self):
+        # Priority "self.user_toolchains", otherwise it will take a single conf value if set
+        toolchains = self.user_toolchains
+        if not toolchains:
+            # This is global [conf] injection of extra toolchain files
+            user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
+            toolchains = [user_toolchain.replace("\\", "/")] if user_toolchain else []
+
+        return {"paths": toolchains if toolchains else []}
 
 
 class CMakeFlagsInitBlock(Block):

@@ -157,7 +157,8 @@ def test_cmake_toolchain_multiple_user_toolchain():
 
                 # Modify the context of the user_toolchain block
                 t = CMakeToolchain(self)
-                t.blocks["user_toolchain"].values["toolchain_paths"] = user_toolchains
+                # t.blocks["user_toolchain"].values["paths"] = user_toolchains
+                t.blocks["user_toolchain"].user_toolchains = user_toolchains
                 t.generate()
 
             def build(self):
