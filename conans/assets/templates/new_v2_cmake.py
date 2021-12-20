@@ -1,4 +1,4 @@
-conanfile_sources_v2 = """from conans import ConanFile
+conanfile_sources_v2 = """from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake
 from conan.tools.layout import cmake_layout
 
@@ -52,6 +52,7 @@ test_conanfile_v2 = """import os
 from conans import ConanFile, tools
 from conan.tools.cmake import CMake
 from conan.tools.layout import cmake_layout
+from conan.tools.build import cross_building
 
 
 class {package_name}TestConan(ConanFile):
@@ -67,7 +68,7 @@ class {package_name}TestConan(ConanFile):
         cmake_layout(self)
 
     def test(self):
-        if not tools.cross_building(self):
+        if not cross_building(self):
             cmd = os.path.join(self.cpp.build.bindirs[0], "example")
             self.run(cmd, env="conanrun")
 """
@@ -275,14 +276,15 @@ install(TARGETS {name} DESTINATION "."
 """
 
 test_conanfile_exe_v2 = """import os
-from conans import ConanFile, tools
+from conan import ConanFile
+from conan.tools.build import cross_building
 
 
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def test(self):
-        if not tools.cross_building(self):
+        if not cross_building(self):
             self.run("{name}", env="conanrun")
 """
 

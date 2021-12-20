@@ -1,7 +1,7 @@
 import os
 
 from conan.tools.build import build_jobs
-from conan.tools.cross_building import cross_building
+from conan.tools.build.cross_building import cross_building
 from conan.tools.meson import MesonToolchain
 
 
