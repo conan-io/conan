@@ -5,6 +5,7 @@ from conans.model.version import Version
 def architecture_flag(settings):
     """
     returns flags specific to the target architecture and compiler
+    Used by CMakeToolchain and AutotoolsToolchain
     """
     compiler = settings.get_safe("compiler")
     compiler_base = settings.get_safe("compiler.base")
@@ -60,6 +61,7 @@ def build_type_flags(settings):
     """
     returns flags specific to the build type (Debug, Release, etc.)
     (-s, -g, /Zi, etc.)
+    Used only by AutotoolsToolchain
     """
     compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
     build_type = settings.get_safe("build_type")

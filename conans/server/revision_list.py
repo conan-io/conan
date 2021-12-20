@@ -1,7 +1,7 @@
 import json
 from collections import namedtuple
 
-from conans.util.dates import revision_timestamp_now, from_iso8601_to_timestamp
+from conans.util.dates import revision_timestamp_now
 
 _RevisionEntry = namedtuple("RevisionEntry", "revision time")
 
@@ -14,18 +14,9 @@ class RevisionList(object):
     @staticmethod
     def loads(contents):
         ret = RevisionList()
-        ret._data = [_RevisionEntry(e["revision"], RevisionList._fix_timestamp(e["time"]))
+        ret._data = [_RevisionEntry(e["revision"], e["time"])
                      for e in json.loads(contents)["revisions"]]
         return ret
-
-    @staticmethod
-    def _fix_timestamp(the_time):
-        """In Conan 1.X the timestamp might be saved as ISO. But Conan rferences use timestamp
-        """
-        if isinstance(the_time, (float, int)):
-            return the_time
-        else:
-            return from_iso8601_to_timestamp(the_time)
 
     def dumps(self):
         return json.dumps({"revisions": [{"revision": e.revision,
