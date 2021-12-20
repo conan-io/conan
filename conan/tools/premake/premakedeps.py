@@ -1,24 +1,39 @@
-from conans.util.files import save
 from conans.model.new_build_info import NewCppInfo
-from conans.paths import BUILD_INFO_PREMAKE
+from conans.util.files import save
 
-class PremakeTemplate(object):
+PREMAKE_FILE = "conandeps.premake.lua"
+
+
+class _PremakeTemplate(object):
     def __init__(self, deps_cpp_info):
         self.includedirs = ",\n".join('"%s"' % p.replace("\\", "/")
-                                    for p in deps_cpp_info.includedirs) if deps_cpp_info.includedirs else ""
+                                      for p in
+                                      deps_cpp_info.includedirs) if deps_cpp_info.includedirs else ""
         self.libdirs = ",\n".join('"%s"' % p.replace("\\", "/")
-                                    for p in deps_cpp_info.libdirs) if deps_cpp_info.libdirs else ""
+                                  for p in deps_cpp_info.libdirs) if deps_cpp_info.libdirs else ""
         self.bindirs = ",\n".join('"%s"' % p.replace("\\", "/")
-                                    for p in deps_cpp_info.bindirs) if deps_cpp_info.bindirs else ""
-        self.libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.libs) if deps_cpp_info.libs else ""
-        self.system_libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.system_libs) if deps_cpp_info.system_libs else ""
-        self.defines = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.defines) if deps_cpp_info.defines else ""
-        self.cxxflags = ", ".join('"%s"' % p for p in deps_cpp_info.cxxflags) if deps_cpp_info.cxxflags else ""
-        self.cflags = ", ".join('"%s"' % p for p in deps_cpp_info.cflags) if deps_cpp_info.cflags else ""
-        self.sharedlinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.sharedlinkflags) if deps_cpp_info.sharedlinkflags else ""
-        self.exelinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.exelinkflags) if deps_cpp_info.exelinkflags else ""
-        self.frameworks = ", ".join('"%s.framework"' % p.replace('"', '\\"') for p in deps_cpp_info.frameworks) if deps_cpp_info.frameworks else ""
-        self.sysroot = "%s" % deps_cpp_info.sysroot.replace("\\", "/") if deps_cpp_info.sysroot else ""
+                                  for p in deps_cpp_info.bindirs) if deps_cpp_info.bindirs else ""
+        self.libs = ", ".join(
+            '"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.libs) if deps_cpp_info.libs else ""
+        self.system_libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in
+                                     deps_cpp_info.system_libs) if deps_cpp_info.system_libs else ""
+        self.defines = ", ".join('"%s"' % p.replace('"', '\\"') for p in
+                                 deps_cpp_info.defines) if deps_cpp_info.defines else ""
+        self.cxxflags = ", ".join(
+            '"%s"' % p for p in deps_cpp_info.cxxflags) if deps_cpp_info.cxxflags else ""
+        self.cflags = ", ".join(
+            '"%s"' % p for p in deps_cpp_info.cflags) if deps_cpp_info.cflags else ""
+        self.sharedlinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in
+                                         deps_cpp_info.sharedlinkflags) \
+            if deps_cpp_info.sharedlinkflags else ""
+        self.exelinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in
+                                      deps_cpp_info.exelinkflags) \
+            if deps_cpp_info.exelinkflags else ""
+        self.frameworks = ", ".join('"%s.framework"' % p.replace('"', '\\"') for p in
+                                    deps_cpp_info.frameworks) if deps_cpp_info.frameworks else ""
+        self.sysroot = "%s" % deps_cpp_info.sysroot.replace("\\",
+                                                            "/") if deps_cpp_info.sysroot else ""
+
 
 class PremakeDeps(object):
 
@@ -43,7 +58,7 @@ class PremakeDeps(object):
 
     @property
     def content(self):
-        ret = {} # filename -> file content
+        ret = {}  # filename -> file content
 
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
@@ -61,13 +76,8 @@ class PremakeDeps(object):
                     'conan_frameworks{dep} = {{{deps.frameworks}}}\n')
 
         sections = ["#!lua"]
-        sections.extend(
-                ['conan_build_type = "{0}"'.format(str(self._conanfile.settings.build_type)),
-                'conan_arch = "{0}"'.format(str(self._conanfile.settings.get_safe("arch"))),
-                ""]
-        )
 
-        deps = PremakeTemplate(self._get_cpp_info())
+        deps = _PremakeTemplate(self._get_cpp_info())
         all_flags = template.format(dep="", deps=deps)
         sections.append(all_flags)
         sections.append(
@@ -82,23 +92,17 @@ class PremakeDeps(object):
             "    defines{conan_defines}\n"
             "    bindirs{conan_bindirs}\n"
             "end\n")
-        ret[BUILD_INFO_PREMAKE] = "\n".join(sections)
+        ret[PREMAKE_FILE] = "\n".join(sections)
 
         template_deps = template + 'conan_sysroot{dep} = "{deps.sysroot}"\n'
 
         # Iterate all the transitive requires
         for require, dep in list(host_req.items()) + list(test_req.items()):
-            deps = PremakeTemplate(dep.cpp_info)
+            # FIXME: Components are not being aggregated
+            # FIXME: It is not clear the usage of individual dependencies
+            deps = _PremakeTemplate(dep.cpp_info)
             dep_name = dep.ref.name.replace("-", "_")
             dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
-            sections.clear()
-            sections = ["#!lua"]
-            sections.extend(
-                    ['conan_build_type = "{0}"'.format(str(self._conanfile.settings.build_type)),
-                    'conan_arch = "{0}"'.format(str(self._conanfile.settings.get_safe("arch"))),
-                    ""]
-            )
-            sections.append(dep_flags)
-            ret[dep.ref.name + '.lua'] = "\n".join(sections)
+            ret[dep.ref.name + '.lua'] = "\n".join(["#!lua", dep_flags])
 
         return ret
