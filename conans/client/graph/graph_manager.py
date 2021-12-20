@@ -100,7 +100,7 @@ class GraphManager(object):
             if test:
                 conanfile.display_name = "%s (test package)" % str(test)
                 conanfile.output.scope = conanfile.display_name
-                conanfile.testing_reference = str(test)
+                conanfile.tested_reference_str = repr(test)
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
@@ -248,7 +248,7 @@ class GraphManager(object):
                                                )
         conanfile.display_name = "%s (test package)" % str(test)
         conanfile.output.scope = conanfile.display_name
-        conanfile.testing_reference = str(create_reference)
+        conanfile.tested_reference_str = repr(create_reference)
 
         # Injection of the tested reference
         test_type = getattr(conanfile, "test_type", ("requires", ))

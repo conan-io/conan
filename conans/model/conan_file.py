@@ -143,7 +143,7 @@ class ConanFile(object):
     win_bash = None
 
     # For test_package, reference being tested
-    testing_reference = None
+    tested_reference_str = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
