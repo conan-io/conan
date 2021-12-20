@@ -35,7 +35,7 @@ def test_component_aggregation():
     cppinfo.components["c2"].defines = ["defines_c2"]
     cppinfo.components["c2"].set_property("my_foo", ["bar", "bar2"])
     cppinfo.components["c2"].set_property("cmake_build_modules", ["build_module_c2",
-                                                                  "build_module_c22"])
+                                                                  "build_module_c22"], path=True)
 
     cppinfo.components["c1"].requires = ["c2", "LIB_A::C1"]
     cppinfo.components["c1"].includedirs = ["includedir_c1"]
@@ -203,7 +203,7 @@ def test_fill_old_cppinfo():
     build = NewCppInfo()
     build.libdirs = ["build_libdir"]
     build.frameworkdirs = []  # An empty list is an explicit delaration with priority too
-    build.set_property("cmake_build_modules", ["my_cmake.cmake"])
+    build.set_property("cmake_build_modules", ["my_cmake.cmake"], path=True)
     build.builddirs = ["my_build"]
 
     old_cpp = CppInfo("lib/1.0", "/root/folder")
