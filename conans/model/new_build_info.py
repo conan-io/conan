@@ -47,21 +47,21 @@ class _NewComponent(object):
             return []
         return [r for r in self.requires if "::" not in r]
 
-    def set_property(self, property_name, value, generator=None):
+    def set_property(self, property_name, value, generator=None, path=False):
         if self._generator_properties is None:
             self._generator_properties = {}
-        self._generator_properties.setdefault(generator, {})[property_name] = value
+        self._generator_properties.setdefault(generator, {})[property_name] = (value, path)
 
     def get_property(self, property_name, generator=None):
         if self._generator_properties is None:
             return None
         if generator:
             try:
-                return self._generator_properties[generator][property_name]
+                return self._generator_properties[generator][property_name][0]
             except KeyError:
                 pass
         try:  # generator = None is the dict for all generators
-            return self._generator_properties[None][property_name]
+            return self._generator_properties[None][property_name][0]
         except KeyError:
             pass
 
@@ -151,11 +151,13 @@ class NewCppInfo(object):
                 origin = getattr(component, varname)
                 if origin is not None:
                     origin[:] = [os.path.join(folder, el) for el in origin]
-        if self._generator_properties is not None:
-            for properties in self._generator_properties.values():
-                for prop_name, value in properties.items():
-                    if prop_name == "cmake_build_modules":  # FIXME: Hardcoded, avoid
-                        value[:] = [os.path.join(folder, v) for v in value]
+            if component._generator_properties is not None:
+                for properties in component._generator_properties.values():
+                    for prop_name, value in properties.items():
+                        print("PRRRRRRRR", prop_name, value)
+                        values, path = value
+                        if path:
+                            values[:] = [os.path.join(folder, v) for v in values]
         self._defined_base_folder = True
 
     def get_sorted_components(self):
@@ -257,7 +259,7 @@ def from_old_cppinfo(old):
                 current_value.extend([v for v in multi if v not in current_value])
             if no_multi:
                 current_value.extend([v for v in no_multi if v not in current_value])
-        dest.set_property("cmake_build_modules", current_value)
+        dest.set_property("cmake_build_modules", current_value, path=True)
 
     # Copy the build modules as the new recommended property
     if old.build_modules:
