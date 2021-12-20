@@ -79,7 +79,7 @@ def test_properties_dont_affect_legacy_cmake_with_components(setup_client):
                 self.cpp_info.set_property("cmake_file_name", "AnotherFileName")
                 self.cpp_info.components["mycomponent"].set_property("cmake_target_name", "mycomponent-name-but-different")
                 self.cpp_info.components["mycomponent"].set_property("cmake_build_modules", [os.path.join("lib", "non-existing.cmake")])
-                self.cpp_info.components["mycomponent"].set_property("custom_name", "mycomponent-name", "custom_generator")
+                self.cpp_info.components["mycomponent"].set_property("custom_name", "mycomponent-name")
 
                 self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
                 self.cpp_info.filenames["cmake_find_package"] = "MyFileName"
@@ -145,7 +145,7 @@ def test_properties_dont_affect_legacy_cmake_without_components(setup_client):
                 self.cpp_info.set_property("cmake_target_name", "other-mypkg-name")
                 self.cpp_info.set_property("cmake_build_modules",[os.path.join("lib",
                                                                  "other-mypkg_bm.cmake")])
-                self.cpp_info.set_property("custom_name", "mypkg-name", "custom_generator")
+                self.cpp_info.set_property("custom_name", "mypkg-name")
 
                 self.cpp_info.filenames["cmake_find_package"] = "MyFileName"
                 self.cpp_info.filenames["cmake_find_package_multi"] = "MyFileName"
@@ -208,14 +208,14 @@ def test_properties_dont_affect_legacy_cmake_specific_generators(setup_client):
                 self.copy("mypkg_bm.cmake", dst="lib")
                 self.copy("mypkg_anootherbm.cmake", dst="lib")
             def package_info(self):
-                self.cpp_info.set_property("cmake_file_name", "OtherMyFileName", "cmake_find_package")
-                self.cpp_info.set_property("cmake_file_name", "OtherMyFileNameMulti", "cmake_find_package_multi")
-                self.cpp_info.set_property("cmake_target_name", "other-mypkg-name", "cmake_find_package")
-                self.cpp_info.set_property("cmake_target_name", "other-mypkg-name-multi", "cmake_find_package_multi")
+                self.cpp_info.set_property("cmake_file_name", "OtherMyFileName")
+                self.cpp_info.set_property("cmake_file_name", "OtherMyFileNameMulti")
+                self.cpp_info.set_property("cmake_target_name", "other-mypkg-name")
+                self.cpp_info.set_property("cmake_target_name", "other-mypkg-name-multi")
                 self.cpp_info.set_property("cmake_build_modules",[os.path.join("lib",
-                                                                 "mypkg_bm.cmake")], "other-cmake_find_package")
+                                                                 "mypkg_bm.cmake")],)
                 self.cpp_info.set_property("cmake_build_modules",[os.path.join("lib",
-                                                                 "mypkg_anootherbm.cmake")], "other-cmake_find_package_multi")
+                                                                 "mypkg_anootherbm.cmake")])
 
                 self.cpp_info.filenames["cmake_find_package"] = "MyFileName"
                 self.cpp_info.filenames["cmake_find_package_multi"] = "MyFileNameMulti"
