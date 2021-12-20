@@ -26,14 +26,13 @@ from conans.client.source import config_source_local
 from conans.errors import (ConanException, RecipeNotFoundException,
                            NotFoundException)
 from conans.model.graph_lock import LOCKFILE, Lockfile
-from conans.model.manifest import discarded_file
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_recipes
-from conans.util.files import mkdir, save_files, load, save
+from conans.util.files import mkdir, save_files, load, save, discarded_file
 
 
 class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env", "conf"])):

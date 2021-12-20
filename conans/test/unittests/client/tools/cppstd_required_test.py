@@ -77,11 +77,10 @@ class CheckMinCppStdTests(unittest.TestCase):
         """
         conanfile = self._create_conanfile("gcc", "9", "Linux", None, "libstdc++")
         with mock.patch("platform.system", mock.MagicMock(return_value="Linux")):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                with mock.patch("conans.client.tools.settings.cppstd_default", return_value="17"):
-                    with self.assertRaises(ConanException) as raises:
-                        check_min_cppstd(conanfile, "17", True)
-                    self.assertEqual("The cppstd GNU extension is required", str(raises.exception))
+            with mock.patch("conans.client.tools.settings.cppstd_default", return_value="17"):
+                with self.assertRaises(ConanException) as raises:
+                    check_min_cppstd(conanfile, "17", True)
+                self.assertEqual("The cppstd GNU extension is required", str(raises.exception))
 
     def test_no_compiler_declared(self):
         conanfile = self._create_conanfile(None, None, "Linux", None, "libstdc++")
@@ -149,9 +148,8 @@ class ValidMinCppstdTests(unittest.TestCase):
         """
         conanfile = self._create_conanfile("gcc", "9", "Linux", None, "libstdc++")
         with mock.patch("platform.system", mock.MagicMock(return_value="Linux")):
-            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
-                with mock.patch("conans.client.tools.settings.cppstd_default", return_value="gnu1z"):
-                    self.assertFalse(valid_min_cppstd(conanfile, "20", True))
+            with mock.patch("conans.client.tools.settings.cppstd_default", return_value="gnu1z"):
+                self.assertFalse(valid_min_cppstd(conanfile, "20", True))
 
     @parameterized.expand(["98", "11", "14", "17"])
     def test_min_cppstd_mingw_windows(self, cppstd):
