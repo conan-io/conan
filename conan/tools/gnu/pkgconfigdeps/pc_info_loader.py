@@ -20,7 +20,7 @@ def _get_package_reference_name(dep):
 
 
 def _get_package_aliases(dep):
-    pkg_aliases = dep.cpp_info.get_property("pkg_config_aliases", "PkgConfigDeps")
+    pkg_aliases = dep.cpp_info.get_property("pkg_config_aliases")
     return pkg_aliases or []
 
 
@@ -32,13 +32,12 @@ def _get_component_aliases(dep, comp_name):
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                              "package requirement".format(name=_get_package_reference_name(dep),
                                                           cname=comp_name))
-    comp_aliases = dep.cpp_info.components[comp_name].get_property("pkg_config_aliases",
-                                                                   "PkgConfigDeps")
+    comp_aliases = dep.cpp_info.components[comp_name].get_property("pkg_config_aliases")
     return comp_aliases or []
 
 
 def _get_package_name(dep):
-    pkg_name = dep.cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
+    pkg_name = dep.cpp_info.get_property("pkg_config_name")
     return pkg_name or _get_package_reference_name(dep)
 
 
@@ -50,7 +49,7 @@ def _get_component_name(dep, comp_name):
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                              "package requirement".format(name=_get_package_reference_name(dep),
                                                           cname=comp_name))
-    comp_name = dep.cpp_info.components[comp_name].get_property("pkg_config_name", "PkgConfigDeps")
+    comp_name = dep.cpp_info.components[comp_name].get_property("pkg_config_name")
     return comp_name
 
 

@@ -94,7 +94,7 @@ def get_pc_filename_and_content(conanfile, dep, name, requires, description, cpp
     prefix_path = package_folder.replace("\\", "/")
     libdirs = _get_formatted_dirs(cpp_info.libdirs, prefix_path)
     includedirs = _get_formatted_dirs(cpp_info.includedirs, prefix_path)
-    custom_content = cpp_info.get_property("pkg_config_custom_content", "PkgConfigDeps")
+    custom_content = cpp_info.get_property("pkg_config_custom_content")
 
     context = {
         "prefix_path": prefix_path,
