@@ -468,7 +468,8 @@ class UserToolchain(Block):
         user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
         if user_toolchain:
             user_toolchain = user_toolchain.replace("\\", "/")
-        return {"toolchain_paths": [user_toolchain]}
+
+        return {"toolchain_paths": [user_toolchain] if user_toolchain else []}
 
 
 class CMakeFlagsInitBlock(Block):
