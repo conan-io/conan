@@ -26,7 +26,7 @@ def setup_client():
             def _get_components_custom_names(self, cpp_info):
                 ret = []
                 for comp_name, comp in self.sorted_components(cpp_info).items():
-                    comp_genname = comp.get_property("custom_name", generator=self.name)
+                    comp_genname = comp.get_property("custom_name")
                     ret.append("{}:{}".format(comp.name, comp_genname))
                 return ret
 
@@ -34,7 +34,7 @@ def setup_client():
             def content(self):
                 info = []
                 for pkg_name, cpp_info in self.deps_build_info.dependencies:
-                    info.append("{}:{}".format(pkg_name, cpp_info.get_property("custom_name", self.name)))
+                    info.append("{}:{}".format(pkg_name, cpp_info.get_property("custom_name")))
                     info.extend(self._get_components_custom_names(cpp_info))
                 return os.linesep.join(info)
         """)

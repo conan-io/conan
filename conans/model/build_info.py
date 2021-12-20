@@ -220,7 +220,7 @@ class _CppInfo(object):
         property_name = None
         if "pkg_config" in generator:
             property_name = "pkg_config_name"
-        return self.get_property(property_name, generator) \
+        return self.get_property(property_name) \
                or self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
