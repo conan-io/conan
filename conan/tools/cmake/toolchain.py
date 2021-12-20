@@ -5,8 +5,8 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools._compilers import architecture_flag, use_win_mingw
-from conan.tools.build import build_jobs
+from conan.tools.build.flags import architecture_flag, libcxx_flag
+from conan.tools.build import build_jobs, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import save_toolchain_args
 from conan.tools.intel import IntelCC
@@ -166,26 +166,10 @@ class GLibCXXBlock(Block):
         libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
         if not libcxx:
             return None
+        lib = libcxx_flag(self._conanfile)
         compiler = self._conanfile.settings.get_safe("compiler")
-        lib = glib = None
-        if compiler == "apple-clang":
-            # In apple-clang 2 only values atm are "libc++" and "libstdc++"
-            lib = "-stdlib={}".format(libcxx)
-        elif compiler == "clang" or compiler == "intel-cc":
-            if libcxx == "libc++":
-                lib = "-stdlib=libc++"
-            elif libcxx == "libstdc++" or libcxx == "libstdc++11":
-                lib = "-stdlib=libstdc++"
-            # FIXME, something to do with the other values? Android c++_shared?
-        elif compiler == "sun-cc":
-            lib = {"libCstd": "Cstd",
-                   "libstdcxx": "stdcxx4",
-                   "libstlport": "stlport4",
-                   "libstdc++": "stdcpp"
-                   }.get(libcxx)
-            if lib:
-                lib = "-library={}".format(lib)
-        elif compiler == "gcc":
+        glib = None
+        if compiler == "gcc":
             # we might want to remove this "1", it is the default in most distros
             if libcxx == "libstdc++11":
                 glib = "1"
@@ -582,33 +566,33 @@ class GenericSystemBlock(Block):
         system_processor = self._conanfile.conf["tools.cmake.cmaketoolchain:system_processor"]
 
         settings = self._conanfile.settings
-        if hasattr(self._conanfile, "settings_build"):
-            os_ = settings.get_safe("os")
-            arch = settings.get_safe("arch")
-            settings_build = self._conanfile.settings_build
-            os_build = settings_build.get_safe("os")
-            arch_build = settings_build.get_safe("arch")
+        assert hasattr(self._conanfile, "settings_build")
+        os_ = settings.get_safe("os")
+        arch = settings.get_safe("arch")
+        settings_build = self._conanfile.settings_build
+        os_build = settings_build.get_safe("os")
+        arch_build = settings_build.get_safe("arch")
 
-            if system_name is None:  # Try to deduce
-                # Handled by AppleBlock, or AndroidBlock, not here
-                if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS', 'Android'):
-                    cmake_system_name_map = {"Neutrino": "QNX",
-                                             "": "Generic",
-                                             None: "Generic"}
-                    if os_ != os_build:
+        if system_name is None:  # Try to deduce
+            # Handled by AppleBlock, or AndroidBlock, not here
+            if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS', 'Android'):
+                cmake_system_name_map = {"Neutrino": "QNX",
+                                         "": "Generic",
+                                         None: "Generic"}
+                if os_ != os_build:
+                    system_name = cmake_system_name_map.get(os_, os_)
+                elif arch is not None and arch != arch_build:
+                    if not ((arch_build == "x86_64") and (arch == "x86") or
+                            (arch_build == "sparcv9") and (arch == "sparc") or
+                            (arch_build == "ppc64") and (arch == "ppc32")):
                         system_name = cmake_system_name_map.get(os_, os_)
-                    elif arch is not None and arch != arch_build:
-                        if not ((arch_build == "x86_64") and (arch == "x86") or
-                                (arch_build == "sparcv9") and (arch == "sparc") or
-                                (arch_build == "ppc64") and (arch == "ppc32")):
-                            system_name = cmake_system_name_map.get(os_, os_)
 
-            if system_name is not None and system_version is None:
-                system_version = settings.get_safe("os.version")
+        if system_name is not None and system_version is None:
+            system_version = settings.get_safe("os.version")
 
-            if system_name is not None and system_processor is None:
-                if arch != arch_build:
-                    system_processor = arch
+        if system_name is not None and system_processor is None:
+            if arch != arch_build:
+                system_processor = arch
 
         return system_name, system_version, system_processor
 

@@ -1,7 +1,7 @@
 import unittest
 from parameterized.parameterized import parameterized
 
-from conan.tools._compilers import architecture_flag, build_type_flags
+from conan.tools.build.flags import architecture_flag, build_type_flags
 from conans.test.utils.mocks import MockSettings
 
 

@@ -1,4 +1,5 @@
-from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag
+
+from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
 from conan.tools import args_to_string
@@ -30,7 +31,7 @@ class AutotoolsToolchain:
         self.cxxflags = []
         self.cflags = []
         self.ldflags = []
-        self.libcxx = self._libcxx()
+        self.libcxx = libcxx_flag(conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
 
         self.cppstd = cppstd_flag(self._conanfile.settings)
@@ -76,27 +77,6 @@ class AutotoolsToolchain:
         if compiler == "gcc":
             if libcxx == 'libstdc++':
                 return '_GLIBCXX_USE_CXX11_ABI=0'
-
-    def _libcxx(self):
-        settings = self._conanfile.settings
-        libcxx = settings.get_safe("compiler.libcxx")
-        if not libcxx:
-            return
-
-        compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-
-        if compiler in ['clang', 'apple-clang']:
-            if libcxx in ['libstdc++', 'libstdc++11']:
-                return '-stdlib=libstdc++'
-            elif libcxx == 'libc++':
-                return '-stdlib=libc++'
-        elif compiler == 'sun-cc':
-            return ({"libCstd": "-library=Cstd",
-                     "libstdcxx": "-library=stdcxx4",
-                     "libstlport": "-library=stlport4",
-                     "libstdc++": "-library=stdcpp"}.get(libcxx))
-        elif compiler == "qcc":
-            return "-Y _%s" % str(libcxx)
 
     def environment(self):
         env = Environment()

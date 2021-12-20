@@ -1,4 +1,4 @@
-from conans.client.tools.apple import to_apple_arch
+from conans.client.tools import to_apple_arch
 from conans.model.version import Version
 
 
@@ -18,42 +18,42 @@ def architecture_flag(settings):
     if the_os == "Android":
         return ""
 
-    if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
-        if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':
+    if compiler in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
+        if the_os == 'Macos' and subsystem == 'catalyst':
             # FIXME: This might be conflicting with Autotools --target cli arg
             apple_arch = to_apple_arch(arch)
             if apple_arch:
                 return '--target=%s-apple-ios-macabi' % apple_arch
-        elif str(arch) in ['x86_64', 'sparcv9', 's390x']:
+        elif arch in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
-        elif str(arch) in ['x86', 'sparc']:
+        elif arch in ['x86', 'sparc']:
             return '-m32'
-        elif str(arch) in ['s390']:
+        elif arch in ['s390']:
             return '-m31'
-        elif str(the_os) == 'AIX':
-            if str(arch) in ['ppc32']:
+        elif the_os == 'AIX':
+            if arch in ['ppc32']:
                 return '-maix32'
-            elif str(arch) in ['ppc64']:
+            elif arch in ['ppc64']:
                 return '-maix64'
-    elif str(compiler) == "intel":
+    elif compiler == "intel":
         # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-m32-m64-qm32-qm64
-        if str(arch) == "x86":
+        if arch == "x86":
             return "/Qm32" if str(compiler_base) == "Visual Studio" else "-m32"
-        elif str(arch) == "x86_64":
+        elif arch == "x86_64":
             return "/Qm64" if str(compiler_base) == "Visual Studio" else "-m64"
-    elif str(compiler) == "intel-cc":
+    elif compiler == "intel-cc":
         # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-m32-m64-qm32-qm64
-        if str(arch) == "x86":
+        if arch == "x86":
             return "/Qm32" if the_os == "Windows" else "-m32"
-        elif str(arch) == "x86_64":
+        elif arch == "x86_64":
             return "/Qm64" if the_os == "Windows" else "-m64"
-    elif str(compiler) == "mcst-lcc":
+    elif compiler == "mcst-lcc":
         return {"e2k-v2": "-march=elbrus-v2",
                 "e2k-v3": "-march=elbrus-v3",
                 "e2k-v4": "-march=elbrus-v4",
                 "e2k-v5": "-march=elbrus-v5",
                 "e2k-v6": "-march=elbrus-v6",
-                "e2k-v7": "-march=elbrus-v7"}.get(str(arch), "")
+                "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
     return ""
 
 
@@ -71,8 +71,8 @@ def build_type_flags(settings):
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
-    if str(compiler) in ['Visual Studio', 'msvc']:
-        if vs_toolset and "clang" in str(vs_toolset):
+    if compiler in ['Visual Studio', 'msvc']:
+        if vs_toolset and "clang" in vs_toolset:
             flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
                      "Release": ["-O2"],
                      "RelWithDebInfo": ["-gline-tables-only", "-O2", "-fno-inline"],
@@ -90,17 +90,17 @@ def build_type_flags(settings):
         # Modules/Compiler/GNU.cmake
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
-        if str(compiler) in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc"]:
+        if compiler in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc"]:
             # FIXME: It is not clear that the "-s" is something related with the build type
             # cmake is not adjusting it
             # -s: Remove all symbol table and relocation information from the executable.
             flags = {"Debug": ["-g"],
-                     "Release": ["-O3", "-s"] if str(compiler) == "gcc" else ["-O3"],
+                     "Release": ["-O3", "-s"] if compiler == "gcc" else ["-O3"],
                      "RelWithDebInfo": ["-O2", "-g"],
                      "MinSizeRel": ["-Os"],
                      }.get(build_type, [])
             return flags
-        elif str(compiler) == "sun-cc":
+        elif compiler == "sun-cc":
             # https://github.com/Kitware/CMake/blob/f3bbb37b253a1f4a26809d6f132b3996aa2e16fc/
             # Modules/Compiler/SunPro-CXX.cmake
             flags = {"Debug": ["-g"],
@@ -112,16 +112,31 @@ def build_type_flags(settings):
     return ""
 
 
-def use_win_mingw(conanfile):
-    os_build = conanfile.settings_build.get_safe('os')
-    if os_build == "Windows":
-        compiler = conanfile.settings.get_safe("compiler")
-        sub = conanfile.settings.get_safe("os.subsystem")
-        if sub in ("cygwin", "msys2", "msys") or compiler == "qcc":
-            return False
-        else:
-            return True
-    return False
+def libcxx_flag(conanfile):
+    libcxx = conanfile.settings.get_safe("compiler.libcxx")
+    if not libcxx:
+        return None
+
+    lib = None
+    compiler = conanfile.settings.get_safe("compiler")
+    if compiler == "apple-clang":
+        # In apple-clang 2 only values atm are "libc++" and "libstdc++"
+        lib = "-stdlib={}".format(libcxx)
+    elif compiler == "clang" or compiler == "intel-cc":
+        if libcxx == "libc++":
+            lib = "-stdlib=libc++"
+        elif libcxx == "libstdc++" or libcxx == "libstdc++11":
+            lib = "-stdlib=libstdc++"
+        # FIXME, something to do with the other values? Android c++_shared?
+    elif compiler == "sun-cc":
+        lib = {"libCstd": "-library=Cstd",
+               "libstdcxx": "-library=stdcxx4",
+               "libstlport": "-library=stlport4",
+               "libstdc++": "-library=stdcpp"
+               }.get(libcxx)
+    elif compiler == "qcc":
+        lib = "-Y _%s" % str(libcxx)
+    return lib
 
 
 def cppstd_flag(settings):
@@ -142,10 +157,10 @@ def cppstd_flag(settings):
             "msvc": _cppstd_msvc,
             "intel": cppstd_intel,
             "intel-cc": _cppstd_intel_cc,
-            "mcst-lcc": _cppstd_mcst_lcc}.get(str(compiler), None)
+            "mcst-lcc": _cppstd_mcst_lcc}.get(compiler, None)
     flag = None
     if func:
-        flag = func(str(compiler_version), str(cppstd))
+        flag = func(Version(compiler_version), str(cppstd))
     return flag
 
 
@@ -156,13 +171,13 @@ def _cppstd_visualstudio(visual_version, cppstd):
     v20 = None
     v23 = None
 
-    if Version(visual_version) >= "14":
+    if visual_version >= "14":
         v14 = "c++14"
         v17 = "c++latest"
-    if Version(visual_version) >= "15":
+    if visual_version >= "15":
         v17 = "c++17"
         v20 = "c++latest"
-    if Version(visual_version) >= "17":
+    if visual_version >= "17":
         v20 = "c++20"
         v23 = "c++latest"
 
@@ -177,13 +192,13 @@ def _cppstd_msvc(visual_version, cppstd):
     v20 = None
     v23 = None
 
-    if Version(visual_version) >= "190":
+    if visual_version >= "190":
         v14 = "c++14"
         v17 = "c++latest"
-    if Version(visual_version) >= "191":
+    if visual_version >= "191":
         v17 = "c++17"
         v20 = "c++latest"
-    if Version(visual_version) >= "193":
+    if visual_version >= "193":
         v20 = "c++20"
         v23 = "c++latest"
 
@@ -196,32 +211,31 @@ def _cppstd_apple_clang(clang_version, cppstd):
     Inspired in:
     https://github.com/Kitware/CMake/blob/master/Modules/Compiler/AppleClang-CXX.cmake
     """
-
     v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
 
-    if Version(clang_version) >= "4.0":
+    if clang_version >= "4.0":
         v98 = "c++98"
         vgnu98 = "gnu++98"
         v11 = "c++11"
         vgnu11 = "gnu++11"
 
-    if Version(clang_version) >= "6.1":
+    if clang_version >= "6.1":
         v14 = "c++14"
         vgnu14 = "gnu++14"
-    elif Version(clang_version) >= "5.1":
+    elif clang_version >= "5.1":
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(clang_version) >= "6.1":
+    if clang_version >= "6.1":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
-    if Version(clang_version) >= "9.1":
+    if clang_version >= "9.1":
         # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
         v17 = "c++17"
         vgnu17 = "gnu++17"
 
-    if Version(clang_version) >= "10.0":
+    if clang_version >= "10.0":
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
@@ -244,36 +258,36 @@ def _cppstd_clang(clang_version, cppstd):
     """
     v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
 
-    if Version(clang_version) >= "2.1":
+    if clang_version >= "2.1":
         v98 = "c++98"
         vgnu98 = "gnu++98"
 
-    if Version(clang_version) >= "3.1":
+    if clang_version >= "3.1":
         v11 = "c++11"
         vgnu11 = "gnu++11"
-    elif Version(clang_version) >= "2.1":
+    elif clang_version >= "2.1":
         v11 = "c++0x"
         vgnu11 = "gnu++0x"
 
-    if Version(clang_version) >= "3.5":
+    if clang_version >= "3.5":
         v14 = "c++14"
         vgnu14 = "gnu++14"
-    elif Version(clang_version) >= "3.4":
+    elif clang_version >= "3.4":
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(clang_version) >= "5":
+    if clang_version >= "5":
         v17 = "c++17"
         vgnu17 = "gnu++17"
-    elif Version(clang_version) >= "3.5":
+    elif clang_version >= "3.5":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
-    if Version(clang_version) >= "6":
+    if clang_version >= "6":
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
-    if Version(clang_version) >= "12":
+    if clang_version >= "12":
         v20 = "c++20"
         vgnu20 = "gnu++20"
 
@@ -294,37 +308,37 @@ def _cppstd_gcc(gcc_version, cppstd):
     # https://gcc.gnu.org/projects/cxx-status.html
     v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
 
-    if Version(gcc_version) >= "3.4":
+    if gcc_version >= "3.4":
         v98 = "c++98"
         vgnu98 = "gnu++98"
 
-    if Version(gcc_version) >= "4.7":
+    if gcc_version >= "4.7":
         v11 = "c++11"
         vgnu11 = "gnu++11"
-    elif Version(gcc_version) >= "4.3":
+    elif gcc_version >= "4.3":
         v11 = "c++0x"
         vgnu11 = "gnu++0x"
 
-    if Version(gcc_version) >= "4.9":
+    if gcc_version >= "4.9":
         v14 = "c++14"
         vgnu14 = "gnu++14"
-    elif Version(gcc_version) >= "4.8":
+    elif gcc_version >= "4.8":
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(gcc_version) >= "5":
+    if gcc_version >= "5":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
-    if Version(gcc_version) >= "5.2":  # Not sure if even in 5.1 gnu17 is valid, but gnu1z is
+    if gcc_version >= "5.2":  # Not sure if even in 5.1 gnu17 is valid, but gnu1z is
         v17 = "c++17"
         vgnu17 = "gnu++17"
 
-    if Version(gcc_version) >= "8":
+    if gcc_version >= "8":
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
-    if Version(gcc_version) >= "11":
+    if gcc_version >= "11":
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
 
@@ -344,17 +358,17 @@ def _cppstd_intel_common(intel_version, cppstd, vgnu98, vgnu0x):
     v98 = v11 = v14 = v17 = v20 = None
     vgnu11 = vgnu14 = vgnu17 = vgnu20 = None
 
-    if Version(intel_version) >= "12":
+    if intel_version >= "12":
         v11 = "c++0x"
         vgnu11 = vgnu0x
-    if Version(intel_version) >= "14":
+    if intel_version >= "14":
         v11 = "c++11"
         vgnu11 = vgnu0x
-    if Version(intel_version) >= "16":
+    if intel_version >= "16":
         v14 = "c++14"
-    if Version(intel_version) >= "18":
+    if intel_version >= "18":
         v17 = "c++17"
-    if Version(intel_version) >= "19.1":
+    if intel_version >= "19.1":
         v20 = "c++20"
 
     return {"98": v98, "gnu98": vgnu98,
@@ -377,17 +391,17 @@ def _cppstd_intel_visualstudio(intel_version, cppstd):
 def _cppstd_mcst_lcc(mcst_lcc_version, cppstd):
     v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
 
-    if Version(mcst_lcc_version) >= "1.21":
+    if mcst_lcc_version >= "1.21":
         v11 = "c++11"
         vgnu11 = "gnu++11"
         v14 = "c++14"
         vgnu14 = "gnu++14"
 
-    if Version(mcst_lcc_version) >= "1.24":
+    if mcst_lcc_version >= "1.24":
         v17 = "c++17"
         vgnu17 = "gnu++17"
 
-    if Version(mcst_lcc_version) >= "1.25":
+    if mcst_lcc_version >= "1.25":
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
