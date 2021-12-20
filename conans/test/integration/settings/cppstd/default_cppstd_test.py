@@ -3,10 +3,7 @@ import os
 import textwrap
 import unittest
 
-from conans.client.build.cppstd_flags import cppstd_default
-from conans.client.conf import get_default_settings_yml
 from conans.client.tools import save, load
-from conans.model.settings import Settings
 from conans.test.utils.tools import TestClient
 
 
@@ -66,16 +63,6 @@ class DefaultCppTestCase(unittest.TestCase):
         # Explicit value 'None' passed to setting 'cppstd'
         id_with, output = self._get_id(settings_values={"compiler.cppstd": "None"})
         self.assertIn("compiler.cppstd: None!!", output)
-        self.assertEqual(self.id_default, id_with)
-
-    def test_value_default(self):
-        # Explicit value (equals to default) passed to setting 'compiler.cppstd'
-        settings = Settings.loads(get_default_settings_yml())
-        settings.compiler = self.compiler
-        settings.compiler.version = self.compiler_version
-        cppstd = cppstd_default(settings)
-        id_with, output = self._get_id(settings_values={"compiler.cppstd": cppstd})
-        self.assertIn("compiler.cppstd: gnu14!!", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_other(self):
