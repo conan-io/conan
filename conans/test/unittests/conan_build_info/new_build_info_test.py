@@ -184,8 +184,7 @@ def test_from_old_cppinfo_components():
     assert cppinfo.components["foo"].requires == ["my_req::my_component"]
     assert cppinfo.components["foo2"].get_property("cmake_build_modules") is None
 
-    assert cppinfo.get_property("cmake_build_modules") == \
-           ["foo_my_scripts.cmake", "foo.cmake", "foo2_my_scripts.cmake"]
+    assert cppinfo.get_property("cmake_build_modules") is None
 
 
 def test_from_old_cppinfo_no_components():
@@ -204,8 +203,7 @@ def test_from_old_cppinfo_no_components():
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         assert getattr(cppinfo, n) == ["var_{}_1".format(n), "var_{}_2".format(n)]
 
-    assert cppinfo.get_property("cmake_build_modules") == ["my_scripts.cmake",
-                                                           "foo2.cmake", "foo.cmake"]
+    assert cppinfo.get_property("cmake_build_modules") is None
     assert cppinfo.requires == ["my_req::my_component"]
 
 
