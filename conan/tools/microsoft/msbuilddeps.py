@@ -5,7 +5,6 @@ from xml.dom import minidom
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
 from conans.errors import ConanException
 from conans.util.files import load, save
 
@@ -116,8 +115,6 @@ class MSBuildDeps(object):
             if not isinstance(self.exclude_code_analysis, list):
                 raise ConanException("tools.microsoft.msbuilddeps:exclude_code_analysis must be a"
                                      " list of package names patterns like ['pkga*']")
-
-        check_using_build_profile(self._conanfile)
 
     def generate(self):
         # TODO: Apply config from command line, something like

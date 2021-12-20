@@ -297,6 +297,15 @@ class GenConanfile(object):
         return tmp
 
     @property
+    def _build_requirements_render(self):
+        lines = []
+        for ref, kwargs in self._build_requirements:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.build_requires("{}", {})'.format(ref, args))
+        return "def build_requirements(self):\n{}\n".format("\n".join(lines))
+
+    @property
     def _build_requires_render(self):
         line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
         tmp = "build_requires = %s" % line
@@ -335,12 +344,12 @@ class GenConanfile(object):
             lines.append('        self.requires("{}", {})'.format(ref, args))
 
         for ref, kwargs in self._build_requirements or []:
-            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, bool) else v)
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
                              for k, v in kwargs.items())
             lines.append('        self.build_requires("{}", {})'.format(ref, args))
 
         for ref, kwargs in self._tool_requirements or []:
-            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, bool) else v)
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
                              for k, v in kwargs.items())
             lines.append('        self.tool_requires("{}", {})'.format(ref, args))
 
@@ -455,6 +464,7 @@ class GenConanfile(object):
                        "package_method", "package_info", "package_id_lines", "test_lines"
                        ):
             if member == "requirements":
+                # FIXME: This seems exclusive, but we could mix them?
                 v = self._requirements or self._tool_requirements or self._build_requirements
             else:
                 v = getattr(self, "_{}".format(member), None)

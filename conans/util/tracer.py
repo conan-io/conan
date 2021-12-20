@@ -70,7 +70,11 @@ def _append_action(action_name, props):
 # ############## LOG METHODS ######################
 
 def _file_document(name, path):
-    return {"name": name, "path": path, "md5": md5sum(path), "sha1": sha1sum(path)}
+    if os.path.isdir(path):
+        return {"name": name, "path": path, "type": "folder"}
+    else:
+        return {"name": name, "path": path, "md5": md5sum(path),
+                "sha1": sha1sum(path), "type": "folder"}
 
 
 def log_recipe_upload(ref, duration, files_uploaded, remote_name):

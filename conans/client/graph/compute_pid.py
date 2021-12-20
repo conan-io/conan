@@ -26,6 +26,8 @@ def compute_package_id(node, new_config):
     for require, transitive in node.transitive_deps.items():
         dep_package_id = require.package_id_mode
         dep_node = transitive.node
+        require.deduce_package_id_mode(node.conanfile.package_type,
+                                       dep_node.conanfile.package_type)
         if require.build:
             if dep_package_id:
                 req_info = RequirementInfo(dep_node.pref, dep_package_id)

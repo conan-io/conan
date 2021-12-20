@@ -5,7 +5,6 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.build.flags import architecture_flag, libcxx_flag
 from conan.tools.build import build_jobs, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration
@@ -731,8 +730,6 @@ class CMakeToolchain(object):
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
-
-        check_using_build_profile(self._conanfile)
 
     def _context(self):
         """ Returns dict, the context for the template

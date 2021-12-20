@@ -31,8 +31,8 @@ class HelloConan(ConanFile):
         os.symlink("other_empty_folder", "other_link")
 
     def package(self):
-        self.copy("*.txt*", links=True)
-        self.copy("*.so*", links=True)
+        self.copy("*.txt*")
+        self.copy("*.so*")
 """
 
 test_conanfile = """[requires]
@@ -95,7 +95,7 @@ class TestConan(ConanFile):
     version = "0.1"
 
     def package(self):
-        self.copy("*", symlinks=True)
+        self.copy("*")
     """
         client.save({"recipe/conanfile.py": conanfile})
         file1 = os.path.join(client.current_folder, "file1.txt")

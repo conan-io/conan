@@ -123,27 +123,6 @@ class ToolsTest(unittest.TestCase):
         result = md5(u"äüïöñç")
         self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
 
-    def test_cpu_count(self):
-        output = ConanOutput()
-        cpus = tools.cpu_count(output=output)
-        self.assertIsInstance(cpus, int)
-        self.assertGreaterEqual(cpus, 1)
-        with environment_update({"CONAN_CPU_COUNT": "34"}):
-            self.assertEqual(tools.cpu_count(output=output), 34)
-        with environment_update({"CONAN_CPU_COUNT": "null"}):
-            with self.assertRaisesRegex(ConanException, "Invalid CONAN_CPU_COUNT value"):
-                tools.cpu_count(output=output)
-
-    @patch("conans.client.tools.oss.CpuProperties.get_cpu_period")
-    @patch("conans.client.tools.oss.CpuProperties.get_cpu_quota")
-    def test_cpu_count_in_container(self, get_cpu_quota_mock, get_cpu_period_mock):
-        get_cpu_quota_mock.return_value = 12000
-        get_cpu_period_mock.return_value = 1000
-
-        output = ConanOutput()
-        cpus = tools.cpu_count(output=output)
-        self.assertEqual(12, cpus)
-
     def test_get_env_unit(self):
         """
         Unit tests get_env
