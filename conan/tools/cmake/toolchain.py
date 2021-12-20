@@ -654,7 +654,9 @@ class ToolchainBlocks:
         del self._blocks[name]
 
     def __setitem__(self, name, block_type):
-        self._blocks[name] = block_type(self._conanfile, self._toolchain)
+        # Create a new class inheriting Block with the elements of the provided one
+        new_class = type('proxyUserBlock', (Block,), dict(block_type.__dict__))
+        self._blocks[name] = new_class(self._conanfile, self._toolchain)
 
     def __getitem__(self, name):
         return self._blocks[name]
