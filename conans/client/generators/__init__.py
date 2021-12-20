@@ -1,6 +1,5 @@
 import os
 import traceback
-from collections import OrderedDict
 from os.path import join
 
 from conan.tools.env import VirtualRunEnv
@@ -150,9 +149,7 @@ class GeneratorManager(object):
         """
         _receive_conf(conanfile)
 
-        # Remove duplicated elements in generators keeping the order
-        unique_generators = list(OrderedDict.fromkeys(conanfile.generators))
-        for generator_name in unique_generators:
+        for generator_name in set(conanfile.generators):
             generator_class = self._new_generator(generator_name, output)
             if generator_class:
                 if generator_name == "msbuild":
