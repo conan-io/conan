@@ -14,5 +14,4 @@ def test_set_get_properties():
     cpp_info.set_property("my_property", "pkg_config_value")
     assert cpp_info.get_property("my_property") == "pkg_config_value"
     cpp_info.set_property("other_property", "other_pkg_config_value")
-    assert not cpp_info.get_property("other_property")
     assert cpp_info.get_property("other_property") == "other_pkg_config_value"
