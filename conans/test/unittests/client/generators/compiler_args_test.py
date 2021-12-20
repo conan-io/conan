@@ -76,6 +76,7 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m32 -O3 -s -DNDEBUG'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -F /root/Frameworks -std=gnu++17', gcc.content)
 
@@ -86,6 +87,7 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m64 -g'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -D_GLIBCXX_USE_CXX11_ABI=1 -F /root/Frameworks -std=gnu++17',
                          gcc.content)
@@ -94,6 +96,7 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m64 -g'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -D_GLIBCXX_USE_CXX11_ABI=0 -F /root/Frameworks -std=gnu++17',
                          gcc.content)
@@ -107,6 +110,7 @@ class CompilerArgsTest(unittest.TestCase):
         # GCC generator ignores the compiler setting, it is always gcc
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m32 -O3 -s -DNDEBUG'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -D_GLIBCXX_USE_CXX11_ABI=0 -F /root/Frameworks -std=gnu++17',
                          gcc.content)
@@ -136,6 +140,7 @@ class CompilerArgsTest(unittest.TestCase):
         gen = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -F /root/Frameworks', gen.content)
 
@@ -151,6 +156,7 @@ class CompilerArgsTest(unittest.TestCase):
         args = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -F /root/Frameworks', args.content)
 
@@ -166,6 +172,7 @@ class CompilerArgsTest(unittest.TestCase):
         args = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m64 -O3 -DNDEBUG'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -framework AVFoundation -framework VideoToolbox'
                          ' -F /root/Frameworks -F /root/path/to/Frameworks1'
@@ -183,5 +190,6 @@ class CompilerArgsTest(unittest.TestCase):
         args = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m64 -O3 -s -DNDEBUG'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib -lsystem_lib1'
                          ' -F /root/Frameworks', args.content)
