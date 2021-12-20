@@ -391,7 +391,7 @@ class Requirements:
         self._requires[req] = req
 
     def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                      run=None,options=None):
+                      run=None, options=None):
         """
              Represent a generic build require, could be a tool, like "cmake" or a bundle of build
              scripts.
@@ -412,7 +412,6 @@ class Requirements:
         self._requires[req] = req
 
     def override(self, ref):
-        name = ref.name
         req = Requirement(ref)
         old_requirement = self._requires.get(req)
         if old_requirement is not None:
