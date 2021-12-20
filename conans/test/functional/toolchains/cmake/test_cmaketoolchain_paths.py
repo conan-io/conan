@@ -1,3 +1,4 @@
+import platform
 import textwrap
 
 import pytest
@@ -8,11 +9,35 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.tool_cmake
 @pytest.mark.parametrize("package", ["hello", "ZLIB"])
 @pytest.mark.parametrize("find_package", ["module", "config"])
-def test_cmaketoolchain_path_find_package(package, find_package):
+@pytest.mark.parametrize(
+    "host",
+    [
+        "native",
+        pytest.param(
+            "cross_build_iOS", marks=pytest.mark.skipif(
+                platform.system() != "Darwin", reason="OSX only",
+            ),
+        ),
+    ],
+)
+def test_cmaketoolchain_path_find_package(package, find_package, host):
     """Test with user "Hello" and also ZLIB one, to check that package ZLIB
     has priority over the CMake system one
     """
     client = TestClient()
+
+    cross_build = "cross_build" in host
+    if cross_build:
+        host_profile = "ios12.0-armv8"
+        profile_content = textwrap.dedent("""
+            include(default)
+            [settings]
+            os=iOS
+            os.version=12.0
+            arch=armv8
+        """)
+        client.save({host_profile: profile_content})
+
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         class TestConan(ConanFile):
@@ -32,7 +57,10 @@ def test_cmaketoolchain_path_find_package(package, find_package):
     filename = "{}Config.cmake" if find_package == "config" else "Find{}.cmake"
     filename = filename.format(package)
     client.save({"conanfile.py": conanfile, "cmake/{}".format(filename): find})
-    client.run("create . {}/0.1@".format(package))
+    client.run("create . {}/0.1@{}".format(
+        package,
+        " -pr:b default -pr:h {}".format(host_profile) if cross_build else "",
+    ))
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -41,14 +69,22 @@ def test_cmaketoolchain_path_find_package(package, find_package):
         """).format(package=package)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install {}/0.1@ -g CMakeToolchain".format(package))
+    if cross_build:
+        client.save({host_profile: profile_content})
+    client.run("install {}/0.1@ -g CMakeToolchain{}".format(
+        package,
+        " -pr:b default -pr:h {}".format(host_profile) if cross_build else "",
+    ))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared" not in client.out
     assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) in client.out
 
     # If using the CMakeDeps generator, the in-package .cmake will be ignored
-    client.run("install {}/0.1@ -g CMakeToolchain -g CMakeDeps".format(package))
+    client.run("install {}/0.1@ -g CMakeToolchain -g CMakeDeps{}".format(
+        package,
+        " -pr:b default -pr:h {}".format(host_profile) if cross_build else "",
+    ))
     with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared '{package}::{package}'".format(package=package) in client.out
@@ -98,11 +134,34 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type):
 
 
 @pytest.mark.tool_cmake
-def test_cmaketoolchain_path_find_file_find_path():
+@pytest.mark.parametrize(
+    "host",
+    [
+        "native",
+        pytest.param(
+            "cross_build_iOS", marks=pytest.mark.skipif(
+                platform.system() != "Darwin", reason="OSX only",
+            ),
+        ),
+    ],
+)
+def test_cmaketoolchain_path_find_file_find_path(host):
     """Test that headers in includedirs of requires can be found with
     find_file() and find_path() in consumer CMakeLists
     """
     client = TestClient()
+
+    cross_build = "cross_build" in host
+    if cross_build:
+        host_profile = "ios12.0-armv8"
+        profile_content = textwrap.dedent("""
+            include(default)
+            [settings]
+            os=iOS
+            os.version=12.0
+            arch=armv8
+        """)
+        client.save({host_profile: profile_content})
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -115,7 +174,9 @@ def test_cmaketoolchain_path_find_file_find_path():
                 self.copy(pattern="*.h", dst="include")
     """)
     client.save({"conanfile.py": conanfile, "hello.h": ""})
-    client.run("create . hello/0.1@")
+    client.run("create . hello/0.1@{}".format(
+        " -pr:b default -pr:h {}".format(host_profile) if cross_build else "",
+    ))
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -130,7 +191,11 @@ def test_cmaketoolchain_path_find_file_find_path():
         endif()
     """)
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install hello/0.1@ -g CMakeToolchain")
+    if cross_build:
+        client.save({host_profile: profile_content})
+    client.run("install hello/0.1@ -g CMakeToolchain{}".format(
+        " -pr:b default -pr:h {}".format(host_profile) if cross_build else "",
+    ))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found file hello.h" in client.out
@@ -138,11 +203,34 @@ def test_cmaketoolchain_path_find_file_find_path():
 
 
 @pytest.mark.tool_cmake
-def test_cmaketoolchain_path_find_library():
+@pytest.mark.parametrize(
+    "host",
+    [
+        "native",
+        pytest.param(
+            "cross_build_iOS", marks=pytest.mark.skipif(
+                platform.system() != "Darwin", reason="OSX only",
+            ),
+        ),
+    ],
+)
+def test_cmaketoolchain_path_find_library(host):
     """Test that libraries in libdirs of requires can be found with
     find_library() in consumer CMakeLists
     """
     client = TestClient()
+
+    cross_build = "cross_build" in host
+    if cross_build:
+        host_profile = "ios12.0-armv8"
+        profile_content = textwrap.dedent("""
+            include(default)
+            [settings]
+            os=iOS
+            os.version=12.0
+            arch=armv8
+        """)
+        client.save({host_profile: profile_content})
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -155,7 +243,9 @@ def test_cmaketoolchain_path_find_library():
                 self.copy(pattern="*", dst="lib")
     """)
     client.save({"conanfile.py": conanfile, "libhello.a": "", "hello.lib": ""})
-    client.run("create . hello_host/0.1@")
+    client.run("create . hello_host/0.1@{}".format(
+        " -pr:b default -pr:h {}".format(host_profile) if cross_build else "",
+    ))
     client.run("create . hello_build/0.1@")
 
     conanfile = textwrap.dedent("""
@@ -174,7 +264,11 @@ def test_cmaketoolchain_path_find_library():
         endif()
     """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install . pkg/0.1@ -g CMakeToolchain")
+    if cross_build:
+        client.save({host_profile: profile_content})
+    client.run("install . pkg/0.1@ -g CMakeToolchain{}".format(
+        " -pr:b default -pr:h {}".format(host_profile) if cross_build else "",
+    ))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found hello lib" in client.out
@@ -183,11 +277,34 @@ def test_cmaketoolchain_path_find_library():
 
 
 @pytest.mark.tool_cmake
-def test_cmaketoolchain_path_find_program():
+@pytest.mark.parametrize(
+    "host",
+    [
+        "native",
+        pytest.param(
+            "cross_build_iOS", marks=pytest.mark.skipif(
+                platform.system() != "Darwin", reason="OSX only",
+            ),
+        ),
+    ],
+)
+def test_cmaketoolchain_path_find_program(host):
     """Test that executables in bindirs of build_requires can be found with
     find_program() in consumer CMakeLists.
     """
     client = TestClient()
+
+    cross_build = "cross_build" in host
+    if cross_build:
+        host_profile = "ios12.0-armv8"
+        profile_content = textwrap.dedent("""
+            include(default)
+            [settings]
+            os=iOS
+            os.version=12.0
+            arch=armv8
+        """)
+        client.save({host_profile: profile_content})
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -200,7 +317,9 @@ def test_cmaketoolchain_path_find_program():
                 self.copy(pattern="*", dst="bin")
     """)
     client.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""})
-    client.run("create . hello_host/0.1@")
+    client.run("create . hello_host/0.1@{}".format(
+        " -pr:b default -pr:h {}".format(host_profile) if cross_build else "",
+    ))
     client.run("create . hello_build/0.1@")
 
     conanfile = textwrap.dedent("""
@@ -219,7 +338,11 @@ def test_cmaketoolchain_path_find_program():
         endif()
     """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install . pkg/0.1@ -g CMakeToolchain")
+    if cross_build:
+        client.save({host_profile: profile_content})
+    client.run("install . pkg/0.1@ -g CMakeToolchain{}".format(
+        " -pr:b default -pr:h {}".format(host_profile) if cross_build else "",
+    ))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found hello prog" in client.out
