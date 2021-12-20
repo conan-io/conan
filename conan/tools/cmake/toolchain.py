@@ -11,7 +11,6 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.build import build_jobs
 from conan.tools.cmake.utils import is_multi_configuration
-from conan.tools.conf import ConfAggregator
 from conan.tools.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
@@ -459,28 +458,17 @@ class FindConfigFiles(Block):
 
 class UserToolchain(Block):
     template = textwrap.dedent("""
-        {% for user_toolchain in user_toolchains %}
+        {% for user_toolchain in toolchain_paths %}
         include("{{user_toolchain}}")
         {% endfor %}
         """)
 
-    user_toolchain = None
-
     def context(self):
-        conf_aggregator_file = os.path.join(self._conanfile.generators_folder,
-                                            ConfAggregator.filename)
-        user_toolchains = []
-        if os.path.exists(conf_aggregator_file):
-            data = json.loads(load(conf_aggregator_file))
-            user_toolchains = data.get("tools.cmake.cmaketoolchain:user_toolchain", [])
-        elif self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]:
-            # This is global [conf] injection of extra toolchain files
-            user_toolchains = [self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]]
-        elif self.user_toolchain:
-            user_toolchains = [self.user_toolchain]
-
-        user_toolchains = [toolchain.replace("\\", "/") for toolchain in user_toolchains]
-        return {"user_toolchains": user_toolchains}
+        # This is global [conf] injection of extra toolchain files
+        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
+        if user_toolchain:
+            user_toolchain = user_toolchain.replace("\\", "/")
+        return {"toolchain_paths": [user_toolchain]}
 
 
 class CMakeFlagsInitBlock(Block):

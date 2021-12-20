@@ -139,12 +139,27 @@ def test_cmake_toolchain_multiple_user_toolchain():
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        from conan.tools.cmake import CMake
+        from conan.tools.cmake import CMake, CMakeToolchain
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "CMakeLists.txt"
-            build_requires = "toolchain1/0.1", "toolchain2/0.1"
-            generators = "ConfAggregator", "CMakeToolchain"
+            tool_requires = "toolchain1/0.1", "toolchain2/0.1"
+
+
+            def generate(self):
+                # Get the toolchains from "tools.cmake.cmaketoolchain:user_toolchain" conf at the
+                # tool_requires
+                user_toolchains = []
+                for dep in self.dependencies.direct_build.values():
+                    ut = dep.conf_info["tools.cmake.cmaketoolchain:user_toolchain"]
+                    if ut:
+                        user_toolchains.append(ut)
+
+                # Modify the context of the user_toolchain block
+                t = CMakeToolchain(self)
+                t.blocks["user_toolchain"].values["toolchain_paths"] = user_toolchains
+                t.generate()
+
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
