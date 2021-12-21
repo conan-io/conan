@@ -9,6 +9,7 @@ class AutotoolsDeps:
         self._environment = None
 
     def _get_cpp_info(self):
+        # FIXME: The order in resulting CppInfo is not well defined, need to sort first, link order!
         ret = CppInfo()
         for dep in self._conanfile.dependencies.host.values():
             dep_cppinfo = dep.cpp_info.aggregated_components()
