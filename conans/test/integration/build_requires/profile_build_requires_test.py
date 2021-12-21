@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 import six
 
@@ -267,80 +268,35 @@ nonexistingpattern*: SomeTool/1.2@user/channel
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.out)
         self.assertNotIn("Project: Hello world from python tool!", client.out)
 
-    def test_consumer_patterns_negotiated_condition(self):
+    def test_consumer_patterns_loop_error(self):
         client = TestClient()
-        self._create(client)
 
-        build_tool_1 = """
-from conans import ConanFile, tools
-class TestMyLib(ConanFile):
-    pass
-        """
-        build_tool_2 = """
-from conans import ConanFile, tools
-class TestMyLib(ConanFile):
-    build_requires = "build_tool_1/1.0@test/test"
-        """
-        consumer = """
-from conans import ConanFile, tools
+        profile_patterns = textwrap.dedent("""
+            [build_requires]
+            tool1/1.0
+            tool2/1.0
+            """)
+        client.save({"tool1/conanfile.py": GenConanfile(),
+                     "tool2/conanfile.py": GenConanfile().with_build_requires("tool1/1.0"),
+                     "consumer/conanfile.py": GenConanfile(),
+                     "profile.txt": profile_patterns})
 
-class MyLib(ConanFile):
-    pass
-"""
-        profile_patterns = """
-[build_requires]
-build_tool_1/1.0@test/test
-build_tool_2/1.0@test/test
-"""
-        client.save({"conanfile_build_tool_1.py": build_tool_1,
-                     "conanfile_build_tool_2.py": build_tool_2,
-                     "conanfile_consumer.py": consumer,
-                     "profile.txt": profile_patterns}, clean_first=True)
+        client.run("export tool1 tool1/1.0@")
+        client.run("export tool2 tool2/1.0@")
+        with six.assertRaisesRegex(self, Exception, "Loop detected in context build"):
+            client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt")
 
-        client.run("export conanfile_build_tool_1.py build_tool_1/1.0@test/test")
-        client.run("export conanfile_build_tool_2.py build_tool_2/1.0@test/test")
-        with six.assertRaisesRegex(self, Exception,
-                                    "Loop detected in context build: 'build_tool_1/1.0@test/test' requires 'build_tool_2/1.0@test/test' which is an ancestor too"):
-            client.run("create conanfile_consumer.py consumer/1.0@test/test --build=missing -pr:b=profile.txt -pr:h=profile.txt -pr:b=default -pr:h=default --build=build_tool_1 --build=build_tool_2")
+        # we can fix it with the negation
+        profile_patterns = textwrap.dedent("""
+            [build_requires]
+            tool1/1.0
+            !tool1*:tool2/1.0
+            """)
+        client.save({"profile.txt": profile_patterns})
 
-    def test_consumer_patterns_circular_loop(self):
-        client = TestClient()
-        self._create(client)
-
-        build_tool_1 = """
-from conans import ConanFile, tools
-class TestMyLib(ConanFile):
-    pass
-        """
-        build_tool_2 = """
-from conans import ConanFile, tools
-class TestMyLib(ConanFile):
-    build_requires = "build_tool_1/1.0@test/test"
-        """
-        consumer = """
-from conans import ConanFile, tools
-
-class MyLib(ConanFile):
-    pass
-"""
-        profile_patterns = """
-[build_requires]
-build_tool_1/1.0@test/test
-!build_tool_1/*: build_tool_2/1.0@test/test
-"""
-        client.save({"conanfile_build_tool_1.py": build_tool_1,
-                     "conanfile_build_tool_2.py": build_tool_2,
-                     "conanfile_consumer.py": consumer,
-                     "profile.txt": profile_patterns}, clean_first=True)
-
-        client.run("export conanfile_build_tool_1.py build_tool_1/1.0@test/test")
-        client.run("export conanfile_build_tool_2.py build_tool_2/1.0@test/test")
-        client.run("create conanfile_consumer.py consumer/1.0@test/test --build=missing -pr:b=profile.txt -pr:h=profile.txt -pr:b=default -pr:h=default --build=build_tool_1 --build=build_tool_2")
-
-        self.assertIn("build_tool_1/1.0@test/test: Forced build from source", client.out)
-        self.assertIn("build_tool_1/1.0@test/test: Created package", client.out)
-        self.assertIn("build_tool_2/1.0@test/test: Forced build from source", client.out)
-        self.assertIn("build_tool_2/1.0@test/test: Created package", client.out)
+        client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt")
+        self.assertIn("tool1/1.0: Created package", client.out)
+        self.assertIn("tool2/1.0: Created package", client.out)
 
     def test_build_requires_options(self):
         client = TestClient()
