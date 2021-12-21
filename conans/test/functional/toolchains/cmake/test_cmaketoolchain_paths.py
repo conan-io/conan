@@ -6,20 +6,23 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
+ios10_armv8_settings = "-s os=iOS -s os.version=10.0 -s arch=armv8"
+
+
 @pytest.mark.tool_cmake
 @pytest.mark.parametrize("package", ["hello", "ZLIB"])
 @pytest.mark.parametrize("find_package", ["module", "config"])
 @pytest.mark.parametrize(
-    "settings",
+    ("settings_build", "settings"),
     [
-        "",
+        ("", ""),
         pytest.param(
-            "-pr:b default -s os=iOS -s os.version=10.0 -s arch=armv8",
+            "-pr:b default", ios10_armv8_settings,
             marks=pytest.mark.skipif(platform.system() != "Darwin", reason="OSX only"),
         ),
     ],
 )
-def test_cmaketoolchain_path_find_package(package, find_package, settings):
+def test_cmaketoolchain_path_find_package(package, find_package, settings_build, settings):
     """Test with user "Hello" and also ZLIB one, to check that package ZLIB
     has priority over the CMake system one
     """
@@ -44,7 +47,7 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings):
     filename = "{}Config.cmake" if find_package == "config" else "Find{}.cmake"
     filename = filename.format(package)
     client.save({"conanfile.py": conanfile, "cmake/{}".format(filename): find})
-    client.run("create . {}/0.1@ {}".format(package, settings))
+    client.run("create . {}/0.1@ {} {}".format(package, settings_build, settings))
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -53,14 +56,16 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings):
         """).format(package=package)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install {}/0.1@ -g CMakeToolchain {}".format(package, settings))
+    client.run("install {}/0.1@ -g CMakeToolchain {} {}".format(package, settings_build, settings))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared" not in client.out
     assert "HELLO FROM THE {package} FIND PACKAGE!".format(package=package) in client.out
 
     # If using the CMakeDeps generator, the in-package .cmake will be ignored
-    client.run("install {}/0.1@ -g CMakeToolchain -g CMakeDeps {}".format(package, settings))
+    client.run("install {}/0.1@ -g CMakeToolchain -g CMakeDeps {} {}".format(
+        package, settings_build, settings
+    ))
     with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared '{package}::{package}'".format(package=package) in client.out
@@ -69,16 +74,16 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings):
 
 @pytest.mark.tool_cmake
 @pytest.mark.parametrize(
-    "settings",
+    ("settings_build", "settings"),
     [
-        "",
+        ("", ""),
         pytest.param(
-            "-pr:b default -s os=iOS -s os.version=10.0 -s arch=armv8",
+            "-pr:b default", ios10_armv8_settings,
             marks=pytest.mark.skipif(platform.system() != "Darwin", reason="OSX only"),
         ),
     ],
 )
-def test_cmaketoolchain_path_find_package_real_config(settings):
+def test_cmaketoolchain_path_find_package_real_config(settings_build, settings):
     client = TestClient()
 
     conanfile = textwrap.dedent("""
@@ -120,7 +125,7 @@ def test_cmaketoolchain_path_find_package_real_config(settings):
         )
         """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmake})
-    client.run("create . hello/0.1@ {}".format(settings))
+    client.run("create . hello/0.1@ {} {}".format(settings_build, settings))
 
     consumer = textwrap.dedent("""
         project(MyHello NONE)
@@ -130,14 +135,14 @@ def test_cmaketoolchain_path_find_package_real_config(settings):
         """)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install hello/0.1@ -g CMakeToolchain {}".format(settings))
+    client.run("install hello/0.1@ -g CMakeToolchain {} {}".format(settings_build, settings))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     # If it didn't fail, it found the helloConfig.cmake
     assert "Conan: Target declared" not in client.out
 
     # If using the CMakeDeps generator, the in-package .cmake will be ignored
-    client.run("install hello/0.1@ -g CMakeToolchain -g CMakeDeps {}".format(settings))
+    client.run("install hello/0.1@ -g CMakeToolchain -g CMakeDeps {} {}".format(settings_build, settings))
     with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared 'hello::hello'" in client.out
@@ -145,7 +150,17 @@ def test_cmaketoolchain_path_find_package_real_config(settings):
 
 @pytest.mark.tool_cmake
 @pytest.mark.parametrize("require_type", ["requires", "build_requires"])
-def test_cmaketoolchain_path_include_cmake_modules(require_type):
+@pytest.mark.parametrize(
+    ("settings_build", "settings"),
+    [
+        ("", ""),
+        pytest.param(
+            "-pr:b default", ios10_armv8_settings,
+            marks=pytest.mark.skipif(platform.system() != "Darwin", reason="OSX only"),
+        ),
+    ],
+)
+def test_cmaketoolchain_path_include_cmake_modules(require_type, settings_build, settings):
     """Test that cmake module files in builddirs of requires and build_requires
     are accessible with include() in consumer CMakeLists
     """
@@ -165,7 +180,9 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type):
     """)
     myowncmake = 'MESSAGE("MYOWNCMAKE FROM hello!")'
     client.save({"conanfile.py": conanfile, "cmake/myowncmake.cmake": myowncmake})
-    client.run("create . hello/0.1@")
+    client.run("create . hello/0.1@ {}".format(
+        settings if require_type == "requires" else settings_build
+    ))
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -179,7 +196,7 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type):
         include(myowncmake)
     """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install . pkg/0.1@ -g CMakeToolchain")
+    client.run("install . pkg/0.1@ -g CMakeToolchain {} {}".format(settings_build, settings))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "MYOWNCMAKE FROM hello!" in client.out
@@ -187,16 +204,16 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type):
 
 @pytest.mark.tool_cmake
 @pytest.mark.parametrize(
-    "settings",
+    ("settings_build", "settings"),
     [
-        "",
+        ("", ""),
         pytest.param(
-            "-pr:b default -s os=iOS -s os.version=10.0 -s arch=armv8",
+            "-pr:b default", ios10_armv8_settings,
             marks=pytest.mark.skipif(platform.system() != "Darwin", reason="OSX only"),
         ),
     ],
 )
-def test_cmaketoolchain_path_find_file_find_path(settings):
+def test_cmaketoolchain_path_find_file_find_path(settings_build, settings):
     """Test that headers in includedirs of requires can be found with
     find_file() and find_path() in consumer CMakeLists
     """
@@ -213,7 +230,7 @@ def test_cmaketoolchain_path_find_file_find_path(settings):
                 self.copy(pattern="*.h", dst="include")
     """)
     client.save({"conanfile.py": conanfile, "hello.h": ""})
-    client.run("create . hello/0.1@ {}".format(settings))
+    client.run("create . hello/0.1@ {} {}".format(settings_build, settings))
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
@@ -228,7 +245,7 @@ def test_cmaketoolchain_path_find_file_find_path(settings):
         endif()
     """)
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install hello/0.1@ -g CMakeToolchain {}".format(settings))
+    client.run("install hello/0.1@ -g CMakeToolchain {} {}".format(settings_build, settings))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found file hello.h" in client.out
@@ -237,16 +254,16 @@ def test_cmaketoolchain_path_find_file_find_path(settings):
 
 @pytest.mark.tool_cmake
 @pytest.mark.parametrize(
-    "settings",
+    ("settings_build", "settings"),
     [
-        "",
+        ("", ""),
         pytest.param(
-            "-pr:b default -s os=iOS -s os.version=10.0 -s arch=armv8",
+            "-pr:b default", ios10_armv8_settings,
             marks=pytest.mark.skipif(platform.system() != "Darwin", reason="OSX only"),
         ),
     ],
 )
-def test_cmaketoolchain_path_find_library(settings):
+def test_cmaketoolchain_path_find_library(settings_build, settings):
     """Test that libraries in libdirs of requires can be found with
     find_library() in consumer CMakeLists
     """
@@ -264,7 +281,7 @@ def test_cmaketoolchain_path_find_library(settings):
     """)
     client.save({"conanfile.py": conanfile, "libhello.a": "", "hello.lib": ""})
     client.run("create . hello_host/0.1@ {}".format(settings))
-    client.run("create . hello_build/0.1@")
+    client.run("create . hello_build/0.1@ {}".format(settings_build))
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -282,7 +299,7 @@ def test_cmaketoolchain_path_find_library(settings):
         endif()
     """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install . pkg/0.1@ -g CMakeToolchain {}".format(settings))
+    client.run("install . pkg/0.1@ -g CMakeToolchain {} {}".format(settings_build, settings))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found hello lib" in client.out
@@ -292,16 +309,16 @@ def test_cmaketoolchain_path_find_library(settings):
 
 @pytest.mark.tool_cmake
 @pytest.mark.parametrize(
-    "settings",
+    ("settings_build", "settings"),
     [
-        "",
+        ("", ""),
         pytest.param(
-            "-pr:b default -s os=iOS -s os.version=10.0 -s arch=armv8",
+            "-pr:b default", ios10_armv8_settings,
             marks=pytest.mark.skipif(platform.system() != "Darwin", reason="OSX only"),
         ),
     ],
 )
-def test_cmaketoolchain_path_find_program(settings):
+def test_cmaketoolchain_path_find_program(settings_build, settings):
     """Test that executables in bindirs of build_requires can be found with
     find_program() in consumer CMakeLists.
     """
@@ -319,7 +336,7 @@ def test_cmaketoolchain_path_find_program(settings):
     """)
     client.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""})
     client.run("create . hello_host/0.1@ {}".format(settings))
-    client.run("create . hello_build/0.1@")
+    client.run("create . hello_build/0.1@ {}".format(settings_build))
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -337,7 +354,7 @@ def test_cmaketoolchain_path_find_program(settings):
         endif()
     """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install . pkg/0.1@ -g CMakeToolchain {}".format(settings))
+    client.run("install . pkg/0.1@ -g CMakeToolchain {} {}".format(settings_build, settings))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Found hello prog" in client.out
