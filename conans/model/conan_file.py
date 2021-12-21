@@ -5,7 +5,6 @@ from contextlib import contextmanager
 import six
 from six import string_types
 
-
 from conans.client import tools
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
@@ -93,6 +92,11 @@ def get_env_context_manager(conanfile, without_python=False):
     return _env_and_python(conanfile)
 
 
+class RaiseProfileBuild:
+    def __getattr__(self, item):
+        raise ConanException("Provide 'build' profile")
+
+
 class ConanFile(object):
     """ The base class for all package recipes
     """
@@ -129,6 +133,7 @@ class ConanFile(object):
 
     # Settings and Options
     settings = None
+    settings_build = RaiseProfileBuild()
     options = None
     default_options = None
 
@@ -161,7 +166,7 @@ class ConanFile(object):
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
-        self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
+        self._conan_new_cpp_info = None  # Will be calculated lazy in the getter
         self._conan_dependencies = None
 
         self.env_scripts = {}  # Accumulate the env scripts generated in order
