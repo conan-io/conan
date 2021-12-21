@@ -144,4 +144,4 @@ def test_cpp_info_merge_aggregating_components_first(aggregate_first):
                                                              "jar_{}_2".format(n)]
             assert getattr(cppinfo.components["boo2"], n) == ["jar2_{}_1".format(n),
                                                               "jar2_{}_2".format(n)]
-            assert getattr(cppinfo, n) == []
+            assert getattr(cppinfo, n) == None
