@@ -400,11 +400,11 @@ class FindFiles(Block):
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
-        {% if generators_folder or cmake_module_path %}
-        set(CMAKE_MODULE_PATH {{ generators_folder }} {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        {% if generators_folder or host_build_paths_root or host_build_paths_noroot or build_build_paths %}
+        set(CMAKE_MODULE_PATH {{ generators_folder }} {{ host_build_paths_root }} {{ host_build_paths_noroot }} {{ build_build_paths }} ${CMAKE_MODULE_PATH})
         {% endif %}
-        {% if generators_folder or cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH {{ generators_folder }} {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        {% if generators_folder or host_build_paths_noroot %}
+        set(CMAKE_PREFIX_PATH {{ generators_folder }} {{ host_build_paths_noroot }} ${CMAKE_PREFIX_PATH})
         {% endif %}
         {% if cmake_program_path %}
         set(CMAKE_PROGRAM_PATH {{ cmake_program_path }} ${CMAKE_PROGRAM_PATH})
@@ -439,7 +439,7 @@ class FindFiles(Block):
         endif()
 
         if(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE STREQUAL "ONLY")
-            set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} {{ generators_folder }} {{ cmake_prefix_path }})
+            set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} {{ generators_folder }} {{ host_build_paths_noroot }})
         endif()
         if(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM STREQUAL "NEVER")
             if(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY STREQUAL "ONLY" OR
@@ -447,7 +447,7 @@ class FindFiles(Block):
                CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK STREQUAL "ONLY" OR
         {% endif %}
                CMAKE_FIND_ROOT_PATH_MODE_INCLUDE STREQUAL "ONLY")
-                set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} {{ host_builddirs }})
+                set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} {{ host_build_paths_root }})
             endif()
         else()
             if(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM STREQUAL "ONLY")
@@ -487,15 +487,15 @@ class FindFiles(Block):
 
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
-        host_module_paths = []
-        host_prefix_paths = []
+        host_build_paths_root = []
+        host_build_paths_noroot = []
         host_lib_paths = []
         host_framework_paths = []
         host_include_paths = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            host_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
-            host_prefix_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            host_build_paths_root.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p == ""])
+            host_build_paths_noroot.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
             host_lib_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.libdirs])
             if is_apple_:
                 host_framework_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.frameworkdirs])
@@ -503,25 +503,25 @@ class FindFiles(Block):
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
-        build_module_paths = []
+        build_build_paths = []
         build_bin_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.aggregated_components()
-            build_module_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
+            build_build_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
             build_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
 
         return {
             "find_package_prefer_config": find_package_prefer_config,
             "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
-            "is_apple": is_apple_,
-            "cmake_module_path": self._join_paths(host_module_paths + build_module_paths),
-            "cmake_prefix_path": self._join_paths(host_prefix_paths),
+            "host_build_paths_root": self._join_paths(host_build_paths_root),
+            "host_build_paths_noroot": self._join_paths(host_build_paths_noroot),
+            "build_build_paths": self._join_paths(build_build_paths),
             "cmake_program_path": self._join_paths(build_bin_paths),
             "cmake_library_path": self._join_paths(host_lib_paths),
             "cmake_framework_path": self._join_paths(host_framework_paths),
             "cmake_include_path": self._join_paths(host_include_paths),
+            "is_apple": is_apple_,
             "cross_building": cross_building(self._conanfile),
-            "host_builddirs": self._join_paths(host_module_paths),
         }
 
 
