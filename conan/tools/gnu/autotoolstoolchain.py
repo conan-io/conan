@@ -74,9 +74,11 @@ class AutotoolsToolchain:
             return
 
         compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-        if compiler == "gcc":
+        if compiler in ['clang', 'apple-clang', 'gcc']:
             if libcxx == 'libstdc++':
                 return '_GLIBCXX_USE_CXX11_ABI=0'
+            elif libcxx == "libstdc++11" and self._conanfile.conf["tools.gnu:define_libcxx11_abi"]:
+                return '_GLIBCXX_USE_CXX11_ABI=1'
 
     def environment(self):
         env = Environment()

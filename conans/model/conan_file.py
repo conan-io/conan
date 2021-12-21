@@ -139,35 +139,18 @@ class ConanFile:
     def source_folder(self):
         return self.folders.source_folder
 
-    @source_folder.setter
-    def source_folder(self, folder):
-        self.folders.set_base_source(folder)
-
     @property
     def build_folder(self):
         return self.folders.build_folder
-
-    @build_folder.setter
-    def build_folder(self, folder):
-        self.folders.set_base_build(folder)
 
     @property
     def package_folder(self):
         return self.folders.base_package
 
-    @package_folder.setter
-    def package_folder(self, folder):
-        self.folders.set_base_package(folder)
-
     @property
     def install_folder(self):
         # FIXME: Remove in 2.0, no self.install_folder
         return self.folders.base_install
-
-    @install_folder.setter
-    def install_folder(self, folder):
-        # FIXME: Remove in 2.0, no self.install_folder
-        self.folders.set_base_install(folder)
 
     @property
     def generators_folder(self):
@@ -177,10 +160,6 @@ class ConanFile:
     @property
     def imports_folder(self):
         return self.folders.imports_folder
-
-    @imports_folder.setter
-    def imports_folder(self, folder):
-        self.folders.set_base_imports(folder)
 
     def source(self):
         pass

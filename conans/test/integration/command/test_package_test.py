@@ -269,3 +269,46 @@ class HelloReuseConan(ConanFile):
         pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
+
+
+def test_tested_reference_str():
+    """
+    At the test_package/conanfile the variable `self.tested_reference_str` is injected with the
+    str of the reference being tested. It is available in all the methods.
+
+    Compatibility with Conan 2.0:
+    If the 'test_type' is set to "explicit" the require won't be automatically injected and has to
+    be the user the one injecting the require or the build require using the
+    `self.tested_reference_str`. This 'test_type' can be removed in 2.0 if we consider it has
+    to be always explicit. The recipes will still work in Conan 2.0 because the 'test_type' will be
+    ignored.
+    """
+    client = TestClient()
+    test_conanfile = textwrap.dedent("""
+    from conans import ConanFile
+    import os
+
+    class HelloReuseConan(ConanFile):
+
+        test_type = "explicit"
+
+        def generate(self):
+            self.output.warning("At generate: {}".format(self.tested_reference_str))
+            assert len(self.dependencies.values()) == 1
+            assert len(self.dependencies.build.values()) == 1
+
+        def build(self):
+            self.output.warning("At build: {}".format(self.tested_reference_str))
+
+        def build_requirements(self):
+            self.output.warning("At build_requirements: {}".format(self.tested_reference_str))
+            self.build_requires(self.tested_reference_str)
+
+        def test(self):
+            self.output.warning("At test: {}".format(self.tested_reference_str))
+    """)
+
+    client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": test_conanfile})
+    client.run("create . foo/1.0@")
+    for method in ("generate", "build", "build_requirements", "test"):
+        assert "At {}: foo/1.0".format(method) in client.out

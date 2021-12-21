@@ -82,8 +82,6 @@ class MockConanfile(ConanFile):
         self.generators = []
         self.conf = Conf()
 
-        self.package_folder = None
-
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None

@@ -1,5 +1,4 @@
 import os
-import platform
 import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -14,7 +13,6 @@ def get_requires_from_content(content):
     return ""
 
 
-# Without compiler, def rpath_flags(settings, os_build, lib_paths): doesn't append the -Wl...etc
 def test_pkg_config_dirs():
     # https://github.com/conan-io/conan/issues/2756
     conanfile = textwrap.dedent("""
@@ -44,9 +42,6 @@ def test_pkg_config_dirs():
     pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
-    expected_rpaths = ""
-    if platform.system() in ("Linux", "Darwin"):
-        expected_rpaths = ' -Wl,-rpath,"${libdir1}" -Wl,-rpath,"${libdir2}"'
     expected_content = textwrap.dedent("""\
         libdir1=/my_absoulte_path/fake/mylib/lib
         libdir2=${prefix}/lib2
@@ -55,8 +50,8 @@ def test_pkg_config_dirs():
         Name: mylib
         Description: Conan package: mylib
         Version: 0.1
-        Libs: -L"${libdir1}" -L"${libdir2}"%s
-        Cflags: -I"${includedir1}\"""" % expected_rpaths)
+        Libs: -L"${libdir1}" -L"${libdir2}"
+        Cflags: -I"${includedir1}\"""")
 
     # Avoiding trailing whitespaces in Jinja template
     for line in pc_content.splitlines()[1:]:
@@ -108,43 +103,6 @@ def test_empty_dirs():
         Libs:%s
         Cflags: """ % " ")  # ugly hack for trailing whitespace removed by IDEs
     assert "\n".join(pc_content.splitlines()[1:]) == expected
-
-
-def test_pkg_config_rpaths():
-    # rpath flags are only generated for gcc and clang
-    profile = textwrap.dedent("""\
-        [settings]
-        os=Linux
-        compiler=gcc
-        compiler.version=7
-        compiler.libcxx=libstdc++
-        """)
-    conanfile = textwrap.dedent("""
-        from conans import ConanFile
-
-        class PkgConfigConan(ConanFile):
-            name = "mylib"
-            version = "0.1"
-            settings = "os", "compiler"
-            exports = "mylib.so"
-
-            def package(self):
-                self.copy("mylib.so", dst="lib")
-
-            def package_info(self):
-                self.cpp_info.libs = ["mylib"]
-        """)
-    client = TestClient()
-    client.save({"conanfile.py": conanfile,
-                 "linux_gcc": profile,
-                 "mylib.so": "fake lib content"})
-    client.run("create . -pr=linux_gcc")
-    client.run("install --reference=mylib/0.1@ -g PkgConfigDeps -pr=linux_gcc")
-
-    pc_path = os.path.join(client.current_folder, "mylib.pc")
-    assert os.path.exists(pc_path) is True
-    pc_content = load(pc_path)
-    assert '-Wl,-rpath,"${libdir1}"' in pc_content
 
 
 def test_system_libs():

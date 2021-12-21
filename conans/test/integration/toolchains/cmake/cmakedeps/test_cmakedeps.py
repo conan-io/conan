@@ -115,3 +115,42 @@ def test_cpp_info_component_objects():
         content = f.read()
         assert 'set(hello_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content
         assert 'set(hello_hello_say_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content
+
+
+def test_cpp_info_component_error_aggregate():
+    # https://github.com/conan-io/conan/issues/10176
+    # This test was consistently failing because "VirtualRunEnv" was not doing a "copy()"
+    # of cpp_info before calling "aggregate_components()", and it was destructive, removing
+    # components data
+    client = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.cpp_info.components["say"].includedirs = ["include"]
+            """)
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            requires = "hello/1.0"
+            generators = "VirtualRunEnv", "CMakeDeps"
+            def package_info(self):
+                self.cpp_info.components["chat"].requires = ["hello::say"]
+        """)
+    test_package = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "VirtualRunEnv", "CMakeDeps"
+
+            def test(self):
+                pass
+        """)
+
+    client.save({"hello/conanfile.py": conan_hello,
+                 "consumer/conanfile.py": consumer,
+                 "consumer/test_package/conanfile.py": test_package})
+    client.run("create hello hello/1.0@")
+    client.run("create consumer consumer/1.0@")
+    assert "consumer/1.0 (test package): Running test()" in client.out

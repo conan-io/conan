@@ -63,8 +63,7 @@ class BazelDeps(object):
 
         """)
 
-        cpp_info = dependency.cpp_info.copy()
-        cpp_info.aggregate_components()
+        cpp_info = dependency.cpp_info.aggregated_components()
 
         if not cpp_info.libs and not cpp_info.includedirs:
             return None

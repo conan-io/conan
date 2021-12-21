@@ -1,9 +1,11 @@
 import copy
 import os
+import platform
 import time
 import unittest
 from collections import OrderedDict
 
+import pytest
 from mock import patch
 from parameterized.parameterized import parameterized
 
@@ -383,6 +385,7 @@ def absolute_existing_folder():
     return tmp
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")
 def test_exports_does_not_follow_symlink():
     linked_abs_folder = absolute_existing_folder()
     client = TurboTestClient(default_server_user=True)
