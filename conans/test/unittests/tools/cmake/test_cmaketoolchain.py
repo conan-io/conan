@@ -116,23 +116,6 @@ def test_add_new_block(conanfile):
     assert 'CMAKE_BUILD_TYPE' in content
 
 
-def test_extend_block(conanfile):
-    toolchain = CMakeToolchain(conanfile)
-
-    class MyBlock(GenericSystemBlock):
-        template = "Hello {{build_type}}!!"
-
-        def context(self):
-            c = super(MyBlock, self).context()
-            c["build_type"] = c["build_type"] + "Super"
-            return c
-
-    toolchain.blocks["generic_system"] = MyBlock
-    content = toolchain.content
-    assert 'Hello ReleaseSuper!!' in content
-    assert 'CMAKE_BUILD_TYPE' not in content
-
-
 def test_user_toolchain(conanfile):
     toolchain = CMakeToolchain(conanfile)
     toolchain.blocks["user_toolchain"].values["paths"] = ["myowntoolchain.cmake"]
