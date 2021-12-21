@@ -148,6 +148,13 @@ class Git(SCMBase):
     def _configure_ssl_verify(self):
         return "-c http.sslVerify=%s " % ("true" if self._verify_ssl else "false")
 
+    @property
+    def version(self):
+        if not hasattr(self, '_version'):
+            version = Git.get_version()
+            setattr(self, '_version', version)
+        return getattr(self, '_version')
+
     def run(self, command):
         command = self._configure_ssl_verify + command
         return super(Git, self).run(command)
