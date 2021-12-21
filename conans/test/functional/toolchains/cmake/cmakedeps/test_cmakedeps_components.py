@@ -215,3 +215,111 @@ def test_components_system_libs():
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>') in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>
+
+
+@pytest.mark.tool_cmake
+def test_components_exelinkflags():
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Requirement(ConanFile):
+            name = "requirement"
+            version = "system"
+
+            settings = "os", "arch", "compiler", "build_type"
+
+            def package_info(self):
+                self.cpp_info.components["component"].exelinkflags = ["-Wl,-link1", "-Wl,-link2"]
+    """)
+    t = TestClient()
+    t.save({"conanfile.py": conanfile})
+    t.run("create .")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
+
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            requires = "requirement/system"
+            generators = "CMakeDeps", "CMakeToolchain"
+            exports_sources = "CMakeLists.txt"
+            settings = "os", "arch", "compiler", "build_type"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+    """)
+
+    cmakelists = textwrap.dedent("""
+        project(consumer)
+        cmake_minimum_required(VERSION 3.1)
+        find_package(requirement)
+        get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
+        message("component options: ${tmp_options}")
+    """)
+
+    t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+    t.run("create . --build missing -s build_type=Release")
+    assert ('component options: '
+            '$<$<CONFIG:Release>:'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-Wl,-link1;-Wl,-link2>>') in t.out
+    # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
+    #       <CONFIG:Debug>
+
+
+@pytest.mark.tool_cmake
+def test_components_sharedlinkflags():
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Requirement(ConanFile):
+            name = "requirement"
+            version = "system"
+
+            settings = "os", "arch", "compiler", "build_type"
+
+            def package_info(self):
+                self.cpp_info.components["component"].sharedlinkflags = ["-Wl,-link1", "-Wl,-link2"]
+    """)
+    t = TestClient()
+    t.save({"conanfile.py": conanfile})
+    t.run("create .")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
+
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "0.1"
+            requires = "requirement/system"
+            generators = "CMakeDeps", "CMakeToolchain"
+            exports_sources = "CMakeLists.txt"
+            settings = "os", "arch", "compiler", "build_type"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+    """)
+
+    cmakelists = textwrap.dedent("""
+        project(consumer)
+        cmake_minimum_required(VERSION 3.1)
+        find_package(requirement)
+        get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
+        message("component options: ${tmp_options}")
+    """)
+
+    t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+    t.run("create . --build missing -s build_type=Release")
+    assert ('component options: '
+            '$<$<CONFIG:Release>:'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:-Wl,-link1;-Wl,-link2>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:-Wl,-link1;-Wl,-link2>;'
+            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>') in t.out
+    # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
+    #       <CONFIG:Debug>
