@@ -61,28 +61,3 @@ def test_reuse_with_modules_and_config(cmake_find_mode):
     elif cmake_find_mode == FIND_MODE_NONE:
         assert not exists_config(ifolder)
         assert not exists_module(ifolder)
-
-
-def test_module_defined_vars():
-    t = TestClient()
-    conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile
-
-            class Conan(ConanFile):
-                name = "mydep"
-                version = "1.0"
-                settings = "os", "arch", "compiler", "build_type"
-
-            def package_info(self):
-                self.cpp_info.set_property("cmake_file_name", "MYDEP")
-                self.cpp_info.set_property("cmake_find_mode", "module")
-
-            """)
-
-    t.save({"conanfile.py": conanfile})
-    t.run("create .")
-    t.run("install mydep/1.0@")
-    with open(os.path.join(t.current_folder, "Findmydep.cmake")) as f:
-        content = f.read()
-        self.assertIn(filename, content)
