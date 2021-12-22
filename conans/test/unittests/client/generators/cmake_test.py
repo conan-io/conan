@@ -314,7 +314,7 @@ endmacro()""", macro)
         conanfile = ConanFile(Mock(), None)
         conanfile.initialize(settings_mock, EnvValues())
         install_folder = "/c/foo/testing"
-        setattr(conanfile, "install_folder", install_folder)
+        conanfile.folders.set_base_install(install_folder)
         conanfile.generators = ["cmake_find_package_multi"]
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
         definitions = definitions_builder.get_definitions("3.13")
@@ -327,7 +327,7 @@ endmacro()""", macro)
         settings_mock.os = "iOS"
         settings_mock.os_build = "Macos"
         conanfile = ConanFile(Mock(), None)
-        conanfile.install_folder = "/c/foo/testing"
+        conanfile.folders.set_base_install("/c/foo/testing")
         conanfile.initialize(settings_mock, EnvValues())
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
         definitions = definitions_builder.get_definitions("3.13")
@@ -346,7 +346,7 @@ endmacro()""", macro)
             settings_mock = _MockSettings(build_type="Release")
             conanfile = ConanFile(Mock(), None)
             install_folder = "/c/foo/testing"
-            setattr(conanfile, "install_folder", install_folder)
+            conanfile.folders.set_base_install(install_folder)
             conanfile.initialize(settings_mock, EnvValues())
             assert CMake(conanfile)
 

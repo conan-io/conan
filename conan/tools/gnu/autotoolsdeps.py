@@ -13,11 +13,10 @@ class AutotoolsDeps:
     def _get_cpp_info(self):
         ret = NewCppInfo()
         for dep in self._conanfile.dependencies.host.values():
-            dep_cppinfo = dep.cpp_info.copy()
+            dep_cppinfo = dep.cpp_info.aggregated_components()
             dep_cppinfo.set_relative_base_folder(dep.package_folder)
             # In case we have components, aggregate them, we do not support isolated
             # "targets" with autotools
-            dep_cppinfo.aggregate_components()
             ret.merge(dep_cppinfo)
         return ret
 
@@ -38,8 +37,6 @@ class AutotoolsDeps:
             ldflags.extend(flags.frameworks)
             ldflags.extend(flags.framework_paths)
             ldflags.extend(flags.lib_paths)
-            # FIXME: Previously we had an argument "include_rpath_flags" defaulted to False
-            ldflags.extend(flags.rpath_flags)
 
             # cflags
             cflags = flags.cflags

@@ -13,7 +13,8 @@ def serialize_cpp_info(cpp_info):
         "libs",
         "system_libs",
         "defines", "cflags", "cxxflags", "sharedlinkflags", "exelinkflags",
-        "frameworks", "framework_paths", "names", "filenames"
+        "frameworks", "framework_paths", "names", "filenames",
+        "build_modules", "build_modules_paths"
     ]
     res = {}
     for key in keys:
