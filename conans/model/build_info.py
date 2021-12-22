@@ -235,7 +235,7 @@ class _CppInfo(object):
         return self._build_modules
 
     def set_property(self, property_name, value, is_path=False):
-        self._generator_properties[property_name] = value, is_path
+        self._generator_properties[property_name] = (value, is_path)
 
     def get_property(self, property_name):
         try:

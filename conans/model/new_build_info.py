@@ -149,9 +149,9 @@ class NewCppInfo(object):
                     values, is_path = value
                     if is_path:
                         if isinstance(values, list):
-                            updates[prop_name] = [os.path.join(folder, v) for v in values]
+                            updates[prop_name] = [os.path.join(folder, v) for v in values], is_path
                         else:
-                            updates[prop_name] = os.path.join(folder, values)
+                            updates[prop_name] = os.path.join(folder, values), is_path
                 component._generator_properties.update(updates)
 
     def get_sorted_components(self):
