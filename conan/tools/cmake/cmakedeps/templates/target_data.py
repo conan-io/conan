@@ -45,6 +45,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                                                       .replace('$', '\\$').replace('"', '\\"')
         return {"global_cpp": global_cpp,
                 "pkg_name": self.pkg_name,
+                "file_name": self.file_name,
                 "package_folder": package_folder,
                 "config_suffix": self.config_suffix,
                 "components_names": components_names,
@@ -60,8 +61,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
               set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_names }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_NAMES)
-              set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ pkg_name }}_FIND_DEPENDENCY_NAMES} {{ dependency_filenames }})
-              list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
+              set({{ file_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ file_name }}_FIND_DEPENDENCY_NAMES} {{ dependency_filenames }})
+              list(REMOVE_DUPLICATES {{ file_name }}_FIND_DEPENDENCY_NAMES)
 
               ########### VARIABLES #######################################################################
               #############################################################################################
