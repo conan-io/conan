@@ -60,7 +60,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         include(${CMAKE_CURRENT_LIST_DIR}/{{ targets_include_file }})
         include(CMakeFindDependencyMacro)
 
-        foreach(_DEPENDENCY {{ '${' + file_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
+        foreach(_DEPENDENCY {{ '${' + pkg_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
             # Check that we have not already called a find_package with the transitive dependency
             if(NOT {{ '${_DEPENDENCY}' }}_FOUND)
             {% if is_module %}
