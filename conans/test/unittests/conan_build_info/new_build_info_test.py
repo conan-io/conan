@@ -47,7 +47,7 @@ def test_component_aggregation():
     cppinfo.components["c1"].cxxflags = ["cxxflags_c1"]
     cppinfo.components["c1"].defines = ["defines_c1"]
     cppinfo.components["c1"].set_property("my_foo", "jander")
-    cppinfo.components["c1"].set_property("my_foo2", "bar2", "other_gen")
+    cppinfo.components["c1"].set_property("my_foo2", "bar2")
 
     ret = cppinfo.aggregated_components()
 
@@ -63,7 +63,7 @@ def test_component_aggregation():
     # that belongs to a component, it could make sense to aggregate it or not, "cmake_target_name"
     # for example, cannot be aggregated. But "cmake_build_modules" is aggregated.
     assert ret.get_property("my_foo") is None
-    assert ret.get_property("my_foo2", "other_gen") is None
+    assert ret.get_property("my_foo2") is None
     assert ret.get_property("cmake_build_modules") == None
 
     # If we change the internal graph the order is different
@@ -223,7 +223,7 @@ def test_fill_old_cppinfo():
     assert old_cpp.cxxflags == ["source_cxxflags"]
     assert old_cpp.cflags == ["package_cflags"]
     assert old_cpp.frameworkdirs == []
-    assert old_cpp.get_property("cmake_build_modules", "my_cmake.cmake")
+    assert old_cpp.get_property("cmake_build_modules")
     assert old_cpp.builddirs == ["my_build"]
 
 

@@ -36,8 +36,6 @@ class AutotoolsDeps:
             ldflags.extend(flags.frameworks)
             ldflags.extend(flags.framework_paths)
             ldflags.extend(flags.lib_paths)
-            # FIXME: Previously we had an argument "include_rpath_flags" defaulted to False
-            ldflags.extend(flags.rpath_flags)
 
             # cflags
             cflags = flags.cflags

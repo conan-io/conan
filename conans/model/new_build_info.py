@@ -47,21 +47,16 @@ class _NewComponent(object):
             return []
         return [r for r in self.requires if "::" not in r]
 
-    def set_property(self, property_name, value, generator=None, path=False):
+    def set_property(self, property_name, value, path=False):
         if self._generator_properties is None:
             self._generator_properties = {}
-        self._generator_properties.setdefault(generator, {})[property_name] = (value, path)
+        self._generator_properties[property_name] = value, path
 
-    def get_property(self, property_name, generator=None):
+    def get_property(self, property_name):
         if self._generator_properties is None:
             return None
-        if generator:
-            try:
-                return self._generator_properties[generator][property_name][0]
-            except KeyError:
-                pass
-        try:  # generator = None is the dict for all generators
-            return self._generator_properties[None][property_name][0]
+        try:
+            return self._generator_properties[property_name][0]
         except KeyError:
             pass
 

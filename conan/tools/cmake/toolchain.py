@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import textwrap
@@ -456,20 +457,16 @@ class FindConfigFiles(Block):
 
 class UserToolchain(Block):
     template = textwrap.dedent("""
-        {% if user_toolchain %}
+        {% for user_toolchain in paths %}
         include("{{user_toolchain}}")
-        {% endif %}
+        {% endfor %}
         """)
-
-    user_toolchain = None
 
     def context(self):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
-        user_toolchain = user_toolchain or self.user_toolchain
-        if user_toolchain:
-            user_toolchain = user_toolchain.replace("\\", "/")
-        return {"user_toolchain": user_toolchain}
+        toolchains = [user_toolchain.replace("\\", "/")] if user_toolchain else []
+        return {"paths": toolchains if toolchains else []}
 
 
 class CMakeFlagsInitBlock(Block):
@@ -653,6 +650,8 @@ class ToolchainBlocks:
         del self._blocks[name]
 
     def __setitem__(self, name, block_type):
+        # Create a new class inheriting Block with the elements of the provided one
+        block_type = type('proxyUserBlock', (Block,), dict(block_type.__dict__))
         self._blocks[name] = block_type(self._conanfile, self._toolchain)
 
     def __getitem__(self, name):
