@@ -41,7 +41,7 @@ def test_pkg_config_dirs():
 
     pc_path = os.path.join(client.current_folder, "MyLib.pc")
     assert os.path.exists(pc_path) is True
-    pc_content = load(pc_path)
+    pc_content = load(pc_path).replace("C:", "")  # In Windows abs paths append the letter
     expected_content = textwrap.dedent("""\
         libdir1=/my_absoulte_path/fake/mylib/lib
         libdir2=${prefix}/lib2
@@ -54,6 +54,7 @@ def test_pkg_config_dirs():
         Cflags: -I"${includedir1}\"""")
 
     # Avoiding trailing whitespaces in Jinja template
+
     for line in pc_content.splitlines()[1:]:
         assert line.strip() in expected_content
 
@@ -61,13 +62,13 @@ def test_pkg_config_dirs():
         assert os.path.isabs(path) is True
 
     for line in pc_content.splitlines():
-        if line.startswith("includedir="):
-            assert_is_abs(line[len("includedir="):])
-            assert line.endswith("include") is True
-        elif line.startswith("libdir="):
-            assert_is_abs(line[len("libdir="):])
-            assert line.endswith("lib") is True
-        elif line.startswith("libdir3="):
+        if line.startswith("includedir1="):
+            assert_is_abs(line[len("includedir1="):])
+            assert line.endswith("include")
+        elif line.startswith("libdir1="):
+            assert_is_abs(line[len("libdir1="):])
+            assert line.endswith("lib")
+        elif line.startswith("libdir2="):
             assert "${prefix}/lib2" in line
 
 

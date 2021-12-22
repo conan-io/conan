@@ -47,10 +47,10 @@ class _NewComponent(object):
             return []
         return [r for r in self.requires if "::" not in r]
 
-    def set_property(self, property_name, value, path=False):
+    def set_property(self, property_name, value, is_path=False):
         if self._generator_properties is None:
             self._generator_properties = {}
-        self._generator_properties[property_name] = (value, path)
+        self._generator_properties[property_name] = (value, is_path)
 
     def get_property(self, property_name):
         if self._generator_properties is None:
@@ -75,8 +75,6 @@ class NewCppInfo(object):
         # Main package is a component with None key
         self.components[None] = _NewComponent()
         self._aggregated = None  # A _NewComponent object with all the components aggregated
-        self._sorted_components = None  # Caching the sorted components
-        self._defined_base_folder = False  # To prevent errors and double definition
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
@@ -140,38 +138,38 @@ class NewCppInfo(object):
 
     def set_relative_base_folder(self, folder):
         """Prepend the folder to all the directories"""
-        assert self._defined_base_folder is False
         for component in self.components.values():
             for varname in _DIRS_VAR_NAMES:
                 origin = getattr(component, varname)
                 if origin is not None:
                     origin[:] = [os.path.join(folder, el) for el in origin]
             if component._generator_properties is not None:
-                for prop_name, value  in component._generator_properties.items():
-                    values, path = value
-                    if path:
-                        values[:] = [os.path.join(folder, v) for v in values]
-        self._defined_base_folder = True
+                updates = {}
+                for prop_name, value in component._generator_properties.items():
+                    values, is_path = value
+                    if is_path:
+                        if isinstance(values, list):
+                            updates[prop_name] = [os.path.join(folder, v) for v in values]
+                        else:
+                            updates[prop_name] = os.path.join(folder, values)
+                component._generator_properties.update(updates)
 
     def get_sorted_components(self):
         """Order the components taking into account if they depend on another component in the
         same package (not scoped with ::). First less dependant
         return:  {component_name: component}
         """
-        if self._sorted_components is None:
-            processed = []  # Names of the components ordered
-            # FIXME: Cache the sort
-            while (len(self.components) - 1) > len(processed):
-                for name, c in self.components.items():
-                    if name is None:
-                        continue
-                    req_processed = [n for n in c.required_component_names if n not in processed]
-                    if not req_processed and name not in processed:
-                        processed.append(name)
+        processed = []  # Names of the components ordered
+        # FIXME: Cache the sort
+        while (len(self.components) - 1) > len(processed):
+            for name, c in self.components.items():
+                if name is None:
+                    continue
+                req_processed = [n for n in c.required_component_names if n not in processed]
+                if not req_processed and name not in processed:
+                    processed.append(name)
 
-            self._sorted_components = OrderedDict([(cname,  self.components[cname])
-                                                   for cname in processed])
-        return self._sorted_components
+        return OrderedDict([(cname,  self.components[cname]) for cname in processed])
 
     def aggregated_components(self):
         """Aggregates all the components as global values, returning a new NewCppInfo"""

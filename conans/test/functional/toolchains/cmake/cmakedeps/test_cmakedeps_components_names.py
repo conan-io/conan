@@ -705,7 +705,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
         self.copy("*.cmake", dst="cmake")
 
     def package_info(self):
-        self.cpp_info.set_property("cmake_build_modules", ["cmake/my_modules.cmake"], path=True)
+        self.cpp_info.set_property("cmake_build_modules", ["cmake/my_modules.cmake"], is_path=True)
     """
     my_modules = textwrap.dedent("""
     add_library(cool_component INTERFACE)

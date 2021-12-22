@@ -28,7 +28,7 @@ def test_cpp_info_editable():
         self.cpp.source.cxxflags = ["my_cxx_flag"]
         self.cpp.source.includedirs = ["my_include_source"]
         self.cpp.source.builddirs = ["my_builddir_source"]
-        self.cpp.source.set_property("cmake_build_modules", ["mypath/mybuildmodule"], path=True)
+        self.cpp.source.set_property("cmake_build_modules", ["mypath/mybuildmodule"], is_path=True)
 
         self.cpp.package.libs = ["lib_when_package"]
 
@@ -40,7 +40,7 @@ def test_cpp_info_editable():
         self.cpp_info.libs.append("lib_when_package2")
 
         self.cpp_info.objects = ["myobject.o"]
-        self.cpp_info.set_property("cmake_build_modules", ["mymodules/mybuildmodule"], path=True)
+        self.cpp_info.set_property("cmake_build_modules", ["mymodules/mybuildmodule"], is_path=True)
 
         # when editable: This one will be discarded because declared in source
         self.cpp_info.cxxflags.append("my_cxx_flag2")
@@ -136,7 +136,7 @@ def test_cpp_info_components_editable():
         self.cpp.source.components["foo"].includedirs = ["my_include_source_foo"]
         self.cpp.source.components["foo"].builddirs = ["my_builddir_source_foo"]
         self.cpp.source.components["foo"].set_property("cmake_build_modules",
-                                                      ["mypath/mybuildmodule"], path=True)
+                                                      ["mypath/mybuildmodule"], is_path=True)
         self.cpp.source.components["var"].cxxflags = ["my_cxx_flag_var"]
         self.cpp.source.components["var"].includedirs = ["my_include_source_var"]
         self.cpp.source.components["var"].builddirs = ["my_builddir_source_var"]
@@ -153,7 +153,7 @@ def test_cpp_info_components_editable():
 
         self.cpp_info.components["foo"].objects = ["myobject.o"]
         self.cpp_info.components["foo"].set_property("cmake_build_modules",
-                                                    ["mymodules/mybuildmodule"], path=True)
+                                                    ["mymodules/mybuildmodule"], is_path=True)
 
         # when editable: This one will be discarded because declared in source
         self.cpp_info.components["foo"].cxxflags.append("my_cxx_flag2_foo")

@@ -234,8 +234,8 @@ class _CppInfo(object):
             self._build_modules = self.build_modules
         return self._build_modules
 
-    def set_property(self, property_name, value, path=False):
-        self._generator_properties[property_name] = value, path
+    def set_property(self, property_name, value, is_path=False):
+        self._generator_properties[property_name] = value, is_path
 
     def get_property(self, property_name):
         try:
