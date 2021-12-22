@@ -63,15 +63,14 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             find_dependency({{ '${_DEPENDENCY}' }} REQUIRED MODULE)
         endforeach()
 
-        {% endif %}
+        {% else %}
 
         foreach(_DEPENDENCY {{ '${' + file_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
-            # if we did not set the <dependency>_FOUND var in a Find<Package>.cmake MODULE
-            # let's try to find the CONFIG files
-            if(NOT {{ '${_DEPENDENCY}' }}_FOUND)
-                find_dependency({{ '${_DEPENDENCY}' }} REQUIRED NO_MODULE)
-            endif()
+            find_dependency({{ '${_DEPENDENCY}' }} REQUIRED NO_MODULE)
         endforeach()
+
+        {% endif %}
+
 
         # Only the first installed configuration is included to avoid the collision
         foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS' + config_suffix + '}' }} )
