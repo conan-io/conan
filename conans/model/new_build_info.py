@@ -50,7 +50,7 @@ class _NewComponent(object):
     def set_property(self, property_name, value, path=False):
         if self._generator_properties is None:
             self._generator_properties = {}
-        self._generator_properties[property_name] = value, path
+        self._generator_properties[property_name] = (value, path)
 
     def get_property(self, property_name):
         if self._generator_properties is None:
@@ -147,12 +147,10 @@ class NewCppInfo(object):
                 if origin is not None:
                     origin[:] = [os.path.join(folder, el) for el in origin]
             if component._generator_properties is not None:
-                for properties in component._generator_properties.values():
-                    for prop_name, value in properties.items():
-                        print("PRRRRRRRR", prop_name, value)
-                        values, path = value
-                        if path:
-                            values[:] = [os.path.join(folder, v) for v in values]
+                for prop_name, value  in component._generator_properties.items():
+                    values, path = value
+                    if path:
+                        values[:] = [os.path.join(folder, v) for v in values]
         self._defined_base_folder = True
 
     def get_sorted_components(self):
