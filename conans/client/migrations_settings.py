@@ -44,8 +44,8 @@ compiler:
                   "7", "7.1", "7.2", "7.3",
                   "8", "8.1", "8.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
@@ -121,8 +121,8 @@ compiler:
                   "7", "7.1", "7.2", "7.3",
                   "8", "8.1", "8.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
@@ -193,8 +193,8 @@ compiler:
                   "7", "7.1", "7.2", "7.3",
                   "8", "8.1", "8.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15", "16"]
@@ -265,8 +265,8 @@ compiler:
                   "7", "7.1", "7.2", "7.3",
                   "8", "8.1", "8.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15", "16"]
@@ -345,8 +345,8 @@ compiler:
                   "8", "8.1", "8.2",
                   "9"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
@@ -431,8 +431,8 @@ compiler:
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
@@ -515,8 +515,8 @@ compiler:
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
@@ -598,8 +598,8 @@ compiler:
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
@@ -689,8 +689,8 @@ compiler:
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1", "9.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
@@ -775,8 +775,8 @@ compiler:
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1", "9.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
@@ -863,8 +863,8 @@ compiler:
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1", "9.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -964,8 +964,8 @@ compiler:
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1", "9.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1058,8 +1058,8 @@ compiler:
                   "8", "8.1", "8.2", "8.3",
                   "9", "9.1", "9.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1157,8 +1157,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1254,8 +1254,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10", "10.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1359,8 +1359,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10", "10.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1462,8 +1462,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10", "10.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1564,8 +1564,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10", "10.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1664,8 +1664,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10", "10.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1766,8 +1766,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10", "10.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1879,8 +1879,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10", "10.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -1998,8 +1998,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10", "10.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -2124,8 +2124,8 @@ compiler:
                   "9", "9.1", "9.2", "9.3",
                   "10", "10.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -2244,8 +2244,8 @@ compiler:
                   "10", "10.1", "10.2", "10.3",
                   "11", "11.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -2371,8 +2371,8 @@ compiler:
                   "10", "10.1", "10.2", "10.3",
                   "11", "11.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -2495,8 +2495,8 @@ compiler:
                   "10", "10.1", "10.2", "10.3",
                   "11", "11.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -2619,8 +2619,8 @@ compiler:
                   "10", "10.1", "10.2", "10.3",
                   "11", "11.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -2755,8 +2755,8 @@ compiler:
                   "10", "10.1", "10.2", "10.3",
                   "11", "11.1"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
@@ -2895,8 +2895,8 @@ compiler:
                   "10", "10.1", "10.2", "10.3",
                   "11", "11.1", "11.2"]
         libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        threads: [None, posix, win32]  # Windows MinGW
+        exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]
