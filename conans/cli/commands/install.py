@@ -45,6 +45,52 @@ def _get_conanfile_path(path, cwd, py):
     return path
 
 
+def graph_compute(args, conan_api):
+    cwd = os.getcwd()
+    lockfile_path = _make_abs_path(args.lockfile, cwd) if args.lockfile else None
+    path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
+    reference = RecipeReference.loads(args.reference) if args.reference else None
+    if not path and not reference:
+        raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
+
+    # Basic collaborators, remotes, lockfile, profiles
+    remote = conan_api.remotes.get(args.remote) if args.remote else None
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
+    profile_host, profile_build = get_profiles_from_args(conan_api, args)
+    root_ref = RecipeReference(name=args.name, version=args.version,
+                               user=args.user, channel=args.channel)
+
+    out = ConanOutput()
+    out.highlight("-------- Input profiles ----------")
+    out.info("Profile host:")
+    out.info(profile_host.dumps())
+    out.info("Profile build:")
+    out.info(profile_build.dumps())
+
+    # decoupling the most complex part, which is loading the root_node, this is the point where
+    # the difference between "reference", "path", etc
+    root_node = conan_api.graph.load_root_node(reference, path, profile_host, profile_build,
+                                               lockfile, root_ref,
+                                               create_reference=None,
+                                               is_build_require=args.build_require,
+                                               require_overrides=args.require_override,
+                                               remote=remote,
+                                               update=args.update)
+
+    out.highlight("-------- Computing dependency graph ----------")
+    deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
+                                            profile_build=profile_build,
+                                            lockfile=lockfile,
+                                            remote=remote,
+                                            update=args.update)
+    cli_format_graph_basic(deps_graph)
+    out.highlight("\n-------- Computing necessary packages ----------")
+    conan_api.graph.analyze_binaries(deps_graph, args.build, remote=remote, update=args.update)
+    cli_format_graph_packages(deps_graph)
+
+    return deps_graph, lockfile
+
+
 @conan_command(group=COMMAND_GROUPS['consumer'])
 def install(conan_api, parser, *args):
     """
@@ -97,49 +143,17 @@ def install(conan_api, parser, *args):
     if args.reference and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--reference")
+
     cwd = os.getcwd()
     install_folder = _make_abs_path(args.install_folder, cwd)
-    lockfile_path = _make_abs_path(args.lockfile, cwd) if args.lockfile else None
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
     conanfile_folder = os.path.dirname(path) if path else None
     reference = RecipeReference.loads(args.reference) if args.reference else None
-    if not path and not reference:
-        raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
-
-    # Basic collaborators, remotes, lockfile, profiles
     remote = conan_api.remotes.get(args.remote) if args.remote else None
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
-    profile_host, profile_build = get_profiles_from_args(conan_api, args)
-    root_ref = RecipeReference(name=args.name, version=args.version,
-                               user=args.user, channel=args.channel)
+
+    deps_graph, lockfile = graph_compute(args, conan_api)
 
     out = ConanOutput()
-    out.highlight("-------- Input profiles ----------")
-    out.info("Profile host:")
-    out.info(profile_host.dumps())
-    out.info("Profile build:")
-    out.info(profile_build.dumps())
-
-    # decoupling the most complex part, which is loading the root_node, this is the point where
-    # the difference between "reference", "path", etc
-    root_node = conan_api.graph.load_root_node(reference, path, profile_host, profile_build,
-                                               lockfile, root_ref,
-                                               create_reference=None,
-                                               is_build_require=args.build_require,
-                                               require_overrides=args.require_override,
-                                               remote=remote,
-                                               update=args.update)
-
-    out.highlight("-------- Computing dependency graph ----------")
-    deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
-                                            profile_build=profile_build,
-                                            lockfile=lockfile,
-                                            remote=remote,
-                                            update=args.update)
-    cli_format_graph_basic(deps_graph)
-    out.highlight("\n-------- Computing necessary packages ----------")
-    conan_api.graph.analyze_binaries(deps_graph, args.build, remote=remote, update=args.update)
-    cli_format_graph_packages(deps_graph)
     # TODO: Keeping old printing to avoid many tests fail: TO REMOVE
     out.highlight("\nLegacy graph output (to be removed):")
     print_graph(deps_graph)

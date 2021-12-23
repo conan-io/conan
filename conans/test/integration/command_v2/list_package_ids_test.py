@@ -1,4 +1,3 @@
-import copy
 import re
 import textwrap
 from unittest.mock import Mock, patch

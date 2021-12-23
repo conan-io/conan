@@ -304,7 +304,7 @@ def test_single_config_decentralized(client_setup):
 
     # Now lets build the application, to see everything ok
     c.run("graph build-order --reference=app1/0.1@ --lockfile=app1_b_changed.lock "
-          "--build=missing --json=build_order.json -s os=Windows")
+          "--build=missing --format=build_order.json -s os=Windows")
     json_file = c.load("build_order.json")
     to_build = json.loads(json_file)
     level0 = to_build[0]
@@ -369,11 +369,11 @@ def test_multi_config_decentralized(client_setup):
 
     # Now lets build the application, to see everything ok, for all the configs
     c.run("graph build-order --reference=app1/0.1@ --lockfile=app1_win.lock "
-          "--build=missing --json=app1_win.json -s os=Windows")
+          "--build=missing --format=app1_win.json -s os=Windows")
     c.run("graph build-order --reference=app1/0.1@ --lockfile=app1_nix.lock "
-          "--build=missing --json=app1_nix.json -s os=Linux")
+          "--build=missing --format=app1_nix.json -s os=Linux")
     c.run("graph build-order-merge --file=app1_win.json --file=app1_nix.json"
-          " --json=build_order.json")
+          " --format=build_order.json")
 
     json_file = c.load("build_order.json")
     to_build = json.loads(json_file)

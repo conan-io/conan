@@ -4,8 +4,7 @@ from typing import List
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.commands import json_formatter, CommandResult
 from conans.cli.common import get_remote_selection
-from conans.cli.output import Color
-from conans.cli.output import cli_out_write
+from conans.cli.output import Color, ConanOutput
 from conans.errors import ConanException, InvalidNameException, PackageNotFoundException, \
     NotFoundException
 from conans.model.package_ref import PkgReference
@@ -20,100 +19,86 @@ value_color = Color.CYAN
 
 
 def _print_common_headers(result: CommandResult):
+    out = ConanOutput()
     if result.remote:
-        cli_out_write(f"{result.remote.name}:", fg=remote_color)
+        out.writeln(f"{result.remote.name}:", fg=remote_color)
     else:
-        cli_out_write("Local Cache:", remote_color)
+        out.writeln("Local Cache:", remote_color)
 
 
 def list_recipes_cli_formatter(results: List[CommandResult]):
+    out = ConanOutput()
     for result in results:
         _print_common_headers(result)
         if result.error:
-            error = f"ERROR: {result.error}"
-            cli_out_write(error, fg=error_color, indentation=2)
+            error = f"    ERROR: {result.error}"
+            out.writeln(error, fg=error_color)
         elif not result.elements:
-            cli_out_write("There are no matching recipe references", indentation=2)
+            out.writeln("  There are no matching recipe references")
         else:
             current_recipe = None
             for ref in result.elements:
                 if ref.name != current_recipe:
                     current_recipe = ref.name
-                    cli_out_write(current_recipe, fg=recipe_color, indentation=2)
+                    out.writeln(f"    {current_recipe}", fg=recipe_color)
 
-                cli_out_write(ref, fg=reference_color, indentation=4)
+                out.writeln(f"    {ref}", fg=reference_color)
 
 
 def list_recipe_revisions_cli_formatter(results):
+    out = ConanOutput()
     for result in results:
         _print_common_headers(result)
         if result.error:
-            error = f"ERROR: {result.error}"
-            cli_out_write(error, fg=error_color, indentation=2)
+            error = f"  ERROR: {result.error}"
+            out.writeln(error, fg=error_color)
         elif not result.elements:
-            cli_out_write(f"There are no matching recipe references", indentation=2)
+            out.writeln(f"  There are no matching recipe references")
         else:
             for ref in result.elements:
-                cli_out_write(ref.repr_humantime(), fg=recipe_color, indentation=2)
+                out.writeln(f"    {ref.repr_humantime()}", fg=recipe_color)
 
 
 def list_package_revisions_cli_formatter(results):
+    out = ConanOutput()
     for result in results:
         _print_common_headers(result)
         if result.error:
-            error = f"ERROR: {result.error}"
-            cli_out_write(error, fg=error_color, indentation=2)
+            error = f"  ERROR: {result.error}"
+            out.writeln(error, fg=error_color)
         elif not result.elements:
-            cli_out_write(f"There are no matching package references", indentation=2)
+            out.writeln(f"  There are no matching package references")
         else:
             for pref in result.elements:
-                cli_out_write(pref.repr_humantime(), fg=recipe_color, indentation=2)
+                out.writeln(f"    {pref.repr_humantime()}", fg=recipe_color)
 
 
 def list_package_ids_cli_formatter(results: List[CommandResult]):
-
+    out = ConanOutput()
     for result in results:
         _print_common_headers(result)
         if result.error:
-            error = f"ERROR: {result.error}"
-            cli_out_write(error, fg=error_color, indentation=2)
+            error = f"  ERROR: {result.error}"
+            out.writeln(error, fg=error_color)
         elif not result.elements:
-            cli_out_write("There are no packages", indentation=2)
+            out.writeln("  There are no packages")
         else:
             for pref, search_info in result.elements.items():
                 _tmp_pref = copy.copy(pref)
                 _tmp_pref.revision = None  # Do not show the revision of the package
-                cli_out_write(f"{_tmp_pref.repr_notime()}", fg=reference_color, indentation=2)
+                out.writeln(f"  {_tmp_pref.repr_notime()}", fg=reference_color)
                 if search_info.requires:
-                    cli_out_write("requires:", fg=field_color, indentation=4)
+                    out.writeln("    requires:", fg=field_color)
                     for req in search_info.requires:
-                        cli_out_write(req, fg=value_color, indentation=6)
+                        out.writeln(f"      {req}", fg=value_color)
                 if search_info.settings:
-                    cli_out_write(f"settings:", fg=field_color, indentation=4)
+                    out.writeln(f"    settings:", fg=field_color)
                     for name, val in search_info.settings.items():
-                        cli_out_write(f"{name}={val}", fg=value_color, indentation=6)
+                        out.writeln(f"      {name}={val}", fg=value_color)
                 if search_info.options:
-                    cli_out_write(f"options:", fg=field_color, indentation=4)
+                    out.writeln(f"    options:", fg=field_color)
                     for name, val in search_info.options.items():
-                        cli_out_write(f"{name}={val}", fg=value_color, indentation=6)
-
-
-list_recipes_formatters = {
-    "cli": list_recipes_cli_formatter,
-    "json": json_formatter
-}
-list_recipe_revisions_formatters = {
-    "cli": list_recipe_revisions_cli_formatter,
-    "json": json_formatter
-}
-list_package_revisions_formatters = {
-    "cli": list_package_revisions_cli_formatter,
-    "json": json_formatter
-}
-list_package_ids_formatters = {
-    "cli": list_package_ids_cli_formatter,
-    "json": json_formatter
-}
+                        out.writeln(f"      {name}={val}", fg=value_color)
 
 
 def _add_remotes_and_cache_options(subparser):
@@ -123,7 +108,7 @@ def _add_remotes_and_cache_options(subparser):
     subparser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
 
-@conan_subcommand(formatters=list_recipes_formatters)
+@conan_subcommand(formatters={"json": json_formatter})
 def list_recipes(conan_api, parser, subparser, *args):
     """
     Search available recipes in the local cache or in the remotes
@@ -164,10 +149,12 @@ def list_recipes(conan_api, parser, subparser, *args):
             except Exception as e:
                 result.error = str(e)
             results.append(result)
+
+    list_recipes_cli_formatter(results)
     return results
 
 
-@conan_subcommand(formatters=list_recipe_revisions_formatters)
+@conan_subcommand(formatters={"json": json_formatter})
 def list_recipe_revisions(conan_api, parser, subparser, *args):
     """
     List all the revisions of a recipe reference.
@@ -208,11 +195,11 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
                 result.error = str(e)
 
             results.append(result)
-
+    list_recipe_revisions_cli_formatter(results)
     return results
 
 
-@conan_subcommand(formatters=list_package_revisions_formatters)
+@conan_subcommand(formatters={"json": json_formatter})
 def list_package_revisions(conan_api, parser, subparser, *args):
     """
     List all the revisions of a package ID reference.
@@ -258,10 +245,12 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             except Exception as e:
                 result.error = str(e)
             results.append(result)
+
+    list_package_revisions_cli_formatter(results)
     return results
 
 
-@conan_subcommand(formatters=list_package_ids_formatters)
+@conan_subcommand(formatters={"json": json_formatter})
 def list_packages(conan_api, parser, subparser, *args):
     """
     List all the package IDs for a given recipe reference. If the reference doesn't
@@ -305,6 +294,7 @@ def list_packages(conan_api, parser, subparser, *args):
                 result.error = str(e)
             results.append(result)
 
+    list_package_ids_cli_formatter(results)
     return results
 
 

@@ -4,7 +4,6 @@ from json import JSONEncoder
 from typing import List
 
 from conans.cli.api.model import Remote, PackageConfiguration
-from conans.cli.output import cli_out_write
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -75,4 +74,4 @@ def _fix_dict_keys(result: CommandResult):
 def json_formatter(data: List[CommandResult]):
     _data = [_fix_dict_keys(result) for result in data]
     myjson = json.dumps(_data, indent=4, cls=ConanJSONEncoder)
-    cli_out_write(myjson)
+    return myjson
