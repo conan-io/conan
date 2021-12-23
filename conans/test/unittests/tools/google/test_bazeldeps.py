@@ -107,7 +107,7 @@ def test_bazeldeps_build_dependency_buildfiles():
 
         bazeldeps = BazelDeps(conanfile)
 
-        for build_dependency in bazeldeps._conanfile.dependencies.build.values():
+        for build_dependency in bazeldeps._conanfile.dependencies.direct_build.values():
             dependency_content = bazeldeps._get_build_dependency_buildfile_content(build_dependency)
             assert 'filegroup(\n    name = "OriginalDepName_binaries",' in dependency_content
             assert 'data = glob(["**"]),' in dependency_content

@@ -13,7 +13,8 @@ class BazelDeps(object):
 
     def generate(self):
         local_repositories = []
-        for build_dependency in self._conanfile.dependencies.build.values():
+
+        for build_dependency in self._conanfile.dependencies.direct_build.values():
             content = self._get_build_dependency_buildfile_content(build_dependency)
             filename = self._save_dependendy_buildfile(build_dependency, content)
 
