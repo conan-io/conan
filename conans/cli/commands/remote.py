@@ -50,7 +50,7 @@ def output_set_user_cli(results):
 
 
 def output_remotes_json(results):
-    return list(results.values())
+    return json.dumps(list(results.values()))
 
 
 @conan_subcommand(formatters={"json": output_remote_list_json})
