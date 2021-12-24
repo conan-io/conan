@@ -31,7 +31,7 @@ def list_recipes_cli_formatter(results: List[CommandResult]):
     for result in results:
         _print_common_headers(result)
         if result.error:
-            error = f"    ERROR: {result.error}"
+            error = f"  ERROR: {result.error}"
             out.writeln(error, fg=error_color)
         elif not result.elements:
             out.writeln("  There are no matching recipe references")
@@ -40,7 +40,7 @@ def list_recipes_cli_formatter(results: List[CommandResult]):
             for ref in result.elements:
                 if ref.name != current_recipe:
                     current_recipe = ref.name
-                    out.writeln(f"    {current_recipe}", fg=recipe_color)
+                    out.writeln(f"  {current_recipe}", fg=recipe_color)
 
                 out.writeln(f"    {ref}", fg=reference_color)
 
@@ -56,7 +56,7 @@ def list_recipe_revisions_cli_formatter(results):
             out.writeln(f"  There are no matching recipe references")
         else:
             for ref in result.elements:
-                out.writeln(f"    {ref.repr_humantime()}", fg=recipe_color)
+                out.writeln(f"  {ref.repr_humantime()}", fg=recipe_color)
 
 
 def list_package_revisions_cli_formatter(results):
@@ -70,7 +70,7 @@ def list_package_revisions_cli_formatter(results):
             out.writeln(f"  There are no matching package references")
         else:
             for pref in result.elements:
-                out.writeln(f"    {pref.repr_humantime()}", fg=recipe_color)
+                out.writeln(f"  {pref.repr_humantime()}", fg=recipe_color)
 
 
 def list_package_ids_cli_formatter(results: List[CommandResult]):
