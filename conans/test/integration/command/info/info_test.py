@@ -1,7 +1,8 @@
 import json
 import textwrap
 
-from conans.test.utils.tools import TestClient, GenConanfile
+from conans.model.recipe_ref import RecipeReference
+from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
 class TestBasicCliOutput:
@@ -189,3 +190,16 @@ class TestEditables:
         c.run("graph info consumer --package-filter=pkg*")
         # FIXME: Paths are not diplayed yet
         assert "source_folder: None" in c.out
+
+
+class TestInfoRevisions:
+
+    def test_info_command_showing_revision(self):
+        """If I run 'conan info ref' I get information about the revision only in a v2 client"""
+        client = TurboTestClient()
+        ref = RecipeReference.loads("lib/1.0@conan/testing")
+
+        client.create(ref)
+        client.run("graph info --reference={}".format(ref))
+        revision = client.recipe_revision(ref)
+        assert f"ref: lib/1.0@conan/testing#{revision}" in client.out
