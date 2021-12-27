@@ -682,6 +682,14 @@ class TestClient(object):
         ref_layout = self.cache.ref_layout(latest_rrev)
         return ref_layout
 
+    def recipe_exists(self, ref):
+        rrev = self.cache.get_recipe_revisions_references(ref)
+        return True if rrev else False
+
+    def package_exists(self, pref):
+        prev = self.cache.get_package_revisions_references(pref)
+        return True if prev else False
+
 
 class TurboTestClient(TestClient):
 
@@ -737,14 +745,6 @@ class TurboTestClient(TestClient):
         _tmp = copy.copy(package_ref)
         _tmp.revision = prev
         return _tmp
-
-    def recipe_exists(self, ref):
-        rrev = self.cache.get_recipe_revisions_references(ref)
-        return True if rrev else False
-
-    def package_exists(self, pref):
-        prev = self.cache.get_package_revisions_references(pref)
-        return True if prev else False
 
     def recipe_revision(self, ref):
         tmp = copy.copy(ref)

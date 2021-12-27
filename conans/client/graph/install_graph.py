@@ -157,7 +157,6 @@ class InstallGraph:
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
 
-
     @staticmethod
     def load(filename):
         data = json.loads(load(filename))

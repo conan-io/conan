@@ -203,10 +203,11 @@ class Node(object):
         result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
         result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
         result["recipe"] = self.recipe
+        result["package_id"] = self.package_id
         result["binary"] = self.binary
         result.update(self.conanfile.serialize())
         result["context"] = self.context
-        result["requires"] = {n.id: n.ref for n in self.neighbors()}
+        result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
 
 

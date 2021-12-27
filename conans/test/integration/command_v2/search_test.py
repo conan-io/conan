@@ -110,6 +110,7 @@ class TestRemotes:
             "  test_recipe\n"
             "    {}\n".format(recipe_name)
         )
+
         assert expected_output == self.client.out
 
     def test_search_in_all_remotes(self):
