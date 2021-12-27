@@ -116,7 +116,7 @@ def graph_info(conan_api, parser, subparser, *args):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--reference")
 
-    if args.format and args.filter or args.package_filter:
+    if args.format is not None and (args.filter or args.package_filter):
         raise ConanException("Formatted outputs cannot be filtered")
 
     deps_graph, lockfile = graph_compute(args, conan_api)

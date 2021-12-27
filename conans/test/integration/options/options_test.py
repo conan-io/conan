@@ -139,7 +139,7 @@ equal:opt=a=b
             client.save({"conanfile.py": conanfile})
 
             # Test info
-            client.run("info . -o *:shared=True")
+            client.run("graph info . -o *:shared=True")
             self.assertIn("conanfile.py: shared=True", client.out)
             self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
             # Test create

@@ -1,5 +1,3 @@
-import os
-
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conans.assets.templates import dict_loader

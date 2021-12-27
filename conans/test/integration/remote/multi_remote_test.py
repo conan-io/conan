@@ -78,7 +78,8 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Uploading hello0/0.0@lasote/stable", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
-        client_b.run("info hello0/0.0@lasote/stable -u")
+        client_b.run("graph info --reference=hello0/0.0@lasote/stable -u")
+        # FIXME: This is broken with new ``graph info``
         self.assertIn("Recipe: Update available", client_b.out)
         self.assertIn("Binary: Cache", client_b.out)
 

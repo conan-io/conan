@@ -169,3 +169,23 @@ class TestAdvancedCliOutput:
         client.run("graph info . -s build_type=Debug")
         assert "build_id: 0fd133f1e4dcd2142c739d230905104b42f660df" in client.out
         assert "package_id: 040ce2bd0189e377b2d15eb7246a4274d1c63317" in client.out
+
+
+class TestEditables:
+    def test_info_paths(self):
+        # https://github.com/conan-io/conan/issues/7054
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def layout(self):
+                    self.folders.source = "."
+                    self.folders.build = "."
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.py": GenConanfile().with_require("pkg/0.1")})
+        c.run("editable add pkg pkg/0.1@")
+        # TODO: Check this --package-filter with *
+        c.run("graph info consumer --package-filter=pkg*")
+        # FIXME: Paths are not diplayed yet
+        assert "source_folder: None" in c.out

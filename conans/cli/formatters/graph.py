@@ -1,3 +1,4 @@
+import fnmatch
 import json
 
 from conans.assets import templates
@@ -102,6 +103,14 @@ def basic_graph_info_printer(deps_graph, field_filter, package_filter):
     out.highlight("\n-------- Basic graph information ----------")
     serial = deps_graph.serialize()
     for n in serial["nodes"]:
+        if package_filter is not None:
+            display = False
+            for p in package_filter:
+                if fnmatch.fnmatch(n["ref"] or "", p):
+                    display = True
+                    break
+            if not display:
+                continue
         out.writeln(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"
         _serial_pretty_printer(n, field_filter, indent="  ")
 
