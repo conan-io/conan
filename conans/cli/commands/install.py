@@ -1,11 +1,11 @@
 import os
 
+from conans.cli.commands import make_abs_path
 from conans.cli.formatters.graph import cli_format_graph_basic, cli_format_graph_packages
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile
 from conans.cli.output import ConanOutput
-from conans.client.conan_api import _make_abs_path
 from conans.client.graph.printer import print_graph
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
@@ -16,7 +16,7 @@ def _get_conanfile_path(path, cwd, py):
     param py= True: Must be .py, False: Must be .txt, None: Try .py, then .txt
     """
     candidate_paths = list()
-    path = _make_abs_path(path, cwd)
+    path = make_abs_path(path, cwd)
 
     if os.path.isdir(path):  # Can be a folder
         if py:
@@ -47,7 +47,7 @@ def _get_conanfile_path(path, cwd, py):
 
 def graph_compute(args, conan_api):
     cwd = os.getcwd()
-    lockfile_path = _make_abs_path(args.lockfile, cwd) if args.lockfile else None
+    lockfile_path = make_abs_path(args.lockfile, cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
     reference = RecipeReference.loads(args.reference) if args.reference else None
     if not path and not reference:
@@ -78,17 +78,43 @@ def graph_compute(args, conan_api):
                                                update=args.update)
 
     out.highlight("-------- Computing dependency graph ----------")
+    check_updates = args.check_updates if "check_updates" in args else False
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
                                             remote=remote,
-                                            update=args.update)
+                                            update=args.update,
+                                            check_update=check_updates)
     cli_format_graph_basic(deps_graph)
     out.highlight("\n-------- Computing necessary packages ----------")
     conan_api.graph.analyze_binaries(deps_graph, args.build, remote=remote, update=args.update)
     cli_format_graph_packages(deps_graph)
 
     return deps_graph, lockfile
+
+
+def common_graph_args(subparser):
+    subparser.add_argument("path", nargs="?",
+                           help="Path to a folder containing a recipe (conanfile.py "
+                                "or conanfile.txt) or to a recipe file. e.g., "
+                                "./my_project/conanfile.txt.")
+    subparser.add_argument("--name", action=OnceArgument,
+                           help='Provide a package name if not specified in conanfile')
+    subparser.add_argument("--version", action=OnceArgument,
+                           help='Provide a package version if not specified in conanfile')
+    subparser.add_argument("--user", action=OnceArgument,
+                           help='Provide a user')
+    subparser.add_argument("--channel", action=OnceArgument,
+                           help='Provide a channel')
+
+    subparser.add_argument("--reference", action=OnceArgument,
+                           help='Provide a package reference instead of a conanfile')
+
+    _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
+    subparser.add_argument("--build-require", action='store_true', default=False,
+                           help='The provided reference is a build-require')
+    subparser.add_argument("--require-override", action="append",
+                           help="Define a requirement override")
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
@@ -106,36 +132,14 @@ def install(conan_api, parser, *args):
     the package is installed, Conan will write the files for the specified
     generators.
     """
-    parser.add_argument("path", nargs="?", help="Path to a folder containing a recipe (conanfile.py "
-                                                "or conanfile.txt) or to a recipe file. e.g., "
-                                                "./my_project/conanfile.txt.")
-
-    parser.add_argument("--name", action=OnceArgument,
-                        help='Provide a package name if not specified in conanfile')
-    parser.add_argument("--version", action=OnceArgument,
-                        help='Provide a package version if not specified in conanfile')
-    parser.add_argument("--user", action=OnceArgument,
-                        help='Provide a user')
-    parser.add_argument("--channel", action=OnceArgument,
-                        help='Provide a channel')
-
-    parser.add_argument("--reference", action=OnceArgument,
-                        help='Provide a package reference instead of a conanfile')
-
+    common_graph_args(parser)
     parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                         help='Generators to use')
     parser.add_argument("-if", "--install-folder", action=OnceArgument,
                         help='Use this directory as the directory where to put the generator'
                              'files.')
-
     parser.add_argument("--no-imports", action='store_true', default=False,
                         help='Install specified packages but avoid running imports')
-    parser.add_argument("--build-require", action='store_true', default=False,
-                        help='The provided reference is a build-require')
-
-    _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-    parser.add_argument("--require-override", action="append",
-                        help="Define a requirement override")
 
     args = parser.parse_args(*args)
 
@@ -145,7 +149,7 @@ def install(conan_api, parser, *args):
                              "--reference")
 
     cwd = os.getcwd()
-    install_folder = _make_abs_path(args.install_folder, cwd)
+    install_folder = make_abs_path(args.install_folder or "", cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
     conanfile_folder = os.path.dirname(path) if path else None
     reference = RecipeReference.loads(args.reference) if args.reference else None
@@ -165,6 +169,6 @@ def install(conan_api, parser, *args):
                                        install_folder=install_folder, generators=args.generator,
                                        no_imports=args.no_imports, conanfile_folder=conanfile_folder)
     if args.lockfile_out:
-        lockfile_out = _make_abs_path(args.lockfile_out, cwd)
+        lockfile_out = make_abs_path(args.lockfile_out, cwd)
         out.info(f"Saving lockfile: {lockfile_out}")
         lockfile.save(lockfile_out)

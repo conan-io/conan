@@ -39,7 +39,7 @@ class GraphAPI:
 
     @api_method
     def load_graph(self, root_node, profile_host, profile_build, lockfile=None, remote=None,
-                   update=False):
+                   update=False, check_update=False):
         """ Compute the dependency graph, starting from a root package, evaluation the graph with
         the provided configuration in profile_build, and profile_host. The resulting graph is a
         graph of recipes, but packages are not computed yet (package_ids) will be empty in the
@@ -54,11 +54,12 @@ class GraphAPI:
         :param remote: TODO: Not clear, cannot be more than 1 now?
         :param update: (False by default), if Conan should look for newer versions or revisions for
                        already existing recipes in the Conan cache
+        :param check_update: For "graph info" command, check if there are recipe updates
         """
         app = ConanApp(self.conan_api.cache_folder)
 
         remote = [remote] if remote is not None else None
-        app.load_remotes(remote, update=update)
+        app.load_remotes(remote, update=update, check_updates=check_update)
 
         assert profile_host is not None
         assert profile_build is not None

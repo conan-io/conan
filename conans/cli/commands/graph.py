@@ -1,14 +1,13 @@
 import json
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, conan_subcommand, \
+from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, \
     Extender
-from conans.cli.commands.install import graph_compute
-from conans.cli.common import _add_common_install_arguments, _help_build_policies
+from conans.cli.commands import make_abs_path
+from conans.cli.commands.install import graph_compute, common_graph_args
 from conans.cli.formatters.graph import graph_html_format, graph_json_format, graph_dot_format, \
     basic_graph_info_printer
 from conans.cli.output import ConanOutput
-from conans.client.conan_api import _make_abs_path
 from conans.client.graph.install_graph import InstallGraph
 from conans.errors import ConanException
 
@@ -32,36 +31,12 @@ def json_build_order(build_order):
     return json.dumps(build_order, indent=4)
 
 
-def _common_args(subparser):
-    subparser.add_argument("path", nargs="?",
-                           help="Path to a folder containing a recipe (conanfile.py "
-                                "or conanfile.txt) or to a recipe file. e.g., "
-                                "./my_project/conanfile.txt.")
-    subparser.add_argument("--name", action=OnceArgument,
-                           help='Provide a package name if not specified in conanfile')
-    subparser.add_argument("--version", action=OnceArgument,
-                           help='Provide a package version if not specified in conanfile')
-    subparser.add_argument("--user", action=OnceArgument,
-                           help='Provide a user')
-    subparser.add_argument("--channel", action=OnceArgument,
-                           help='Provide a channel')
-
-    subparser.add_argument("--reference", action=OnceArgument,
-                           help='Provide a package reference instead of a conanfile')
-
-    _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
-    subparser.add_argument("--build-require", action='store_true', default=False,
-                           help='The provided reference is a build-require')
-    subparser.add_argument("--require-override", action="append",
-                           help="Define a requirement override")
-
-
 @conan_subcommand(formatters={"json": json_build_order})
 def graph_build_order(conan_api, parser, subparser, *args):
     """
     Computes the build order of a dependency graph
     """
-    _common_args(subparser)
+    common_graph_args(subparser)
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -89,7 +64,7 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
 
     result = InstallGraph()
     for f in args.file:
-        f = _make_abs_path(f)
+        f = make_abs_path(f)
         install_graph = InstallGraph.load(f)
         result.merge(install_graph)
 
@@ -104,7 +79,8 @@ def graph_info(conan_api, parser, subparser, *args):
     """
     Computes the dependency graph and shows information about it
     """
-    _common_args(subparser)
+    common_graph_args(subparser)
+    subparser.add_argument("--check-updates", default=False, action="store_true")
     subparser.add_argument("--filter", nargs=1, action=Extender,
                            help="Show only the specified fields")
     subparser.add_argument("--package-filter", nargs=1, action=Extender,
