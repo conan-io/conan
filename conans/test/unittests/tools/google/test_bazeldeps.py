@@ -22,7 +22,7 @@ def test_bazeldeps_dependency_buildfiles():
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
@@ -74,7 +74,7 @@ def test_bazeldeps_main_buildfile():
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
@@ -99,7 +99,7 @@ def test_bazeldeps_build_dependency_buildfiles():
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"), build=True)
