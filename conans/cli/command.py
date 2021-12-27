@@ -116,8 +116,8 @@ class BaseConanCommand(object):
         try:
             formatter = self._formatters[formatext]
         except KeyError:
-            raise ConanException("{} is not a know format: {}".format(formatext,
-                                                                      list(self._formatters)))
+            raise ConanException("{} is not a known format: {}".format(formatext,
+                                                                       list(self._formatters)))
 
         if info is not None and formatter is not None:
             result = formatter(info)

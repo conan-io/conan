@@ -1,9 +1,11 @@
 import json
+import os
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, conan_subcommand, \
     Extender
 from conans.cli.commands.install import graph_compute
 from conans.cli.common import _add_common_install_arguments, _help_build_policies
+from conans.cli.formatters.graph import graph_html_format, graph_json_format, graph_dot_format
 from conans.cli.output import ConanOutput
 from conans.client.conan_api import _make_abs_path
 from conans.client.graph.install_graph import InstallGraph
@@ -36,11 +38,7 @@ def json_build_order(build_order):
     return json.dumps(build_order, indent=4)
 
 
-@conan_subcommand(formatters={"txt": text_build_order, "json": json_build_order})
-def graph_build_order(conan_api, parser, subparser, *args):
-    """
-    Computes the build order of a dependency graph
-    """
+def _common_args(subparser):
     subparser.add_argument("path", nargs="?",
                            help="Path to a folder containing a recipe (conanfile.py "
                                 "or conanfile.txt) or to a recipe file. e.g., "
@@ -60,9 +58,16 @@ def graph_build_order(conan_api, parser, subparser, *args):
     _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='The provided reference is a build-require')
-    parser.add_argument("--require-override", action="append",
-                        help="Define a requirement override")
+    subparser.add_argument("--require-override", action="append",
+                           help="Define a requirement override")
 
+
+@conan_subcommand(formatters={"txt": text_build_order, "json": json_build_order})
+def graph_build_order(conan_api, parser, subparser, *args):
+    """
+    Computes the build order of a dependency graph
+    """
+    _common_args(subparser)
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -85,7 +90,6 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
     Merges more than 1 build-order file
     """
-
     subparser.add_argument("--file", nargs="?", action=Extender, help="Files to be merged")
     args = parser.parse_args(*args)
 
@@ -98,3 +102,52 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     install_order_serialized = result.install_build_order()
     cli_build_order(install_order_serialized)
     return install_order_serialized
+
+
+@conan_subcommand(formatters={"html": graph_html_format, "json": graph_json_format,
+                              "dot": graph_dot_format})
+def graph_info(conan_api, parser, subparser, *args):
+    """
+    Computes the dependency graph and shows information about it
+    """
+    _common_args(subparser)
+    subparser.add_argument("--filter", nargs=1, action=Extender,
+                           help="Show only the specified fields")
+    subparser.add_argument("--package-filter", nargs=1, action=Extender,
+                           help='Print information only for packages that match the patterns')
+    args = parser.parse_args(*args)
+
+    # parameter validation
+    if args.reference and (args.name or args.version or args.user or args.channel):
+        raise ConanException("Can't use --name, --version, --user or --channel arguments with "
+                             "--reference")
+
+    if args.format and args.filter or args.package_filter:
+        raise ConanException("Formatted outputs cannot be filtered")
+
+    deps_graph, lockfile = graph_compute(args, conan_api)
+    if not args.format:
+        _basic_graph_info_printer(deps_graph, args.filter, args.package_filter)
+    return deps_graph, os.path.join(conan_api.cache_folder, "templates")
+
+
+def _basic_graph_info_printer(deps_graph, field_filter, package_filter):
+    out = ConanOutput()
+    out.highlight("-------- Basic graph information ----------")
+    serial = deps_graph.serialize()
+    for n in serial["nodes"]:
+        out.writeln(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"
+        _serial_pretty_printer(n, field_filter, indent="  ")
+
+
+def _serial_pretty_printer(data, field_filter, indent=""):
+    out = ConanOutput()
+    for k, v in data.items():
+        if field_filter is not None and k not in field_filter:
+            continue
+        if isinstance(v, dict):
+            out.writeln(f"{indent}{k}:")
+            # TODO: increment color too
+            _serial_pretty_printer(v, field_filter, indent=indent+"  ")
+        else:
+            out.writeln(f"{indent}{k}: {v}")

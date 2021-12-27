@@ -198,6 +198,17 @@ class Node(object):
     def __repr__(self):
         return repr(self.conanfile)
 
+    def serialize(self):
+        result = OrderedDict()
+        result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
+        result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
+        result["recipe"] = self.recipe
+        result["binary"] = self.binary
+        result.update(self.conanfile.serialize())
+        result["context"] = self.context
+        result["requires"] = {n.id: n.ref for n in self.neighbors()}
+        return result
+
 
 class Edge(object):
     def __init__(self, src, dst, require):
@@ -274,3 +285,12 @@ class DepsGraph(object):
     def report_graph_error(self):
         if self.error:
             raise self.error
+
+    def serialize(self):
+        for i, n in enumerate(self.nodes):
+            n.id = i
+        result = OrderedDict()
+        result["nodes"] = [n.serialize() for n in self.nodes]
+        result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
+        return result
+

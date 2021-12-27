@@ -6,16 +6,13 @@ import sys
 from argparse import ArgumentError
 from difflib import get_close_matches
 
-from conans.assets import templates
 from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION, \
     ERROR_INVALID_SYSTEM_REQUIREMENTS
-from conans.cli.output import Color, ConanOutput
+from conans.cli.output import ConanOutput
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import ConanAPIV1, _make_abs_path, ProfileData
+from conans.client.conan_api import ConanAPIV1, ProfileData
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf.config_installer import is_config_install_scheduled
-from conans.client.graph.install_graph import InstallGraph
-from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.conf import DEFAULT_CONFIGURATION
@@ -182,9 +179,18 @@ class Command(object):
         quiet = bool(args.raw)
 
         result = self._conan_api.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
-        Printer(self._out).print_inspect(result, raw=args.raw)
-        if args.json:
+        for k, v in result.items():
+            if args.raw:
+                self._out.write(str(v))
+            else:
+                if isinstance(v, dict):
+                    self._out.writeln("%s:" % k)
+                    for ok, ov in sorted(v.items()):
+                        self._out.writeln("    %s: %s" % (ok, ov))
+                else:
+                    self._out.writeln("%s: %s" % (k, str(v)))
 
+        if args.json:
             def dump_custom_types(obj):
                 if isinstance(obj, set):
                     return sorted(list(obj))
@@ -521,15 +527,6 @@ class Command(object):
                                  "Use --only=None to show only the references."
                                  % (only, str_only_options))
 
-        if args.graph:
-            if args.graph.endswith(".html"):
-                template = self._conan_api.get_template_path(templates.INFO_GRAPH_HTML,
-                                                             user_overrides=True)
-            else:
-                template = self._conan_api.get_template_path(templates.INFO_GRAPH_DOT,
-                                                             user_overrides=True)
-            CommandOutputer().info_graph(args.graph, deps_graph, os.getcwd(), template=template,
-                                         cache_folder=self._conan_api.cache_folder)
         if args.json:
             json_arg = True if args.json == "1" else args.json
             CommandOutputer().json_info(deps_graph, json_arg, os.getcwd(), show_paths=args.paths)
