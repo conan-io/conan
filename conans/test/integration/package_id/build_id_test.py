@@ -249,49 +249,6 @@ class BuildIdTest(unittest.TestCase):
         #package_ids = client.cache.package_layout(ref).package_ids()
         #self.assertEqual(2, len(package_ids))
 
-    @parameterized.expand([(True, ), (False,)])
-    def test_info(self, python_consumer):
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("export . --user=user --channel=channel")
-        if python_consumer:
-            client.save({"conanfile.py": consumer_py}, clean_first=True)
-        else:
-            client.save({"conanfile.txt": consumer}, clean_first=True)
-        client.run('install . -s os=Windows -s build_type=Debug')
-        client.run('install . -s os=Windows -s build_type=Release')
-        client.run("info . -s os=Windows -s build_type=Release")
-
-        def _check():
-            build_ids = str(client.out).count("BuildID: 509127386afe264490c1c3484e6949f3b86d95f6")
-            build_nones = str(client.out).count("BuildID: None")
-            if python_consumer:
-                self.assertEqual(2, build_ids)
-                self.assertEqual(0, build_nones)
-            else:
-                self.assertEqual(1, build_ids)
-                self.assertEqual(1, build_nones)
-
-        _check()
-        self.assertIn(f"ID: {package_id_windows_release}", client.out)
-        self.assertNotIn(f"ID: {package_id_windows_debug}", client.out)
-
-        client.run("info . -s os=Windows -s build_type=Debug")
-        _check()
-        self.assertNotIn(f"ID: {package_id_windows_release}", client.out)
-        self.assertIn(f"ID: {package_id_windows_debug}", client.out)
-
-        if python_consumer:
-            client.run("export . --user=user --channel=channel")
-            client.run("info mytest/0.1@user/channel -s os=Windows -s build_type=Debug")
-            _check()
-            self.assertNotIn(f"ID: {package_id_windows_release}", client.out)
-            self.assertIn(f"ID: {package_id_windows_debug}", client.out)
-            client.run("info mytest/0.1@user/channel -s os=Windows -s build_type=Release")
-            _check()
-            self.assertIn(f"ID: {package_id_windows_release}", client.out)
-            self.assertNotIn(f"ID: {package_id_windows_debug}", client.out)
-
     def test_failed_build(self):
         # Repeated failed builds keep failing
         fail_conanfile = textwrap.dedent("""\

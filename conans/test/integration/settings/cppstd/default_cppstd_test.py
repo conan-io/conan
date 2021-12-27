@@ -37,8 +37,7 @@ class DefaultCppTestCase(unittest.TestCase):
         self.t = TestClient()
         save(self.t.cache.default_profile_path, self.default_profile)
         # Compute ID without the setting 'cppstd'
-        target_id, output = self._get_id({})
-        self.assertEqual(target_id, self.id_default)
+        output = self._get_id({})
         self.assertIn("compiler.cppstd: None!!", output)
 
     def _get_id(self, settings_values):
@@ -50,23 +49,17 @@ class DefaultCppTestCase(unittest.TestCase):
         settings_values_str = " ".join(settings_values_str)
 
         # Call `conan info`
-        json_file = os.path.join(self.t.current_folder, "tmp.json")
-        self.t.run('info . {} --json="{}"'.format(settings_values_str, json_file))
-        info_output = self.t.out
-        data = json.loads(load(json_file))
-        self.assertEqual(len(data), 1)
-
-        # Return ID, output
-        return data[0]["id"], info_output
+        self.t.run('graph info . {} '.format(settings_values_str))
+        assert "package_id: 827ab7c8bacdca7433f4463313dfe30219f13843" in self.t.out
+        return self.t.out
 
     def test_value_none(self):
         # Explicit value 'None' passed to setting 'cppstd'
-        id_with, output = self._get_id(settings_values={"compiler.cppstd": "None"})
+        output = self._get_id(settings_values={"compiler.cppstd": "None"})
         self.assertIn("compiler.cppstd: None!!", output)
-        self.assertEqual(self.id_default, id_with)
 
     def test_value_other(self):
         # Explicit value (not the default) passed to setting 'cppstd'
-        id_with, output = self._get_id(settings_values={"compiler.cppstd": "14"})
+        output = self._get_id(settings_values={"compiler.cppstd": "14"})
         self.assertIn("compiler.cppstd: 14!!", output)
-        self.assertNotEqual(self.id_default, id_with)
+

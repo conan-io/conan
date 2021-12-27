@@ -21,8 +21,8 @@ def client():
 def test_install_reference_txt(client):
     # Test to check the "conan install <path> <reference>" command argument
     client.save({"conanfile.txt": ""})
-    client.run("info .")
-    assert "conanfile.txt" in str(client.out).splitlines()
+    client.run("install .")
+    assert "conanfile.txt" in client.out
 
 
 def test_install_reference_error(client):

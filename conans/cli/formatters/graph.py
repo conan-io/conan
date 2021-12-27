@@ -99,7 +99,7 @@ def basic_graph_info_printer(deps_graph, field_filter, package_filter):
     Used for 'graph info' command
     """
     out = ConanOutput()
-    out.highlight("-------- Basic graph information ----------")
+    out.highlight("\n-------- Basic graph information ----------")
     serial = deps_graph.serialize()
     for n in serial["nodes"]:
         out.writeln(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"

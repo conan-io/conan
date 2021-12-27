@@ -132,7 +132,8 @@ class TestAdvancedCliOutput:
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=tool --version=0.1")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
+
             class pkg(ConanFile):
                 python_requires = "tool/0.1"
             """)
@@ -144,3 +145,27 @@ class TestAdvancedCliOutput:
         client.run("graph info . --format=file.json")
         info = json.loads(client.load("file.json"))
         assert info["nodes"][0]["python_requires"] == ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']
+
+    def test_build_id_info(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "build_type"
+
+                def build_id(self):
+                    self.info_build.settings.build_type = "Any"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export .")
+        client.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1")}, clean_first=True)
+        client.run("graph info . -s build_type=Release")
+        assert "build_id: 0fd133f1e4dcd2142c739d230905104b42f660df" in client.out
+        assert "package_id: e53d55fd33066c49eb97a4ede6cb50cd8036fe8b" in client.out
+
+        client.run("graph info . -s build_type=Debug")
+        assert "build_id: 0fd133f1e4dcd2142c739d230905104b42f660df" in client.out
+        assert "package_id: 040ce2bd0189e377b2d15eb7246a4274d1c63317" in client.out
