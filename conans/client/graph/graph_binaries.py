@@ -1,9 +1,12 @@
+import os
+
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
                                        BINARY_INVALID, BINARY_ERROR)
+from conans.client.loader import load_python_file
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
 from conans.model.info import PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
@@ -18,6 +21,12 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
+        compatible_file = os.path.join(self._cache.cache_folder, "compatibility.py")
+        if os.path.isfile(compatible_file):
+            mod, _ = load_python_file(compatible_file)
+            self._compatibility = mod.compatibility
+        else:
+            self._compatibility = None
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -116,9 +125,18 @@ class GraphBinariesAnalyzer(object):
             pref = PkgReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode)
             if node.binary in (BINARY_MISSING, BINARY_INVALID):
-                if node.conanfile.compatible_packages:
+                cache_compatibles = []
+                if self._compatibility:
+                    list_of_compatibles = self._compatibility(node.conanfile)
+                    for elem in list_of_compatibles:
+                        compat = node.conanfile.info.clone()
+                        apply_to, name, value = elem
+                        if apply_to == "settings":
+                            setattr(compat.settings, name, value)
+                        cache_compatibles.append(compat)
+                if node.conanfile.compatible_packages or cache_compatibles:
                     compatible_build_mode = BuildMode(None)
-                    for compatible_package in node.conanfile.compatible_packages:
+                    for compatible_package in node.conanfile.compatible_packages or cache_compatibles:
                         package_id = compatible_package.package_id()
                         if package_id == node.package_id:
                             node.conanfile.output.info("Compatible package ID %s equal to the "
