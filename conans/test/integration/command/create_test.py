@@ -195,6 +195,8 @@ class MyPkg(ConanFile):
         test_conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
     requires = "other/1.0@user/channel"
+    def requirements(self):
+        self.requires(self.tested_reference_str)
     def build(self):
         for r in self.requires.values():
             self.output.info("build() Requires: %s" % str(r.ref))

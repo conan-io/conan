@@ -432,9 +432,11 @@ class GenConanfile(object):
 
     @property
     def _test_lines_render(self):
-        if not self._test_lines:
-            return ""
-        lines = ['', '    def test(self):'] + ['        %s' % m for m in self._test_lines]
+        lines = ["",
+                 "    def requirements(self):",
+                 '         self.requires(self.tested_reference_str)',
+                 "",
+                 '    def test(self):'] + ['        %s' % m for m in self._test_lines]
         return "\n".join(lines)
 
     @property
