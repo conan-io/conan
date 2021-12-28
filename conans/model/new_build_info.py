@@ -47,16 +47,16 @@ class _NewComponent(object):
             return []
         return [r for r in self.requires if "::" not in r]
 
-    def set_property(self, property_name, value, is_path=False):
+    def set_property(self, property_name, value):
         if self._generator_properties is None:
             self._generator_properties = {}
-        self._generator_properties[property_name] = (value, is_path)
+        self._generator_properties[property_name] = value
 
     def get_property(self, property_name):
         if self._generator_properties is None:
             return None
         try:
-            return self._generator_properties[property_name][0]
+            return self._generator_properties[property_name]
         except KeyError:
             pass
 
@@ -146,12 +146,11 @@ class NewCppInfo(object):
             if component._generator_properties is not None:
                 updates = {}
                 for prop_name, value in component._generator_properties.items():
-                    values, is_path = value
-                    if is_path:
-                        if isinstance(values, list):
-                            updates[prop_name] = [os.path.join(folder, v) for v in values], is_path
+                    if prop_name == "cmake_build_modules":
+                        if isinstance(value, list):
+                            updates[prop_name] = [os.path.join(folder, v) for v in value]
                         else:
-                            updates[prop_name] = os.path.join(folder, values), is_path
+                            updates[prop_name] = os.path.join(folder, value)
                 component._generator_properties.update(updates)
 
     def get_sorted_components(self):

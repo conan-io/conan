@@ -33,7 +33,7 @@ def client():
             # This info depends on self.context !!
             self.cpp_info.includedirs = ["include_{}".format(self.context)]
             path_build_modules = os.path.join("build", "my_tools_{}.cmake".format(self.context))
-            self.cpp_info.set_property("cmake_build_modules", [path_build_modules], is_path=True)
+            self.cpp_info.set_property("cmake_build_modules", [path_build_modules])
 
     ''')
     c.save({"conanfile.py": conanfile})
