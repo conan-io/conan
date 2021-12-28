@@ -233,8 +233,12 @@ class DepsGraphBuilder(object):
         deferred = profile_build.deferred_requires if node.context == CONTEXT_BUILD \
             else profile_host.deferred_requires
         if deferred:
+            version_range = require.version_range
             for d in deferred:
-                if require.ref == d:
+                if version_range:
+                    if require.ref.name == d.name and d.version in version_range:
+                        return d, ConanFile(None, str(d)), RECIPE_DEFERRED, None
+                elif require.ref == d:
                     return d, ConanFile(None, str(d)), RECIPE_DEFERRED, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
