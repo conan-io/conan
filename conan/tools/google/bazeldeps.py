@@ -1,3 +1,5 @@
+import os
+import platform
 import textwrap
 
 from jinja2 import Template
@@ -32,7 +34,9 @@ class BazelDeps(object):
         self._save_main_buildfiles(content)
 
     def _save_dependendy_buildfile(self, dependency, buildfile_content):
-        filename = 'conandeps/{}/BUILD'.format(dependency.ref.name)
+        filename = '{}/conandeps/{}/BUILD'.format(
+            self._conanfile.install_folder, dependency.ref.name)
+        filename = filename.replace(os.sep, '/')
         save(filename, buildfile_content)
         return filename
 
@@ -43,7 +47,6 @@ class BazelDeps(object):
                 data = glob(["**"]),
                 visibility = ["//visibility:public"],
             )
-
         """).format(dependency.ref.name)
 
         return filegroup
@@ -55,7 +58,7 @@ class BazelDeps(object):
             {% for lib in libs %}
             cc_import(
                 name = "{{ lib }}_precompiled",
-                static_library = "{{ libdir }}/lib{{ lib }}.a"
+                static_library = "{{ libdir }}/{{ lib }}"
             )
             {% endfor %}
 
@@ -85,6 +88,10 @@ class BazelDeps(object):
 
         """)
 
+        system = platform.system()
+        if not system:
+            system == 'Linux'
+
         cpp_info = dependency.cpp_info.aggregated_components()
 
         if not cpp_info.libs and not cpp_info.includedirs:
@@ -94,6 +101,7 @@ class BazelDeps(object):
         includes = []
 
         for path in cpp_info.includedirs:
+            path = path.replace(os.sep, '/')
             headers.append('"{}/**"'.format(path))
             includes.append('"{}"'.format(path))
 
@@ -105,14 +113,24 @@ class BazelDeps(object):
         defines = ', '.join(defines)
 
         linkopts = []
-        for linkopt in cpp_info.system_libs:
-            linkopts.append('"-l{}"'.format(linkopt))
+        for system_lib in cpp_info.system_libs:
+            if system == "Windows":
+                linkopts.append('"/DEFAULTLIB:{}"'.format(system_lib))
+            else:
+                linkopts.append('"-l{}"'.format(system_lib))
         linkopts = ', '.join(linkopts)
+
+        libs = []
+        for libname in cpp_info.libs:
+            if system == "Windows":
+                libs.append("{}.lib".format(libname))
+            else:
+                libs.append("lib{}.a".format(libname))
 
         context = {
             "name": dependency.ref.name,
-            "libs": cpp_info.libs,
-            "libdir": cpp_info.libdirs[0],
+            "libs": libs,
+            "libdir": cpp_info.libdirs[0].replace(os.sep, '/'),
             "headers": headers,
             "includes": includes,
             "defines": defines,
@@ -123,6 +141,7 @@ class BazelDeps(object):
         return content
 
     def _create_new_local_repository(self, dependency, dependency_buildfile_name):
+        package_folder = dependency.package_folder.replace(os.sep, '/')
         snippet = textwrap.dedent("""
             native.new_local_repository(
                 name="{}",
@@ -131,7 +150,7 @@ class BazelDeps(object):
             )
         """).format(
             dependency.ref.name,
-            dependency.package_folder,
+            package_folder,
             dependency_buildfile_name
         )
 
