@@ -71,8 +71,11 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             endif()
         endforeach()
 
+        set({{ file_name }}_VERSION_STRING "{{ version }}")
         set({{ file_name }}_INCLUDE_DIRS {{ '${' + pkg_name + '_INCLUDE_DIRS' + config_suffix + '}' }} )
+        set({{ file_name }}_INCLUDE_DIR {{ '${' + pkg_name + '_INCLUDE_DIRS' + config_suffix + '}' }} )
         set({{ file_name }}_LIBRARIES {{ '${' + pkg_name + '_LIBRARIES' + config_suffix + '}' }} )
+        set({{ file_name }}_DEFINITIONS {{ '${' + pkg_name + '_DEFINITIONS' + config_suffix + '}' }} )
 
         # Only the first installed configuration is included to avoid the collision
         foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS' + config_suffix + '}' }} )

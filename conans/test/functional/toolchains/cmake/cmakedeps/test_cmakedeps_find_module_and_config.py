@@ -129,6 +129,7 @@ def test_transitive_modules_found(find_mode):
             def package_info(self):
                 self.cpp_info.set_property("cmake_find_mode", "{mode}")
                 self.cpp_info.set_property("cmake_file_name", "{filename}")
+                self.cpp_info.defines.append("DEFINE_{filename}")
             """)
 
     consumer = textwrap.dedent("""
@@ -149,6 +150,12 @@ def test_transitive_modules_found(find_mode):
         cmake_minimum_required(VERSION 3.1)
         project(test_package CXX)
         find_package(MYPKGB REQUIRED)
+        message("MYPKGB_VERSION: ${MYPKGB_VERSION}")
+        message("MYPKGB_VERSION_STRING: ${MYPKGB_VERSION_STRING}")
+        message("MYPKGB_INCLUDE_DIRS: ${MYPKGB_INCLUDE_DIRS}")
+        message("MYPKGB_INCLUDE_DIR: ${MYPKGB_INCLUDE_DIR}")
+        message("MYPKGB_LIBRARIES: ${MYPKGB_LIBRARIES}")
+        message("MYPKGB_DEFINITIONS: ${MYPKGB_DEFINITIONS}")
         """)
 
     client.save({"pkgb.py": conan_pkg.format(requires='requires="pkga/1.0"', filename='MYPKGB', mode=find_mode),
@@ -158,6 +165,15 @@ def test_transitive_modules_found(find_mode):
     client.run("create pkga.py pkga/1.0@")
     client.run("create pkgb.py pkgb/1.0@")
     client.run("create consumer.py consumer/1.0@")
+
+    assert "MYPKGB_VERSION: 1.0" in client.out
+    assert "MYPKGB_VERSION_STRING: 1.0" in client.out
+    assert "MYPKGB_INCLUDE_DIRS:" in client.out
+    assert "MYPKGB_INCLUDE_DIR:" in client.out
+    assert "MYPKGB_LIBRARIES: pkga::pkga" in client.out
+    assert "MYPKGB_DEFINITIONS: -DDEFINE_MYPKGB" in client.out
     assert "Conan: Target declared 'pkga::pkga'"
     if find_mode == "module":
         assert 'Found MYPKGA: 1.0 (found version "1.0")' in client.out
+
+
