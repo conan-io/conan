@@ -79,6 +79,9 @@ def pkg_cmake_test(require_name):
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps", "VirtualRunEnv"
 
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def layout(self):
                 cmake_layout(self)
 
