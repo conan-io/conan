@@ -45,6 +45,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                                                       .replace('$', '\\$').replace('"', '\\"')
         return {"global_cpp": global_cpp,
                 "pkg_name": self.pkg_name,
+                "file_name": self.file_name,
                 "package_folder": package_folder,
                 "config_suffix": self.config_suffix,
                 "components_names": components_names,
