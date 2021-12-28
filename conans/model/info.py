@@ -543,6 +543,7 @@ class ConanInfo(object):
         result = [self.settings.sha,
                   self.options.sha]
         requires_sha = self.requires.sha
+        print("HASHING IN PACKAEG ID +++++++++++++", requires_sha, "**************************")
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
         if requires_sha == PACKAGE_ID_INVALID:
