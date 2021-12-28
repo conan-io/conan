@@ -5,9 +5,8 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools._compilers import architecture_flag, use_win_mingw
-from conan.tools.build import build_jobs
+from conan.tools.build.flags import architecture_flag, libcxx_flag
+from conan.tools.build import build_jobs, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import save_toolchain_args
 from conan.tools.intel import IntelCC
@@ -167,31 +166,15 @@ class GLibCXXBlock(Block):
         libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
         if not libcxx:
             return None
+        lib = libcxx_flag(self._conanfile)
         compiler = self._conanfile.settings.get_safe("compiler")
-        lib = glib = None
-        if compiler == "apple-clang":
-            # In apple-clang 2 only values atm are "libc++" and "libstdc++"
-            lib = "-stdlib={}".format(libcxx)
-        elif compiler == "clang" or compiler == "intel-cc":
-            if libcxx == "libc++":
-                lib = "-stdlib=libc++"
-            elif libcxx == "libstdc++" or libcxx == "libstdc++11":
-                lib = "-stdlib=libstdc++"
-            # FIXME, something to do with the other values? Android c++_shared?
-        elif compiler == "sun-cc":
-            lib = {"libCstd": "Cstd",
-                   "libstdcxx": "stdcxx4",
-                   "libstlport": "stlport4",
-                   "libstdc++": "stdcpp"
-                   }.get(libcxx)
-            if lib:
-                lib = "-library={}".format(lib)
-        elif compiler == "gcc":
+        glib = None
+        if compiler in ['clang', 'apple-clang', 'gcc']:
             # we might want to remove this "1", it is the default in most distros
-            if libcxx == "libstdc++11":
-                glib = "1"
-            elif libcxx == "libstdc++":
+            if libcxx == "libstdc++":
                 glib = "0"
+            elif libcxx == "libstdc++11" and self._conanfile.conf["tools.gnu:define_libcxx11_abi"]:
+                glib = "1"
         return {"set_libcxx": lib, "glibcxx": glib}
 
 
@@ -433,8 +416,7 @@ class FindConfigFiles(Block):
         # Read the buildirs
         build_paths = []
         for req in host_req:
-            cppinfo = req.cpp_info.copy()
-            cppinfo.aggregate_components()
+            cppinfo = req.cpp_info.aggregated_components()
             build_paths.extend([os.path.join(req.package_folder,
                                        p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
                                 for p in cppinfo.builddirs])
@@ -456,20 +438,16 @@ class FindConfigFiles(Block):
 
 class UserToolchain(Block):
     template = textwrap.dedent("""
-        {% if user_toolchain %}
+        {% for user_toolchain in paths %}
         include("{{user_toolchain}}")
-        {% endif %}
+        {% endfor %}
         """)
-
-    user_toolchain = None
 
     def context(self):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
-        user_toolchain = user_toolchain or self.user_toolchain
-        if user_toolchain:
-            user_toolchain = user_toolchain.replace("\\", "/")
-        return {"user_toolchain": user_toolchain}
+        toolchains = [user_toolchain.replace("\\", "/")] if user_toolchain else []
+        return {"paths": toolchains if toolchains else []}
 
 
 class CMakeFlagsInitBlock(Block):
@@ -583,33 +561,33 @@ class GenericSystemBlock(Block):
         system_processor = self._conanfile.conf["tools.cmake.cmaketoolchain:system_processor"]
 
         settings = self._conanfile.settings
-        if hasattr(self._conanfile, "settings_build"):
-            os_ = settings.get_safe("os")
-            arch = settings.get_safe("arch")
-            settings_build = self._conanfile.settings_build
-            os_build = settings_build.get_safe("os")
-            arch_build = settings_build.get_safe("arch")
+        assert hasattr(self._conanfile, "settings_build")
+        os_ = settings.get_safe("os")
+        arch = settings.get_safe("arch")
+        settings_build = self._conanfile.settings_build
+        os_build = settings_build.get_safe("os")
+        arch_build = settings_build.get_safe("arch")
 
-            if system_name is None:  # Try to deduce
-                # Handled by AppleBlock, or AndroidBlock, not here
-                if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS', 'Android'):
-                    cmake_system_name_map = {"Neutrino": "QNX",
-                                             "": "Generic",
-                                             None: "Generic"}
-                    if os_ != os_build:
+        if system_name is None:  # Try to deduce
+            # Handled by AppleBlock, or AndroidBlock, not here
+            if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS', 'Android'):
+                cmake_system_name_map = {"Neutrino": "QNX",
+                                         "": "Generic",
+                                         None: "Generic"}
+                if os_ != os_build:
+                    system_name = cmake_system_name_map.get(os_, os_)
+                elif arch is not None and arch != arch_build:
+                    if not ((arch_build == "x86_64") and (arch == "x86") or
+                            (arch_build == "sparcv9") and (arch == "sparc") or
+                            (arch_build == "ppc64") and (arch == "ppc32")):
                         system_name = cmake_system_name_map.get(os_, os_)
-                    elif arch is not None and arch != arch_build:
-                        if not ((arch_build == "x86_64") and (arch == "x86") or
-                                (arch_build == "sparcv9") and (arch == "sparc") or
-                                (arch_build == "ppc64") and (arch == "ppc32")):
-                            system_name = cmake_system_name_map.get(os_, os_)
 
-            if system_name is not None and system_version is None:
-                system_version = settings.get_safe("os.version")
+        if system_name is not None and system_version is None:
+            system_version = settings.get_safe("os.version")
 
-            if system_name is not None and system_processor is None:
-                if arch != arch_build:
-                    system_processor = arch
+        if system_name is not None and system_processor is None:
+            if arch != arch_build:
+                system_processor = arch
 
         return system_name, system_version, system_processor
 
@@ -653,6 +631,8 @@ class ToolchainBlocks:
         del self._blocks[name]
 
     def __setitem__(self, name, block_type):
+        # Create a new class inheriting Block with the elements of the provided one
+        block_type = type('proxyUserBlock', (Block,), dict(block_type.__dict__))
         self._blocks[name] = block_type(self._conanfile, self._toolchain)
 
     def __getitem__(self, name):
@@ -747,8 +727,6 @@ class CMakeToolchain(object):
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
-
-        check_using_build_profile(self._conanfile)
 
     def _context(self):
         """ Returns dict, the context for the template

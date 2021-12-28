@@ -153,7 +153,6 @@ def test_ndebug():
     ("clang", 'libstdc++11', '-stdlib=libstdc++'),
     ("clang", 'libc++', '-stdlib=libc++'),
     ("apple-clang", 'libstdc++', '-stdlib=libstdc++'),
-    ("apple-clang", 'libstdc++11', '-stdlib=libstdc++'),
     ("apple-clang", 'libc++', '-stdlib=libc++'),
     ("sun-cc", 'libCstd', '-library=Cstd'),
     ("sun-cc", 'libstdcxx', '-library=stdcxx4'),
@@ -207,12 +206,23 @@ def test_cxx11_abi_define():
     be = AutotoolsToolchain(conanfile)
     env = be.vars()
     assert be.gcc_cxx11_abi is None
-    assert "-D_GLIBCXX_USE_CXX11_ABI=0" not in env["CPPFLAGS"]
+    assert "GLIBCXX_USE_CXX11_ABI" not in env["CPPFLAGS"]
+
+    # Force the GLIBCXX_USE_CXX11_ABI=1 for old distros is direct def f ``gcc_cxx11_abi``
+    be.gcc_cxx11_abi = "_GLIBCXX_USE_CXX11_ABI=1"
+    env = be.vars()
+    assert "-D_GLIBCXX_USE_CXX11_ABI=1" in env["CPPFLAGS"]
+
+    # Also conf is possible
+    conanfile.conf["tools.gnu:define_libcxx11_abi"] = True
+    be = AutotoolsToolchain(conanfile)
+    env = be.vars()
+    assert "-D_GLIBCXX_USE_CXX11_ABI=1" in env["CPPFLAGS"]
 
 
 @pytest.mark.parametrize("config", [
     ('x86_64', "-m64"),
-    ('x86', "-m32"),])
+    ('x86', "-m32")])
 def test_architecture_flag(config):
     """Architecture flag is set in CXXFLAGS, CFLAGS and LDFLAGS"""
     arch, expected = config

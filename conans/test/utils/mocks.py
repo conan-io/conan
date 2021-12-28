@@ -3,7 +3,7 @@ from collections import namedtuple
 from io import StringIO
 
 from conans import ConanFile
-from conans.model.conf import ConfDefinition
+from conans.model.conf import ConfDefinition, Conf
 from conans.model.layout import Folders
 from conans.model.options import Options
 from conans.util.log import logger
@@ -80,8 +80,7 @@ class MockConanfile(ConanFile):
         self.runner = runner
         self.options = options or MockOptions({})
         self.generators = []
-
-        self.package_folder = None
+        self.conf = Conf()
 
     def run(self, *args, **kwargs):
         if self.runner:

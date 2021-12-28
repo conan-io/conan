@@ -80,7 +80,7 @@ def test_msbuild_standard():
     test_folder = temp_folder()
     conanfile = ConanFile(Mock(), None)
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.install_folder = test_folder
+    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
     conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -111,7 +111,7 @@ def test_resource_compile():
                          "arch": ["x86_64"]})
     conanfile = ConanFile(Mock(), None)
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.install_folder = test_folder
+    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
     conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -153,7 +153,7 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
                          "arch": ["x86_64"]})
     conanfile = ConanFile(Mock(), None)
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.install_folder = test_folder
+    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
     conanfile.conf["tools.intel:installation_path"] = "my/intel/oneapi/path"
     conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."

@@ -8,14 +8,12 @@ import pytest
 from mock.mock import mock_open, patch
 
 from conans.client import tools
-from conans.cli.output import ConanOutput
 from conans.client.conf.detect_vs import vswhere
 from conans.client.tools.files import replace_in_file
-from conans.errors import ConanException
 from conans.model.layout import Infos
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, redirect_output
+from conans.test.utils.tools import redirect_output
 from conans.util.env import get_env, environment_update
 from conans.util.files import load, md5, save
 from conans.util.runners import check_output_runner
@@ -122,27 +120,6 @@ class ToolsTest(unittest.TestCase):
     def test_md5(self):
         result = md5(u"äüïöñç")
         self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
-
-    def test_cpu_count(self):
-        output = ConanOutput()
-        cpus = tools.cpu_count(output=output)
-        self.assertIsInstance(cpus, int)
-        self.assertGreaterEqual(cpus, 1)
-        with environment_update({"CONAN_CPU_COUNT": "34"}):
-            self.assertEqual(tools.cpu_count(output=output), 34)
-        with environment_update({"CONAN_CPU_COUNT": "null"}):
-            with self.assertRaisesRegex(ConanException, "Invalid CONAN_CPU_COUNT value"):
-                tools.cpu_count(output=output)
-
-    @patch("conans.client.tools.oss.CpuProperties.get_cpu_period")
-    @patch("conans.client.tools.oss.CpuProperties.get_cpu_quota")
-    def test_cpu_count_in_container(self, get_cpu_quota_mock, get_cpu_period_mock):
-        get_cpu_quota_mock.return_value = 12000
-        get_cpu_period_mock.return_value = 1000
-
-        output = ConanOutput()
-        cpus = tools.cpu_count(output=output)
-        self.assertEqual(12, cpus)
 
     def test_get_env_unit(self):
         """
@@ -297,12 +274,11 @@ class CollectLibTestCase(unittest.TestCase):
         with redirect_output(output):
             conanfile = ConanFileMock()
             # Without package_folder
-            conanfile.package_folder = None
             result = tools.collect_libs(conanfile)
             self.assertEqual([], result)
 
             # Default behavior
-            conanfile.package_folder = temp_folder()
+            conanfile.folders.set_base_package(temp_folder())
             mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
             save(mylib_path, "")
             conanfile.cpp = Infos()
@@ -333,7 +309,7 @@ class CollectLibTestCase(unittest.TestCase):
 
             # Warn same lib different folders
             conanfile = ConanFileMock()
-            conanfile.package_folder = temp_folder()
+            conanfile.folders.set_base_package(temp_folder())
             conanfile.cpp = Infos()
             custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
             lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
@@ -350,7 +326,7 @@ class CollectLibTestCase(unittest.TestCase):
 
             # Warn lib folder does not exist with correct result
             conanfile = ConanFileMock()
-            conanfile.package_folder = temp_folder()
+            conanfile.folders.set_base_package(temp_folder())
             conanfile.cpp = Infos()
             lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
             save(lib_mylib_path, "")
@@ -367,12 +343,11 @@ class CollectLibTestCase(unittest.TestCase):
         with redirect_output(output):
             conanfile = ConanFileMock()
             # Without package_folder
-            conanfile.package_folder = None
             result = tools.collect_libs(conanfile)
             self.assertEqual([], result)
 
             # Default behavior
-            conanfile.package_folder = temp_folder()
+            conanfile.folders.set_base_package(temp_folder())
             mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
             save(mylib_path, "")
             conanfile.cpp = Infos()
@@ -403,7 +378,7 @@ class CollectLibTestCase(unittest.TestCase):
 
             # Warn same lib different folders
             conanfile = ConanFileMock()
-            conanfile.package_folder = temp_folder()
+            conanfile.folders.set_base_package(temp_folder())
             conanfile.cpp = Infos()
             custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
             lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
@@ -419,7 +394,7 @@ class CollectLibTestCase(unittest.TestCase):
 
             # Warn lib folder does not exist with correct result
             conanfile = ConanFileMock()
-            conanfile.package_folder = temp_folder()
+            conanfile.folders.set_base_package(temp_folder())
             conanfile.cpp = Infos()
             lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
             save(lib_mylib_path, "")

@@ -2,11 +2,9 @@ import textwrap
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
-from conans.client.build.cppstd_flags import cppstd_from_settings
-from conan.tools.cross_building import cross_building, get_cross_building_settings
+from conan.tools.build.cross_building import cross_building
 from conans.util.files import save
 
 
@@ -75,7 +73,7 @@ class MesonToolchain(object):
                               self._conanfile.settings.get_safe("compiler")
         self._vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
                       self._conanfile.settings.get_safe("compiler.runtime")
-        self._cppstd = cppstd_from_settings(self._conanfile.settings)
+        self._cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._shared = self._conanfile.options.get_safe("shared")
         self._fpic = self._conanfile.options.get_safe("fPIC")
         self._build_env = VirtualBuildEnv(self._conanfile).vars()
@@ -117,8 +115,6 @@ class MesonToolchain(object):
                                              self._env_array('CXXFLAGS'))
         self.cpp_link_args = self._to_meson_value(self._env_array('LDFLAGS'))
         self.pkg_config_path = "'%s'" % self._conanfile.generators_folder
-
-        check_using_build_profile(self._conanfile)
 
     def _get_backend(self, recipe_backend):
         # Returns the name of the backend used by Meson
@@ -307,7 +303,11 @@ class MesonToolchain(object):
 
     @property
     def _cross_content(self):
-        os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
+        os_host = self._conanfile.settings.get_safe("os")
+        arch_host = self._conanfile.settings.get_safe("arch")
+        os_build = self._conanfile.settings_build.get_safe('os')
+        arch_build = self._conanfile.settings_build.get_safe('arch')
+
         os_target, arch_target = os_host, arch_host  # TODO: assume target the same as a host for now?
 
         build_machine = self._to_meson_machine(os_build, arch_build)

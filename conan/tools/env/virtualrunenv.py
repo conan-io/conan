@@ -7,11 +7,9 @@ def runenv_from_cpp_info(dep, os_name):
     """ return an Environment deducing the runtime information from a cpp_info
     """
     dyn_runenv = Environment()
-
-    cpp_info = dep.cpp_info
-    cpp_info = cpp_info.copy()
-    cpp_info.aggregate_components()
+    cpp_info = dep.cpp_info.aggregated_components()
     pkg_folder = dep.package_folder
+    # FIXME: This code is dead, cpp_info cannot be None
     if cpp_info is None:  # This happens when the dependency is a private one = BINARY_SKIP
         return dyn_runenv
 
