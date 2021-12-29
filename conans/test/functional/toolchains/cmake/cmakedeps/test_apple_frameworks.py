@@ -219,6 +219,9 @@ def test_apple_own_framework_cross_build(settings):
             # FIXME
             test_type = "build_requires", "requires"
 
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def generate(self):
                 cmake = CMakeDeps(self)
                 cmake.build_context_activated = ["mylibrary"]
@@ -347,6 +350,8 @@ def test_apple_own_framework_cmake_find_package_multi():
         class TestPkg(ConanFile):
             generators = "CMakeDeps", "CMakeToolchain"
             settings = "build_type", "os", "arch"
+            def requirements(self):
+                self.requires(self.tested_reference_str)
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
