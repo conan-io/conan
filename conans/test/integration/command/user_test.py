@@ -187,7 +187,7 @@ class ConanLib(ConanFile):
         servers["default"] = default_server
         servers["other_server"] = other_server
         client = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass"])
-        client.run("remote list-users -f users.json")
+        client.run("remote list-users -f json", redirect_stdout="users.json")
         info = json.loads(client.load("users.json"))
         assert info == [
                             {
@@ -203,7 +203,7 @@ class ConanLib(ConanFile):
                         ]
 
         client.run('remote set-user default bad_user')
-        client.run("remote list-users -f users.json")
+        client.run("remote list-users -f json", redirect_stdout="users.json")
         info = json.loads(client.load("users.json"))
         assert info == [
             {
@@ -219,7 +219,7 @@ class ConanLib(ConanFile):
         ]
 
         client.run('remote set-user default lasote')
-        client.run("remote list-users -f users.json")
+        client.run("remote list-users -f json", redirect_stdout="users.json")
         info = json.loads(client.load("users.json"))
         assert info == [
             {
@@ -235,7 +235,7 @@ class ConanLib(ConanFile):
         ]
 
         client.run("remote login default lasote -p mypass")
-        client.run("remote list-users -f users.json")
+        client.run("remote list-users -f json", redirect_stdout="users.json")
         info = json.loads(client.load("users.json"))
         assert info == [
             {
@@ -251,7 +251,7 @@ class ConanLib(ConanFile):
         ]
 
         client.run("remote login default danimtb -p passpass")
-        client.run("remote list-users -f users.json")
+        client.run("remote list-users -f json", redirect_stdout="users.json")
         info = json.loads(client.load("users.json"))
         assert info == [
             {
@@ -266,7 +266,7 @@ class ConanLib(ConanFile):
             }
         ]
         client.run("remote set-user other_server lasote")
-        client.run("remote list-users -f users.json")
+        client.run("remote list-users -f json", redirect_stdout="users.json")
         info = json.loads(client.load("users.json"))
         assert info == [
             {
@@ -283,7 +283,7 @@ class ConanLib(ConanFile):
 
         client.run("remote logout '*'")
         client.run("remote set-user default danimtb")
-        client.run("remote list-users -f users.json")
+        client.run("remote list-users -f json", redirect_stdout="users.json")
         info = json.loads(client.load("users.json"))
         assert info == [
             {
