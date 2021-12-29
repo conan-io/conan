@@ -1,7 +1,7 @@
 import os
 
 from conans.cli.commands import make_abs_path
-from conans.cli.formatters.graph import cli_format_graph_basic, cli_format_graph_packages
+from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS, OnceArgument
 from conans.cli.common import _add_common_install_arguments, _help_build_policies, \
     get_profiles_from_args, get_lockfile
@@ -85,10 +85,10 @@ def graph_compute(args, conan_api):
                                             remote=remote,
                                             update=args.update,
                                             check_update=check_updates)
-    cli_format_graph_basic(deps_graph)
+    print_graph_basic(deps_graph)
     out.highlight("\n-------- Computing necessary packages ----------")
     conan_api.graph.analyze_binaries(deps_graph, args.build, remote=remote, update=args.update)
-    cli_format_graph_packages(deps_graph)
+    print_graph_packages(deps_graph)
 
     return deps_graph, lockfile
 

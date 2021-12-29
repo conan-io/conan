@@ -4,7 +4,6 @@ from collections import OrderedDict
 from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.api.model import Remote
 from conans.cli.command import conan_command, conan_subcommand, OnceArgument
-
 from conans.cli.commands.list import remote_color, error_color, recipe_color, \
     reference_color
 from conans.cli.output import ConanOutput
@@ -12,21 +11,21 @@ from conans.client.userio import UserInput
 from conans.errors import ConanException
 
 
-def output_remote_list_json(remotes):
+def formatter_remote_list_json(remotes):
     info = [{"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl, "enabled": not r.disabled}
             for r in remotes]
     myjson = json.dumps(info, indent=4)
     return myjson
 
 
-def output_remote_list_cli(remotes):
+def print_remote_list(remotes):
     output = ConanOutput()
     for r in remotes:
         output_str = str(r)
         output.writeln(output_str)
 
 
-def output_remote_user_list_cli(results):
+def print_remote_user_list(results):
     output = ConanOutput()
     for remote_name, result in results.items():
         output.writeln(f"{remote_name}:", fg=remote_color)
@@ -39,7 +38,7 @@ def output_remote_user_list_cli(results):
             output.writeln(result["authenticated"], fg=reference_color)
 
 
-def output_set_user_cli(results):
+def print_remote_user_set(results):
     output = ConanOutput()
     for remote_name, result in results.items():
         from_user = "'{}'".format(result["previous_info"]["user_name"])
@@ -56,13 +55,13 @@ def output_remotes_json(results):
     return json.dumps(list(results.values()))
 
 
-@conan_subcommand(formatters={"json": output_remote_list_json})
+@conan_subcommand(formatters={"json": formatter_remote_list_json})
 def remote_list(conan_api: ConanAPIV2, parser, subparser, *args):
     """
     List current remotes
     """
     result = conan_api.remotes.list()
-    output_remote_list_cli(result)
+    print_remote_list(result)
     return result
 
 
@@ -199,7 +198,7 @@ def remote_list_users(conan_api, parser, subparser, *args):
     for r in remotes:
         ret[r.name] = conan_api.remotes.user_info(r)
 
-    output_remote_user_list_cli(ret)
+    print_remote_user_list(ret)
     return ret
 
 
@@ -234,7 +233,7 @@ def remote_login(conan_api, parser, subparser, *args):
         info = conan_api.remotes.user_info(r)
         ret[r.name] = {"previous_info": previous_info, "info": info}
 
-    output_set_user_cli(ret)
+    print_remote_user_set(ret)
     return ret
 
 
@@ -257,7 +256,7 @@ def remote_set_user(conan_api, parser, subparser, *args):
             conan_api.remotes.logout(r)
             conan_api.remotes.user_set(r, args.username)
         ret[r.name] = {"previous_info": previous_info, "info": conan_api.remotes.user_info(r)}
-    output_set_user_cli(ret)
+    print_remote_user_set(ret)
     return ret
 
 
@@ -277,7 +276,7 @@ def remote_logout(conan_api, parser, subparser, *args):
         conan_api.remotes.logout(r)
         info = conan_api.remotes.user_info(r)
         ret[r.name] = {"previous_info": previous_info, "info": info}
-    output_set_user_cli(ret)
+    print_remote_user_set(ret)
     return ret
 
 

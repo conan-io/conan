@@ -8,7 +8,7 @@ from conans.errors import ConanException
 from conans.util.files import save
 
 
-def profiles_cli_output(profiles):
+def print_profiles(profiles):
     host, build = profiles
     out = ConanOutput()
     out.writeln("Host profile:")
@@ -38,7 +38,7 @@ def profile_show(conan_api, parser, subparser, *args):
     add_profiles_args(subparser)
     args = parser.parse_args(*args)
     result = get_profiles_from_args(conan_api, args)
-    profiles_cli_output(result)
+    print_profiles(result)
     return result
 
 

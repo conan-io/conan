@@ -26,7 +26,7 @@ def _print_common_headers(result: CommandResult):
         out.writeln("Local Cache:", remote_color)
 
 
-def list_recipes_cli_formatter(results: List[CommandResult]):
+def print_list_recipes(results: List[CommandResult]):
     out = ConanOutput()
     for result in results:
         _print_common_headers(result)
@@ -45,7 +45,7 @@ def list_recipes_cli_formatter(results: List[CommandResult]):
                 out.writeln(f"    {ref}", fg=reference_color)
 
 
-def list_recipe_revisions_cli_formatter(results):
+def print_list_recipe_revisions(results):
     out = ConanOutput()
     for result in results:
         _print_common_headers(result)
@@ -59,7 +59,7 @@ def list_recipe_revisions_cli_formatter(results):
                 out.writeln(f"  {ref.repr_humantime()}", fg=recipe_color)
 
 
-def list_package_revisions_cli_formatter(results):
+def print_list_package_revisions(results):
     out = ConanOutput()
     for result in results:
         _print_common_headers(result)
@@ -73,7 +73,7 @@ def list_package_revisions_cli_formatter(results):
                 out.writeln(f"  {pref.repr_humantime()}", fg=recipe_color)
 
 
-def list_package_ids_cli_formatter(results: List[CommandResult]):
+def print_list_package_ids(results: List[CommandResult]):
     out = ConanOutput()
     for result in results:
         _print_common_headers(result)
@@ -150,7 +150,7 @@ def list_recipes(conan_api, parser, subparser, *args):
                 result.error = str(e)
             results.append(result)
 
-    list_recipes_cli_formatter(results)
+    print_list_recipes(results)
     return results
 
 
@@ -195,7 +195,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
                 result.error = str(e)
 
             results.append(result)
-    list_recipe_revisions_cli_formatter(results)
+    print_list_recipe_revisions(results)
     return results
 
 
@@ -246,7 +246,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
                 result.error = str(e)
             results.append(result)
 
-    list_package_revisions_cli_formatter(results)
+    print_list_package_revisions(results)
     return results
 
 
@@ -294,7 +294,7 @@ def list_packages(conan_api, parser, subparser, *args):
                 result.error = str(e)
             results.append(result)
 
-    list_package_ids_cli_formatter(results)
+    print_list_package_ids(results)
     return results
 
 

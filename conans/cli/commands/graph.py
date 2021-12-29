@@ -5,8 +5,8 @@ from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, 
     Extender
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import graph_compute, common_graph_args
-from conans.cli.formatters.graph import graph_html_format, graph_json_format, graph_dot_format, \
-    basic_graph_info_printer
+from conans.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot, \
+    print_graph_info
 from conans.cli.output import ConanOutput
 from conans.client.graph.install_graph import InstallGraph
 from conans.errors import ConanException
@@ -73,8 +73,9 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     return install_order_serialized
 
 
-@conan_subcommand(formatters={"html": graph_html_format, "json": graph_json_format,
-                              "dot": graph_dot_format})
+@conan_subcommand(formatters={"html": format_graph_html,
+                              "json": format_graph_json,
+                              "dot": format_graph_dot})
 def graph_info(conan_api, parser, subparser, *args):
     """
     Computes the dependency graph and shows information about it
@@ -97,5 +98,5 @@ def graph_info(conan_api, parser, subparser, *args):
 
     deps_graph, lockfile = graph_compute(args, conan_api)
     if not args.format:
-        basic_graph_info_printer(deps_graph, args.filter, args.package_filter)
+        print_graph_info(deps_graph, args.filter, args.package_filter)
     return deps_graph, os.path.join(conan_api.cache_folder, "templates")

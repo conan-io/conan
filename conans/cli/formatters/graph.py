@@ -9,7 +9,7 @@ from conans.client.graph.graph import CONTEXT_BUILD, RECIPE_CONSUMER, RECIPE_VIR
 from conans.client.installer import build_id
 
 
-def cli_format_graph_basic(graph):
+def print_graph_basic(graph):
     # I am excluding the "download"-"cache" or remote information, that is not
     # the definition of the graph, but some history how it was computed
     # maybe we want to summarize that info after the "GraphBuilder" ends?
@@ -67,7 +67,7 @@ def cli_format_graph_basic(graph):
             output.info("    {}{}".format(d, reason), Color.BRIGHT_CYAN)
 
 
-def cli_format_graph_packages(graph):
+def print_graph_packages(graph):
     # I am excluding the "download"-"cache" or remote information, that is not
     # the definition of the graph, but some history how it was computed
     # maybe we want to summarize that info after the "GraphBuilder" ends?
@@ -95,7 +95,7 @@ def cli_format_graph_packages(graph):
     _format_requires("Build requirements", build_requires)
 
 
-def basic_graph_info_printer(deps_graph, field_filter, package_filter):
+def print_graph_info(deps_graph, field_filter, package_filter):
     """ More complete graph output, including information for every node in the graph
     Used for 'graph info' command
     """
@@ -129,8 +129,8 @@ def _serial_pretty_printer(data, field_filter, indent=""):
 
 
 class _PrinterGraphItem(object):
-    def __init__(self, id, node, is_build_time_node):
-        self.id = id
+    def __init__(self, _id, node, is_build_time_node):
+        self.id = _id
         self._ref = node.ref
         self._conanfile = node.conanfile
         self._is_build_time_node = is_build_time_node
@@ -210,19 +210,19 @@ def _render_graph(graph, template, template_folder):
     return template.render(graph=graph, base_template_path=template_folder, version=client_version)
 
 
-def graph_html_format(info):
+def format_graph_html(info):
     graph, template_folder = info
     template = get_template(templates.INFO_GRAPH_HTML, template_folder=template_folder)
     return _render_graph(graph, template, template_folder)
 
 
-def graph_dot_format(info):
+def format_graph_dot(info):
     graph, template_folder = info
     template = get_template(templates.INFO_GRAPH_DOT, template_folder=template_folder)
     return _render_graph(graph, template, template_folder)
 
 
-def graph_json_format(info):
+def format_graph_json(info):
     deps_graph, _ = info
     serialized = deps_graph.serialize()
     json_result = json.dumps(serialized, indent=4)
