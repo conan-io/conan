@@ -420,50 +420,22 @@ class FindFiles(Block):
         {% endif %}
 
         {% if cross_building %}
-        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_PACKAGE)
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_PACKAGE OR CMAKE_FIND_ROOT_PATH_MODE_PACKAGE STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
         endif()
-        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_PROGRAM)
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_PROGRAM OR CMAKE_FIND_ROOT_PATH_MODE_PROGRAM STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
         endif()
-        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_LIBRARY)
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_LIBRARY OR CMAKE_FIND_ROOT_PATH_MODE_LIBRARY STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
         endif()
         {% if is_apple %}
-        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK)
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK OR CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK "BOTH")
         endif()
         {% endif %}
-        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_INCLUDE)
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_INCLUDE OR CMAKE_FIND_ROOT_PATH_MODE_INCLUDE STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
-        endif()
-
-        if(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE STREQUAL "ONLY")
-            set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} {{ generators_folder }} {{ host_build_paths_noroot }})
-        endif()
-        if(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM STREQUAL "NEVER")
-            if(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY STREQUAL "ONLY" OR
-        {% if is_apple %}
-               CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK STREQUAL "ONLY" OR
-        {% endif %}
-               CMAKE_FIND_ROOT_PATH_MODE_INCLUDE STREQUAL "ONLY")
-                set(CMAKE_FIND_ROOT_PATH ${CMAKE_FIND_ROOT_PATH} {{ host_build_paths_root }})
-            endif()
-        else()
-            if(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM STREQUAL "ONLY")
-                set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
-            endif()
-            if(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY STREQUAL "ONLY")
-                set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
-            endif()
-        {% if is_apple %}
-            if(CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK STREQUAL "ONLY")
-                set(CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK "BOTH")
-            endif()
-        {% endif %}
-            if(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE STREQUAL "ONLY")
-                set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
-            endif()
         endif()
         {% endif %}
     """)
