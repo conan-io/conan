@@ -4,7 +4,7 @@ class Premake(object):
 
     # automatically chooses premake action based on used compiler
     def configure(self):
-        if "Visual Studio" in self.settings.compiler:
+        if "Visual Studio" in self._conanfile.settings.compiler:
             _visuals = {'8': '2005',
                         '9': '2008',
                         '10': '2010',
@@ -13,9 +13,9 @@ class Premake(object):
                         '14': '2015',
                         '15': '2017',
                         '16': '2019'}
-            premake_command = "premake5 vs%s" % _visuals.get(str(self.settings.compiler.version), "UnknownVersion %s" % str(self.settings.compiler.version))
-            self.run(premake_command)
-        elif "msvc" in self.settings.compiler:
+            premake_command = "premake5 vs%s" % _visuals.get(str(self._conanfile.settings.compiler.version))
+            self._conanfile.run(premake_command)
+        elif "msvc" in self._conanfile.settings.compiler:
             _visuals = {'14.0': '2005',
                         '15.0': '2008',
                         '16.0': '2010',
@@ -33,7 +33,7 @@ class Premake(object):
             for i in range(0,10):
                 ver = '19.2' + str(i)
                 _visuals[ver] = '2019'
-            premake_command = "premake5 vs%s" % _visuals.get(str(self.settings.compiler.version), "UnknownVersion %s" % str(self.settings.compiler.version))
-            self.run(premake_command)
+            premake_command = "premake5 vs%s" % _visuals.get(str(self._conanfile.settings.compiler.version))
+            self._conanfile.run(premake_command)
         else:
-            self.run("premake5 gmake2")
+            self._conanfile.run("premake5 gmake2")

@@ -77,7 +77,8 @@ def test_update_not_date():
     time.sleep(1)
 
     # Change and rebuild package
-    client.save({"conanfile.py": GenConanfile("hello0", "1.0").with_test("pass")}, clean_first=True)
+    client.save({"conanfile.py": GenConanfile("hello0", "1.0").with_class_attribute("author = 'O'")},
+                clean_first=True)
     client.run("export . --user=lasote --channel=stable")
     client.run("install --reference=hello0/1.0@lasote/stable --build")
 

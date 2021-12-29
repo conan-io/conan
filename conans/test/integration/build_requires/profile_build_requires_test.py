@@ -109,6 +109,8 @@ import os
 from conans import ConanFile, tools
 
 class Testmylib(ConanFile):
+    def requirements(self):
+        self.requires(self.tested_reference_str)
 
     def build(self):
         self.run("mytool")

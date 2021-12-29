@@ -18,6 +18,11 @@ class TestPackageTestCase(unittest.TestCase):
             settings = "os"
             {{ build_requires|default("") }}
 
+            {% if test %}
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            {% endif %}
+
             {% raw %}
             def build(self):
                 self.output.info(">> settings.os: {}".format(self.settings.os))
@@ -37,7 +42,8 @@ class TestPackageTestCase(unittest.TestCase):
 
     conanfile_br = conanfile_tpl.render()
     conanfile = conanfile_tpl.render(build_requires='build_requires = "br1/version"')
-    conanfile_test = conanfile_tpl.render(build_requires='build_requires = "br2/version"')
+    conanfile_test = conanfile_tpl.render(build_requires='build_requires = "br2/version"',
+                                          test=True)
 
     settings_yml = textwrap.dedent("""
         os:

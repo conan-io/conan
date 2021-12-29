@@ -592,6 +592,10 @@ class ConanLib(ConanFile):
         scm_info = self.client.scm_info_cache("issue/3831@user/channel")
         self.assertEqual(commit, scm_info.revision)
 
+    def test_git_version(self):
+        git = Git()
+        self.assertNotIn("Error retrieving git", str(git.version))
+
 
 @pytest.mark.tool_svn
 class SVNSCMTest(SVNLocalRepoTestCase):
