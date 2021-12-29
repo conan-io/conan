@@ -26,6 +26,8 @@ class Pkg(ConanFile):
 """
         test_conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
+    def requirements(self):
+        self.requires(self.tested_reference_str)
     def build(self):
         self.output.info("Test SYSROOT: %s"
                           % self.dependencies["sysroot"].cpp_info.sysroot)

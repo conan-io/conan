@@ -93,6 +93,9 @@ def setup_client_with_greetings():
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps", "CMakeToolchain"
 
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -186,6 +189,9 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
         class WorldTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps", "CMakeToolchain"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def build(self):
                 cmake = CMake(self)
@@ -461,6 +467,9 @@ def test_same_names():
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps", "CMakeToolchain"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def build(self):
                 cmake = CMake(self)
