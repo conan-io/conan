@@ -1,14 +1,9 @@
-import json
-import os
 import textwrap
 import unittest
 from datetime import datetime
 
-import pytest
-
 from conans import __version__ as client_version
-from conans.test.utils.tools import TestClient, GenConanfile, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import save, load
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class InfoTest(unittest.TestCase):
@@ -64,7 +59,7 @@ class InfoTest(unittest.TestCase):
         create_export(test_deps, "hello0")
 
         # arbitrary case - file will be named according to argument
-        self.client.run("graph info . --format=test.dot")
+        self.client.run("graph info . --format=dot", redirect_stdout="test.dot")
         contents = self.client.load("test.dot")
 
         expected = textwrap.dedent("""
@@ -103,7 +98,7 @@ class InfoTest(unittest.TestCase):
 
         # arbitrary case - file will be named according to argument
         arg_filename = "test.html"
-        self.client.run("graph info . --format=%s" % arg_filename)
+        self.client.run("graph info . --format=html", redirect_stdout=arg_filename)
         html = self.client.load(arg_filename)
         self.assertIn("<body>", html)
         self.assertIn("{ from: 0, to: 1 }", html)
@@ -123,7 +118,8 @@ class InfoTest(unittest.TestCase):
         client.run("export . --name=pkg2 --version=0.1 --user=user --channel=channel")
         client.save({"conanfile.txt": "[requires]\npkg/0.1@user/channel\npkg2/0.1@user/channel",
                      "myprofile": "[tool_requires]\ntool/0.1@user/channel"}, clean_first=True)
-        client.run("graph info . -pr=myprofile --build=missing --format=file.html")
+        client.run("graph info . -pr=myprofile --build=missing --format=html",
+                   redirect_stdout="file.html")
         html = client.load("file.html")
         self.assertIn("html", html)
         # To check that this node is not duplicated
@@ -153,7 +149,8 @@ class InfoTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=testing")
 
         # Topics as tuple
-        client.run("graph info --reference=pkg/0.2@lasote/testing --format file.html")
+        client.run("graph info --reference=pkg/0.2@lasote/testing --format=html",
+                   redirect_stdout="file.html")
         html_content = client.load("file.html")
         self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo, bar, qux</li>", html_content)
@@ -162,7 +159,8 @@ class InfoTest(unittest.TestCase):
         conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("export . --user=lasote --channel=testing")
-        client.run("graph info --reference=pkg/0.2@lasote/testing --format file.html")
+        client.run("graph info --reference=pkg/0.2@lasote/testing --format=html",
+                   redirect_stdout="file.html")
         html_content = client.load("file.html")
         self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)

@@ -18,7 +18,7 @@ class RemoteTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, inputs=3*["admin", "password"])
 
     def test_list_json(self):
-        self.client.run("remote list --format=list.json")
+        self.client.run("remote list --format=json", redirect_stdout="list.json")
         data = json.loads(str(self.client.load("list.json")))
 
         assert data[0]["name"] == "remote0"

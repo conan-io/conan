@@ -111,20 +111,17 @@ class BaseConanCommand(object):
         if formatarg is None:
             return
 
-        filename = formatarg if "." in formatarg else None
-        formatext = formatarg.rsplit(".")[-1]
         try:
-            formatter = self._formatters[formatext]
+            formatter = self._formatters[formatarg]
         except KeyError:
-            raise ConanException("{} is not a known format: {}".format(formatext,
+            raise ConanException("{} is not a known format: {}".format(formatarg,
                                                                        list(self._formatters)))
 
-        if info is not None and formatter is not None:
-            result = formatter(info)
-            if filename is not None:
-                save(filename, result)
-            else:
-                cli_out_write(result)
+        if info is None:
+            raise ConanException("fFormat {formatarg} was specified, but command didn't return "
+                                 "anything to format")
+        result = formatter(info)
+        cli_out_write(result)
 
 
 class ConanCommand(BaseConanCommand):

@@ -34,13 +34,15 @@ class UserOverridesTemplatesTestCase(unittest.TestCase):
     def test_graph_html(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', INFO_GRAPH_HTML)
         save(table_template_path, content='{{ base_template_path }}')
-        self.t.run("graph info --reference={}@ --format=output.html".format(self.app_ref))
+        self.t.run("graph info --reference={}@ --format=html".format(self.app_ref),
+                   redirect_stdout="output.html")
         content = self.t.load("output.html")
-        self.assertEqual(os.path.join(self.t.cache_folder, 'templates'), content)
+        self.assertEqual(os.path.join(self.t.cache_folder, 'templates')+ "\n", content)
 
     def test_graph_dot(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', INFO_GRAPH_DOT)
         save(table_template_path, content='{{ base_template_path }}')
-        self.t.run("graph info --reference={}@ --format=output.dot".format(self.app_ref))
+        self.t.run("graph info --reference={}@ --format=dot".format(self.app_ref),
+                   redirect_stdout="output.dot")
         content = self.t.load("output.dot")
-        self.assertEqual(os.path.join(self.t.cache_folder, 'templates'), content)
+        self.assertEqual(os.path.join(self.t.cache_folder, 'templates') + "\n", content)

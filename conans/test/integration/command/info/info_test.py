@@ -84,16 +84,16 @@ class TestJsonOutput:
         client = TestClient()
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"conanfile.py": conanfile})
-        client.run("graph info . --filter=license --format=graph.json", assert_error=True)
+        client.run("graph info . --filter=license --format=json", assert_error=True)
         assert "Formatted outputs cannot be filtered" in client.out
-        client.run("graph info . --package-filter=license --format=graph.html", assert_error=True)
+        client.run("graph info . --package-filter=license --format=html", assert_error=True)
         assert "Formatted outputs cannot be filtered" in client.out
 
     def test_json_info_outputs(self):
         client = TestClient()
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"conanfile.py": conanfile})
-        client.run("graph info . -s build_type=Debug --format=graph.json")
+        client.run("graph info . -s build_type=Debug --format=json", redirect_stdout="graph.json")
         graph = json.loads(client.load("graph.json"))
         assert graph["nodes"][0]["settings"]["build_type"] == "Debug"
 
@@ -122,7 +122,7 @@ class TestAdvancedCliOutput:
         assert "revision: some commit hash" in client.out
         assert "url: some-url/path" in client.out
 
-        client.run("graph info . --format=file.json")
+        client.run("graph info . --format=json", redirect_stdout="file.json")
         file_json = client.load("file.json")
         info_json = json.loads(file_json)
         assert info_json["nodes"][0]["scm"]["type"] == "git"
@@ -143,7 +143,7 @@ class TestAdvancedCliOutput:
         client.run("graph info .")
         assert "python_requires: ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']" in client.out
 
-        client.run("graph info . --format=file.json")
+        client.run("graph info . --format=json", redirect_stdout="file.json")
         info = json.loads(client.load("file.json"))
         assert info["nodes"][0]["python_requires"] == ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']
 

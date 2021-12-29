@@ -330,14 +330,14 @@ if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
 
 
 @contextmanager
-def redirect_output(target):
+def redirect_output(stderr, stdout=None):
     original_stdout = sys.stdout
     original_stderr = sys.stderr
     # TODO: change in 2.0
     # redirecting both of them to the same target for the moment
     # to assign to Testclient out
-    sys.stdout = target
-    sys.stderr = target
+    sys.stdout = stdout or stderr
+    sys.stderr = stderr
     try:
         yield
     finally:
@@ -405,7 +405,9 @@ class TestClient(object):
         mkdir(self.current_folder)
         self.tune_conan_conf(cache_folder, cpu_count)
 
-        self.out = RedirectedTestOutput()
+        self.out = ""
+        self.stdout = RedirectedTestOutput()
+        self.stderr = RedirectedTestOutput()
         self.user_inputs = RedirectedInputStream(inputs)
 
         # create default profile
@@ -428,12 +430,6 @@ class TestClient(object):
     @property
     def storage_folder(self):
         return self.cache.store
-
-    @property
-    def proxy(self):
-        api = self.get_conan_api()
-        api.create_app()
-        return api.app.proxy
 
     def tune_conan_conf(self, cache_folder, cpu_count):
         # Create the default
@@ -504,6 +500,7 @@ class TestClient(object):
         self.api = self.get_conan_api(args)
         command = self.get_conan_command(args)
 
+        error = None
         try:
             error = command.run(args)
         finally:
@@ -520,15 +517,16 @@ class TestClient(object):
         self._handle_cli_result(command_line, assert_error=assert_error, error=error)
         return error
 
-    def run(self, command_line, assert_error=False):
+    def run(self, command_line, assert_error=False, redirect_stdout=None, redirect_stderr=None):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
         from conans.test.utils.mocks import RedirectedTestOutput
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
-            self.out = RedirectedTestOutput()  # Initialize each command
-            with redirect_output(self.out):
+            self.stdout = RedirectedTestOutput()  # Initialize each command
+            self.stderr = RedirectedTestOutput()
+            with redirect_output(self.stderr, self.stdout):
                 with redirect_input(self.user_inputs):
                     real_servers = any(isinstance(s, (str, ArtifactoryServer))
                                        for s in self.servers.values())
@@ -538,12 +536,20 @@ class TestClient(object):
                             http_requester = self.requester_class(self.servers)
                         else:
                             http_requester = TestRequester(self.servers)
-
-                    if http_requester:
-                        with self.mocked_servers(http_requester):
+                    try:
+                        if http_requester:
+                            with self.mocked_servers(http_requester):
+                                return self.run_cli(command_line, assert_error=assert_error)
+                        else:
                             return self.run_cli(command_line, assert_error=assert_error)
-                    else:
-                        return self.run_cli(command_line, assert_error=assert_error)
+                    finally:
+                        self.out = str(self.stdout) + str(self.stderr)
+                        if redirect_stdout:
+                            save(os.path.join(self.current_folder, redirect_stdout),
+                                 str(self.stdout))
+                        if redirect_stderr:
+                            save(os.path.join(self.current_folder, redirect_stderr),
+                                 str(self.stderr))
 
     def run_command(self, command, cwd=None, assert_error=False):
         runner = ConanRunner()

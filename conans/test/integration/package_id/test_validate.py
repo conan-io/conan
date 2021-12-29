@@ -37,7 +37,8 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         client.run("graph info --reference=pkg/0.1@ -s os=Windows")
         self.assertIn("package_id: INVALID", client.out)
-        client.run("graph info --reference=pkg/0.1@ -s os=Windows --format=myjson.json")
+        client.run("graph info --reference=pkg/0.1@ -s os=Windows --format=json",
+                   redirect_stdout="myjson.json")
         myjson = json.loads(client.load("myjson.json"))
         self.assertEqual(myjson["nodes"][1]["binary"], BINARY_INVALID)
         self.assertEqual(myjson["nodes"][1]["package_id"], 'INVALID')
