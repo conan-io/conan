@@ -21,7 +21,7 @@ class InfoCommandTest(unittest.TestCase):
 
         self.t = TestClient(path_with_spaces=False)
         self.t.save({'conanfile.py': GenConanfile()})
-        self.t.run('create . parent/version@user/name')
+        self.t.run('create . --name=parent --version=version --user=user --channel=name')
 
         lib_folder = os.path.join(self.t.current_folder, 'lib')
         conan_package_layout = textwrap.dedent("""\

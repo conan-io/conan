@@ -108,6 +108,6 @@ class MesonInstall(TestMesonBase):
                      os.path.join("test_package", "CMakeLists.txt"): self._test_package_cmake_lists,
                      os.path.join("test_package", "src", "test_package.cpp"): test_package_cpp})
 
-        self.t.run("create . hello/0.1@")
+        self.t.run("create . --name=hello --version=0.1")
 
         self._check_binary()

@@ -74,7 +74,7 @@ def test_locally_build_linux(build_type, shared, client):
     check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
 
     # create should also work
-    client.run("create . hello/1.0@ {}".format(settings))
+    client.run("create . --name=hello --version=1.0 {}".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run("install --reference=hello/1.0@ -g=deploy -if=mydeploy {}".format(settings))
@@ -107,7 +107,7 @@ def test_locally_build_msvc(build_type, shared, client):
     check_vs_runtime(libname, client, msvc_version, build_type, architecture="amd64")
 
     # create should also work
-    client.run("create . hello/1.0@ {}".format(settings))
+    client.run("create . --name=hello --version=1.0 {}".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run("install --reference=hello/1.0@ -g=deploy -if=mydeploy {}".format(settings))

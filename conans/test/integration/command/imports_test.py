@@ -224,14 +224,14 @@ class SymbolicImportsTest(unittest.TestCase):
         self.consumer.save({"conanfile.py": consumer}, clean_first=True)
 
     def test_imports_symbolic_names(self):
-        self.client.run("create . pkg/0.1@")
+        self.client.run("create . --name=pkg --version=0.1")
         self.consumer.run("install .")
         self.assertEqual("hello world", self.consumer.load("bin/myfile.bin"))
         self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))
         self.assertEqual("bye moon", self.consumer.load("lib/myfile.a"))
 
     def test_error_unknown(self):
-        self.client.run("create . pkg/0.1@")
+        self.client.run("create . --name=pkg --version=0.1")
         consumer = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
@@ -293,7 +293,7 @@ class SymbolicImportsComponentTest(unittest.TestCase):
         self.consumer.save({"conanfile.py": consumer}, clean_first=True)
 
     def test_imports_symbolic_names(self):
-        self.client.run("create . pkg/0.1@")
+        self.client.run("create . --name=pkg --version=0.1")
         self.consumer.run("install .")
         self.assertEqual("hello world", self.consumer.load("bin/myfileA.bin"))
         self.assertEqual("hello moon", self.consumer.load("bin/myfileB.bin"))

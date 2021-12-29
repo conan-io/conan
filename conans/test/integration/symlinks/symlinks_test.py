@@ -318,7 +318,7 @@ class SymlinkExportSources(unittest.TestCase):
         self.assertEqual(os.path.realpath(local_content),
                          os.path.join(t.current_folder, relpath_v1, 'headers', 'content'))
 
-        t.run("create . user/channel")
+        t.run("create . --user=user --channel=channel")
 
         # Check that things are in place (in the cache): exists and points to 'source' directory
         layout = t.get_latest_ref_layout(RecipeReference.loads("symlinks/1.0.0@user/channel"))

@@ -25,7 +25,7 @@ class CollectLibsTest(unittest.TestCase):
         lib_name = "mylibname.%s" % ("a" if platform.system() != "Windows" else "lib")
         client.save({"conanfile.py": conanfile,
                      lib_name: ""})
-        client.run("create . mylib/0.1@user/channel")
+        client.run("create . --name=mylib --version=0.1 --user=user --channel=channel")
 
         # reusing the binary already in cache
         client.save({"conanfile.py": GenConanfile().with_require("mylib/0.1@user/channel")

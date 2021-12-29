@@ -106,8 +106,8 @@ def test_different_options_values_recipe(scope):
         """)
     c.save({"conanfile.py": protobuf})
 
-    c.run("create . protobuf/1.0@")
-    c.run("create . protobuf/1.0@ -o protobuf:shared=True")
+    c.run("create . --name=protobuf --version=1.0")
+    c.run("create . --name=protobuf --version=1.0 -o protobuf:shared=True")
 
     for host, build in ((True, True), (True, False), (False, True), (False, False)):
         c.save({"conanfile.py": consumer_recipe.format(host=host, build=build, scope=scope)})

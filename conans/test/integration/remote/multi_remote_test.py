@@ -14,7 +14,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "source.txt": "somesource"})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("upload pkg/0.1@user/testing --all -r default")
 
         # Failure because remote is removed
@@ -175,7 +175,7 @@ class MultiRemoteTest(unittest.TestCase):
 
         client = TestClient(servers=servers)
         client.save({"conanfile.py": GenConanfile("mylib", "0.1")})
-        client.run("create . lasote/testing")
+        client.run("create . --user=lasote --channel=testing")
         client.run("remote login s1 admin -p password")
         client.run("upload mylib* -r s1 -c")
 

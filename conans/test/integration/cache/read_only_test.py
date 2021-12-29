@@ -32,7 +32,7 @@ class MyPkg(ConanFile):
 """
         self.client.save({"conanfile.py": conanfile,
                           "myheader.h": "my header"})
-        self.client.run("create . pkg/0.1@lasote/channel")
+        self.client.run("create . --name=pkg --version=0.1 --user=lasote --channel=channel")
 
     def test_basic(self):
         pref = self.client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@lasote/channel"),

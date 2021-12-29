@@ -17,14 +17,14 @@ class Pkg(ConanFile):
 '''
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkga/0.1@user/testing")
+        client.run("create . --name=pkga --version=0.1 --user=user --channel=testing")
         self.assertIn("e522a4e1c101d2a2b4f0009497ae0d0b6a29ae65", client.out)
-        client.run("create . pkga/0.1@user/testing -o pkga:shared=True -o pkga:num=2")
+        client.run("create . --name=pkga --version=0.1 --user=user --channel=testing -o pkga:shared=True -o pkga:num=2")
         self.assertIn("18d072f161b7c8d77083ca6dec0c5222f4bacf22", client.out)
         client.save({"conanfile.py": conanfile + "    requires = 'pkga/0.1@user/testing'"})
-        client.run("create . pkgb/0.1@user/testing")
+        client.run("create . --name=pkgb --version=0.1 --user=user --channel=testing")
         client.save({"conanfile.py": conanfile + "    requires = 'pkgb/0.1@user/testing'"})
-        client.run("create . PkgC/0.1@user/testing")
+        client.run("create . --name=PkgC --version=0.1 --user=user --channel=testing")
         client.save({"conanfile.py": conanfile + "    requires = 'PkgC/0.1@user/testing'"})
 
         client.run("install .")

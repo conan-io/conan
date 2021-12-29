@@ -18,7 +18,7 @@ class MyPkg(ConanFile):
 
 """})
 
-        error = self.client.run("create . name/ver@jgsogo/test", assert_error=True)
+        error = self.client.run("create . --name=name --version=ver --user=jgsogo --channel=test", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_SYSTEM_REQUIREMENTS)
         self.assertIn("Invalid system requirements: Some package missed", self.client.out)
 

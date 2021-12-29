@@ -68,7 +68,7 @@ class ConanFileToolsTest(ConanFile):
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile % "True"})
-        client.run("create . lasote/testing --build")
+        client.run("create . --user=lasote --channel=testing --build")
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
 
         latest_rrev = client.cache.get_latest_recipe_reference(ref)
@@ -80,7 +80,7 @@ class ConanFileToolsTest(ConanFile):
 
         client = TestClient()
         client.save({"conanfile.py": conanfile % "False"})
-        client.run("create . lasote/testing --build")
+        client.run("create . --user=lasote --channel=testing --build")
         ref = RecipeReference.loads("pkg/0.1@lasote/testing")
 
         latest_rrev = client.cache.get_latest_recipe_reference(ref)

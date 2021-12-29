@@ -329,9 +329,9 @@ class ProfileTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "profile": profile})
 
-        client.run("create . mypkg/0.1@user/channel -pr=profile")
+        client.run("create . --name=mypkg --version=0.1 --user=user --channel=channel -pr=profile")
         assert "mypkg/0.1@user/channel: SETTINGS! os=FreeBSD!!" in client.out
-        client.run("create . mypkg/0.1@ -pr=profile")
+        client.run("create . --name=mypkg --version=0.1 -pr=profile")
         assert "mypkg/0.1: SETTINGS! os=Linux!!" in client.out
 
     def test_install_profile_options(self):
@@ -374,7 +374,7 @@ class ProfileTest(unittest.TestCase):
                               "default_profile = default",
                               "default_profile = p1")
         self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run("create . user/testing")
+        self.client.run("create . --user=user --channel=testing")
         self._assert_env_variable_printed("A_VAR", "1")
 
     @pytest.mark.xfail(reason="New environment changed")
@@ -407,7 +407,7 @@ class DefaultNameConan(ConanFile):
                        env=[("ONE_VAR", "ONE_VALUE")])
 
         self.client.save(files)
-        self.client.run("create . lasote/stable --profile scopes_env")
+        self.client.run("create . --user=lasote --channel=stable --profile scopes_env")
 
         self._assert_env_variable_printed("ONE_VAR", "ONE_VALUE")
         self.assertIn("My var is ONE_VALUE", str(self.client.out))
@@ -417,13 +417,13 @@ class DefaultNameConan(ConanFile):
                        package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
                                     "hello0": [("ONE_VAR", "PACKAGE VALUE")]})
 
-        self.client.run("create . lasote/stable --profile scopes_env2")
+        self.client.run("create . --user=lasote --channel=stable --profile scopes_env2")
 
         self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
         self.assertIn("My var is IN_TEST_PACKAGE", str(self.client.out))
 
         # Try now overriding some variables with command line
-        self.client.run("create . lasote/stable --profile scopes_env2 "
+        self.client.run("create . --user=lasote --channel=stable --profile scopes_env2 "
                         "-e DefaultName:ONE_VAR=InTestPackageOverride "
                         "-e hello0:ONE_VAR=PackageValueOverride ")
 
@@ -431,7 +431,7 @@ class DefaultNameConan(ConanFile):
         self.assertIn("My var is InTestPackageOverride", str(self.client.out))
 
         # A global setting in command line won't override a scoped package variable
-        self.client.run("create . lasote/stable --profile scopes_env2 -e ONE_VAR=AnotherValue")
+        self.client.run("create . --user=lasote --channel=stable --profile scopes_env2 -e ONE_VAR=AnotherValue")
         self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
 
     def _assert_env_variable_printed(self, name, value):
@@ -546,7 +546,7 @@ class ProfileAggregationTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
         # The latest declared profile has priority
-        self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
+        self.client.run("create . --name=lib --version=1.0 --user=user --channel=channel --profile profile1 -pr profile2")
         self.assertIn(dedent("""
         [env]
         ENV1=foo2
@@ -558,7 +558,7 @@ class ProfileAggregationTest(unittest.TestCase):
 
     def test_info(self):
         # The latest declared profile has priority
-        self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
+        self.client.run("create . --name=lib --version=1.0 --user=user --channel=channel --profile profile1 -pr profile2")
 
         self.client.save({CONANFILE: self.consumer})
         self.client.run("graph info . --profile profile1 --profile profile2")
@@ -610,7 +610,7 @@ class ProfileAggregationTest(unittest.TestCase):
             """)
 
         self.client.save({"profile1": profile1, "profile2": profile2})
-        self.client.run("create . lib/1.0@user/channel --profile profile2 -pr profile1")
+        self.client.run("create . --name=lib --version=1.0 --user=user --channel=channel --profile profile2 -pr profile1")
         self.assertIn(dedent("""
                              Configuration (profile_host):
                              [settings]
@@ -686,8 +686,8 @@ def test_consumer_specific_settings():
     """
     dep += configure
     client.save({"conanfile.py": dep})
-    client.run("create . dep/1.0@")
-    client.run("create . dep/1.0@ -s build_type=Debug -o dep:shared=True")
+    client.run("create . --name=dep --version=1.0")
+    client.run("create . --name=dep --version=1.0 -s build_type=Debug -o dep:shared=True")
 
     consumer = str(GenConanfile().with_settings("build_type").with_requires("dep/1.0")
                    .with_option("shared", [True, False]).with_default_option("shared", False))

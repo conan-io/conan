@@ -14,7 +14,7 @@ def test_basic():
                 self.conf_info["tools.android:ndk_path"] = "MY-NDK!!!"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . android_ndk/1.0@")
+    client.run("create . --name=android_ndk --version=1.0")
 
     consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -63,7 +63,7 @@ def test_basic_conf_through_cli():
                 self.output.info("NDK build: %s" % self.conf["tools.android:ndk_path"])
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . android_ndk/1.0@")
+    client.run("create . --name=android_ndk --version=1.0")
 
     consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -109,7 +109,7 @@ def test_declared_generators_get_conf():
                 self.conf_info["tools.cmake.cmaketoolchain:user_toolchain"] = "mytoolchain.cmake"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . mytool/1.0@")
+    client.run("create . --name=mytool --version=1.0")
 
     consumer = textwrap.dedent("""
         from conans import ConanFile

@@ -34,7 +34,7 @@ class TestProxiesConfTest:
                     download(self, "MyUrl", "filename.txt")
         """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . foo/1.0@")
+        client.run("create . --name=foo --version=1.0")
         assert "{'myproxykey': 'myvalue'}" in client.out
 
     def test_new_proxy_exclude(self):
@@ -65,7 +65,7 @@ class TestProxiesConfTest:
                       download(self, "{}", "filename.txt")
                 """).format(url)
             client.save({"conanfile.py": conanfile})
-            client.run("create . foo/1.0@")
+            client.run("create . --name=foo --version=1.0")
             if url in ("MyUrl", "**MyExcludedUrl***"):
                 assert "is not excluded!" in client.out
             else:
@@ -99,7 +99,7 @@ class TestProxiesConfTest:
         client.save({"conanfile.py": conanfile})
 
         with environment_update({"HTTP_PROXY": "my_system_proxy"}):
-            client.run("create . foo/1.0@")
+            client.run("create . --name=foo --version=1.0")
 
         assert "My requester!" in client.out
 
@@ -132,5 +132,5 @@ class TestProxiesConfTest:
 
         with environment_update({"http_proxy": "my_system_proxy"}):
             client.save({"conanfile.py": conanfile})
-            client.run("create . foo/1.0@")
+            client.run("create . --name=foo --version=1.0")
             assert "My requester!" in client.out

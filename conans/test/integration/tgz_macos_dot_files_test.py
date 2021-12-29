@@ -77,7 +77,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
             subprocess.call(["xattr", "-w", "name", "value", filepath])
 
         _add_macos_metadata_to_file(os.path.join(t.current_folder, 'file.txt'))
-        t.run("create . user/channel")
+        t.run("create . --user=user --channel=channel")
 
         # Check if the metadata travels through the Conan commands
         pref = t.get_latest_package_reference(RecipeReference.loads("lib/version@user/channel"),

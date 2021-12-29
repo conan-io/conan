@@ -15,7 +15,7 @@ class ConanTestTest(unittest.TestCase):
         client = TestClient()
         client.run("new hello/0.1 -m=cmake_lib")
 
-        client.run("create . lasote/stable -tf=None")
+        client.run("create . --user=lasote --channel=stable -tf=None")
         time.sleep(1)  # Try to avoid windows errors in CI  (Cannot change permissions)
         client.run("test test_package hello/0.1@lasote/stable -s build_type=Release")
         self.assertIn('hello/0.1: Hello World Release!', client.out)

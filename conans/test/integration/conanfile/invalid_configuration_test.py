@@ -43,16 +43,16 @@ class MyPkg(ConanFile):
                       "user says that compiler.version=12 is invalid", self.client.out)
 
     def test_create_method(self):
-        self.client.run("create . name/ver@jgsogo/test %s" % self.settings_msvc15)
+        self.client.run("create . --name=name --version=ver --user=jgsogo --channel=test %s" % self.settings_msvc15)
 
-        error = self.client.run("create . name/ver@jgsogo/test %s" % self.settings_msvc12,
+        error = self.client.run("create . --name=name --version=ver --user=jgsogo --channel=test %s" % self.settings_msvc12,
                                 assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("name/ver@jgsogo/test: Invalid configuration: user says that "
                       "compiler.version=12 is invalid", self.client.out)
 
     def test_as_requirement(self):
-        self.client.run("create . name/ver@jgsogo/test %s" % self.settings_msvc15)
+        self.client.run("create . --name=name --version=ver --user=jgsogo --channel=test %s" % self.settings_msvc15)
         self.client.save({"other/conanfile.py": """
 from conans import ConanFile
 from conans.errors import ConanInvalidConfiguration

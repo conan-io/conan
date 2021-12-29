@@ -16,7 +16,7 @@ def test_reuse_uploaded_tgz():
     files = {"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
              "another_export_file.lib": "to compress"}
     client.save(files)
-    client.run("create . user/stable")
+    client.run("create . --user=user --channel=stable")
     client.run("upload %s --all -r default" % str(ref))
     assert "Compressing recipe" in client.out
     assert "Compressing package" in client.out
@@ -30,7 +30,7 @@ def test_reuse_downloaded_tgz():
     files = {"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
              "another_export_file.lib": "to compress"}
     client.save(files)
-    client.run("create . user/stable")
+    client.run("create . --user=user --channel=stable")
     client.run("upload hello0/0.1@user/stable --all -r default")
     assert "Compressing recipe" in client.out
     assert "Compressing package" in client.out
@@ -52,7 +52,7 @@ def test_upload_only_tgz_if_needed():
                                                                                   "File")
     client.save({"conanfile.py": conanfile,
                  "file.txt": "contents"})
-    client.run("create . user/stable")
+    client.run("create . --user=user --channel=stable")
 
     # Upload conans
     client.run("upload %s -r default" % str(ref))

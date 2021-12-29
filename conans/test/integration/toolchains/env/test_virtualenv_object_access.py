@@ -17,7 +17,7 @@ def client():
         self.buildenv_info.append("Hello", "MyHelloValue!")
     """
     client.save({"conanfile.py": conanfile})
-    client.run("create . foo/1.0@")
+    client.run("create . --name=foo --version=1.0")
     return client
 
 
@@ -51,7 +51,7 @@ def test_virtualenv_object_access(client):
 
     client.save({"conanfile.py": conanfile, "profile": profile})
 
-    client.run("create . app/1.0@ --profile=profile")
+    client.run("create . --name=app --version=1.0 --profile=profile")
     assert "Foo: *MyVar! MyFooValue*"
     assert "runFoo:* Value!*"
     assert "Hello:* MyHelloValue!*"

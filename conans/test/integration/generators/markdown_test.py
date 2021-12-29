@@ -22,7 +22,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
                     """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . bar/0.1.0@user/testing")
+        client.run("create . --name=bar --version=0.1.0 --user=user --channel=testing")
         client.run("install --reference=bar/0.1.0@user/testing -g markdown")
         content = client.load("bar.md")
 
@@ -50,7 +50,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "bm.cmake": "Content of build_module" })
-        client.run("create . bar/0.1.0@user/testing")
+        client.run("create . --name=bar --version=0.1.0 --user=user --channel=testing")
         client.run("install --reference=bar/0.1.0@user/testing -g markdown")
         content = client.load("bar.md")
 

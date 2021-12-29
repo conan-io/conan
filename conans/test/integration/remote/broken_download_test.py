@@ -38,7 +38,7 @@ class BrokenDownloadTest(unittest.TestCase):
         servers = {"default": server}
         client = TestClient(servers=servers, inputs=["admin", "password"])
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . lib/1.0@lasote/stable")
+        client.run("create . --name=lib --version=1.0 --user=lasote --channel=stable")
         client.run("upload lib/1.0@lasote/stable -c --all -r default")
 
         class DownloadFilesBrokenRequester(TestRequester):

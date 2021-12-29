@@ -27,7 +27,7 @@ class SayConan(ConanFile):
 
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
-        client.run("create . pkg/0.1@conan/testing")
+        client.run("create . --name=pkg --version=0.1 --user=conan --channel=testing")
         self.assertIn("pkg/0.1@conan/testing (test package): USER: conan!!", client.out)
         self.assertIn("pkg/0.1@conan/testing (test package): CHANNEL: testing!!", client.out)
 
@@ -72,7 +72,7 @@ class HelloConan(ConanFile):
                           "test/conanfile.py": self.test_conanfile})
 
     def test_create(self):
-        self.client.run("create . lasote/stable")
+        self.client.run("create . --user=lasote --channel=stable")
         self.assertIn("say/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertIn("hello/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertNotIn("other/testing", self.client.out)

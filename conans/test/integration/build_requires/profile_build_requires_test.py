@@ -123,7 +123,7 @@ class Testmylib(ConanFile):
                      "profile.txt": profile,
                      "profile2.txt": profile2}, clean_first=True)
 
-        client.run("create . lasote/stable --profile ./profile.txt --build missing")
+        client.run("create . --user=lasote --channel=stable --profile ./profile.txt --build missing")
         self.assertEqual(2, str(client.out).splitlines().count("Hello World!"))
 
     def test_consumer_patterns(self):
@@ -160,7 +160,7 @@ nonexistingpattern*: sometool/1.2@user/channel
                      "test_package/conanfile.py": test_conanfile,
                      "profile.txt": profile_patterns}, clean_first=True)
 
-        client.run("create . lasote/stable --profile=./profile.txt --build=missing")
+        client.run("create . --user=lasote --channel=stable --profile=./profile.txt --build=missing")
         self.assertEqual(1, str(client.out).splitlines().count("Hello World!"))
 
     def test_build_requires_options(self):

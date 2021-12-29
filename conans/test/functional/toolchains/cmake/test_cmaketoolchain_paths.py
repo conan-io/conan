@@ -37,7 +37,7 @@ def test_cmaketoolchain_path_find(package, find_package):
     client.save({"conanfile.py": conanfile,
                  "{}".format(filename): find,
                  "myowncmake.cmake": myowncmake})
-    client.run("create . {}/0.1@".format(package))
+    client.run("create . --name={} --version=0.1".format(package))
 
     consumer = textwrap.dedent("""
         set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -106,7 +106,7 @@ def test_cmaketoolchain_path_find_real_config():
         """)
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmake})
-    client.run("create . hello/0.1@")
+    client.run("create . --name=hello --version=0.1")
 
     consumer = textwrap.dedent("""
         project(MyHello NONE)

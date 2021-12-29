@@ -151,8 +151,8 @@ class AConan(ConanFile):
     pass
 """
         client.save({CONANFILE: conanfile_dep})
-        client.run("create . Hello.pkg/0.1@lasote/testing")
-        client.run("create . Hello-Tools/0.1@lasote/testing")
+        client.run("create . --name=Hello.pkg --version=0.1 --user=lasote --channel=testing")
+        client.run("create . --name=Hello-Tools --version=0.1 --user=lasote --channel=testing")
         conanfile_scope_env = """
 from conans import ConanFile
 
@@ -227,7 +227,7 @@ class FooConan(ConanFile):
     version = "1.0"
 """
         client.save({CONANFILE: conanfile})
-        client.run("create . user/stable")
+        client.run("create . --user=user --channel=stable")
 
         conanfile = """
 from conans import ConanFile
@@ -259,7 +259,7 @@ class BarConan(ConanFile):
                                      % (self.name, self.settings.build_type))
             """)
         client.save({CONANFILE: conanfile.format(name="dep", requires="")})
-        client.run("create . dep/0.1@user/testing -s build_type=Release")
+        client.run("create . --name=dep --version=0.1 --user=user --channel=testing -s build_type=Release")
         client.save({CONANFILE: conanfile.format(name="mypkg",
                                                  requires="requires = 'dep/0.1@user/testing'")})
         client.run("build . -s mypkg:build_type=Debug -s build_type=Release")

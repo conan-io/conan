@@ -51,7 +51,7 @@ class ConanTraceTest(unittest.TestCase):
             client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
             ref = RecipeReference.loads("hello0/0.1@lasote/stable")
             client.save({"conanfile.py": base})
-            client.run("create . lasote/stable")
+            client.run("create . --user=lasote --channel=stable")
             pref = client.get_latest_package_reference(ref)
             package_dir = client.get_latest_pkg_layout(pref).package()
             log_file_packaged_ = os.path.join(package_dir, RUN_LOG_NAME)

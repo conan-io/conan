@@ -24,11 +24,11 @@ class ConanAliasTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/8702
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . test-python-requires/0.1@user/testing")
+        client.run("create . --name=test-python-requires --version=0.1 --user=user --channel=testing")
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     python_requires = 'test-python-requires/0.1@user/testing'"""})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("alias pkg/0.1@user/testing pkg/0.2@user/testing", assert_error=True)
         self.assertIn("ERROR: Reference 'pkg/0.1@user/testing' is already a package",
                       client.out)

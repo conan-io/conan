@@ -16,7 +16,7 @@ class InstallParallelTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
 
         for i in range(counter):
-            client.run("create . pkg%s/0.1@user/testing" % i)
+            client.run("create . --name=pkg%s --version=0.1 --user=user --channel=testing" % i)
         client.run("upload * --all --confirm -r default")
         client.run("remove * -f")
 

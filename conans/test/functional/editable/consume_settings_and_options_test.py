@@ -130,7 +130,7 @@ int main() {
                      "src/main.cpp": main_cpp})
 
         # Build consumer project
-        client.run("create . pkg/0.0@user/testing "
+        client.run("create . --name=pkg --version=0.0 --user=user --channel=testing "
                    "-s build_type={} -o MyLib:shared={}".format(build_type, str(shared)))
         self.assertIn("    MyLib/0.1@user/editable from user folder - Editable", client.out)
         self.assertIn("Hello {}!".format(build_type), client.out)

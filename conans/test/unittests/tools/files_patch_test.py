@@ -149,7 +149,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
                       client.out)
         self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
@@ -170,7 +170,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
 '''
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
                       client.out)
 

@@ -12,8 +12,8 @@ def test_build_requires_ranges():
     # dependency to cmake/1.0
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . cmake/0.5@")
-    client.run("create . cmake/1.0@")
+    client.run("create . --name=cmake --version=0.5")
+    client.run("create . --name=cmake --version=1.0")
     client.run("upload cmake/1.0* -c --all -r default")
     client.run("remove cmake/1.0* -f")
 

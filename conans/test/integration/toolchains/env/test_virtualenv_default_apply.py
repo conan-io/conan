@@ -18,7 +18,7 @@ def client():
         self.runenv_info.define("Foo", "MyRunVar!")
     """
     client.save({"conanfile.py": conanfile})
-    client.run("create . foo/1.0@")
+    client.run("create . --name=foo --version=1.0")
     return client
 
 

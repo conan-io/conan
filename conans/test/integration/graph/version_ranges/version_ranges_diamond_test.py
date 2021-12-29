@@ -23,9 +23,9 @@ class VersionRangesUpdatingTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . boost/1.68.0@lasote/stable")
-        client.run("create . boost/1.69.0@lasote/stable")
-        client.run("create . boost/1.70.0@lasote/stable")
+        client.run("create . --name=boost --version=1.68.0 --user=lasote --channel=stable")
+        client.run("create . --name=boost --version=1.69.0 --user=lasote --channel=stable")
+        client.run("create . --name=boost --version=1.70.0 --user=lasote --channel=stable")
         client.run("upload * -r=default --all --confirm")
         client.run("remove * -f")
         conanfile = textwrap.dedent("""
@@ -94,9 +94,9 @@ class HelloReuseConan(ConanFile):
         self.output.info("PACKAGE_INFO {}")
 """
         client.save({"conanfile.py": conanfile.format("1.1")})
-        client.run("create . pkg/1.1@lasote/testing")
+        client.run("create . --name=pkg --version=1.1 --user=lasote --channel=testing")
         client.save({"conanfile.py": conanfile.format("1.2")})
-        client.run("create . pkg/1.2@lasote/testing")
+        client.run("create . --name=pkg --version=1.2 --user=lasote --channel=testing")
         client.run("upload Pkg* -r=default --all --confirm")
         consumer = """from conans import ConanFile
 class HelloReuseConan(ConanFile):
@@ -111,7 +111,7 @@ class HelloReuseConan(ConanFile):
         # modify remote 1.2
         client2 = TestClient(servers={"default": server}, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile.format("*1.2*")})
-        client2.run("create . pkg/1.2@lasote/testing")
+        client2.run("create . --name=pkg --version=1.2 --user=lasote --channel=testing")
 
         # Make sure timestamp increases, in some machines in testing,
         # it can fail due to same timestamp

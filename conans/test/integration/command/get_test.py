@@ -31,7 +31,7 @@ class ConanGetTest(unittest.TestCase):
                  "path/to/exported_source": "1",
                  "other/path/to/exported": "2"}
         self.client.save(files)
-        self.client.run("create . lasote/channel")
+        self.client.run("create . --user=lasote --channel=channel")
 
     def test_get_local_reference(self):
         # Local search, dir list

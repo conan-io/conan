@@ -144,7 +144,7 @@ class TestFoldersAccess(unittest.TestCase):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . user/testing --build missing")
+        self.client.run("create . --user=user --channel=testing --build missing")
         self.client.run("install --reference=lib/1.0@user/testing")  # Checks deploy
 
     def test_full_install(self):

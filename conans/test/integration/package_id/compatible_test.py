@@ -39,7 +39,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
-        client.run("create . pkg/0.1@user/stable -pr=myprofile -s compiler.version=4.8")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -pr=myprofile -s compiler.version=4.8")
         package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}'"
                       " created", client.out)
@@ -115,7 +115,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "myprofile": profile})
 
         # No user/channel
-        client.run("create . pkg/0.1@ -pr=myprofile -s compiler.version=4.8")
+        client.run("create . --name=pkg --version=0.1 -pr=myprofile -s compiler.version=4.8")
         package_id = re.search(r"pkg/0.1:(\S+)", str(client.out)).group(1)
         self.assertIn(f"pkg/0.1: Package '{package_id}' created",
                       client.out)
@@ -143,7 +143,7 @@ class CompatibleIDsTest(unittest.TestCase):
                                      % self.options.optimized)
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/stable")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
         package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}' created", client.out)
 
@@ -415,14 +415,14 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
-        client.run("create . pkg/0.1@user/stable -pr=myprofile -s compiler.version=4.8")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -pr=myprofile -s compiler.version=4.8")
         package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}'"
                       " created", client.out)
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("create . consumer/0.1@user/stable -pr=myprofile")
+        client.run("create . --name=consumer --version=0.1 --user=user --channel=stable -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
         self.assertIn(f"pkg/0.1@user/stable:{package_id} - Cache",
                       client.out)
@@ -433,13 +433,13 @@ class CompatibleIDsTest(unittest.TestCase):
 
         # Create package with gcc 4.9
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/stable -pr=myprofile")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: Package 'c6715d73365c2dd62f68836b2dee8359a312ff12'"
                       " created", client.out)
 
         # Consume it
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("create . consumer/0.1@user/stable -pr=myprofile")
+        client.run("create . --name=consumer --version=0.1 --user=user --channel=stable -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
         self.assertIn("pkg/0.1@user/stable:c6715d73365c2dd62f68836b2dee8359a312ff12 - Cache",
                       client.out)
@@ -465,7 +465,7 @@ class CompatibleIDsTest(unittest.TestCase):
                 """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing -s os=Linux")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux")
         package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("install . -s os=Windows --build=missing")
@@ -492,7 +492,7 @@ class CompatibleIDsTest(unittest.TestCase):
                 """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing -s os=Linux")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux")
         package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("install . -s os=Windows")
@@ -518,7 +518,7 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/stable -s os=Linux")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -s os=Linux")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: OS: Linux!", client.out)
         self.assertIn("pkg/0.1@user/stable: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'"
                       " created", client.out)
@@ -547,7 +547,7 @@ def test_msvc_visual_incompatible():
         """)
     client.save({"conanfile.py": conanfile,
                  "profile": profile})
-    client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
+    client.run('create . --name=pkg --version=0.1 -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
                '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
     client.run("install --reference=pkg/0.1@ -pr=profile")
     assert "Using compatible package" in client.out

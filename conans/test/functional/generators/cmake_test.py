@@ -71,7 +71,7 @@ class CMakeGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": file_content,
                      "CMakeLists.txt": cmakelists})
-        client.run("create . lib/1.0@ -s compiler='Visual Studio' -s compiler.toolset=v140")
+        client.run("create . --name=lib --version=1.0 -s compiler='Visual Studio' -s compiler.toolset=v140")
         self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
 
     @pytest.mark.slow
@@ -106,7 +106,7 @@ class CMakeGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": file_content,
                      "CMakeLists.txt": cmakelists})
-        client.run("create . lib/1.0@ -s compiler=msvc -s compiler.version=193")
+        client.run("create . --name=lib --version=1.0 -s compiler=msvc -s compiler.version=193")
         self.assertIn("-- The C compiler identification is MSVC 19.3", client.out)
         self.assertIn("-- The CXX compiler identification is MSVC 19.3", client.out)
 

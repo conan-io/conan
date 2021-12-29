@@ -443,7 +443,7 @@ class TestPackageInfo(unittest.TestCase):
                     self.cpp_info.filenames["cmake_find_package"] = "GtesT"
                 """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . gtest/1.0@")
+        client.run("create . --name=gtest --version=1.0")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -458,7 +458,7 @@ class TestPackageInfo(unittest.TestCase):
                     self.output.info("GTEST_FILEINFO: %s" % fileinfo)
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
         self.assertIn("pkg/1.0: GTEST_INFO: GTest", client.out)
         self.assertIn("pkg/1.0: GTEST_FILEINFO: GtesT", client.out)
         client.run("build . --name=pkg --version=1.0")

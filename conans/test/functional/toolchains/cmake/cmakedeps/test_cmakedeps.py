@@ -28,11 +28,11 @@ def client():
         """)
 
     c.save({"conanfile.py": conanfile.format("")})
-    c.run("create . liba/0.1@ -s build_type=Release")
-    c.run("create . liba/0.1@ -s build_type=Debug")
+    c.run("create . --name=liba --version=0.1 -s build_type=Release")
+    c.run("create . --name=liba --version=0.1 -s build_type=Debug")
     c.save({"conanfile.py": conanfile.format("requires = 'liba/0.1'")})
-    c.run("create . libb/0.1@ -s build_type=Release")
-    c.run("create . libb/0.1@ -s build_type=Debug")
+    c.run("create . --name=libb --version=0.1 -s build_type=Release")
+    c.run("create . --name=libb --version=0.1 -s build_type=Debug")
     return c
 
 

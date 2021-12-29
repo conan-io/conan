@@ -20,10 +20,10 @@ class Test(ConanFile):
     settings = "os"
     """
         client.save({"conanfile.py": conanfile})
-        client.run("create . Test/0.1@lasote/testing -s os=Windows")
-        client.run("create . Test/0.1@lasote/testing -s os=Linux")
+        client.run("create . --name=Test --version=0.1 --user=lasote --channel=testing -s os=Windows")
+        client.run("create . --name=Test --version=0.1 --user=lasote --channel=testing -s os=Linux")
         client.save({"conanfile.py": conanfile.replace("settings", "pass #")})
-        client.run("create . Test2/0.1@lasote/testing")
+        client.run("create . --name=Test2 --version=0.1 --user=lasote --channel=testing")
         client.run("upload * --all --confirm -r default")
         for remote in ("", "-r=default"):
             client.run("remove Test/0.1@lasote/testing -q=os=Windows -f %s" % remote)
@@ -66,7 +66,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
 
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . lib/1.0@")
+        self.client.run("create . --name=lib --version=1.0")
         latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("lib/1.0"))
         ref_layout = self.client.cache.ref_layout(latest_rrev)
         pkg_ids = self.client.cache.get_package_references(latest_rrev)
@@ -78,7 +78,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
 
     def test_remote(self):
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . lib/1.0@")
+        self.client.run("create . --name=lib --version=1.0")
         self.client.run("upload lib/1.0 -r default -c --all")
         self.client.run("remove lib/1.0 -f")
         # we can still install it
@@ -111,7 +111,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
             Package ID is a separated argument: <package>#<rref> -p <pkgid>
         """
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         assert self.client.package_exists(self.pref)
 
         self.client.run("remove -f foobar/0.1@user/testing#{} -p {}"
@@ -124,7 +124,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
             Package ID is part of package reference: <package>#<rref>:<pkgid>
         """
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         assert self.client.package_exists(self.pref)
 
         self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
@@ -135,7 +135,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         """ The package ID must not be present in both -p argument and package reference
         """
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         self.client.run("remove -f foobar/0.1@user/testing#{}:{} -p {}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID,
                                 NO_SETTINGS_PACKAGE_ID), assert_error=True)
@@ -147,7 +147,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
             Package ID is part of package reference: <package>#<rref>:<pkgid>
         """
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         self.client.run("upload foobar/0.1@user/testing -r default -c --all")
         self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))

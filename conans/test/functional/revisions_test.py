@@ -1018,7 +1018,7 @@ def test_touching_other_server():
                            ("remote2", None)])  # None server will crash if touched
     c = TestClient(servers=servers, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
-    c.run("create . pkg/0.1@conan/channel -s os=Windows")
+    c.run("create . --name=pkg --version=0.1 --user=conan --channel=channel -s os=Windows")
     c.run("upload * --all -c -r=remote1")
     c.run("remove * -f")
 

@@ -44,7 +44,7 @@ def client():
                 save("include/doxygen.h", "int foo=1;")
     ''')
     c.save({"conanfile.py": doxygen_conanfile})
-    c.run("create . doxygen/1.0@")
+    c.run("create . --name=doxygen --version=1.0")
     return c
 
 

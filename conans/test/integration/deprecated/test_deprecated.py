@@ -16,7 +16,7 @@ class TestDeprecated:
 
         assert "Deprecated\n    cpp-taskflow/1.0" in t.out
 
-        t.run("create taskflow.py conan/stable")
+        t.run("create taskflow.py --user=conan --channel=stable")
         assert "Deprecated\n    cpp-taskflow/1.0" in t.out
 
     def test_deprecated_with(self):
@@ -26,5 +26,5 @@ class TestDeprecated:
 
         assert "Deprecated\n    cpp-taskflow/1.0 in favor of 'taskflow'" in t.out
 
-        t.run("create taskflow.py conan/stable")
+        t.run("create taskflow.py --user=conan --channel=stable")
         assert "Deprecated\n    cpp-taskflow/1.0@conan/stable in favor of 'taskflow'" in t.out

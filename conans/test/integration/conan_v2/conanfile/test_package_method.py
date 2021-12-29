@@ -18,5 +18,5 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
                     self.info.header_only()
         """)
         t.save({'conanfile.py': conanfile})
-        t.run('create . name/version@ -s os=Linux', assert_error=True)
+        t.run('create . --name=name --version=version -s os=Linux', assert_error=True)
         self.assertIn("'self.info' access in package() method is deprecated", t.out)

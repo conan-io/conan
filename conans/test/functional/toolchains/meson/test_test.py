@@ -53,6 +53,6 @@ class MesonTest(TestMesonBase):
                      os.path.join("test_package", "meson.build"): self._test_package_meson_build,
                      os.path.join("test_package", "test_package.cpp"): test_package_cpp})
 
-        self.t.run("create . hello/0.1@")
+        self.t.run("create . --name=hello --version=0.1")
 
         self._check_binary()

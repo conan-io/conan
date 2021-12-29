@@ -518,7 +518,7 @@ class TestComponentsCMakeGenerators:
         """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . greetings/0.0.1@")
+        client.run("create . --name=greetings --version=0.0.1")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -530,7 +530,7 @@ class TestComponentsCMakeGenerators:
                     self.cpp_info.components["helloworld"].includedirs = ["include"]
         """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . world/0.0.1@")
+        client.run("create . --name=world --version=0.0.1")
         client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
@@ -577,7 +577,7 @@ class TestComponentsCMakeGenerators:
             """)
             client = TestClient()
             client.save({"conanfile.py": conanfile})
-            client.run("create . greetings/0.0.1@")
+            client.run("create . --name=greetings --version=0.0.1")
 
             conanfile = textwrap.dedent("""
                 from conans import ConanFile
@@ -587,7 +587,7 @@ class TestComponentsCMakeGenerators:
                         self.cpp_info.components["helloworld"].requires = ["greetings::non-existent"]
             """)
             client.save({"conanfile.py": conanfile})
-            client.run("create . world/0.0.1@")
+            client.run("create . --name=world --version=0.0.1")
             client.run("install --reference=world/0.0.1@ -g CMakeDeps", assert_error=True)
             assert ("Component 'greetings::non-existent' not found in 'greetings' "
                     "package requirement" in client.out)
@@ -645,7 +645,7 @@ class TestComponentsCMakeGenerators:
             client.run("new {name}/1.0 -s".format(name=name))
             client.save({"conanfile.py": conanfile_tpl.format(name=name),
                          "src/CMakeLists.txt": basic_cmake.format(name=name)})
-            client.run("create . {name}/1.0@".format(name=name))
+            client.run("create . --name={name} --version=1.0".format(name=name))
         middle_cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)
@@ -688,7 +688,7 @@ class TestComponentsCMakeGenerators:
             """)
         client.save({"conanfile.py": middle_conanfile, "src/CMakeLists.txt": middle_cmakelists,
                      "src/middle.h": middle_h, "src/middle.cpp": middle_cpp}, clean_first=True)
-        client.run("create . middle/1.0@")
+        client.run("create . --name=middle --version=1.0")
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -731,7 +731,7 @@ class TestComponentsCMakeGenerators:
         client.save({"conanfile.py": conanfile,
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp}, clean_first=True)
-        client.run("create . consumer/1.0@")
+        client.run("create . --name=consumer --version=1.0")
 
         assert 'main: Release!' in client.out
         assert 'middle: Release!' in client.out

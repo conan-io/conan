@@ -307,8 +307,8 @@ def test_apple_own_framework_cmake_deps():
                  "src/hello.cpp": hello_cpp,
                  "src/Info.plist": infoplist})
     client.run("export . --name=mylibrary --version=1.0")
-    client.run("create . mylibrary/1.0@ -s build_type=Debug")
-    client.run("create . mylibrary/1.0@ -s build_type=Release")
+    client.run("create . --name=mylibrary --version=1.0 -s build_type=Debug")
+    client.run("create . --name=mylibrary --version=1.0 -s build_type=Release")
 
     profile = textwrap.dedent("""
         include(default)
@@ -492,7 +492,7 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
             'test_package/conanfile.py': test_conanfile_py,
             'test_package/CMakeLists.txt': test_cmakelists_txt,
             'test_package/test_package.cpp': test_test_package_cpp})
-    t.run("create . hello/1.0@")
+    t.run("create . --name=hello --version=1.0")
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")

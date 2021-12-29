@@ -49,9 +49,9 @@ def client():
                  "cmake/conanfile.py": cmake,
                  "openssl/conanfile.py": openssl})
 
-    client.run("create tool tool/1.0@")
-    client.run("create openssl openssl/1.0@")
-    client.run("create cmake mycmake/1.0@")
+    client.run("create tool --name=tool --version=1.0")
+    client.run("create openssl --name=openssl --version=1.0")
+    client.run("create cmake --name=mycmake --version=1.0")
     return client
 
 
@@ -140,7 +140,7 @@ def test_create_build_requires():
                 self.output.info("MYTARGET={}!!!".format(self.settings_target.os))
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . br/0.1@  --build-require -s:h os=Linux -s:b os=Windows")
+    client.run("create . --name=br --version=0.1  --build-require -s:h os=Linux -s:b os=Windows")
     assert "br/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb" in client.out
     assert "br/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31" not in client.out
     assert "br/0.1: MYOS=Windows!!!" in client.out

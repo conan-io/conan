@@ -149,7 +149,7 @@ def test_multiple_include():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
     client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
@@ -188,7 +188,7 @@ def test_custom_content():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
     client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
@@ -214,7 +214,7 @@ def test_custom_content_components():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
     client.run("install --reference=pkg/0.1@ -g PkgConfigDeps")
     pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
@@ -256,7 +256,7 @@ def test_pkg_with_public_deps_and_component_requires():
                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . first/0.1@")
+    client.run("create . --name=first --version=0.1")
     client.save({"conanfile.py": GenConanfile("other", "0.1").with_package_file("file.h", "0.1")})
     client.run("create .")
 
@@ -272,7 +272,7 @@ def test_pkg_with_public_deps_and_component_requires():
 
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("create . second/0.1@")
+    client.run("create . --name=second --version=0.1")
     client.save({"conanfile.py": GenConanfile("third", "0.1").with_package_file("file.h", "0.1")
                                                              .with_require("second/0.1")
                                                              .with_require("other/0.1")},
@@ -340,7 +340,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
                 self.cpp_info.components["cmp3"].set_property("pkg_config_name", "component3")
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . other/1.0@")
+    client.run("create . --name=other --version=1.0")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -352,7 +352,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
                 self.cpp_info.requires = ["other::cmp1"]
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
 
     client2 = TestClient(cache_folder=client.cache_folder)
     conanfile = textwrap.dedent("""
@@ -400,7 +400,7 @@ def test_pkg_config_name_full_aliases():
                 self.cpp_info.components["cmp1"].set_property("pkg_config_aliases", ["compo1_alias"])
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . first/0.3@")
+    client.run("create . --name=first --version=0.3")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -413,7 +413,7 @@ def test_pkg_config_name_full_aliases():
 
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("create . second/0.2@")
+    client.run("create . --name=second --version=0.2")
 
     conanfile = textwrap.dedent("""
         [requires]

@@ -30,7 +30,7 @@ class TestListPackageIdsBase:
     def _upload_full_recipe(self, remote, reference):
         self.client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_file("file.h",
                                                                                        "0.1")})
-        self.client.run("create . user/channel")
+        self.client.run("create . --user=user --channel=channel")
         self.client.run("upload --force --all -r {} {}".format(remote, "pkg/0.1@user/channel"))
 
         self.client.save({'conanfile.py': GenConanfile().with_require("pkg/0.1@user/channel")

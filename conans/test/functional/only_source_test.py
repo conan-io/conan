@@ -26,7 +26,7 @@ class OnlySourceTest(unittest.TestCase):
         # Should recognize the hello package
         # Will Fail because hello0/0.0 and hello1/1.1 has not built packages
         # and by default no packages are built
-        client.run("create . lasote/stable", assert_error=True)
+        client.run("create . --user=lasote --channel=stable", assert_error=True)
         self.assertIn("Or try to build locally from sources with '--build=hello0 --build=hello1'",
                       client.out)
         # Only 1 reference!
@@ -36,19 +36,19 @@ class OnlySourceTest(unittest.TestCase):
         client.run("install --reference=hello0/0.0@lasote/stable --build hello0")
 
         # Still missing hello1/1.1
-        client.run("create . lasote/stable", assert_error=True)
+        client.run("create . --user=lasote --channel=stable", assert_error=True)
         self.assertIn("Or try to build locally from sources with '--build=hello1'", client.out)
 
         # We generate the package for hello1/1.1
         client.run("install --reference=hello1/1.1@lasote/stable --build hello1")
 
         # Now Hello2 should be built and not fail
-        client.run("create . lasote/stable")
+        client.run("create . --user=lasote --channel=stable")
         self.assertNotIn("Can't find a 'hello2/2.2@lasote/stable' package", client.out)
         self.assertIn('hello2/2.2@lasote/stable: Forced build from source', client.out)
 
         # Now package is generated but should be built again
-        client.run("create . lasote/stable")
+        client.run("create . --user=lasote --channel=stable")
         self.assertIn('hello2/2.2@lasote/stable: Forced build from source', client.out)
 
     def test_build_policies_update(self):
