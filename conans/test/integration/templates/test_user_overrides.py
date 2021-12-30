@@ -5,7 +5,6 @@ import pytest
 
 from conans.assets.templates import SEARCH_TABLE_HTML, INFO_GRAPH_DOT, INFO_GRAPH_HTML
 from conans.client.tools import save
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -32,15 +31,13 @@ class UserOverridesTemplatesTestCase(unittest.TestCase):
     def test_graph_html(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', INFO_GRAPH_HTML)
         save(table_template_path, content='{{ base_template_path }}')
-        self.t.run("graph info --reference=app/0.1 --format=html",
-                   redirect_stdout="output.html")
-        content = self.t.load("output.html")
+        self.t.run("graph info --reference=app/0.1 --format=html")
+        content = self.t.stdout
         self.assertEqual(os.path.join(self.t.cache_folder, 'templates')+ "\n", content)
 
     def test_graph_dot(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', INFO_GRAPH_DOT)
         save(table_template_path, content='{{ base_template_path }}')
-        self.t.run("graph info --reference=app/0.1 --format=dot",
-                   redirect_stdout="output.dot")
-        content = self.t.load("output.dot")
+        self.t.run("graph info --reference=app/0.1 --format=dot")
+        content = self.t.stdout
         self.assertEqual(os.path.join(self.t.cache_folder, 'templates') + "\n", content)

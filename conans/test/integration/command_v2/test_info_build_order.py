@@ -12,8 +12,8 @@ def test_info_build_order():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order consumer --build=missing --format=json", redirect_stdout="bo.json")
-    bo_json = json.loads(c.load("bo.json"))
+    c.run("graph build-order consumer --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
 
     result = [
         [
@@ -62,8 +62,8 @@ def test_info_build_order_build_require():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order  consumer --build=missing --format=json", redirect_stdout="bo.json")
-    bo_json = json.loads(c.load("bo.json"))
+    c.run("graph build-order  consumer --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
     result = [
         [
             {
@@ -118,9 +118,8 @@ def test_info_build_order_options():
     c.run("export dep1 --name=dep1 --version=0.1")
     c.run("export dep2 --name=dep2 --version=0.1")
 
-    c.run("graph build-order  consumer --build=missing --format=json", redirect_stdout="bo.json")
-
-    bo_json = json.loads(c.load("bo.json"))
+    c.run("graph build-order  consumer --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
 
     result = [
         [
