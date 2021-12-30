@@ -58,8 +58,8 @@ def test_cmake_virtualenv():
                  "consumer/CMakeLists.txt": cmakelists},
                 clean_first=True)
 
-    client.run("create cmakewrapper cmakewrapper/0.1@")
-    client.run("create consumer consumer/0.1@")
+    client.run("create cmakewrapper --name=cmakewrapper --version=0.1")
+    client.run("create consumer --name=consumer --version=0.1")
     assert "MYCMAKE WRAPPER!!" in client.out
     assert "consumer/0.1: Created package" in client.out
 
