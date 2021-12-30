@@ -72,7 +72,6 @@ def create(conan_api, parser, *args):
                                                    remote=remote,
                                                    update=args.update)
     else:
-
         # decoupling the most complex part, which is loading the root_node, this is the point where
         # the difference between "reference", "path", etc
         root_node = conan_api.graph.load_root_node(ref, None, profile_host, profile_build,
@@ -114,9 +113,15 @@ def create(conan_api, parser, *args):
         lockfile.save(lockfile_out)
 
     if test_conanfile_path:
-        conanfile = deps_graph.root.conanfile
         out.highlight("\n-------- Testing the package ----------")
+
         conanfile_folder = os.path.dirname(test_conanfile_path)
+        conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd,
+                                           reference=ref,
+                                           install_folder=conanfile_folder,
+                                           conanfile_folder=conanfile_folder)
+        conanfile = deps_graph.root.conanfile
+
         if hasattr(conanfile, "layout"):
             conanfile.folders.set_base_build(conanfile_folder)
             conanfile.folders.set_base_source(conanfile_folder)
@@ -130,11 +135,13 @@ def create(conan_api, parser, *args):
             conanfile.folders.set_base_generators(conanfile_folder)
             conanfile.folders.set_base_install(conanfile_folder)
 
+        out.highlight("\n-------- Testing the package: Building ----------")
         mkdir(conanfile.build_folder)
         with chdir(conanfile.build_folder):
             app = ConanApp(conan_api.cache_folder)
             run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
 
+        out.highlight("\n-------- Testing the package: Running test() ----------")
         conanfile.output.highlight("Running test()")
         with conanfile_exception_formatter(conanfile, "test"):
             with chdir(conanfile.build_folder):
