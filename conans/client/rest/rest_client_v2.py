@@ -200,57 +200,23 @@ class RestV2Methods(RestCommonMethods):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed
         return
 
-    def remove_packages(self, ref, package_ids):
-        """ Remove any packages specified by package_ids"""
-        # FIXME: package_ids containing the revisions is a mess, why not passing prefs directly
-        #        and separate the methods to not do many different things???
+    def remove_packages(self, prefs):
         self.check_credentials()
-
-        if ref.revision is None:
-            # Remove the packages from all the RREVs
-            refs = self.get_recipe_revisions_references(ref)
-        else:
-            refs = [ref]
-
-        for ref in refs:
-            assert ref.revision is not None, "remove_packages needs RREV"
-            if not package_ids:
-                url = self.router.remove_all_packages(ref)
-                response = self.requester.delete(url, auth=self.auth, verify=self.verify_ssl,
-                                                 headers=self.custom_headers)
+        for pref in prefs:
+            if not pref.revision:
+                prevs = self.get_package_revisions_references(pref)
+            else:
+                prevs = [pref]
+            for prev in prevs:
+                url = self.router.remove_package(prev)
+                response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                                 verify=self.verify_ssl)
                 if response.status_code == 404:
-                    # Double check if it is a 404 because there are no packages
-                    try:
-                        package_search_url = self.router.search_packages(ref)
-                        if not self.get_json(package_search_url):
-                            return
-                    except Exception as e:
-                        logger.warning("Unexpected error searching {} packages"
-                                       " in remote {}: {}".format(ref, self.remote_url, e))
+                    raise PackageNotFoundException(pref)
                 if response.status_code != 200:  # Error message is text
                     # To be able to access ret.text (ret.content are bytes)
                     response.charset = "utf-8"
                     raise get_exception_from_error(response.status_code)(response.text)
-            else:
-                for mix_pid in package_ids:
-                    _tmp = mix_pid.split("#") if "#" in mix_pid else (mix_pid, None)
-                    pid, revision = _tmp
-                    pref = PkgReference(ref, pid, revision=revision)
-                    if not revision:
-                        prefs = self.get_package_revisions_references(pref)
-                    else:
-                        prefs = [pref]
-                    for pref in prefs:
-                        url = self.router.remove_package(pref)
-                        response = self.requester.delete(url, auth=self.auth,
-                                                         headers=self.custom_headers,
-                                                         verify=self.verify_ssl)
-                        if response.status_code == 404:
-                            raise PackageNotFoundException(pref)
-                        if response.status_code != 200:  # Error message is text
-                            # To be able to access ret.text (ret.content are bytes)
-                            response.charset = "utf-8"
-                            raise get_exception_from_error(response.status_code)(response.text)
 
     def remove_recipe(self, ref):
         """ Remove a recipe and packages """

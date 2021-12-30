@@ -128,9 +128,8 @@ class RestApiClient(object):
     def remove_recipe(self, ref):
         return self._get_api().remove_recipe(ref)
 
-    def remove_packages(self, ref, package_ids=None):
-        # FIXME: This interface is a mess, the package_ids containing the revision.
-        return self._get_api().remove_packages(ref, package_ids)
+    def remove_packages(self, prefs):
+        return self._get_api().remove_packages(prefs)
 
     def server_capabilities(self):
         return self._get_api().server_capabilities()
