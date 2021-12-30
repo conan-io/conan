@@ -12,8 +12,8 @@ def test_info_build_order():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order consumer --json=bo.json --build=missing")
-    bo_json = json.loads(c.load("bo.json"))
+    c.run("graph build-order consumer --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
 
     result = [
         [
@@ -62,8 +62,8 @@ def test_info_build_order_build_require():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order  consumer --json=bo.json --build=missing")
-    bo_json = json.loads(c.load("bo.json"))
+    c.run("graph build-order  consumer --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
     result = [
         [
             {
@@ -118,9 +118,9 @@ def test_info_build_order_options():
     c.run("export dep1 --name=dep1 --version=0.1")
     c.run("export dep2 --name=dep2 --version=0.1")
 
-    c.run("graph build-order  consumer --json=bo.json --build=missing")
+    c.run("graph build-order  consumer --build=missing --format=json")
 
-    bo_json = json.loads(c.load("bo.json"))
+    bo_json = json.loads(c.stdout)
 
     result = [
         [
@@ -201,9 +201,10 @@ def test_info_build_order_merge_multi_product():
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
     c.run("export pkg --name=pkg --version=0.2")
-    c.run("graph build-order consumer1 --json=bo1.json --build=missing")
-    c.run("graph build-order consumer2 --json=bo2.json --build=missing")
-    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --json=bo3.json")
+    c.run("graph build-order consumer1  --build=missing --format=json", redirect_stdout="bo1.json")
+    c.run("graph build-order consumer2  --build=missing --format=json", redirect_stdout="bo2.json")
+    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=json",
+          redirect_stdout="bo3.json")
 
     bo_json = json.loads(c.load("bo3.json"))
 
@@ -281,9 +282,12 @@ def test_info_build_order_merge_conditionals():
     c.run("export dep --name=depwin --version=0.1")
     c.run("export dep --name=depnix --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order consumer --json=bo_win.json --build=missing -s os=Windows")
-    c.run("graph build-order consumer --json=bo_nix.json --build=missing -s os=Linux")
-    c.run("graph build-order-merge --file=bo_win.json --file=bo_nix.json --json=bo3.json")
+    c.run("graph build-order consumer --format=json --build=missing -s os=Windows",
+          redirect_stdout="bo_win.json")
+    c.run("graph build-order consumer --format=json --build=missing -s os=Linux",
+          redirect_stdout="bo_nix.json")
+    c.run("graph build-order-merge --file=bo_win.json --file=bo_nix.json --format=json",
+          redirect_stdout="bo3.json")
 
     bo_json = json.loads(c.load("bo3.json"))
 

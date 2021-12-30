@@ -43,8 +43,8 @@ class TestInvalidConfiguration:
         """
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
-        client.run("info consumer -s os=Windows")
-        assert "Binary: {}".format(self.invalid) in client.out
+        client.run("graph info consumer -s os=Windows")
+        assert "binary: {}".format(self.invalid) in client.out
 
     def test_valid(self, client):
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")

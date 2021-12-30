@@ -1,9 +1,6 @@
 import json
-import re
 import unittest
 from collections import OrderedDict
-
-import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
@@ -21,8 +18,8 @@ class RemoteTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, inputs=3*["admin", "password"])
 
     def test_list_json(self):
-        self.client.run("remote list --format json")
-        data = json.loads(str(self.client.out))
+        self.client.run("remote list --format=json")
+        data = json.loads(self.client.stdout)
 
         assert data[0]["name"] == "remote0"
         assert data[1]["name"] == "remote1"

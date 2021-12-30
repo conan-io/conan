@@ -6,16 +6,13 @@ import sys
 from argparse import ArgumentError
 from difflib import get_close_matches
 
-from conans.assets import templates
 from conans.cli.exit_codes import SUCCESS, ERROR_GENERAL, ERROR_INVALID_CONFIGURATION, \
     ERROR_INVALID_SYSTEM_REQUIREMENTS
-from conans.cli.output import Color, ConanOutput
+from conans.cli.output import ConanOutput
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import ConanAPIV1, _make_abs_path, ProfileData
+from conans.client.conan_api import ConanAPIV1, ProfileData
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf.config_installer import is_config_install_scheduled
-from conans.client.graph.install_graph import InstallGraph
-from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.conf import DEFAULT_CONFIGURATION
@@ -182,9 +179,18 @@ class Command(object):
         quiet = bool(args.raw)
 
         result = self._conan_api.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
-        Printer(self._out).print_inspect(result, raw=args.raw)
-        if args.json:
+        for k, v in result.items():
+            if args.raw:
+                self._out.write(str(v))
+            else:
+                if isinstance(v, dict):
+                    self._out.writeln("%s:" % k)
+                    for ok, ov in sorted(v.items()):
+                        self._out.writeln("    %s: %s" % (ok, ov))
+                else:
+                    self._out.writeln("%s: %s" % (k, str(v)))
 
+        if args.json:
             def dump_custom_types(obj):
                 if isinstance(obj, set):
                     return sorted(list(obj))
@@ -438,173 +444,6 @@ class Command(object):
             self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
             for key, value in DEFAULT_CONFIGURATION.items():
                 self._out.info("{}: {}".format(key, value))
-
-    def graph(self, *args):
-        """
-        Graph related commands: build-order
-        """
-        parser = argparse.ArgumentParser(description=self.graph.__doc__,
-                                         prog="conan graph",
-                                         formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        parser_build_order = subparsers.add_parser('build-order', help='Compute the build-order')
-        parser_build_order.add_argument("path", nargs="?", help="Path to a conanfile")
-        parser_build_order.add_argument("--reference", action=OnceArgument,
-                                        help='Provide a package reference instead of a conanfile')
-        parser_build_order.add_argument("--json", action=OnceArgument,
-                                        help='Save the build-order, in json file')
-        _add_common_install_arguments(parser_build_order, build_help="Build policy")
-
-        parser_build_order_merge = subparsers.add_parser('build-order-merge',
-                                                         help='Merge several build-order')
-        parser_build_order_merge.add_argument("--file", nargs="?", action=Extender,
-                                              help="Files to be merged")
-        parser_build_order_merge.add_argument("--json", action=OnceArgument,
-                                              help='Save the build-order, in json file')
-        args = parser.parse_args(*args)
-
-        if args.subcommand == "build-order":
-            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build,
-                                        conf=args.conf_build)
-            path_or_reference = args.path if args.path is not None else args.reference
-            if path_or_reference is None:
-                raise ConanException("Please define either the path to a conanfile or a reference")
-            # TODO: Change API
-            data = self._conan_api.info(path_or_reference,
-                                        remote_name=args.remote,
-                                        settings=args.settings_host,
-                                        options=args.options_host,
-                                        env=args.env_host,
-                                        profile_names=args.profile_host,
-                                        conf=args.conf_host,
-                                        profile_build=profile_build,
-                                        update=args.update,
-                                        build=args.build,
-                                        lockfile=args.lockfile)
-            deps_graph, _ = data
-            install_graph = InstallGraph(deps_graph)
-            install_order_serialized = install_graph.install_build_order()
-            json_result = json.dumps(install_order_serialized, indent=4)
-            self._out.writeln(json_result)
-            if args.json:
-                save(_make_abs_path(args.json), json_result)
-        elif args.subcommand == "build-order-merge":
-            result = InstallGraph()
-            for f in args.file:
-                f = _make_abs_path(f)
-                install_graph = InstallGraph.load(f)
-                result.merge(install_graph)
-
-            install_order_serialized = result.install_build_order()
-            json_result = json.dumps(install_order_serialized, indent=4)
-            self._out.writeln(json_result)
-            if args.json:
-                save(_make_abs_path(args.json), json_result)
-
-    def info(self, *args):
-        """
-        Gets information about the dependency graph of a recipe.
-
-        It can be used with a recipe or a reference for any existing package in
-        your local cache.
-        """
-
-        info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update",
-                             "required", "date", "author", "description", "provides", "deprecated",
-                             "None"]
-        path_only_options = ["export_folder", "build_folder", "package_folder", "source_folder"]
-        str_path_only_options = ", ".join(['"%s"' % field for field in path_only_options])
-        str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
-
-        parser = argparse.ArgumentParser(description=self.info.__doc__,
-                                         prog="conan info",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
-                            " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
-                            "./my_project/conanfile.txt. It could also be a reference")
-        parser.add_argument("--name", action=OnceArgument, help='Provide a package name '
-                                                                'if not specified in conanfile')
-        parser.add_argument("--version", action=OnceArgument, help='Provide a package version '
-                                                                   'if not specified in conanfile')
-        parser.add_argument("--user", action=OnceArgument, help='Provide a user')
-        parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
-        parser.add_argument("--paths", action='store_true', default=False,
-                            help='Show package paths in local cache')
-        parser.add_argument("-g", "--graph", action=OnceArgument,
-                            help='Creates file with project dependencies graph. It will generate '
-                            'a DOT or HTML file depending on the filename extension')
-        parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
-                            help='Path to a json file where the information will be written')
-        parser.add_argument("-n", "--only", nargs=1, action=Extender,
-                            help="Show only the specified fields: %s. '--paths' information can "
-                            "also be filtered with options %s. Use '--only None' to show only "
-                            "references." % (str_only_options, str_path_only_options))
-        parser.add_argument("--package-filter", nargs='?',
-                            help='Print information only for packages that match the filter pattern'
-                                 ' e.g., MyPackage/1.2@user/channel or MyPackage*')
-        build_help = ("Given a build policy, return an ordered list of packages that would be built"
-                      " from sources during the install command")
-        update_help = "Will check if updates of the dependencies exist in the remotes " \
-                      "(a new version that satisfies a version range, a new revision or a newer " \
-                      "recipe if not using revisions)."
-        _add_common_install_arguments(parser, update_help=update_help, build_help=build_help)
-        args = parser.parse_args(*args)
-
-        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build,
-                                    conf=args.conf_build)
-        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
-
-        # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
-        data = self._conan_api.info(args.path_or_reference,
-                                remote_name=args.remote,
-                                settings=args.settings_host,
-                                options=args.options_host,
-                                env=args.env_host,
-                                profile_names=args.profile_host,
-                                conf=args.conf_host,
-                                profile_build=profile_build,
-                                update=args.update,
-                                build=args.build,
-                                lockfile=args.lockfile,
-                                name=args.name,
-                                version=args.version,
-                                user=args.user,
-                                channel=args.channel)
-        deps_graph, _ = data
-        only = args.only
-        if args.only == ["None"]:
-            only = []
-        if only and args.paths and (set(only) - set(path_only_options)):
-            raise ConanException("Invalid --only value '%s' with --path specified, allowed "
-                                 "values: [%s]." % (only, str_path_only_options))
-        elif only and not args.paths and (set(only) - set(info_only_options)):
-            raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
-                                 "Use --only=None to show only the references."
-                                 % (only, str_only_options))
-
-        if args.graph:
-            if args.graph.endswith(".html"):
-                template = self._conan_api.get_template_path(templates.INFO_GRAPH_HTML,
-                                                             user_overrides=True)
-            else:
-                template = self._conan_api.get_template_path(templates.INFO_GRAPH_DOT,
-                                                             user_overrides=True)
-            CommandOutputer().info_graph(args.graph, deps_graph, os.getcwd(), template=template,
-                                         cache_folder=self._conan_api.cache_folder)
-        if args.json:
-            json_arg = True if args.json == "1" else args.json
-            CommandOutputer().json_info(deps_graph, json_arg, os.getcwd(), show_paths=args.paths)
-
-        if not args.graph and not args.json:
-            CommandOutputer().info(deps_graph, only, args.package_filter, args.paths)
-
-        # TODO: Check this UX or flow
-        if deps_graph.error:
-            raise deps_graph.error
 
     def source(self, *args):
         """
