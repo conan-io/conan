@@ -238,7 +238,7 @@ class DepsGraphBuilder(object):
                 if version_range:
                     if require.ref.name == d.name and d.version in version_range:
                         return d, ConanFile(None, str(d)), RECIPE_DEFERRED, None
-                elif require.ref == d:
+                elif require.ref.name == d.name and require.ref.version == d.version:
                     return d, ConanFile(None, str(d)), RECIPE_DEFERRED, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
