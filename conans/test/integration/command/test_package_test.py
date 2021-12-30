@@ -48,7 +48,7 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . user/channel", assert_error=True)
-        assert "ERROR: Duplicated requirement: hello/0.1@user/channel" in client.out
+        assert "Duplicated requirement: hello/0.1@user/channel" in client.out
 
     def test_other_requirements(self):
         test_conanfile = (GenConanfile().with_require("other/0.2@user2/channel2")
@@ -147,6 +147,8 @@ class TestPackageTest(unittest.TestCase):
         test_conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
+                def requirements(self):
+                    self.requires(self.tested_reference_str)
                 def build(self):
                     ref = self.dependencies["hello"].ref
                     self.output.info("BUILD HELLO VERSION %s" % ref.version)
@@ -212,8 +214,10 @@ from conans import ConanFile
 from conan.tools.env import VirtualBuildEnv
 
 class HelloTestConan(ConanFile):
-    test_type = "build_requires"
     generators = "VirtualBuildEnv"
+
+    def requirements(self):
+        self.build_requires(self.tested_reference_str)
 
     def build(self):
         build_env = VirtualBuildEnv(self).vars()
@@ -247,7 +251,8 @@ class HelloConan(ConanFile):
 from conans import ConanFile
 
 class HelloReuseConan(ConanFile):
-
+    def requirements(self):
+        self.requires(self.tested_reference_str)
     def test(self):
         pass
 """
@@ -289,8 +294,6 @@ def test_tested_reference_str():
     import os
 
     class HelloReuseConan(ConanFile):
-
-        test_type = "explicit"
 
         def generate(self):
             self.output.warning("At generate: {}".format(self.tested_reference_str))

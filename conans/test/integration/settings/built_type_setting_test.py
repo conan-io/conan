@@ -17,6 +17,8 @@ class Pkg(ConanFile):
         test_conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     settings = "build_type"
+    def requirements(self):
+        self.requires(self.tested_reference_str)
     def build(self):
         self.output.info("BUILD TYPE: %s" % (self.settings.build_type or "Not defined"))
     def test(self):

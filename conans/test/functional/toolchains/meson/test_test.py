@@ -26,6 +26,9 @@ class MesonTest(TestMesonBase):
             settings = "os", "compiler", "build_type", "arch"
             generators = "PkgConfigDeps"
 
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def generate(self):
                 tc = MesonToolchain(self)
                 tc.generate()

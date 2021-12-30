@@ -216,8 +216,10 @@ def test_apple_own_framework_cross_build(settings):
         class TestPkg(ConanFile):
             generators = "CMakeToolchain"
             settings = "os", "arch", "compiler", "build_type"
-            # FIXME
-            test_type = "build_requires", "requires"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+                self.tool_requires(self.tested_reference_str)
 
             def generate(self):
                 cmake = CMakeDeps(self)
@@ -278,8 +280,9 @@ def test_apple_own_framework_cmake_deps():
             requires = "mylibrary/1.0"
             exports_sources = "CMakeLists.txt", "timer.cpp"
             settings = "os", "arch", "compiler", "build_type"
-            # FIXME
-            test_type = "build_requires"
+
+            def requirements(self):
+                self.tool_requires(self.tested_reference_str)
 
             def generate(self):
                 cmake = CMakeDeps(self)
@@ -347,6 +350,10 @@ def test_apple_own_framework_cmake_find_package_multi():
         class TestPkg(ConanFile):
             generators = "CMakeDeps", "CMakeToolchain"
             settings = "build_type", "os", "arch"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -440,8 +447,10 @@ from conan.tools.build import cross_building
 class TestPackageConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeToolchain"
-    # FIXME
-    test_type = "build_requires", "requires"
+
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+        self.tool_requires(self.tested_reference_str)
 
     def generate(self):
         cmake = CMakeDeps(self)
