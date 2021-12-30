@@ -181,7 +181,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.assertIn("arch=x86", self.client.out)
 
         self.client.run("remove -f foobar/0.1@user/testing -p -r default")
-        self.client.run("search foobar/0.1@user/testing -gr default")
+        self.client.run("search foobar/0.1@user/testing -r default")
         self.assertNotIn("arch=x86_64", self.client.out)
         self.assertNotIn("arch=x86", self.client.out)
 
