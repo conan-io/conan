@@ -166,3 +166,22 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         self.client.run("info foobar/0.1@user/testing")
         self.assertIn("Binary: Missing", self.client.out)
+
+    def test_remove_all_packages_but_the_recipe_at_remote(self):
+        """ Remove all the packages but not the recipe in a remote
+        """
+        self.client.save({"conanfile.py": GenConanfile().with_settings("arch")})
+        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("create . foobar/0.1@user/testing -s arch=x86")
+        self.client.run("upload foobar/0.1@user/testing -r default -c --all")
+        ref = self.client.cache.get_latest_recipe_reference(
+               RecipeReference.loads("foobar/0.1@user/testing"))
+        self.client.run("list packages foobar/0.1@user/testing#{} -r default".format(ref.revision))
+        self.assertIn("arch=x86_64", self.client.out)
+        self.assertIn("arch=x86", self.client.out)
+
+        self.client.run("remove -f foobar/0.1@user/testing -p -r default")
+        self.client.run("search foobar/0.1@user/testing -r default")
+        self.assertNotIn("arch=x86_64", self.client.out)
+        self.assertNotIn("arch=x86", self.client.out)
+
