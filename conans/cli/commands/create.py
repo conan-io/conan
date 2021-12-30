@@ -117,7 +117,7 @@ def create(conan_api, parser, *args):
 
         conanfile_folder = os.path.dirname(test_conanfile_path)
         conan_api.install.install_consumer(deps_graph=deps_graph, base_folder=cwd,
-                                           reference=ref,
+                                           reference=ref, create_reference=True,
                                            install_folder=conanfile_folder,
                                            conanfile_folder=conanfile_folder)
         conanfile = deps_graph.root.conanfile

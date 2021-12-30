@@ -74,7 +74,7 @@ sources:
     other: "field"
 """})
         ref = RecipeReference.loads("lib/0.1@user/testing")
-        client.run("create . {}".format(ref))
+        client.run(f"create . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
         self.assertIn("File 'conandata.yml' found. Exporting it...", client.out)
         self.assertIn("My URL:", client.out)
         export_folder = client.get_latest_ref_layout(ref).export()
@@ -138,7 +138,7 @@ sources:
                      "conandata.yml": conandata.format(thread.port, md5_value, sha1_value,
                                                        sha256_value)})
         ref = RecipeReference.loads("lib/0.1@user/testing")
-        client.run("create . {}".format(ref))
+        client.run(f"create . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
         self.assertIn("OK!", client.out)
 
         latest_rrev = client.cache.get_latest_recipe_reference(ref)
@@ -157,7 +157,7 @@ class Lib(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "conandata.yml": ">>>> ::"})
         ref = RecipeReference.loads("lib/0.1@user/testing")
-        client.run("create . {}".format(ref), assert_error=True)
+        client.run(f"create . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}", assert_error=True)
         self.assertIn("ERROR: Error loading conanfile at", client.out)
         self.assertIn(": Invalid yml format at conandata.yml: while scanning a block scalar",
                       client.out)

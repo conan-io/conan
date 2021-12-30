@@ -177,9 +177,9 @@ class HelloConan(ConanFile):
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("create . conan/stable")
-        client.run("create . conan/testing")
-        client.run("create . conan/foo")
+        client.run("create . --user=conan --channel=stable")
+        client.run("create . --user=conan --channel=testing")
+        client.run("create . --user=conan --channel=foo")
 
         def test(conanfile_test, test_reference, path=None):
             path = path or "."

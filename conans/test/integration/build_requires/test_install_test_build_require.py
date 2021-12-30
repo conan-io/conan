@@ -6,7 +6,6 @@ import pytest
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 @pytest.fixture(scope="module")
@@ -77,7 +76,7 @@ def test_build_require_test_package(build_profile, client):
 
     # Test with extra build_requires to check it doesn't interfere or get deleted
     client.save({"cmake/test_package/conanfile.py": test_cmake})
-    client.run("create cmake mycmake/1.0@ {} --build=missing".format(build_profile))
+    client.run("create cmake --name=mycmake --version=1.0 {} --build=missing".format(build_profile))
 
     def check(out):
         system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
@@ -114,7 +113,7 @@ def test_both_types(client):
     # Test with extra build_requires to check it doesn't interfere or get deleted
     client.save({"cmake/test_package/conanfile.py": test_cmake})
     # This must use the build-host contexts to have same dep in different contexts
-    client.run("create cmake mycmake/1.0@ -pr:b=default --build=missing")
+    client.run("create cmake --name=mycmake --version=1.0 -pr:b=default --build=missing")
 
     def check(out):
         system = {"Darwin": "Macos"}.get(platform.system(), platform.system())

@@ -10,18 +10,16 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class UserOverridesTemplatesTestCase(unittest.TestCase):
-    lib_ref = RecipeReference.loads("lib/version")
-    app_ref = RecipeReference.loads("app/version")
 
     @classmethod
     def setUpClass(cls):
         cls.t = TestClient()
-        cls.t.save({'lib.py': GenConanfile().with_setting("os"),
-                    'app.py': GenConanfile().with_setting("os").with_require(cls.lib_ref)})
-        cls.t.run("create lib.py {}@ -s os=Windows".format(cls.lib_ref))
-        cls.t.run("create lib.py {}@ -s os=Linux".format(cls.lib_ref))
-        cls.t.run("create app.py {}@ -s os=Windows".format(cls.app_ref))
-        cls.t.run("create app.py {}@ -s os=Linux".format(cls.app_ref))
+        cls.t.save({'lib.py': GenConanfile("lib", "0.1").with_setting("os"),
+                    'app.py': GenConanfile("app", "0.1").with_setting("os").with_require("lib/0.1")})
+        cls.t.run("create lib.py -s os=Windows")
+        cls.t.run("create lib.py -s os=Linux")
+        cls.t.run("create app.py -s os=Windows")
+        cls.t.run("create app.py -s os=Linux")
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_table_html(self):
@@ -34,7 +32,7 @@ class UserOverridesTemplatesTestCase(unittest.TestCase):
     def test_graph_html(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', INFO_GRAPH_HTML)
         save(table_template_path, content='{{ base_template_path }}')
-        self.t.run("graph info --reference={}@ --format=html".format(self.app_ref),
+        self.t.run("graph info --reference=app/0.1 --format=html",
                    redirect_stdout="output.html")
         content = self.t.load("output.html")
         self.assertEqual(os.path.join(self.t.cache_folder, 'templates')+ "\n", content)
@@ -42,7 +40,7 @@ class UserOverridesTemplatesTestCase(unittest.TestCase):
     def test_graph_dot(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', INFO_GRAPH_DOT)
         save(table_template_path, content='{{ base_template_path }}')
-        self.t.run("graph info --reference={}@ --format=dot".format(self.app_ref),
+        self.t.run("graph info --reference=app/0.1 --format=dot",
                    redirect_stdout="output.dot")
         content = self.t.load("output.dot")
         self.assertEqual(os.path.join(self.t.cache_folder, 'templates') + "\n", content)

@@ -152,5 +152,5 @@ def test_cpp_info_component_error_aggregate():
                  "consumer/conanfile.py": consumer,
                  "consumer/test_package/conanfile.py": test_package})
     client.run("create hello --name=hello --version=1.0")
-    client.run("create consumer consumer/1.0@")
+    client.run("create consumer --name=consumer --version=1.0")
     assert "consumer/1.0 (test package): Running test()" in client.out

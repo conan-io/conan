@@ -80,7 +80,7 @@ class HelloConan(ConanFile):
         self.client.save({"conanfile.py": self.conanfile,
                           "test/conanfile.py": self.test_conanfile.replace("lasote/stable",
                                                                            "other/testing")})
-        self.client.run("create . other/testing")
+        self.client.run("create . --user=other --channel=testing")
         self.assertIn("say/0.1@other/testing: Building other/testing", self.client.out)
         self.assertIn("hello/0.1@other/testing: Building other/testing", self.client.out)
         self.assertNotIn("lasote/stable", self.client.out)

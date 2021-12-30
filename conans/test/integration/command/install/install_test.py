@@ -154,14 +154,6 @@ def test_install_cwd(client):
     assert "hello/0.1@lasote/stable#a44254cfa891c2fe4d98ee6aff203222 - Cache" in client.out
 
 
-def test_install_reference_not_conanbuildinfo(client):
-    client.save({"conanfile.py": GenConanfile("hello", "0.1").with_setting("os")})
-    client.run("create . conan/stable")
-    client.save({}, clean_first=True)
-    client.run("install --reference=hello/0.1@conan/stable")
-    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt"))
-
-
 def test_install_with_profile(client):
     # Test for https://github.com/conan-io/conan/pull/2043
     conanfile = textwrap.dedent("""
@@ -385,5 +377,5 @@ class TestCliOverride:
         client.run("create . --name=zlib --version=2.0")
         client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0"),
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        client.run("create . --name=pkg --version=0.1 --user= --require-override=zlib --channel=2.0")
+        client.run("create . --name=pkg --version=0.1 --require-override=zlib/2.0")
         assert "zlib/2.0: Already installed" in client.out

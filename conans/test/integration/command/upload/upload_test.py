@@ -239,7 +239,7 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "include/hello.h": ""})
-        client.run("create . frodo/stable")
+        client.run("create . --user=frodo --channel=stable")
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         latest_rrev = client.cache.get_latest_recipe_reference(ref)
         pkg_ids = client.cache.get_package_references(latest_rrev)
@@ -314,13 +314,13 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
-        client.run("create . frodo/stable")
+        client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable --all -r default")
 
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile,
                       "hello.cpp": ""})
-        client2.run("create . frodo/stable")
+        client2.run("create . --user=frodo --channel=stable")
         client2.run("upload hello0/1.2.1@frodo/stable --all -r default")
         self.assertIn("hello0/1.2.1@frodo/stable#3a26992ac7bfd9de8ca9a821a6ca54dc already "
                       "in server, skipping upload", client2.out)
@@ -355,7 +355,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile_new,
                      "hello.h": ""})
-        client.run("create . frodo/stable")
+        client.run("create . --user=frodo --channel=stable")
 
         # First time upload
         client.run("upload hello/1.0@frodo/stable --all -r default")
@@ -379,7 +379,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*"),
                  "file.txt": ""}
         client.save(files)
-        client.run("create . frodo/stable")
+        client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default --all --skip-upload -r default")
 
         # dry run should not upload
