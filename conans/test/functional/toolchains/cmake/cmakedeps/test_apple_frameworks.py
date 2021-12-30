@@ -4,17 +4,16 @@ import textwrap
 import pytest
 
 from conans.client.tools.apple import XCRun, to_apple_arch
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture
 def client():
-    lib_ref = RecipeReference.loads("foolib/1.0")
     lib_conanfile = textwrap.dedent("""
         from conans import ConanFile
-
+        name = "foolib"
+        version = "1.0"
         class FooLib(ConanFile):
             def package_info(self):
                 self.cpp_info.frameworks.extend(['Foundation', 'CoreServices', 'CoreFoundation'])
@@ -22,7 +21,7 @@ def client():
 
     t = TestClient()
     t.save({'conanfile.py': lib_conanfile})
-    t.run("create . {}@".format(lib_ref))
+    t.run("create .")
     return t
 
 
