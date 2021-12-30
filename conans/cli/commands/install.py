@@ -74,7 +74,7 @@ def install(conan_api, parser, *args):
                         help='Provide a channel')
 
     parser.add_argument("--reference", action=OnceArgument,
-                        help='Provide a package reference instead of a conanfile')
+                        help='Provide a recipe reference to install instead of a conanfile path')
 
     parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                         help='Generators to use')
