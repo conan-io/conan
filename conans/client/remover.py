@@ -98,8 +98,23 @@ class ConanRemover(object):
             result = self._remote_manager.remove_recipe(ref, remote)
             return result
         else:
-            tmp = self._remote_manager.remove_packages(ref, package_ids, remote)
-            return tmp
+            if ref.revision is None:
+                refs = self._remote_manager.get_recipe_revisions_references(ref, remote)
+            else:
+                refs = [ref]
+
+            if not package_ids:  # empty packages means all of them
+                ret = []
+                for _r in refs:
+                    ret.append(self._remote_manager.remove_all_packages(_r, remote))
+                return ret
+
+            prefs = []
+            for _r in refs:
+                # pid can contain pid#prev
+                prefs.extend([PkgReference.loads("{}:{}".format(repr(_r), pid))
+                              for pid in package_ids])
+            return self._remote_manager.remove_packages(prefs, remote)
 
     @staticmethod
     def _message_removing_editable(ref):
