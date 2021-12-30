@@ -76,7 +76,7 @@ def create(conan_api, parser, *args):
         # the difference between "reference", "path", etc
         root_node = conan_api.graph.load_root_node(ref, None, profile_host, profile_build,
                                                    lockfile, root_ref=None,
-                                                   create_reference=None,
+                                                   create_reference=ref,
                                                    is_build_require=args.build_require,
                                                    require_overrides=args.require_override,
                                                    remote=remote,

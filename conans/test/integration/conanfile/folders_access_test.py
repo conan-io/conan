@@ -151,22 +151,22 @@ class TestFoldersAccess(unittest.TestCase):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . conan/stable --build")
+        self.client.run("create . --user=conan --channel=stable --build")
 
         c1 = conanfile % {"no_copy_source": True, "source_with_infos": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . conan/stable --build")
+        self.client.run("create . --user=conan --channel=stable --build")
 
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . conan/stable --build")
+        self.client.run("create . --user=conan --channel=stable --build")
 
         c1 = conanfile % {"no_copy_source": True, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . conan/stable --build")
+        self.client.run("create . --user=conan --channel=stable --build")
 
 
 class RecipeFolderTest(unittest.TestCase):
