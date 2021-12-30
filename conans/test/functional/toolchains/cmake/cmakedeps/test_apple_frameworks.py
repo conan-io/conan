@@ -12,9 +12,11 @@ from conans.test.utils.tools import TestClient
 def client():
     lib_conanfile = textwrap.dedent("""
         from conans import ConanFile
-        name = "foolib"
-        version = "1.0"
+
         class FooLib(ConanFile):
+            name = "foolib"
+            version = "1.0"
+
             def package_info(self):
                 self.cpp_info.frameworks.extend(['Foundation', 'CoreServices', 'CoreFoundation'])
     """)
