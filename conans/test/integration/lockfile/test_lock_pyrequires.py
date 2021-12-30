@@ -68,8 +68,8 @@ def test_transitive_matching_ranges():
 
     client.run("export dep --name=dep --version=0.2")
     client.run("export tool2 --name=tool --version=0.3")
-    client.run("create pkga pkga/0.2@")
-    client.run("create pkgb pkgb/0.2@")
+    client.run("create pkga --name=pkga --version=0.2")
+    client.run("create pkgb --name=pkgb --version=0.2")
 
     client.run("install app/conanfile.py --lockfile=conan.lock")
     assert "pkga/0.1: tool: tool/0.1!!" in client.out

@@ -896,7 +896,7 @@ def test_transitive_python_requires():
             python_requires_extend = "base-class.BaseClass"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . @user/channel")
+    client.run("create . --user=user --channel=channel")
     assert "consumer/1.0@user/channel: Calling build()\nconsumer/1.0@user/channel: 123, 234" in \
            client.out
 
@@ -966,7 +966,7 @@ def test_transitive_diamond_python_requires():
             python_requires_extend = "base-class.BaseClass", "base-class2.BaseClass2"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . @user/channel")
+    client.run("create . --user=user --channel=channel")
     assert "consumer/1.0@user/channel: Calling build()\nconsumer/1.0@user/channel: 123, 2222" in \
            client.out
     assert "consumer/1.0@user/channel: Calling package()\nconsumer/1.0@user/channel: 222, 234" in \

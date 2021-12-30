@@ -14,11 +14,11 @@ def test_conanfile_txt_deps_ranges(requires):
     client = TestClient()
     client.save({"pkg/conanfile.py": GenConanfile(),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
-    client.run("create pkg --name=pkg --version=0.1user/testing")
+    client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
     assert "pkg/0.1@user/testing from local cache - Cache" in client.out
 
-    client.run("create pkg pkg/0.2@user/testing")
+    client.run("create pkg --name=pkg --version=0.2 --user=user --channel=testing")
 
     client.run("install consumer/conanfile.txt --lockfile=conan.lock")
     assert "pkg/0.1@user/testing from local cache - Cache" in client.out
@@ -37,8 +37,8 @@ def test_conanfile_txt_deps_ranges_transitive(requires):
     client.save({"dep/conanfile.py": GenConanfile(),
                  "pkg/conanfile.py": GenConanfile().with_requires("dep/[>0.0]@user/testing"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
-    client.run("create dep --name=dep --version=0.1user/testing")
-    client.run("create pkg --name=pkg --version=0.1user/testing")
+    client.run("create dep --name=dep --version=0.1 --user=user --channel=testing")
+    client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
 
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
     assert "dep/0.1@user/testing from local cache - Cache" in client.out
@@ -62,12 +62,12 @@ def test_conanfile_txt_strict(requires):
     client = TestClient()
     client.save({"pkg/conanfile.py": GenConanfile(),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]@user/testing"})
-    client.run("create pkg --name=pkg --version=0.1user/testing")
+    client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
     assert "pkg/0.1@user/testing from local cache - Cache" in client.out
 
-    client.run("create pkg pkg/0.2@user/testing")
-    client.run("create pkg pkg/1.2@user/testing")
+    client.run("create pkg --name=pkg --version=0.2 --user=user --channel=testing")
+    client.run("create pkg --name=pkg --version=1.2 --user=user --channel=testing")
 
     # Not strict mode works
     client.save({"consumer/conanfile.txt": f"[{requires}]\npkg/[>1.0]@user/testing"})
@@ -113,8 +113,8 @@ def test_conditional_os(requires):
     assert "pkg/0.1 from local cache - Cache" in client.out
 
     # New dependencies will not be used if using the lockfile
-    client.run("create dep win/0.2@")
-    client.run("create dep nix/0.2@")
+    client.run("create dep --name=win --version=0.2")
+    client.run("create dep --name=nix --version=0.2")
     client.run("create pkg --name=pkg --version=0.1 -s os=Windows")
     client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 

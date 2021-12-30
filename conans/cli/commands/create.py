@@ -8,6 +8,7 @@ from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_
     _help_build_policies
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
+from conans.client.graph.printer import print_graph
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -26,9 +27,8 @@ def create(conan_api, parser, *args):
 
     cwd = os.getcwd()
     path = _get_conanfile_path(args.path, cwd, py=True) if args.path else None
-    conanfile_folder = os.path.dirname(path) if path else None
     lockfile_path = make_abs_path(args.lockfile, cwd)
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=False)  # Create is NOT strict!
     remote = conan_api.remotes.get(args.remote) if args.remote else None
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
@@ -73,6 +73,15 @@ def create(conan_api, parser, *args):
     conan_api.graph.analyze_binaries(deps_graph, build_modes, remote=remote, update=args.update)
     print_graph_packages(deps_graph)
 
+    # TODO: Keeping old printing to avoid many tests fail: TO REMOVE
+    out.highlight("\nLegacy graph output (to be removed):")
+    print_graph(deps_graph)
+
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remote=remote, update=args.update)
+
+    if args.lockfile_out:
+        lockfile_out = make_abs_path(args.lockfile_out, cwd)
+        out.info(f"Saving lockfile: {lockfile_out}")
+        lockfile.save(lockfile_out)
