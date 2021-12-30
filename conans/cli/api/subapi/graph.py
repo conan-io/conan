@@ -57,6 +57,7 @@ class GraphAPI:
                                     require_overrides=None):
         app = ConanApp(self.conan_api.cache_folder)
         profile_host.options.scope(ref.name)
+        profile_host.dev_reference = ref
         conanfile = app.loader.load_virtual([ref],  is_build_require=is_build_require,
                                             require_overrides=require_overrides)
         virtual_definer(conanfile, profile_host)

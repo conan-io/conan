@@ -72,7 +72,6 @@ class Pkg(ConanFile):
         client.run("source . -sf=mysrc")
         self.assertIn("PATCH: this is my patch", client.out)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        print(client.out)
         self.assertIn("PATCH: this is my patch", client.out)
 
     def test_source_warning_os_build(self):
