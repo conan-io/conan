@@ -60,27 +60,19 @@ def create(conan_api, parser, *args):
         args.test_folder = False
     test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
     if test_conanfile_path:
-        # decoupling the most complex part, which is loading the root_node, this is the point where
-        # the difference between "reference", "path", etc
         if args.build_require:
             raise ConanException("--build-require should not be specified, test_package does it")
-        root_node = conan_api.graph.load_root_node(None, test_conanfile_path, profile_host,
-                                                   profile_build,
-                                                   lockfile, root_ref=None,
-                                                   create_reference=ref,
-                                                   require_overrides=args.require_override,
-                                                   remote=remote,
-                                                   update=args.update)
+        root_node = conan_api.graph.load_root_test_conanfile(test_conanfile_path, ref,
+                                                             profile_host, profile_build,
+                                                             require_overrides=args.require_override,
+                                                             remote=remote,
+                                                             update=args.update,
+                                                             lockfile=lockfile)
     else:
-        # decoupling the most complex part, which is loading the root_node, this is the point where
-        # the difference between "reference", "path", etc
-        root_node = conan_api.graph.load_root_node(ref, None, profile_host, profile_build,
-                                                   lockfile, root_ref=None,
-                                                   create_reference=ref,
-                                                   is_build_require=args.build_require,
-                                                   require_overrides=args.require_override,
-                                                   remote=remote,
-                                                   update=args.update)
+        req_override = args.require_override
+        root_node = conan_api.graph.load_root_virtual_conanfile(ref, profile_host,
+                                                                is_build_require=args.build_require,
+                                                                require_overrides=req_override)
 
     out.highlight("-------- Computing dependency graph ----------")
     check_updates = args.check_updates if "check_updates" in args else False
