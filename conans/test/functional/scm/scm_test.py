@@ -218,10 +218,10 @@ class ConanLib(ConanFile):
         self.client.run_command('git remote add origin https://myrepo.com.git')
 
         # Create the package
-        self.client.run("create conan/ user/channel")
+        self.client.run("create conan")
 
         # Check that the conanfile is on the source/conan
-        ref = RecipeReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1")
         source_folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "conan", "conanfile.py")))
 
@@ -689,10 +689,10 @@ class ConanLib(ConanFile):
                                                     "myfile.txt": "My file is copied"})
         self.client.run_command('svn co "{url}" "{path}"'.format(url=project_url,
                                                                  path=self.client.current_folder))
-        self.client.run("create conan/ user/channel")
+        self.client.run("create conan")
 
         # Check that the conanfile is on the source/conan
-        ref = RecipeReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1")
         source_folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "conan", "conanfile.py")))
 
@@ -1049,10 +1049,10 @@ class TestConan(ConanFile):
                                              users={"lasote": "mypass"})}
         client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.save({"conanfile.py": conanfile + exports_sources, "include/file": "content"})
-        client.run("create . danimtb/testing")
-        client.run("upload test/1.0@danimtb/testing -r upload_repo")
+        client.run("create .")
+        client.run("upload test/1.0@ -r upload_repo")
         self.assertIn("Uploading conan_sources.tgz", client.out)
-        ref = RecipeReference("test", "1.0", "danimtb", "testing")
+        ref = RecipeReference("test", "1.0")
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
         ref.revision = rev
         export_sources_path = os.path.join(servers["upload_repo"].server_store.export(ref),
@@ -1071,9 +1071,9 @@ class TestConan(ConanFile):
         client.run_command("git remote add origin https://github.com/fake/fake.git")
         client.run_command("git add .")
         client.run_command("git commit -m \"initial commit\"")
-        client.run("create . danimtb/testing")
+        client.run("create . ")
         self.assertIn("Repo origin deduced by 'auto': https://github.com/fake/fake.git", client.out)
-        client.run("upload test/1.0@danimtb/testing -r upload_repo")
+        client.run("upload test/1.0@ -r upload_repo")
         self.assertNotIn("Uploading conan_sources.tgz", client.out)
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
         ref.revision = rev

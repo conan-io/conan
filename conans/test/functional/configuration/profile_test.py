@@ -72,13 +72,6 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install .. -pr=sub/profile")
         self.assertIn("Installing (downloading, building) binaries", self.client.out)
 
-    def test_base_profile_generated(self):
-        """we are testing that the default profile is created (when not existing, fresh install)
-         even when you run a create with a profile"""
-        self.client.save({CONANFILE: conanfile_scope_env,
-                          "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
-        self.client.run("create . conan/testing --profile myprofile")
-
     @pytest.mark.xfail(reason="New environment changed")
     def test_bad_syntax(self):
         self.client.save({CONANFILE: conanfile_scope_env})
@@ -610,9 +603,8 @@ class ProfileAggregationTest(unittest.TestCase):
             """)
 
         self.client.save({"profile1": profile1, "profile2": profile2})
-        self.client.run("create . --name=lib --version=1.0 --user=user --channel=channel --profile profile2 -pr profile1")
-        self.assertIn(dedent("""
-                             Configuration (profile_host):
+        self.client.run("create . --name=lib --version=1.0 --profile profile2 -pr profile1")
+        self.assertIn(dedent("""\
                              [settings]
                              arch=x86_64
                              compiler=Visual Studio
