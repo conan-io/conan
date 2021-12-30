@@ -13,6 +13,30 @@ from conans.model.info import PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.package_ref import PkgReference
 
 
+class BinaryCompatibilityPlugin:
+    def __init__(self, cache):
+        compatible_file = os.path.join(cache.plugins_path, "binary_compatibility.py")
+        if os.path.isfile(compatible_file):
+            mod, _ = load_python_file(compatible_file)
+            self._compatibility = mod.compatibility
+        else:
+            self._compatibility = None
+
+    def compatibles(self, conanfile):
+        if self._compatibility is None:
+            return  # We might want to define a common compatibility for cppstd, for example
+
+        cache_compatibles = []
+        list_of_compatibles = self._compatibility(conanfile)
+        for elem in list_of_compatibles:
+            compat = conanfile.info.clone()
+            apply_to, name, value = elem
+            if apply_to == "settings":
+                setattr(compat.settings, name, value)
+            cache_compatibles.append(compat)
+        return cache_compatibles
+
+
 class GraphBinariesAnalyzer(object):
 
     def __init__(self, conan_app):
@@ -21,12 +45,7 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        compatible_file = os.path.join(self._cache.cache_folder, "compatibility.py")
-        if os.path.isfile(compatible_file):
-            mod, _ = load_python_file(compatible_file)
-            self._compatibility = mod.compatibility
-        else:
-            self._compatibility = None
+        self._compatibility = BinaryCompatibilityPlugin(self._cache)
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -125,15 +144,7 @@ class GraphBinariesAnalyzer(object):
             pref = PkgReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode)
             if node.binary in (BINARY_MISSING, BINARY_INVALID):
-                cache_compatibles = []
-                if self._compatibility:
-                    list_of_compatibles = self._compatibility(node.conanfile)
-                    for elem in list_of_compatibles:
-                        compat = node.conanfile.info.clone()
-                        apply_to, name, value = elem
-                        if apply_to == "settings":
-                            setattr(compat.settings, name, value)
-                        cache_compatibles.append(compat)
+                cache_compatibles = self._compatibility.compatibles(node.conanfile)
                 if node.conanfile.compatible_packages or cache_compatibles:
                     compatible_build_mode = BuildMode(None)
                     for compatible_package in node.conanfile.compatible_packages or cache_compatibles:

@@ -17,7 +17,7 @@ class TestCacheCompatibles:
                     result.append(["settings", "build_type", "Release"])
                 return result
             """)
-        save(os.path.join(client.cache_folder, "compatibility.py"), compatibles)
+        save(os.path.join(client.cache.plugins_path, "binary_compatibility.py"), compatibles)
         client.save({"dep/conanfile.py": GenConanfile().with_setting("build_type"),
                      "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
 

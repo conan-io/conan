@@ -149,6 +149,10 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, "config_install.json")
 
     @property
+    def plugins_path(self):
+        return os.path.join(self.cache_folder, "plugins")
+
+    @property
     def remotes_path(self):
         return os.path.join(self.cache_folder, REMOTES)
 
