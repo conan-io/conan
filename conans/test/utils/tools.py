@@ -543,13 +543,13 @@ class TestClient(object):
                         else:
                             return self.run_cli(command_line, assert_error=assert_error)
                     finally:
-                        self.out = str(self.stdout) + str(self.stderr)
+                        self.stdout = str(self.stdout)
+                        self.stderr = str(self.stderr)
+                        self.out = self.stderr + self.stdout
                         if redirect_stdout:
-                            save(os.path.join(self.current_folder, redirect_stdout),
-                                 str(self.stdout))
+                            save(os.path.join(self.current_folder, redirect_stdout), self.stdout)
                         if redirect_stderr:
-                            save(os.path.join(self.current_folder, redirect_stderr),
-                                 str(self.stderr))
+                            save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
 
     def run_command(self, command, cwd=None, assert_error=False):
         runner = ConanRunner()
