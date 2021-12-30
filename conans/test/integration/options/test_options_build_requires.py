@@ -58,8 +58,8 @@ def test_different_options_values_profile():
             "consumer/conanfile.py": GenConanfile().with_requires("protobuf/1.0")
            .with_build_requires("protobuf/1.0")})
 
-    c.run("create protobuf protobuf/1.0@")
-    c.run("create protobuf protobuf/1.0@ -o protobuf:shared=True")
+    c.run("create protobuf --name=protobuf --version=1.0")
+    c.run("create protobuf --name=protobuf --version=1.0 -o protobuf:shared=True")
     c.run("install consumer")
     assert "protobuf/1.0: MYOPTION: host-False" in c.out
     assert "protobuf/1.0: MYOPTION: build-False" in c.out
@@ -147,9 +147,9 @@ def test_different_options_values_recipe_priority():
             "consumer/conanfile.py": GenConanfile().with_requires("mypkg/1.0")
            .with_default_option("protobuf:shared", 3)})
 
-    c.run("create protobuf protobuf/1.0@ -o protobuf:shared=2")
-    c.run("create protobuf protobuf/1.0@ -o protobuf:shared=3")
-    c.run("create mypkg mypkg/1.0@")
+    c.run("create protobuf --name=protobuf --version=1.0 -o protobuf:shared=2")
+    c.run("create protobuf --name=protobuf --version=1.0 -o protobuf:shared=3")
+    c.run("create mypkg --name=mypkg --version=1.0")
 
     c.run("install consumer")
     assert f"protobuf/1.0: MYOPTION: host-3" in c.out

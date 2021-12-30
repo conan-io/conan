@@ -164,8 +164,8 @@ def test_transitive_modules_found(find_mode):
                  "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', mode=find_mode),
                  "consumer.py": consumer,
                  "CMakeLists.txt": cmakelist})
-    client.run("create pkga.py pkga/1.0@")
-    client.run("create pkgb.py pkgb/1.0@")
+    client.run("create pkga.py --name=pkga --version=1.0")
+    client.run("create pkgb.py --name=pkgb --version=1.0")
     client.run("create consumer.py consumer/1.0@")
 
     assert "MYPKGB_VERSION: 1.0" in client.out

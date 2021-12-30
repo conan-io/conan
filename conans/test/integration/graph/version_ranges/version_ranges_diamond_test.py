@@ -54,8 +54,8 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
 
         client.save({"pkg.py": GenConanfile()})
-        client.run("create pkg.py pkg/1.1@lasote/testing")
-        client.run("create pkg.py pkg/1.2@lasote/testing")
+        client.run("create pkg.py --name=pkg --veersion=1.1 --user=lasote --channel=testing")
+        client.run("create pkg.py --name=pkg --veersion=1.2 --user=lasote --channel=testing")
         client.run("upload Pkg* -r=default --all --confirm")
         client.run("remove pkg/1.2@lasote/testing -f")
 
@@ -69,7 +69,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         self.assertNotIn("pkg/1.1", client.out)
 
         # newer in cache that in remotes and updating, should resolve the cache one
-        client.run("create pkg.py pkg/1.3@lasote/testing")
+        client.run("create pkg.py --name=pkg --veersion=1.3 --user=lasote --channel=testing")
         client.run("install consumer.py --update")
         self.assertIn("pkg/1.3@lasote/testing: Already installed!", client.out)
         client.run("remove pkg/1.3@lasote/testing -f")

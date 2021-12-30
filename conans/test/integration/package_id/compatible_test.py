@@ -199,7 +199,8 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile visual_profile" % repr(ref))
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile visual_profile")
         package_id = re.search(r"bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
         client.run("install --reference=%s -pr intel_profile" % repr(ref))
         missing_id = "c1b60feb368929efd9e60fd47dbfa45969742332"
@@ -210,7 +211,6 @@ class CompatibleIDsTest(unittest.TestCase):
 
     def test_wrong_base_compatible(self):
         client = TestClient()
-        ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -230,7 +230,8 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile visual_profile" % repr(ref), assert_error=True)
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile visual_profile", assert_error=True)
         self.assertIn("The compiler 'Visual Studio' has no 'base' sub-setting", client.out)
 
     def test_intel_package_compatible_with_base(self):
@@ -266,7 +267,8 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile intel_profile" % repr(ref))
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile intel_profile")
         package_id = re.search(r"bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
         client.run("install --reference=%s -pr visual_profile" % repr(ref))
         missing_id = "6e399d2c50620569974e4d894ee9651ee7861be9"
@@ -278,7 +280,6 @@ class CompatibleIDsTest(unittest.TestCase):
 
     def test_no_valid_compiler_keyword_base(self):
         client = TestClient()
-        ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -300,7 +301,8 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile visual_profile" % repr(ref), assert_error=True)
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile visual_profile", assert_error=True)
         self.assertIn("Specify 'compiler' as a keywork "
                       "argument. e.g: 'parent_compiler(compiler=\"intel\")'", client.out)
 
@@ -338,7 +340,8 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile intel_profile" % repr(ref))
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile intel_profile")
         client.run("install --reference=%s -pr visual_profile" % repr(ref), assert_error=True)
         self.assertIn("Missing prebuilt package for 'bye/0.1@us/ch'", client.out)
 
@@ -415,7 +418,8 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -pr=myprofile -s compiler.version=4.8")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable "
+                   "-pr=myprofile -s compiler.version=4.8")
         package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}'"
                       " created", client.out)

@@ -448,18 +448,18 @@ class PackageRevisionModeTestCase(unittest.TestCase):
                         self.info.requires["pkg1"].package_revision_mode()
             """)
         })
-        t.run("create package1.py pkg1/1.0@")
-        t.run("create package2.py pkg2/1.0@")
+        t.run("create package1.py --name=pkg1 --version=1.0")
+        t.run("create package2.py --name=pkg2 --version=1.0")
 
         # If we only build pkg1, we get a new packageID for pkg3
-        t.run("create package3.py pkg3/1.0@ --build=pkg1", assert_error=True)
+        t.run("create package3.py --name=pkg3 --version=1.0 --build=pkg1", assert_error=True)
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
         self.assertIn("pkg3/1.0: Updated ID: f6770ce9c022ba560312e0efb75c278426f71cbf", t.out)
         self.assertIn("ERROR: Missing binary: pkg3/1.0:f6770ce9c022ba560312e0efb75c278426f71cbf",
                       t.out)
 
         # If we build both, we get the new package
-        t.run("create package3.py pkg3/1.0@ --build=pkg1 --build=pkg3")
+        t.run("create package3.py --name=pkg3 --version=1.0 --build=pkg1 --build=pkg3")
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
         self.assertIn("pkg3/1.0: Updated ID: f6770ce9c022ba560312e0efb75c278426f71cbf", t.out)
         self.assertIn("pkg3/1.0: Package 'f6770ce9c022ba560312e0efb75c278426f71cbf' created", t.out)
@@ -477,9 +477,9 @@ class PackageRevisionModeTestCase(unittest.TestCase):
                 """),
             'package3.py': GenConanfile("pkg3").with_require("pkg2/1.0")
         })
-        t.run("create package1.py pkg1/1.0@")
-        t.run("create package2.py pkg2/1.0@")
-        t.run("create package3.py pkg3/1.0@")
+        t.run("create package1.py --name=pkg1 --version=1.0")
+        t.run("create package2.py --name=pkg2 --version=1.0")
+        t.run("create package3.py --name=pkg3 --version=1.0")
         t.run("upload * --all -c -r default")
         t.run("remove * -f")
 
