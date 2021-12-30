@@ -57,8 +57,7 @@ class MultiRemotesTest(unittest.TestCase):
 
     def test_conan_install_build_flag(self):
         """
-        Checks conan install --update works with different remotes and changes the associated ones
-        in registry accordingly
+        Checks conan install --update works with different remotes
         """
         client_a = TestClient(servers=self.servers, inputs=2*["admin", "password"])
         client_b = TestClient(servers=self.servers, inputs=2*["admin", "password"])
@@ -78,9 +77,9 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Uploading hello0/0.0@lasote/stable", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
-        client_b.run("info hello0/0.0@lasote/stable -u")
-        self.assertIn("Recipe: Update available", client_b.out)
-        self.assertIn("Binary: Cache", client_b.out)
+        client_b.run("graph info --reference=hello0/0.0@lasote/stable --check-updates")
+        self.assertIn("recipe: Update available", client_b.out)
+        self.assertIn("binary: Cache", client_b.out)
 
         # Now try to update the package with install -u
         client_b.run("install --reference=hello0/0.0@lasote/stable -u --build")
@@ -95,24 +94,24 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Now client_b checks for updates without -r parameter
         # TODO: cache2.0 conan info not yet implemented with new cache
-        client_b.run("info hello0/0.0@lasote/stable -u")
-        # self.assertIn("Remote: local", client_b.out)
+        client_b.run("graph info --reference=hello0/0.0@lasote/stable --check-updates")
+        self.assertIn("recipe: Update available", client_b.out)
         # self.assertIn("Recipe: Cache", client_b.out)
 
         # But if we connect to default, should tell us that there is an update IN DEFAULT!
         # TODO: cache2.0 conan info not yet implemented with new cache
-        client_b.run("info hello0/0.0@lasote/stable -r default -u")
+        client_b.run("graph info --reference=hello0/0.0@lasote/stable -r default --check-updates")
         # self.assertIn("Remote: local", client_b.out)
-        self.assertIn("Recipe: Update available", client_b.out)
+        self.assertIn("recipe: Update available", client_b.out)
 
         # Well, now try to update the package with -r default -u
         client_b.run("install --reference=hello0/0.0@lasote/stable -r default -u --build")
         self.assertIn("hello0/0.0@lasote/stable: Calling build()",
                       str(client_b.out))
         # TODO: cache2.0 conan info not yet implemented with new cache
-        client_b.run("info hello0/0.0@lasote/stable -u")
-        self.assertIn("Recipe: Cache", client_b.out)
-        self.assertIn("Binary: Cache", client_b.out)
+        client_b.run("graph info --reference=hello0/0.0@lasote/stable -u")
+        self.assertIn("recipe: Cache", client_b.out)
+        self.assertIn("binary: Cache", client_b.out)
 
     def test_conan_install_update(self):
         """

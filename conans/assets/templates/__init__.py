@@ -5,6 +5,7 @@ import conans.assets.templates.info_graph_html
 import conans.assets.templates.search_table_html
 
 SEARCH_TABLE_HTML = 'output/search_table.html'
+# FIXME: THis output folder is ugly and confusing in code
 INFO_GRAPH_DOT = 'output/info_graph.dot'
 INFO_GRAPH_HTML = 'output/info_graph.html'
 

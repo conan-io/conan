@@ -1,9 +1,9 @@
 import os
 
 from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conans.cli.commands import make_abs_path
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile
-from conans.client.conan_api import _make_abs_path
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -31,7 +31,7 @@ def export(conan_api, parser, *args, **kwargs):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    lockfile_path = _make_abs_path(args.lockfile, cwd) if args.lockfile else None
+    lockfile_path = make_abs_path(args.lockfile, cwd)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
 
@@ -42,5 +42,5 @@ def export(conan_api, parser, *args, **kwargs):
                             ignore_dirty=args.ignore_dirty)
 
     if args.lockfile_out:
-        lockfile_out = _make_abs_path(args.lockfile_out, cwd)
+        lockfile_out = make_abs_path(args.lockfile_out, cwd)
         lockfile.save(lockfile_out)

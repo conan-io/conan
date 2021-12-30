@@ -55,20 +55,17 @@ def client():
     return client
 
 
-@pytest.mark.parametrize("existing_br", ["",
-                                         'build_requires="tool/1.0"',
-                                         'build_requires=("tool/1.0", )',
-                                         'build_requires=["tool/1.0"]'])
 @pytest.mark.parametrize("build_profile", ["", "-pr:b=default"])
-def test_build_require_test_package(existing_br, build_profile, client):
+def test_build_require_test_package(build_profile, client):
     test_cmake = textwrap.dedent(r"""
         import os, platform, sys
         from conans import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
-            test_type = "build_requires"
-            {}
+
+            def requirements(self):
+                self.tool_requires(self.tested_reference_str)
 
             def build(self):
                 mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
@@ -79,7 +76,7 @@ def test_build_require_test_package(existing_br, build_profile, client):
         """)
 
     # Test with extra build_requires to check it doesn't interfere or get deleted
-    client.save({"cmake/test_package/conanfile.py": test_cmake.format(existing_br)})
+    client.save({"cmake/test_package/conanfile.py": test_cmake})
     client.run("create cmake mycmake/1.0@ {} --build=missing".format(build_profile))
 
     def check(out):
@@ -93,11 +90,7 @@ def test_build_require_test_package(existing_br, build_profile, client):
     check(client.out)
 
 
-@pytest.mark.parametrize("existing_br", ["",
-                                         'build_requires="tool/1.0"',
-                                         'build_requires=("tool/1.0", )',
-                                         'build_requires=["tool/1.0"]'])
-def test_both_types(existing_br, client):
+def test_both_types(client):
     # When testing same package in both contexts, the 2 profiles approach must be used
     test_cmake = textwrap.dedent(r"""
         import os, platform
@@ -105,8 +98,10 @@ def test_both_types(existing_br, client):
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
-            test_type = "build_requires", "requires"
-            {}
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+                self.build_requires(self.tested_reference_str)
 
             def build(self):
                 mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
@@ -117,7 +112,7 @@ def test_both_types(existing_br, client):
         """)
 
     # Test with extra build_requires to check it doesn't interfere or get deleted
-    client.save({"cmake/test_package/conanfile.py": test_cmake.format(existing_br)})
+    client.save({"cmake/test_package/conanfile.py": test_cmake})
     # This must use the build-host contexts to have same dep in different contexts
     client.run("create cmake mycmake/1.0@ -pr:b=default --build=missing")
 

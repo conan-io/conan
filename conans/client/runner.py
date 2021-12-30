@@ -33,7 +33,7 @@ class ConanRunner(object):
         """
 
         user_output = output if output and hasattr(output, "write") else None
-        stream_output = user_output or sys.stdout
+        stream_output = user_output or sys.stderr
         if hasattr(stream_output, "flush"):
             # We do not want output from different streams to get mixed (sys.stdout, os.system)
             stream_output = _UnbufferedWrite(stream_output)

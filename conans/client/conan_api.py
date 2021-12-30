@@ -296,48 +296,6 @@ class ConanAPIV1(object):
             app.cache.remotes_registry.initialize_remotes()
             app.cache.initialize_settings()
 
-    def _info_args(self, app, reference_or_path, profile_host, profile_build,
-                   name=None, version=None, user=None, channel=None, lockfile=None):
-        cwd = os.getcwd()
-        if check_valid_ref(reference_or_path):
-            ref = RecipeReference.loads(reference_or_path)
-        else:
-            ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
-
-        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-        profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
-                                                                           profile_build,
-                                                                           cwd,
-                                                                           app.cache,
-                                                                           name=name,
-                                                                           version=version,
-                                                                           user=user,
-                                                                           channel=channel,
-                                                                           lockfile=lockfile)
-
-        return ref, profile_host, profile_build, graph_lock, root_ref
-
-    @api_method
-    def info(self, reference_or_path, remote_name=None, settings=None, options=None, env=None,
-             profile_names=None, update=False, build=None, lockfile=None,
-             profile_build=None, name=None, version=None, user=None, channel=None, conf=None):
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
-        app = ConanApp(self.cache_folder)
-        # FIXME: Fix the argument "update" to name it check_updates
-        # FIXME: remote_name should be remote
-        # The info never update
-        app.load_remotes([Remote(remote_name, None)], update=False, check_updates=update)
-        reference, profile_host, profile_build, graph_lock, root_ref = \
-            self._info_args(app, reference_or_path, profile_host,
-                            profile_build, name=name, version=version,
-                            user=user, channel=channel, lockfile=lockfile)
-
-        deps_graph = app.graph_manager.load_graph(reference, None, profile_host,
-                                                  profile_build, graph_lock,
-                                                  root_ref, build, False)
-        return deps_graph, deps_graph.root.conanfile
-
     @api_method
     def build(self, conanfile_path, name=None, version=None, user=None, channel=None,
               source_folder=None, package_folder=None, build_folder=None,
@@ -673,10 +631,6 @@ class ConanAPIV1(object):
         lockfile_out = _make_abs_path(lockfile_out or "conan.lock")
         graph_lock.save(lockfile_out)
         ConanOutput().info("Generated lockfile: %s" % lockfile_out)
-
-    def get_template_path(self, template_name, user_overrides=False):
-        app = ConanApp(self.cache_folder)
-        return app.cache.get_template(template_name, user_overrides=user_overrides)
 
 
 def get_graph_info(profile_host, profile_build, cwd, cache,

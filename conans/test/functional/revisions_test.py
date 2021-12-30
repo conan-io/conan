@@ -870,20 +870,6 @@ class CapabilitiesRevisionsTest(unittest.TestCase):
         c_v2.upload_all(ref, remote="default")
 
 
-class InfoRevisions(unittest.TestCase):
-
-    def test_info_command_showing_revision(self):
-        """If I run 'conan info ref' I get information about the revision only in a v2 client"""
-        server = TestServer(server_capabilities=[])
-        client = TurboTestClient(servers={"default": server})
-        ref = RecipeReference.loads("lib/1.0@conan/testing")
-
-        client.create(ref)
-        client.run("info {}".format(ref))
-        revision = client.recipe_revision(ref)
-        self.assertIn("Revision: {}".format(revision), client.out)
-
-
 class ServerRevisionsIndexes(unittest.TestCase):
 
     def setUp(self):

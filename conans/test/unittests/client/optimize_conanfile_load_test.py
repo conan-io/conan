@@ -28,8 +28,15 @@ class Pkg(ConanFile):
 
         client.run("create . build/0.1@user/testing")
 
+        test_conanfile = conanfile + """
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+
+    def test(self):
+        pass
+        """
         client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": conanfile + "    def test(self): pass",
+                     "test_package/conanfile.py": test_conanfile,
                      "myprofile": "[tool_requires]\nbuild/0.1@user/testing"})
 
         client.run("create . pkg/0.1@user/testing -pr=myprofile")

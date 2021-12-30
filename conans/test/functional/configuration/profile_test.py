@@ -478,7 +478,7 @@ class DefaultNameConan(ConanFile):
                        settings={"os": "Linux"})
 
         # Install with the previous profile
-        self.client.run("info hello/0.1@lasote/stable --profile scopes_env")
+        self.client.run("graph info --reference=hello/0.1@lasote/stable --profile scopes_env")
         self.assertNotIn('''Requires:
                 winrequire/0.1@lasote/stable''', self.client.out)
 
@@ -487,9 +487,8 @@ class DefaultNameConan(ConanFile):
                        settings={"os": "Windows"})
 
         # Install with the previous profile
-        self.client.run("info hello/0.1@lasote/stable --profile scopes_env")
-        self.assertIn('''Requires:
-        winrequire/0.1@lasote/stable''', self.client.out)
+        self.client.run("graph info --reference=hello/0.1@lasote/stable --profile scopes_env")
+        self.assertIn(' winrequire/0.1@lasote/stable', self.client.out)
 
 
 class ProfileAggregationTest(unittest.TestCase):
@@ -562,7 +561,7 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
 
         self.client.save({CONANFILE: self.consumer})
-        self.client.run("info . --profile profile1 --profile profile2")
+        self.client.run("graph info . --profile profile1 --profile profile2")
         self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
