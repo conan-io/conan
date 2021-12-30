@@ -200,6 +200,28 @@ class RestV2Methods(RestCommonMethods):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed
         return
 
+    def remove_all_packages(self, ref):
+        """ Remove all packages from the specified reference"""
+        self.check_credentials()
+        assert ref.revision is not None, "remove_packages needs RREV"
+
+        url = self.router.remove_all_packages(ref)
+        response = self.requester.delete(url, auth=self.auth, verify=self.verify_ssl,
+                                         headers=self.custom_headers)
+        if response.status_code == 404:
+            # Double check if it is a 404 because there are no packages
+            try:
+                package_search_url = self.router.search_packages(ref)
+                if not self.get_json(package_search_url):
+                    return
+            except Exception as e:
+                logger.warning("Unexpected error searching {} packages"
+                               " in remote {}: {}".format(ref, self.remote_url, e))
+        if response.status_code != 200:  # Error message is text
+            # To be able to access ret.text (ret.content are bytes)
+            response.charset = "utf-8"
+            raise get_exception_from_error(response.status_code)(response.text)
+
     def remove_packages(self, prefs):
         self.check_credentials()
         for pref in prefs:

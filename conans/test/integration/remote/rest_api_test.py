@@ -195,6 +195,11 @@ class RestApiTest(unittest.TestCase):
         self.assertTrue(os.path.exists(folders["4"]))
         self.assertTrue(os.path.exists(folders["5"]))
 
+        self.api.remove_all_packages(ref)
+        self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
+        for sha in ["1", "2", "3", "4", "5"]:
+            self.assertFalse(os.path.exists(folders[sha]))
+
     def _upload_package(self, package_reference, base_files=None):
 
         files = {"conanfile.py": GenConanfile("3").with_requires("1", "12").with_exports("*"),

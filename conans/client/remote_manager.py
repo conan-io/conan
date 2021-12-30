@@ -212,6 +212,9 @@ class RemoteManager(object):
     def remove_packages(self, prefs, remote):
         return self._call_remote(remote, "remove_packages", prefs)
 
+    def remove_all_packages(self, ref, remote):
+        return self._call_remote(remote, "remove_all_packages", ref)
+
     def get_recipe_file(self, ref, path, remote):
         return self._call_remote(remote, "get_recipe_file", ref, path)
 

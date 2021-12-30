@@ -128,6 +128,9 @@ class RestApiClient(object):
     def remove_recipe(self, ref):
         return self._get_api().remove_recipe(ref)
 
+    def remove_all_packages(self, ref):
+        return self._get_api().remove_all_packages(ref)
+
     def remove_packages(self, prefs):
         return self._get_api().remove_packages(prefs)
 

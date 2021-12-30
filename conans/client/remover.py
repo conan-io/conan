@@ -103,6 +103,12 @@ class ConanRemover(object):
             else:
                 refs = [ref]
 
+            if not package_ids:  # empty packages means all of them
+                ret = []
+                for _r in refs:
+                    ret.append(self._remote_manager.remove_all_packages(_r, remote))
+                return ret
+
             prefs = []
             for _r in refs:
                 # pid can contain pid#prev
