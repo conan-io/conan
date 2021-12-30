@@ -55,8 +55,8 @@ def client_setup():
 
     c.run("create pkga pkgawin/0.1@ -s os=Windows")
     c.run("create pkga pkganix/0.1@ -s os=Linux")
-    c.run("create pkgb pkgb/0.1@ -s os=Windows")
-    c.run("create pkgc pkgc/0.1@ -s os=Windows")
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows")
+    c.run("create pkgc --name=pkgc --version=0.1 -s os=Windows")
     c.run("create app1 app1/0.1@ -s os=Windows")
     assert "app1/0.1: SELF FILE: App1" in c.out
     assert "app1/0.1: DEP FILE pkgawin: HelloA" in c.out

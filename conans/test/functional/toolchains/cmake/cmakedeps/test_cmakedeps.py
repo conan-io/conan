@@ -335,8 +335,8 @@ def test_private_transitive():
                  "pkg/conanfile.py": GenConanfile().with_requirement("dep/0.1", visible=False),
                  "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
                                                         .with_settings("os", "build_type", "arch")})
-    client.run("create dep dep/0.1@")
-    client.run("create pkg pkg/0.1@")
+    client.run("create dep --name=dep --version=0.1")
+    client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release")
     assert f"dep/0.1:{NO_SETTINGS_PACKAGE_ID} - Skip" in client.out
     data_cmake = client.load("pkg-release-x86_64-data.cmake")

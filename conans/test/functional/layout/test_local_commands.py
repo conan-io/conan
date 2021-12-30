@@ -356,7 +356,7 @@ def test_importdir_failure():
         """)
     c.save({"dep/conanfile.py": GenConanfile().with_package_file("myfile.txt", "mycontent"),
             "consumer/conanfile.py": conanfile})
-    c.run("create dep dep/0.1@")
+    c.run("create dep --name=dep --version=0.1")
     with c.chdir("consumer"):
         c.run("install . -s build_type=Release")
         expected_path_release = os.path.join(c.current_folder, "ImportRelease", "myfile.txt")

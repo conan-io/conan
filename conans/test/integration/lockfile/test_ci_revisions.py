@@ -57,8 +57,8 @@ def client_setup():
 
     c.run("create pkga pkgawin/0.1@ -s os=Windows")
     c.run("create pkga pkganix/0.1@ -s os=Linux")
-    c.run("create pkgb pkgb/0.1@ -s os=Windows")
-    c.run("create pkgc pkgc/0.1@ -s os=Windows")
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows")
+    c.run("create pkgc --name=pkgc --version=0.1 -s os=Windows")
     c.run("create app1 app1/0.1@ -s os=Windows")
     assert "app1/0.1: SELF FILE: App1" in c.out
     assert "app1/0.1: DEP FILE pkgawin: HelloA" in c.out
@@ -89,7 +89,7 @@ def test_single_config_centralized(client_setup):
     c.save({"pkgb/myfile.txt": "ByeB World!!"})
 
     # Test that pkgb/0.1 new revision works
-    c.run("create pkgb pkgb/0.1@ -s os=Windows "
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows "
           "--lockfile=app1.lock --lockfile-out=app1_b_changed.lock")
     assert "pkgb/0.1: DEP FILE pkgawin: HelloA" in c.out
 
@@ -122,7 +122,7 @@ def test_single_config_centralized_out_range(client_setup):
     c = client_setup
     c.save({"pkgc/conanfile.py":
             conanfile.format(requires='requires="pkgb/0.1#22b62df19ae387d159447df568be38be"')})
-    c.run("create pkgc pkgc/0.1@ -s os=Windows")
+    c.run("create pkgc --name=pkgc --version=0.1 -s os=Windows")
     c.run("create app1 app1/0.1@ -s os=Windows --build=missing")
     c.run("lock create --reference=app1/0.1@ --lockfile-out=app1.lock -s os=Windows")
     app1_lock = c.load("app1.lock")
@@ -136,7 +136,7 @@ def test_single_config_centralized_out_range(client_setup):
     c.save({"pkgb/myfile.txt": "ByeB World!!"})
 
     # Test that pkgb/1.0 works (but it is not matching the pinned revision)
-    c.run("create pkgb pkgb/0.1@ -s os=Windows "
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows "
           "--lockfile=app1.lock --lockfile-out=app1_b_changed.lock")
     assert "pkgb/0.1: DEP FILE pkgawin: HelloA" in c.out
     app1_b_changed = c.load("app1_b_changed.lock")
@@ -182,7 +182,7 @@ def test_single_config_centralized_change_dep(client_setup):
             "pkgb/myfile.txt": "ByeB World!!"})
 
     # Test that pkgb/0.1 new revision works
-    c.run("create pkgb pkgb/0.1@ -s os=Windows "
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows "
           "--lockfile=app1.lock --lockfile-out=app1_b_changed.lock")
     assert "pkgb/0.1: DEP FILE pkgj: HelloJ" in c.out
     # Build new package alternative J, it won't be included, already locked in this create
@@ -236,10 +236,10 @@ def test_multi_config_centralized(client_setup):
     c.save({"pkgb/myfile.txt": "ByeB World!!"})
 
     # Test that pkgb/0.1 works
-    c.run("create pkgb pkgb/0.1@ -s os=Windows "
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows "
           "--lockfile=app1.lock --lockfile-out=app1_win.lock")
     assert "pkgb/0.1: DEP FILE pkgawin: HelloA" in c.out
-    c.run("create pkgb pkgb/0.1@ -s os=Linux "
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Linux "
           "--lockfile=app1.lock --lockfile-out=app1_nix.lock")
     assert "pkgb/0.1: DEP FILE pkganix: HelloA" in c.out
 
@@ -298,7 +298,7 @@ def test_single_config_decentralized(client_setup):
     c.save({"pkgb/myfile.txt": "ByeB World!!"})
 
     # Test that pkgb/0.1 works
-    c.run("create pkgb pkgb/0.1@ -s os=Windows "
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows "
           "--lockfile=app1.lock --lockfile-out=app1_b_changed.lock")
     assert "pkgb/0.1: DEP FILE pkgawin: HelloA" in c.out
 
@@ -360,10 +360,10 @@ def test_multi_config_decentralized(client_setup):
     c.save({"pkgb/myfile.txt": "ByeB World!!"})
 
     # Test that pkgb/0.1 new revision works
-    c.run("create pkgb pkgb/0.1@ -s os=Windows "
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Windows "
           "--lockfile=app1.lock --lockfile-out=app1_win.lock")
     assert "pkgb/0.1: DEP FILE pkgawin: HelloA" in c.out
-    c.run("create pkgb pkgb/0.1@ -s os=Linux "
+    c.run("create pkgb --name=pkgb --version=0.1 -s os=Linux "
           "--lockfile=app1.lock --lockfile-out=app1_nix.lock")
     assert "pkgb/0.1: DEP FILE pkganix: HelloA" in c.out
 

@@ -179,7 +179,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile_mylib.py": mylib, "conanfile_consumer.py": consumer,
                      "CMakeLists.txt": cmakelists, "lib1.lib": "", "liblib1.a": ""})
-        client.run("create conanfile_mylib.py mylib/1.0@us/ch")
+        client.run("create file_mylib.py --name=mylib --version=1.0 --user=us --channel=ch")
         client.run("install conanfile_consumer.py")
 
         content = client.load("conanbuildinfo.cmake")
@@ -250,7 +250,7 @@ class CMakeGeneratorTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-        client.run("create conanfile.py consumer/1.0@us/ch")
+        client.run("create file.py --name=consumer --version=1.0 --user=us --channel=ch")
 
         self.assertNotIn("Library sys1 not found in package, might be system one", client.out)
         self.assertIn("CONAN_PKG::mylib libs: "

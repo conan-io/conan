@@ -330,7 +330,7 @@ def test_package_revision_mode_full_transitive_package_id():
                  "profile": profile})
     client.run("export tool --name=tool --version=0.1")
     client.run("export pkga --name=pkga --version=0.1")
-    client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
+    client.run("create pkgb --name=pkgb --version=0.1 -pr=profile --build=missing")
     assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
     assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
     pkg_id = "fbdb93dfebd237827767fd6bc7b235c1af5012dd"

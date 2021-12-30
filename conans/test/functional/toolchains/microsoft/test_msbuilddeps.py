@@ -850,8 +850,8 @@ def test_private_transitive():
                  "pkg/conanfile.py": GenConanfile().with_requirement("dep/0.1", visible=False),
                  "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
                                                         .with_settings("os", "build_type", "arch")})
-    client.run("create dep dep/0.1@")
-    client.run("create pkg pkg/0.1@")
+    client.run("create dep --name=dep --version=0.1")
+    client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g MSBuildDeps -s arch=x86_64 -s build_type=Release")
     assert f"dep/0.1:{NO_SETTINGS_PACKAGE_ID} - Skip" in client.out
     deps_props = client.load("conandeps.props")
@@ -968,8 +968,8 @@ def test_build_requires():
                  "consumer/hello.sln": hello_sln,
                  "consumer/MyProject/MyProject.vcxproj": hello_vcxproj,
                  "consumer/MyProject/data.proto": "dataproto"})
-    client.run("create dep dep/0.1@ -s arch=x86")
-    client.run("create dep dep/0.1@ -s arch=x86_64")
+    client.run("create dep --name=dep --version=0.1 -s arch=x86")
+    client.run("create dep --name=dep --version=0.1 -s arch=x86_64")
     with client.chdir("consumer"):
         client.run('build . -s compiler="Visual Studio" -s compiler.version=15 '
                    " -s arch=x86_64 -s build_type=Release")

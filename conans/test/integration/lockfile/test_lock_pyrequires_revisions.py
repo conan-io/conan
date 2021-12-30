@@ -76,8 +76,8 @@ def test_transitive_matching_revisions():
     client.run("export dep --name=dep --version=0.2")
     client.run("export toola --name=toola --version=0.1")
     client.run("export toolb --name=toolb --version=0.1")
-    client.run("create pkga pkga/0.1@")
-    client.run("create pkgb pkgb/0.1@")
+    client.run("create pkga --name=pkga --version=0.1")
+    client.run("create pkgb --name=pkgb --version=0.1")
     client.run("lock create app/conanfile.py --lockfile-out=conan.lock")
 
     client.save({"dep/conanfile.py": dep.format(123)})
