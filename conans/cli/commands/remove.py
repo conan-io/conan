@@ -1,6 +1,9 @@
 from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.command import conan_command, COMMAND_GROUPS, Extender, OnceArgument
-from conans.errors import ConanException
+from conans.cli.commands import CommandResult
+from conans.cli.conan_app import ConanApp
+from conans.client.userio import UserInput
+from conans.errors import ConanException, NotFoundException, PackageNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -12,12 +15,12 @@ class ReferenceOrPatternArgument:
         self.pref = None
         self.pattern = None
         try:
-            self.ref = RecipeReference.loads(value)
+            self.pref = PkgReference.loads(value)
             return
         except ConanException:
             pass
         try:
-            self.pref = PkgReference.loads(value)
+            self.ref = RecipeReference.loads(value)
         except ConanException:
             self.pattern = value
 
@@ -41,8 +44,8 @@ def remove(conan_api: ConanAPIV2, parser, *args):
       will be removed.
     - If a package reference is specified, it will remove only the package.
     """
-    parser.add_argument('reference', nargs="?", help="Recipe reference, package reference or "
-                                                     "fnmatch pattern for recipe references.")
+    parser.add_argument('reference', help="Recipe reference, package reference or fnmatch pattern "
+                                          "for recipe references.")
 
     parser.add_argument('-f', '--force', default=False, action='store_true',
                         help='Remove without requesting a confirmation')
@@ -53,38 +56,39 @@ def remove(conan_api: ConanAPIV2, parser, *args):
                         help='Will remove from the specified remote')
     args = parser.parse_args(*args)
 
-    if args.packages is not None and args.query:
-        raise ConanException("'-q' and '-p' parameters can't be used at the same time")
+    tmp = ReferenceOrPatternArgument(args.reference)
+    app = ConanApp(conan_api.cache_folder)
+    ui = UserInput(app.cache.new_config["core:non_interactive"])
 
-    if args.builds is not None and args.query:
-        raise ConanException("'-q' and '-b' parameters can't be used at the same time")
-
-    if args.system_reqs:
-        if args.packages:
-            raise ConanException("'-t' and '-p' parameters can't be used at the same time")
-        if not args.pattern_or_reference:
-            raise ConanException("Please specify a valid pattern or reference to be cleaned")
-
-        if check_valid_ref(args.pattern_or_reference):
-            return self._conan_api.remove_system_reqs(args.pattern_or_reference)
-
-        return self._conan_api.remove_system_reqs_by_pattern(args.pattern_or_reference)
+    if tmp.is_package_ref():
+        if args.package_query:
+            raise ConanException("'-p' cannot be used with a package reference")
+        answer = ui.request_boolean("Are you sure you want to delete the package {}?"
+                                    "".format(repr(tmp.pref)))
+        if answer:
+            conan_api.remove.package(tmp.pref)
     else:
-        if not args.pattern_or_reference:
-            raise ConanException('Please specify a pattern to be removed ("*" for all)')
+        if tmp.is_pattern():
+            refs = conan_api.search.recipes(tmp.pattern, args.remote)
+            if not refs:
+                raise ConanException("No recipes matching {}".format(tmp.pattern))
+        else:
+            refs = [tmp.ref]
 
-    try:
-        pref = PkgReference.loads(args.pattern_or_reference)
-        packages = [pref.package_id]
-        pattern_or_reference = repr(pref.ref)
-    except ConanException:
-        pref = None
-        pattern_or_reference = args.pattern_or_reference
-        packages = args.packages
+        for ref in refs:
+            if not args.package_query:
+                answer = ui.request_boolean("Are you sure you want to delete the recipe {} "
+                                            "and all its packages?".format(repr(ref)))
+            else:
+                answer = ui.request_boolean("Are you sure you want to delete the recipe {} "
+                                            "and the packages matching "
+                                            "'{}'?".format(repr(ref), args.package_query))
 
-    if pref and args.packages:
-        raise ConanException("Use package ID only as -p argument or reference, not both")
-
-    return self._conan_api.remove(pattern=pattern_or_reference, query=args.query,
-                                  packages=packages, builds=args.builds, src=args.src,
-                                  force=args.force, remote_name=args.remote)
+            if answer:
+                if not args.package_query:
+                    conan_api.remove.recipe(ref)
+                else:
+                    configs = conan_api.list.packages_configurations(ref, remote=args.remote)
+                    prefs = conan_api.search.filter_packages_configurations(configs,
+                                                                            args.package_query).keys()
+                    # FIXME: Remove prefs and only the recipe
