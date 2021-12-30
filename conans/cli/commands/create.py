@@ -1,14 +1,18 @@
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS
+from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
 from conans.cli.commands import make_abs_path
 from conans.cli.commands.export import common_args_export
 from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile, get_profiles_from_args, _add_common_install_arguments, \
     _help_build_policies
+from conans.cli.conan_app import ConanApp
 from conans.cli.formatters.graph import print_graph_basic, print_graph_packages
 from conans.cli.output import ConanOutput
+from conans.client.conanfile.build import run_build_method
 from conans.client.graph.printer import print_graph
+from conans.errors import ConanException, conanfile_exception_formatter
+from conans.util.files import chdir, mkdir
 
 
 @conan_command(group=COMMAND_GROUPS['creator'])
@@ -23,10 +27,15 @@ def create(conan_api, parser, *args):
                         help='The provided reference is a build-require')
     parser.add_argument("--require-override", action="append",
                         help="Define a requirement override")
+    parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
+                        help='Working directory for the build of the test project.')
+    parser.add_argument("-tf", "--test-folder", action=OnceArgument,
+                        help='Alternative test folder name. By default it is "test_package". '
+                             'Use "None" to skip the test stage')
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=True) if args.path else None
+    path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile_path = make_abs_path(args.lockfile, cwd)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=False)  # Create is NOT strict!
     remote = conan_api.remotes.get(args.remote) if args.remote else None
@@ -40,21 +49,39 @@ def create(conan_api, parser, *args):
                                   lockfile=lockfile,
                                   ignore_dirty=args.ignore_dirty)
 
-    out.highlight("-------- Input profiles ----------")
+    out.highlight("\n-------- Input profiles ----------")
     out.info("Profile host:")
     out.info(profile_host.dumps())
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
-    # decoupling the most complex part, which is loading the root_node, this is the point where
-    # the difference between "reference", "path", etc
-    root_node = conan_api.graph.load_root_node(ref, None, profile_host, profile_build,
-                                               lockfile, root_ref=None,
-                                               create_reference=None,
-                                               is_build_require=args.build_require,
-                                               require_overrides=args.require_override,
-                                               remote=remote,
-                                               update=args.update)
+    if args.test_folder == "None":
+        # Now if parameter --test-folder=None (string None) we have to skip tests
+        args.test_folder = False
+    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
+    if test_conanfile_path:
+        # decoupling the most complex part, which is loading the root_node, this is the point where
+        # the difference between "reference", "path", etc
+        if args.build_require:
+            raise ConanException("--build-require should not be specified, test_package does it")
+        root_node = conan_api.graph.load_root_node(None, test_conanfile_path, profile_host,
+                                                   profile_build,
+                                                   lockfile, root_ref=None,
+                                                   create_reference=ref,
+                                                   require_overrides=args.require_override,
+                                                   remote=remote,
+                                                   update=args.update)
+    else:
+
+        # decoupling the most complex part, which is loading the root_node, this is the point where
+        # the difference between "reference", "path", etc
+        root_node = conan_api.graph.load_root_node(ref, None, profile_host, profile_build,
+                                                   lockfile, root_ref=None,
+                                                   create_reference=None,
+                                                   is_build_require=args.build_require,
+                                                   require_overrides=args.require_override,
+                                                   remote=remote,
+                                                   update=args.update)
 
     out.highlight("-------- Computing dependency graph ----------")
     check_updates = args.check_updates if "check_updates" in args else False
@@ -85,3 +112,50 @@ def create(conan_api, parser, *args):
         lockfile_out = make_abs_path(args.lockfile_out, cwd)
         out.info(f"Saving lockfile: {lockfile_out}")
         lockfile.save(lockfile_out)
+
+    if test_conanfile_path:
+        conanfile = deps_graph.root.conanfile
+        out.highlight("\n-------- Testing the package ----------")
+        conanfile_folder = os.path.dirname(test_conanfile_path)
+        if hasattr(conanfile, "layout"):
+            conanfile.folders.set_base_build(conanfile_folder)
+            conanfile.folders.set_base_source(conanfile_folder)
+            conanfile.folders.set_base_package(conanfile_folder)
+            conanfile.folders.set_base_generators(conanfile_folder)
+            conanfile.folders.set_base_install(conanfile_folder)
+        else:
+            conanfile.folders.set_base_build(conanfile_folder)
+            conanfile.folders.set_base_source(conanfile_folder)
+            conanfile.folders.set_base_package(conanfile_folder)
+            conanfile.folders.set_base_generators(conanfile_folder)
+            conanfile.folders.set_base_install(conanfile_folder)
+
+        mkdir(conanfile.build_folder)
+        with chdir(conanfile.build_folder):
+            app = ConanApp(conan_api.cache_folder)
+            run_build_method(conanfile, app.hook_manager, conanfile_path=test_conanfile_path)
+
+        conanfile.output.highlight("Running test()")
+        with conanfile_exception_formatter(conanfile, "test"):
+            with chdir(conanfile.build_folder):
+                conanfile.test()
+
+
+def _get_test_conanfile_path(tf, conanfile_path):
+    """Searches in the declared test_folder or in the standard locations"""
+
+    if tf is False:
+        # Look up for testing conanfile can be disabled if tf (test folder) is False
+        return None
+
+    test_folders = [tf] if tf else ["test_package", "test"]
+    base_folder = os.path.dirname(conanfile_path)
+    for test_folder_name in test_folders:
+        test_folder = os.path.join(base_folder, test_folder_name)
+        test_conanfile_path = os.path.join(test_folder, "conanfile.py")
+        if os.path.exists(test_conanfile_path):
+            return test_conanfile_path
+    else:
+        if tf:
+            raise ConanException("test folder '%s' not available, or it doesn't have a conanfile.py"
+                                 % tf)
