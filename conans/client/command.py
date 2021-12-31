@@ -18,7 +18,7 @@ from conans.errors import ConanInvalidSystemRequirements
 from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import get_reference_fields, check_valid_ref, validate_recipe_reference
+from conans.model.ref import get_reference_fields, check_valid_ref
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -102,50 +102,6 @@ class Command(object):
         assert isinstance(conan_api, ConanAPIV1)
         self._conan_api = conan_api
         self._out = ConanOutput()
-
-    def new(self, *args):
-        """
-        Creates a new package recipe template with a 'conanfile.py' and optionally,
-        'test_package' testing files.
-        """
-        parser = argparse.ArgumentParser(description=self.new.__doc__,
-                                         prog="conan new",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("name", help='Package name, e.g.: "poco/1.9.4" or complete reference'
-                                         ' for CI scripts: "poco/1.9.4@user/channel"')
-        parser.add_argument("-t", "--test", action='store_true', default=False,
-                            help='Create test_package skeleton to test package')
-        parser.add_argument("-i", "--header", action='store_true', default=False,
-                            help='Create a headers only package template')
-        parser.add_argument("-c", "--pure-c", action='store_true', default=False,
-                            help='Create a C language package only package, '
-                                 'deleting "self.settings.compiler.libcxx" setting '
-                                 'in the configure method')
-        parser.add_argument("-s", "--sources", action='store_true', default=False,
-                            help='Create a package with embedded sources in "src" folder, '
-                                 'using "exports_sources" instead of retrieving external code with '
-                                 'the "source()" method')
-        parser.add_argument("-b", "--bare", action='store_true', default=False,
-                            help='Create the minimum package recipe, without build() method. '
-                            'Useful in combination with "export-pkg" command')
-        parser.add_argument("-m", "--template",
-                            help='Use the given template to generate a conan project')
-        parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
-                            help='Generate a .gitignore with the known patterns to excluded')
-        parser.add_argument('-d', '--define', action='append')
-
-        args = parser.parse_args(*args)
-
-        defines = args.define or []
-        defines = dict((n, v) for n, v in (d.split('=') for d in defines))
-
-        self._warn_python_version()
-        ref = RecipeReference.loads(args.name)
-        validate_recipe_reference(ref)
-        self._conan_api.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
-                            exports_sources=args.sources, bare=args.bare,
-                            gitignore=args.gitignore, template=args.template,
-                            defines=defines)
 
     def inspect(self, *args):
         """
@@ -792,26 +748,6 @@ class Command(object):
             CommandOutputer().print_dir_list(ret, path, args.raw)
         else:
             CommandOutputer().print_file_contents(ret, path, args.raw)
-
-    def alias(self, *args):
-        """
-        Creates and exports an 'alias package recipe'.
-
-        An "alias" package is a symbolic name (reference) for another package
-        (target). When some package depends on an alias, the target one will be
-        retrieved and used instead, so the alias reference, the symbolic name,
-        does not appear in the final dependency graph.
-        """
-        parser = argparse.ArgumentParser(description=self.alias.__doc__,
-                                         prog="conan alias",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument('reference', help='Alias reference. e.g.: mylib/1.X@user/channel')
-        parser.add_argument('target', help='Target reference. e.g.: mylib/1.12@user/channel')
-        args = parser.parse_args(*args)
-
-        self._warn_python_version()
-
-        self._conan_api.export_alias(args.reference, args.target)
 
     def editable(self, *args):
         """

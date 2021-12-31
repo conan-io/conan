@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS, OnceArgument
+from conans.cli.command import conan_command, COMMAND_GROUPS
 from conans.cli.output import ConanOutput
 from conans.util.files import save_files
 
@@ -23,9 +23,7 @@ def new(conan_api, parser, *args):
         k = k.replace("-", "")  # Remove possible "--name=value"
         definitions[k] = v
     files = conan_api.new.new(args.template, definitions)
-    print(files)
     cwd = os.getcwd()
     save_files(cwd, files)
     for f in sorted(files):
         ConanOutput().success("File saved: %s" % f)
-
