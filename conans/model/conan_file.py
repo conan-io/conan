@@ -90,6 +90,24 @@ class ConanFile:
         self.folders = Folders()
         self.cpp = Infos()
 
+    def serialize(self):
+        result = {}
+        for a in ("url", "license", "author", "description", "topics", "homepage", "build_policy",
+                  "revision_mode", "provides", "deprecated", "win_bash"):
+            v = getattr(self, a)
+            if v is not None:
+                result[a] = v
+        result["package_type"] = str(self.package_type)
+        result["settings"] = self.settings.serialize()
+        result["scm"] = getattr(self, "scm", None)
+        if hasattr(self, "python_requires"):
+            result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
+        result.update(self.options.serialize())  # FIXME: The options contain an "options" already
+        result["source_folder"] = self.source_folder
+        result["build_folder"] = self.build_folder
+        result["package_folder"] = self.package_folder
+        return result
+
     @property
     def output(self):
         # an output stream (writeln, info, warn error)

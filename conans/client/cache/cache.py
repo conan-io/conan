@@ -2,11 +2,9 @@ import copy
 import os
 from typing import List
 
-from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conans.assets.templates import dict_loader
 from conans.cli.output import ConanOutput
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -265,15 +263,6 @@ class ClientCache(object):
                 if os.path.isfile(generator) and generator.endswith(".py"):
                     generators.append(generator)
         return generators
-
-    def get_template(self, template_name, user_overrides=False):
-        # TODO: It can be initialized only once together with the Conan app
-        loaders = [dict_loader]
-        if user_overrides:
-            loaders.insert(0, FileSystemLoader(os.path.join(self.cache_folder, 'templates')))
-        env = Environment(loader=ChoiceLoader(loaders),
-                          autoescape=select_autoescape(['html', 'xml']))
-        return env.get_template(template_name)
 
     def initialize_config(self):
         if not os.path.exists(self.conan_conf_path):

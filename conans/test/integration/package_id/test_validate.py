@@ -35,12 +35,12 @@ class TestValidate(unittest.TestCase):
         error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
-        client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("ID: INVALID", client.out)
-        client.run("info pkg/0.1@ -s os=Windows --json=myjson")
-        myjson = json.loads(client.load("myjson"))
-        self.assertEqual(myjson[0]["binary"], BINARY_INVALID)
-        self.assertEqual(myjson[0]["id"], 'INVALID')
+        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
+        self.assertIn("package_id: INVALID", client.out)
+        client.run("graph info --reference=pkg/0.1@ -s os=Windows --format=json")
+        myjson = json.loads(client.stdout)
+        self.assertEqual(myjson["nodes"][1]["binary"], BINARY_INVALID)
+        self.assertEqual(myjson["nodes"][1]["package_id"], 'INVALID')
 
     def test_validate_compatible_create(self):
         client = TestClient()
@@ -70,11 +70,11 @@ class TestValidate(unittest.TestCase):
         client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
-        client.run("info pkg/0.1@ -s os=Windows")
+        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
         self.assertIn("pkg/0.1: Main binary package 'cf2e4ff978548fafd099ad838f9ecb8858bf25cb' "
                       "missing. Using compatible package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8'",
                       client.out)
-        self.assertIn("ID: 02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8", client.out)
+        self.assertIn("package_id: 02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8", client.out)
 
     def test_validate_remove_package_id_create(self):
         client = TestClient()
@@ -101,8 +101,8 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
 
-        client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
+        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
+        self.assertIn("package_id: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
     def test_validate_compatible_also_invalid(self):
         client = TestClient()
@@ -137,8 +137,8 @@ class TestValidate(unittest.TestCase):
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
 
-        client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("ID: INVALID", client.out)
+        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
+        self.assertIn("package_id: INVALID", client.out)
 
     def test_validate_compatible_also_invalid_fail(self):
         client = TestClient()
@@ -192,10 +192,10 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
 
         # info
-        client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("ID: INVALID", client.out)
-        client.run("info pkg/0.1@ -s os=Windows -s build_type=Debug")
-        self.assertIn("ID: INVALID", client.out)
+        client.run("graph info --reference=pkg/0.1@ -s os=Windows")
+        self.assertIn("package_id: INVALID", client.out)
+        client.run("graph info --reference=pkg/0.1@ -s os=Windows -s build_type=Debug")
+        self.assertIn("package_id: INVALID", client.out)
 
     @pytest.mark.xfail(reason="The way to check options of transitive deps has changed")
     def test_validate_options(self):

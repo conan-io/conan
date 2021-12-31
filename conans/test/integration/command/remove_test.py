@@ -3,6 +3,7 @@ import unittest
 
 import pytest
 
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 
@@ -101,6 +102,8 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                                       write_permissions=[("foobar/0.1@*/*", "user")])
         servers = {"default": self.test_server}
         self.client = TestClient(servers=servers, inputs=["user", "password"])
+        ref = RecipeReference.loads(f"foobar/0.1@user/testing#{self.NO_SETTINGS_RREF}")
+        self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "a397cb03d51fb3b129c78d2968e2676f")
 
     def test_remove_local_package_id_argument(self):
         """ Remove package ID based on recipe revision. The package must be deleted, but
@@ -109,17 +112,11 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         """
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . foobar/0.1@user/testing")
-        self.client.run("info foobar/0.1@user/testing")
-        self.assertIn("Binary: Cache", self.client.out)
-        self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
-        self.assertIn("Package revision: a397cb03d51fb3b129c78d2968e2676f", self.client.out)
+        assert self.client.package_exists(self.pref)
 
         self.client.run("remove -f foobar/0.1@user/testing#{} -p {}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
-        self.client.run("info foobar/0.1@user/testing")
-        self.assertIn("Binary: Missing", self.client.out)
-        self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
-        self.assertIn("Package revision: None", self.client.out)
+        assert not self.client.package_exists(self.pref)
 
     def test_remove_local_package_id_reference(self):
         """ Remove package ID based on recipe revision. The package must be deleted, but
@@ -128,17 +125,11 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         """
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . foobar/0.1@user/testing")
-        self.client.run("info foobar/0.1@user/testing")
-        self.assertIn("Binary: Cache", self.client.out)
-        self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
-        self.assertIn("Package revision: a397cb03d51fb3b129c78d2968e2676f", self.client.out)
+        assert self.client.package_exists(self.pref)
 
         self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
-        self.client.run("info foobar/0.1@user/testing")
-        self.assertIn("Binary: Missing", self.client.out)
-        self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
-        self.assertIn("Package revision: None", self.client.out)
+        assert not self.client.package_exists(self.pref)
 
     def test_remove_duplicated_package_id(self):
         """ The package ID must not be present in both -p argument and package reference
@@ -160,9 +151,25 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("upload foobar/0.1@user/testing -r default -c --all")
         self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
-        self.client.run("info foobar/0.1@user/testing")
-        self.assertIn("Binary: Download", self.client.out)
+        assert not self.client.package_exists(self.pref)
         self.client.run("remove -f foobar/0.1@user/testing#{}:{} -r default"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
-        self.client.run("info foobar/0.1@user/testing")
-        self.assertIn("Binary: Missing", self.client.out)
+        assert not self.client.package_exists(self.pref)
+
+    def test_remove_all_packages_but_the_recipe_at_remote(self):
+        """ Remove all the packages but not the recipe in a remote
+        """
+        self.client.save({"conanfile.py": GenConanfile().with_settings("arch")})
+        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("create . foobar/0.1@user/testing -s arch=x86")
+        self.client.run("upload foobar/0.1@user/testing -r default -c --all")
+        ref = self.client.cache.get_latest_recipe_reference(
+               RecipeReference.loads("foobar/0.1@user/testing"))
+        self.client.run("list packages foobar/0.1@user/testing#{} -r default".format(ref.revision))
+        self.assertIn("arch=x86_64", self.client.out)
+        self.assertIn("arch=x86", self.client.out)
+
+        self.client.run("remove -f foobar/0.1@user/testing -p -r default")
+        self.client.run("search foobar/0.1@user/testing -r default")
+        self.assertNotIn("arch=x86_64", self.client.out)
+        self.assertNotIn("arch=x86", self.client.out)

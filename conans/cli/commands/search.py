@@ -1,17 +1,12 @@
 from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conans.cli.commands import CommandResult
-from conans.cli.commands.list import list_recipes_cli_formatter, json_formatter
+from conans.cli.commands.list import print_list_recipes, json_formatter
 from conans.cli.common import get_remote_selection
-
-search_formatters = {
-    "cli": list_recipes_cli_formatter,
-    "json": json_formatter
-}
 
 
 # FIXME: "conan search" == "conan list recipes -r="*" -c" --> implement @conan_alias_command??
-@conan_command(group=COMMAND_GROUPS['consumer'], formatters=search_formatters)
+@conan_command(group=COMMAND_GROUPS['consumer'], formatters={"json": json_formatter})
 def search(conan_api: ConanAPIV2, parser, *args):
     """
     Searches for package recipes in a remote or remotes
@@ -32,4 +27,5 @@ def search(conan_api: ConanAPIV2, parser, *args):
         except Exception as e:
             result.error = str(e)
         results.append(result)
+    print_list_recipes(results)
     return results
