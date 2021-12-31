@@ -1,9 +1,9 @@
+from conans.cli.api.model import Remote
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.errors import RecipeNotFoundException, ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.search.search import search_recipes, filter_packages
 
 
 class RemoveAPI:
@@ -32,24 +32,35 @@ class RemoveAPI:
             app.cache.remove_recipe_layout(recipe_layout)
 
     @api_method
-    def recipe(self, ref: RecipeReference, remote=None):
+    def recipe(self, ref: RecipeReference, remote: Remote=None):
+        assert ref.revision, "Recipe revision cannot be None to remove a recipe"
         """Removes the recipe (or recipe revision if present) and all the packages (with all prev)"""
         app = ConanApp(self.conan_api.cache_folder)
         if remote:
             app.remote_manager.remove_recipe(ref, remote)
         else:
-            refs = app.cache.get_recipe_revisions_references(ref)
-            if not refs:
-                raise RecipeNotFoundException(ref)
-            for ref in refs:
-                # Remove all the prefs with all the prevs
-                self._remove_local_recipe(app, ref)
+            # Remove all the prefs with all the prevs
+            self._remove_local_recipe(app, ref)
 
     @api_method
-    def package(self, pref: PkgReference, remote=None):
+    def package(self, pref: PkgReference, remote: Remote):
+        assert pref.ref.revision, "Recipe revision cannot be None to remove a package"
+        assert pref.revision, "Package revision cannot be None to remove a package"
+
         app = ConanApp(self.conan_api.cache_folder)
         if remote:
-            app.remote_manager.remove_packages(pref.p, remote)
+            if pref.ref.revision is None:
+                # If the recipe doesn't have revision, remove that package from all the revisions
+                refs = app.remote_manager.get_recipe_revisions_references(pref.ref, remote)
+            else:
+                refs = [pref.ref]
+
+            prefs = []
+            for _r in refs:
+                prefs.append([PkgReference.loads("{}:{}".format(repr(_r), pid))
+                              for pid in package_ids])
+
+            app.remote_manager.remove_packages(pref, remote)
         else:
             refs = app.cache.get_recipe_revisions_references(ref)
             if not refs:

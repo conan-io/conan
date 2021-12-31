@@ -59,23 +59,37 @@ def remove(conan_api: ConanAPIV2, parser, *args):
     tmp = ReferenceOrPatternArgument(args.reference)
     app = ConanApp(conan_api.cache_folder)
     ui = UserInput(app.cache.new_config["core:non_interactive"])
+    remote = conan_api.remotes.get(args.remote) if args.remote else None
 
     if tmp.is_package_ref():
         if args.package_query:
             raise ConanException("'-p' cannot be used with a package reference")
         answer = ui.request_boolean("Are you sure you want to delete the package {}?"
                                     "".format(repr(tmp.pref)))
+        prefs = [tmp.pref]
+        if not tmp.pref.ref.revision:
+            prefs = [PkgReference(ref, tmp.pref.package_id, tmp.pref.revision)
+                        for ref in conan_api.list.recipe_revisions(tmp.pref.ref, remote)]
+        complete_prefs = []
+        for pref in prefs:
+            complete_prefs.extend([_p for _p in conan_api.list.package_revisions(pref, remote)])
+
         if answer:
-            conan_api.remove.package(tmp.pref)
+            conan_api.remove.package(tmp.pref, remote)
     else:
         if tmp.is_pattern():
-            refs = conan_api.search.recipes(tmp.pattern, args.remote)
+            refs = conan_api.search.recipes(tmp.pattern, remote)
             if not refs:
                 raise ConanException("No recipes matching {}".format(tmp.pattern))
         else:
-            refs = [tmp.ref]
+            refs = tmp.ref
 
+        # FIXME: We have to complete the revision from "refs", with latest? or remove from all?
+        complete_refs = []
         for ref in refs:
+            complete_refs.extend(conan_api.list.recipe_revisions(ref, remote))
+
+        for ref in complete_refs:
             if not args.package_query:
                 answer = ui.request_boolean("Are you sure you want to delete the recipe {} "
                                             "and all its packages?".format(repr(ref)))
@@ -86,9 +100,9 @@ def remove(conan_api: ConanAPIV2, parser, *args):
 
             if answer:
                 if not args.package_query:
-                    conan_api.remove.recipe(ref)
+                    conan_api.remove.recipe(ref, remote)
                 else:
-                    configs = conan_api.list.packages_configurations(ref, remote=args.remote)
+                    configs = conan_api.list.packages_configurations(ref, remote)
                     prefs = conan_api.search.filter_packages_configurations(configs,
                                                                             args.package_query).keys()
                     # FIXME: Remove prefs and only the recipe
