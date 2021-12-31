@@ -57,7 +57,7 @@ from conan import ConanFile
 from conan.tools.build import cross_building
 
 
-class {package_name}TestConan(ConanFile):
+class {{package_name}}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def requirements(self):
