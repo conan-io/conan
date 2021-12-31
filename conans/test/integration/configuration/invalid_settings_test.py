@@ -1,17 +1,17 @@
 import os
 import textwrap
-import unittest
+
 
 from conans.test.utils.tools import TestClient
 
 
-class SettingsLoadTestCase(unittest.TestCase):
+class TestSettingsLoad:
     def test_invalid_settings(self):
         client = TestClient()
-        client.save({os.path.join(client.cache_folder, 'settings.yml'): """your buggy file"""})
-        client.run("new -b hello/1.0")
+        client.save({os.path.join(client.cache_folder, 'settings.yml'): """your buggy file""",
+                     "conanfile.txt": ""})
         client.run("install .", assert_error=True)
-        self.assertIn("ERROR: Invalid settings.yml format", client.out)
+        assert "ERROR: Invalid settings.yml format" in client.out
 
     def test_invalid_yaml(self):
         client = TestClient()
@@ -21,8 +21,7 @@ class SettingsLoadTestCase(unittest.TestCase):
                             - a
                             - valid
                           yaml
-                     """)})
-        client.run("new -b hello/1.0")
+                     """),
+                     "conanfile.txt": ""})
         client.run("install .", assert_error=True)
-        self.assertIn("ERROR: Invalid settings.yml format: while parsing a block mapping",
-                      client.out)
+        assert "ERROR: Invalid settings.yml format: while parsing a block mapping" in client.out
