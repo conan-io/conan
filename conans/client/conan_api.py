@@ -12,7 +12,6 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.download import download
 from conans.client.cmd.export import export_alias
-from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.graph.printer import print_graph
@@ -157,28 +156,6 @@ class ConanAPIV1(object):
             except AttributeError:
                 result[attribute] = ''
         return result
-
-    @api_method
-    def test(self, path, reference, profile_names=None, settings=None, options=None, env=None,
-             remote_name=None, update=False, build_modes=None, cwd=None, test_build_folder=None,
-             lockfile=None, profile_build=None, conf=None):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)], update=update)
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
-
-        conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-        profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
-                                                                           profile_build, cwd,
-                                                                           app.cache,
-                                                                           lockfile=lockfile)
-        ref = RecipeReference.loads(reference)
-        install_build_and_test(app, conanfile_path, ref, profile_host,
-                               profile_build, graph_lock, root_ref,
-                               build_modes=build_modes, test_build_folder=test_build_folder)
 
     @api_method
     def download(self, reference, remote_name=None, packages=None, recipe=False):
