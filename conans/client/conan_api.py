@@ -98,21 +98,6 @@ class ConanAPIV1(object):
         check_required_conan_version(self.cache_folder)
 
     @api_method
-    def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-            cwd=None, template=None, defines=None, gitignore=None):
-        from conans.client.cmd.new import cmd_new
-        app = ConanApp(self.cache_folder)
-        cwd = os.path.abspath(cwd or os.getcwd())
-        ref = RecipeReference.loads(name)
-        files = cmd_new(ref.name, ref.version, header=header, pure_c=pure_c, test=test,
-                        exports_sources=exports_sources, bare=bare, gitignore=gitignore,
-                        template=template, cache=app.cache, defines=defines)
-
-        save_files(cwd, files)
-        for f in sorted(files):
-            ConanOutput().success("File saved: %s" % f)
-
-    @api_method
     def inspect(self, path, attributes, remote_name=None):
         app = ConanApp(self.cache_folder)
         # FIXME: remote_name should be remote
