@@ -2,6 +2,7 @@ import os
 import platform
 from collections import OrderedDict
 
+from conan.tools.microsoft.visual import vs_ide_version
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_flag_new as cppstd_flag
@@ -53,18 +54,26 @@ def get_generator(conanfile):
             return None
         return "Unix Makefiles"
 
+    cmake_years = {'8': '8 2005',
+                   '9': '9 2008',
+                   '10': '10 2010',
+                   '11': '11 2012',
+                   '12': '12 2013',
+                   '14': '14 2015',
+                   '15': '15 2017',
+                   '16': '16 2019',
+                   '17': '17 2022'}
+
+    if compiler == "msvc":
+        if compiler_version is None:
+            raise ConanException("compiler.version must be defined")
+        vs_version = vs_ide_version(conanfile)
+        return "Visual Studio %s" % cmake_years[vs_version]
+
     if compiler == "Visual Studio" or compiler_base == "Visual Studio":
         version = compiler_base_version or compiler_version
         major_version = version.split('.', 1)[0]
-        _visuals = {'8': '8 2005',
-                    '9': '9 2008',
-                    '10': '10 2010',
-                    '11': '11 2012',
-                    '12': '12 2013',
-                    '14': '14 2015',
-                    '15': '15 2017',
-                    '16': '16 2019',
-                    '17': '17 2022'}.get(major_version, "UnknownVersion %s" % version)
+        _visuals = cmake_years.get(major_version, "UnknownVersion %s" % version)
         base = "Visual Studio %s" % _visuals
         return base
 
