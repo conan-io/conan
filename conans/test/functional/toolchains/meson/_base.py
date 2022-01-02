@@ -1,6 +1,7 @@
 import platform
 import sys
 import unittest
+import os
 
 import pytest
 
@@ -30,7 +31,7 @@ class TestMesonBase(unittest.TestCase):
                             "build_type": "Release"}
 
         settings_linux = {"compiler": "gcc",
-                          "compiler.version": "5",
+                          "compiler.version": os.getenv('CONAN_COMPILER_VERSION'),
                           "compiler.libcxx": "libstdc++",
                           "arch": "x86_64",
                           "build_type": "Release"}
@@ -57,4 +58,4 @@ class TestMesonBase(unittest.TestCase):
             self.assertIn("main _MSVC_LANG2014", self.t.out)
         elif platform.system() == "Linux":
             self.assertIn("main __x86_64__ defined", self.t.out)
-            self.assertIn("main __GNUC__5", self.t.out)
+            self.assertIn("main __GNUC__" + os.getenv('CONAN_COMPILER_VERSION').split('.')[0], self.t.out)
