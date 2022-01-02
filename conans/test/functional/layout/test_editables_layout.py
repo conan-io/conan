@@ -55,7 +55,7 @@ def test_cpp_info_editable():
         settings = "os", "compiler", "build_type", "arch"
         requires = "hello/1.0"
         def build(self):
-            info = self.dependencies.requires["hello"].cpp_info
+            info = self.dependencies["hello"].cpp_info
             self.output.warn("**includedirs:{}**".format(info.includedirs))
             self.output.warn("**libdirs:{}**".format(info.libdirs))
             self.output.warn("**builddirs:{}**".format(info.builddirs))
@@ -159,7 +159,7 @@ def test_cpp_info_components_editable():
         settings = "os", "compiler", "build_type", "arch"
         requires = "hello/1.0"
         def build(self):
-            info = self.dependencies.requires["hello"].cpp_info
+            info = self.dependencies["hello"].cpp_info
             self.output.warn("**FOO includedirs:{}**".format(info.components["foo"].includedirs))
             self.output.warn("**FOO libdirs:{}**".format(info.components["foo"].libdirs))
             self.output.warn("**FOO builddirs:{}**".format(info.components["foo"].builddirs))

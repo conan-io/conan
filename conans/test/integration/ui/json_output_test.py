@@ -78,7 +78,6 @@ class JsonOutputTest(unittest.TestCase):
         self.assertFalse(my_json["installed"][0]["packages"][0]["downloaded"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
-    @pytest.mark.tool_compiler
     def test_errors(self):
 
         # Missing recipe

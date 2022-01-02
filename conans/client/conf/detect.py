@@ -107,14 +107,14 @@ def _get_default_compiler(output):
             if compiler:
                 return compiler
         else:
+            if "clang" in command.lower():
+                return _clang_compiler(output, command)
             if "gcc" in command:
                 gcc = _gcc_compiler(output, command)
                 if platform.system() == "Darwin" and gcc is None:
                     output.error("%s detected as a frontend using apple-clang. "
                                  "Compiler not supported" % command)
                 return gcc
-            if "clang" in command.lower():
-                return _clang_compiler(output, command)
             if platform.system() == "SunOS" and command.lower() == "cc":
                 return _sun_cc_compiler(output, command)
         # I am not able to find its version
@@ -159,6 +159,8 @@ def _get_profile_compiler_version(compiler, version, output):
     elif compiler == "Visual Studio":
         return major
     elif compiler == "intel" and (int(major) < 19 or (int(major) == 19 and int(minor) == 0)):
+        return major
+    elif compiler == "msvc":
         return major
     return version
 
@@ -221,8 +223,15 @@ def _detect_compiler_version(result, output, profile_path):
     except Exception:
         compiler, version = None, None
     if not compiler or not version:
-        output.error("Unable to find a working compiler")
+        output.info("No compiler was detected (one may not be needed)")
         return
+
+    # Visual Studio 2022 onwards, detect as a new compiler "msvc"
+    if compiler == "Visual Studio":
+        version = Version(version)
+        if version == "17":
+            compiler = "msvc"
+            version = "193"
 
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version, output)))

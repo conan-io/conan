@@ -289,3 +289,24 @@ def test_fail_usefully_when_failing_retrieving_package():
     # Try to install ref2, it will try to download the binary for ref1
     client.run("install {}".format(ref2), assert_error=True)
     assert "ERROR: Error downloading binary package: '{}'".format(pref1) in client.out
+
+
+def test_evil_insertions():
+    ref = ConanFileReference.loads("lib1/1.0@conan/stable")
+    ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
+
+    client = TurboTestClient(servers={"default": TestServer()})
+    pref1 = client.create(ref)
+    client.upload_all(ref)
+
+    client.create(ref2, conanfile=GenConanfile().with_requirement(ref))
+    client.upload_all(ref2)
+
+    client.run("remove {} -p {} -f".format(pref1.ref, pref1.id))
+
+    # Even if we create the package folder artificially, the folder will be discarded and installed again.
+    os.makedirs(os.path.join(client.cache_folder, "data", ref.dir_repr(), "package", pref1.id))
+
+    client.run("install {}".format(ref2))
+
+    assert "AssertionError: PREV" not in client.out

@@ -8,12 +8,14 @@ from six import StringIO
 from conans import __version__
 from conans.client.cache.editable import EDITABLE_PACKAGES_FILE
 from conans.client.migrations import migrate_plugins_to_hooks, migrate_to_default_profile, \
-    migrate_editables_use_conanfile_name
+    migrate_editables_use_conanfile_name, remove_buggy_cacert
 from conans.client.output import ConanOutput
+from conans.client.rest.cacert import cacert_default
 from conans.client.tools.version import Version
 from conans.migrations import CONAN_VERSION
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, CACERT_FILE
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, GenConanfile, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load, save
@@ -32,7 +34,7 @@ class TestMigrations(unittest.TestCase):
         self.assertTrue(hasattr(migrations_settings, var_name),
                         "Migrations var '{}' not found".format(var_name))
         migrations_settings_content = getattr(migrations_settings, var_name)
-        self.assertListEqual(current_settings.splitlines(), migrations_settings_content.splitlines())
+        assert current_settings == migrations_settings_content
 
     def test_is_there_var_for_settings_previous_version(self):
         from conans import __version__ as current_version
@@ -250,3 +252,24 @@ the old general
         self.assertFalse(os.path.isfile(export_tgz))
         self.assertFalse(os.path.isfile(export_src_tgz))
         self.assertFalse(os.path.isfile(pkg_tgz))
+
+    def test_cacert_migration(self):
+        client = TestClient()
+        client.run("search foo")
+        cacert_path = os.path.join(client.cache_folder, CACERT_FILE)
+        out = TestBufferConanOutput()
+        remove_buggy_cacert(client.cache, out)
+        assert "Conan 'cacert.pem' is up to date..." in out
+
+        modified_cacert_content = load(cacert_path) + "other_info"
+        save(cacert_path, modified_cacert_content)
+        remove_buggy_cacert(client.cache, out)
+        assert "'cacert.pem' is locally modified, can't be updated" in out
+        new_path = cacert_path + ".new"
+        assert os.path.exists(new_path)
+
+        old_cacert = cacert_default
+        save(cacert_path, old_cacert)
+        remove_buggy_cacert(client.cache, out)
+        assert "Removing the 'cacert.pem' file..." in out
+        assert not os.path.exists(cacert_path)

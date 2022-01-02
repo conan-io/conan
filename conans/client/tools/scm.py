@@ -16,7 +16,7 @@ from conans.util.runners import check_output_runner, version_runner, muted_runne
 
 
 def _check_repo(cmd, folder):
-    msg = "Not a valid '{0}' repository or '{0}' not found.".format(cmd[0])
+    msg = "'{0}' is not a valid '{1}' repository or '{1}' not found.".format(folder, cmd[0])
     try:
         ret = muted_runner(cmd, folder=folder)
     except Exception:
@@ -147,6 +147,13 @@ class Git(SCMBase):
     @property
     def _configure_ssl_verify(self):
         return "-c http.sslVerify=%s " % ("true" if self._verify_ssl else "false")
+
+    @property
+    def version(self):
+        if not hasattr(self, '_version'):
+            version = Git.get_version()
+            setattr(self, '_version', version)
+        return getattr(self, '_version')
 
     def run(self, command):
         command = self._configure_ssl_verify + command

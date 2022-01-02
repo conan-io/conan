@@ -11,8 +11,9 @@ from conans import DEFAULT_REVISION_V1, load, ONLY_V2
 from conans.client.tools import environment_append
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
+from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
 from conans.util.env_reader import get_env
+from conans.util.files import save
 
 
 @pytest.mark.artifactory_ready
@@ -102,8 +103,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Install, it wont resolve the remote2 because it is in the registry, it will use the cache
         self.c_v2.run("install {} --update".format(self.ref))
-        self.assertIn("lib/1.0@conan/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - "
-                      "Cache".format(pref.id), self.c_v2.out)
+        self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
 
         # If we force remote2, it will find an update
         self.c_v2.run("install {} --update -r remote2".format(self.ref))
@@ -1576,3 +1576,42 @@ class ServerRevisionsIndexes(unittest.TestCase):
 
         latest = self.server.server_store.get_last_revision(self.ref)
         self.assertEqual(latest.revision, DEFAULT_REVISION_V1)
+
+
+def test_necessary_update():
+    # https://github.com/conan-io/conan/issues/7235
+    c = TestClient(default_server_user=True)
+    save(c.cache.new_config_path, "core:allow_explicit_revision_update=True")
+    c.run("config set general.revisions_enabled=True")
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . pkg/0.1@")
+    rrev1 = "f3367e0e7d170aa12abccb175fee5f97"
+    c.run("upload * --all -c")
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("create . ")
+    rrev2 = "27ec09effe18a84f465dbc350e496335"
+    c.run("upload * --all -c")
+
+    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev1))})
+    c.run("install .")
+    assert rrev1 in c.out
+    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev2))})
+    c.run("install .")
+    assert rrev2 in c.out
+
+
+def test_touching_other_server():
+    # https://github.com/conan-io/conan/issues/9333
+    servers = OrderedDict([("remote1", TestServer()),
+                           ("remote2", None)])  # None server will crash if touched
+    c = TestClient(servers=servers, users={"remote1": [("conan", "password")]})
+    c.run("config set general.revisions_enabled=True")
+    c.save({"conanfile.py": GenConanfile().with_settings("os")})
+    c.run("create . pkg/0.1@conan/channel -s os=Windows")
+    c.run("upload * --all -c -r=remote1")
+    c.run("remove * -f")
+
+    # This is OK, binary found
+    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Windows")
+    c.run("install pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
+    assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out

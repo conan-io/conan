@@ -4,24 +4,36 @@ from conans.errors import ConanException
 
 
 DEFAULT_CONFIGURATION = {
-    "core:required_conan_version": "Will raise if the current Conan version does not match the defined version range.",
+    "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core.package_id:msvc_visual_incompatible": "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries",
-    "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
-    "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m (/maxCpuCount) when running MSBuild",
-    "tools.microsoft.msbuild:vs_version": "Defines the compiler version when using using the new msvc compiler",
-    "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
-    "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
-    "tools.build:processes": "Default jobs number",
-    "tools.ninja:jobs": "Argument for the --jobs parameter when running Ninja generator",
-    "tools.gnu.make:jobs": "Argument for the -j parameter when running Make generator",
-    "tools.gnu:make_program": "Indicate path to make program",
-    "tools.env.virtualenv:auto_use": "Automatically activate virtualenvs when changing into a directory",
-    "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
-    "tools.cmake.cmaketoolchain:msvc_parallel_compile": "Argument for the /MP when running msvc",
-    "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
+    "core:default_profile": "Defines the default host profile ('default' by default)",
+    "core:default_build_profile": "Defines the default build profile (None by default)",
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
+    "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
+    "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
+    "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
+    "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
+    "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
+    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchain at the beginning of conan_toolchain.cmake",
+    "tools.cmake.cmaketoolchain:system_name": "Define CMAKE_SYSTEM_NAME in CMakeToolchain",
+    "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
+    "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
+    "tools.env.virtualenv:auto_use": "Automatically activate virtualenv file generation",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
+    "tools.gnu:make_program": "Indicate path to make program",
+    "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
+    "tools.google.bazel:config": "Define Bazel config file",
+    "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
+    "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: "
+                                         "'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
+    "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
+    "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
+    "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community",
+    "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
+    "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
+    "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
+    "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI"
 }
 
 
@@ -44,6 +56,9 @@ class Conf(object):
             raise ConanException("Conf '{}' must be lowercase".format(name))
         self._values[name] = value
 
+    def __delitem__(self, name):
+        del self._values[name]
+
     def __repr__(self):
         return "Conf: " + repr(self._values)
 
@@ -59,9 +74,19 @@ class Conf(object):
 
     def update(self, other):
         """
+        :param other: has more priority than current one
         :type other: Conf
         """
         self._values.update(other._values)
+
+    def compose_conf(self, other):
+        """
+        :param other: other has less priority than current one
+        :type other: Conf
+        """
+        for k, v in other._values.items():
+            if k not in self._values:
+                self._values[k] = v
 
     @property
     def sha(self):
@@ -87,6 +112,11 @@ class ConfDefinition(object):
         """ if a module name is requested for this, always goes to the None-Global config
         """
         return self._pattern_confs.get(None, Conf())[module_name]
+
+    def __delitem__(self, module_name):
+        """ if a module name is requested for this, always goes to the None-Global config
+        """
+        del self._pattern_confs.get(None, Conf())[module_name]
 
     def get_conanfile_conf(self, ref_str):
         result = Conf()
@@ -119,16 +149,22 @@ class ConfDefinition(object):
                 new_v.update(existing)
             self._pattern_confs[k] = new_v
 
-    def dumps(self):
+    def as_list(self):
         result = []
         # It is necessary to convert the None for sorting
         for pattern, conf in sorted(self._pattern_confs.items(),
                                     key=lambda x: ("", x[1]) if x[0] is None else x):
             for name, value in sorted(conf.items()):
                 if pattern:
-                    result.append("{}:{}={}".format(pattern, name, value))
+                    result.append(("{}:{}".format(pattern, name), value))
                 else:
-                    result.append("{}={}".format(name, value))
+                    result.append((name, value))
+        return result
+
+    def dumps(self):
+        result = []
+        for name, value in self.as_list():
+            result.append("{}={}".format(name, value))
         return "\n".join(result)
 
     def loads(self, text, profile=False):
@@ -139,19 +175,27 @@ class ConfDefinition(object):
                 continue
             try:
                 left, value = line.split("=", 1)
-                value = value.strip()
-                left = left.strip()
-                if left.count(":") >= 2:
-                    pattern, name = left.split(":", 1)
-                else:
-                    pattern, name = None, left
-            except Exception:
+            except ValueError:
                 raise ConanException("Error while parsing conf value '{}'".format(line))
+            else:
+                self.update(left.strip(), value.strip(), profile=profile)
 
-            if not _is_profile_module(name):
-                if profile:
-                    raise ConanException("[conf] '{}' not allowed in profiles".format(line))
-                if pattern is not None:
-                    raise ConanException("Conf '{}' cannot have a package pattern".format(line))
-            conf = self._pattern_confs.setdefault(pattern, Conf())
-            conf[name] = value
+    def update(self, key, value, profile=False):
+        """
+        Add/update a new/existing Conf line
+
+        >> update("tools.microsoft.msbuild:verbosity", "Detailed")
+        """
+        if key.count(":") >= 2:
+            pattern, name = key.split(":", 1)
+        else:
+            pattern, name = None, key
+
+        if not _is_profile_module(name):
+            if profile:
+                raise ConanException("[conf] '{}' not allowed in profiles".format(key))
+            if pattern is not None:
+                raise ConanException("Conf '{}' cannot have a package pattern".format(key))
+
+        conf = self._pattern_confs.setdefault(pattern, Conf())
+        conf[name] = value

@@ -169,6 +169,12 @@ class _FileImporter(object):
                     raise ConanException("Import from unknown package folder '@%s'"
                                          % symbolic_dir_name)
 
+                if cpp_info.components:
+                    for comp_name, comp in cpp_info.components.items():
+                        src_dir = getattr(comp, symbolic_dir_name)
+                        if isinstance(src_dirs, list):  # it can return a "config" CppInfo item!
+                            src_dirs += src_dir
+
             for src_dir in src_dirs:
                 files = file_copier(pattern, src=src_dir, links=True, ignore_case=ignore_case,
                                     excludes=excludes, keep_path=keep_path)

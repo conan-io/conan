@@ -17,15 +17,13 @@ def test_components_order():
 
 def test_generator_properties_copy():
     cppinfo = NewCppInfo()
-    cppinfo.set_property("foo", "foo_value", "generator1")
-    cppinfo.set_property("foo", "var_value", "generator2")
-    cppinfo.set_property("foo2", "foo2_value", "generator1")
+    cppinfo.set_property("foo", "foo_value")
+    cppinfo.set_property("foo2", "foo2_value")
 
     copied = cppinfo.copy()
 
-    assert copied.get_property("foo") is None
-    assert copied.get_property("foo", "generator1") == "foo_value"
-    assert copied.get_property("foo", "generator2") == "var_value"
+    assert copied.get_property("foo") == "foo_value"
+    assert copied.get_property("foo2") == "foo2_value"
 
 
 def test_component_aggregation():
@@ -47,6 +45,8 @@ def test_component_aggregation():
     cppinfo.components["c2"].cxxflags = ["cxxflags_c2"]
     cppinfo.components["c2"].defines = ["defines_c2"]
     cppinfo.components["c2"].set_property("my_foo", ["bar", "bar2"])
+    cppinfo.components["c2"].set_property("cmake_build_modules", ["build_module_c2",
+                                                                  "build_module_c22"])
 
     cppinfo.components["c1"].requires = ["c2", "LIB_A::C1"]
     cppinfo.components["c1"].includedirs = ["includedir_c1"]
@@ -58,10 +58,9 @@ def test_component_aggregation():
     cppinfo.components["c1"].cxxflags = ["cxxflags_c1"]
     cppinfo.components["c1"].defines = ["defines_c1"]
     cppinfo.components["c1"].set_property("my_foo", "jander")
-    cppinfo.components["c1"].set_property("my_foo2", "bar2", "other_gen")
+    cppinfo.components["c1"].set_property("my_foo2", "bar2")
 
-    ret = cppinfo.copy()
-    ret.aggregate_components()
+    ret = cppinfo.aggregated_components()
 
     assert ret.includedirs == ["includedir_c1", "includedir_c2"]
     assert ret.libdirs == ["libdir_c1", "libdir_c2"]
@@ -71,15 +70,19 @@ def test_component_aggregation():
     assert ret.frameworkdirs == ["frameworkdir_c1", "frameworkdir_c2"]
     assert ret.cxxflags == ["cxxflags_c1", "cxxflags_c2"]
     assert ret.defines == ["defines_c1", "defines_c2"]
-    assert ret.get_property("my_foo") == ['bar', 'bar2']
-    assert ret.get_property("my_foo2", "other_gen") == "bar2"
+    # The properties are not aggregated because we cannot generalize the meaning of a property
+    # that belongs to a component, it could make sense to aggregate it or not, "cmake_target_name"
+    # for example, cannot be aggregated. But "cmake_build_modules" is aggregated.
+    assert ret.get_property("my_foo") is None
+    assert ret.get_property("my_foo2") is None
+    assert ret.get_property("cmake_build_modules") == None
 
     # If we change the internal graph the order is different
     cppinfo.components["c1"].requires = []
     cppinfo.components["c2"].requires = ["c1"]
 
-    ret = cppinfo.copy()
-    ret.aggregate_components()
+    cppinfo._aggregated = None  # Dirty, just to force recomputation
+    ret = cppinfo.aggregated_components()
 
     assert ret.includedirs == ["includedir_c2", "includedir_c1"]
     assert ret.libdirs == ["libdir_c2", "libdir_c1"]
@@ -87,6 +90,23 @@ def test_component_aggregation():
     assert ret.bindirs == ["bindir_c2", "bindir_c1"]
     assert ret.builddirs == ["builddir_c2", "builddir_c1"]
     assert ret.frameworkdirs == ["frameworkdir_c2", "frameworkdir_c1"]
+
+
+def test_cpp_info_sysroot_merge():
+    # If the value was already set is kept in the merge
+    one = NewCppInfo()
+    one.sysroot = "sys1"
+    two = NewCppInfo()
+    two.sysroot = "sys2"
+    one.merge(two)
+    assert one.sysroot == "sys1"
+
+    # If the value was not set it is assigned
+    one = NewCppInfo()
+    two = NewCppInfo()
+    two.sysroot = "sys2"
+    one.merge(two)
+    assert one.sysroot == "sys2"
 
 
 @pytest.mark.parametrize("aggregate_first", [True, False])
@@ -106,8 +126,8 @@ def test_cpp_info_merge_aggregating_components_first(aggregate_first):
     other.components["boo"].requires = ["boo2"]  # Deterministic order
 
     if aggregate_first:
-        cppinfo.aggregate_components()
-        other.aggregate_components()
+        cppinfo = cppinfo.aggregated_components()
+        other = other.aggregated_components()
 
     cppinfo.merge(other)
 
@@ -156,11 +176,13 @@ def test_from_old_cppinfo_components():
         assert getattr(cppinfo.components["foo2"], n) == ["var2_{}_1".format(n),
                                                           "var2_{}_2".format(n)]
 
-    assert cppinfo.components["foo"].get_property("cmake_build_modules") == \
-           ["foo_my_scripts.cmake", "foo.cmake"]
+    # The .build_modules are assigned to the root cppinfo because it is something
+    # global that make no sense to set as a component property
+    assert cppinfo.components["foo"].get_property("cmake_build_modules") is None
     assert cppinfo.components["foo"].requires == ["my_req::my_component"]
-    assert cppinfo.components["foo2"].get_property("cmake_build_modules") == \
-           ["foo2_my_scripts.cmake"]
+    assert cppinfo.components["foo2"].get_property("cmake_build_modules") is None
+
+    assert cppinfo.get_property("cmake_build_modules") is None
 
 
 def test_from_old_cppinfo_no_components():
@@ -179,8 +201,7 @@ def test_from_old_cppinfo_no_components():
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         assert getattr(cppinfo, n) == ["var_{}_1".format(n), "var_{}_2".format(n)]
 
-    assert cppinfo.get_property("cmake_build_modules") == ["my_scripts.cmake",
-                                                           "foo2.cmake", "foo.cmake"]
+    assert cppinfo.get_property("cmake_build_modules") is None
     assert cppinfo.requires == ["my_req::my_component"]
 
 
@@ -212,7 +233,7 @@ def test_fill_old_cppinfo():
     assert old_cpp.cxxflags == ["source_cxxflags"]
     assert old_cpp.cflags == ["package_cflags"]
     assert old_cpp.frameworkdirs == []
-    assert old_cpp.get_property("cmake_build_modules", "my_cmake.cmake")
+    assert old_cpp.get_property("cmake_build_modules")
     assert old_cpp.builddirs == ["my_build"]
 
 

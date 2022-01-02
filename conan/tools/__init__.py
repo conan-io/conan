@@ -1,1 +1,2 @@
-CONAN_TOOLCHAIN_ARGS_FILE = "conanbuild.json"
+CONAN_TOOLCHAIN_ARGS_FILE = "conanbuild.conf"
+CONAN_TOOLCHAIN_ARGS_SECTION = "toolchain"

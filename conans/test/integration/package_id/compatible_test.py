@@ -186,6 +186,7 @@ class CompatibleIDsTest(unittest.TestCase):
             [settings]
             compiler = intel
             compiler.version = 16
+            compiler.update = 311
             compiler.base = Visual Studio
             compiler.base.version = 8
             compiler.base.runtime = MD
@@ -195,10 +196,9 @@ class CompatibleIDsTest(unittest.TestCase):
                      "visual_profile": visual_profile})
         client.run("create . %s --profile visual_profile" % ref.full_str())
         client.run("install %s -pr intel_profile" % ref.full_str())
-        self.assertIn("Bye/0.1@us/ch: Main binary package '2ef6f6c768dd0f332dc252"
-                      "b72c30dee116632302' missing. Using compatible package "
-                      "'1151fe341e6b310f7645a76b4d3d524342835acc'",
-                      client.out)
+        self.assertIn("Bye/0.1@us/ch: Main binary package 'e47bdfb622243eda5b530bf2656b129862d7b47f'"
+                      " missing. Using compatible package "
+                      "'1151fe341e6b310f7645a76b4d3d524342835acc'", client.out)
         self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
 
     def test_wrong_base_compatible(self):
@@ -494,6 +494,35 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
+    def test_compatible_lockfile(self):
+        # https://github.com/conan-io/conan/issues/9002
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
+                def package_id(self):
+                    if self.settings.os == "Windows":
+                        compatible_pkg = self.info.clone()
+                        compatible_pkg.settings.os = "Linux"
+                        self.compatible_packages.append(compatible_pkg)
+                def package_info(self):
+                    self.output.info("PackageInfo!: OS: %s!" % self.settings.os)
+            """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/stable -s os=Linux")
+        self.assertIn("pkg/0.1@user/stable: PackageInfo!: OS: Linux!", client.out)
+        self.assertIn("pkg/0.1@user/stable: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'"
+                      " created", client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
+        client.run("lock create conanfile.py -s os=Windows --lockfile-out=deps.lock")
+        client.run("install conanfile.py --lockfile=deps.lock")
+        self.assertIn("pkg/0.1@user/stable: PackageInfo!: OS: Linux!", client.out)
+        self.assertIn("pkg/0.1@user/stable:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
+        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
+
 
 def test_msvc_visual_incompatible():
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
@@ -502,7 +531,7 @@ def test_msvc_visual_incompatible():
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.1
+        compiler.version=191
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release

@@ -377,9 +377,9 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn('#include "hello.h"', source)
         self.assertIn("hello();", source)
 
-    def test_new_v2_cmake(self):
+    def test_new_cmake_lib(self):
         client = TestClient()
-        client.run("new pkg/0.1 --template=v2_cmake")
+        client.run("new pkg/0.1 --template=cmake_lib")
         conanfile = client.load("conanfile.py")
         self.assertIn("CMakeToolchain", conanfile)
         conanfile = client.load("test_package/conanfile.py")
@@ -390,17 +390,17 @@ class NewCommandTest(unittest.TestCase):
     def test_new_reference(self):
         client = TestClient()
         # full reference
-        client.run("new MyPackage/1.3@myuser/testing --template=v2_cmake")
+        client.run("new MyPackage/1.3@myuser/testing --template=cmake_lib")
         conanfile = client.load("conanfile.py")
         self.assertIn('name = "MyPackage"', conanfile)
         self.assertIn('version = "1.3"', conanfile)
         # no username, no channel (with @)
-        client.run("new MyPackage/1.3@ --template=v2_cmake")
+        client.run("new MyPackage/1.3@ --template=cmake_lib")
         conanfile = client.load("conanfile.py")
         self.assertIn('version = "1.3"', conanfile)
         self.assertIn('name = "MyPackage"', conanfile)
         # no username, no channel (without @)
-        client.run("new MyPackage/1.3 --template=v2_cmake")
+        client.run("new MyPackage/1.3 --template=cmake_lib")
         conanfile = client.load("conanfile.py")
         self.assertIn('name = "MyPackage"', conanfile)
         self.assertIn('version = "1.3"', conanfile)

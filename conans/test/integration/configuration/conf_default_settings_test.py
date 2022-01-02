@@ -22,6 +22,9 @@ class MockOut(object):
 
     def warn(self, *args, **kwargs):
         pass
+    
+    def info(self, *args, **kwargs):
+        pass
 
 
 class ConfDefaultSettingsTest(unittest.TestCase):

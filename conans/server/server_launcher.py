@@ -1,6 +1,8 @@
 from conans.server.launcher import ServerLauncher
 
-launcher = ServerLauncher()
+from conans.util.env_reader import get_env
+
+launcher = ServerLauncher(server_dir=get_env("CONAN_SERVER_HOME"))
 app = launcher.server.root_app
 
 

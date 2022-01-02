@@ -29,7 +29,7 @@ class RunSCMTest(unittest.TestCase):
         # Mock the conanfile (return scm_data)
         conanfile = mock.MagicMock()
         conanfile.scm = {'type': 'git', 'url': 'auto', 'revision': 'auto'}
-        conanfile.source_folder = self.src_folder
+        conanfile.folders.base_source = self.src_folder
 
         # Mock functions called from inside _run_scm (tests will be here)
         def merge_directories(src, dst, excluded=None):
@@ -58,7 +58,7 @@ class RunSCMTest(unittest.TestCase):
         url = 'whatever'
         conanfile = mock.MagicMock()
         conanfile.scm = {'type': 'git', 'url': url, 'revision': 'auto', 'subfolder': subfolder}
-        conanfile.source_folder = self.src_folder
+        conanfile.folders.base_source = self.src_folder
 
         # Mock functions called from inside _run_scm (tests will be here)
         def clean_source_folder(folder):

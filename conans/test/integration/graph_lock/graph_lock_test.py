@@ -32,22 +32,26 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("lock create conanfile.py --lockfile-out=conan.lock")
         client.run("install . --lockfile=conan.lock -s os=Windows", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'host' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'host' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock -pr=default", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'host' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'host' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock -o myoption=default", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'host' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'host' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock -s:b os=Windows", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'build' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock --profile:build=default", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'build' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock -o:b myoption=default", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'build' "
+                      "when using lockfile", client.out)
+        client.run("install . --lockfile=conan.lock -c:b core:required_conan_version=>=1.36",
+                   assert_error=True)
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'build' "
                       "when using lockfile", client.out)
 
     def test_error_old_format(self):
@@ -539,3 +543,66 @@ class AddressRootNodetest(unittest.TestCase):
         client.run("lock create conanfile.py --lockfile-out=conan.lock")
         client.run("install . --lockfile=conan.lock")
         self.assertIn("conanfile.py (pkg/0.1): Installing package", client.out)
+
+
+def test_error_test_command():
+    # https://github.com/conan-io/conan/issues/9088
+    client = TestClient()
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "pkg/conanfile.py": GenConanfile().with_requires("dep/[>=1.0]"),
+                 "test_package/conanfile.py": GenConanfile().with_test("pass")})
+    client.run("create dep dep/1.0@")
+    client.run("create pkg pkg/1.0@")
+    client.run("lock create --ref=pkg/1.0@")
+    client.run("create dep dep/1.1@")
+    client.run("test test_package pkg/1.0@ --lockfile=conan.lock")
+    assert "dep/1.0" in client.out
+    assert "dep/1.1" not in client.out
+    client.run("test test_package pkg/1.0@")
+    assert "dep/1.0" not in client.out
+    assert "dep/1.1" in client.out
+
+
+def test_override_not_locked():
+    # https://github.com/conan-io/conan/pull/8907
+    client = TestClient()
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "pkg/conanfile.py": GenConanfile().with_requires("dep/[*]"),
+                 "consumer/conanfile.py":
+                     GenConanfile().with_requirement("pkg/1.0").with_requirement("dep/1.0",
+                                                                                 override=True)})
+    client.run("create dep dep/1.0@")
+    client.run("create dep dep/1.1@")
+    client.run("create pkg pkg/1.0@")
+    client.run("lock create consumer/conanfile.py --lockfile-out=app1.lock")
+    client.run("install consumer/conanfile.py --lockfile app1.lock")
+
+
+def test_compatible_transient_options():
+    # https://github.com/conan-io/conan/issues/9591
+    client = TestClient()
+
+    lib_base = GenConanfile().with_option("shared", [True, False])\
+        .with_default_option("shared", False)
+
+    lib_compatible = textwrap.dedent("""
+        from conans import ConanFile
+        class LibCompatibleConanFile(ConanFile):
+            settings = "os"
+            options = {"shared": [True, False]}
+            default_options = {"shared": False}
+            requires = "base/1.0"
+            def package_id(self):
+                if self.settings.os == "Windows":
+                    compatible_pkg = self.info.clone()
+                    compatible_pkg.settings.os = "Linux"
+                    self.compatible_packages.append(compatible_pkg)
+        """)
+    consumer = GenConanfile().with_requires("compatible/1.0")
+    client.save({"base/conanfile.py": lib_base,
+                 "compat/conanfile.py": lib_compatible,
+                 "consumer/conanfile.py": consumer})
+    client.run("create base base/1.0@")
+    client.run("create compat compatible/1.0@ -s os=Linux")
+    client.run("lock create consumer/conanfile.py -s os=Windows --lockfile-out=deps.lock")
+    client.run("install consumer/conanfile.py --lockfile=deps.lock")

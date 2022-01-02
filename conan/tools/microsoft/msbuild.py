@@ -1,5 +1,3 @@
-import os
-
 from conans.errors import ConanException
 
 
@@ -9,13 +7,6 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
         if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
             raise ConanException("Unknown msbuild verbosity: {}".format(verbosity))
         return '/verbosity:{}'.format(verbosity)
-
-
-def msbuild_max_cpu_count_cmd_line_arg(conanfile):
-    max_cpu_count = conanfile.conf["tools.microsoft.msbuild:max_cpu_count"] or \
-                    conanfile.conf["tools.build:processes"]
-    if max_cpu_count:
-        return "/m:{}".format(max_cpu_count)
 
 
 def msbuild_arch(arch):
@@ -45,16 +36,15 @@ class MSBuild(object):
         if verbosity:
             cmd += " {}".format(verbosity)
 
-        max_cpu_count = msbuild_max_cpu_count_cmd_line_arg(self._conanfile)
-        if max_cpu_count:
-            cmd += " {}".format(max_cpu_count)
+        maxcpucount = self._conanfile.conf["tools.microsoft.msbuild:max_cpu_count"]
+        if maxcpucount:
+            cmd += " /m:{}".format(maxcpucount)
 
         return cmd
 
     def build(self, sln):
         cmd = self.command(sln)
-        vcvars = os.path.join(self._conanfile.generators_folder, "conanvcvars")
-        self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
+        self._conanfile.run(cmd)
 
     @staticmethod
     def get_version(_):
