@@ -610,6 +610,14 @@ class TestClient(object):
         tmp.revision = rrev
         return tmp
 
+    def alias(self, source_target):
+        source, target = source_target.split()
+        source = RecipeReference.loads(source)
+        target = target.split("/", 1)[1]
+        self.run(f"new alias --name={source.name} --version={source.version} --target={target}")
+        self.run(f"export . --user={source.user} --channel={source.channel}")
+        os.remove(os.path.join(self.current_folder, "conanfile.py"))
+
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
         if folder is not None:
             folder = os.path.join(self.current_folder, folder)
