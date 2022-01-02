@@ -615,7 +615,9 @@ class TestClient(object):
         source = RecipeReference.loads(source)
         target = target.split("/", 1)[1]
         self.run(f"new alias --name={source.name} --version={source.version} --target={target}")
-        self.run(f"export . --user={source.user} --channel={source.channel}")
+        user = f"--user={source.user}" if source.user else ""
+        channel = f"--channel={source.channel}" if source.channel else ""
+        self.run(f"export . {user} {channel}")
         os.remove(os.path.join(self.current_folder, "conanfile.py"))
 
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
