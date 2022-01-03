@@ -19,15 +19,15 @@ def _get_aliases_pc_files_and_content(conanfile, dep, aliases_info, root_pc_file
                 description="Alias %s for %s" % (alias, name),
             )
             if pc_name in pc_files:
-                conanfile.out.warn("[%s] The PC alias name %s already exists and it matches with "
-                                   "another pkg_config_aliases. Please, review all the "
-                                   "pkg_config_aliases. Skipping it!"
-                                   % (dep, pc_name))
+                conanfile.output.warn("[%s] The PC alias name %s already exists and it matches with "
+                                      "another alias one. Please, review all the "
+                                      "pkg_config_aliases defined. Skipping it!"
+                                      % (dep, pc_name))
             elif pc_name in root_pc_files:
-                conanfile.out.warn("[%s] The PC alias name %s already exists and it matches with "
-                                   "another pkg_config_name. Please, review all the "
-                                   "pkg_config_aliases. Skipping it!"
-                                   % (dep, pc_name))
+                conanfile.output.warn("[%s] The PC alias name %s already exists and it matches with "
+                                      "another package/component one. Please, review all the "
+                                      "pkg_config_aliases defined. Skipping it!"
+                                      % (dep, pc_name))
             else:
                 pc_files[pc_name] = pc_content
     return pc_files
@@ -50,10 +50,10 @@ def _get_components_pc_files_and_content(conanfile, dep, components_info):
             description,
             cpp_info=pc_info_component.cpp_info)
         if pc_name in pc_files:
-            conanfile.out.warn("[%s] The PC component name %s already exists and it matches with "
-                               "another component pkg_config_name. Please, review all the "
-                               "component's pkg_config_name. Skipping it!"
-                               % (dep, pc_name))
+            conanfile.output.warn("[%s] The PC component name %s already exists and it matches with "
+                                  "another component one. Please, review all the "
+                                  "component's pkg_config_name defined. Skipping it!"
+                                  % (dep, pc_name))
         else:
             pc_files[pc_name] = pc_content
     return pc_files
@@ -73,9 +73,9 @@ def _get_package_with_components_pc_files_and_content(conanfile, dep, package_in
         description
     )
     if pc_name in pc_files:
-        conanfile.out.warn("[%s] The PC package name %s already exists and it matches with "
-                           "another component pkg_config_name. Please, review all the "
-                           "component's pkg_config_name. Skipping it!" % (dep, pc_name))
+        conanfile.output.warn("[%s] The PC package name %s already exists and it matches with "
+                              "another component one. Please, review all the "
+                              "component's pkg_config_name defined. Skipping it!" % (dep, pc_name))
     else:
         pc_files[pc_name] = pc_content
     return pc_files
