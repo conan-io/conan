@@ -71,7 +71,6 @@ def test_component_aggregation():
     cppinfo.components["c2"].requires = ["c1"]
 
     cppinfo._aggregated = None  # Dirty, just to force recomputation
-    cppinfo._sorted_components = None
     ret = cppinfo.aggregated_components()
 
     assert ret.includedirs == ["includedir_c2", "includedir_c1"]

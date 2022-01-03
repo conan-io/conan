@@ -80,6 +80,7 @@ def test_properties_dont_affect_legacy_cmake_with_components(setup_client):
                 self.cpp_info.components["mycomponent"].set_property("cmake_target_name", "mycomponent-name-but-different")
                 self.cpp_info.components["mycomponent"].set_property("cmake_build_modules", [os.path.join("lib", "non-existing.cmake")])
                 self.cpp_info.components["mycomponent"].set_property("custom_name", "mycomponent-name")
+
                 self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
                 self.cpp_info.filenames["cmake_find_package"] = "MyFileName"
                 self.cpp_info.filenames["cmake_find_package_multi"] = "MyFileName"
@@ -212,7 +213,7 @@ def test_properties_dont_affect_legacy_cmake_specific_generators(setup_client):
                 self.cpp_info.set_property("cmake_target_name", "other-mypkg-name")
                 self.cpp_info.set_property("cmake_target_name", "other-mypkg-name-multi")
                 self.cpp_info.set_property("cmake_build_modules",[os.path.join("lib",
-                                                                 "mypkg_bm.cmake")])
+                                                                 "mypkg_bm.cmake")],)
                 self.cpp_info.set_property("cmake_build_modules",[os.path.join("lib",
                                                                  "mypkg_anootherbm.cmake")])
 
