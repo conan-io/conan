@@ -3,7 +3,7 @@ import unittest
 from time import sleep
 
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, to_file_bytes, walk
+from conans.util.files import save, to_file_bytes
 
 
 class SaveTestCase(unittest.TestCase):
@@ -33,11 +33,3 @@ class SaveTestCase(unittest.TestCase):
     def test_modified_only_false(self):
         save(self.filepath, "other content", only_if_modified=False)
         self.assertNotEqual(self.timestamp, os.path.getmtime(self.filepath))
-
-    def test_walk_encoding(self):
-        badfilename = "\xE3\x81\x82badfile.txt"
-        folder = temp_folder()
-        filepath = os.path.join(folder, badfilename)
-        save(to_file_bytes(filepath), "contents")
-        a_file = [f[0] for _, _, f in walk(folder)][0]
-        self.assertTrue(a_file.endswith("badfile.txt"))

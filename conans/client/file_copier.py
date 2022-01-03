@@ -3,7 +3,7 @@ import os
 import shutil
 from collections import defaultdict
 
-from conans.util.files import mkdir, walk
+from conans.util.files import mkdir
 
 
 def report_copied_files(copied, scoped_output, message_suffix="Copied"):
@@ -148,7 +148,7 @@ class FileCopier(object):
         else:
             excludes = []
 
-        for root, subfolders, files in walk(src, followlinks=True):
+        for root, subfolders, files in os.walk(src, followlinks=True):
             if root in excluded_folders:
                 subfolders[:] = []
                 continue
