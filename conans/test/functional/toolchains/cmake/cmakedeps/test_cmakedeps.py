@@ -7,7 +7,7 @@ import pytest
 from conans.client.tools import replace_in_file
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_cpp
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
 
@@ -151,17 +151,12 @@ def test_system_libs():
         if build_type == "Release":
             assert "System libs release: %s" % library_name in client.out
             assert "Libraries to Link release: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>")
+            target_libs = "$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
         else:
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Debug>:CONAN_LIB::Test_lib1_DEBUG;sys1d;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>")
+            target_libs = "$<$<CONFIG:Debug>:CONAN_LIB::Test_lib1_DEBUG;sys1d;"
+
         assert "Target libs: %s" % target_libs in client.out
 
 
@@ -276,3 +271,72 @@ def test_buildirs_working():
     c.save({"conanfile.py": consumer_conanfile, "CMakeLists.txt": cmake})
     c.run("create .")
     assert "MYVAR=>Like a Rolling Stone" in c.out
+
+
+@pytest.mark.tool_cmake
+def test_cpp_info_link_objects():
+    client = TestClient()
+    obj_ext = "obj" if platform.system() == "Windows" else "o"
+    cpp_info = {"objects": [os.path.join("lib", "myobject.{}".format(obj_ext))]}
+    object_cpp = gen_function_cpp(name="myobject")
+    object_h = gen_function_h(name="myobject")
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyObject)
+        file(GLOB HEADERS *.h)
+        add_library(myobject OBJECT myobject.cpp)
+        if( WIN32 )
+            set(OBJ_PATH "myobject.dir/Release/myobject${CMAKE_C_OUTPUT_EXTENSION}")
+        else()
+            set(OBJ_PATH "CMakeFiles/myobject.dir/myobject.cpp${CMAKE_C_OUTPUT_EXTENSION}")
+        endif()
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${OBJ_PATH}
+                DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+                RENAME myobject${CMAKE_C_OUTPUT_EXTENSION})
+        install(FILES ${HEADERS}
+                DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+    """)
+
+    test_package_cpp = gen_function_cpp(name="main", includes=["myobject"], calls=["myobject"])
+    test_package_cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(example)
+        find_package(myobject REQUIRED)
+        add_executable(example example.cpp)
+        target_link_libraries(example myobject::myobject)
+    """)
+
+    client.save({"CMakeLists.txt": cmakelists,
+                 "conanfile.py": GenConanfile("myobject", "1.0").with_package_info(cpp_info=cpp_info,
+                                                                                   env_info={})
+                                                                .with_exports_sources("*")
+                                                                .with_cmake_build()
+                                                                .with_package("cmake = CMake(self)",
+                                                                              "cmake.install()"),
+                 "myobject.cpp": object_cpp,
+                 "myobject.h": object_h,
+                 "test_package/conanfile.py": GenConanfile().with_cmake_build()
+                                                            .with_import("import os")
+                                                            .with_test('path = "{}".format(self.settings.build_type) '
+                                                                       'if self.settings.os == "Windows" else "."')
+                                                            .with_test('self.run("{}{}example".format(path, os.sep))'),
+                 "test_package/example.cpp": test_package_cpp,
+                 "test_package/CMakeLists.txt": test_package_cmakelists})
+
+    client.run("create . -s build_type=Release")
+    assert "myobject: Release!" in client.out
+
+
+def test_private_transitive():
+    # https://github.com/conan-io/conan/issues/9514
+    client = TestClient()
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "pkg/conanfile.py": GenConanfile().with_require("dep/0.1", private=True),
+                 "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                        .with_settings("os", "build_type", "arch")})
+    client.run("create dep dep/0.1@")
+    client.run("create pkg pkg/0.1@")
+    client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release")
+    assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip" in client.out
+    data_cmake = client.load("pkg-release-x86_64-data.cmake")
+    assert "set(pkg_FIND_DEPENDENCY_NAMES ${pkg_FIND_DEPENDENCY_NAMES} )" in data_cmake

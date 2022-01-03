@@ -519,3 +519,80 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.client.run("remove lib/1.0 -f -r default")
         self.client.run("install lib/1.0@", assert_error=True)
         self.assertIn("ERROR: Unable to find 'lib/1.0' in remotes", self.client.out)
+
+
+class RemovePackageRevisionsTest(unittest.TestCase):
+
+    NO_SETTINGS_RREF = "f3367e0e7d170aa12abccb175fee5f97"
+
+    def setUp(self):
+        self.test_server = TestServer(users={"user": "password"},
+                                      write_permissions=[("foobar/0.1@*/*", "user")])
+        servers = {"default": self.test_server}
+        self.client = TestClient(servers=servers, users={"default": [("user", "password")]})
+        self.client.run("config set general.revisions_enabled=1")
+
+    def test_remove_local_package_id_argument(self):
+        """ Remove package ID based on recipe revision. The package must be deleted, but
+            the recipe must be preserved
+            Package ID is a separated argument: <package>#<rref> -p <pkgid>
+        """
+        self.client.save({"conanfile.py": GenConanfile()})
+        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("info foobar/0.1@user/testing")
+        self.assertIn("Binary: Cache", self.client.out)
+        self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
+        self.assertIn("Package revision: 83c38d3b4e5f1b8450434436eec31b00", self.client.out)
+
+        self.client.run("remove -f foobar/0.1@user/testing#{} -p {}"
+                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
+        self.client.run("info foobar/0.1@user/testing")
+        self.assertIn("Binary: Missing", self.client.out)
+        self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
+        self.assertIn("Package revision: None", self.client.out)
+
+    def test_remove_local_package_id_reference(self):
+        """ Remove package ID based on recipe revision. The package must be deleted, but
+            the recipe must be preserved.
+            Package ID is part of package reference: <package>#<rref>:<pkgid>
+        """
+        self.client.save({"conanfile.py": GenConanfile()})
+        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("info foobar/0.1@user/testing")
+        self.assertIn("Binary: Cache", self.client.out)
+        self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
+        self.assertIn("Package revision: 83c38d3b4e5f1b8450434436eec31b00", self.client.out)
+
+        self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
+                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
+        self.client.run("info foobar/0.1@user/testing")
+        self.assertIn("Binary: Missing", self.client.out)
+        self.assertIn("Revision: f3367e0e7d170aa12abccb175fee5f97", self.client.out)
+        self.assertIn("Package revision: None", self.client.out)
+
+    def test_remove_duplicated_package_id(self):
+        """ The package ID must not be present in both -p argument and package reference
+        """
+        self.client.save({"conanfile.py": GenConanfile()})
+        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("remove -f foobar/0.1@user/testing#{}:{} -p {}"
+                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID,
+                                NO_SETTINGS_PACKAGE_ID), assert_error=True)
+        self.assertIn("Use package ID only as -p argument or reference, not both", self.client.out)
+
+    def test_remove_remote_package_id_reference(self):
+        """ Remove remote package ID based on recipe revision. The package must be deleted, but
+            the recipe must be preserved.
+            Package ID is part of package reference: <package>#<rref>:<pkgid>
+        """
+        self.client.save({"conanfile.py": GenConanfile()})
+        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("upload foobar/0.1@user/testing -r default -c --all")
+        self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
+                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
+        self.client.run("info foobar/0.1@user/testing")
+        self.assertIn("Binary: Download", self.client.out)
+        self.client.run("remove -f foobar/0.1@user/testing#{}:{} -r default"
+                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
+        self.client.run("info foobar/0.1@user/testing")
+        self.assertIn("Binary: Missing", self.client.out)

@@ -11,11 +11,11 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
-@pytest.mark.tool_msys2()
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool_msys2
 def test_autotools_bash_complete():
     client = TestClient(path_with_spaces=False)
-    bash_path = tools_locations["msys2"]["Windows"]["default"] + "/bash.exe"
+    bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
     save(client.cache.new_config_path, textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path={}
@@ -45,10 +45,10 @@ def test_autotools_bash_complete():
 
                 # Force autotools to use "cl" compiler
                 # FIXME: Should this be added to AutotoolsToolchain when visual?
-                env = Environment(self)
+                env = Environment()
                 env.define("CXX", "cl")
                 env.define("CC", "cl")
-                env.save_script("conan_compiler")
+                env.vars(self).save_script("conan_compiler")
 
             def build(self):
                 # These commands will run in bash activating first the vcvars and
@@ -65,13 +65,13 @@ def test_autotools_bash_complete():
                  "configure.ac": configure_ac,
                  "Makefile.am": makefile_am,
                  "main.cpp": main})
-    client.run("install .")
+    client.run("install . -s:b os=Windows -s:h os=Windows")
     client.run("build .")
     client.run_command("main.exe")
     check_exe_run(client.out, "main", "msvc", None, "Release", "x86_64", None)
 
-    bat_contents = client.load("conanenv.bat")
-    sh_contents = client.load("conanenv.sh")
+    bat_contents = client.load("conanbuild.bat")
+    sh_contents = client.load("conanbuild.sh")
 
     assert "conanvcvars.bat" in bat_contents
     assert "conan_compiler.sh" in sh_contents and "conanautotoolstoolchain.sh" in sh_contents

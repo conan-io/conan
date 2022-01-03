@@ -6,7 +6,6 @@ import pytest
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 
 
@@ -22,10 +21,10 @@ def editable_cmake(generator):
            path=os.path.join(c.current_folder, "pkg"))
 
     def build_dep():
-        c.run("install .")
-        c.run("build .")
-        c.run("install . -s build_type=Debug")
-        c.run("build .")
+        c.run("install . -if=install_release")
+        c.run("build . -if=install_release")
+        c.run("install . -s build_type=Debug -if=install_debug")
+        c.run("build . -if=install_debug")
 
     with c.chdir("dep"):
         c.run("editable add . dep/0.1@")
@@ -94,10 +93,10 @@ def editable_cmake_exe(generator):
     c.save(pkg_cmake("dep", "0.1", exe=True), path=os.path.join(c.current_folder, "dep"))
 
     def build_dep():
-        c.run("install . -o dep:shared=True")
-        c.run("build .")
-        c.run("install . -s build_type=Debug -o dep:shared=True")
-        c.run("build .")
+        c.run("install . -o dep:shared=True -if=install_release")
+        c.run("build . -if=install_release")
+        c.run("install . -s build_type=Debug -o dep:shared=True -if=install_debug")
+        c.run("build . -if=install_debug")
 
     with c.chdir("dep"):
         c.run("editable add . dep/0.1@")
@@ -105,19 +104,18 @@ def editable_cmake_exe(generator):
 
     def run_pkg(msg):
         # FIXME: This only works with ``--install-folder``, layout() will break this
-        cmd_release = environment_wrap_command(ConanFileMock(), "install_release/conanrunenv",
+        cmd_release = environment_wrap_command("conanrunenv-release-x86_64",
                                                "dep_app", cwd=c.current_folder)
         c.run_command(cmd_release)
         assert "{}: Release!".format(msg) in c.out
-        cmd_release = environment_wrap_command(ConanFileMock(), "install_debug/conanrunenv",
+        cmd_release = environment_wrap_command("conanrunenv-debug-x86_64",
                                                "dep_app", cwd=c.current_folder)
         c.run_command(cmd_release)
         assert "{}: Debug!".format(msg) in c.out
 
     with c.chdir("pkg"):
-        c.run("install dep/0.1@ -o dep:shared=True -if=install_release -g VirtualRunEnv")
-        c.run("install dep/0.1@ -o dep:shared=True -if=install_debug -s build_type=Debug "
-              "-g VirtualRunEnv")
+        c.run("install dep/0.1@ -o dep:shared=True -g VirtualRunEnv")
+        c.run("install dep/0.1@ -o dep:shared=True -s build_type=Debug -g VirtualRunEnv")
         run_pkg("dep")
 
     # Do a source change in the editable!

@@ -3,6 +3,7 @@ import errno
 import os
 import platform
 import subprocess
+from contextlib import contextmanager
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
@@ -50,12 +51,12 @@ def mkdir(conanfile, path):
     os.makedirs(path)
 
 
-def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
-        pattern=None, verify=True, retry=None, retry_wait=None,
-        overwrite=False, auth=None, headers=None, strip_root=False):
+def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename="",
+        keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
+        auth=None, headers=None, strip_root=False):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
-    requester = conanfile._conan_requester
+
     output = conanfile.output
     if not filename:  # deduce filename from the URL
         url_base = url[0] if isinstance(url, (list, tuple)) else url
@@ -64,8 +65,8 @@ def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename=""
                                  "parameter.".format(url_base))
         filename = os.path.basename(url_base)
 
-    download(url, filename, out=output, requester=requester, verify=verify,
-             retry=retry, retry_wait=retry_wait, overwrite=overwrite, auth=auth, headers=headers,
+    download(conanfile, url, filename, verify=verify,
+             retry=retry, retry_wait=retry_wait, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
     unzip(filename, destination=destination, keep_permissions=keep_permissions, pattern=pattern,
           output=output, strip_root=strip_root)
@@ -73,7 +74,10 @@ def get(conanfile, url, md5='', sha1='', sha256='', destination=".", filename=""
 
 
 def ftp_download(conanfile, ip, filename, login='', password=''):
+    # TODO: Check if we want to join this method with download() one, based on ftp:// protocol
+    # this has been requested by some users, but the signature is a bit divergent
     import ftplib
+    ftp = None
     try:
         ftp = ftplib.FTP(ip)
         ftp.login(login, password)
@@ -89,33 +93,27 @@ def ftp_download(conanfile, ip, filename, login='', password=''):
             pass
         raise ConanException("Error in FTP download from %s\n%s" % (ip, str(e)))
     finally:
-        try:
+        if ftp:
             ftp.quit()
-        except Exception:
-            pass
 
 
-def download(conanfile, url, filename, verify=True, out=None, retry=None, retry_wait=None, overwrite=False,
-             auth=None, headers=None, requester=None, md5='', sha1='', sha256=''):
+def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
+             auth=None, headers=None, md5='', sha1='', sha256=''):
     """Retrieves a file from a given URL into a file with a given filename.
        It uses certificates from a list of known verifiers for https downloads,
        but this can be optionally disabled.
 
+    :param conanfile:
     :param url: URL to download. It can be a list, which only the first one will be downloaded, and
                 the follow URLs will be used as mirror in case of download error.
     :param filename: Name of the file to be created in the local storage
     :param verify: When False, disables https certificate validation
-    :param out: An object with a write() method can be passed to get the output. stdout will use if
-                not specified
     :param retry: Number of retries in case of failure. Default is overriden by general.retry in the
                   conan.conf file or an env variable CONAN_RETRY
     :param retry_wait: Seconds to wait between download attempts. Default is overriden by
                        general.retry_wait in the conan.conf file or an env variable CONAN_RETRY_WAIT
-    :param overwrite: When True, Conan will overwrite the destination file if exists. Otherwise it
-                      will raise an exception
     :param auth: A tuple of user and password to use HTTPBasic authentication
     :param headers: A dictionary with additional headers
-    :param requester: HTTP requests instance
     :param md5: MD5 hash code to check the downloaded file
     :param sha1: SHA-1 hash code to check the downloaded file
     :param sha256: SHA-256 hash code to check the downloaded file
@@ -125,19 +123,25 @@ def download(conanfile, url, filename, verify=True, out=None, retry=None, retry_
     out = conanfile.output
     requester = conanfile._conan_requester
     config = conanfile.conf
+    overwrite = True
 
-    # It might be possible that users provide their own requester
-    retry = retry if retry is not None else int(config["tools.files.download:retry"])
-    retry = retry if retry is not None else 1
-    retry_wait = retry_wait if retry_wait is not None else int(config["tools.files.download:retry_wait"])
-    retry_wait = retry_wait if retry_wait is not None else 5
+    if config["tools.files.download:retry"]:
+        retry = int(config["tools.files.download:retry"])
+    elif retry is None:
+        retry = 1
+
+    if config["tools.files.download:retry_wait"]:
+        retry_wait = int(config["tools.files.download:retry_wait"])
+    elif retry_wait is None:
+        retry_wait = 5
 
     checksum = sha256 or sha1 or md5
+    download_cache = config["tools.files.download:download_cache"] if checksum else None
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        run_downloader(requester=requester, output=out, verify=verify, config=config,
-                       user_download=True, use_cache=bool(config and checksum), url=file_url,
+        run_downloader(requester=requester, output=out, verify=verify, download_cache=download_cache,
+                       user_download=True, url=file_url,
                        file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
                        auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
         out.writeln("")
@@ -185,15 +189,18 @@ def rename(conanfile, src, dst):
             raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
 
 
-def load_toolchain_args(generators_folder=None):
+def load_toolchain_args(generators_folder=None, namespace=None):
     """
     Helper function to load the content of any CONAN_TOOLCHAIN_ARGS_FILE
 
     :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE.
+    :param namespace: `str` namespace to be prepended to the filename.
     :return: <class 'configparser.SectionProxy'>
     """
-    args_file = os.path.join(generators_folder, CONAN_TOOLCHAIN_ARGS_FILE) if generators_folder \
+    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
         else CONAN_TOOLCHAIN_ARGS_FILE
+    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
+        else namespace_name
     toolchain_config = configparser.ConfigParser()
     toolchain_file = toolchain_config.read(args_file)
     if not toolchain_file:
@@ -207,18 +214,31 @@ def load_toolchain_args(generators_folder=None):
                              (CONAN_TOOLCHAIN_ARGS_SECTION, args_file))
 
 
-def save_toolchain_args(content, generators_folder=None):
+def save_toolchain_args(content, generators_folder=None, namespace=None):
     """
     Helper function to save the content into the CONAN_TOOLCHAIN_ARGS_FILE
 
     :param content: `dict` all the information to be saved into the toolchain file.
+    :param namespace: `str` namespace to be prepended to the filename.
     :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE
     """
     # Let's prune None values
     content_ = {k: v for k, v in content.items() if v is not None}
-    args_file = os.path.join(generators_folder, CONAN_TOOLCHAIN_ARGS_FILE) if generators_folder \
+    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
         else CONAN_TOOLCHAIN_ARGS_FILE
+    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
+        else namespace_name
     toolchain_config = configparser.ConfigParser()
     toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
     with open(args_file, "w") as f:
         toolchain_config.write(f)
+
+
+@contextmanager
+def chdir(conanfile, newdir):
+    old_path = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)

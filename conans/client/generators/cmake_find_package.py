@@ -31,17 +31,17 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         {find_libraries_block}
         if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
             # Target approach
-            if(NOT TARGET {name}::{name})
-                add_library({name}::{name} INTERFACE IMPORTED)
+            if(NOT TARGET {namespace}::{name})
+                add_library({namespace}::{name} INTERFACE IMPORTED)
                 if({name}_INCLUDE_DIRS)
-                    set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+                    set_target_properties({namespace}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
                                           "${{{name}_INCLUDE_DIRS}}")
                 endif()
-                set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES
+                set_property(TARGET {namespace}::{name} PROPERTY INTERFACE_LINK_LIBRARIES
                              "${{{name}_LIBRARIES_TARGETS}};${{{name}_LINKER_FLAGS_LIST}}")
-                set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS
+                set_property(TARGET {namespace}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                              ${{{name}_COMPILE_DEFINITIONS}})
-                set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS
+                set_property(TARGET {namespace}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS
                              "${{{name}_COMPILE_OPTIONS_LIST}}")
                 {find_dependencies_block}
             endif()
@@ -74,9 +74,9 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
         set({{ pkg_name }}_COMPONENTS {{ pkg_components }})
 
-        if({{ pkg_name }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_name }}_COMPONENTS "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
+        if({{ pkg_filename }}_FIND_COMPONENTS)
+            foreach(_FIND_COMPONENT {{ '${'+pkg_filename+'_FIND_COMPONENTS}' }})
+                list(FIND {{ pkg_name }}_COMPONENTS "{{ namespace }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 else()
@@ -172,17 +172,17 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
             # Target approach
-            if(NOT TARGET {{ pkg_name }}::{{ comp_name }})
-                add_library({{ pkg_name }}::{{ comp_name }} INTERFACE IMPORTED)
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+            if(NOT TARGET {{ namespace }}::{{ comp_name }})
+                add_library({{ namespace }}::{{ comp_name }} INTERFACE IMPORTED)
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
                                       "{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS}' }}")
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_DIRECTORIES
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_DIRECTORIES
                                       "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS}' }}")
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
                                       "{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS}' }};{{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST}' }}")
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_DEFINITIONS
                                       "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS}' }}")
-                set_target_properties({{ pkg_name }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
+                set_target_properties({{ namespace }}::{{ comp_name }} PROPERTIES INTERFACE_COMPILE_OPTIONS
                                       "{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C}' }};{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX}' }}")
             endif()
         endif()
@@ -192,10 +192,10 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         ########## GLOBAL TARGET ####################################################################
 
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
-            if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
-                add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
+            if(NOT TARGET {{ namespace }}::{{ pkg_name }})
+                add_library({{ namespace }}::{{ pkg_name }} INTERFACE IMPORTED)
             endif()
-            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY
+            set_property(TARGET {{ namespace }}::{{ pkg_name }} APPEND PROPERTY
                          INTERFACE_LINK_LIBRARIES "{{ '${'+pkg_name+'_COMPONENTS}' }}")
         endif()
 
@@ -227,10 +227,12 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
             pkg_filename = self._get_filename(cpp_info)
             pkg_findname = self._get_name(cpp_info)
+            pkg_namespace = pkg_findname
             ret["Find%s.cmake" % pkg_filename] = self._find_for_dep(
                 pkg_name=pkg_name,
                 pkg_findname=pkg_findname,
                 pkg_filename=pkg_filename,
+                pkg_namespace=pkg_namespace,
                 cpp_info=cpp_info
             )
         return ret
@@ -245,7 +247,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
             ret.append((comp_genname, deps_cpp_cmake))
         return ret
 
-    def _find_for_dep(self, pkg_name, pkg_findname, pkg_filename, cpp_info):
+    def _find_for_dep(self, pkg_name, pkg_findname, pkg_filename, pkg_namespace, cpp_info):
         # return the content of the FindXXX.cmake file for the package "pkg_name"
         self._validate_components(cpp_info)
 
@@ -263,7 +265,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         if cpp_info.components:
             components = self._get_components(pkg_name, cpp_info)
             # Note these are in reversed order, from more dependent to less dependent
-            pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
+            pkg_components = " ".join(["{p}::{c}".format(p=pkg_namespace, c=comp_findname) for
                                        comp_findname, _ in reversed(components)])
             pkg_info = DepsCppCmake(cpp_info, self.name)
             global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
@@ -271,6 +273,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                                                              deps_names=deps_names)
             return self.find_components_tpl.render(
                 pkg_name=pkg_findname,
+                namespace=pkg_namespace,
                 pkg_filename=pkg_filename,
                 pkg_version=pkg_version,
                 pkg_components=pkg_components,
@@ -296,8 +299,8 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
             # The find_libraries_block, all variables for the package, and creation of targets
             deps = DepsCppCmake(dep_cpp_info, self.name)
-            find_libraries_block = target_template.format(name=pkg_findname, deps=deps,
-                                                          build_type_suffix="",
+            find_libraries_block = target_template.format(name=pkg_findname,
+                                                          deps=deps, build_type_suffix="",
                                                           deps_names=deps_names)
 
             # The find_transitive_dependencies block
@@ -309,7 +312,8 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                 find_dependencies_block = ''.join("        " + line if line.strip() else line
                                                   for line in f.splitlines(True))
 
-            return self.find_template.format(name=pkg_findname, version=pkg_version,
+            return self.find_template.format(name=pkg_findname, namespace=pkg_namespace,
+                                             version=pkg_version,
                                              filename=pkg_filename,
                                              find_libraries_block=find_libraries_block,
                                              find_dependencies_block=find_dependencies_block,

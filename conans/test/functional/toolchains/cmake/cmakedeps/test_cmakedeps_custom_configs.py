@@ -24,7 +24,6 @@ class CustomConfigurationTest(unittest.TestCase):
 
             def generate(self):
                 cmake = CMakeDeps(self)
-                cmake.configurations.append("ReleaseShared")
                 if self.options["hello"].shared:
                     cmake.configuration = "ReleaseShared"
                 cmake.generate()
@@ -84,9 +83,9 @@ class CustomConfigurationTest(unittest.TestCase):
             self.client.run("install .. %s -o hello:shared=True" % settings)
             self.client.run("install .. %s -o hello:shared=False" % settings)
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
-                                                        "helloTarget-releaseshared.cmake")))
+                                                        "hello-Target-releaseshared.cmake")))
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
-                                                        "helloTarget-release.cmake")))
+                                                        "hello-Target-release.cmake")))
 
             self.client.run_command('cmake .. -G "Visual Studio 15 Win64"')
             self.client.run_command('cmake --build . --config Release')
@@ -177,7 +176,7 @@ class CustomSettingsTest(unittest.TestCase):
         with self.client.chdir(build_directory):
             self.client.run("install .. %s" % settings)
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
-                                                        "helloTarget-myrelease.cmake")))
+                                                        "hello-Target-myrelease.cmake")))
 
             self.client.run_command('cmake .. -G "Visual Studio 15 Win64"')
             self.client.run_command('cmake --build . --config MyRelease')

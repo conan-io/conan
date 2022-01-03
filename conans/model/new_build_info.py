@@ -7,7 +7,8 @@ from conans.model.build_info import DefaultOrderedDict
 _DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
                    "frameworkdirs"]
 _FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "cxxflags",
-                    "sharedlinkflags", "exelinkflags"]
+                    "sharedlinkflags", "exelinkflags", "objects"]
+_ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
 
 
 class _NewComponent(object):
@@ -34,6 +35,7 @@ class _NewComponent(object):
         self.cxxflags = None  # C++ compilation flags
         self.sharedlinkflags = None  # linker flags
         self.exelinkflags = None  # linker flags
+        self.objects = None  # objects to link
 
         self.sysroot = None
         self.requires = None
@@ -45,21 +47,16 @@ class _NewComponent(object):
             return []
         return [r for r in self.requires if "::" not in r]
 
-    def set_property(self, property_name, value, generator=None):
+    def set_property(self, property_name, value):
         if self._generator_properties is None:
             self._generator_properties = {}
-        self._generator_properties.setdefault(generator, {})[property_name] = value
+        self._generator_properties[property_name] = value
 
-    def get_property(self, property_name, generator=None):
+    def get_property(self, property_name):
         if self._generator_properties is None:
             return None
-        if generator:
-            try:
-                return self._generator_properties[generator][property_name]
-            except KeyError:
-                pass
-        try:  # generator = None is the dict for all generators
-            return self._generator_properties[None][property_name]
+        try:
+            return self._generator_properties[property_name]
         except KeyError:
             pass
 
@@ -77,6 +74,7 @@ class NewCppInfo(object):
         self.components = DefaultOrderedDict(lambda: _NewComponent())
         # Main package is a component with None key
         self.components[None] = _NewComponent()
+        self._aggregated = None  # A _NewComponent object with all the components aggregated
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
@@ -96,11 +94,14 @@ class NewCppInfo(object):
         return filter(None, self.components.keys())
 
     def merge(self, other):
-        """Merge 'other' into self. 'other' can be an old cpp_info object"""
+        """Merge 'other' into self. 'other' can be an old cpp_info object
+        Used to merge Layout source + build cpp objects info (editables)
+        :type other: NewCppInfo
+        """
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
 
-        for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+        for varname in _ALL_NAMES:
             other_values = getattr(other, varname)
             if other_values is not None:
                 current_values = self.components[None].get_init(varname, [])
@@ -121,7 +122,7 @@ class NewCppInfo(object):
         for cname, c in other.components.items():
             if cname is None:
                 continue
-            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            for varname in _ALL_NAMES:
                 other_values = getattr(c, varname)
                 if other_values is not None:
                     current_values = self.components[cname].get_init(varname, [])
@@ -160,42 +161,36 @@ class NewCppInfo(object):
 
         return OrderedDict([(cname,  self.components[cname]) for cname in processed])
 
-    def aggregate_components(self):
-        """Aggregates all the components as global values"""
+    def aggregated_components(self):
+        """Aggregates all the components as global values, returning a new NewCppInfo"""
+        if self._aggregated is None:
+            if self.has_components:
+                result = _NewComponent()
+                for n in _ALL_NAMES:  # Initialize all values, from None => []
+                    setattr(result, n, [])  # TODO: This is a bit dirty
+                # Reversed to make more dependant first
+                for name, component in reversed(self.get_sorted_components().items()):
+                    for n in _ALL_NAMES:
+                        if getattr(component, n):
+                            dest = result.get_init(n, [])
+                            dest.extend([i for i in getattr(component, n) if i not in dest])
 
-        if self.has_components:
-            components = self.get_sorted_components()
-            cnames = list(components.keys())
-            cnames.reverse()  # More dependant first
+                    # NOTE: The properties are not aggregated because they might refer only to the
+                    # component like "cmake_target_name" describing the target name FOR THE component
+                    # not the namespace.
+                    if component.requires:
+                        current_values = result.get_init("requires", [])
+                        current_values.extend(component.requires)
 
-            # Clean global values
-            for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                setattr(self.components[None], n, [])
-
-            for name in cnames:
-                component = components[name]
-                for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                    if getattr(component, n):
-                        dest = getattr(self.components[None], n)
-                        if dest is None:
-                            setattr(self.components[None], n, [])
-                        dest += [i for i in getattr(component, n) if i not in dest]
-
-                # NOTE: The properties are not aggregated because they might refer only to the
-                # component like "cmake_target_name" describing the target name FOR THE component
-                # not the namespace.
-
-                if component.requires:
-                    current_values = self.components[None].get_init("requires", [])
-                    current_values.extend(component.requires)
-
-            # FIXME: What to do about sysroot?
-            # Leave only the aggregated value
-            main_value = self.components[None]
-            self.components = DefaultOrderedDict(lambda: _NewComponent())
-            self.components[None] = main_value
+                # FIXME: What to do about sysroot?
+            else:
+                result = copy.copy(self.components[None])
+            self._aggregated = NewCppInfo()
+            self._aggregated.components[None] = result
+        return self._aggregated
 
     def copy(self):
+        # Only used at the moment by layout() editable merging build+source .cpp data
         ret = NewCppInfo()
         ret._generator_properties = copy.copy(self._generator_properties)
         ret.components = DefaultOrderedDict(lambda: _NewComponent())
@@ -218,7 +213,7 @@ class NewCppInfo(object):
         """A field with None meaning is 'not declared' but for consumers, that is irrelevant, an
         empty list is easier to handle and makes perfect sense."""
         for c in self.components.values():
-            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            for varname in _ALL_NAMES:
                 if getattr(c, varname) is None:
                     setattr(c, varname, [])
             if c.requires is None:
@@ -231,7 +226,7 @@ class NewCppInfo(object):
     def __str__(self):
         ret = []
         for cname, c in self.components.items():
-            for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            for n in _ALL_NAMES:
                 ret.append("Component: '{}' "
                            "Var: '{}' "
                            "Value: '{}'".format(cname, n, getattr(c, n)))
@@ -242,29 +237,6 @@ def from_old_cppinfo(old):
     ret = NewCppInfo()
     ret.merge(old)
     ret.clear_none()
-
-    def _copy_build_modules_to_property(origin, dest):
-        current_value = dest.get_property("cmake_build_modules") or []
-        if isinstance(origin.build_modules, list):
-            current_value.extend([v for v in origin.build_modules if v not in current_value])
-        else:
-            multi = origin.build_modules.get("cmake_find_package_multi")
-            no_multi = origin.build_modules.get("cmake_find_package")
-            if multi:
-                current_value.extend([v for v in multi if v not in current_value])
-            if no_multi:
-                current_value.extend([v for v in no_multi if v not in current_value])
-        dest.set_property("cmake_build_modules", current_value)
-
-    # Copy the build modules as the new recommended property
-    if old.build_modules:
-        _copy_build_modules_to_property(old, ret)
-
-    for cname, c in old.components.items():
-        if c.build_modules:
-            # The build modules properties are applied to the root cppinfo, not per component
-            # because it is something global that makes no sense to be set at a component
-            _copy_build_modules_to_property(c, ret)
     return ret
 
 
@@ -279,7 +251,7 @@ def fill_old_cppinfo(origin, old_cpp):
         for cname, c in origin.components.items():
             if cname is None:
                 continue
-            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            for varname in _ALL_NAMES:
                 value = getattr(c, varname)
                 if value is not None:
                     # Override the self.cpp_info component value
@@ -290,7 +262,7 @@ def fill_old_cppinfo(origin, old_cpp):
             if c._generator_properties is not None:
                 old_cpp.components[cname]._generator_properties = copy.copy(c._generator_properties)
     else:
-        for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+        for varname in _ALL_NAMES:
             value = getattr(origin, varname)
             if value is not None:
                 # Override the self.cpp_info value

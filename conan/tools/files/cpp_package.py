@@ -47,7 +47,11 @@ class CppPackage(object):
             conanfile.cpp_info.components[cname].libs = component.libs
             conanfile.cpp_info.components[cname].requires = component.requires
             for generator, gname in component.names.items():
-                conanfile.cpp_info.components[cname].set_property("cmake_target_name", gname, generator)
+                # TODO: probably we want to revisit all this stuff with the new absolute
+                #  target names via set_property
+                conanfile.cpp_info.components[cname].set_property("cmake_target_name",
+                                                                  "{}::{}".format(conanfile.ref.name,
+                                                                                  gname))
 
     def add_component(self, name):
         """

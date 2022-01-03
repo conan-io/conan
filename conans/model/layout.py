@@ -3,27 +3,6 @@ import os
 from conans.model.new_build_info import NewCppInfo
 
 
-class _PatternEntry(object):
-
-    def __init__(self):
-        self.include = []
-        self.lib = []
-        self.bin = []
-        self.src = []
-        self.build = []
-        self.res = []
-        self.framework = []
-
-
-class Patterns(object):
-
-    def __init__(self):
-        self.source = _PatternEntry()
-        self.build = _PatternEntry()
-        # TODO: Pending use case
-        # self.package = _PatternEntry()
-
-
 class Infos(object):
 
     def __init__(self):

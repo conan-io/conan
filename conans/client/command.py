@@ -19,7 +19,7 @@ from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
-    ConanMigrationError
+    ConanMigrationError, ConanInvalidSystemRequirements
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
 from conans.model.conf import DEFAULT_CONFIGURATION
@@ -29,7 +29,7 @@ from conans.util.files import save
 from conans.util.log import logger
 from conans.assets import templates
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
-    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_INVALID_SYSTEM_REQUIREMENTS
 
 
 class Extender(argparse.Action):
@@ -657,7 +657,7 @@ class Command(object):
         elif args.subcommand == 'init':
             return self._conan.config_init(force=args.force)
         elif args.subcommand == "list":
-            self._out.info("Supported Conan *experimental* conan.conf properties:")
+            self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
             for key, value in DEFAULT_CONFIGURATION.items():
                 self._out.writeln("{}: {}".format(key, value))
 
@@ -1077,8 +1077,8 @@ class Command(object):
         Copies the recipe (conanfile.py & associated files) to your local cache.
 
         Use the 'reference' param to specify a user and channel where to export
-        it. Once the recipe is in the local cache it can be shared, reused and
-        to any remote with the 'conan upload' command.
+        it. Once the recipe is in the local cache it can be shared and reused
+        with any remote with the 'conan upload' command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__,
                                          prog="conan export",
@@ -1182,8 +1182,20 @@ class Command(object):
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
-        return self._conan.remove(pattern=args.pattern_or_reference, query=args.query,
-                                  packages=args.packages, builds=args.builds, src=args.src,
+        try:
+            pref = PackageReference.loads(args.pattern_or_reference, validate=True)
+            packages = [pref.id]
+            pattern_or_reference = repr(pref.ref)
+        except ConanException:
+            pref = None
+            pattern_or_reference = args.pattern_or_reference
+            packages = args.packages
+
+        if pref and args.packages:
+            raise ConanException("Use package ID only as -p argument or reference, not both")
+
+        return self._conan.remove(pattern=pattern_or_reference, query=args.query,
+                                  packages=packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote, outdated=args.outdated)
 
     def copy(self, *args):
@@ -2228,6 +2240,9 @@ class Command(object):
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
+            self._out.error(exc)
+        except ConanInvalidSystemRequirements as exc:
+            ret_code = ERROR_INVALID_SYSTEM_REQUIREMENTS
             self._out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL

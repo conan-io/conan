@@ -138,8 +138,6 @@ class MockConanfile(ConanFile):
         self.should_install = True
         self.should_test = True
 
-        self.package_folder = None
-
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None
@@ -180,10 +178,9 @@ class ConanFileMock(ConanFile):
         self.folders.set_base_generators(".")
         self._conan_user = None
         self._conan_channel = None
-        self.environment_scripts = []
+        self.env_scripts = {}
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
-
 
     def run(self, command, win_bash=False, subsystem=None, env=None):
         assert win_bash is False

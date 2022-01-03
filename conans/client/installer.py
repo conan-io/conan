@@ -369,10 +369,11 @@ class BinaryInstaller(object):
 
         raise ConanException(textwrap.dedent('''\
             Missing prebuilt package for '%s'
-            Try to build from sources with '%s'
-            Use 'conan search <reference> --table table.html'
-            Or read 'http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-            ''' % (missing_pkgs, build_str)))
+            Use 'conan search %s --table=table.html -r=remote' and open the table.html file to see available packages
+            Or try to build locally from sources with '%s'
+
+            More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
+            ''' % (missing_pkgs, ref, build_str)))
 
     def _download(self, downloads, processed_package_refs):
         """ executes the download of packages (both download and update), only once for a given
@@ -393,11 +394,10 @@ class BinaryInstaller(object):
             download_nodes.append(node)
 
         def _download(n):
-            npref = n.pref
-            layout = self._cache.package_layout(npref.ref, n.conanfile.short_paths)
+            layout = self._cache.package_layout(n.pref.ref, n.conanfile.short_paths)
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
-            with layout.package_lock(pref):
+            with layout.package_lock(n.pref):
                 self._download_pkg(layout, n)
 
         parallel = self._cache.config.parallel_download
@@ -666,8 +666,6 @@ class BinaryInstaller(object):
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
                         if not is_editable:
-                            package_cppinfo = conanfile.cpp.package.copy()
-                            package_cppinfo.set_relative_base_folder(conanfile.folders.package)
                             # Copy the infos.package into the old cppinfo
                             fill_old_cppinfo(conanfile.cpp.package, conanfile.cpp_info)
                         else:
@@ -699,9 +697,14 @@ class BinaryInstaller(object):
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:
-                            if not is_editable:
+                            if not is_editable and not hasattr(conanfile, "layout"):
                                 # FIXME: The default for the cppinfo from build are not the same
                                 #        so this check fails when editable
+                                # FIXME: Remove when new cppinfo model. If using the layout method
+                                #        the cppinfo object is filled from self.cpp.package new
+                                #        model and we cannot check if the defaults have been modified
+                                #        because it doesn't exist in the new model where the defaults
+                                #        for the components are always empty
                                 conanfile.cpp_info._raise_incorrect_components_definition(
                                     conanfile.name, conanfile.requires)
                         except ConanException as e:

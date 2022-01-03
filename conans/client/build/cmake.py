@@ -5,7 +5,6 @@ from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
 
-
 from conans.client import tools
 from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
@@ -77,6 +76,14 @@ class CMake(object):
             self.definitions = builder.get_definitions(None)
 
         self.definitions["CONAN_EXPORTED"] = "1"
+
+        if hasattr(self._conanfile, 'settings_build'):
+            # https://github.com/conan-io/conan/issues/9202
+            if self._conanfile.settings_build.get_safe("os") == "Macos" and \
+               self._conanfile.settings.get_safe("os") == "iOS":
+                self.definitions["CMAKE_FIND_ROOT_PATH_MODE_INCLUDE"] = "BOTH"
+                self.definitions["CMAKE_FIND_ROOT_PATH_MODE_LIBRARY"] = "BOTH"
+                self.definitions["CMAKE_FIND_ROOT_PATH_MODE_PACKAGE"] = "BOTH"
 
         self.toolset = toolset or get_toolset(self._settings, self.generator)
         self.build_dir = None

@@ -100,9 +100,11 @@ class GraphBinariesAnalyzer(object):
     def _get_package_info(self, node, pref, remote):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
 
-    def _evaluate_remote_pkg(self, node, pref, remote, remotes):
+    def _evaluate_remote_pkg(self, node, pref, remote, remotes, remote_selected):
         remote_info = None
-        if remote:
+        # If the remote is pinned (remote_selected) we won't iterate the remotes.
+        # The "remote" can come from -r or from the registry (associated ref)
+        if remote_selected or remote:
             try:
                 remote_info, pref = self._get_package_info(node, pref, remote)
             except NotFoundException:
@@ -111,10 +113,16 @@ class GraphBinariesAnalyzer(object):
                 node.conanfile.output.error("Error downloading binary package: '{}'".format(pref))
                 raise
 
-        # If the "remote" came from the registry but the user didn't specified the -r, with
-        # revisions iterate all remotes
-        if not remote or (not remote_info and self._cache.config.revisions_enabled):
-            for r in remotes.values():  # FIXME: Here we hit the same remote we did before
+        # If we didn't pin a remote with -r and:
+        #   - The remote is None (not registry entry)
+        #        or
+        #   - We didn't find a package but having revisions enabled
+        # We iterate the other remotes to find a binary
+        if not remote_selected and (not remote or
+                                    (not remote_info and self._cache.config.revisions_enabled)):
+            for r in remotes.values():
+                if r == remote:
+                    continue
                 try:
                     remote_info, pref = self._get_package_info(node, pref, r)
                 except NotFoundException:
@@ -209,7 +217,8 @@ class GraphBinariesAnalyzer(object):
                             node._package_id = package_id
                             # So they are available in package_info() method
                             node.conanfile.settings.values = compatible_package.settings
-                            node.conanfile.options.values = compatible_package.options
+                            # TODO: Conan 2.0 clean this ugly
+                            node.conanfile.options._package_options.values = compatible_package.options._package_values
                             break
                     if node.binary == BINARY_MISSING and node.package_id == PACKAGE_ID_INVALID:
                         node.binary = BINARY_INVALID
@@ -243,6 +252,7 @@ class GraphBinariesAnalyzer(object):
         metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
 
         remote = remotes.selected
+        remote_selected = remote is not None
 
         metadata = metadata or package_layout.load_metadata()
         if not remote:
@@ -260,7 +270,8 @@ class GraphBinariesAnalyzer(object):
             recipe_hash = None
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
-            recipe_hash, remote = self._evaluate_remote_pkg(node, pref, remote, remotes)
+            recipe_hash, remote = self._evaluate_remote_pkg(node, pref, remote, remotes,
+                                                            remote_selected)
 
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):

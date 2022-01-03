@@ -52,7 +52,8 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("gcc", "5", "11"), '-std=c++11')
         self.assertEqual(_make_cppstd_flag("gcc", "5", "14"), '-std=c++14')
         self.assertEqual(_make_cppstd_flag("gcc", "5", "gnu14"), '-std=gnu++14')
-        self.assertEqual(_make_cppstd_flag("gcc", "5", "17"), None)
+        self.assertEqual(_make_cppstd_flag("gcc", "5", "17"), '-std=c++1z')
+        self.assertEqual(_make_cppstd_flag("gcc", "5", "gnu17"), '-std=gnu++1z')
 
         self.assertEqual(_make_cppstd_flag("gcc", "5.1", "11"), '-std=c++11')
         self.assertEqual(_make_cppstd_flag("gcc", "5.1", "14"), '-std=c++14')
@@ -222,7 +223,8 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "11"), None)
         self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "14"), '/std:c++14')
         self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "17"), '/std:c++17')
-        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "20"), '/std:c++latest')
+        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "20"), '/std:c++20')
+        self.assertEqual(_make_cppstd_flag("Visual Studio", "17", "23"), '/std:c++latest')
 
     def test_visual_cppstd_defaults(self):
         self.assertEqual(_make_cppstd_default("Visual Studio", "11"), None)

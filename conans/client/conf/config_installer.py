@@ -11,6 +11,7 @@ from six.moves.urllib.parse import urlparse
 from conans import load
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt, migrate_registry_file
+from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
@@ -81,8 +82,12 @@ def _filecopy(src, filename, dst):
     # copying with permissions that later cause bugs
     src = os.path.join(src, filename)
     dst = os.path.join(dst, filename)
+    # Clear the destination file
     if os.path.exists(dst):
-        remove(dst)
+        if os.path.isdir(dst):  # dst was a directory and now src is a file
+            rmdir(dst)
+        else:
+            remove(dst)
     shutil.copyfile(src, dst)
 
 
@@ -118,6 +123,11 @@ def _process_file(directory, filename, config, cache, output, folder):
                                              relpath)
             else:
                 target_folder = os.path.join(cache.cache_folder, relpath)
+
+            if os.path.exists(target_folder):
+                if os.path.isfile(target_folder):  # Existed as a file and now should be a folder
+                    remove(target_folder)
+
             mkdir(target_folder)
             output.info("Copying file %s to %s" % (filename, target_folder))
             _filecopy(directory, filename, target_folder)
@@ -137,10 +147,11 @@ def _process_folder(config, folder, cache, output):
 def _process_download(config, cache, output, requester):
     with tmp_config_install_folder(cache) as tmp_folder:
         output.info("Trying to download  %s" % _hide_password(config.uri))
-        zippath = os.path.join(tmp_folder, "config.zip")
+        zippath = os.path.join(tmp_folder, os.path.basename(config.uri))
         try:
-            tools.download(config.uri, zippath, out=output, verify=config.verify_ssl,
-                           requester=requester)
+            downloader = FileDownloader(requester=requester, output=output, verify=config.verify_ssl,
+                                        config_retry=None, config_retry_wait=None)
+            downloader.download(url=config.uri, file_path=zippath)
             _process_zip_file(config, zippath, cache, output, tmp_folder, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))

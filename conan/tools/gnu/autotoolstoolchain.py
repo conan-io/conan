@@ -10,8 +10,9 @@ from conans.tools import args_to_string
 
 
 class AutotoolsToolchain:
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
+        self._namespace = namespace
         build_type = self._conanfile.settings.get_safe("build_type")
 
         self.configure_args = []
@@ -48,8 +49,9 @@ class AutotoolsToolchain:
         self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
-            self._host = _get_gnu_triplet(os_host, arch_host)
-            self._build = _get_gnu_triplet(os_build, arch_build)
+            compiler = self._conanfile.settings.get_safe("compiler")
+            self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+            self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
             # Apple Stuff
             if os_build == "Macos":
@@ -71,9 +73,11 @@ class AutotoolsToolchain:
             return
 
         compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-        if compiler == "gcc":
+        if compiler in ['clang', 'apple-clang', 'gcc']:
             if libcxx == 'libstdc++':
                 return '_GLIBCXX_USE_CXX11_ABI=0'
+            elif libcxx == "libstdc++11" and self._conanfile.conf["tools.gnu:define_libcxx11_abi"]:
+                return '_GLIBCXX_USE_CXX11_ABI=1'
 
     def _libcxx(self):
         settings = self._conanfile.settings
@@ -97,7 +101,7 @@ class AutotoolsToolchain:
             return "-Y _%s" % str(libcxx)
 
     def environment(self):
-        env = Environment(conanfile=self._conanfile)
+        env = Environment()
         # defines
         if self.ndebug:
             self.defines.append(self.ndebug)
@@ -138,9 +142,13 @@ class AutotoolsToolchain:
         env.append("LDFLAGS", self.ldflags)
         return env
 
-    def generate(self, env=None, auto_activate=True):
+    def vars(self):
+        return self.environment().vars(self._conanfile, scope="build")
+
+    def generate(self, env=None, scope="build"):
         env = env or self.environment()
-        env.save_script("conanautotoolstoolchain", auto_activate=auto_activate)
+        env = env.vars(self._conanfile, scope=scope)
+        env.save_script("conanautotoolstoolchain")
         self.generate_args()
 
     def generate_args(self):
@@ -165,4 +173,4 @@ class AutotoolsToolchain:
         args = {"configure_args": args_to_string(configure_args),
                 "make_args":  args_to_string(self.make_args)}
 
-        save_toolchain_args(args)
+        save_toolchain_args(args, namespace=self._namespace)

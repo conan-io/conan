@@ -1,10 +1,10 @@
 import fnmatch
 import os
 import textwrap
-import platform
 from collections import OrderedDict
 from contextlib import contextmanager
 
+from conan.tools.microsoft.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -13,8 +13,8 @@ class _EnvVarPlaceHolder:
     pass
 
 
-def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
-    from conan.tools.microsoft.subsystems import unix_path
+def environment_wrap_command(env_filenames, cmd, subsystem=None, cwd=None):
+    from conan.tools.microsoft.subsystems import subsystem_path
     assert env_filenames
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
     bats, shs = [], []
@@ -25,7 +25,7 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
         f = f if os.path.isabs(f) else os.path.join(cwd, f)
         if f.lower().endswith(".sh"):
             if os.path.isfile(f):
-                f = unix_path(conanfile, f)
+                f = subsystem_path(subsystem, f)
                 shs.append(f)
         elif f.lower().endswith(".bat"):
             if os.path.isfile(f):
@@ -36,7 +36,7 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
             if os.path.isfile(path_bat):
                 bats.append(path_bat)
             elif os.path.isfile(path_sh):
-                path_sh = unix_path(conanfile, path_sh)
+                path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
 
     if bats and shs:
@@ -53,12 +53,29 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
 
 
 class _EnvValue:
-    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ",
-                 path=False):
+    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ", path=False):
         self._name = name
         self._values = [] if value is None else value if isinstance(value, list) else [value]
         self._path = path
         self._sep = separator
+
+    def dumps(self):
+        result = []
+        path = "(path)" if self._path else ""
+        if not self._values:  # Empty means unset
+            result.append("{}=!".format(self._name))
+        elif _EnvVarPlaceHolder in self._values:
+            index = self._values.index(_EnvVarPlaceHolder)
+            for v in self._values[:index]:
+                result.append("{}=+{}{}".format(self._name, path, v))
+            for v in self._values[index+1:]:
+                result.append("{}+={}{}".format(self._name, path, v))
+        else:
+            append = ""
+            for v in self._values:
+                result.append("{}{}={}{}".format(self._name, append, path, v))
+                append = "+"
+        return "\n".join(result)
 
     def copy(self):
         return _EnvValue(self._name, self._values, self._sep, self._path)
@@ -86,7 +103,7 @@ class _EnvValue:
         else:
             self._values.insert(0, value)
 
-    def compose(self, other):
+    def compose_env_value(self, other):
         """
         :type other: _EnvValue
         """
@@ -99,8 +116,9 @@ class _EnvValue:
             new_value[index:index + 1] = other._values  # replace the placeholder
             self._values = new_value
 
-    def get_str(self, conanfile, placeholder, pathsep=os.pathsep):
+    def get_str(self, placeholder, subsystem, pathsep):
         """
+        :param subsystem:
         :param placeholder: a OS dependant string pattern of the previous env-var value like
         $PATH, %PATH%, et
         :param pathsep: The path separator, typically ; or :
@@ -113,33 +131,42 @@ class _EnvValue:
                     values.append(placeholder.format(name=self._name))
             else:
                 if self._path:
-                    from conan.tools.microsoft.subsystems import unix_path
-                    v = unix_path(conanfile, v)
+                    from conan.tools.microsoft.subsystems import subsystem_path
+                    v = subsystem_path(subsystem, v)
                 values.append(v)
         if self._path:
-            pathsep = ":" if conanfile.win_bash else pathsep
             return pathsep.join(values)
 
         return self._sep.join(values)
 
-    def get_value(self, conanfile, pathsep=os.pathsep):
+    def get_value(self, subsystem, pathsep):
         previous_value = os.getenv(self._name)
-        return self.get_str(conanfile, previous_value, pathsep)
+        return self.get_str(previous_value, subsystem, pathsep)
 
 
 class Environment:
-    def __init__(self, conanfile):
+    def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
         self._values = OrderedDict()  # {var_name: [] of values, including separators}
-        self._conanfile = conanfile
 
     def __bool__(self):
         return bool(self._values)
 
     __nonzero__ = __bool__
 
+    def copy(self):
+        e = Environment()
+        e._values = self._values.copy()
+        return e
+
     def __repr__(self):
         return repr(self._values)
+
+    def dumps(self):
+        """ returns a string with a profile-like original definition, not the full environment
+        values
+        """
+        return "\n".join([v.dumps() for v in reversed(self._values.values())])
 
     def define(self, name, value, separator=" "):
         self._values[name] = _EnvValue(name, value, separator, path=False)
@@ -168,101 +195,10 @@ class Environment:
     def remove(self, name, value):
         self._values[name].remove(value)
 
-    def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
-        deactivate = textwrap.dedent("""\
-            echo Capturing current environment in deactivate_{filename}
-            setlocal
-            echo @echo off > "deactivate_{filename}"
-            echo echo Restoring environment >> "deactivate_{filename}"
-            for %%v in ({vars}) do (
-                set foundenvvar=
-                for /f "delims== tokens=1,2" %%a in ('set') do (
-                    if "%%a" == "%%v" (
-                        echo set %%a=%%b>> "deactivate_{filename}"
-                        set foundenvvar=1
-                    )
-                )
-                if not defined foundenvvar (
-                    echo set %%v=>> "deactivate_{filename}"
-                )
-            )
-            endlocal
-
-            """).format(filename=os.path.basename(filename), vars=" ".join(self._values.keys()))
-        capture = textwrap.dedent("""\
-            @echo off
-            {deactivate}
-            echo Configuring environment variables
-            """).format(deactivate=deactivate if generate_deactivate else "")
-        result = [capture]
-        for varname, varvalues in self._values.items():
-            value = varvalues.get_str(self._conanfile, "%{name}%", pathsep)
-            result.append('set {}={}'.format(varname, value))
-
-        content = "\n".join(result)
-        save(filename, content)
-
-    def save_ps1(self, filename, generate_deactivate=False, pathsep=os.pathsep):
-        # FIXME: This is broken and doesnt work
-        deactivate = ""
-        capture = textwrap.dedent("""\
-            {deactivate}
-            """).format(deactivate=deactivate if generate_deactivate else "")
-        result = [capture]
-        for varname, varvalues in self._values.items():
-            value = varvalues.get_str(self._conanfile, "$env:{name}", pathsep)
-            result.append('$env:{}={}'.format(varname, value))
-
-        content = "\n".join(result)
-        save(filename, content)
-
-    def save_sh(self, filename, generate_deactivate=False, pathsep=os.pathsep):
-        deactivate = textwrap.dedent("""\
-            echo Capturing current environment in deactivate_{filename}
-            echo echo Restoring variables >> deactivate_{filename}
-            for v in {vars}
-            do
-                value=$(printenv $v)
-                if [ -n "$value" ]
-                then
-                    echo export "$v=$value" >> deactivate_{filename}
-                else
-                    echo unset $v >> deactivate_{filename}
-                fi
-            done
-            echo Configuring environment variables
-            """.format(filename=os.path.basename(filename), vars=" ".join(self._values.keys())))
-        capture = textwrap.dedent("""\
-           {deactivate}
-           echo Configuring environment variables
-           """).format(deactivate=deactivate if generate_deactivate else "")
-        result = [capture]
-        for varname, varvalues in self._values.items():
-            value = varvalues.get_str(self._conanfile, "${name}", pathsep)
-            if value:
-                result.append('export {}="{}"'.format(varname, value))
-            else:
-                result.append('unset {}'.format(varname))
-
-        content = "\n".join(result)
-        save(filename, content)
-
-    def save_script(self, name, auto_activate=True):
-        # FIXME: using platform is not ideal but settings might be incomplete
-        if platform.system() == "Windows" and not self._conanfile.win_bash:
-            path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
-            self.save_bat(path)
-        else:
-            path = os.path.join(self._conanfile.generators_folder, "{}.sh".format(name))
-            self.save_sh(path)
-
-        if auto_activate:
-            register_environment_script(self._conanfile, path)
-
-    def compose(self, other):
+    def compose_env(self, other):
         """
         self has precedence, the "other" will add/append if possible and not conflicting, but
-        self mandates what to do
+        self mandates what to do. If self has define(), without placeholder, that will remain
         :type other: Environment
         """
         for k, v in other._values.items():
@@ -270,26 +206,9 @@ class Environment:
             if existing is None:
                 self._values[k] = v.copy()
             else:
-                existing.compose(v)
+                existing.compose_env_value(v)
 
         return self
-
-    # Methods to user access to the environment object as a dict
-    def keys(self):
-        return self._values.keys()
-
-    def __getitem__(self, name):
-        return self._values[name].get_value(self._conanfile)
-
-    def get(self, name, default=None):
-        v = self._values.get(name)
-        if v is None:
-            return default
-        return v.get_value(self._conanfile)
-
-    def items(self):
-        """returns {str: str} (varname: value)"""
-        return {k: v.get_value(self._conanfile) for k, v in self._values.items()}.items()
 
     def __eq__(self, other):
         """
@@ -299,6 +218,38 @@ class Environment:
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def vars(self, conanfile, scope="build"):
+        return EnvVars(conanfile, self, scope)
+
+
+class EnvVars:
+    def __init__(self, conanfile, env, scope):
+        self._values = env._values  # {var_name: _EnvValue}, just a reference to the Environment
+        self._conanfile = conanfile
+        self._scope = scope
+        self._subsystem = deduce_subsystem(conanfile, scope)
+
+    @property
+    def _pathsep(self):
+        return ":" if self._subsystem != WINDOWS else ";"
+
+    def __getitem__(self, name):
+        return self._values[name].get_value(self._subsystem, self._pathsep)
+
+    def keys(self):
+        return self._values.keys()
+
+    def get(self, name, default=None):
+        v = self._values.get(name)
+        if v is None:
+            return default
+        return v.get_value(self._subsystem, self._pathsep)
+
+    def items(self):
+        """returns {str: str} (varname: value)"""
+        return {k: v.get_value(self._subsystem, self._pathsep)
+                for k, v in self._values.items()}.items()
 
     @contextmanager
     def apply(self):
@@ -311,6 +262,126 @@ class Environment:
             os.environ.clear()
             os.environ.update(old_env)
 
+    def save_bat(self, filename, generate_deactivate=True):
+        deactivate = textwrap.dedent("""\
+            echo Capturing current environment in deactivate_{filename}
+            setlocal
+            echo @echo off > "deactivate_{filename}"
+            echo echo Restoring environment >> "deactivate_{filename}"
+            for %%v in ({vars}) do (
+                set foundenvvar=
+                for /f "delims== tokens=1,2" %%a in ('set') do (
+                    if /I "%%a" == "%%v" (
+                        echo set %%a=%%b>> "deactivate_{filename}"
+                        set foundenvvar=1
+                    )
+                )
+                if not defined foundenvvar (
+                    echo set %%v=>> "deactivate_{filename}"
+                )
+            )
+            endlocal
+            """).format(filename=os.path.basename(filename), vars=" ".join(self._values.keys()))
+        capture = textwrap.dedent("""\
+            @echo off
+            {deactivate}
+            echo Configuring environment variables
+            """).format(deactivate=deactivate if generate_deactivate else "")
+        result = [capture]
+        for varname, varvalues in self._values.items():
+            value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
+            result.append('set {}={}'.format(varname, value))
+
+        content = "\n".join(result)
+        save(filename, content)
+
+    def save_ps1(self, filename, generate_deactivate=True,):
+        deactivate = textwrap.dedent("""\
+            echo "Capturing current environment in deactivate_{filename}"
+
+            "echo `"Restoring environment`"" | Out-File -FilePath "deactivate_{filename}"
+            $vars = (Get-ChildItem env:*).name
+            $updated_vars = @({vars})
+
+            foreach ($var in $updated_vars)
+            {{
+                if ($var -in $vars)
+                {{
+                    $var_value = (Get-ChildItem env:$var).value
+                    Add-Content "deactivate_{filename}" "`n`$env:$var = `"$var_value`""
+                }}
+                else
+                {{
+                    Add-Content "deactivate_{filename}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
+                }}
+            }}
+        """).format(
+            filename=os.path.basename(filename),
+            vars=",".join(['"{}"'.format(var) for var in self._values.keys()])
+        )
+
+        capture = textwrap.dedent("""\
+            {deactivate}
+            echo "Configuring environment variables"
+        """).format(deactivate=deactivate if generate_deactivate else "")
+        result = [capture]
+        for varname, varvalues in self._values.items():
+            value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep)
+            if value:
+                result.append('$env:{}="{}"'.format(varname, value))
+            else:
+                result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
+
+        content = "\n".join(result)
+        save(filename, content)
+
+    def save_sh(self, filename, generate_deactivate=True):
+        deactivate = textwrap.dedent("""\
+           echo Capturing current environment in deactivate_{filename}
+           echo echo Restoring environment >> deactivate_{filename}
+           for v in {vars}
+           do
+               value=$(printenv $v)
+               if [ -n "$value" ]
+               then
+                   echo export "$v=$value" >> deactivate_{filename}
+               else
+                   echo unset $v >> deactivate_{filename}
+               fi
+           done
+           """.format(filename=os.path.basename(filename), vars=" ".join(self._values.keys())))
+        capture = textwrap.dedent("""\
+              {deactivate}
+              echo Configuring environment variables
+              """).format(deactivate=deactivate if generate_deactivate else "")
+        result = [capture]
+        for varname, varvalues in self._values.items():
+            value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep)
+            if value:
+                result.append('export {}="{}"'.format(varname, value))
+            else:
+                result.append('unset {}'.format(varname))
+
+        content = "\n".join(result)
+        save(filename, content)
+
+    def save_script(self, filename):
+        name, ext = os.path.splitext(filename)
+        if ext:
+            is_bat = ext == ".bat"
+        else:  # Need to deduce it automatically
+            is_bat = self._subsystem == WINDOWS
+            filename = filename + (".bat" if is_bat else ".sh")
+
+        path = os.path.join(self._conanfile.generators_folder, filename)
+        if is_bat:
+            self.save_bat(path)
+        else:
+            self.save_sh(path)
+
+        if self._scope:
+            register_env_script(self._conanfile, path, self._scope)
+
 
 class ProfileEnvironment:
     def __init__(self):
@@ -319,31 +390,46 @@ class ProfileEnvironment:
     def __repr__(self):
         return repr(self._environments)
 
-    def get_env(self, conanfile, ref):
+    def __bool__(self):
+        return bool(self._environments)
+
+    __nonzero__ = __bool__
+
+    def get_profile_env(self, ref):
         """ computes package-specific Environment
         it is only called when conanfile.buildenv is called
         the last one found in the profile file has top priority
         """
-        result = Environment(conanfile)
+        result = Environment()
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
-                result = env.compose(result)
-
-        # FIXME: Needed to assign _conanfile here too because in the env.compose returns env and it
-        #        hasn't conanfile
-        result._conanfile = conanfile
+                # Latest declared has priority, copy() necessary to not destroy data
+                result = env.copy().compose_env(result)
         return result
 
-    def compose(self, other):
+    def update_profile_env(self, other):
         """
         :type other: ProfileEnvironment
+        :param other: The argument profile has priority/precedence over the current one.
         """
         for pattern, environment in other._environments.items():
             existing = self._environments.get(pattern)
             if existing is not None:
-                self._environments[pattern] = environment.compose(existing)
+                self._environments[pattern] = environment.compose_env(existing)
             else:
                 self._environments[pattern] = environment
+
+    def dumps(self):
+        result = []
+        for pattern, env in self._environments.items():
+            if pattern is None:
+                result.append(env.dumps())
+            else:
+                result.append("\n".join("{}:{}".format(pattern, line) if line else ""
+                                        for line in env.dumps().splitlines()))
+        if result:
+            result.append("")
+        return "\n".join(result)
 
     @staticmethod
     def loads(text):
@@ -364,7 +450,8 @@ class ProfileEnvironment:
                 else:
                     pattern, name = None, pattern_name[0]
 
-                env = Environment(conanfile=None)
+                # When loading from profile file, latest line has priority
+                env = Environment()
                 if method == "unset":
                     env.unset(name)
                 else:
@@ -377,13 +464,30 @@ class ProfileEnvironment:
                 if existing is None:
                     result._environments[pattern] = env
                 else:
-                    result._environments[pattern] = env.compose(existing)
+                    result._environments[pattern] = env.compose_env(existing)
                 break
             else:
-                raise ConanException("Bad env defintion: {}".format(line))
+                raise ConanException("Bad env definition: {}".format(line))
         return result
 
 
-def register_environment_script(conanfile, path):
-    if path not in conanfile.environment_scripts:
-        conanfile.environment_scripts.append(path)
+def create_env_script(conanfile, content, filename, scope):
+    """
+    Create a file with any content which will be registered as a new script for the defined "group".
+    """
+    path = os.path.join(conanfile.generators_folder, filename)
+    save(path, content)
+
+    if scope:
+        register_env_script(conanfile, path, scope)
+
+
+def register_env_script(conanfile, env_script_path, scope):
+    """
+    Add the "env_script_path" to the current list of registered scripts for defined "group"
+    These will be mapped to files:
+    - conan{group}.bat|sh = calls env_script_path1,... env_script_pathN
+    """
+    existing = conanfile.env_scripts.setdefault(scope, [])
+    if env_script_path not in existing:
+        existing.append(env_script_path)

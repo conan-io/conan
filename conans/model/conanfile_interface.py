@@ -19,6 +19,9 @@ class ConanFileInterface:
         """
         return self._conanfile == other._conanfile
 
+    def __hash__(self):
+        return hash(self._conanfile)
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
@@ -44,10 +47,6 @@ class ConanFileInterface:
 
     @property
     def cpp_info(self):
-        return self._conanfile.cpp_info
-
-    @property
-    def new_cpp_info(self):
         return self._conanfile.new_cpp_info
 
     @property

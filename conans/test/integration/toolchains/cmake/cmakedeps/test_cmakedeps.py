@@ -16,7 +16,7 @@ def test_package_from_system():
                .with_settings("os", "arch", "build_type", "compiler"))
     dep2 += """
     def package_info(self):
-        self.cpp_info.set_property("skip_deps_file", True)
+        self.cpp_info.set_property("cmake_find_mode", "None")
         self.cpp_info.set_property("cmake_file_name", "custom_dep2")
 
     """
@@ -62,3 +62,94 @@ def test_test_package():
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     cmake_data = client.load("pkg-release-x86_64-data.cmake")
     assert "gtest" not in cmake_data
+
+
+def test_components_error():
+    # https://github.com/conan-io/conan/issues/9331
+    client = TestClient()
+
+    conan_hello = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+
+            def layout(self):
+                pass
+
+            def package_info(self):
+                self.cpp_info.components["say"].includedirs = ["include"]
+            """)
+
+    client.save({"conanfile.py": conan_hello})
+    client.run("create . hello/1.0@")
+
+
+def test_cpp_info_component_objects():
+    client = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "arch", "build_type"
+            def package_info(self):
+                self.cpp_info.components["say"].objects = ["mycomponent.o"]
+            """)
+
+    client.save({"conanfile.py": conan_hello})
+    client.run("create . hello/1.0@ -s arch=x86_64 -s build_type=Release")
+    client.run("install hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
+    with open(os.path.join(client.current_folder, "hello-Target-release.cmake")) as f:
+        content = f.read()
+        assert """set_property(TARGET hello::say PROPERTY INTERFACE_LINK_LIBRARIES
+             $<$<CONFIG:Release>:${hello_hello_say_LINK_LIBS_RELEASE}
+             ${hello_hello_say_OBJECTS_RELEASE}> APPEND)""" in content
+        assert """set_property(TARGET hello::hello
+             PROPERTY INTERFACE_LINK_LIBRARIES
+             $<$<CONFIG:Release>:${hello_LIBRARIES_TARGETS_RELEASE}
+                                           ${hello_OBJECTS_RELEASE}> APPEND)""" in content
+
+    with open(os.path.join(client.current_folder, "hello-release-x86_64-data.cmake")) as f:
+        content = f.read()
+        assert 'set(hello_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content
+        assert 'set(hello_hello_say_OBJECTS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in content
+
+
+def test_cpp_info_component_error_aggregate():
+    # https://github.com/conan-io/conan/issues/10176
+    # This test was consistently failing because "VirtualRunEnv" was not doing a "copy()"
+    # of cpp_info before calling "aggregate_components()", and it was destructive, removing
+    # components data
+    client = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.cpp_info.components["say"].includedirs = ["include"]
+            """)
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            requires = "hello/1.0"
+            generators = "VirtualRunEnv", "CMakeDeps"
+            def package_info(self):
+                self.cpp_info.components["chat"].requires = ["hello::say"]
+        """)
+    test_package = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "VirtualRunEnv", "CMakeDeps"
+
+            def test(self):
+                pass
+        """)
+
+    client.save({"hello/conanfile.py": conan_hello,
+                 "consumer/conanfile.py": consumer,
+                 "consumer/test_package/conanfile.py": test_package})
+    client.run("create hello hello/1.0@")
+    client.run("create consumer consumer/1.0@")
+    assert "consumer/1.0 (test package): Running test()" in client.out
