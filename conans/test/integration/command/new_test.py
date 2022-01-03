@@ -83,7 +83,7 @@ class TestNewCommandUserTemplate:
         client.run(f"new mytemplate --name=hello --version=0.1")
         assert not os.path.exists(os.path.join(client.current_folder, "file.h"))
         assert not os.path.exists(os.path.join(client.current_folder, "file.cpp"))
-        client.run(f"new mytemplate --name=hello --version=0.1 --header=xxx")
+        client.run(f"new mytemplate --name=hello --version=0.1 --header=xxx -f")
         assert os.path.exists(os.path.join(client.current_folder, "file.h"))
         assert not os.path.exists(os.path.join(client.current_folder, "file.cpp"))
 
@@ -108,3 +108,12 @@ class TestNewErrors:
         client = TestClient()
         client.run("new mytemplate", assert_error=True)
         assert "ERROR: Template doesn't exist" in client.out
+
+    def test_forced(self):
+        client = TestClient()
+        client.run("new cmake_lib --name=hello --version=0.1")
+        client.run("new cmake_lib --name=hello --version=0.1", assert_error=True)
+        client.run("new cmake_lib --name=bye --version=0.2 --force")
+        conanfile = client.load("conanfile.py")
+        assert 'name = "bye"' in conanfile
+        assert 'version = "0.2"' in conanfile

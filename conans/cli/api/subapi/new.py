@@ -13,6 +13,8 @@ from conans import __version__
 
 class NewAPI:
 
+    _NOT_TEMPLATES = "not_templates"
+
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
@@ -37,7 +39,7 @@ class NewAPI:
         if not template_files:
             raise ConanException("Template doesn't exist or not a folder: {}".format(template))
 
-        excluded = template_files.get("not_templates")
+        excluded = template_files.get(self._NOT_TEMPLATES)
         excluded = [] if not excluded else [s.strip() for s in excluded.splitlines() if s.strip()]
 
         result = {}
@@ -50,17 +52,27 @@ class NewAPI:
                 result[k] = v
         return result
 
-    @staticmethod
-    def _get_files(folder):
+    def _get_files(self, folder):
         files = {}
+        excluded = os.path.join(folder, self._NOT_TEMPLATES)
+        if os.path.exists(excluded):
+            excluded = load(excluded)
+            excluded = [] if not excluded else [s.strip() for s in excluded.splitlines() if
+                                                s.strip()]
+        else:
+            excluded = []
         for d, _, fs in os.walk(folder):
             for f in fs:
                 rel_d = os.path.relpath(d, folder) if d != folder else ""
                 rel_f = os.path.join(rel_d, f)
-                files[rel_f] = load(os.path.join(d, f))
+                path = os.path.join(d, f)
+                if not any(fnmatch.fnmatch(rel_f, exclude) for exclude in excluded):
+                    files[rel_f] = load(path)  # text, encodings
+                else:
+                    files[rel_f] = open(path, "rb").read() # binaries
         return files
 
     @staticmethod
     def _render_template(text, defines):
-        t = Template(text, trim_blocks=True, lstrip_blocks=True, keep_trailing_newline=True)
+        t = Template(text, keep_trailing_newline=True)
         return t.render(**defines)
