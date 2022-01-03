@@ -307,7 +307,7 @@ def test_xcodedeps_build_configurations():
     client.run("new cmake_lib --name=hello --version=0.1")
     client.run("export .")
 
-    client.run("new cmake_lib --name=bye --version=0.1")
+    client.run("new cmake_lib --name=bye --version=0.1 -f")
     client.run("export .")
 
     main = textwrap.dedent("""
