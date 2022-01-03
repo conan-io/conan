@@ -13,12 +13,21 @@ class PkgConfigDeps(object):
         pc_files = {}
         host_req = self._conanfile.dependencies.host
         for _, dep in host_req.items():
-            pc_files.update(get_pc_files_and_content(self._conanfile, dep))
+            dep_name = str(dep)
+            for pc_name, pc_content in get_pc_files_and_content(self._conanfile, dep).items():
+                if pc_name in pc_files:
+                    _, analyzed_dep_name = pc_files[pc_name]
+                    self._conanfile.out.warn(
+                        "[%s] The PC file name %s already exists and it matches with another "
+                        "pkg_config_name/pkg_config_aliases from %s package. Please, review all the "
+                        "names defined. Skipping it!" % (dep_name, analyzed_dep_name, pc_name))
+                else:
+                    pc_files[pc_name] = (pc_content, dep_name)
         return pc_files
 
     def generate(self):
         """Save all the *.pc files"""
         # Current directory is the generators_folder
         generator_files = self.content
-        for generator_file, content in generator_files.items():
+        for generator_file, (content, _) in generator_files.items():
             save(generator_file, content)

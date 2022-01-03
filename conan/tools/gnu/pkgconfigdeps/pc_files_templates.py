@@ -110,7 +110,7 @@ def get_pc_filename_and_content(conanfile, dep, name, requires, description, cpp
     }
     template = Template(_get_pc_file_template(), trim_blocks=True, lstrip_blocks=True,
                         undefined=StrictUndefined)
-    return {name + ".pc": template.render(context)}
+    return name + ".pc", template.render(context)
 
 
 def get_alias_pc_filename_and_content(dep, name, requires, description):
@@ -122,4 +122,4 @@ def get_alias_pc_filename_and_content(dep, name, requires, description):
     }
     template = Template(_get_alias_pc_file_template(), trim_blocks=True,
                         lstrip_blocks=True, undefined=StrictUndefined)
-    return {name + ".pc": template.render(context)}
+    return name + ".pc", template.render(context)
