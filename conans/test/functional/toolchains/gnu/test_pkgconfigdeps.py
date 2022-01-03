@@ -524,23 +524,24 @@ def test_duplicated_names_warnings():
         """)
     client.save({"conanfile.txt": conanfile}, clean_first=True)
     client.run("install .")
+    output = client.out
     # Duplicated aliases from pkgA
-    assert "WARN: [pkgA/1.0] The PC alias name alias1.pc already exists and it matches with" \
-           "another alias one"
+    assert "WARN: [pkgA/1.0] The PC alias name alias1.pc already exists and it matches with " \
+           "another alias one" in output
     # Duplicated names, alias and component name from pkgA
-    assert "WARN: [pkgA/1.0] The PC alias name alias1.pc already exists and it matches with" \
-           "another package/component one"
+    assert "WARN: [pkgA/1.0] The PC alias name libcmp.pc already exists and it matches with " \
+           "another package/component one" in output
     # Duplicated components from pkgB
     assert "WARN: [pkgB/1.0] The PC component name component1.pc already exists and it matches " \
-           "with another component one"
+           "with another component one" in output
     # Duplicated package and component name from pkgB
     assert "WARN: [pkgB/1.0] The PC package name libpkg.pc already exists and it matches with " \
-           "another component one"
+           "another component one" in output
     # Duplicated names between pkgB and pkgA
     assert "WARN: [pkgB/1.0] The PC file name component1.pc already exists and it matches with " \
-           "another name/alias from pkgA/1.0 package"
+           "another name/alias declared in pkgA/1.0 package" in output
     assert "WARN: [pkgB/1.0] The PC file name libpkg.pc already exists and it matches with " \
-           "another name/alias from pkgA/1.0 package"
+           "another name/alias declared in pkgA/1.0 package" in output
     pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
     pc_files.sort()
     # Let's check all the PC file names created just in case
