@@ -1,6 +1,7 @@
 import os
 from os.path import join, normpath, relpath
 
+import conans.server.utils.files
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -64,7 +65,7 @@ class ServerStore(object):
         return abspath
 
     def path_exists(self, path):
-        return self._storage_adapter.path_exists(path)
+        return conans.server.utils.files.path_exists(path)
 
     # ############ SNAPSHOTS (APIv1)
     def get_recipe_snapshot(self, ref):
@@ -234,7 +235,7 @@ class ServerStore(object):
         self._update_last_revision(rev_file_path, pref)
 
     def _update_last_revision(self, rev_file_path, ref):
-        if self._storage_adapter.path_exists(rev_file_path):
+        if conans.server.utils.files.path_exists(rev_file_path):
             rev_file = self._storage_adapter.read_file(rev_file_path,
                                                        lock_file=rev_file_path + ".lock")
             rev_list = RevisionList.loads(rev_file)
@@ -263,7 +264,7 @@ class ServerStore(object):
         return [PkgReference(pref.ref, pref.package_id, rev.revision, rev.time) for rev in ret]
 
     def _get_revisions_list(self, rev_file_path):
-        if self._storage_adapter.path_exists(rev_file_path):
+        if conans.server.utils.files.path_exists(rev_file_path):
             rev_file = self._storage_adapter.read_file(rev_file_path,
                                                        lock_file=rev_file_path + ".lock")
             rev_list = RevisionList.loads(rev_file)

@@ -4,7 +4,8 @@ import fasteners
 
 from conans.errors import NotFoundException
 from conans.util.env import no_op
-from conans.util.files import md5sum, path_exists, relative_dirs, rmdir
+from conans.util.files import md5sum, rmdir
+from conans.server.utils.files import path_exists, relative_dirs
 
 
 class ServerDiskAdapter(object):

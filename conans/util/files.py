@@ -6,7 +6,6 @@ import platform
 import re
 import shutil
 import stat
-import sys
 import tarfile
 import tempfile
 
@@ -226,17 +225,6 @@ def load(path, binary=False, encoding="auto"):
         return tmp if binary else decode_text(tmp, encoding)
 
 
-def relative_dirs(path):
-    """ Walks a dir and return a list with the relative paths """
-    ret = []
-    for dirpath, _, fnames in os.walk(path):
-        for filename in fnames:
-            tmp = os.path.join(dirpath, filename)
-            tmp = tmp[len(path) + 1:]
-            ret.append(tmp)
-    return ret
-
-
 def get_abs_path(folder, origin):
     if folder:
         if os.path.isabs(folder):
@@ -279,26 +267,6 @@ def mkdir(path):
     if os.path.exists(path):
         return
     os.makedirs(path)
-
-
-def path_exists(path, basedir):
-    """Case sensitive, for windows, optional
-    basedir for skip caps check for tmp folders in testing for example (returned always
-    in lowercase for some strange reason)"""
-    exists = os.path.exists(path)
-    if not exists or sys.platform == "linux2":
-        return exists
-
-    path = os.path.normpath(path)
-    path = os.path.relpath(path, basedir)
-    chunks = path.split(os.sep)
-    tmp = basedir
-
-    for chunk in chunks:
-        if chunk and chunk not in os.listdir(tmp):
-            return False
-        tmp = os.path.normpath(tmp + os.sep + chunk)
-    return True
 
 
 def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, **kwargs):

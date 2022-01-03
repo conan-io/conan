@@ -23,6 +23,7 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
+import conans.server.utils.files
 from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import load, REVISIONS
 from conans.cli.api.conan_api import ConanAPIV2
@@ -287,7 +288,7 @@ class TestServer(object):
                 path = self.test_server.server_store.conan_revisions_root(ref)
             else:
                 path = self.test_server.server_store.base_folder(ref)
-            return self.test_server.server_store.path_exists(path)
+            return conans.server.utils.files.path_exists(path)
         except NotFoundException:  # When resolves the latest and there is no package
             return False
 
@@ -297,7 +298,7 @@ class TestServer(object):
                 path = self.test_server.server_store.package(pref)
             else:
                 path = self.test_server.server_store.package_revisions_root(pref)
-            return self.test_server.server_store.path_exists(path)
+            return conans.server.utils.files.path_exists(path)
         except NotFoundException:  # When resolves the latest and there is no package
             return False
 

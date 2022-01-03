@@ -11,7 +11,7 @@ from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
 
-from conans.util.files import decode_text, to_file_bytes, walk, mkdir
+from conans.util.files import decode_text, to_file_bytes, mkdir
 from conans.util.runners import check_output_runner, version_runner, muted_runner, input_runner, \
     pyinstaller_bundle_env_cleaned
 
@@ -242,7 +242,7 @@ class Git(SCMBase):
             file_paths = [os.path.normpath(
                                 os.path.join(
                                     os.path.relpath(folder, self.folder), el)).replace("\\", "/")
-                          for folder, dirpaths, fs in walk(self.folder)
+                          for folder, dirpaths, fs in os.walk(self.folder)
                           for el in fs + dirpaths]
             if file_paths:
                 paths = to_file_bytes("\n".join(file_paths))
