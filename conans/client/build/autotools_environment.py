@@ -105,6 +105,7 @@ class AutoToolsBuildEnvironment(object):
             # FIXME: Why not use 'os_build' and 'arch_build' from conanfile.settings?
             os_build = detected_os() or platform.system()
             arch_build = detected_architecture() or platform.machine()
+            compiler_build = self._compiler
 
         if os_build is None or arch_build is None or self._arch is None or self._os is None:
             return False, False, target
