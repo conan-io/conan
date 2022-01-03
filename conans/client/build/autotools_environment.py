@@ -14,7 +14,7 @@ from conans.client.build.cppstd_flags import cppstd_from_settings, \
 from conans.client import tools
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
-    detected_architecture, detected_os, get_gnu_triplet, get_target_os_arch, get_build_os_arch
+    detected_architecture, detected_os, get_gnu_triplet, get_target_os_arch_compiler, get_build_os_arch_compiler
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
@@ -44,7 +44,8 @@ class AutoToolsBuildEnvironment(object):
         self._os_sdk = conanfile.settings.get_safe("os.sdk")
         self._os_subsystem = conanfile.settings.get_safe("os.subsystem")
         self._arch = conanfile.settings.get_safe("arch")
-        self._os_target, self._arch_target = get_target_os_arch(conanfile)
+
+        self._os_target, self._arch_target, self._compiler_target = get_target_os_arch_compiler(conanfile)
 
         self._build_type = conanfile.settings.get_safe("build_type")
 
@@ -91,7 +92,7 @@ class AutoToolsBuildEnvironment(object):
 
         if self._os_target and self._arch_target:
             try:
-                target = get_gnu_triplet(self._os_target, self._arch_target, self._compiler)
+                target = get_gnu_triplet(self._os_target, self._arch_target, self._compiler_target)
             except ConanException as exc:
                 self._conanfile.output.warn(str(exc))
                 target = None
@@ -99,7 +100,7 @@ class AutoToolsBuildEnvironment(object):
             target = None
 
         if hasattr(self._conanfile, 'settings_build'):
-            os_build, arch_build = get_build_os_arch(self._conanfile)
+            os_build, arch_build, compiler_build = get_build_os_arch_compiler(self._conanfile)
         else:
             # FIXME: Why not use 'os_build' and 'arch_build' from conanfile.settings?
             os_build = detected_os() or platform.system()
@@ -112,7 +113,7 @@ class AutoToolsBuildEnvironment(object):
             return False, False, target
 
         try:
-            build = get_gnu_triplet(os_build, arch_build, self._compiler)
+            build = get_gnu_triplet(os_build, arch_build, compiler_build)
         except ConanException as exc:
             self._conanfile.output.warn(str(exc))
             build = None
