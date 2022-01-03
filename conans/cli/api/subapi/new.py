@@ -1,3 +1,4 @@
+import fnmatch
 import os
 
 from jinja2 import Template
@@ -36,12 +37,15 @@ class NewAPI:
         if not template_files:
             raise ConanException("Template doesn't exist or not a folder: {}".format(template))
 
-        result = {}
+        excluded = template_files.get("not_templates")
+        excluded = [] if not excluded else [s.strip() for s in excluded.splitlines() if s.strip()]
 
+        result = {}
         definitions["conan_version"] = __version__
         for k, v in template_files.items():
-            k = self._render_template(k, definitions)
-            v = self._render_template(v, definitions)
+            if not any(fnmatch.fnmatch(k, exclude) for exclude in excluded):
+                k = self._render_template(k, definitions)
+                v = self._render_template(v, definitions)
             if v:
                 result[k] = v
         return result
@@ -58,5 +62,5 @@ class NewAPI:
 
     @staticmethod
     def _render_template(text, defines):
-        t = Template(text, keep_trailing_newline=True)
+        t = Template(text, trim_blocks=True, lstrip_blocks=True, keep_trailing_newline=True)
         return t.render(**defines)

@@ -87,6 +87,21 @@ class TestNewCommandUserTemplate:
         assert os.path.exists(os.path.join(client.current_folder, "file.h"))
         assert not os.path.exists(os.path.join(client.current_folder, "file.cpp"))
 
+    def test_template_image_files(self):
+        """ problematic files that we dont want to render with Jinja, like PNG or other binaries,
+        have to be explicitly excluded from render"""
+        client = TestClient()
+        template_dir = "templates/command/new/t_dir"
+        png = "$&(){}{}{{}{}"
+        save(os.path.join(client.cache_folder, template_dir, "myimage.png"), png)
+        client.run("new t_dir --name=hello --version=0.1", assert_error=True)
+        assert "TemplateSyntaxError" in client.out
+
+        save(os.path.join(client.cache_folder, template_dir, "not_templates"), "*.png")
+        client.run("new t_dir --name=hello --version=0.1")
+        myimage = client.load("myimage.png")
+        assert myimage == png
+
 
 class TestNewErrors:
     def test_template_errors(self):
