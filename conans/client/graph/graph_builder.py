@@ -1,5 +1,6 @@
 import copy
 import fnmatch
+import os
 from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
@@ -9,6 +10,7 @@ from conans.client.graph.graph_error import GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
+from conans.model.graph_lock import Lockfile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
 from conans.model.requires import Requirement
@@ -44,9 +46,10 @@ class DepsGraphBuilder(object):
                 (require, node) = open_requires.popleft()
                 if require.override:
                     continue
-                new_node = self._expand_require(require, node, dep_graph, profile_host,
-                                                profile_build, graph_lock)
-                if new_node:
+                result = self._expand_require(require, node, dep_graph, profile_host,
+                                              profile_build, graph_lock)
+                if result:
+                    new_node, graph_lock = result
                     self._initialize_requires(new_node, dep_graph, graph_lock)
                     open_requires.extendleft((r, new_node)
                                              for r in reversed(new_node.conanfile.requires.values()))
@@ -84,9 +87,9 @@ class DepsGraphBuilder(object):
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
-            new_node = self._create_new_node(node, require, graph, profile_host, profile_build,
-                                             graph_lock)
-            return new_node
+            new_node, graph_lock = self._create_new_node(node, require, graph, profile_host,
+                                                         profile_build, graph_lock)
+            return new_node, graph_lock
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
             require.process_package_type(prev_node)
@@ -219,13 +222,21 @@ class DepsGraphBuilder(object):
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref)
         conanfile_path, recipe_status, remote, new_ref = result
+        # We check if the recipe exported a "conan.lock", and if it is there, use it
+        exported_lock = os.path.join(os.path.dirname(conanfile_path), "conan.lock")
+        if os.path.isfile(exported_lock):
+            exported_lockfile = Lockfile.load(exported_lock)
+            if graph_lock is not None:
+                graph_lock.merge(exported_lockfile)
+            else:
+                graph_lock = exported_lockfile
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock)
 
         if recipe_status == RECIPE_EDITABLE:
             dep_conanfile.in_local_cache = False
             dep_conanfile.develop = True
 
-        return new_ref, dep_conanfile, recipe_status, remote
+        return new_ref, dep_conanfile, recipe_status, remote, graph_lock
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         try:
@@ -240,7 +251,7 @@ class DepsGraphBuilder(object):
         except ConanException as e:
             raise GraphError.missing(node, require, str(e))
 
-        new_ref, dep_conanfile, recipe_status, remote = resolved
+        new_ref, dep_conanfile, recipe_status, remote, graph_lock = resolved
 
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
                                      require.build, new_ref)
@@ -277,7 +288,7 @@ class DepsGraphBuilder(object):
         if ancestor is not None:
             raise GraphError.loop(new_node, require, ancestor)
 
-        return new_node
+        return new_node, graph_lock
 
     @staticmethod
     def _remove_overrides(dep_graph):
