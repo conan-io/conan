@@ -468,8 +468,9 @@ def test_pkg_config_name_full_aliases():
 def test_duplicated_names_warnings():
     """
     Testing some WARN messages if there are duplicated pkg_config_name/pkg_config_aliases defined
-    Scenario: consumer -> pkgA/1.0 -> pkgB/1.0  ) -> depen
-    Expected cases:
+
+    Scenario: consumer -> pkgA/1.0 -> pkgB/1.0
+    Expected WARN cases:
         - Duplicated aliases.
         - Duplicated names, alias and component name
         - Duplicated components names.
