@@ -17,12 +17,8 @@ from contextlib import contextmanager
 from conans.util.log import logger
 
 
-def walk(top, **kwargs):
-    return os.walk(top, **kwargs)
-
-
 def make_read_only(folder_path):
-    for root, _, files in walk(folder_path):
+    for root, _, files in os.walk(folder_path):
         for f in files:
             full_path = os.path.join(root, f)
             make_file_read_only(full_path)
@@ -112,7 +108,7 @@ def touch(fname, times=None):
 
 
 def touch_folder(folder):
-    for dirname, _, filenames in walk(folder):
+    for dirname, _, filenames in os.walk(folder):
         for fname in filenames:
             try:
                 os.utime(os.path.join(dirname, fname), None)
@@ -233,7 +229,7 @@ def load(path, binary=False, encoding="auto"):
 def relative_dirs(path):
     """ Walks a dir and return a list with the relative paths """
     ret = []
-    for dirpath, _, fnames in walk(path):
+    for dirpath, _, fnames in os.walk(path):
         for filename in fnames:
             tmp = os.path.join(dirpath, filename)
             tmp = tmp[len(path) + 1:]
@@ -365,19 +361,6 @@ def tar_extract(fileobj, destination_dir):
     the_tar.close()
 
 
-def list_folder_subdirs(basedir, level):
-    ret = []
-    for root, dirs, _ in walk(basedir):
-        rel_path = os.path.relpath(root, basedir)
-        if rel_path == ".":
-            continue
-        dir_split = rel_path.split(os.sep)
-        if len(dir_split) == level:
-            ret.append("/".join(dir_split))
-            dirs[:] = []  # Stop iterate subdirs
-    return ret
-
-
 def exception_message_safe(exc):
     try:
         return str(exc)
@@ -403,7 +386,7 @@ def discarded_file(filename):
 def gather_files(folder):
     file_dict = {}
     symlinked_folders = {}
-    for root, dirs, files in walk(folder):
+    for root, dirs, files in os.walk(folder):
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):

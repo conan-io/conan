@@ -10,7 +10,7 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.search.search import _partial_match
-from conans.util.files import list_folder_subdirs
+from conans.server.utils.files import list_folder_subdirs
 from conans.util.log import logger
 
 
