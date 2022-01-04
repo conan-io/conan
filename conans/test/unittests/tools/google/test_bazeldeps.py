@@ -94,3 +94,22 @@ def test_bazeldeps_main_buildfile():
 
         for line in expected_content:
             assert line in content
+
+def test_bazeldeps_build_dependency_buildfiles():
+    conanfile = ConanFile(Mock(), None)
+
+    conanfile_dep = ConanFile(Mock(), None)
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
+
+    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+        req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"), build=True)
+        mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
+
+        bazeldeps = BazelDeps(conanfile)
+
+        for build_dependency in bazeldeps._conanfile.dependencies.direct_build.values():
+            dependency_content = bazeldeps._get_build_dependency_buildfile_content(build_dependency)
+            assert 'filegroup(\n    name = "OriginalDepName_binaries",' in dependency_content
+            assert 'data = glob(["**"]),' in dependency_content
