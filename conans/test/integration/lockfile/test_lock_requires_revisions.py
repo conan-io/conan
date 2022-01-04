@@ -18,7 +18,7 @@ def test_conanfile_txt_deps_revisions(requires):
     client.run("create pkg pkg/0.1@user/testing")
     assert "REV1!!!" in client.out
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
-    assert "pkg/0.1@user/testing from local cache - Cache" in client.out
+    assert "pkg/0.1@user/testing#" in client.out
 
     client.save({"pkg/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')")})
     client.run("create pkg pkg/0.1@user/testing")
@@ -47,8 +47,8 @@ def test_conanfile_txt_deps_revisions_transitive(requires, req_version):
     client.run("create pkg pkg/0.1@user/testing")
 
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
-    assert "dep/0.1@user/testing from local cache - Cache" in client.out
-    assert "pkg/0.1@user/testing from local cache - Cache" in client.out
+    assert "dep/0.1@user/testing#" in client.out
+    assert "pkg/0.1@user/testing#" in client.out
 
     client.save({"dep/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')")})
     client.run("create dep dep/0.1@user/testing")
@@ -73,7 +73,7 @@ def test_conanfile_txt_strict_revisions(requires):
                  "consumer/conanfile.txt": f"[{requires}]\npkg/0.1@user/testing"})
     client.run("create pkg pkg/0.1@user/testing")
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
-    assert "pkg/0.1@user/testing from local cache - Cache" in client.out
+    assert "pkg/0.1@user/testing#" in client.out
 
     client.save({"pkg/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')")})
     client.run("create pkg pkg/0.1@user/testing")
@@ -116,12 +116,12 @@ def test_conditional_os(requires):
 
     client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Windows"
                " -s:b os=Windows")
-    assert "win/0.1 from local cache - Cache" in client.out
-    assert "pkg/0.1 from local cache - Cache" in client.out
+    assert "win/0.1#" in client.out
+    assert "pkg/0.1#" in client.out
     client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Linux -s:b os=Linux")
-    assert "nix/0.1 from local cache - Cache" in client.out
-    assert "pkg/0.1 from local cache - Cache" in client.out
+    assert "nix/0.1#" in client.out
+    assert "pkg/0.1#" in client.out
 
     # New dependencies will not be used if using the lockfile
     client.save({"dep/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')")})
