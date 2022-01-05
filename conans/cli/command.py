@@ -3,7 +3,6 @@ import textwrap
 
 from conans.cli.output import cli_out_write
 from conans.errors import ConanException
-from conans.util.files import save
 
 COMMAND_GROUPS = {
     'consumer': 'Consumer commands',

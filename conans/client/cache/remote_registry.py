@@ -142,12 +142,6 @@ class RemoteRegistry(object):
             remotes.add(remote)
             self.save_remotes(remotes)
 
-    def reset_remotes(self):
-        if os.path.exists(self._filename):
-            os.chmod(self._filename, stat.S_IWRITE)
-            os.remove(self._filename)
-        self.initialize_remotes()
-
     def _load_remotes(self):
         self.initialize_remotes()
         content = load(self._filename)

@@ -3,7 +3,6 @@ import os
 import shutil
 
 from datetime import datetime
-from dateutil.tz import gettz
 
 from contextlib import contextmanager
 from urllib.parse import urlparse
@@ -257,35 +256,32 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
     configs_file = cache.config_install_file
     if os.path.isfile(configs_file):
         configs = _load_configs(configs_file)
-    if uri is None:
-        if config_type or args or not verify_ssl:  # Not the defaults
-            if not configs:
-                raise ConanException("Called config install without arguments")
-            # Modify the last one
-            config = configs[-1]
-            config.config_type = config_type or config.type
-            config.args = args or config.args
-            config.verify_ssl = verify_ssl or config.verify_ssl
-            _process_config(config, cache, requester)
-            _save_configs(configs_file, configs)
-        else:
-            if not configs:
-                raise ConanException("Called config install without arguments")
-            # Execute the previously stored ones
-            for config in configs:
-                ConanOutput().info("Config install:  %s" % _hide_password(config.uri))
-                _process_config(config, cache, requester)
-            touch(cache.config_install_file)
+
+    # Execute and store the new one
+    config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
+                                     source_folder, target_folder)
+    _process_config(config, cache, requester)
+    if config not in configs:
+        configs.append(config)
     else:
-        # Execute and store the new one
-        config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
-                                         source_folder, target_folder)
+        configs = [(c if c != config else config) for c in configs]
+    _save_configs(configs_file, configs)
+
+
+def configuration_reinstall(app):
+    cache, requester = app.cache, app.requester
+    configs = []
+    configs_file = cache.config_install_file
+    if os.path.isfile(configs_file):
+        configs = _load_configs(configs_file)
+
+    if not configs:
+        ConanOutput().warning("No previous configuration to re-install")
+    # Execute the previously stored ones
+    for config in configs:
+        ConanOutput().info("Config install:  %s" % _hide_password(config.uri))
         _process_config(config, cache, requester)
-        if config not in configs:
-            configs.append(config)
-        else:
-            configs = [(c if c != config else config) for c in configs]
-        _save_configs(configs_file, configs)
+    touch(cache.config_install_file)
 
 
 def _is_scheduled_intervals(file, interval):
@@ -296,9 +292,9 @@ def _is_scheduled_intervals(file, interval):
     :return: True if last change - current time is bigger than interval. Otherwise, False.
     """
     timestamp = os.path.getmtime(file)
-    sched = datetime.fromtimestamp(timestamp, tz=gettz())
+    sched = datetime.fromtimestamp(timestamp)
     sched += interval
-    now = datetime.now(gettz())
+    now = datetime.now()
     return now > sched
 
 

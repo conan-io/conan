@@ -115,13 +115,6 @@ def touch_folder(folder):
                 pass
 
 
-def normalize(text):
-    if platform.system() == "Windows":
-        return re.sub("\r?\n", "\r\n", text)
-    else:
-        return text
-
-
 def md5(content):
     try:
         md5alg = hashlib.md5()

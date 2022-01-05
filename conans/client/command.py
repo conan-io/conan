@@ -386,14 +386,8 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
-        home_subparser = subparsers.add_parser('home', help='Retrieve the Conan home directory')
         install_subparser = subparsers.add_parser('install', help='Install a full configuration '
                                                                   'from a local or remote zip file')
-        init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
-        subparsers.add_parser('list', help='List Conan configuration properties')
-
-        home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                                    help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
                                        help="git repository, local file or folder or zip file (local or "
                                        "http) where the configuration is stored")
@@ -414,18 +408,10 @@ class Command(object):
         install_subparser.add_argument("-r", "--remove", type=int,
                                        help='Remove configuration origin by index in list (index '
                                             'provided by --list argument)')
-        init_subparser.add_argument('-f', '--force', default=False, action='store_true',
-                                    help='Overwrite existing Conan configuration files')
 
         args = parser.parse_args(*args)
 
-        if args.subcommand == "home":
-            conan_home = self._conan_api.config_home()
-            self._out.info(conan_home)
-            if args.json:
-                CommandOutputer().json_output({"home": conan_home}, args.json, os.getcwd())
-            return conan_home
-        elif args.subcommand == "install":
+        if args.subcommand == "install":
             if args.list:
                 configs = self._conan_api.config_install_list()
                 for index, config in enumerate(configs):
@@ -438,12 +424,8 @@ class Command(object):
             return self._conan_api.config_install(args.item, verify_ssl, args.type, args.args,
                                               source_folder=args.source_folder,
                                               target_folder=args.target_folder)
-        elif args.subcommand == 'init':
-            return self._conan_api.config_init(force=args.force)
-        elif args.subcommand == "list":
-            self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
-            for key, value in DEFAULT_CONFIGURATION.items():
-                self._out.info("{}: {}".format(key, value))
+
+
 
     def source(self, *args):
         """
