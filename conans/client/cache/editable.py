@@ -34,7 +34,7 @@ class EditablePackages(object):
         ref = ref.copy_clear_rev()
         return self._edited_refs.get(ref)
 
-    def add(self, ref, path, layout, source_folder, build_folder):
+    def add(self, ref, path, layout, source_folder=None, build_folder=None):
         assert isinstance(ref, ConanFileReference)
         ref = ref.copy_clear_rev()
         self._edited_refs[ref] = {"path": path, "layout": layout, "source_folder": source_folder,
