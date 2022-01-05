@@ -1,4 +1,4 @@
-from conans.client.tools import to_apple_arch
+from conan.tools.apple.apple import to_apple_arch
 from conans.model.version import Version
 
 

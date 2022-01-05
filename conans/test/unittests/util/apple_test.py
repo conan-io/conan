@@ -33,6 +33,32 @@ class FakeSettings(object):
             return self._os_subystem
 
 
+class TestApple:
+    @pytest.mark.parametrize("os_, version, sdk, subsystem, flag",
+                             [("Macos", "10.1", None, None, '-mmacosx-version-min=10.1'),
+                              ("Macos", "10.1", "macosx", None, '-mmacosx-version-min=10.1'),
+                              ("iOS", "10.1", None, None, '-mios-version-min=10.1'),
+                              ("iOS", "10.1", "iphoneos", None, '-mios-version-min=10.1'),
+                              ("iOS", "10.1", "iphonesimulator", None,
+                               '-mios-simulator-version-min=10.1'),
+                              ("watchOS", "10.1", None, None, '-mwatchos-version-min=10.1'),
+                              ("watchOS", "10.1", "watchos", None, '-mwatchos-version-min=10.1'),
+                              ("watchOS", "10.1", "watchsimulator", None,
+                               '-mwatchos-simulator-version-min=10.1'),
+                              ("tvOS", "10.1", None, None, '-mtvos-version-min=10.1'),
+                              ("tvOS", "10.1", "appletvos", None, '-mtvos-version-min=10.1'),
+                              ("tvOS", "10.1", "appletvsimulator", None,
+                               '-mtvos-simulator-version-min=10.1'),
+                              ("Macos", "10.1", None, "catalyst", '-mios-version-min=10.1'),
+                              ("Macos", "10.1", "macosx", "catalyst", '-mios-version-min=10.1'),
+                              ("Solaris", "10.1", None, None, ''),
+                              ])
+    def test_deployment_target_flag_name(self, os_, version, sdk, subsystem, flag):
+        conanfile = MockConanfile(FakeSettings(os_, arch=None, os_version=version, os_sdk=sdk,
+                                               subsystem=subsystem))
+        assert apple_min_version_flag(conanfile) == flag
+
+
 class AppleTest(unittest.TestCase):
     def test_is_apple_os(self):
         self.assertTrue(is_apple_os('iOS'))
@@ -77,51 +103,6 @@ class AppleTest(unittest.TestCase):
         self.assertEqual(apple_sdk_name(FakeSettings('watchOS', 'ios_fat')), 'watchos')
         self.assertEqual(apple_sdk_name(FakeSettings('tvOS', 'ios_fat')), 'appletvos')
         self.assertIsNone(apple_sdk_name(FakeSettings('ConanOS', 'ios_fat')))
-
-    def test_deployment_target_flag_name(self):
-        self.assertEqual(apple_min_version_flag(MockConanfile(FakeSettings('Macos',
-                                                                           os_version="10.1"))),
-                         '-mmacosx-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag(MockConanfile(FakeSettings('Macos',
-                                                                           os_version="10.1",
-                                                                           os_sdk="macosx"))),
-                         '-mmacosx-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag('iOS', "10.1"),
-                         '-mios-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag('iOS', "10.1", 'iphoneos'),
-                         '-mios-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag('iOS', "10.1", 'iphonesimulator'),
-                         '-mios-simulator-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag('watchOS', "10.1"),
-                         '-mwatchos-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag('watchOS', "10.1", 'watchos'),
-                         '-mwatchos-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag('watchOS', "10.1", 'watchsimulator'),
-                         '-mwatchos-simulator-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag('tvOS', "10.1"),
-                         '-mtvos-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag('tvOS', "10.1", 'appletvos'),
-                         '-mtvos-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag('tvOS', "10.1", 'appletvsimulator'),
-                         '-mtvos-simulator-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag("Macos", "10.1", None, "catalyst"),
-                         '-mios-version-min=10.1')
-
-        self.assertEqual(apple_min_version_flag("Macos", "10.1", "macosx", "catalyst"),
-                         '-mios-version-min=10.1')
-
-        self.assertEqual('', apple_min_version_flag('Solaris', "10.1"))
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
     def test_xcrun(self):
