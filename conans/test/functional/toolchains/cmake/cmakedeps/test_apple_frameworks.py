@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.client.tools.apple import XCRun, to_apple_arch
+from conan.tools.apple.apple import XCRun, to_apple_arch
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient

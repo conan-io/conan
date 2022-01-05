@@ -5,11 +5,6 @@ import os
 from conans.util.runners import check_output_runner
 
 
-def is_apple_os(os_):
-    """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
-    return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
-
-
 def to_apple_arch(arch):
     """converts conan-style architecture into Apple-style arch"""
     return {'x86': 'i386',

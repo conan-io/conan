@@ -3,8 +3,8 @@ import textwrap
 
 import pytest
 
+from conan.tools.apple.apple import XCRun, to_apple_arch
 from conan.tools.files import load_toolchain_args
-from conans.client.tools.apple import XCRun, to_apple_arch
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient

@@ -7,7 +7,8 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.client.tools.apple import XCRun, apple_deployment_target_flag, to_apple_arch
+from conan.tools.apple.apple import to_apple_arch, XCRun
+from conans.client.tools.apple import apple_deployment_target_flag
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 

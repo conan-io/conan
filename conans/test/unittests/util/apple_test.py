@@ -7,6 +7,7 @@ import unittest
 
 import pytest
 
+from conan.tools.apple.apple import is_apple_os
 from conans.client import tools
 
 
@@ -27,13 +28,13 @@ class FakeSettings(object):
 
 class AppleTest(unittest.TestCase):
     def test_is_apple_os(self):
-        self.assertTrue(tools.is_apple_os('iOS'))
-        self.assertTrue(tools.is_apple_os('tvOS'))
-        self.assertTrue(tools.is_apple_os('watchOS'))
-        self.assertTrue(tools.is_apple_os('Macos'))
-        self.assertFalse(tools.is_apple_os('Windows'))
-        self.assertFalse(tools.is_apple_os('Linux'))
-        self.assertFalse(tools.is_apple_os('Android'))
+        self.assertTrue(is_apple_os('iOS'))
+        self.assertTrue(is_apple_os('tvOS'))
+        self.assertTrue(is_apple_os('watchOS'))
+        self.assertTrue(is_apple_os('Macos'))
+        self.assertFalse(is_apple_os('Windows'))
+        self.assertFalse(is_apple_os('Linux'))
+        self.assertFalse(is_apple_os('Android'))
 
     def test_to_apple_arch(self):
         self.assertEqual(tools.to_apple_arch('x86'), 'i386')
