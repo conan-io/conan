@@ -15,42 +15,12 @@ def to_apple_arch(arch):
             'armv7k': 'armv7k'}.get(str(arch))
 
 
-def _guess_apple_sdk_name(os_, arch):
-    if str(arch).startswith('x86'):
-        return {'Macos': 'macosx',
-                'iOS': 'iphonesimulator',
-                'watchOS': 'watchsimulator',
-                'tvOS': 'appletvsimulator'}.get(str(os_))
-    else:
-        return {'Macos': 'macosx',
-                'iOS': 'iphoneos',
-                'watchOS': 'watchos',
-                'tvOS': 'appletvos'}.get(str(os_), None)
-
-
-def apple_sdk_name(settings):
-    """returns proper SDK name suitable for OS and architecture
-    we're building for (considering simulators)"""
-    arch = settings.get_safe('arch')
-    os_ = settings.get_safe('os')
-    os_sdk = settings.get_safe('os.sdk')
-    return os_sdk or _guess_apple_sdk_name(os_, arch)
-
-
-def apple_min_version_flag(conanfile):
+def apple_min_version_flag(os_version, os_sdk, subsystem):
     """compiler flag name which controls deployment target"""
-    os_version = conanfile.settings.get_safe("os.version")
     if not os_version:
         return ''
 
-    os_ = conanfile.settings.get_safe("os")
-    os_sdk = conanfile.settings.get_safe("os.sdk")
-    os_subsystem = conanfile.settings.get_safe("os.subsystem")
-    arch = conanfile.settings.get_safe("arch")
-
-    if not os_version:
-        return ''
-    os_sdk = os_sdk if os_sdk else _guess_apple_sdk_name(os_, arch)
+    # FIXME: This guess seems wrong, nothing has to be guessed, but explicit
     flag = {'macosx': '-mmacosx-version-min',
             'iphoneos': '-mios-version-min',
             'iphonesimulator': '-mios-simulator-version-min',
@@ -58,7 +28,7 @@ def apple_min_version_flag(conanfile):
             'watchsimulator': '-mwatchos-simulator-version-min',
             'appletvos': '-mtvos-version-min',
             'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
-    if os_subsystem == 'catalyst':
+    if subsystem == 'catalyst':
         # especial case, despite Catalyst is macOS, it requires an iOS version argument
         flag = '-mios-version-min'
     if not flag:
@@ -79,7 +49,7 @@ class XCRun(object):
         """sdk=False will skip the flag
            sdk=None will try to adjust it automatically"""
         if sdk is None and settings:
-            sdk = apple_sdk_name(settings)
+            sdk = settings.get_safe('os.sdk')
         self.sdk = sdk
 
     def _invoke(self, args):

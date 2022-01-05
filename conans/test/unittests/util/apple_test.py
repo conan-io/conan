@@ -54,9 +54,7 @@ class TestApple:
                               ("Solaris", "10.1", None, None, ''),
                               ])
     def test_deployment_target_flag_name(self, os_, version, sdk, subsystem, flag):
-        conanfile = MockConanfile(FakeSettings(os_, arch=None, os_version=version, os_sdk=sdk,
-                                               subsystem=subsystem))
-        assert apple_min_version_flag(conanfile) == flag
+        assert apple_min_version_flag(version, sdk, subsystem) == flag
 
 
 class AppleTest(unittest.TestCase):

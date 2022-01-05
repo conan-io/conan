@@ -7,8 +7,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conan.tools.apple.apple import to_apple_arch, XCRun
-from conans.client.tools.apple import apple_deployment_target_flag
+from conan.tools.apple.apple import to_apple_arch, XCRun, apple_min_version_flag
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
@@ -66,7 +65,7 @@ class IOSMesonTestCase(unittest.TestCase):
         cc = self.xcrun.cc
         cxx = self.xcrun.cxx
 
-        deployment_flag = apple_deployment_target_flag(self.os, self.os_version)
+        deployment_flag = apple_min_version_flag(self.os_version, self.os_sdk)
         sysroot_flag = " -isysroot " + self.xcrun.sdk_path
         arch_flag = " -arch " + to_apple_arch(self.arch)
         flags = deployment_flag + sysroot_flag + arch_flag
@@ -99,6 +98,7 @@ class IOSMesonTestCase(unittest.TestCase):
         self.arch = arch
         self.os = os_
         self.os_version = os_version
+        self.os_sdk = sdk
 
         hello_h = gen_function_h(name="hello")
         hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
