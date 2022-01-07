@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.client import conan_api
+from conans.cli.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conf import get_default_client_conf
 from conans.paths import DEFAULT_CONAN_HOME
@@ -19,8 +19,8 @@ class ConfigTest(unittest.TestCase):
         os.mkdir(self._cache_folder)
         save(os.path.join(self._cache_folder, CONAN_CONF), conf)
         with environment_update({"CONAN_HOME": user_home}):
-            self.api = conan_api.ConanAPIV1()
+            self.api = ConanAPIV2()
 
     def test_config_home(self):
-        conan_home = self.api.config_home()
+        conan_home = self.api.config.home()
         self.assertEqual(self.api.cache_folder, conan_home)

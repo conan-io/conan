@@ -12,7 +12,6 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import ConanAPIV1, ProfileData
 from conans.client.conan_command_output import CommandOutputer
-from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.package_ref import PkgReference
@@ -893,11 +892,6 @@ class Command(object):
             command = args[0][0]
             commands = self._commands()
             method = commands[command]
-
-            if (command != "config" or
-               (command == "config" and len(args[0]) > 1 and args[0][1] != "install")) and \
-               is_config_install_scheduled(self._conan_api):
-                self._conan_api.config_install(None, None)
 
             method(args[0][1:])
         except KeyboardInterrupt as exc:
