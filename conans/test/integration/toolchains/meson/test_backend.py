@@ -27,6 +27,9 @@ def test_cross_x86():
                 if self.settings.os == "Windows":
                     del self.options.fPIC
 
+            def layout(self):
+                self.folders.build = "build"
+
             def generate(self):
                 tc = MesonToolchain(self, backend='vs')
                 tc.generate()
