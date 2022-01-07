@@ -15,11 +15,9 @@ from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
-from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import get_reference_fields, check_valid_ref, validate_recipe_reference
-from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
@@ -372,60 +370,6 @@ class Command(object):
         self._warn_python_version()
         return self._conan_api.download(reference=reference, packages=packages_list,
                                         remote_name=args.remote, recipe=args.recipe)
-
-    def config(self, *args):
-        """
-        Manages Conan configuration.
-
-        Used to edit conan.conf, or install config files.
-        """
-        parser = argparse.ArgumentParser(description=self.config.__doc__,
-                                         prog="conan config",
-                                         formatter_class=SmartFormatter)
-
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        install_subparser = subparsers.add_parser('install', help='Install a full configuration '
-                                                                  'from a local or remote zip file')
-        install_subparser.add_argument("item", nargs="?",
-                                       help="git repository, local file or folder or zip file (local or "
-                                       "http) where the configuration is stored")
-
-        install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
-                                       help='Verify SSL connection when downloading file')
-        install_subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url"],
-                                       help='Type of remote config')
-        install_subparser.add_argument("-a", "--args",
-                                       help='String with extra arguments for "git clone"')
-        install_subparser.add_argument("-sf", "--source-folder",
-                                       help='Install files only from a source subfolder from the '
-                                       'specified origin')
-        install_subparser.add_argument("-tf", "--target-folder",
-                                       help='Install to that path in the conan cache')
-        install_subparser.add_argument("-l", "--list", default=False, action='store_true',
-                                       help='List stored configuration origins')
-        install_subparser.add_argument("-r", "--remove", type=int,
-                                       help='Remove configuration origin by index in list (index '
-                                            'provided by --list argument)')
-
-        args = parser.parse_args(*args)
-
-        if args.subcommand == "install":
-            if args.list:
-                configs = self._conan_api.config_install_list()
-                for index, config in enumerate(configs):
-                    self._out.info("%s: %s" % (index, config))
-                return
-            elif args.remove is not None:
-                self._conan_api.config_install_remove(index=args.remove)
-                return
-            verify_ssl = get_bool_from_text(args.verify_ssl)
-            return self._conan_api.config_install(args.item, verify_ssl, args.type, args.args,
-                                              source_folder=args.source_folder,
-                                              target_folder=args.target_folder)
-
-
 
     def source(self, *args):
         """

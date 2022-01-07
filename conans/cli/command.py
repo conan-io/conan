@@ -120,7 +120,7 @@ class BaseConanCommand(object):
             raise ConanException("Format {formatarg} was specified, but command didn't return "
                                  "anything to format")
         result = formatter(info)
-        cli_out_write(result)
+        cli_out_write(result, endline="")
 
 
 class ConanCommand(BaseConanCommand):

@@ -152,10 +152,11 @@ class Cli:
             output.error(exc)
             return ERROR_GENERAL
 
-        if command != "config" and is_config_install_scheduled(self._conan_api):
-            self._conan_api.config_install(None, None)
-
         try:
+            # This can raise too, with ConanException, etc
+            if command.name != "config" and is_config_install_scheduled(self._conan_api):
+                self._conan_api.config.remote_reinstall()
+
             command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
             exit_error = SUCCESS
         except SystemExit as exc:

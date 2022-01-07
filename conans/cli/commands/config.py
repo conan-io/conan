@@ -1,16 +1,9 @@
 import json
-import os
 
-from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand, \
-    Extender
-from conans.cli.commands import make_abs_path
-from conans.cli.commands.install import graph_compute, common_graph_args
-from conans.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot, \
-    print_graph_info
+from conans.cli.command import conan_command, COMMAND_GROUPS, conan_subcommand
 from conans.cli.output import ConanOutput
-from conans.client.graph.install_graph import InstallGraph
-from conans.errors import ConanException
 from conans.model.conf import DEFAULT_CONFIGURATION
+from conans.util.config_parser import get_bool_from_text
 
 
 @conan_command(group=COMMAND_GROUPS['consumer'])
@@ -24,15 +17,63 @@ def json_build_order(build_order):
     return json.dumps(build_order, indent=4)
 
 
-@conan_subcommand(formatters={"json": json_build_order})
-def config_install(conan_api, parser, subparser, *args):
+@conan_subcommand()
+def config_remote_install(conan_api, parser, subparser, *args):
     """
-    Computes the build order of a dependency graph
+    Installs the configuration (remotes, profiles, conf), from git, http or folder
     """
-    common_graph_args(subparser)
+    subparser.add_argument("item", nargs="?",
+                           help="git repository, local file or folder or zip file (local or "
+                                "http) where the configuration is stored")
+
+    subparser.add_argument("--verify-ssl", nargs="?", default="True",
+                           help='Verify SSL connection when downloading file')
+    subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url"],
+                           help='Type of remote config')
+    subparser.add_argument("-a", "--args",
+                           help='String with extra arguments for "git clone"')
+    subparser.add_argument("-sf", "--source-folder",
+                           help='Install files only from a source subfolder from the '
+                                'specified origin')
+    subparser.add_argument("-tf", "--target-folder",
+                           help='Install to that path in the conan cache')
     args = parser.parse_args(*args)
 
-    return install_order_serialized
+    verify_ssl = get_bool_from_text(args.verify_ssl)
+    conan_api.config.remote_install(args.item, verify_ssl, args.type, args.args,
+                                    source_folder=args.source_folder,
+                                    target_folder=args.target_folder)
+
+
+@conan_subcommand()
+def config_remote_reinstall(conan_api, parser, subparser, *args):
+    """
+    Re-installs previously defined configuration (remotes, profiles, conf), from git, http or folder
+    """
+    conan_api.config.remote_reinstall()
+
+
+@conan_subcommand()
+def config_remote_list(conan_api, parser, subparser, *args):
+    """
+    Returns the defined origins of configuration
+    """
+    configs = conan_api.config.remote_list()
+    for index, remote_config in enumerate(configs):
+        ConanOutput().info("%s: %s" % (index, remote_config))
+
+
+@conan_subcommand()
+def config_remote_remove(conan_api, parser, subparser, *args):
+    """
+    Returns the defined origins of configuration
+    """
+    subparser.add_argument("item", type=int,
+                           help='Remove configuration origin by index in list (index '
+                                'provided by --list argument)')
+    args = parser.parse_args(*args)
+    conan_api.config.remote_remove(index=args.item)
+    ConanOutput().success("Removed remote-install configuration")
 
 
 @conan_subcommand(formatters={"json": json_build_order})

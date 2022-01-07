@@ -1,6 +1,4 @@
-import json
 import os
-
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -8,11 +6,6 @@ from conans.util.files import load, save_append
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import environment_update
 from conans.model.conf import DEFAULT_CONFIGURATION
-
-
-def _assert_dict_subset(expected, actual):
-    actual = {k: v for k, v in actual.items() if k in expected}
-    assert all(v == actual[k] for k, v in expected.items()) and len(expected) == len(actual)
 
 
 def test_missing_subarguments():
@@ -29,8 +22,8 @@ def test_config_home_default():
     client = TestClient()
     client.run("config home")
     assert client.cache.cache_folder in client.out
-    client.run("config home --json home.json")
-    _assert_dict_subset({"home": client.cache.cache_folder}, json.loads(client.load("home.json")))
+    client.run("config home --format=text")
+    assert client.cache.cache_folder == client.stdout
 
 
 def test_config_home_custom_home_dir():
@@ -41,8 +34,8 @@ def test_config_home_custom_home_dir():
         client = TestClient(cache_folder=cache_folder)
         client.run("config home")
         assert cache_folder in client.out
-        client.run("config home --json home.json")
-        _assert_dict_subset({"home": cache_folder}, json.loads(client.load("home.json")))
+        client.run("config home --format=text")
+        assert client.cache.cache_folder == client.stdout
 
 
 def test_config_home_custom_install():
@@ -57,14 +50,13 @@ def test_config_home_custom_install():
 
 
 def test_init():
-    """ config init MUST initialize conan.conf, remotes, settings and default profile
+    """ config init MUST initialize conan.conf, remotes, settings
     """
     client = TestClient()
     client.run('config init')
     assert os.path.exists(client.cache.conan_conf_path)
     assert os.path.exists(client.cache.remotes_path)
     assert os.path.exists(client.cache.settings_path)
-    assert not os.path.exists(client.cache.default_profile_path)
 
 
 def test_init_overwrite():
@@ -76,14 +68,12 @@ def test_init_overwrite():
     save_append(client.cache.conan_conf_path, dummy_content)
     save_append(client.cache.remotes_path, dummy_content)
     save_append(client.cache.settings_path, dummy_content)
-    save_append(client.cache.default_profile_path, dummy_content)
 
     client.run('config init --force')
     assert dummy_content not in load(client.cache.conan_conf_path)
     assert dummy_content not in load(client.cache.conan_conf_path)
     assert dummy_content not in load(client.cache.settings_path)
     assert dummy_content not in load(client.cache.remotes_path)
-    assert not os.path.exists(client.cache.default_profile_path)
 
 
 def test_config_list():

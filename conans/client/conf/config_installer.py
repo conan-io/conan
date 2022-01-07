@@ -232,7 +232,7 @@ def _process_config(config, cache, requester):
         else:
             raise ConanException("Unable to process config install: %s" % config.uri)
     except Exception as e:
-        raise ConanException("Failed conan config install: %s" % str(e))
+        raise ConanException("Failed conan config remote-install: %s" % str(e))
 
 
 def _save_configs(configs_file, configs):
@@ -281,7 +281,8 @@ def configuration_reinstall(app):
     for config in configs:
         ConanOutput().info("Config install:  %s" % _hide_password(config.uri))
         _process_config(config, cache, requester)
-    touch(cache.config_install_file)
+    if os.path.isfile(configs_file):
+        touch(cache.config_install_file)
 
 
 def _is_scheduled_intervals(file, interval):
@@ -321,7 +322,7 @@ def is_config_install_scheduled(api):
             raise ConanException("config_install_interval defined, but no config_install file")
         scheduled = _is_scheduled_intervals(config_install_file, interval)
         if scheduled and not _load_configs(config_install_file):
-            ConanOutput().warning("Skipping scheduled config install, "
+            ConanOutput().warning("Skipping scheduled config remote-reinstall, "
                                   "no config listed in config_install file")
             os.utime(config_install_file, None)
         else:

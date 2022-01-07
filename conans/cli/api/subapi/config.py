@@ -18,8 +18,8 @@ class ConfigAPI:
         return self.conan_api.cache_folder
 
     @api_method
-    def install(self, path_or_url, verify_ssl, config_type=None, args=None,
-                source_folder=None, target_folder=None):
+    def remote_install(self, path_or_url, verify_ssl, config_type=None, args=None,
+                       source_folder=None, target_folder=None):
         # TODO: We probably want to split this into git-folder-http cases?
         from conans.client.conf.config_installer import configuration_install
         app = ConanApp(self.conan_api.cache_folder)
@@ -28,19 +28,19 @@ class ConfigAPI:
                                      source_folder=source_folder, target_folder=target_folder)
 
     @api_method
-    def reinstall(self):
+    def remote_reinstall(self):
         app = ConanApp(self.conan_api.cache_folder)
         configuration_reinstall(app)
 
     @api_method
-    def install_list(self):
+    def remote_list(self):
         app = ConanApp(self.conan_api.cache_folder)
         if not os.path.isfile(app.cache.config_install_file):
             return []
         return json.loads(load(app.cache.config_install_file))
 
     @api_method
-    def install_remove(self, index):
+    def remote_remove(self, index):
         app = ConanApp(self.conan_api.cache_folder)
         if not os.path.isfile(app.cache.config_install_file):
             raise ConanException("There is no config data. Need to install config first.")
