@@ -174,8 +174,7 @@ class XcodeDeps(object):
         for dep in self._conanfile.dependencies.host.values():
             dep_name = dep.ref.name
             dep_name = dep_name.replace(".", "_").replace("-", "_")
-            cpp_info = dep.cpp_info.copy()
-            cpp_info.aggregate_components()
+            cpp_info = dep.cpp_info.aggregated_components()
             public_deps = [d.ref.name.replace(".", "_").replace("-", "_")
                            for r, d in dep.dependencies.direct_host.items() if r.visible]
 

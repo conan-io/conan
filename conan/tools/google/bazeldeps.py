@@ -13,6 +13,14 @@ class BazelDeps(object):
 
     def generate(self):
         local_repositories = []
+
+        for build_dependency in self._conanfile.dependencies.direct_build.values():
+            content = self._get_build_dependency_buildfile_content(build_dependency)
+            filename = self._save_dependendy_buildfile(build_dependency, content)
+
+            local_repository = self._create_new_local_repository(build_dependency, filename)
+            local_repositories.append(local_repository)
+
         for dependency in self._conanfile.dependencies.host.values():
             content = self._get_dependency_buildfile_content(dependency)
             filename = self._save_dependendy_buildfile(dependency, content)
@@ -27,6 +35,18 @@ class BazelDeps(object):
         filename = 'conandeps/{}/BUILD'.format(dependency.ref.name)
         save(filename, buildfile_content)
         return filename
+
+    def _get_build_dependency_buildfile_content(self, dependency):
+        filegroup = textwrap.dedent("""
+            filegroup(
+                name = "{}_binaries",
+                data = glob(["**"]),
+                visibility = ["//visibility:public"],
+            )
+
+        """).format(dependency.ref.name)
+
+        return filegroup
 
     def _get_dependency_buildfile_content(self, dependency):
         template = textwrap.dedent("""
@@ -65,15 +85,15 @@ class BazelDeps(object):
 
         """)
 
-        dependency.cpp_info.aggregate_components()
+        cpp_info = dependency.cpp_info.aggregated_components()
 
-        if not dependency.cpp_info.libs and not dependency.cpp_info.includedirs:
+        if not cpp_info.libs and not cpp_info.includedirs:
             return None
 
         headers = []
         includes = []
 
-        for path in dependency.cpp_info.includedirs:
+        for path in cpp_info.includedirs:
             headers.append('"{}/**"'.format(path))
             includes.append('"{}"'.format(path))
 
@@ -81,18 +101,18 @@ class BazelDeps(object):
         includes = ', '.join(includes)
 
         defines = ('"{}"'.format(define.replace('"', "'"))
-                   for define in dependency.cpp_info.defines)
+                   for define in cpp_info.defines)
         defines = ', '.join(defines)
 
         linkopts = []
-        for linkopt in dependency.cpp_info.system_libs:
+        for linkopt in cpp_info.system_libs:
             linkopts.append('"-l{}"'.format(linkopt))
         linkopts = ', '.join(linkopts)
 
         context = {
             "name": dependency.ref.name,
-            "libs": dependency.cpp_info.libs,
-            "libdir": dependency.cpp_info.libdirs[0],
+            "libs": cpp_info.libs,
+            "libdir": cpp_info.libdirs[0],
             "headers": headers,
             "includes": includes,
             "defines": defines,

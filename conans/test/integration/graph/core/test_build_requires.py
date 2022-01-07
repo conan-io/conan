@@ -6,7 +6,7 @@ from parameterized import parameterized
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
-from conans.test.utils.tools import GenConanfile
+from conans.test.utils.tools import GenConanfile, TestClient
 
 
 class BuildRequiresGraphTest(GraphManagerTest):
@@ -427,3 +427,37 @@ class BuildRequiresGraphTest(GraphManagerTest):
                          closure=[tool])
         self._check_node(tool, "gtest/0.1#123", deps=[], build_deps=[],
                          dependents=[app], closure=[])
+
+
+def test_tool_requires():
+    """Testing temporary tool_requires attribute being "an alias" of build_require and
+    introduced to provide a compatible recipe with 2.0. At 2.0, the meaning of a build require being
+    a 'tool' will be a tool_require."""
+
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . tool1/1.0@")
+    client.run("create . tool2/1.0@")
+    client.run("create . tool3/1.0@")
+    client.run("create . tool4/1.0@")
+
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            tool_requires = "tool2/1.0"
+            build_requires = "tool3/1.0"
+
+            def build_requirements(self):
+                self.tool_requires("tool1/1.0")
+                self.build_requires("tool4/1.0")
+
+            def generate(self):
+                assert len(self.dependencies.build.values()) == 4
+    """)
+    client.save({"conanfile.py": consumer})
+    client.run("create . consumer/1.0@")
+    assert """Build requirements
+    tool1/1.0 from local cache - Cache
+    tool2/1.0 from local cache - Cache
+    tool3/1.0 from local cache - Cache
+    tool4/1.0 from local cache - Cache""" in client.out

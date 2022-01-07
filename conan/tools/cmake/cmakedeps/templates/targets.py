@@ -26,7 +26,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         target_pattern += "{}-Target-*.cmake".format(self.file_name)
 
         cmake_target_aliases = self.conanfile.cpp_info.\
-            get_property("cmake_target_aliases", "CMakeDeps") or dict()
+            get_property("cmake_target_aliases") or dict()
 
         target = self.root_target_name
         cmake_target_aliases = {alias: target for alias in cmake_target_aliases}
@@ -36,7 +36,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
             if comp_name is not None:
                 aliases = \
                     self.conanfile.cpp_info.components[comp_name].\
-                    get_property("cmake_target_aliases", "CMakeDeps") or dict()
+                    get_property("cmake_target_aliases") or dict()
 
                 target = self.get_component_alias(self.conanfile, comp_name)
                 cmake_component_target_aliases[comp_name] = {alias: target for alias in aliases}
@@ -75,8 +75,6 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         if(NOT TARGET {{ root_target_name }})
             add_library({{ root_target_name }} INTERFACE IMPORTED)
             conan_message(STATUS "Conan: Target declared '{{ root_target_name }}'")
-        else()
-            message(WARNING "Target name '{{root_target_name}}' already exists.")
         endif()
 
         {%- for alias, target in cmake_target_aliases.items() %}
