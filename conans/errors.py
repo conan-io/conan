@@ -40,6 +40,8 @@ def conanfile_exception_formatter(conanfile_name, func_name):
         msg = "{}: Invalid configuration: {}".format(conanfile_name, exc)
         raise ConanInvalidConfiguration(msg)
     except Exception as exc:
+        import traceback
+        print(traceback.format_exc())
         msg = _format_conanfile_exception(conanfile_name, func_name, exc)
         raise ConanExceptionInUserConanfileMethod(msg)
 

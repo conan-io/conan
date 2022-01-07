@@ -6,7 +6,6 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
-from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.util.files import save
 
 
@@ -14,17 +13,19 @@ class MesonToolchain(object):
     native_filename = "conan_meson_native.ini"
     cross_filename = "conan_meson_cross.ini"
 
-    _native_file_template = textwrap.dedent("""
+    _meson_file_template = textwrap.dedent("""
     [constants]
     preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
     '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
 
     [project options]
-    {{project_options}}
+    {% for it, value in project_options.items() -%}
+    {{it}} = {{value}}
+    {% endfor %}
 
     [binaries]
-    {% if c %}c = {{c}}{% endif %}
-    {% if cpp %}cpp = {{cpp}}{% endif %}
+    {% if c %}c = '{{c}}'{% endif %}
+    {% if cpp %}cpp = '{{cpp}}'{% endif %}
     {% if c_ld %}c_ld = {{c_ld}}{% endif %}
     {% if cpp_ld %}cpp_ld = {{cpp_ld}}{% endif %}
     {% if ar %}ar = {{ar}}{% endif %}
@@ -37,34 +38,24 @@ class MesonToolchain(object):
     {% if buildtype %}buildtype = {{buildtype}}{% endif %}
     {% if debug %}debug = {{debug}}{% endif %}
     {% if default_library %}default_library = {{default_library}}{% endif %}
-    {% if b_vscrt %}b_vscrt = {{b_vscrt}}{% endif %}
+    {% if b_vscrt %}b_vscrt = '{{b_vscrt}}' {% endif %}
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
-    {% if cpp_std %}cpp_std = {{cpp_std}}{% endif %}
-    {% if backend %}backend = {{backend}}{% endif %}
+    {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
+    {% if backend %}backend = '{{backend}}' {% endif %}
     c_args = {{c_args}} + preprocessor_definitions
     c_link_args = {{c_link_args}}
     cpp_args = {{cpp_args}} + preprocessor_definitions
     cpp_link_args = {{cpp_link_args}}
-    {% if pkg_config_path %}pkg_config_path = {{pkg_config_path}}{% endif %}
-    """)
+    {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
 
-    _cross_file_template = _native_file_template + textwrap.dedent("""
-    [build_machine]
-    {{build_machine}}
-
-    [host_machine]
-    {{host_machine}}
-
-    [target_machine]
-    {{target_machine}}
-    """)
-
-    _machine_template = textwrap.dedent("""
-    system = {{system}}
-    cpu_family = {{cpu_family}}
-    cpu = {{cpu}}
-    endian = {{endian}}
+    {% for context, values in cross_build.items() %}
+    [{{context}}_machine]
+    system = '{{values["system"]}}'
+    cpu_family = '{{values["cpu_family"]}}'
+    cpu = '{{values["cpu"]}}'
+    endian = '{{values["endian"]}}'
+    {% endfor %}
     """)
 
     def __init__(self, conanfile, backend=None):
@@ -80,9 +71,21 @@ class MesonToolchain(object):
                           "Release": "release",
                           "MinSizeRel": "minsize",
                           "RelWithDebInfo": "debugoptimized"}.get(build_type, build_type)
+        self.b_ndebug = "true" if self.buildtype != "Debug" else "false"
 
-        compiler = self._conanfile.settings.get_safe("compiler.base") or \
-                    self._conanfile.settings.get_safe("compiler")
+        # https://mesonbuild.com/Builtin-options.html#base-options
+        fpic = self._conanfile.options.get_safe("fPIC")
+        shared = self._conanfile.options.get_safe("shared")
+        self.b_staticpic = fpic if (shared is False and fpic is not None) else None
+        # https://mesonbuild.com/Builtin-options.html#core-options
+        # Do not adjust "debug" if already adjusted "buildtype"
+        self.default_library = ("shared" if shared else "static") if shared is not None else None
+
+        compiler = (self._conanfile.settings.get_safe("compiler.base") or
+                    self._conanfile.settings.get_safe("compiler"))
+
+        cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
+        self.cpp_std = self._to_meson_cppstd(compiler, cppstd) if cppstd else None
 
         if compiler == "Visual Studio":
             vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
@@ -97,25 +100,38 @@ class MesonToolchain(object):
         else:
             self.b_vscrt = None
 
+        self.project_options = {}
+        self.preprocessor_definitions = {}
 
+        self.pkg_config_path = self._conanfile.generators_folder
 
-        self._cppstd = cppstd_from_settings(self._conanfile.settings)
-        self._shared = self._conanfile.options.get_safe("shared")
-        self._fpic = self._conanfile.options.get_safe("fPIC")
+        check_using_build_profile(self._conanfile)
+
+        self.cross_build = {}
+        if cross_building(conanfile):
+            os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
+            self.cross_build["build"] = self._to_meson_machine(os_build, arch_build)
+            self.cross_build["host"] = self._to_meson_machine(os_host, arch_host)
+            if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
+                settings_target = conanfile.settings_target
+                os_target = settings_target.get_safe("os")
+                arch_target = settings_target.get_safe("arch")
+                self.cross_build["target"] = self._to_meson_machine(os_target, arch_target)
+
+        self.c = "cl" if "Visual" in compiler or compiler == "msvc" else ""
+        self.cpp = "cl" if "Visual" in compiler or compiler == "msvc" else ""
+
+        """
         # It sounds it would be better to keep the `Environment` instead of `EnvVars`
         # For manipulation, and only convert to `vars()` at the very last minute, for rendering
         # TODO: Change to `Environment()`
         self._build_env = VirtualBuildEnv(self._conanfile).vars()
 
-        self.definitions = dict()
-        self.preprocessor_definitions = dict()
-
         def from_build_env(name):
             # TODO: Do not transform to meson value here, but at the very end
-            return self._to_meson_value(self._build_env.get(name, None))
+            return _to_meson_value(self._build_env.get(name, None))
 
-        self.c = from_build_env("CC")
-        self.cpp = from_build_env("CXX")
+
         self.c_ld = from_build_env("CC_LD") or from_build_env("LD")
         self.cpp_ld = from_build_env("CXX_LD") or from_build_env("LD")
         self.ar = from_build_env("AR")
@@ -124,59 +140,21 @@ class MesonToolchain(object):
         self.windres = from_build_env("WINDRES")
         self.pkgconfig = from_build_env("PKG_CONFIG")
 
-        # https://mesonbuild.com/Builtin-options.html#core-options
-        # Do not adjust "debug" if already adjusted "buildtype"
-        self.default_library = self._to_meson_shared(self._shared) \
-            if self._shared is not None else None
-
-        # https://mesonbuild.com/Builtin-options.html#base-options
-        self.b_staticpic = self._to_meson_value(self._fpic) \
-            if (self._shared is False and self._fpic is not None) else None
-        self.b_ndebug = self._to_meson_value(self._ndebug) if self._build_type else None
-
         # https://mesonbuild.com/Builtin-options.html#compiler-options
-        self.cpp_std = self._to_meson_cppstd(self._cppstd) if self._cppstd else None
-        self.c_args = self._to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CFLAGS'))
-        self.c_link_args = self._to_meson_value(self._env_array('LDFLAGS'))
-        self.cpp_args = self._to_meson_value(self._env_array('CPPFLAGS') +
+        self.c_args = _to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CFLAGS'))
+        self.c_link_args = _to_meson_value(self._env_array('LDFLAGS'))
+        self.cpp_args = _to_meson_value(self._env_array('CPPFLAGS') +
                                              self._env_array('CXXFLAGS'))
-        self.cpp_link_args = self._to_meson_value(self._env_array('LDFLAGS'))
-        self.pkg_config_path = "'%s'" % self._conanfile.generators_folder
+        self.cpp_link_args = _to_meson_value(self._env_array('LDFLAGS'))"""
 
-        check_using_build_profile(self._conanfile)
-
-    @staticmethod
-    def _to_meson_value(value):
-        # https://mesonbuild.com/Machine-files.html#data-types
-        import six
-
-        try:
-            from collections.abc import Iterable
-        except ImportError:
-            from collections import Iterable
-
-        if isinstance(value, six.string_types):
-            return "'%s'" % value
-        elif isinstance(value, bool):
-            return 'true' if value else "false"
-        elif isinstance(value, six.integer_types):
-            return value
-        elif isinstance(value, Iterable):
-            return '[%s]' % ', '.join([str(MesonToolchain._to_meson_value(v)) for v in value])
-        return value
-
-    @property
-    def _ndebug(self):
-        # ERROR: Value "True" (of type "boolean") for combo option "Disable asserts" is not one of
-        # the choices. Possible choices are (as string): "true", "false", "if-release".
-        return "true" if self._build_type != "Debug" else "false"
+        self.c_args = []
+        self.c_link_args = []
+        self.cpp_args = []
+        self.cpp_link_args = []
 
     @staticmethod
-    def _to_meson_shared(shared):
-        return "'shared'" if shared else "'static'"
-
-    def _to_meson_cppstd(self, cppstd):
-        if self._base_compiler == "Visual Studio":
+    def _to_meson_cppstd(compiler, cppstd):
+        if compiler == "Visual Studio":
             return {'14': "'vc++14'",
                     '17': "'vc++17'",
                     '20': "'vc++latest'"}.get(cppstd, "'none'")
@@ -186,55 +164,57 @@ class MesonToolchain(object):
                 '17': "'c++17'", 'gnu17': "'gnu++17'",
                 '20': "'c++1z'", 'gnu20': "'gnu++1z'"}.get(cppstd, "'none'")
 
-    def _env_array(self, name):
-        # Most likely this can be avoided, split not necessary if Environment is used
-        import shlex
-        return shlex.split(self._build_env.get(name, ''))
-
     @property
     def _context(self):
-        # Formatting specifics to Meson should happen here in the rendering, not in constructor
-        project_options = []
-        for k, v in self.definitions.items():
-            project_options.append("%s = %s" % (k, self._to_meson_value(v)))
-        project_options = "\n".join(project_options)
+
+        def _to_meson_value(value):
+            # https://mesonbuild.com/Machine-files.html#data-types
+            if isinstance(value, str):
+                return "'%s'" % value
+            elif isinstance(value, bool):
+                return 'true' if value else "false"
+            elif isinstance(value, list):
+                return '[%s]' % ', '.join([str(_to_meson_value(val)) for val in value])
+            return value
 
         context = {
             # https://mesonbuild.com/Machine-files.html#project-specific-options
-            "project_options": project_options,
+            "project_options": {k: _to_meson_value(v) for k, v in  self.project_options.items()},
             # https://mesonbuild.com/Builtin-options.html#directories
             # TODO : we don't manage paths like libdir here (yet?)
             # https://mesonbuild.com/Machine-files.html#binaries
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
             "c": self.c,
             "cpp": self.cpp,
-            "c_ld": self.c_ld,
-            "cpp_ld": self.cpp_ld,
-            "ar": self.ar,
-            "strip": self.strip,
-            "as": self.as_,
-            "windres": self.windres,
-            "pkgconfig": self.pkgconfig,
+            # "c_ld": self.c_ld,
+            # "cpp_ld": self.cpp_ld,
+            # "ar": self.ar,
+            # "strip": self.strip,
+            # "as": self.as_,
+            # "windres": self.windres,
+            # "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
-            "buildtype": self._to_meson_value(self.buildtype),
-            "default_library": self.default_library,
-            "backend": self._to_meson_value(self.backend),
+            "buildtype": _to_meson_value(self.buildtype),
+            "default_library": _to_meson_value(self.default_library),
+            "backend": self.backend,
             # https://mesonbuild.com/Builtin-options.html#base-options
-            "b_vscrt": self._to_meson_value(self.b_vscrt),
-            "b_staticpic": self.b_staticpic,
-            "b_ndebug": self.b_ndebug,
+            "b_vscrt": self.b_vscrt,
+            "b_staticpic": _to_meson_value(self.b_staticpic),
+            "b_ndebug": _to_meson_value(self.b_ndebug),
             # https://mesonbuild.com/Builtin-options.html#compiler-options
             "cpp_std": self.cpp_std,
-            "c_args": self.c_args,
-            "c_link_args": self.c_link_args,
-            "cpp_args": self.cpp_args,
-            "cpp_link_args": self.cpp_link_args,
+            "c_args": _to_meson_value(self.c_args),
+            "c_link_args": _to_meson_value(self.c_link_args),
+            "cpp_args": _to_meson_value(self.cpp_args),
+            "cpp_link_args": _to_meson_value(self.cpp_link_args),
             "pkg_config_path": self.pkg_config_path,
-            "preprocessor_definitions": self.preprocessor_definitions
+            "preprocessor_definitions": self.preprocessor_definitions,
+            "cross_build": self.cross_build
         }
         return context
 
-    def _to_meson_machine(self, machine_os, machine_arch):
+    @staticmethod
+    def _to_meson_machine(machine_os, machine_arch):
         # https://mesonbuild.com/Reference-tables.html#operating-system-names
         system_map = {'Android': 'android',
                       'Macos': 'darwin',
@@ -281,32 +261,15 @@ class MesonToolchain(object):
         cpu_tuple = cpu_family_map.get(machine_arch, default_cpu_tuple)
         cpu_family, cpu, endian = cpu_tuple[0], cpu_tuple[1], cpu_tuple[2]
         context = {
-            'system': self._to_meson_value(system),
-            'cpu_family': self._to_meson_value(cpu_family),
-            'cpu': self._to_meson_value(cpu),
-            'endian': self._to_meson_value(endian),
+            'system': system,
+            'cpu_family': cpu_family,
+            'cpu': cpu,
+            'endian': endian,
         }
-        return Template(self._machine_template).render(context)
-
-    @property
-    def _cross_content(self):
-        os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
-        os_target, arch_target = os_host, arch_host  # TODO: assume target the same as a host for now?
-
-        build_machine = self._to_meson_machine(os_build, arch_build)
-        host_machine = self._to_meson_machine(os_host, arch_host)
-        target_machine = self._to_meson_machine(os_target, arch_target)
-
-        context = self._context
-        context['build_machine'] = build_machine
-        context['host_machine'] = host_machine
-        context['target_machine'] = target_machine
-        return Template(self._cross_file_template).render(context)
+        return context
 
     def generate(self):
-        if cross_building(self._conanfile):
-            save(self.cross_filename, self._cross_content)
-        else:
-            native_content = Template(self._native_file_template).render(self._context)
-            save(self.native_filename, native_content)
+        content = Template(self._meson_file_template).render(self._context)
+        filename = self.native_filename if not self.cross_build else self.cross_filename
+        save(filename, content)
         VCVars(self._conanfile).generate()

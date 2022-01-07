@@ -26,6 +26,9 @@ class MesonTest(TestMesonBase):
             settings = "os", "compiler", "build_type", "arch"
             generators = "pkg_config"
 
+            def layout(self):
+                self.folders.build = "build"
+
             def generate(self):
                 tc = MesonToolchain(self)
                 tc.generate()
