@@ -11,7 +11,7 @@ class MesonInstall(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
         import os
         import shutil
-        from conans import ConanFile, tools
+        from conan import ConanFile
         from conan.tools.meson import Meson, MesonToolchain
 
 
@@ -60,7 +60,7 @@ class MesonInstall(TestMesonBase):
 
     _test_package_conanfile_py = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake, tools
+        from conan import ConanFile, CMake, tools
 
 
         class TestConan(ConanFile):

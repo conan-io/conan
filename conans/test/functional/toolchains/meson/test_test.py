@@ -18,7 +18,7 @@ class MesonTest(TestMesonBase):
 
     _test_package_conanfile_py = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.meson import Meson, MesonToolchain
 
 

@@ -16,7 +16,7 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Windows")
 def test_cross_x86():
     conanfile_py = textwrap.dedent("""
-        from conans import ConanFile, tools
+        from conan import ConanFile
         from conan.tools.meson import Meson, MesonToolchain
 
 

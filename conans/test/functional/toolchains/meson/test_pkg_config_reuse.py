@@ -10,7 +10,7 @@ from conans.test.functional.toolchains.meson._base import TestMesonBase
 @pytest.mark.tool_pkg_config
 class MesonPkgConfigTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, tools
+    from conan import ConanFile
     from conan.tools.meson import Meson, MesonToolchain
 
 
@@ -18,6 +18,9 @@ class MesonPkgConfigTest(TestMesonBase):
         settings = "os", "arch", "compiler", "build_type"
         generators = "pkg_config"
         requires = "hello/0.1"
+
+        def layout(self):
+            self.folders.build = "build"
 
         def generate(self):
             tc = MesonToolchain(self)

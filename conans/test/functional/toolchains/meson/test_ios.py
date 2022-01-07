@@ -18,7 +18,7 @@ from conans.test.utils.tools import TestClient
 class IOSMesonTestCase(unittest.TestCase):
 
     _conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, tools
+    from conan import ConanFile
     from conan.tools.meson import Meson, MesonToolchain
 
 
