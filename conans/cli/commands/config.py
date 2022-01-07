@@ -13,8 +13,8 @@ def config(conan_api, parser, *args):
     """
 
 
-def json_build_order(build_order):
-    return json.dumps(build_order, indent=4)
+def format_remote_install_configs(remote_install_configs):
+    return json.dumps(remote_install_configs, indent=4)
 
 
 @conan_subcommand()
@@ -22,7 +22,7 @@ def config_remote_install(conan_api, parser, subparser, *args):
     """
     Installs the configuration (remotes, profiles, conf), from git, http or folder
     """
-    subparser.add_argument("item", nargs="?",
+    subparser.add_argument("item",
                            help="git repository, local file or folder or zip file (local or "
                                 "http) where the configuration is stored")
 
@@ -76,7 +76,7 @@ def config_remote_remove(conan_api, parser, subparser, *args):
     ConanOutput().success("Removed remote-install configuration")
 
 
-@conan_subcommand(formatters={"json": json_build_order})
+@conan_subcommand(formatters={"json": format_remote_install_configs})
 def config_list(conan_api, parser, subparser, *args):
     """
     return available built-in [conf] configuration items
