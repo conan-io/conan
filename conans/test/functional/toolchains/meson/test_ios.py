@@ -72,8 +72,7 @@ class IOSMesonTestCase(unittest.TestCase):
             {settings}
             """)
         settings = '\n'.join(["%s = %s" % (s[0], s[1]) for s in self.settings()])
-        env = '\n'.join(["%s=%s" % (k, v) for k, v in self.env().items()])
-        return template.format(settings=settings, env=env)
+        return template.format(settings=settings)
 
     @parameterized.expand([('armv8', 'iOS', '10.0', 'iphoneos'),
                            ('armv7', 'iOS', '10.0', 'iphoneos'),
