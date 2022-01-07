@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.client.tools.apple import XCRun, apple_deployment_target_flag, to_apple_arch
+from conans.client.tools.apple import XCRun, to_apple_arch
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
@@ -26,6 +26,9 @@ class IOSMesonTestCase(unittest.TestCase):
         settings = "os", "arch", "compiler", "build_type"
         options = {"shared": [True, False], "fPIC": [True, False]}
         default_options = {"shared": False, "fPIC": True}
+
+        def layout(self):
+            self.folders.build = "build"
 
         def config_options(self):
             if self.settings.os == "Windows":
@@ -56,33 +59,17 @@ class IOSMesonTestCase(unittest.TestCase):
     def settings(self):
         return [("os", self.os),
                 ("os.version", self.os_version),
+                ("os.sdk", self.os_sdk),
                 ("arch", self.arch),
                 ("compiler", "apple-clang"),
                 ("compiler.version", "12.0"),
                 ("compiler.libcxx", "libc++")]
-
-    def env(self):
-        cc = self.xcrun.cc
-        cxx = self.xcrun.cxx
-
-        deployment_flag = apple_deployment_target_flag(self.os, self.os_version)
-        sysroot_flag = " -isysroot " + self.xcrun.sdk_path
-        arch_flag = " -arch " + to_apple_arch(self.arch)
-        flags = deployment_flag + sysroot_flag + arch_flag
-
-        return {'CC': cc,
-                'CXX': cxx,
-                'CFLAGS': flags,
-                'CXXFLAGS': flags,
-                'LDFLAGS': flags}
 
     def profile(self):
         template = textwrap.dedent("""
             include(default)
             [settings]
             {settings}
-            [buildenv]
-            {env}
             """)
         settings = '\n'.join(["%s = %s" % (s[0], s[1]) for s in self.settings()])
         env = '\n'.join(["%s=%s" % (k, v) for k, v in self.env().items()])
@@ -94,9 +81,9 @@ class IOSMesonTestCase(unittest.TestCase):
                            ('x86_64', 'iOS', '10.0', 'iphonesimulator')
                            ])
     def test_meson_toolchain(self, arch, os_, os_version, sdk):
-        self.xcrun = XCRun(None, sdk)
         self.arch = arch
         self.os = os_
+        self.os_sdk = sdk
         self.os_version = os_version
 
         hello_h = gen_function_h(name="hello")
@@ -122,7 +109,8 @@ class IOSMesonTestCase(unittest.TestCase):
         demo = os.path.join(self.t.current_folder, "build", "demo")
         self.assertTrue(os.path.isfile(demo))
 
-        lipo = self.xcrun.find('lipo')
+        xcrun = XCRun(None, sdk)
+        lipo = xcrun.find('lipo')
 
         self.t.run_command('"%s" -info "%s"' % (lipo, libhello))
         self.assertIn("architecture: %s" % to_apple_arch(self.arch), self.t.out)

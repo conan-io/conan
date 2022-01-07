@@ -1,5 +1,3 @@
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -10,9 +8,9 @@ def test_env_vars_from_build_require():
     def package_info(self):
         {}
     """
-    vars = ["CC", "CC_LD", "CXX", "CXX_LD", "AR", "STRIP", "AS", "WINDRES", "PKG_CONFIG", "LD"]
+    vs = ["CC", "CC_LD", "CXX", "CXX_LD", "AR", "STRIP", "AS", "WINDRES", "PKG_CONFIG", "LD"]
     lines = "\n        ".join(['self.buildenv_info.define("{var}", "{var}_VALUE")'.format(var=var)
-                               for var in vars])
+                               for var in vs])
     cf = br.format(lines)
 
     client = TestClient()

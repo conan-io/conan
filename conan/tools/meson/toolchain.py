@@ -3,6 +3,7 @@ import textwrap
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.apple.apple import to_apple_arch
 from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
@@ -26,13 +27,13 @@ class MesonToolchain(object):
     [binaries]
     {% if c %}c = '{{c}}'{% endif %}
     {% if cpp %}cpp = '{{cpp}}'{% endif %}
-    {% if c_ld %}c_ld = {{c_ld}}{% endif %}
-    {% if cpp_ld %}cpp_ld = {{cpp_ld}}{% endif %}
-    {% if ar %}ar = {{ar}}{% endif %}
-    {% if strip %}strip = {{strip}}{% endif %}
-    {% if as %}as = {{as}}{% endif %}
-    {% if windres %}windres = {{windres}}{% endif %}
-    {% if pkgconfig %}pkgconfig = {{pkgconfig}}{% endif %}
+    {% if c_ld %}c_ld = '{{c_ld}}'{% endif %}
+    {% if cpp_ld %}cpp_ld = '{{cpp_ld}}'{% endif %}
+    {% if ar %}ar = '{{ar}}'{% endif %}
+    {% if strip %}strip = '{{strip}}'{% endif %}
+    {% if as %}as = '{{as}}'{% endif %}
+    {% if windres %}windres = '{{windres}}'{% endif %}
+    {% if pkgconfig %}pkgconfig = '{{pkgconfig}}'{% endif %}
 
     [built-in options]
     {% if buildtype %}buildtype = {{buildtype}}{% endif %}
@@ -118,28 +119,20 @@ class MesonToolchain(object):
                 arch_target = settings_target.get_safe("arch")
                 self.cross_build["target"] = self._to_meson_machine(os_target, arch_target)
 
-        self.c = "cl" if "Visual" in compiler or compiler == "msvc" else ""
-        self.cpp = "cl" if "Visual" in compiler or compiler == "msvc" else ""
+        default_comp = "cl" if "Visual" in compiler or compiler == "msvc" else ""
+
+        build_env = VirtualBuildEnv(self._conanfile).vars()
+        self.c = build_env.get("CC") or default_comp
+        self.cpp = build_env.get("CXX") or default_comp
+        self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
+        self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
+        self.ar = build_env.get("AR")
+        self.strip = build_env.get("STRIP")
+        self.as_ = build_env.get("AS")
+        self.windres = build_env.get("WINDRES")
+        self.pkgconfig = build_env.get("PKG_CONFIG")
 
         """
-        # It sounds it would be better to keep the `Environment` instead of `EnvVars`
-        # For manipulation, and only convert to `vars()` at the very last minute, for rendering
-        # TODO: Change to `Environment()`
-        self._build_env = VirtualBuildEnv(self._conanfile).vars()
-
-        def from_build_env(name):
-            # TODO: Do not transform to meson value here, but at the very end
-            return _to_meson_value(self._build_env.get(name, None))
-
-
-        self.c_ld = from_build_env("CC_LD") or from_build_env("LD")
-        self.cpp_ld = from_build_env("CXX_LD") or from_build_env("LD")
-        self.ar = from_build_env("AR")
-        self.strip = from_build_env("STRIP")
-        self.as_ = from_build_env("AS")
-        self.windres = from_build_env("WINDRES")
-        self.pkgconfig = from_build_env("PKG_CONFIG")
-
         # https://mesonbuild.com/Builtin-options.html#compiler-options
         self.c_args = _to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CFLAGS'))
         self.c_link_args = _to_meson_value(self._env_array('LDFLAGS'))
@@ -147,6 +140,14 @@ class MesonToolchain(object):
                                              self._env_array('CXXFLAGS'))
         self.cpp_link_args = _to_meson_value(self._env_array('LDFLAGS'))"""
 
+        # TODO: What is known by the toolchain, from settings, MUST be defined here
+        """
+        flags = []
+        flags.append("-arch " + to_apple_arch(self.arch))
+        deployment_flag = apple_deployment_target_flag(self.os, self.os_version)
+        sysroot_flag = " -isysroot " + self.xcrun.sdk_path
+        flags = deployment_flag + sysroot_flag
+        """
         self.c_args = []
         self.c_link_args = []
         self.cpp_args = []
@@ -186,13 +187,13 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
             "c": self.c,
             "cpp": self.cpp,
-            # "c_ld": self.c_ld,
-            # "cpp_ld": self.cpp_ld,
-            # "ar": self.ar,
-            # "strip": self.strip,
-            # "as": self.as_,
-            # "windres": self.windres,
-            # "pkgconfig": self.pkgconfig,
+            "c_ld": self.c_ld,
+            "cpp_ld": self.cpp_ld,
+            "ar": self.ar,
+            "strip": self.strip,
+            "as": self.as_,
+            "windres": self.windres,
+            "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
             "buildtype": _to_meson_value(self.buildtype),
             "default_library": _to_meson_value(self.default_library),
