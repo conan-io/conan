@@ -65,33 +65,33 @@ class MesonToolchain(object):
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
         backend_conf = conanfile.conf["tools.meson.mesontoolchain:backend"]
-        self.backend = backend_conf or backend or 'ninja'
+        self._backend = backend_conf or backend or 'ninja'
 
         build_type = self._conanfile.settings.get_safe("build_type")
-        self.buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
+        self._buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
                           "Release": "release",
                           "MinSizeRel": "minsize",
                           "RelWithDebInfo": "debugoptimized"}.get(build_type, build_type)
-        self.b_ndebug = "true" if self.buildtype != "Debug" else "false"
+        self._b_ndebug = "true" if self._buildtype != "Debug" else "false"
 
         # https://mesonbuild.com/Builtin-options.html#base-options
         fpic = self._conanfile.options.get_safe("fPIC")
         shared = self._conanfile.options.get_safe("shared")
-        self.b_staticpic = fpic if (shared is False and fpic is not None) else None
+        self._b_staticpic = fpic if (shared is False and fpic is not None) else None
         # https://mesonbuild.com/Builtin-options.html#core-options
         # Do not adjust "debug" if already adjusted "buildtype"
-        self.default_library = ("shared" if shared else "static") if shared is not None else None
+        self._default_library = ("shared" if shared else "static") if shared is not None else None
 
         compiler = (self._conanfile.settings.get_safe("compiler.base") or
                     self._conanfile.settings.get_safe("compiler"))
 
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        self.cpp_std = self._to_meson_cppstd(compiler, cppstd) if cppstd else None
+        self._cpp_std = self._to_meson_cppstd(compiler, cppstd) if cppstd else None
 
         if compiler == "Visual Studio":
             vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
                     self._conanfile.settings.get_safe("compiler.runtime")
-            self.b_vscrt = {"MD": "md",
+            self._b_vscrt = {"MD": "md",
                             "MDd": "mdd",
                             "MT": "mt",
                             "MTd": "mtd"}.get(vscrt, "none")
@@ -99,7 +99,7 @@ class MesonToolchain(object):
             # TODO: Fill here the msvc model
             pass
         else:
-            self.b_vscrt = None
+            self._b_vscrt = None
 
         self.project_options = {}
         self.preprocessor_definitions = {}
@@ -119,11 +119,21 @@ class MesonToolchain(object):
                 arch_target = settings_target.get_safe("arch")
                 self.cross_build["target"] = self._to_meson_machine(os_target, arch_target)
 
-        default_comp = "cl" if "Visual" in compiler or compiler == "msvc" else ""
+        default_comp = ""
+        default_comp_cpp = ""
+        if "Visual" in compiler or compiler == "msvc":
+            default_comp = "cl"
+            default_comp_cpp = "cl"
+        elif "clang" in compiler:
+            default_comp = "clang"
+            default_comp_cpp = "clang++"
+        elif compiler == "gcc":
+            default_comp = "gcc"
+            default_comp_cpp = "g++"
 
         build_env = VirtualBuildEnv(self._conanfile).vars()
         self.c = build_env.get("CC") or default_comp
-        self.cpp = build_env.get("CXX") or default_comp
+        self.cpp = build_env.get("CXX") or default_comp_cpp
         self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
         self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
         self.ar = build_env.get("AR")
@@ -195,15 +205,15 @@ class MesonToolchain(object):
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
-            "buildtype": _to_meson_value(self.buildtype),
-            "default_library": _to_meson_value(self.default_library),
-            "backend": self.backend,
+            "buildtype": _to_meson_value(self._buildtype),
+            "default_library": _to_meson_value(self._default_library),
+            "backend": self._backend,
             # https://mesonbuild.com/Builtin-options.html#base-options
-            "b_vscrt": self.b_vscrt,
-            "b_staticpic": _to_meson_value(self.b_staticpic),
-            "b_ndebug": _to_meson_value(self.b_ndebug),
+            "b_vscrt": self._b_vscrt,
+            "b_staticpic": _to_meson_value(self._b_staticpic),
+            "b_ndebug": _to_meson_value(self._b_ndebug),
             # https://mesonbuild.com/Builtin-options.html#compiler-options
-            "cpp_std": self.cpp_std,
+            "cpp_std": self._cpp_std,
             "c_args": _to_meson_value(self.c_args),
             "c_link_args": _to_meson_value(self.c_link_args),
             "cpp_args": _to_meson_value(self.cpp_args),
