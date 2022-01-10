@@ -42,9 +42,9 @@ class NewAPI:
         if os.path.isdir(folder_template):
             return self._read_files(folder_template)
 
-    def _read_files(self, folder_template):
+    def _read_files(self, template_folder):
         template_files, non_template_files = {}, {}
-        excluded = os.path.join(folder_template, self._NOT_TEMPLATES)
+        excluded = os.path.join(template_folder, self._NOT_TEMPLATES)
         if os.path.exists(excluded):
             excluded = load(excluded)
             excluded = [] if not excluded else [s.strip() for s in excluded.splitlines() if
@@ -52,11 +52,11 @@ class NewAPI:
         else:
             excluded = []
 
-        for d, _, fs in os.walk(folder_template):
+        for d, _, fs in os.walk(template_folder):
             for f in fs:
                 if f == self._NOT_TEMPLATES:
                     continue
-                rel_d = os.path.relpath(d, folder_template) if d != folder_template else ""
+                rel_d = os.path.relpath(d, template_folder) if d != template_folder else ""
                 rel_f = os.path.join(rel_d, f)
                 path = os.path.join(d, f)
                 if not any(fnmatch.fnmatch(rel_f, exclude) for exclude in excluded):
