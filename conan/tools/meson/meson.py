@@ -8,12 +8,9 @@ class Meson(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def configure(self,  build_script_folder=None):
-        meson_source_folder = self._conanfile.source_folder
-        meson_build_folder = self._conanfile.build_folder
-        if build_script_folder:
-            meson_source_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
-
+    def configure(self):
+        source_folder = self._conanfile.source_folder
+        build_folder = self._conanfile.build_folder
         cmd = "meson setup"
         generators_folder = self._conanfile.generators_folder
         cross = os.path.join(generators_folder, MesonToolchain.cross_filename)
@@ -22,7 +19,7 @@ class Meson(object):
             cmd += ' --cross-file "{}"'.format(cross)
         else:
             cmd += ' --native-file "{}"'.format(native)
-        cmd += ' "{}" "{}"'.format(meson_build_folder, meson_source_folder)
+        cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))

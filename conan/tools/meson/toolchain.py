@@ -109,6 +109,8 @@ class MesonToolchain(object):
         check_using_build_profile(self._conanfile)
 
         self.cross_build = {}
+        default_comp = ""
+        default_comp_cpp = ""
         if cross_building(conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             self.cross_build["build"] = self._to_meson_machine(os_build, arch_build)
@@ -119,17 +121,16 @@ class MesonToolchain(object):
                 arch_target = settings_target.get_safe("arch")
                 self.cross_build["target"] = self._to_meson_machine(os_target, arch_target)
 
-        default_comp = ""
-        default_comp_cpp = ""
-        if "Visual" in compiler or compiler == "msvc":
-            default_comp = "cl"
-            default_comp_cpp = "cl"
-        elif "clang" in compiler:
-            default_comp = "clang"
-            default_comp_cpp = "clang++"
-        elif compiler == "gcc":
-            default_comp = "gcc"
-            default_comp_cpp = "g++"
+        else:
+            if "Visual" in compiler or compiler == "msvc":
+                default_comp = "cl"
+                default_comp_cpp = "cl"
+            elif "clang" in compiler:
+                default_comp = "clang"
+                default_comp_cpp = "clang++"
+            elif compiler == "gcc":
+                default_comp = "gcc"
+                default_comp_cpp = "g++"
 
         build_env = VirtualBuildEnv(self._conanfile).vars()
         self.c = build_env.get("CC") or default_comp
@@ -151,17 +152,19 @@ class MesonToolchain(object):
         self.cpp_link_args = _to_meson_value(self._env_array('LDFLAGS'))"""
 
         # TODO: What is known by the toolchain, from settings, MUST be defined here
-        """
         flags = []
-        flags.append("-arch " + to_apple_arch(self.arch))
+        arch = self._conanfile.settings.get_safe("arch")
+        if arch:
+            flags.append("-arch " + to_apple_arch(self.arch))
+        """
         deployment_flag = apple_deployment_target_flag(self.os, self.os_version)
         sysroot_flag = " -isysroot " + self.xcrun.sdk_path
         flags = deployment_flag + sysroot_flag
         """
-        self.c_args = []
-        self.c_link_args = []
-        self.cpp_args = []
-        self.cpp_link_args = []
+        self.c_args = flags
+        self.c_link_args = flags
+        self.cpp_args = flags
+        self.cpp_link_args = flags
 
     @staticmethod
     def _to_meson_cppstd(compiler, cppstd):
