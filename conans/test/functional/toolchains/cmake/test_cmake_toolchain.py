@@ -190,17 +190,22 @@ def test_cmaketoolchain_no_warnings():
         from conans import ConanFile
         class Conan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
-            generators = "CMakeToolchain"
+            generators = "CMakeToolchain", "CMakeDeps"
+            requires = "dep/0.1"
         """)
     consumer = textwrap.dedent("""
        set(CMAKE_CXX_COMPILER_WORKS 1)
        set(CMAKE_CXX_ABI_COMPILED 1)
        project(MyHello CXX)
        cmake_minimum_required(VERSION 3.15)
+
+       find_package(dep CONFIG REQUIRED)
        """)
-    client.save({"conanfile.py": conanfile,
+    client.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                 "conanfile.py": conanfile,
                  "CMakeLists.txt": consumer})
 
+    client.run("create dep")
     client.run("install .")
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake "
                        "-Werror=dev --warn-uninitialized")
