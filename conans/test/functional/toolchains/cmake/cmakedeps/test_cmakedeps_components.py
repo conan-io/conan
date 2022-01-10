@@ -69,8 +69,7 @@ class PropagateSpecificComponents(unittest.TestCase):
         t.run('install middle/version@ -g CMakeDeps')
 
         content = t.load('middle-release-x86_64-data.cmake')
-        self.assertIn("set(middle_FIND_DEPENDENCY_NAMES ${middle_FIND_DEPENDENCY_NAMES} top)",
-                      content)
+        self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
 
         content = t.load('middle-config.cmake')
         self.assertIn("find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)", content)

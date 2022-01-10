@@ -339,4 +339,4 @@ def test_private_transitive():
     client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release")
     assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip" in client.out
     data_cmake = client.load("pkg-release-x86_64-data.cmake")
-    assert "set(pkg_FIND_DEPENDENCY_NAMES ${pkg_FIND_DEPENDENCY_NAMES} )" in data_cmake
+    assert 'set(pkg_FIND_DEPENDENCY_NAMES "")' in data_cmake
