@@ -23,7 +23,7 @@ class Remote:
                                                              not self.disabled)
 
 
-class PackageConfiguration:
+class PkgConfiguration:
 
     def __init__(self, data):
         self.settings = data.get("settings", {})

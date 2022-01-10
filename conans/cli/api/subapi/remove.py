@@ -12,11 +12,7 @@ class RemoveAPI:
         self.conan_api = conan_api
 
     @staticmethod
-    def _remove_local_recipe(app, ref):
-        if app.cache.installed_as_editable(ref):
-            msg = "Package '{r}' is installed as editable, remove it first using " \
-                  "command 'conan editable remove {r}'".format(r=ref)
-            raise ConanException(msg)
+    def _remove_all_packages(app, ref):
         # Get all the prefs and all the prevs
         pkg_ids = app.cache.get_package_references(ref)
         all_package_revisions = []
@@ -25,9 +21,17 @@ class RemoveAPI:
         for pref in all_package_revisions:
             package_layout = app.cache.pkg_layout(pref)
             app.cache.remove_package_layout(package_layout)
-        # Remove the all the prevs too
+
+    @staticmethod
+    def _remove_local_recipe(app, ref):
+        if app.cache.installed_as_editable(ref):
+            msg = "Package '{r}' is installed as editable, remove it first using " \
+                  "command 'conan editable remove {r}'".format(r=ref)
+            raise ConanException(msg)
+
         refs = app.cache.get_recipe_revisions_references(ref)
         for ref in refs:
+            RemoveAPI._remove_all_packages(app, ref)
             recipe_layout = app.cache.ref_layout(ref)
             app.cache.remove_recipe_layout(recipe_layout)
 
@@ -39,8 +43,18 @@ class RemoveAPI:
         if remote:
             app.remote_manager.remove_recipe(ref, remote)
         else:
-            # Remove all the prefs with all the prevs
             self._remove_local_recipe(app, ref)
+
+    @api_method
+    def all_recipe_packages(self, ref: RecipeReference, remote: Remote = None):
+        assert ref.revision, "Recipe revision cannot be None to remove a recipe"
+        """Removes all the packages from the provided reference"""
+        app = ConanApp(self.conan_api.cache_folder)
+        if remote:
+            app.remote_manager.remove_all_packages(ref, remote)
+        else:
+            # Remove all the prefs with all the prevs
+            self._remove_all_packages(app, ref)
 
     @api_method
     def package(self, pref: PkgReference, remote: Remote):

@@ -24,12 +24,3 @@ class SearchAPI:
                 if r not in ret:
                     ret.append(r)
             return ret
-
-    @api_method
-    def filter_packages_configurations(self, pkg_configurations, query):
-        """
-        :param pkg_configurations: Dict[PkgReference, PackageConfiguration]
-        :param query: str like "os=Windows AND (arch=x86 OR compiler=gcc)"
-        :return: Dict[PkgReference, PackageConfiguration]
-        """
-        return filter_packages(query, pkg_configurations)
