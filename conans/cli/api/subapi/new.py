@@ -3,46 +3,46 @@ import os
 
 from jinja2 import Template
 
-
 from conans.cli.api.subapi import api_method
-from conans.cli.conan_app import ConanApp
 from conans.util.files import load
 from conans import __version__
 
 
 class NewAPI:
 
-    _NOT_TEMPLATES = "not_templates"
+    _NOT_TEMPLATES = "not_templates"  # Filename containing filenames of files not to be rendered
 
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
     @api_method
-    def get_builtin_template(self, template):
+    def get_builtin_template(self, template_name):
         from conans.cli.api.helpers.new.alias_new import alias_file
         from conans.cli.api.helpers.new.cmake_exe import cmake_exe_files
         from conans.cli.api.helpers.new.cmake_lib import cmake_lib_files
         new_templates = {"cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
                          "alias": alias_file}
-        template_files = new_templates.get(template)
+        template_files = new_templates.get(template_name)
         return template_files
 
     @api_method
-    def get_cache_template(self, template):
-        app = ConanApp(self.conan_api.cache_folder)
+    def get_template(self, template_name):
+        """ Load a template from a user absolute folder
+        """
+        if os.path.isdir(template_name):
+            return self._read_files(template_name)
 
-        folder_template = None
-        if os.path.isdir(template):
-            folder_template = template
-        else:
-            folder = os.path.join(app.cache.cache_folder, "templates", "command/new", template)
-            if os.path.exists(folder):
-                folder_template = folder
+    @api_method
+    def get_home_template(self, template_name):
+        """ load a template from the Conan home templates/command/new folder
+        """
+        folder_template = os.path.join(self.conan_api.home_folder, "templates", "command/new",
+                                       template_name)
+        if os.path.isdir(folder_template):
+            return self._read_files(folder_template)
 
-        if folder_template is None:
-            return None
-
+    def _read_files(self, folder_template):
         template_files, non_template_files = {}, {}
         excluded = os.path.join(folder_template, self._NOT_TEMPLATES)
         if os.path.exists(excluded):

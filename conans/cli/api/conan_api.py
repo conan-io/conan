@@ -26,6 +26,7 @@ class ConanAPIV2(object):
 
         self.out = ConanOutput()
         self.cache_folder = cache_folder or get_conan_user_home()
+        self.home_folder = self.cache_folder  # Lets call it home, deprecate "cache"
 
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
