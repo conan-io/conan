@@ -183,11 +183,11 @@ def _parse_compiler_version(defines):
 def detect_compiler_id(executable, runner=None):
     runner = runner or ConanRunner()
     # use a temporary file, as /dev/null might not be available on all platforms
-    tmpname = tempfile.mktemp(suffix=".c")
+    _, tmpname = tempfile.mkstemp(suffix=".c")
     with open(tmpname, "wb") as f:
         f.write(b"\n")
 
-    cmd = tempfile.mktemp(suffix=".cmd")
+    _, cmd = tempfile.mkstemp(suffix=".cmd")
     with open(cmd, "wb") as f:
         f.write(b"echo off\nset MSC_CMD_FLAGS\n")
 

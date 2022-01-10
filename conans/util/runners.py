@@ -76,7 +76,8 @@ def detect_runner(command):
 
 def check_output_runner(cmd, stderr=None):
     # Used to run several utilities, like Pacman detect, AIX version, uname, SCM
-    tmp_file = tempfile.mktemp()
+    d = tempfile.mkdtemp()
+    tmp_file = os.path.join(d, "output")
     try:
         # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or subprocess.PIPE
