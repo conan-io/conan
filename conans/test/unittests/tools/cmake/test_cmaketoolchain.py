@@ -351,3 +351,36 @@ def test_libcxx_abi_flag():
     toolchain = CMakeToolchain(c)
     content = toolchain.content
     assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
+
+
+@pytest.mark.parametrize("os,os_sdk,arch,expected_sdk", [
+    ("iOS", None, "x86_64", "iphonesimulator"),
+    ("iOS", None, "armv8", "iphoneos"),
+    ("iOS", "iphonesimulator", "armv8", "iphonesimulator"),
+    ("watchOS", None, "armv8", "watchos"),
+    ("watchOS", "watchsimulator", "armv8", "watchsimulator")
+])
+def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
+    """
+    Testing if CMAKE_OSX_SYSROOT is correctly set.
+    Issue related: https://github.com/conan-io/conan/issues/10275
+    """
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.initialize(Settings.loads(get_default_settings_yml()), EnvValues())
+    c.settings.os = os
+    c.settings.os.sdk = os_sdk
+    c.settings.build_type = "Release"
+    c.settings.arch = arch
+    c.settings.compiler = "apple-clang"
+    c.settings.compiler.version = "13.0"
+    c.settings.compiler.libcxx = "libc++"
+    c.settings.compiler.cppstd = "17"
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert 'set(CMAKE_OSX_SYSROOT %s CACHE STRING "" FORCE)' % expected_sdk in content

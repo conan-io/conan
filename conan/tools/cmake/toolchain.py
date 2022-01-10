@@ -356,7 +356,10 @@ class AppleSystemBlock(Block):
         we're building for (considering simulators)"""
         arch = self._conanfile.settings.get_safe('arch')
         os_ = self._conanfile.settings.get_safe('os')
-        if arch.startswith('x86'):
+        os_sdk = self._conanfile.settings.get_safe('os.sdk')
+        if os_sdk:
+            return os_sdk
+        elif arch.startswith('x86'):
             return {'Macos': 'macosx',
                     'iOS': 'iphonesimulator',
                     'watchOS': 'watchsimulator',
