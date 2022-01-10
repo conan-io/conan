@@ -19,7 +19,7 @@ class NewAPI:
         self.conan_api = conan_api
 
     @api_method
-    def new(self, template, definitions):
+    def get_template_files(self, template):
         app = ConanApp(self.conan_api.cache_folder)
 
         # Find the template
@@ -39,7 +39,10 @@ class NewAPI:
         if not template_files:
             raise ConanException("Template doesn't exist or not a folder: {}".format(template))
 
-        excluded = template_files.get(self._NOT_TEMPLATES)
+        return template_files
+
+    def render(self, template_files, definitions):
+        excluded = template_files.pop(self._NOT_TEMPLATES, None)
         excluded = [] if not excluded else [s.strip() for s in excluded.splitlines() if s.strip()]
 
         result = {}
@@ -69,7 +72,7 @@ class NewAPI:
                 if not any(fnmatch.fnmatch(rel_f, exclude) for exclude in excluded):
                     files[rel_f] = load(path)  # text, encodings
                 else:
-                    files[rel_f] = open(path, "rb").read() # binaries
+                    files[rel_f] = open(path, "rb").read()  # binaries
         return files
 
     @staticmethod

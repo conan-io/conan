@@ -22,7 +22,8 @@ def new(conan_api, parser, *args):
         k = k.replace("-", "")  # Remove possible "--name=value"
         definitions[k] = v
 
-    files = conan_api.new.new(args.template, definitions)
+    files = conan_api.new.get_template_files(args.template)
+    files = conan_api.new.render(files, definitions)
 
     # Saving the resulting files
     cwd = os.getcwd()
