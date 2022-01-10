@@ -101,6 +101,7 @@ class TestNewCommandUserTemplate:
         client.run("new t_dir --name=hello --version=0.1")
         myimage = client.load("myimage.png")
         assert myimage == png
+        assert not os.path.exists(os.path.join(client.current_folder, "not_templates"))
 
 
 class TestNewErrors:
