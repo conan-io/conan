@@ -3,10 +3,9 @@ import os
 
 from jinja2 import Template
 
-from conans.cli.api.helpers.new import new_templates
+
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.errors import ConanException
 from conans.util.files import load
 from conans import __version__
 
@@ -19,63 +18,61 @@ class NewAPI:
         self.conan_api = conan_api
 
     @api_method
-    def get_template_files(self, template):
-        app = ConanApp(self.conan_api.cache_folder)
-
-        # Find the template
-        template_files = None
-        if os.path.isdir(template):
-            template_files = self._get_files(template)
-        else:
-            folder_template = os.path.join(app.cache.cache_folder, "templates", "command/new",
-                                           template)
-            if os.path.exists(folder_template):
-                template_files = self._get_files(folder_template)
-
-        # If not in cache or user, then check if it is a predefined one
-        if template_files is None:
-            template_files = new_templates.get(template)
-
-        if not template_files:
-            raise ConanException("Template doesn't exist or not a folder: {}".format(template))
-
+    def get_builtin_template(self, template):
+        from conans.cli.api.helpers.new.alias_new import alias_file
+        from conans.cli.api.helpers.new.cmake_exe import cmake_exe_files
+        from conans.cli.api.helpers.new.cmake_lib import cmake_lib_files
+        new_templates = {"cmake_lib": cmake_lib_files,
+                         "cmake_exe": cmake_exe_files,
+                         "alias": alias_file}
+        template_files = new_templates.get(template)
         return template_files
 
-    def render(self, template_files, definitions):
-        excluded = template_files.pop(self._NOT_TEMPLATES, None)
-        excluded = [] if not excluded else [s.strip() for s in excluded.splitlines() if s.strip()]
+    @api_method
+    def get_cache_template(self, template):
+        app = ConanApp(self.conan_api.cache_folder)
 
-        result = {}
-        definitions["conan_version"] = __version__
-        for k, v in template_files.items():
-            if not any(fnmatch.fnmatch(k, exclude) for exclude in excluded):
-                k = self._render_template(k, definitions)
-                v = self._render_template(v, definitions)
-            if v:
-                result[k] = v
-        return result
+        folder_template = None
+        if os.path.isdir(template):
+            folder_template = template
+        else:
+            folder = os.path.join(app.cache.cache_folder, "templates", "command/new", template)
+            if os.path.exists(folder):
+                folder_template = folder
 
-    def _get_files(self, folder):
-        files = {}
-        excluded = os.path.join(folder, self._NOT_TEMPLATES)
+        if folder_template is None:
+            return None
+
+        template_files, non_template_files = {}, {}
+        excluded = os.path.join(folder_template, self._NOT_TEMPLATES)
         if os.path.exists(excluded):
             excluded = load(excluded)
             excluded = [] if not excluded else [s.strip() for s in excluded.splitlines() if
                                                 s.strip()]
         else:
             excluded = []
-        for d, _, fs in os.walk(folder):
+
+        for d, _, fs in os.walk(folder_template):
             for f in fs:
-                rel_d = os.path.relpath(d, folder) if d != folder else ""
+                if f == self._NOT_TEMPLATES:
+                    continue
+                rel_d = os.path.relpath(d, folder_template) if d != folder_template else ""
                 rel_f = os.path.join(rel_d, f)
                 path = os.path.join(d, f)
                 if not any(fnmatch.fnmatch(rel_f, exclude) for exclude in excluded):
-                    files[rel_f] = load(path)  # text, encodings
+                    template_files[rel_f] = load(path)
                 else:
-                    files[rel_f] = open(path, "rb").read()  # binaries
-        return files
+                    non_template_files[rel_f] = path
+
+        return template_files, non_template_files
 
     @staticmethod
-    def _render_template(text, defines):
-        t = Template(text, keep_trailing_newline=True)
-        return t.render(**defines)
+    def render(template_files, definitions):
+        result = {}
+        definitions["conan_version"] = __version__
+        for k, v in template_files.items():
+            k = Template(k, keep_trailing_newline=True).render(**definitions)
+            v = Template(v, keep_trailing_newline=True).render(**definitions)
+            if v:
+                result[k] = v
+        return result

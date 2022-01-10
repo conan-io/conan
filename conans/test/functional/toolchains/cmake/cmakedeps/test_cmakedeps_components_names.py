@@ -644,7 +644,7 @@ class TestComponentsCMakeGenerators:
             """)
         client = TestClient()
         for name in ["expected", "variant"]:
-            client.run("new cmake_lib --name={name} --version=1.0 -f".format(name=name))
+            client.run("new cmake_lib -d name={name} -d version=1.0 -f".format(name=name))
             client.save({"conanfile.py": conanfile_tpl.format(name=name),
                          "src/CMakeLists.txt": basic_cmake.format(name=name)})
             shutil.rmtree(os.path.join(client.current_folder, "test_package"))

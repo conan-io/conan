@@ -614,7 +614,7 @@ class TestClient(object):
         source, target = source_target.split()
         source = RecipeReference.loads(source)
         target = target.split("/", 1)[1]
-        self.run(f"new alias --name={source.name} --version={source.version} --target={target} -f")
+        self.run(f"new alias -d name={source.name} -d version={source.version} --target={target} -f")
         user = f"--user={source.user}" if source.user else ""
         channel = f"--channel={source.channel}" if source.channel else ""
         self.run(f"export . {user} {channel}")
