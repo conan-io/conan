@@ -27,11 +27,11 @@ class NewAPI:
         return template_files
 
     @api_method
-    def get_template(self, template_name):
+    def get_template(self, template_folder):
         """ Load a template from a user absolute folder
         """
-        if os.path.isdir(template_name):
-            return self._read_files(template_name)
+        if os.path.isdir(template_folder):
+            return self._read_files(template_folder)
 
     @api_method
     def get_home_template(self, template_name):
