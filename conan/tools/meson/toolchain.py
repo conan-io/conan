@@ -155,7 +155,7 @@ class MesonToolchain(object):
         flags = []
         arch = self._conanfile.settings.get_safe("arch")
         if arch:
-            flags.append("-arch " + to_apple_arch(self.arch))
+            flags.append("-arch " + to_apple_arch(arch))
         """
         deployment_flag = apple_deployment_target_flag(self.os, self.os_version)
         sysroot_flag = " -isysroot " + self.xcrun.sdk_path
