@@ -10,9 +10,9 @@ class ConanAliasTest(unittest.TestCase):
 
     def test_repeated_alias(self):
         client = TestClient()
-        client.alias("hello/0.x@lasote/channel hello/0.1@lasote/channel")
-        client.alias("hello/0.x@lasote/channel hello/0.2@lasote/channel")
-        client.alias("hello/0.x@lasote/channel hello/0.3@lasote/channel")
+        client.alias("hello/0.x@lasote/channel",  "hello/0.1@lasote/channel")
+        client.alias("hello/0.x@lasote/channel",  "hello/0.2@lasote/channel")
+        client.alias("hello/0.x@lasote/channel",  "hello/0.3@lasote/channel")
 
     def test_basic(self):
         client = TestClient(default_server_user=True)
@@ -20,7 +20,7 @@ class ConanAliasTest(unittest.TestCase):
             client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.%s" % i)})
             client.run("export . --user=lasote --channel=channel")
 
-        client.alias("hello/0.x@lasote/channel hello/0.1@lasote/channel")
+        client.alias("hello/0.x@lasote/channel",  "hello/0.1@lasote/channel")
         conanfile_chat = textwrap.dedent("""
             from conans import ConanFile
             class TestConan(ConanFile):
@@ -52,7 +52,7 @@ class ConanAliasTest(unittest.TestCase):
         self.assertIn("hello/0.1@lasote/channel from 'default'", client.out)
         self.assertNotIn("hello/0.x@lasote/channel from", client.out)
 
-        client.alias("hello/0.x@lasote/channel hello/0.2@lasote/channel")
+        client.alias("hello/0.x@lasote/channel",  "hello/0.2@lasote/channel")
         client.run("install . --build=missing")
         self.assertIn("hello/0.2", client.out)
         self.assertNotIn("hello/0.1", client.out)

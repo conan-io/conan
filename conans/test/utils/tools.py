@@ -610,11 +610,16 @@ class TestClient(object):
         tmp.revision = rrev
         return tmp
 
-    def alias(self, source_target):
-        source, target = source_target.split()
+    def alias(self, source, target):
+        """
+        creates a new recipe with "conan new alias" template, "conan export" it, and remove it
+        @param source: the reference of the current recipe
+        @param target: the target reference that this recipe is pointing (aliasing to)
+        """
         source = RecipeReference.loads(source)
         target = target.split("/", 1)[1]
-        self.run(f"new alias -d name={source.name} -d version={source.version} --target={target} -f")
+        self.run(f"new alias -d name={source.name} -d version={source.version} "
+                 f"-d target={target} -f")
         user = f"--user={source.user}" if source.user else ""
         channel = f"--channel={source.channel}" if source.channel else ""
         self.run(f"export . {user} {channel}")
