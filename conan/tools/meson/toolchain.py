@@ -69,9 +69,9 @@ class MesonToolchain(object):
 
         build_type = self._conanfile.settings.get_safe("build_type")
         self._buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
-                          "Release": "release",
-                          "MinSizeRel": "minsize",
-                          "RelWithDebInfo": "debugoptimized"}.get(build_type, build_type)
+                           "Release": "release",
+                           "MinSizeRel": "minsize",
+                           "RelWithDebInfo": "debugoptimized"}.get(build_type, build_type)
         self._b_ndebug = "true" if self._buildtype != "Debug" else "false"
 
         # https://mesonbuild.com/Builtin-options.html#base-options
@@ -91,10 +91,7 @@ class MesonToolchain(object):
         if compiler == "Visual Studio":
             vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
                     self._conanfile.settings.get_safe("compiler.runtime")
-            self._b_vscrt = {"MD": "md",
-                            "MDd": "mdd",
-                            "MT": "mt",
-                            "MTd": "mtd"}.get(vscrt, "none")
+            self._b_vscrt = str(vscrt).lower()
         elif compiler == "msvc":
             # TODO: Fill here the msvc model
             pass
@@ -111,7 +108,7 @@ class MesonToolchain(object):
         self.cross_build = {}
         default_comp = ""
         default_comp_cpp = ""
-        if cross_building(conanfile):
+        if cross_building(conanfile, skip_x64_x86=True):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             self.cross_build["build"] = self._to_meson_machine(os_build, arch_build)
             self.cross_build["host"] = self._to_meson_machine(os_host, arch_host)
@@ -120,7 +117,9 @@ class MesonToolchain(object):
                 os_target = settings_target.get_safe("os")
                 arch_target = settings_target.get_safe("arch")
                 self.cross_build["target"] = self._to_meson_machine(os_target, arch_target)
-
+            if os_host in ("iOS", "watchOS", "tvOS"):  # default cross-compiler in Apple is common
+                default_comp = "clang"
+                default_comp_cpp = "clang++"
         else:
             if "Visual" in compiler or compiler == "msvc":
                 default_comp = "cl"
