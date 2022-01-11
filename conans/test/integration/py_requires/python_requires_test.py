@@ -79,12 +79,12 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_with_alias(self):
         client = TestClient()
         self._define_base(client)
-        client.run("alias base/LATEST@user/testing base/1.1@user/testing")
+        client.alias("base/latest@user/testing",  "base/1.1@user/testing")
 
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class PkgTest(ConanFile):
-                python_requires = "base/LATEST@user/testing"
+                python_requires = "base/(latest)@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
@@ -638,8 +638,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires0::build")
                     """)})
         client.run("export . --name=python_requires0 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires0/latest@user/test python_requires0/1.0@user/test")
-        client.run("alias python_requires0/latest2@user/test python_requires0/latest@user/test")
+        client.alias("python_requires0/latest@user/test",  "python_requires0/1.0@user/test")
+        client.alias("python_requires0/latest2@user/test",  "python_requires0/latest@user/test")
 
         # Create python requires, that require the previous one
         client.save({CONANFILE: textwrap.dedent("""
@@ -652,8 +652,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires1::build")
             """).format(v=version_str)})
         client.run("export . --name=python_requires1 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires1/latest@user/test python_requires1/1.0@user/test")
-        client.run("alias python_requires1/latest2@user/test python_requires1/latest@user/test")
+        client.alias("python_requires1/latest@user/test",  "python_requires1/1.0@user/test")
+        client.alias("python_requires1/latest2@user/test",  "python_requires1/latest@user/test")
 
         # Create python requires
         client.save({CONANFILE: textwrap.dedent("""
@@ -664,8 +664,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires11::build")
                     """)})
         client.run("export . --name=python_requires11 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires11/latest@user/test python_requires11/1.0@user/test")
-        client.run("alias python_requires11/latest2@user/test python_requires11/latest@user/test")
+        client.alias("python_requires11/latest@user/test",  "python_requires11/1.0@user/test")
+        client.alias("python_requires11/latest2@user/test",  "python_requires11/latest@user/test")
 
         # Create python requires, that require the previous one
         client.save({CONANFILE: textwrap.dedent("""
@@ -678,8 +678,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires22::build")
                     """).format(v=version_str)})
         client.run("export . --name=python_requires22 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires22/latest@user/test python_requires22/1.0@user/test")
-        client.run("alias python_requires22/latest2@user/test python_requires22/latest@user/test")
+        client.alias("python_requires22/latest@user/test",  "python_requires22/1.0@user/test")
+        client.alias("python_requires22/latest2@user/test",  "python_requires22/latest@user/test")
 
         # Another python_requires, that requires the previous python requires
         client.save({CONANFILE: textwrap.dedent("""
@@ -693,8 +693,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires2::build")
                     """).format(v=version_str)})
         client.run("export . --name=python_requires2 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires2/latest@user/test python_requires2/1.0@user/test")
-        client.run("alias python_requires2/latest2@user/test python_requires2/latest@user/test")
+        client.alias("python_requires2/latest@user/test",  "python_requires2/1.0@user/test")
+        client.alias("python_requires2/latest2@user/test",  "python_requires2/latest@user/test")
 
         # My project, will consume the latest python requires
         client.save({CONANFILE: textwrap.dedent("""

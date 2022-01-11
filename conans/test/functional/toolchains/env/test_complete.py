@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 
 def test_cmake_virtualenv():
     client = TestClient()
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . -tf=None")
 
     cmakewrapper = textwrap.dedent(r"""
@@ -66,7 +66,7 @@ def test_cmake_virtualenv():
 
 def test_complete():
     client = TestClient()
-    client.run("new myopenssl/1.0 -m=cmake_lib")
+    client.run("new cmake_lib -d name=myopenssl -d version=1.0")
     client.run("create . -o myopenssl:shared=True")
     client.run("create . -o myopenssl:shared=True -s build_type=Debug")
 

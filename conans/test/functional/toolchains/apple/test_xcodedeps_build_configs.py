@@ -304,10 +304,10 @@ def create_xcode_project(client, project_name, source):
 def test_xcodedeps_build_configurations():
     client = TestClient(path_with_spaces=False)
 
-    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("export .")
 
-    client.run("new bye/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=bye -d version=0.1 -f")
     client.run("export .")
 
     main = textwrap.dedent("""

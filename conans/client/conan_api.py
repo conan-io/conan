@@ -12,7 +12,7 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
-from conans.client.cmd.export import cmd_export, export_alias
+from conans.client.cmd.export import cmd_export
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
@@ -32,7 +32,7 @@ from conans.model.ref import check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_recipes
-from conans.util.files import mkdir, save_files, load, save, discarded_file
+from conans.util.files import mkdir, load, save, discarded_file
 
 
 class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env", "conf"])):
@@ -96,21 +96,6 @@ class ConanAPIV1(object):
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
         check_required_conan_version(self.cache_folder)
-
-    @api_method
-    def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-            cwd=None, template=None, defines=None, gitignore=None):
-        from conans.client.cmd.new import cmd_new
-        app = ConanApp(self.cache_folder)
-        cwd = os.path.abspath(cwd or os.getcwd())
-        ref = RecipeReference.loads(name)
-        files = cmd_new(ref.name, ref.version, header=header, pure_c=pure_c, test=test,
-                        exports_sources=exports_sources, bare=bare, gitignore=gitignore,
-                        template=template, cache=app.cache, defines=defines)
-
-        save_files(cwd, files)
-        for f in sorted(files):
-            ConanOutput().success("File saved: %s" % f)
 
     @api_method
     def inspect(self, path, attributes, remote_name=None):
@@ -502,28 +487,6 @@ class ConanAPIV1(object):
                 return app.remote_manager.get_package_file(pref, path, remote), path
             else:
                 return app.remote_manager.get_recipe_file(ref, path, remote), path
-
-    @api_method
-    def export_alias(self, reference, target_reference):
-        app = ConanApp(self.cache_folder)
-        ref = RecipeReference.loads(reference)
-        target_ref = RecipeReference.loads(target_reference)
-
-        if ref.name != target_ref.name:
-            raise ConanException("An alias can only be defined to a package with the same name")
-
-        # Do not allow to create an alias of a recipe that already has revisions
-        # with that name
-        latest_rrev = app.cache.get_latest_recipe_reference(ref)
-        if latest_rrev:
-            alias_conanfile_path = app.cache.ref_layout(latest_rrev).conanfile()
-            if os.path.exists(alias_conanfile_path):
-                conanfile = app.loader.load_basic(alias_conanfile_path)
-                if not getattr(conanfile, 'alias', None):
-                    raise ConanException("Reference '{}' is already a package, remove it before "
-                                         "creating and alias with the same name".format(ref))
-
-        return export_alias(ref, target_ref, app.cache)
 
     @api_method
     def editable_add(self, path, reference, cwd):

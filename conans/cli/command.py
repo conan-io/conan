@@ -102,7 +102,7 @@ class BaseConanCommand(object):
         return self._parser
 
     def _format(self, parser, info, *args):
-        parser_args = parser.parse_args(*args)
+        parser_args, _ = parser.parse_known_args(*args)
         try:
             formatarg = parser_args.format
         except AttributeError:

@@ -42,7 +42,7 @@ class Pkg(ConanFile):
         def export_alias(name, conanfile):
             client.save({"conanfile.py": conanfile})
             client.run("export . --name=%s --version=0.1 --user=user --channel=testing" % name)
-            client.run("alias %s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
+            client.alias("%s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
 
         for name, conanfile in [
             ("CA", conanfile0),
@@ -147,7 +147,7 @@ class Pkg(ConanFile):
         def export_alias(name, conanfile):
             client.save({"conanfile.py": conanfile})
             client.run("export . --name=%s --version=0.1 --user=user --channel=testing" % name)
-            client.run("alias %s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
+            client.alias("%s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
 
         export_alias("CH", conanfile0)
 
@@ -209,19 +209,19 @@ class Pkg(ConanFile):
 
         client.save({"conanfile.py": conanfile % ""}, clean_first=True)
         client.run("export . --name=LibD --version=0.1 --user=user --channel=testing")
-        client.run("alias LibD/latest@user/testing LibD/0.1@user/testing")
+        client.alias("LibD/latest@user/testing",  "LibD/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibD/latest@user/testing"})
         client.run("export . --name=LibC --version=0.1 --user=user --channel=testing")
-        client.run("alias LibC/latest@user/testing LibC/0.1@user/testing")
+        client.alias("LibC/latest@user/testing",  "LibC/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
         client.run("export . --name=LibB --version=0.1 --user=user --channel=testing")
-        client.run("alias LibB/latest@user/testing LibB/0.1@user/testing")
+        client.alias("LibB/latest@user/testing",  "LibB/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
         client.run("export . --name=LibA --version=0.1 --user=user --channel=testing")
-        client.run("alias LibA/latest@user/testing LibA/0.1@user/testing")
+        client.alias("LibA/latest@user/testing",  "LibA/0.1@user/testing")
 
         client.save(
                 {"conanfile.txt": "[requires]\nLibA/latest@user/testing\nLibB/latest@user/testing"},
@@ -265,22 +265,22 @@ class Pkg(ConanFile):
 
         client.save({"conanfile.py": conanfile % ""}, clean_first=True)
         client.run("export . --name=LibD --version=0.1 --user=user --channel=testing")
-        client.run("alias LibD/latest@user/testing LibD/0.1@user/testing")
+        client.alias("LibD/latest@user/testing",  "LibD/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibD/latest@user/testing"})
         client.run("export . --name=LibC --version=0.1 --user=user --channel=testing")
-        client.run("alias LibC/latest@user/testing LibC/0.1@user/testing")
+        client.alias("LibC/latest@user/testing",  "LibC/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         '"myoption=True"',
                         '"myoption=True", "LibD:myoption=False"')
         client.run("export . --name=LibB --version=0.1 --user=user --channel=testing")
-        client.run("alias LibB/latest@user/testing LibB/0.1@user/testing")
+        client.alias("LibB/latest@user/testing",  "LibB/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
         client.run("export . --name=LibA --version=0.1 --user=user --channel=testing")
-        client.run("alias LibA/latest@user/testing LibA/0.1@user/testing")
+        client.alias("LibA/latest@user/testing",  "LibA/0.1@user/testing")
 
         client.save({"conanfile.txt": "[requires]\nLibA/latest@user/testing\nLibB/latest@user/testing"},
                     clean_first=True)
@@ -317,19 +317,19 @@ class Pkg(ConanFile):
 
         client.save({"conanfile.py": conanfile % ""}, clean_first=True)
         client.run("export . --name=LibD --version=sha1 --user=user --channel=testing")
-        client.run("alias LibD/0.1@user/testing LibD/sha1@user/testing")
+        client.alias("LibD/0.1@user/testing",  "LibD/sha1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibD/[~0.1]@user/testing"})
         client.run("export . --name=LibC --version=sha1 --user=user --channel=testing")
-        client.run("alias LibC/0.1@user/testing LibC/sha1@user/testing")
+        client.alias("LibC/0.1@user/testing",  "LibC/sha1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/[~0.1]@user/testing"})
         client.run("export . --name=LibB --version=sha1 --user=user --channel=testing")
-        client.run("alias LibB/0.1@user/testing LibB/sha1@user/testing")
+        client.alias("LibB/0.1@user/testing",  "LibB/sha1@user/testing")
 
         client.save({"conanfile.py": conanfile % "LibC/[~0.1]@user/testing"})
         client.run("export . --name=LibA --version=sha1 --user=user --channel=testing")
-        client.run("alias LibA/0.1@user/testing LibA/sha1@user/testing")
+        client.alias("LibA/0.1@user/testing",  "LibA/sha1@user/testing")
 
         client.save({"conanfile.txt": "[requires]\nLibA/[~0.1]@user/testing\nLibB/[~0.1]@user/testing"},
                     clean_first=True)
@@ -349,7 +349,7 @@ class Pkg(ConanFile):
             client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.%s" % i)})
             client.run("export . --user=lasote --channel=channel")
 
-        client.run("alias hello/0.X@lasote/channel hello/0.1@lasote/channel")
+        client.alias("hello/0.X@lasote/channel",  "hello/0.1@lasote/channel")
         conanfile_chat = textwrap.dedent("""
             from conans import ConanFile
             class TestConan(ConanFile):
@@ -382,7 +382,7 @@ class Pkg(ConanFile):
         self.assertIn("hello/0.1@lasote/channel from 'default'", client.out)
         self.assertNotIn("hello/0.X@lasote/channel from", client.out)
 
-        client.run("alias hello/0.X@lasote/channel hello/0.2@lasote/channel")
+        client.alias("hello/0.X@lasote/channel",  "hello/0.2@lasote/channel")
         client.run("install . --build=missing")
         self.assertIn("hello/0.2", client.out)
         self.assertNotIn("hello/0.1", client.out)
