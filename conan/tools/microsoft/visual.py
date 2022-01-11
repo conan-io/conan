@@ -175,9 +175,9 @@ def _vcvars_vers(conanfile, compiler, vs_version):
 
 
 def is_msvc(conanfile):
-    """ Validate if current compiler is 'Visual Studio' or 'msvc'
+    """ Validate if current compiler in setttings is 'Visual Studio' or 'msvc'
     :param conanfile: ConanFile instance
     :return: True, if the host compiler is related to Visual Studio, otherwise, False.
     """
     settings = conanfile.settings
-    return str(settings.get_safe("compiler")) in ["Visual Studio", "msvc"]
+    return settings.get_safe("compiler") in ["Visual Studio", "msvc"]
