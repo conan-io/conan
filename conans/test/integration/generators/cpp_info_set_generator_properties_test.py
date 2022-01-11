@@ -345,8 +345,5 @@ def test_pkg_config_names(setup_client):
     client.run("export mypkg.py")
     client.run("install consumer.py --build missing")
 
-    with open(os.path.join(client.current_folder, "root-config-name.pc")) as gen_file:
-        assert "Name: root-config-name" in gen_file.read()
-
-    with open(os.path.join(client.current_folder, "mypkg-config-name.pc")) as gen_file:
-        assert "Name: root-config-name-mypkg-config-name" in gen_file.read()
+    assert "Name: root-config-name" in client.load("root-config-name.pc")
+    assert "Name: root-config-name-mypkg-config-name" in client.load("mypkg-config-name.pc")
