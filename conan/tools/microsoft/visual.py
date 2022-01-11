@@ -172,3 +172,15 @@ def _vcvars_vers(conanfile, compiler, vs_version):
         # The equivalent of compiler 192 is toolset 14.2
         vcvars_ver = "14.{}".format(compiler_version[-1])
     return vcvars_ver
+
+
+def is_msvc(conanfile):
+    """ Validate if current compiler is 'Visual Studio' or 'msvc'
+    :param conanfile: ConanFile instance
+    :return: True, if the host compiler is related to Visual Studio, otherwise, False.
+    """
+    settings = conanfile.settings
+    compiler = settings.get_safe("compiler")
+    if not compiler:
+        raise ConanException("settings.compiler is mandatory to check Visual Studio relation.")
+    return str(compiler) in ["Visual Studio", "msvc"]
