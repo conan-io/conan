@@ -180,7 +180,4 @@ def is_msvc(conanfile):
     :return: True, if the host compiler is related to Visual Studio, otherwise, False.
     """
     settings = conanfile.settings
-    compiler = settings.get_safe("compiler")
-    if not compiler:
-        raise ConanException("settings.compiler is mandatory to check Visual Studio relation.")
-    return str(compiler) in ["Visual Studio", "msvc"]
+    return str(settings.get_safe("compiler")) in ["Visual Studio", "msvc"]
