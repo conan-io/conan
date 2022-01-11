@@ -387,6 +387,8 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(str(conanfile), "validate"):
                 try:
                     conanfile.validate()
+                    # FIXME: this shouldn't be necessary in Conan 2.0
+                    conanfile._conan_dependencies = None
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
 
