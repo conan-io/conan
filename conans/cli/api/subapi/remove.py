@@ -24,11 +24,9 @@ class RemoveAPI:
                       "command 'conan editable remove {r}'".format(r=ref)
                 raise ConanException(msg)
 
-            refs = app.cache.get_recipe_revisions_references(ref)
-            for ref in refs:
-                RemoveAPI._remove_all_packages(app, ref)
-                recipe_layout = app.cache.ref_layout(ref)
-                app.cache.remove_recipe_layout(recipe_layout)
+            self.all_recipe_packages(ref)
+            recipe_layout = app.cache.ref_layout(ref)
+            app.cache.remove_recipe_layout(recipe_layout)
 
     @api_method
     def all_recipe_packages(self, ref: RecipeReference, remote: Remote = None):
@@ -59,7 +57,8 @@ class RemoveAPI:
 
         app = ConanApp(self.conan_api.cache_folder)
         if remote:
-            app.remote_manager.remove_packages(pref, remote)
+            # FIXME: Create a "packages" method to optimize remote remove?
+            app.remote_manager.remove_packages([pref], remote)
         else:
             package_layout = app.cache.pkg_layout(pref)
             app.cache.remove_package_layout(package_layout)

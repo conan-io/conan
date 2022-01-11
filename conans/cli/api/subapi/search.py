@@ -55,13 +55,13 @@ class SearchAPI:
             if ref.revision is not None:
                 _tmp = RecipeReference.loads(repr(_r))
                 _tmp.revision = None
-                for _rrev in self.conan_api.list.recipe_revisions(_tmp):
+                for _rrev in self.conan_api.list.recipe_revisions(_tmp, remote):
                     if fnmatch.fnmatch(_rrev.revision, ref.revision):
                         ret.append(_rrev)
             else:
                 if not none_revision_allowed:
                     raise ConanException("Specify a recipe revision in the expression")
-                ret.extend(self.conan_api.list.recipe_revisions(_r))
+                ret.extend(self.conan_api.list.recipe_revisions(_r, remote))
 
         return ret
 

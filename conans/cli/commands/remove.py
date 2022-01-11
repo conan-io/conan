@@ -35,26 +35,36 @@ def remove(conan_api: ConanAPIV2, parser, *args):
     ui = UserInput(app.cache.new_config["core:non_interactive"])
     remote = conan_api.remotes.get(args.remote) if args.remote else None
     remove_all_packages = args.package_query is None
+    query = args.package_query if args.package_query != _not_specified_ else None
 
     def confirmation(message):
         return args.force or ui.request_boolean(message)
 
+    def raise_if_package_not_found(_prefs):
+        if not _prefs:
+            raise ConanException("Binary package not found for expression: "
+                                 "'{}'".format(args.reference))
+
     if ":" in args.reference:
         if remove_all_packages:
             raise ConanException("The -p argument can only be used with a recipe reference")
-        prefs = conan_api.search.package_revisions(args.reference, remote=remote,
-                                                   query=args.package_query)
+
+        prefs = conan_api.search.package_revisions(args.reference, remote=remote, query=query)
+        raise_if_package_not_found(prefs)
         if confirmation("Remove {} package revisions from '{}'?".format(len(prefs), args.reference)):
             for pref in prefs:
                 conan_api.remove.package(pref, remote=remote)
     else:
-        if args.package_query and args.package_query != _not_specified_:
-            prefs = conan_api.search.package_revisions(args.reference)
+        if query:
+            prefs = conan_api.search.package_revisions(args.reference, remote=remote, query=query)
+            raise_if_package_not_found(prefs)
             for pref in prefs:
                 if confirmation("Remove the package '{}'?".format(pref.repr_notime())):
                     conan_api.remove.package(pref, remote=remote)
         else:
             refs = conan_api.search.recipe_revisions(args.reference, remote=remote)
+            if not refs:
+                raise ConanException("Recipe not found for expression: '{}'".format(args.reference))
             if remove_all_packages:
                 for ref in refs:
                     if confirmation("Remove all packages from '{}'?".format(ref.repr_notime())):
