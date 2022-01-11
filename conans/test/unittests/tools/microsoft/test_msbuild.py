@@ -4,7 +4,7 @@ import textwrap
 import pytest
 from mock import Mock
 
-from conan.tools.microsoft import MSBuild, MSBuildToolchain
+from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.env_info import EnvValues
 from conans.test.utils.mocks import ConanFileMock, MockSettings
@@ -172,3 +172,20 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
     props_file = os.path.join(test_folder, 'conantoolchain_release_x64.props')
     msbuild.generate()
     assert '<PlatformToolset>%s</PlatformToolset>' % expected_toolset in load(props_file)
+
+
+@pytest.mark.parametrize("compiler,expected", [
+    ("Visual Studio", True),
+    ("msvc", True),
+    ("clang", False)
+])
+def test_is_msvc(compiler, expected):
+    settings = Settings({"build_type": ["Release"],
+                         "compiler": {compiler: {"version": ["2022"]}},
+                         "os": ["Windows"],
+                         "arch": ["x86_64"]})
+    conanfile = ConanFile(Mock(), None)
+    conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.initialize(settings, EnvValues())
+    conanfile.settings.compiler = compiler
+    assert is_msvc(conanfile) == expected
