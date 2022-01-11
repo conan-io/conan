@@ -1,9 +1,9 @@
-conanfile_sources_v2 = """from conan import ConanFile
+conanfile_sources_v2 = '''from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake
 from conan.tools.layout import cmake_layout
 
 
-class {{package_name}}Conan(ConanFile):
+class {{class_name or name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
 
@@ -11,7 +11,7 @@ class {{package_name}}Conan(ConanFile):
     license = "<Put the package license here>"
     author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
-    description = "<Description of {{package_name}} here>"
+    description = "<Description of {{ name }} package here>"
     topics = ("<Put some tag here>", "<here>", "<and here>")
 
     # Binary configuration
@@ -44,7 +44,7 @@ class {{package_name}}Conan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["{{name}}"]
-"""
+'''
 
 cmake_v2 = """cmake_minimum_required(VERSION 3.15)
 project({{name}} CXX)

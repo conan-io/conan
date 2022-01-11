@@ -1,11 +1,11 @@
 from conans.cli.api.helpers.new.cmake_lib import source_cpp, source_h, test_main
 
-conanfile_exe = """from conans import ConanFile
+conanfile_exe = '''from conans import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake
 from conan.tools.layout import cmake_layout
 
 
-class {{package_name}}Conan(ConanFile):
+class {{class_name or name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
     package_type = "application"
@@ -38,7 +38,7 @@ class {{package_name}}Conan(ConanFile):
     def package(self):
         cmake = CMake(self)
         cmake.install()
-"""
+'''
 
 cmake_exe_v2 = """cmake_minimum_required(VERSION 3.15)
 project({{name}} CXX)
