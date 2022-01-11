@@ -9,7 +9,6 @@ from conans.cli.api.subapi.list import ListAPI
 from conans.cli.api.subapi.remotes import RemotesAPI
 from conans.cli.api.subapi.remove import RemoveAPI
 from conans.cli.api.subapi.search import SearchAPI
-from conans.cli.api.subapi.tools import ToolsAPI
 from conans.cli.output import ConanOutput
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator
@@ -44,7 +43,6 @@ class ConanAPIV2(object):
         self.graph = GraphAPI(self)
         self.export = ExportAPI(self)
         self.remove = RemoveAPI(self)
-        self.tools = ToolsAPI(self)
 
 
 ConanAPI = ConanAPIV2

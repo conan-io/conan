@@ -1,10 +1,12 @@
+import fnmatch
 from typing import Dict
 
 from conans.cli.api.model import Remote, PkgConfiguration
+from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.search.search import get_packages_search_info
+from conans.search.search import get_packages_search_info, filter_packages
 
 
 class ListAPI:
@@ -54,3 +56,11 @@ class ListAPI:
             packages = app.remote_manager.search_packages(remote, ref)
             results = {pref: PkgConfiguration(data) for pref, data in packages.items()}
         return results
+
+    def filter_packages_configurations(self, pkg_configurations, query):
+        """
+        :param pkg_configurations: Dict[PkgReference, PkgConfiguration]
+        :param query: str like "os=Windows AND (arch=x86 OR compiler=gcc)"
+        :return: Dict[PkgReference, PkgConfiguration]
+        """
+        return filter_packages(query, pkg_configurations)

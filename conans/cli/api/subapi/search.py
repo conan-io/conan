@@ -1,6 +1,10 @@
+import fnmatch
+
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.search.search import search_recipes, filter_packages
+from conans.errors import ConanException
+from conans.model.recipe_ref import RecipeReference
+from conans.search.search import search_recipes
 
 
 class SearchAPI:
@@ -24,3 +28,79 @@ class SearchAPI:
                 if r not in ret:
                     ret.append(r)
             return ret
+
+    @api_method
+    def recipe_revisions(self, expression, remote=None, none_revision_allowed=True):
+        """
+        :param ref: A RecipeReference that can contain "*" at any field
+        :param remote: Remote in case we want to check the references in a remote
+        :param none_revision_allowed: Allow a None field as a revision in the expression
+        :return: a list of complete RecipeRefernce
+        """
+        if "/" not in expression:
+            refs = self.conan_api.search.recipes(expression, remote)
+            ref = RecipeReference(expression)
+        else:
+            ref = RecipeReference.loads(expression)
+            # First resolve any * in the regular reference, doing a search
+            if any(["*" in field for field in (ref.name, str(ref.version),
+                                               ref.user or "", ref.channel or "")]):
+                refs = self.recipes(str(ref), remote)  # Do not return revisions
+            else:
+                refs = [ref]
+
+        # Second, for the got references, check revisions matching.
+        ret = []
+        for _r in refs:
+            if ref.revision is not None:
+                _tmp = RecipeReference.loads(repr(_r))
+                _tmp.revision = None
+                for _rrev in self.conan_api.list.recipe_revisions(_tmp):
+                    if fnmatch.fnmatch(_rrev.revision, ref.revision):
+                        ret.append(_rrev)
+            else:
+                if not none_revision_allowed:
+                    raise ConanException("Specify a recipe revision in the expression")
+                ret.extend(self.conan_api.list.recipe_revisions(_r))
+
+        return ret
+
+    @api_method
+    def package_revisions(self, expression, query=None, remote=None):
+        """
+        Resolve an expression like lib*/1*#*:9283*, filtering by query and obtaining all the package
+        revisions
+        :param expression: lib*/1*#*:9283*
+        :param query: package configuration query like "os=Windows AND (arch=x86 OR compiler=gcc)"
+        :param remote: Remote object
+        :return: a List of PkgReference
+        """
+        if ":" in expression:
+            recipe_expr, package_expr = expression.split(":", 1)
+        else:
+            recipe_expr = expression
+            package_expr = "*#*"
+
+        if "#" in package_expr:
+            package_id_expr, package_revision_expr = package_expr.split("#", 1)
+        else:
+            package_id_expr = package_expr
+            package_revision_expr = "*"
+
+        refs = self.recipe_revisions(recipe_expr, remote, none_revision_allowed=False)
+        ret = []
+        for ref in refs:
+            configurations = self.conan_api.list.packages_configurations(ref, remote)
+            filtered_configurations = {}
+            for _pref, configuration in configurations.items():
+                if fnmatch.fnmatch(_pref.package_id, package_id_expr):
+                    filtered_configurations[_pref] = configuration
+            prefs = self.conan_api.list.filter_packages_configurations(filtered_configurations,
+                                                                       query).keys()
+            for pref in prefs:
+                prevs = self.conan_api.list.package_revisions(pref, remote)
+                for prev in prevs:
+                    if fnmatch.fnmatch(prev.revision, package_revision_expr):
+                        ret.append(prev)
+
+        return ret
