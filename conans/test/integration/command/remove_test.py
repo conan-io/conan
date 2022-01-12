@@ -3,6 +3,8 @@ import unittest
 
 import pytest
 
+from conans.cli.api.conan_api import ConanAPIV2
+from conans.cli.api.model import Remote
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
@@ -165,10 +167,59 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.assertNotIn("arch=x86", self.client.out)
 
 
-def test_new_remove_expressions():
-    client = TestClient()
-    client.save({"conanfile.py": GenConanfile().with_settings("build_type")})
-    client.run("create . foo/1.0@ -s build_type=Release")
-    client.run("create . foo/1.0@ -s build_type=Debug")
-    client.run("create . foo/1.0@user/channel -s build_type=Release")
-    client.run("create . foo/1.0@user/channel -s build_type=Debug")
+@pytest.mark.parametrize("with_remote", [True, False])
+def test_new_remove_expressions(with_remote):
+    def populate_client():
+        # To generate different package revisions
+        package_lines = 'save(self, os.path.join(self.package_folder, "foo.txt"), str(time.time()))'
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile().with_settings("build_type")
+                                                   .with_package(package_lines)
+                                                   .with_import("from conan.tools.files import save")
+                                                   .with_import("import os")
+                                                   .with_import("import time")
+                     })
+        for _ in range(2):  # Two package revisions
+            client.run("create . foo/1.0@ -s build_type=Release")
+            client.run("create . foo/1.0@ -s build_type=Debug")
+            client.run("create . foo/1.0@user/channel -s build_type=Release")
+            client.run("create . foo/1.0@user/channel -s build_type=Debug")
+
+            client.run("create . fbar/1.1@ -s build_type=Release")
+            client.run("create . fbar/1.1@ -s build_type=Debug")
+
+            client.run("create . bar/1.1@ -s build_type=Release")
+            client.run("create . bar/1.1@ -s build_type=Debug")
+
+        client.run("upload '*' -c --all -r default")
+
+        return client
+
+    r = "-r default" if with_remote else ""
+
+    client = populate_client()
+    with client.mocked_servers():
+        client.run("remove * -f {}".format(r))
+    assert _get_recipes(client, "*", with_remote) == []
+
+    client = populate_client()
+    with client.mocked_servers():
+        client.run("remove f* -f {}".format(r))
+    assert _get_recipes(client, "*", with_remote) == []
+
+    client = populate_client()
+    api = ConanAPIV2(client.cache_folder)
+    remote = api.remotes.get("default") if with_remote else None
+
+    with client.mocked_servers():
+        client.run("remove f* -f {}".format(r))
+        results = api.search.recipes("*", remote=remote)
+        assert results == [RecipeReference.loads("bar/1.1")]
+!!!!!! pending figure out how to test this
+
+def _get_recipes(client, pattern, with_remote):
+    api = ConanAPIV2(client.cache_folder)
+    remote = api.remotes.get("default") if with_remote else None
+    return api.search.recipes(pattern, remote=remote)
+
+

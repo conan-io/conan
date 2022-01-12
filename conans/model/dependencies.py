@@ -37,7 +37,7 @@ class UserRequirementsDict(object):
         ret = []
         if "/" in ref:
             # FIXME: Validate reference
-            ref = ToolRequirementsrence.loads(ref)
+            ref = RecipeReference.loads(ref)
             for require, value in data.items():
                 if require.ref == ref:
                     ret.append((require, value))
