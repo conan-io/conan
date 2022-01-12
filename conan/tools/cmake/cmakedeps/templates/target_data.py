@@ -109,6 +109,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
               )
+              list(APPEND {{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ cpp.build_modules_paths }})
               {%- endfor %}
           """)
         return ret
