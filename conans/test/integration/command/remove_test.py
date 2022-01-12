@@ -163,3 +163,12 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("search foobar/0.1@user/testing -r default")
         self.assertNotIn("arch=x86_64", self.client.out)
         self.assertNotIn("arch=x86", self.client.out)
+
+
+def test_new_remove_expressions():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("build_type")})
+    client.run("create . foo/1.0@ -s build_type=Release")
+    client.run("create . foo/1.0@ -s build_type=Debug")
+    client.run("create . foo/1.0@user/channel -s build_type=Release")
+    client.run("create . foo/1.0@user/channel -s build_type=Debug")
