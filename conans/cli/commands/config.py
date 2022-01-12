@@ -6,7 +6,7 @@ from conans.util.config_parser import get_bool_from_text
 @conan_command(group=COMMAND_GROUPS['consumer'])
 def config(conan_api, parser, *args):
     """
-    Computes a dependency graph, without  installing or building the binaries
+    Manages the Conan configuration in the current Conan home.
     """
 
 
