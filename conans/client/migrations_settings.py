@@ -2964,3 +2964,4 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
 
 settings_1_43_1 = settings_1_43_0
 settings_1_43_2 = settings_1_43_1
+settings_1_43_3 = settings_1_43_2
