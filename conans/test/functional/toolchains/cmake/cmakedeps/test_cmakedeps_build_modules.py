@@ -92,7 +92,7 @@ def test_build_modules_components_selection_is_not_possible():
             name = "openssl"
             version = "1.0"
             settings = "os", "arch", "compiler", "build_type"
-            exports_sources = ["ssl.cmake", "crypto.cmake"]
+            exports_sources = ["ssl.cmake", "crypto.cmake", "root.cmake"]
 
             def package(self):
                 self.copy("*.cmake", dst="share/cmake")
@@ -100,8 +100,12 @@ def test_build_modules_components_selection_is_not_possible():
             def package_info(self):
                 ssl_module = os.path.join("share", "cmake", "ssl.cmake")
                 self.cpp_info.components["ssl"].set_property("cmake_build_modules", [ssl_module])
+
                 crypto_module = os.path.join("share", "cmake", "crypto.cmake")
                 self.cpp_info.components["crypto"].set_property("cmake_build_modules", [crypto_module])
+
+                root_module = os.path.join("share", "cmake", "root.cmake")
+                self.cpp_info.set_property("cmake_build_modules", [root_module])
         """)
 
     ssl_cmake = textwrap.dedent("""
@@ -110,11 +114,19 @@ def test_build_modules_components_selection_is_not_possible():
         endfunction()
         """)
     crypto_cmake = textwrap.dedent("""
-            function(crypto_message MESSAGE_OUTPUT)
-                message("CRYPTO MESSAGE:${ARGV${0}}")
-            endfunction()
-            """)
-    client.save({"conanfile.py": conanfile, "ssl.cmake": ssl_cmake, "crypto.cmake": crypto_cmake})
+        function(crypto_message MESSAGE_OUTPUT)
+            message("CRYPTO MESSAGE:${ARGV${0}}")
+        endfunction()
+        """)
+    root_cmake = textwrap.dedent("""
+        function(root_message MESSAGE_OUTPUT)
+            message("ROOT MESSAGE:${ARGV${0}}")
+        endfunction()
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "ssl.cmake": ssl_cmake,
+                 "crypto.cmake": crypto_cmake,
+                 "root.cmake": root_cmake})
     client.run("create .")
 
     consumer = textwrap.dedent("""
@@ -135,15 +147,6 @@ def test_build_modules_components_selection_is_not_possible():
             def package_info(self):
                 self.cpp_info.requires = ["openssl::crypto"]
         """)
-    cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.0)
-        project(test)
-        find_package(openssl CONFIG)
-        crypto_message("hello!")
-        """)
-    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run("create .")
-    assert "CRYPTO MESSAGE:hello!" in client.out
 
     cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
@@ -151,10 +154,13 @@ def test_build_modules_components_selection_is_not_possible():
             find_package(openssl CONFIG)
             crypto_message("hello!")
             ssl_message("hello!")
+            root_message("hello!")
             """)
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     # As we are requiring only "crypto" but it doesn't matter, it is not possible to include
     # only crypto build_modules
     client.run("create .")
     assert "SSL MESSAGE:hello!" in client.out
+    assert "CRYPTO MESSAGE:hello!" in client.out
+    assert "ROOT MESSAGE:hello!" in client.out
 
