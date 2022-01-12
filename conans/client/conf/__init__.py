@@ -153,8 +153,6 @@ _t_default_client_conf = textwrap.dedent("""
     # which is deleted after the test.
     # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
-    # config_install_interval = 1h
-
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
     # path beginning with "~" (if the environment var CONAN_HOME is specified, this directory, even

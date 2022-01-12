@@ -16,7 +16,6 @@ from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_
 from conans.cli.output import ConanOutput, cli_out_write, Color
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
-from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
@@ -153,10 +152,6 @@ class Cli:
             return ERROR_GENERAL
 
         try:
-            # This can raise too, with ConanException, etc
-            if command.name != "config" and is_config_install_scheduled(self._conan_api):
-                self._conan_api.config.remote_reinstall()
-
             command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
             exit_error = SUCCESS
         except SystemExit as exc:

@@ -143,10 +143,6 @@ class ClientCache(object):
         return bool(edited_ref)
 
     @property
-    def config_install_file(self):
-        return os.path.join(self.cache_folder, "config_install.json")
-
-    @property
     def remotes_path(self):
         return os.path.join(self.cache_folder, REMOTES)
 
