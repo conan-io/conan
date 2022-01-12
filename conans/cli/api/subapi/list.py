@@ -1,9 +1,8 @@
-import fnmatch
 from typing import Dict
 
 from conans.cli.api.model import Remote, PkgConfiguration
-from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
+from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.search.search import get_packages_search_info, filter_packages

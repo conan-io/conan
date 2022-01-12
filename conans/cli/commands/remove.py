@@ -7,7 +7,6 @@ from conans.client.userio import UserInput
 from conans.errors import ConanException
 
 
-
 @conan_command(group=COMMAND_GROUPS['consumer'])
 def remove(conan_api: ConanAPIV2, parser, *args):
     """
@@ -41,9 +40,8 @@ def remove(conan_api: ConanAPIV2, parser, *args):
         return args.force or ui.request_boolean(message)
 
     def raise_if_package_not_found(_prefs):
-        if not _prefs:
-            raise ConanException("Binary package not found for expression: "
-                                 "'{}'".format(args.reference))
+        if not _prefs and "*" not in args.reference:
+            raise ConanException("Binary package not found: '{}'".format(args.reference))
 
     if ":" in args.reference:
         if remove_all_packages:
@@ -63,8 +61,8 @@ def remove(conan_api: ConanAPIV2, parser, *args):
                     conan_api.remove.package(pref, remote=remote)
         else:
             refs = conan_api.search.recipe_revisions(args.reference, remote=remote)
-            if not refs:
-                raise ConanException("Recipe not found for expression: '{}'".format(args.reference))
+            if not refs and "*" not in args.reference:
+                raise ConanException("Recipe not found: '{}'".format(args.reference))
             if remove_all_packages:
                 for ref in refs:
                     if confirmation("Remove all packages from '{}'?".format(ref.repr_notime())):

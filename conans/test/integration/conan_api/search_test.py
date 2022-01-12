@@ -63,42 +63,42 @@ def test_resolve_recipe_revisions(mode_remote):
 
     with client.mocked_servers():
         sot = api.search.recipe_revisions("foo/1.0", remote)
-        assert sot == [pref3.ref, pref2.ref, pref1.ref]
+        assert set(sot) == {pref3.ref, pref2.ref, pref1.ref}
 
         sot = api.search.recipe_revisions("f*/1.0", remote)
-        assert sot == [pref3.ref, pref2.ref, pref1.ref]
+        assert set(sot) == {pref3.ref, pref2.ref, pref1.ref}
 
         sot = api.search.recipe_revisions("f*/*", remote)
-        assert sot == [pref3.ref, pref2.ref, pref1.ref]
+        assert set(sot) == {pref3.ref, pref2.ref, pref1.ref}
 
         sot = api.search.recipe_revisions("f*", remote)
-        assert sot == [pref3.ref, pref2.ref, pref1.ref]
+        assert set(sot) == {pref3.ref, pref2.ref, pref1.ref}
 
         sot = api.search.recipe_revisions("foo/1.0#*", remote)
-        assert sot == [pref3.ref, pref2.ref, pref1.ref]
+        assert set(sot) == {pref3.ref, pref2.ref, pref1.ref}
 
         sot = api.search.recipe_revisions("foo/1.0#{}*".format(pref2.ref.revision[:4]), remote)
-        assert sot == [pref2.ref]
+        assert set(sot) == {pref2.ref}
 
         sot = api.search.recipe_revisions("f*o/1*#{}*".format(pref2.ref.revision[:4]), remote)
-        assert sot == [pref2.ref]
+        assert set(sot) == {pref2.ref}
 
         sot = api.search.recipe_revisions("*f/1*#*", remote)
         assert sot == []
 
         sot = api.search.recipe_revisions("*", remote)
-        assert sot == [pref2_3.ref, pref2_2.ref, pref2_1.ref, pref3.ref, pref2.ref, pref1.ref]
+        assert set(sot) == {pref2_3.ref, pref2_2.ref, pref2_1.ref, pref3.ref, pref2.ref, pref1.ref}
 
         assert pref2.ref.revision == pref2_2.ref.revision
         sot = api.search.recipe_revisions("*/*#{}".format(pref2.ref.revision), remote)
-        assert sot == [pref2_2.ref, pref2.ref]
+        assert set(sot) == {pref2_2.ref, pref2.ref}
 
         assert pref2.ref.revision == pref2_2.ref.revision
         sot = api.search.recipe_revisions("*/1.0#{}".format(pref2.ref.revision), remote)
-        assert sot == [pref2_2.ref, pref2.ref]
+        assert set(sot) == {pref2_2.ref, pref2.ref}
 
         sot = api.search.recipe_revisions(pref2.ref.repr_notime(), remote)
-        assert sot == [pref2.ref]
+        assert set(sot) == {pref2.ref}
 
 
 @pytest.mark.parametrize("mode_remote", [False, True])

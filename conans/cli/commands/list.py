@@ -179,10 +179,12 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
             result["ref"] = ref
             try:
                 result.elements = conan_api.list.recipe_revisions(ref, remote=remote)
+            except NotFoundException:
+                result.elements = []
             except Exception as e:
                 result.error = str(e)
-
             results.append(result)
+
     print_list_recipe_revisions(results)
     return results
 
@@ -213,6 +215,8 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         result = CommandResult()
         try:
             result.elements = conan_api.list.package_revisions(pref)
+        except NotFoundException:
+            result.elements = []
         except Exception as e:
             result.error = str(e)
 
@@ -224,6 +228,8 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             result = CommandResult(remote=remote)
             try:
                 result.elements = conan_api.list.package_revisions(pref, remote=remote)
+            except NotFoundException:
+                result.elements = []
             except Exception as e:
                 result.error = str(e)
             results.append(result)
@@ -266,6 +272,8 @@ def list_packages(conan_api, parser, subparser, *args):
             result = CommandResult(remote=remote)
             try:
                 result.elements = conan_api.list.packages_configurations(ref, remote=remote)
+            except NotFoundException:
+                result.elements = []
             except Exception as e:
                 result.error = str(e)
             results.append(result)
