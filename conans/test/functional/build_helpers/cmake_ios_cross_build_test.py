@@ -34,7 +34,7 @@ def test_cross_build_test_package():
     """)
 
     client = TestClient()
-    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.save({"profile_build": profile_build,
                  "profile_host": profile_host})
     client.run("create . -pr:b profile_build -pr:h profile_host")

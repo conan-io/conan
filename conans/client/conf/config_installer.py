@@ -17,7 +17,7 @@ from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
 from conans.util.dates import timedelta_from_text
-from conans.util.files import mkdir, rmdir, walk, save, touch, remove
+from conans.util.files import mkdir, rmdir, save, touch, remove
 from conans.client.cache.cache import ClientCache
 
 
@@ -134,7 +134,7 @@ def _process_folder(config, folder, cache):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
-    for root, dirs, files in walk(folder):
+    for root, dirs, files in os.walk(folder):
         dirs[:] = [d for d in dirs if d != ".git"]
         for f in files:
             _process_file(root, f, config, cache, folder)

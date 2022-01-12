@@ -100,7 +100,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.remove_all()
 
         # Create an alias to the first revision
-        self.c_v2.run("alias lib/latest@conan/stable {}".format(repr(pref.ref)))
+        self.c_v2.alias("lib/latest@conan/stable", repr(pref.ref))
         alias_ref = RecipeReference.loads("lib/latest@conan/stable")
         exported = load(self.c_v2.get_latest_ref_layout(alias_ref).conanfile())
         self.assertIn('alias = "{}"'.format(repr(pref.ref)), exported)

@@ -5,7 +5,8 @@ from conans import DEFAULT_REVISION_V1
 from conans.migrations import Migrator
 from conans.server.revision_list import RevisionList
 from conans.server.store.server_store import REVISIONS_FILE, SERVER_PACKAGES_FOLDER
-from conans.util.files import list_folder_subdirs, mkdir, save
+from conans.util.files import mkdir, save
+from conans.server.utils.files import list_folder_subdirs
 from conans.util.log import logger
 
 
