@@ -344,7 +344,7 @@ class EnvVars:
                value=$(printenv $v)
                if [ -n "$value" ]
                then
-                   echo export "$v=$value" >> deactivate_{filename}
+                   echo export "$v='$value'" >> deactivate_{filename}
                else
                    echo unset $v >> deactivate_{filename}
                fi
