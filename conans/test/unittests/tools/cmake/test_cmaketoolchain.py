@@ -377,7 +377,7 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     """
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings.loads(get_default_settings_yml()), EnvValues())
+    c.settings = Settings.loads(get_default_settings_yml())
     c.settings.os = os
     c.settings.os.sdk = os_sdk
     c.settings.build_type = "Release"
@@ -386,10 +386,12 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     c.settings.compiler.version = "13.0"
     c.settings.compiler.libcxx = "libc++"
     c.settings.compiler.cppstd = "17"
+    c.settings_build = c.settings
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()
     c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
 
     toolchain = CMakeToolchain(c)
     content = toolchain.content
@@ -408,7 +410,7 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
     """
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings.loads(get_default_settings_yml()), EnvValues())
+    c.settings = Settings.loads(get_default_settings_yml())
     c.settings.os = os
     c.settings.os.sdk = os_sdk
     c.settings.build_type = "Release"
@@ -417,6 +419,7 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
     c.settings.compiler.version = "13.0"
     c.settings.compiler.libcxx = "libc++"
     c.settings.compiler.cppstd = "17"
+    c.settings_build = c.settings
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()

@@ -393,6 +393,7 @@ class CppInfo(object):
                         current_values.extend(component.requires)
 
                 # FIXME: What to do about sysroot?
+                result._generator_properties = copy.copy(self._generator_properties)
             else:
                 result = copy.copy(self.components[None])
             self._aggregated = CppInfo()
