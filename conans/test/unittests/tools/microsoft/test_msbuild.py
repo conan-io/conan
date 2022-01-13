@@ -183,7 +183,6 @@ def test_is_msvc(compiler, expected):
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
     conanfile = ConanFile(Mock(), None)
-    conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(settings, EnvValues())
+    conanfile.settings = settings
     conanfile.settings.compiler = compiler
     assert is_msvc(conanfile) == expected

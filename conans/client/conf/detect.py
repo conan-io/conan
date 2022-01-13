@@ -256,8 +256,9 @@ def _detect_compiler_version(result):
         result.append(("compiler.runtime", "dynamic"))
         result.append(("compiler.runtime_type", "Release"))
 
-    cppstd = _cppstd_default(compiler, version)
-    result.append(("compiler.cppstd", cppstd))
+    if compiler != "msvc":
+        cppstd = _cppstd_default(compiler, version)
+        result.append(("compiler.cppstd", cppstd))
 
 
 def _get_solaris_architecture():
