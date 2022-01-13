@@ -5,6 +5,7 @@ import textwrap
 import pytest
 
 from conan.tools.files import load_toolchain_args
+from conans.client.tools import environment_append
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -209,5 +210,5 @@ def test_cmaketoolchain_no_warnings():
     client.run("install .")
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake "
                        "-Werror=dev --warn-uninitialized")
-    assert "Using Conan toolchain"
+    assert "Using Conan toolchain" in client.out
     # The real test is that there are no errors, it returns successfully

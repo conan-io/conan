@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conans.client.tools import environment_append
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -72,6 +73,17 @@ def test_clang_cmake_ninja(client):
     # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
     assert "main _MSC_VER19" in client.out
     assert "main _MSVC_LANG2014" in client.out
+
+
+@pytest.mark.tool_cmake
+@pytest.mark.tool_clang(version="12")
+@pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
+def test_clang_cmake_ninja_custom_cxx(client):
+    with environment_append({"CXX": "/no/exist/clang++"}):
+        client.run("create . pkg/0.1@ -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja",
+                   assert_error=True)
+        assert 'Could not find compiler' in client.out
+        assert '/no/exist/clang++' in client.out
 
 
 @pytest.mark.tool_cmake
