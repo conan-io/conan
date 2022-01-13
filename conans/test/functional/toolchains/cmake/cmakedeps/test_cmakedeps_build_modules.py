@@ -28,8 +28,6 @@ def test_build_modules_alias_target(use_components):
         """)
     if use_components:
         info = """
-        self.cpp_info.name = "namespace"
-        self.cpp_info.filenames["CMakeDeps"] = "hello"
         self.cpp_info.components["comp"].set_property("cmake_build_modules", [module])
         """
     else:
