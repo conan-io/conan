@@ -469,7 +469,7 @@ def test_duplicated_names_warnings():
     """
     Testing some WARN messages if there are duplicated pkg_config_name/pkg_config_aliases defined
 
-    Scenario: consumer -> pkgA/1.0 -> pkgB/1.0
+    Scenario: consumer -> pkga/1.0 -> pkgB/1.0
     Expected WARN cases:
         - Duplicated aliases.
         - Duplicated names, alias and component name
@@ -492,18 +492,18 @@ def test_duplicated_names_warnings():
                 self.cpp_info.components["cmp3"].set_property("pkg_config_name", "libpkg")
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkgB/1.0@")
+    client.run("create . pkgb/1.0@")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
 
         class PkgConfigConan(ConanFile):
-            requires = "pkgB/1.0"
+            requires = "pkgb/1.0"
 
             def package_info(self):
-                # Duplicated name as pkgB
+                # Duplicated name as pkgb
                 self.cpp_info.set_property("pkg_config_name", "libpkg")
-                self.cpp_info.components["cmp1"].requires.append("pkgB::cmp1")
+                self.cpp_info.components["cmp1"].requires.append("pkgb::cmp1")
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "component1")
                 # Duplicated aliases
                 self.cpp_info.components["cmp2"].set_property("pkg_config_aliases", ["alias1"])
@@ -513,11 +513,11 @@ def test_duplicated_names_warnings():
                 self.cpp_info.components["cmp4"].set_property("pkg_config_aliases", ["libcmp"])
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("create . pkgA/1.0@")
+    client.run("create . pkga/1.0@")
 
     conanfile = textwrap.dedent("""
         [requires]
-        pkgA/1.0
+        pkga/1.0
 
         [generators]
         PkgConfigDeps
@@ -525,23 +525,23 @@ def test_duplicated_names_warnings():
     client.save({"conanfile.txt": conanfile}, clean_first=True)
     client.run("install .")
     output = client.out
-    # Duplicated aliases from pkgA
-    assert "WARN: [pkgA/1.0] The PC alias name alias1.pc already exists and it matches with " \
+    # Duplicated aliases from pkga
+    assert "WARN: [pkga/1.0] The PC alias name alias1.pc already exists and it matches with " \
            "another alias one" in output
-    # Duplicated names, alias and component name from pkgA
-    assert "WARN: [pkgA/1.0] The PC alias name libcmp.pc already exists and it matches with " \
+    # Duplicated names, alias and component name from pkga
+    assert "WARN: [pkga/1.0] The PC alias name libcmp.pc already exists and it matches with " \
            "another package/component one" in output
-    # Duplicated components from pkgB
-    assert "WARN: [pkgB/1.0] The PC component name component1.pc already exists and it matches " \
+    # Duplicated components from pkgb
+    assert "WARN: [pkgb/1.0] The PC component name component1.pc already exists and it matches " \
            "with another component one" in output
-    # Duplicated package and component name from pkgB
-    assert "WARN: [pkgB/1.0] The PC package name libpkg.pc already exists and it matches with " \
+    # Duplicated package and component name from pkgb
+    assert "WARN: [pkgb/1.0] The PC package name libpkg.pc already exists and it matches with " \
            "another component one" in output
-    # Duplicated names between pkgB and pkgA
-    assert "WARN: [pkgB/1.0] The PC file name component1.pc already exists and it matches with " \
-           "another name/alias declared in pkgA/1.0 package" in output
-    assert "WARN: [pkgB/1.0] The PC file name libpkg.pc already exists and it matches with " \
-           "another name/alias declared in pkgA/1.0 package" in output
+    # Duplicated names between pkgb and pkga
+    assert "WARN: [pkgb/1.0] The PC file name component1.pc already exists and it matches with " \
+           "another name/alias declared in pkga/1.0 package" in output
+    assert "WARN: [pkgb/1.0] The PC file name libpkg.pc already exists and it matches with " \
+           "another name/alias declared in pkga/1.0 package" in output
     pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
     pc_files.sort()
     # Let's check all the PC file names created just in case
