@@ -336,6 +336,7 @@ def test_pkg_config_names(setup_client):
             name = "mypkg"
             version = "1.0"
             def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "root-config-name")
                 self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
                 self.cpp_info.components["mycomponent"].set_property("pkg_config_name", "mypkg-config-name")
         """)
@@ -344,5 +345,5 @@ def test_pkg_config_names(setup_client):
     client.run("export mypkg.py")
     client.run("install consumer.py --build missing")
 
-    with open(os.path.join(client.current_folder, "mypkg-config-name.pc")) as gen_file:
-        assert "mypkg-config-name" in gen_file.read()
+    assert "Name: root-config-name" in client.load("root-config-name.pc")
+    assert "Name: root-config-name-mypkg-config-name" in client.load("mypkg-config-name.pc")
