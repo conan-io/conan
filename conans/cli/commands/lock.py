@@ -44,7 +44,7 @@ def lock_create(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def lock_merge(conan_api, parser, subparser, *args):
     """
-    Merges more than 1 build-order file
+    Merge 2 or more lockfiles
     """
     subparser.add_argument('--lockfile', action="append", help='Path to lockfile to be merged')
     subparser.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
