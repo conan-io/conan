@@ -321,7 +321,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         command = "remove {}:{}#{} -f".format(repr(tmp), pref1.package_id, pref1.revision)
         client.run(command, assert_error=True)
         self.assertTrue(client.package_exists(pref1))
-        self.assertIn("Specify a recipe revision in the expression", client.out)
+        self.assertIn("Specify a recipe revision", client.out)
 
         # A wrong PREV doesn't remove the PREV
         pref1 = client.create(self.ref)
@@ -437,7 +437,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         command = "remove {}:{}#{} -f -r default".format(self.ref, pref2.package_id,
                                                             pref2.revision)
         remover_client.run(command, assert_error=True)
-        self.assertIn("Specify a recipe revision in the expression", remover_client.out)
+        self.assertIn("Specify a recipe revision", remover_client.out)
 
         # Remove package with RREV and PREV
         command = "remove {}:{}#{} -f -r default".format(repr(pref2.ref),

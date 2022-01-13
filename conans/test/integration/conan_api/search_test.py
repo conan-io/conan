@@ -127,7 +127,7 @@ def test_resolve_package_revisions(mode_remote):
     with client.mocked_servers():
         with pytest.raises(ConanException) as e:
             api.search.package_revisions("*/1.0*:*", remote=remote)
-        assert "Specify a recipe revision in the expression" in str(e.value)
+        assert "Specify a recipe revision" in str(e.value)
 
         sot = api.search.package_revisions("*/*.0#*:*", remote=remote)
         assert set(sot) == set(prefs)
