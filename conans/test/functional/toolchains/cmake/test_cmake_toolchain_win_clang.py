@@ -20,11 +20,6 @@ def client():
         build_type=Release
         compiler=clang
         compiler.version=12
-
-        [buildenv]
-        CC=clang
-        CXX=clang++
-        RC=clang
         """)
     conanfile = textwrap.dedent("""
         import os
