@@ -172,11 +172,11 @@ class RemovePackageRevisionsTest(unittest.TestCase):
 # populated packages of bar
 bar_rrev = "bar/1.1#54ebd2321a1375c524eb7174c272927b"
 bar_rrev2 = "bar/1.1#b305dca03567ef3ebaeddc22f7f45376"
-bar_pref_debug = '{}:040ce2bd0189e377b2d15eb7246a4274d1c63317'.format(bar_rrev2)
-bar_pref_release = '{}:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b'.format(bar_rrev2)
+bar_rrev2_debug = '{}:040ce2bd0189e377b2d15eb7246a4274d1c63317'.format(bar_rrev2)
+bar_rrev2_release = '{}:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b'.format(bar_rrev2)
 
-prev1 = "{}#61ceea29651eaf24b902e4ccdd49cc44".format(bar_pref_release)
-prev2 = "{}#c1c8d8ef1f9f9278d7963f6e35527bc7".format(bar_pref_release)
+bar_rrev2_release_prev1 = "{}#61ceea29651eaf24b902e4ccdd49cc44".format(bar_rrev2_release)
+bar_rrev2_release_prev2 = "{}#c1c8d8ef1f9f9278d7963f6e35527bc7".format(bar_rrev2_release)
 
 
 @pytest.fixture()
@@ -208,8 +208,8 @@ def populated_client():
             client.run("create . bar/1.1@ -s build_type=Release")
     client.run("create . bar/1.1@ -s build_type=Debug")
 
-    prefs = _get_revisions_packages(client, bar_pref_release, False)
-    assert set(prefs) == {prev1, prev2}
+    prefs = _get_revisions_packages(client, bar_rrev2_release, False)
+    assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
 
     # Two recipe revisions for bar/1.1
     client.save({"conanfile.py": conanfile + "\n # THIS IS ANOTHER RECIPE REVISION"})
@@ -219,8 +219,8 @@ def populated_client():
     # By default only the latest is uploaded, we want all of them
     client.run("upload {} -c --all -r default".format(bar_rrev))
     client.run("upload {} -c --all -r default".format(bar_rrev2))
-    client.run("upload {} -c -r default".format(prev1))
-    client.run("upload {} -c -r default".format(prev2))
+    client.run("upload {} -c -r default".format(bar_rrev2_release_prev1))
+    client.run("upload {} -c -r default".format(bar_rrev2_release_prev2))
 
     return client
 
@@ -276,15 +276,15 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
 @pytest.mark.parametrize("data", [
     {"remove": "bar/1.1#*:*", "prefs": []},
     {"remove": "bar/1.1#*:*#*", "prefs": []},
-    {"remove": "bar/1.1#z*:*", "prefs": [bar_pref_debug, bar_pref_release]},
-    {"remove": "bar/1.1#*:*#kk*", "prefs": [bar_pref_debug, bar_pref_release]},
-    {"remove": "bar/1.1#*:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "prefs": [bar_pref_debug]},
-    {"remove": "bar/1.1#*:*cb50cd8036fe8b", "prefs": [bar_pref_debug]},
-    {"remove": "{}:*bd0189e377b2d15e*".format(bar_rrev2), "prefs": [bar_pref_release]},
-    {"remove": "*/*#*:*bd0189e377b2d15eb72*", "prefs": [bar_pref_release]},
-    {"remove": '*/*#*:* -p build_type="fake"', "prefs": [bar_pref_release, bar_pref_debug]},
-    {"remove": '*/*#*:* -p build_type="Release"', "prefs": [bar_pref_debug]},
-    {"remove": '*/*#*:* -p build_type="Debug"', "prefs": [bar_pref_release]},
+    {"remove": "bar/1.1#z*:*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1#*:*#kk*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1#*:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "prefs": [bar_rrev2_debug]},
+    {"remove": "bar/1.1#*:*cb50cd8036fe8b", "prefs": [bar_rrev2_debug]},
+    {"remove": "{}:*bd0189e377b2d15e*".format(bar_rrev2), "prefs": [bar_rrev2_release]},
+    {"remove": "*/*#*:*bd0189e377b2d15eb72*", "prefs": [bar_rrev2_release]},
+    {"remove": '*/*#*:* -p build_type="fake"', "prefs": [bar_rrev2_release, bar_rrev2_debug]},
+    {"remove": '*/*#*:* -p build_type="Release"', "prefs": [bar_rrev2_debug]},
+    {"remove": '*/*#*:* -p build_type="Debug"', "prefs": [bar_rrev2_release]},
     # Errors
     {"remove": '*/*#*:*#* -p', "error": True,
      "error_msg": "The -p argument cannot be used with a package reference"},
@@ -298,7 +298,7 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
     populated_client.run("remove f/* -f {}".format(r))
 
     pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
-    assert pids == {bar_pref_debug, bar_pref_release}
+    assert pids == {bar_rrev2_debug, bar_rrev2_release}
 
     with populated_client.mocked_servers():
         error = data.get("error", False)
@@ -312,28 +312,33 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
 
 @pytest.mark.parametrize("with_remote", [True, False])
 @pytest.mark.parametrize("data", [
-    {"remove": '{}#*kk*'.format(bar_pref_release), "prevs": [prev1, prev2]},
-    {"remove": '{}#*'.format(bar_pref_release), "prevs": []},
-    {"remove": '{}#c1c* -p "build_type=Debug"'.format(bar_pref_release), "prevs": [prev1, prev2]},
-    {"remove": '{}#c1c* -p "build_type=Release"'.format(bar_pref_release), "prevs": [prev1]},
-    {"remove": '{}#* -p "build_type=Release"'.format(bar_pref_release), "prevs": []},
-    {"remove": '{}#* -p "build_type=Debug"'.format(bar_pref_release), "prevs": [prev1, prev2]},
+    {"remove": '{}#*kk*'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev1,
+                                                              bar_rrev2_release_prev2]},
+    {"remove": '{}#*'.format(bar_rrev2_release), "prevs": []},
+    {"remove": '{}#c1c* -p "build_type=Debug"'.format(bar_rrev2_release),
+     "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
+    {"remove": '{}#c1c* -p "build_type=Release"'.format(bar_rrev2_release),
+     "prevs": [bar_rrev2_release_prev1]},
+    {"remove": '{}#* -p "build_type=Release"'.format(bar_rrev2_release), "prevs": []},
+    {"remove": '{}#* -p "build_type=Debug"'.format(bar_rrev2_release),
+     "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
     # Errors
-    {"remove": '{}#'.format(bar_pref_release), "error": True, "error_msg": "Specify a package revision"},
+    {"remove": '{}#'.format(bar_rrev2_release), "error": True,
+     "error_msg": "Specify a package revision"},
 ])
 def test_new_remove_package_revisions_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
     r = "-r default" if with_remote else ""
     populated_client.run("remove f/* -f {}".format(r))
 
-    prefs = _get_revisions_packages(populated_client, bar_pref_release, with_remote)
-    assert set(prefs) == {prev1, prev2}
+    prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
+    assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
 
     with populated_client.mocked_servers():
         error = data.get("error", False)
         populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
         if not error:
-            prefs = _get_revisions_packages(populated_client, bar_pref_release, with_remote)
+            prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
             assert set(prefs) == set(data["prevs"])
         elif data.get("error_msg"):
             assert data.get("error_msg") in populated_client.out
