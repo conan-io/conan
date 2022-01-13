@@ -5,7 +5,6 @@ import textwrap
 import pytest
 
 from conan.tools.files import load_toolchain_args
-from conans.client.tools import environment_append
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
