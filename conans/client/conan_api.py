@@ -1,4 +1,3 @@
-import json
 import os
 
 from collections import OrderedDict
@@ -32,7 +31,7 @@ from conans.model.ref import check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_recipes
-from conans.util.files import mkdir, load, save, discarded_file
+from conans.util.files import mkdir, load, discarded_file
 
 
 class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env", "conf"])):
@@ -235,51 +234,6 @@ class ConanAPIV1(object):
             download(app, ref, packages, recipe)
         else:
             raise ConanException("Provide a valid full reference without wildcards.")
-
-    @api_method
-    def config_install_list(self):
-        app = ConanApp(self.cache_folder)
-        if not os.path.isfile(app.cache.config_install_file):
-            return []
-        return json.loads(load(app.cache.config_install_file))
-
-    @api_method
-    def config_install_remove(self, index):
-        app = ConanApp(self.cache_folder)
-        if not os.path.isfile(app.cache.config_install_file):
-            raise ConanException("There is no config data. Need to install config first.")
-        configs = json.loads(load(app.cache.config_install_file))
-        try:
-            configs.pop(index)
-        except Exception as e:
-            raise ConanException("Config %s can't be removed: %s" % (index, str(e)))
-        save(app.cache.config_install_file, json.dumps(configs))
-
-    @api_method
-    def config_install(self, path_or_url, verify_ssl, config_type=None, args=None,
-                       source_folder=None, target_folder=None):
-        from conans.client.conf.config_installer import configuration_install
-        app = ConanApp(self.cache_folder)
-        return configuration_install(app, path_or_url, verify_ssl,
-                                     config_type=config_type, args=args,
-                                     source_folder=source_folder, target_folder=target_folder)
-
-    @api_method
-    def config_home(self):
-        return self.cache_folder
-
-    @api_method
-    def config_init(self, force=False):
-        app = ConanApp(self.cache_folder)
-        app.cache.reset_default_profile()
-        if force:
-            app.cache.reset_config()
-            app.cache.remotes_registry.reset_remotes()
-            app.cache.reset_settings()
-        else:
-            app.cache.initialize_config()
-            app.cache.remotes_registry.initialize_remotes()
-            app.cache.initialize_settings()
 
     @api_method
     def build(self, conanfile_path, name=None, version=None, user=None, channel=None,

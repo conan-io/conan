@@ -3,7 +3,6 @@ import textwrap
 
 from conans.cli.output import cli_out_write
 from conans.errors import ConanException
-from conans.util.files import save
 
 COMMAND_GROUPS = {
     'consumer': 'Consumer commands',
@@ -121,7 +120,7 @@ class BaseConanCommand(object):
             raise ConanException("Format {formatarg} was specified, but command didn't return "
                                  "anything to format")
         result = formatter(info)
-        cli_out_write(result)
+        cli_out_write(result, endline="")
 
 
 class ConanCommand(BaseConanCommand):

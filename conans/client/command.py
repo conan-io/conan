@@ -12,14 +12,11 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import ConanAPIV1, ProfileData
 from conans.client.conan_command_output import CommandOutputer
-from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
-from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.ref import get_reference_fields, check_valid_ref
-from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
@@ -328,78 +325,6 @@ class Command(object):
         self._warn_python_version()
         return self._conan_api.download(reference=reference, packages=packages_list,
                                         remote_name=args.remote, recipe=args.recipe)
-
-    def config(self, *args):
-        """
-        Manages Conan configuration.
-
-        Used to edit conan.conf, or install config files.
-        """
-        parser = argparse.ArgumentParser(description=self.config.__doc__,
-                                         prog="conan config",
-                                         formatter_class=SmartFormatter)
-
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        home_subparser = subparsers.add_parser('home', help='Retrieve the Conan home directory')
-        install_subparser = subparsers.add_parser('install', help='Install a full configuration '
-                                                                  'from a local or remote zip file')
-        init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
-        subparsers.add_parser('list', help='List Conan configuration properties')
-
-        home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                                    help='json file path where the config home will be written to')
-        install_subparser.add_argument("item", nargs="?",
-                                       help="git repository, local file or folder or zip file (local or "
-                                       "http) where the configuration is stored")
-
-        install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
-                                       help='Verify SSL connection when downloading file')
-        install_subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url"],
-                                       help='Type of remote config')
-        install_subparser.add_argument("-a", "--args",
-                                       help='String with extra arguments for "git clone"')
-        install_subparser.add_argument("-sf", "--source-folder",
-                                       help='Install files only from a source subfolder from the '
-                                       'specified origin')
-        install_subparser.add_argument("-tf", "--target-folder",
-                                       help='Install to that path in the conan cache')
-        install_subparser.add_argument("-l", "--list", default=False, action='store_true',
-                                       help='List stored configuration origins')
-        install_subparser.add_argument("-r", "--remove", type=int,
-                                       help='Remove configuration origin by index in list (index '
-                                            'provided by --list argument)')
-        init_subparser.add_argument('-f', '--force', default=False, action='store_true',
-                                    help='Overwrite existing Conan configuration files')
-
-        args = parser.parse_args(*args)
-
-        if args.subcommand == "home":
-            conan_home = self._conan_api.config_home()
-            self._out.info(conan_home)
-            if args.json:
-                CommandOutputer().json_output({"home": conan_home}, args.json, os.getcwd())
-            return conan_home
-        elif args.subcommand == "install":
-            if args.list:
-                configs = self._conan_api.config_install_list()
-                for index, config in enumerate(configs):
-                    self._out.info("%s: %s" % (index, config))
-                return
-            elif args.remove is not None:
-                self._conan_api.config_install_remove(index=args.remove)
-                return
-            verify_ssl = get_bool_from_text(args.verify_ssl)
-            return self._conan_api.config_install(args.item, verify_ssl, args.type, args.args,
-                                              source_folder=args.source_folder,
-                                              target_folder=args.target_folder)
-        elif args.subcommand == 'init':
-            return self._conan_api.config_init(force=args.force)
-        elif args.subcommand == "list":
-            self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
-            for key, value in DEFAULT_CONFIGURATION.items():
-                self._out.info("{}: {}".format(key, value))
 
     def source(self, *args):
         """
@@ -834,11 +759,6 @@ class Command(object):
             command = args[0][0]
             commands = self._commands()
             method = commands[command]
-
-            if (command != "config" or
-               (command == "config" and len(args[0]) > 1 and args[0][1] != "install")) and \
-               is_config_install_scheduled(self._conan_api):
-                self._conan_api.config_install(None, None)
 
             method(args[0][1:])
         except KeyboardInterrupt as exc:

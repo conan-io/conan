@@ -587,6 +587,9 @@ class TestClient(object):
         if not files:
             mkdir(self.current_folder)
 
+    def save_home(self, files):
+        self.save(files, path=self.cache_folder)
+
     def copy_assets(self, origin_folder, assets=None):
         copy_assets(origin_folder, self.current_folder, assets)
 

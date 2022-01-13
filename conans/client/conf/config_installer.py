@@ -1,10 +1,5 @@
-import json
 import os
 import shutil
-
-from datetime import datetime
-from dateutil.tz import gettz
-
 from contextlib import contextmanager
 from urllib.parse import urlparse
 
@@ -16,9 +11,7 @@ from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.dates import timedelta_from_text
-from conans.util.files import mkdir, rmdir, save, touch, remove
-from conans.client.cache.cache import ClientCache
+from conans.util.files import mkdir, rmdir, remove
 
 
 def _hide_password(resource):
@@ -236,97 +229,11 @@ def _process_config(config, cache, requester):
         raise ConanException("Failed conan config install: %s" % str(e))
 
 
-def _save_configs(configs_file, configs):
-    save(configs_file, json.dumps([config.json() for config in configs],
-                                  indent=True))
-
-
-def _load_configs(configs_file):
-    try:
-        configs = json.loads(load(configs_file))
-    except Exception as e:
-        raise ConanException("Error loading configs-install file: %s\n%s"
-                             % (configs_file, str(e)))
-    return [_ConfigOrigin(config) for config in configs]
-
-
 def configuration_install(app, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None):
     cache, requester = app.cache, app.requester
-    configs = []
-    configs_file = cache.config_install_file
-    if os.path.isfile(configs_file):
-        configs = _load_configs(configs_file)
-    if uri is None:
-        if config_type or args or not verify_ssl:  # Not the defaults
-            if not configs:
-                raise ConanException("Called config install without arguments")
-            # Modify the last one
-            config = configs[-1]
-            config.config_type = config_type or config.type
-            config.args = args or config.args
-            config.verify_ssl = verify_ssl or config.verify_ssl
-            _process_config(config, cache, requester)
-            _save_configs(configs_file, configs)
-        else:
-            if not configs:
-                raise ConanException("Called config install without arguments")
-            # Execute the previously stored ones
-            for config in configs:
-                ConanOutput().info("Config install:  %s" % _hide_password(config.uri))
-                _process_config(config, cache, requester)
-            touch(cache.config_install_file)
-    else:
-        # Execute and store the new one
-        config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
-                                         source_folder, target_folder)
-        _process_config(config, cache, requester)
-        if config not in configs:
-            configs.append(config)
-        else:
-            configs = [(c if c != config else config) for c in configs]
-        _save_configs(configs_file, configs)
 
-
-def _is_scheduled_intervals(file, interval):
-    """ Check if time interval is bigger than last file change
-
-    :param file: file path to stat last change
-    :param interval: required time interval
-    :return: True if last change - current time is bigger than interval. Otherwise, False.
-    """
-    timestamp = os.path.getmtime(file)
-    sched = datetime.fromtimestamp(timestamp, tz=gettz())
-    sched += interval
-    now = datetime.now(gettz())
-    return now > sched
-
-
-def is_config_install_scheduled(api):
-    """ Validate if the next config install is scheduled to occur now
-
-        When config_install_interval is not configured, config install should not run
-        When configs file is empty, scheduled config install should not run
-        When config_install_interval is configured, config install will respect the delta from:
-            last conan install execution (sched file) + config_install_interval value < now
-
-    :param api: Conan API instance
-    :return: True, if it should occur now. Otherwise, False.
-    """
-    cache = ClientCache(api.cache_folder)
-    try:
-        interval = cache.new_config.get("core:config_install_interval", timedelta_from_text)
-    except ConanException as e:
-        ConanOutput().error(f"Ignoring core:config_install_interval: {str(e)}")
-        return False
-    config_install_file = cache.config_install_file
-    if interval is not None:
-        if not os.path.exists(config_install_file):
-            raise ConanException("config_install_interval defined, but no config_install file")
-        scheduled = _is_scheduled_intervals(config_install_file, interval)
-        if scheduled and not _load_configs(config_install_file):
-            ConanOutput().warning("Skipping scheduled config install, "
-                                  "no config listed in config_install file")
-            os.utime(config_install_file, None)
-        else:
-            return scheduled
+    # Execute and store the new one
+    config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
+                                     source_folder, target_folder)
+    _process_config(config, cache, requester)
