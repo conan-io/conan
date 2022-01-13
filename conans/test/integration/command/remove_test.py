@@ -284,6 +284,7 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": "*/*#*:*bd0189e377b2d15eb72*", "prefs": [bar_pref_release]},
     {"remove": '*/*#*:* -p build_type="fake"', "prefs": [bar_pref_release, bar_pref_debug]},
     {"remove": '*/*#*:* -p build_type="Release"', "prefs": [bar_pref_debug]},
+    {"remove": '*/*#*:* -p build_type="Debug"', "prefs": [bar_pref_release]},
     # Errors
     {"remove": '*/*#*:*#* -p', "error": True,
      "error_msg": "The -p argument cannot be used with a package reference"},
@@ -313,6 +314,10 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
 @pytest.mark.parametrize("data", [
     {"remove": '{}#*kk*'.format(bar_pref_release), "prevs": [prev1, prev2]},
     {"remove": '{}#*'.format(bar_pref_release), "prevs": []},
+    {"remove": '{}#c1c* -p "build_type=Debug"'.format(bar_pref_release), "prevs": [prev1, prev2]},
+    {"remove": '{}#c1c* -p "build_type=Release"'.format(bar_pref_release), "prevs": [prev1]},
+    {"remove": '{}#* -p "build_type=Release"'.format(bar_pref_release), "prevs": []},
+    {"remove": '{}#* -p "build_type=Debug"'.format(bar_pref_release), "prevs": [prev1, prev2]},
     # Errors
     {"remove": '{}#'.format(bar_pref_release), "error": True, "error_msg": "Specify a package revision"},
 ])
