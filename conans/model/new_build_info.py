@@ -182,6 +182,8 @@ class NewCppInfo(object):
                         current_values = result.get_init("requires", [])
                         current_values.extend(component.requires)
 
+                # We copy the properties from the root object, even if we have components
+                result._generator_properties = copy.copy(self._generator_properties)
                 # FIXME: What to do about sysroot?
             else:
                 result = copy.copy(self.components[None])

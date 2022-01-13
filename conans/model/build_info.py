@@ -328,9 +328,10 @@ class CppInfo(_CppInfo):
     def get_name(self, generator, default_name=True):
         name = super(CppInfo, self).get_name(generator, default_name=default_name)
 
-        # Legacy logic for pkg_config generator
+        # Legacy logic for pkg_config generator, do not enter this logic if the properties model
+        # is used: https://github.com/conan-io/conan/issues/10309
         from conans.client.generators.pkg_config import PkgConfigGenerator
-        if generator == PkgConfigGenerator.name:
+        if generator == PkgConfigGenerator.name and self.get_property("pkg_config_name") is None:
             fallback = self._name.lower() if self._name != self._ref_name else self._ref_name
             if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
                 conan_v2_error("Generated file and name for {gen} generator will change in"

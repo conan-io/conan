@@ -2966,6 +2966,7 @@ settings_1_43_1 = settings_1_43_0
 settings_1_43_2 = settings_1_43_1
 
 settings_1_44_0 = settings_1_43_2
+settings_1_44_1 = settings_1_44_0
 
 settings_1_45_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
