@@ -13,12 +13,12 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.parametrize("op_system", ["Macos", "iOS"])
 def test_m1(op_system):
     os_version = "os.version=12.0" if op_system == "iOS" else ""
-    os_sdk = "macosx" if op_system == "Macos" else "iphoneos"
+    os_sdk = "" if op_system == "Macos" else "os.sdk=iphoneos"
     profile = textwrap.dedent("""
         include(default)
         [settings]
         os={}
-        os.sdk={}
+        {}
         {}
         arch=armv8
     """.format(op_system, os_sdk, os_version))
