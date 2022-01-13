@@ -155,7 +155,7 @@ class FPicBlock(Block):
 class GLibCXXBlock(Block):
     template = textwrap.dedent("""
         {% if set_libcxx %}
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ set_libcxx }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ set_libcxx }}")
         {% endif %}
         {% if glibcxx %}
         add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
@@ -196,10 +196,10 @@ class SkipRPath(Block):
 
 class ArchitectureBlock(Block):
     template = textwrap.dedent("""
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ arch_flag }}")
-        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ arch_flag }}")
-        set(CONAN_SHARED_LINKER_FLAGS "${CONAN_SHARED_LINKER_FLAGS} {{ arch_flag }}")
-        set(CONAN_EXE_LINKER_FLAGS "${CONAN_EXE_LINKER_FLAGS} {{ arch_flag }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_flag }}")
         """)
 
     def context(self):
@@ -247,8 +247,8 @@ class SharedLibBock(Block):
 
 class ParallelBlock(Block):
     template = textwrap.dedent("""
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} /MP{{ parallel }}")
-        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} /MP{{ parallel }}")
+        string(APPEND CONAN_CXX_FLAGS " /MP{{ parallel }}")
+        string(APPEND CONAN_C_FLAGS " /MP{{ parallel }}")
         """)
 
     def context(self):
@@ -383,10 +383,10 @@ class FindConfigFiles(Block):
         {% endif %}
         # To support the generators based on find_package()
         {% if cmake_module_path %}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        list(PREPEND CMAKE_MODULE_PATH {{ cmake_module_path }})
         {% endif %}
         {% if cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        list(PREPEND CMAKE_PREFIX_PATH {{ cmake_prefix_path }})
         {% endif %}
         {% if android_prefix_path %}
         set(CMAKE_FIND_ROOT_PATH {{ android_prefix_path }} ${CMAKE_FIND_ROOT_PATH})
@@ -452,10 +452,18 @@ class UserToolchain(Block):
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
-        set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} ${CONAN_CXX_FLAGS}")
-        set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} ${CONAN_C_FLAGS}")
-        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CMAKE_SHARED_LINKER_FLAGS_INIT} ${CONAN_SHARED_LINKER_FLAGS}")
-        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CMAKE_EXE_LINKER_FLAGS_INIT} ${CONAN_EXE_LINKER_FLAGS}")
+        if(DEFINED CONAN_CXX_FLAGS)
+          string(APPEND CMAKE_CXX_FLAGS_INIT " ${CONAN_CXX_FLAGS}")
+        endif()
+        if(DEFINED CONAN_C_FLAGS)
+          string(APPEND CMAKE_C_FLAGS_INIT " ${CONAN_C_FLAGS}")
+        endif()
+        if(DEFINED CONAN_SHARED_LINKER_FLAGS)
+          string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " ${CONAN_SHARED_LINKER_FLAGS}")
+        endif()
+        if(DEFINED CONAN_EXE_LINKER_FLAGS)
+          string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
+        endif()
         """)
 
 
