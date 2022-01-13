@@ -350,22 +350,21 @@ class AppleSystemBlock(Block):
                 "armv8": "arm64",
                 "armv8_32": "arm64_32"}.get(arch, arch)
 
-    # TODO: refactor, comes from conans.client.tools.apple.py
     def _apple_sdk_name(self):
-        """returns proper SDK name suitable for OS and architecture
-        we're building for (considering simulators)"""
-        arch = self._conanfile.settings.get_safe('arch')
+        """
+        Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
+        there could be several ones depending on the OS architecture.
+
+        Note: In case of MacOS it'll be the same for all the architectures.
+        """
         os_ = self._conanfile.settings.get_safe('os')
-        if arch.startswith('x86'):
-            return {'Macos': 'macosx',
-                    'iOS': 'iphonesimulator',
-                    'watchOS': 'watchsimulator',
-                    'tvOS': 'appletvsimulator'}.get(os_)
+        os_sdk = self._conanfile.settings.get_safe('os.sdk')
+        if os_sdk:
+            return os_sdk
+        elif os_ == "Macos":  # it has only a single value for all the architectures for now
+            return "macosx"
         else:
-            return {'Macos': 'macosx',
-                    'iOS': 'iphoneos',
-                    'watchOS': 'watchos',
-                    'tvOS': 'appletvos'}.get(os_)
+            raise ConanException("Please, specify a suitable value for os.sdk.")
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
