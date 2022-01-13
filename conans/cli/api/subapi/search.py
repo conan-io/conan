@@ -38,10 +38,18 @@ class SearchAPI:
         :return: a list of complete RecipeRefernce
         """
         if "/" not in expression:
+            if "#" in expression or ":" in expression:
+                raise ConanException("Invalid expression, specify version")
             refs = self.conan_api.search.recipes(expression, remote)
             ref = RecipeReference(expression)
         else:
             ref = RecipeReference.loads(expression)
+            if not ref.revision and "#" in expression:
+                # Something like "foo/var#" without specifying revision
+                raise ConanException("Specify a recipe revision")
+            if not ref.user and "@" in expression:
+                # Something like "foo/var@" without specifying user/channel
+                raise ConanException("Specify a user/channel")
             # First resolve any * in the regular reference, doing a search
             if any(["*" in field for field in (ref.name, str(ref.version),
                                                ref.user or "", ref.channel or "")]):
@@ -60,7 +68,7 @@ class SearchAPI:
                         ret.append(_rrev)
             else:
                 if not none_revision_allowed:
-                    raise ConanException("Specify a recipe revision in the expression")
+                    raise ConanException("Specify a recipe revision")
                 ret.extend(self.conan_api.list.recipe_revisions(_r, remote))
 
         return ret
@@ -77,12 +85,16 @@ class SearchAPI:
         """
         if ":" in expression:
             recipe_expr, package_expr = expression.split(":", 1)
+            if not package_expr:
+                raise ConanException("Specify a package ID value after ':'")
         else:
             recipe_expr = expression
             package_expr = "*#*"
 
         if "#" in package_expr:
             package_id_expr, package_revision_expr = package_expr.split("#", 1)
+            if not package_revision_expr:
+                raise ConanException("Specify a package revision")
         else:
             package_id_expr = package_expr
             package_revision_expr = "*"

@@ -45,7 +45,7 @@ def remove(conan_api: ConanAPIV2, parser, *args):
 
     if ":" in args.reference:
         if remove_all_packages:
-            raise ConanException("The -p argument can only be used with a recipe reference")
+            raise ConanException("The -p argument cannot be used with a package reference")
 
         prefs = conan_api.search.package_revisions(args.reference, remote=remote, query=query)
         raise_if_package_not_found(prefs)

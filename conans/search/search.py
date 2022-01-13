@@ -126,6 +126,9 @@ def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PkgConfiguratio
 
         info = ConanInfo.loads(conan_info_content)
         conan_vars_info = info.serialize_min()
+        pref = pkg_layout.reference
+        # The key shoudln't have the latest package revision, we are asking for package configs
+        pref.revision = None
         result[pkg_layout.reference] = conan_vars_info
 
     return result
