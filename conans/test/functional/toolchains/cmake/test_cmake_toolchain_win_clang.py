@@ -85,6 +85,22 @@ def test_clang_cmake_ninja_custom_cxx(client):
         assert 'Could not find compiler' in client.out
         assert '/no/exist/clang++' in client.out
 
+    clang_profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        compiler=clang
+        compiler.version=12
+        [buildenv]
+        CXX=/no/exist/clang++
+        """)
+    client.save({"clang":     clang_profile})
+    client.run("create . pkg/0.1@ -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja",
+               assert_error=True)
+    assert 'Could not find compiler' in client.out
+    assert '/no/exist/clang++' in client.out
+
 
 @pytest.mark.tool_cmake
 @pytest.mark.tool_visual_studio(version="16")  # With Clang distributed in VS!
