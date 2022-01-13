@@ -17,7 +17,7 @@ def lock(conan_api, parser, *args):
 @conan_subcommand()
 def lock_create(conan_api, parser, subparser, *args):
     """
-    Computes the build order of a dependency graph
+    Create a lockfile from a conanfile or a reference
     """
     common_graph_args(subparser)
     subparser.add_argument("--clean", action="store_true", help="remove unused")
