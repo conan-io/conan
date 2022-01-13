@@ -106,6 +106,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ cpp.sharedlinkflags_list }}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ cpp.exelinkflags_list }}>
               )
+              list(APPEND {{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ cpp.build_modules_paths }})
               {%- endfor %}
           """)
         return ret

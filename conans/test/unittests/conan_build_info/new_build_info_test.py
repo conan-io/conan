@@ -35,6 +35,7 @@ def test_component_aggregation():
     cppinfo.bindirs = ["bindir"]
     cppinfo.builddirs = ["builddir"]
     cppinfo.frameworkdirs = ["frameworkdir"]
+    cppinfo.set_property("foo", "bar")
 
     cppinfo.components["c2"].includedirs = ["includedir_c2"]
     cppinfo.components["c2"].libdirs = ["libdir_c2"]
@@ -62,6 +63,7 @@ def test_component_aggregation():
 
     ret = cppinfo.aggregated_components()
 
+    assert ret.get_property("foo") == "bar"
     assert ret.includedirs == ["includedir_c1", "includedir_c2"]
     assert ret.libdirs == ["libdir_c1", "libdir_c2"]
     assert ret.srcdirs == ["srcdir_c1", "srcdir_c2"]
