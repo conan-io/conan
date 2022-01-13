@@ -235,6 +235,7 @@ def test_architecture_flag(config):
     assert expected in env["CXXFLAGS"]
     assert expected in env["CFLAGS"]
     assert expected in env["LDFLAGS"]
+    assert "-debug" not in env["LDFLAGS"]
 
 
 @pytest.mark.parametrize("compiler", ['Visual Studio', 'msvc'])
@@ -252,7 +253,7 @@ def test_build_type_flag(compiler):
     assert "-Zi -Ob0 -Od" in env["CXXFLAGS"]
     assert "-Zi -Ob0 -Od" in env["CFLAGS"]
     assert "-Zi -Ob0 -Od" not in env["LDFLAGS"]
-    assert "-debug" not in env["LDFLAGS"]
+    assert "-debug" in env["LDFLAGS"]
 
 
 def test_apple_arch_flag():
@@ -407,17 +408,3 @@ def test_custom_ldflags():
 
     assert "MyFlag" not in env["CXXFLAGS"]
     assert "MyFlag" not in env["CFLAGS"]
-
-
-def test_debug_ldflags():
-    # https://github.com/conan-io/conan/issues/10338
-    conanfile = ConanFileMock()
-    conanfile.settings = MockSettings(
-        {"build_type": "RelWithDebInfo",
-         "os": "Linux",
-         "compiler": "gcc",
-         "arch": "armv8"})
-    be = AutotoolsToolchain(conanfile)
-    env = be.vars()
-    assert "-debug" in env["LDFLAGS"]
-

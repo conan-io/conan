@@ -68,7 +68,7 @@ def build_type_link_flags(settings):
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
-    if compiler in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc"]:
+    if compiler in ["msvc", "Visual Studio"]:
         if build_type in ("Debug", "RelWithDebInfo"):
             return ["-debug"]
 
