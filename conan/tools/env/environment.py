@@ -267,7 +267,7 @@ class EnvVars:
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
                     if /I "%%a" == "%%v" (
-                        echo set %%a=%%b>> "deactivate_{filename}"
+                        echo set "%%a=%%b">> "deactivate_{filename}"
                         set foundenvvar=1
                     )
                 )
@@ -285,7 +285,7 @@ class EnvVars:
         result = [capture]
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
-            result.append('set {}={}'.format(varname, value))
+            result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
         save(filename, content)
@@ -339,7 +339,7 @@ class EnvVars:
                value=$(printenv $v)
                if [ -n "$value" ]
                then
-                   echo export "$v=$value" >> deactivate_{filename}
+                   echo export "$v='$value'" >> deactivate_{filename}
                else
                    echo unset $v >> deactivate_{filename}
                fi
