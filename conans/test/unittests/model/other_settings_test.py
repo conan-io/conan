@@ -242,10 +242,10 @@ class SayConan(ConanFile):
     settings = None
 """
         client.save({CONANFILE: content})
-        client.run("remove say/0.1@ -f")
+        client.run("remove say/0.1 -f")
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
-        conan_info = self._get_conaninfo("say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1", client)
         self.assertEqual(conan_info.settings.dumps(), "")
 
         # Settings is {}
@@ -258,10 +258,10 @@ class SayConan(ConanFile):
     settings = {}
 """
         client.save({CONANFILE: content})
-        client.run("remove say/0.1@ -f")
+        client.run("remove say/0.1 -f")
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
 
-        conan_info = self._get_conaninfo("say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1", client)
 
         self.assertEqual(conan_info.settings.dumps(), "")

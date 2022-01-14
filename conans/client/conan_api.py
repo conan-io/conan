@@ -1,5 +1,4 @@
 import os
-
 from collections import OrderedDict
 from collections import namedtuple
 
@@ -19,7 +18,6 @@ from conans.client.importer import run_imports, undo_imports
 from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.profile_loader import ProfileLoader
-from conans.client.remover import ConanRemover
 from conans.client.source import config_source_local
 from conans.errors import (ConanException, RecipeNotFoundException,
                            NotFoundException)
@@ -351,16 +349,6 @@ class ConanAPIV1(object):
         cwd = os.getcwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
         undo_imports(manifest_path)
-
-    @api_method
-    def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
-               remote_name=None):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-        remover = ConanRemover(app)
-        remover.remove(pattern, src, builds, packages, force=force,
-                       packages_query=query)
 
     @api_method
     def upload(self, pattern, remote_name=None, all_packages=False, confirm=False,
