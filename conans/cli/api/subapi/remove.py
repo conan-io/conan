@@ -37,10 +37,10 @@ class RemoveAPI:
             app.remote_manager.remove_all_packages(ref, remote)
         else:
             # Remove all the prefs with all the prevs
-            self._remove_all_packages(app, ref)
+            self._remove_all_local_packages(app, ref)
 
     @staticmethod
-    def _remove_all_packages(app, ref):
+    def _remove_all_local_packages(app, ref):
         # Get all the prefs and all the prevs
         pkg_ids = app.cache.get_package_references(ref)
         all_package_revisions = []
