@@ -38,6 +38,9 @@ class SearchAPI:
         :return: a list of complete RecipeRefernce
         """
         if "/" not in expression:
+            if "*" not in expression:
+                raise ConanException("Invalid expression, specify a version "
+                                     "or a wildcard. e.g: {}*".format(expression))
             if "#" in expression or ":" in expression:
                 raise ConanException("Invalid expression, specify version")
             refs = self.conan_api.search.recipes(expression, remote)

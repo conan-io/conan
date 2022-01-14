@@ -227,6 +227,8 @@ def populated_client():
 
 @pytest.mark.parametrize("with_remote", [True, False])
 @pytest.mark.parametrize("data", [
+    {"remove": "foo*", "recipes": ['bar/1.1', 'fbar/1.1']},
+    {"remove": "foo/*", "recipes": ['bar/1.1', 'fbar/1.1']},
     {"remove": "*", "recipes": []},
     {"remove": "*/*", "recipes": []},
     {"remove": "*/*#*", "recipes": []},
@@ -239,6 +241,8 @@ def populated_client():
     {"remove": "foo/1.0@user/channel -p", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0',
                                                       'fbar/1.1']},
     # These are errors
+    {"remove": "foo", "error": True,
+     "error_msg": 'ERROR: Invalid expression, specify a version or a wildcard. e.g: foo*\n'},
     {"remove": "*/*@", "error": True},
     {"remove": "*#", "error": True},
     {"remove": "*/*#", "error": True},
@@ -251,6 +255,8 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
         populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
         if not error:
             assert _get_all_recipes(populated_client, with_remote) == set(data["recipes"])
+        elif data.get("error_msg"):
+            assert data.get("error_msg") in populated_client.out
 
 
 @pytest.mark.parametrize("with_remote", [True, False])
