@@ -338,7 +338,7 @@ class TestProfileEnvRoundTrip:
         myprofile = textwrap.dedent("""
             # define
             MyVar1=MyValue1
-            MyPath1 =(path)/my/path1
+            MyPath1 = (path)/my/path1
             """)
 
         env = ProfileEnvironment.loads(myprofile)
