@@ -509,6 +509,7 @@ def test_m1():
         [settings]
         os=iOS
         os.version=12.0
+        os.sdk=iphoneos
         arch=armv8
         [env]
         CC={cc}
