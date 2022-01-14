@@ -38,6 +38,7 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         t.run_command('svn copy {url}/trunk {url}/tags/release-1.0'
                       ' -m "Release 1.0"'.format(url=self.project_url))
 
+    @pytest.mark.xfail(reason="Remove with sources is not implemented yet (-sf)")
     def test_auto_tag(self):
         t = TestClient()
         ref = RecipeReference.loads("lib/version@issue/testing")
