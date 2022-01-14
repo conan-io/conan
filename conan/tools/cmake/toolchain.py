@@ -158,7 +158,7 @@ class FPicBlock(Block):
 class GLibCXXBlock(Block):
     template = textwrap.dedent("""
         {% if set_libcxx %}
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ set_libcxx }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ set_libcxx }}")
         {% endif %}
         {% if glibcxx %}
         add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
@@ -215,10 +215,10 @@ class SkipRPath(Block):
 
 class ArchitectureBlock(Block):
     template = textwrap.dedent("""
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ arch_flag }}")
-        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ arch_flag }}")
-        set(CONAN_SHARED_LINKER_FLAGS "${CONAN_SHARED_LINKER_FLAGS} {{ arch_flag }}")
-        set(CONAN_EXE_LINKER_FLAGS "${CONAN_EXE_LINKER_FLAGS} {{ arch_flag }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_flag }}")
         """)
 
     def context(self):
@@ -230,7 +230,7 @@ class ArchitectureBlock(Block):
 
 class CppStdBlock(Block):
     template = textwrap.dedent("""
-        message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
+        message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -266,8 +266,8 @@ class SharedLibBock(Block):
 
 class ParallelBlock(Block):
     template = textwrap.dedent("""
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} /MP{{ parallel }}")
-        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} /MP{{ parallel }}")
+        string(APPEND CONAN_CXX_FLAGS " /MP{{ parallel }}")
+        string(APPEND CONAN_C_FLAGS " /MP{{ parallel }}")
         """)
 
     def context(self):
@@ -350,22 +350,21 @@ class AppleSystemBlock(Block):
                 "armv8": "arm64",
                 "armv8_32": "arm64_32"}.get(arch, arch)
 
-    # TODO: refactor, comes from conans.client.tools.apple.py
     def _apple_sdk_name(self):
-        """returns proper SDK name suitable for OS and architecture
-        we're building for (considering simulators)"""
-        arch = self._conanfile.settings.get_safe('arch')
+        """
+        Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
+        there could be several ones depending on the OS architecture.
+
+        Note: In case of MacOS it'll be the same for all the architectures.
+        """
         os_ = self._conanfile.settings.get_safe('os')
-        if arch.startswith('x86'):
-            return {'Macos': 'macosx',
-                    'iOS': 'iphonesimulator',
-                    'watchOS': 'watchsimulator',
-                    'tvOS': 'appletvsimulator'}.get(os_)
+        os_sdk = self._conanfile.settings.get_safe('os.sdk')
+        if os_sdk:
+            return os_sdk
+        elif os_ == "Macos":  # it has only a single value for all the architectures for now
+            return "macosx"
         else:
-            return {'Macos': 'macosx',
-                    'iOS': 'iphoneos',
-                    'watchOS': 'watchos',
-                    'tvOS': 'appletvos'}.get(os_)
+            raise ConanException("Please, specify a suitable value for os.sdk.")
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
@@ -513,10 +512,18 @@ class UserToolchain(Block):
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
-        set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} ${CONAN_CXX_FLAGS}")
-        set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} ${CONAN_C_FLAGS}")
-        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CMAKE_SHARED_LINKER_FLAGS_INIT} ${CONAN_SHARED_LINKER_FLAGS}")
-        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CMAKE_EXE_LINKER_FLAGS_INIT} ${CONAN_EXE_LINKER_FLAGS}")
+        if(DEFINED CONAN_CXX_FLAGS)
+          string(APPEND CMAKE_CXX_FLAGS_INIT " ${CONAN_CXX_FLAGS}")
+        endif()
+        if(DEFINED CONAN_C_FLAGS)
+          string(APPEND CMAKE_C_FLAGS_INIT " ${CONAN_C_FLAGS}")
+        endif()
+        if(DEFINED CONAN_SHARED_LINKER_FLAGS)
+          string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " ${CONAN_SHARED_LINKER_FLAGS}")
+        endif()
+        if(DEFINED CONAN_EXE_LINKER_FLAGS)
+          string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
+        endif()
         """)
 
 
