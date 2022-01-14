@@ -296,7 +296,10 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
      "error_msg": "The -p argument cannot be used with a package reference"},
     {"remove": "bar/1.1#*:", "error": True, "error_msg": 'Specify a package ID value'},
     {"remove": "bar/1.1#*:234234#", "error": True, "error_msg": 'Specify a package revision'},
-    {"remove": "bar/1.1:234234", "error": True, "error_msg": 'Specify a recipe revision'},
+    {"remove": "bar/1.1:234234", "error": True,
+     "error_msg": 'ERROR: Specify a recipe revision or a wildcard. e.g: bar/1.1#*\n'},
+    {"remove": "bar/1.1 -p os=Windows", "error": True,
+     "error_msg": 'ERROR: Specify a recipe revision or a wildcard. e.g: bar/1.1#*\n'},
 ])
 def test_new_remove_package_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here

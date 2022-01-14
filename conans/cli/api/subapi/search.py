@@ -71,7 +71,8 @@ class SearchAPI:
                         ret.append(_rrev)
             else:
                 if not none_revision_allowed:
-                    raise ConanException("Specify a recipe revision")
+                    raise ConanException("Specify a recipe revision or a wildcard. "
+                                         "e.g: {}#*".format(expression))
                 ret.extend(self.conan_api.list.recipe_revisions(_r, remote))
 
         return ret
