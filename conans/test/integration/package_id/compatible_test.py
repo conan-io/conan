@@ -545,8 +545,11 @@ class CompatibleIDsTest(unittest.TestCase):
                         self.compatible_packages.append(compatible_pkg)
                 """)
 
+        private = """def requirements(self):
+        self.requires("pkga/0.1", visible=False)
+        """
         client.save({"pkga/conanfile.py": conanfile.format(""),
-                     "pkgb/conanfile.py": conanfile.format('requires = ("pkga/0.1", "private"), '),
+                     "pkgb/conanfile.py": conanfile.format(private),
                      "pkgc/conanfile.py": conanfile.format('requires = "pkga/0.1"'),
                      "pkgd/conanfile.py": conanfile.format('requires = "pkgb/0.1", "pkgc/0.1"')
                      })
@@ -555,9 +558,9 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("create pkgc pkgc/0.1@ -s build_type=Release")
 
         client.run("install pkgd -s build_type=Debug")
-        assert "pkga/0.1: Main binary package '5a67a79dbc25fd0fa149a0eb7a20715189a0d988' missing" \
+        assert "pkga/0.1: Main binary package '040ce2bd0189e377b2d15eb7246a4274d1c63317' missing" \
                in client.out
-        assert "pkga/0.1:4024617540c4f240a6a5e8911b0de9ef38a11a72 - Cache" in client.out
+        assert "pkga/0.1:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b - Cache" in client.out
 
 
 @pytest.mark.xfail(reason="The conf core.package_id:msvc_visual_incompatible is not passed yet")

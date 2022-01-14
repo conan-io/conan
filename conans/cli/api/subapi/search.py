@@ -49,7 +49,7 @@ class SearchAPI:
                 raise ConanException("Specify a recipe revision")
             if not ref.user and "@" in expression:
                 # Something like "foo/var@" without specifying user/channel
-                raise ConanException("Specify a user/channel")
+                raise ConanException("Specify a user/channel or remove the '@'")
             # First resolve any * in the regular reference, doing a search
             if any(["*" in field for field in (ref.name, str(ref.version),
                                                ref.user or "", ref.channel or "")]):

@@ -15,7 +15,6 @@ from conans.client.cmd.export import cmd_export
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
-from conans.client.graph.printer import print_graph
 from conans.client.importer import run_imports, undo_imports
 from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
@@ -470,84 +469,6 @@ class ConanAPIV1(object):
     def editable_list(self):
         app = ConanApp(self.cache_folder)
         return {str(k): v for k, v in app.cache.editable_packages.edited_refs.items()}
-
-    @api_method
-    def lock_merge(self, lockfiles, lockfile_out):
-        result = Lockfile()
-        for lockfile in lockfiles:
-            lockfile = _make_abs_path(lockfile)
-            graph_lock = Lockfile.load(lockfile)
-            result.merge(graph_lock)
-
-        lockfile_out = _make_abs_path(lockfile_out)
-        result.save(lockfile_out)
-        ConanOutput().info("Generated lockfile: %s" % lockfile_out)
-
-    @api_method
-    def lock_create(self, path, lockfile_out,
-                    reference=None, name=None, version=None, user=None, channel=None,
-                    profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
-                    lockfile=None, clean=False):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)], update=update)
-        # profile_host is mandatory
-        profile_host = profile_host or ProfileData(None, None, None, None, None)
-        profile_build = profile_build or ProfileData(None, None, None, None, None)
-        cwd = os.getcwd()
-
-        if path and reference:
-            raise ConanException("Both path and reference arguments were provided. Please provide "
-                                 "only one of them")
-
-        if path:
-            ref_or_path = _make_abs_path(path, cwd)
-            if os.path.isdir(ref_or_path):
-                raise ConanException("Path argument must include filename "
-                                     "like 'conanfile.py' or 'path/conanfile.py'")
-            if not os.path.isfile(ref_or_path):
-                raise ConanException("Conanfile does not exist in %s" % ref_or_path)
-        else:  # reference
-            ref_or_path = RecipeReference.loads(reference)
-
-        graph_lock = None
-        if lockfile:
-            lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock= Lockfile.load(lockfile)
-
-        profile_loader = ProfileLoader(app.cache)
-        profiles = [profile_loader.get_default_host()] if not profile_host.profiles \
-            else profile_host.profiles
-        phost = profile_loader.from_cli_args(profiles, profile_host.settings,
-                                             profile_host.options, profile_host.env,
-                                             profile_host.conf, cwd)
-
-        # Only work on the profile_build if something is provided
-        profiles = [profile_loader.get_default_build()] if not profile_build.profiles \
-            else profile_build.profiles
-        pbuild = profile_loader.from_cli_args(profiles, profile_build.settings,
-                                              profile_build.options, profile_build.env,
-                                              profile_build.conf, cwd)
-
-        root_ref = RecipeReference(name, version, user, channel)
-
-        # FIXME: Using update as check_update?
-        deps_graph = app.graph_manager.load_graph(ref_or_path, None, phost, pbuild, graph_lock,
-                                                  root_ref, build,)
-        if deps_graph.error:
-            raise deps_graph.error
-
-        print_graph(deps_graph)
-
-        # The computed graph-lock by the graph expansion
-        if lockfile is None or clean:
-            graph_lock = Lockfile(deps_graph)
-        else:
-            graph_lock.update_lock(deps_graph)
-
-        lockfile_out = _make_abs_path(lockfile_out or "conan.lock")
-        graph_lock.save(lockfile_out)
-        ConanOutput().info("Generated lockfile: %s" % lockfile_out)
 
 
 def get_graph_info(profile_host, profile_build, cwd, cache,

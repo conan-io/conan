@@ -45,7 +45,7 @@ def _get_conanfile_path(path, cwd, py):
     return path
 
 
-def graph_compute(args, conan_api):
+def graph_compute(args, conan_api, strict_lockfile=True):
     cwd = os.getcwd()
     lockfile_path = make_abs_path(args.lockfile, cwd)
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -55,7 +55,7 @@ def graph_compute(args, conan_api):
 
     # Basic collaborators, remotes, lockfile, profiles
     remote = conan_api.remotes.get(args.remote) if args.remote else None
-    lockfile = get_lockfile(lockfile=lockfile_path, strict=True)
+    lockfile = get_lockfile(lockfile=lockfile_path, strict=strict_lockfile)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
     root_ref = RecipeReference(name=args.name, version=args.version,
                                user=args.user, channel=args.channel)
