@@ -491,3 +491,31 @@ def test_multiple_deactivate():
     assert 2 == str(out).count("Restoring environment")
     assert "VAR1=!!" in out
     assert "VAR2=!!" in out
+
+
+def test_profile_build_env_spaces():
+    display_bat = textwrap.dedent("""\
+        @echo off
+        echo VAR1=%VAR1%!!
+        """)
+    display_sh = textwrap.dedent("""\
+        echo VAR1=$VAR1!!
+        """)
+    client = TestClient()
+    client.save({"conanfile.txt": "",
+                 "profile": "[buildenv]\nVAR1 = VALUE1",
+                 "display.bat": display_bat,
+                 "display.sh": display_sh})
+    os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
+    client.run("install . -g VirtualBuildEnv -pr=profile")
+
+    if platform.system() == "Windows":
+        cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+    else:
+        cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              shell=True, cwd=client.current_folder).communicate()
+    out = out.decode()
+    assert "VAR1= VALUE1!!" in out
+    assert  "Restoring environment" in out
+    assert "VAR1=!!" in out
