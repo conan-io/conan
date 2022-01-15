@@ -85,7 +85,7 @@ def test_android_ndk():
     assert "androidndk/0.1:e24801f77febd5dd0f5f3eae7444b4132644a856 - Build" in c.out
     assert "androidndk/0.1: Calling build()" in c.out
     # But a different build OS is a different NDK executable
-    c.run("create . -pr:b=Linux -pr:h=android  --build-require")
+    c.run("create . -pr:b=linux -pr:h=android  --build-require")
     assert "androidndk/0.1:bd2c61d8ce335cd78bd92489d2a54435785a7653 - Build" in c.out
     assert "androidndk/0.1: Calling build()" in c.out
 
@@ -115,7 +115,7 @@ def test_android_ndk():
     assert "androidndk/0.1 (test package): MYNDK-Windows-x86 exe!" in c.out
 
     # But a different build OS is a different NDK executable
-    c.run("create . -pr:b=Linux -pr:h=android --build=missing")
+    c.run("create . -pr:b=linux -pr:h=android --build=missing")
     assert "androidndk/0.1:bd2c61d8ce335cd78bd92489d2a54435785a7653 - Build" in c.out
     assert "androidndk/0.1: Calling build()" in c.out
     assert "androidndk/0.1 (test package): NDK LIBS: ['libndklib-armv7']!!!" in c.out
