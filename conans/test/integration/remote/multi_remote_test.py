@@ -202,6 +202,7 @@ class MultiRemoteTest(unittest.TestCase):
         refs = ["hello0/0.1@lasote/stable", "hello1/0.1@lasote/stable", "hello2/0.1@lasote/stable"]
         client2.save({"conanfile.py": GenConanfile("helloX", "0.1").with_requires(*refs)})
         client2.run("install . --build=missing")
-        self.assertIn("hello0/0.1@lasote/stable from 'remote0'", client2.out)
-        self.assertIn("hello1/0.1@lasote/stable from 'remote1'", client2.out)
-        self.assertIn("hello2/0.1@lasote/stable from 'remote2'", client2.out)
+        client2.assert_listed_require({"hello0/0.1@lasote/stable": "Downloaded (remote0)",
+                                       "hello1/0.1@lasote/stable": "Downloaded (remote1)",
+                                       "hello2/0.1@lasote/stable": "Downloaded (remote2)",
+                                       })

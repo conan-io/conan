@@ -715,6 +715,8 @@ class TestClient(object):
         return True if prev else False
 
     def assert_listed_require(self, requires):
+        """ parses the current command output, and extract the first "Requirements" section
+        """
         lines = self.out.splitlines()
         line_req = lines.index("Requirements")
         reqs = []
@@ -725,6 +727,26 @@ class TestClient(object):
         for r, kind in requires.items():
             for req in reqs:
                 if req.startswith(r) and req.endswith(kind):
+                    break
+            else:
+                raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
+
+    def assert_listed_binary(self, requires, build=False):
+        """ parses the current command output, and extract the second "Requirements" section
+        belonging to the computed package binaries
+        """
+        lines = self.out.splitlines()
+        line_req = lines.index("-------- Computing necessary packages ----------")
+        line_req = lines.index("Requirements" if not build else "Build requirements", line_req)
+        reqs = []
+        for line in lines[line_req+1:]:
+            if not line.startswith("    "):
+                break
+            reqs.append(line.strip())
+        for r, kind in requires.items():
+            package_id, binary = kind
+            for req in reqs:
+                if req.startswith(r) and package_id in req and req.endswith(binary):
                     break
             else:
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")

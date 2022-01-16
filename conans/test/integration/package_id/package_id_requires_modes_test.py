@@ -485,8 +485,9 @@ class PackageRevisionModeTestCase(unittest.TestCase):
 
         # If we build pkg1, we need a new packageID for pkg2
         t.run("install --reference=pkg3/1.0@ --build=pkg1")
-        self.assertIn("pkg2/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0:ad2a3c63a3adc6721aeaac45b34f80f0e1b72827 - Download", t.out)
+        t.assert_listed_binary({"pkg2/1.0": ("Package_ID_unknown", "Unknown"),
+                                "pkg3/1.0": ("ad2a3c63a3adc6721aeaac45b34f80f0e1b72827",
+                                             "Download (default)")})
         self.assertIn("pkg2/1.0: Unknown binary for pkg2/1.0, computing updated ID", t.out)
         pkg_id = "f1aefa3648a2e2defd70c3ed8c3915061e6c12eb"
         self.assertIn(f"pkg2/1.0: Updated ID: {pkg_id}", t.out)
