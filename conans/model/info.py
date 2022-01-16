@@ -542,6 +542,10 @@ class ConanInfo(object):
         """
         result = [self.settings.sha,
                   self.options.sha]
+        if hasattr(self, "settings_target") and self.settings_target:
+            # TODO: Poor implementation for POC
+            target_sha = self.settings_target.sha
+            result.append(target_sha)
         requires_sha = self.requires.sha
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
