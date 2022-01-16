@@ -714,6 +714,25 @@ class TestClient(object):
         prev = self.cache.get_package_revisions_references(pref)
         return True if prev else False
 
+    def assert_listed_require(self, requires):
+        lines = self.out.splitlines()
+        line_req = lines.index("Requirements")
+        reqs = []
+        for line in lines[line_req+1:]:
+            if not line.startswith("    "):
+                break
+            reqs.append(line.strip())
+        for r, kind in requires.items():
+            for req in reqs:
+                if req.startswith(r) and req.endswith(kind):
+                    break
+            else:
+                raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
+
+    def created_package_id(self, ref):
+        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)), str(self.out)).group(1)
+        return package_id
+
 
 class TurboTestClient(TestClient):
 
@@ -734,7 +753,7 @@ class TurboTestClient(TestClient):
         if assert_error:
             return None
 
-        package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
+        package_id = self.created_package_id(ref)
         package_ref = PkgReference(ref, package_id)
         tmp = copy.copy(package_ref)
         tmp.revision = None

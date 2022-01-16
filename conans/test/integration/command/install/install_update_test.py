@@ -95,7 +95,7 @@ def test_update_not_date():
     client.run("install . --update")
     # *1 With revisions here is removing the package because it doesn't belong to the recipe
 
-    assert "hello0/1.0@lasote/stable from local cache - Newer" in client.out
+    client.assert_listed_require({"hello0/1.0@lasote/stable": "Newer"})
 
     failed_update_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_recipe_reference(ref))
     failed_update_package_timestamp = client.cache.get_package_timestamp(client.get_latest_package_reference(ref))

@@ -158,9 +158,6 @@ def install(conan_api, parser, *args):
     deps_graph, lockfile = graph_compute(args, conan_api)
 
     out = ConanOutput()
-    # TODO: Keeping old printing to avoid many tests fail: TO REMOVE
-    out.highlight("\nLegacy graph output (to be removed):")
-    print_graph(deps_graph)
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remote=remote, update=args.update)
