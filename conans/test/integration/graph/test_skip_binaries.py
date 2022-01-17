@@ -47,8 +47,8 @@ def test_consumer_no_skip():
 
     client.run("install . ")
 
-    assert f"dep/1.0:{NO_SETTINGS_PACKAGE_ID} - Cache" in client.out
-    assert f"pkg/1.0:{package_id} - Cache" in client.out
+    client.assert_listed_binary({f"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Cache")})
+    client.assert_listed_binary({f"pkg/1.0": (package_id, "Cache")})
 
 
 def test_shared_link_static_skip():

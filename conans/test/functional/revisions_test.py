@@ -51,7 +51,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertEqual(pref.ref.revision, pref2.ref.revision)
 
         self.c_v2.run("install --reference={}".format(self.ref))
-        self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
+        self.c_v2.assert_listed_require({str(self.ref): "Downloaded (default)"})
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.package_id),
                       self.c_v2.out)
 
@@ -196,7 +196,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEqual(prev1_time_remote, prev2_time_remote)  # Two package revisions
 
         client.run("install --reference={} --update".format(self.ref))
-        self.assertIn("{} from 'default' - Cache (Updated date)".format(self.ref), client.out)
+        client.assert_listed_require({str(self.ref): "Cache (Updated date) (default)"})
         self.assertIn("Retrieving package {}".format(pref.package_id), client.out)
 
         prev = client.package_revision(pref)
@@ -242,7 +242,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Repeat the install --update pointing to the new reference
         client.run("install --reference={} --update".format(repr(pref.ref)))
-        self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
+        client.assert_listed_require({str(self.ref): "Downloaded (default)"})
 
     def test_revision_mismatch_packages_remote(self):
         """If we have a recipe that doesn't match a remote recipe:

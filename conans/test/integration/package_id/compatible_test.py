@@ -40,7 +40,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "myprofile": profile})
         # Create package with gcc 4.8
         client.run("create . pkg/0.1@user/stable -pr=myprofile -s compiler.version=4.8")
-        package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("pkg/0.1@user/stable")
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}'"
                       " created", client.out)
 
@@ -48,7 +48,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
         client.run("install . -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
-        self.assertIn(f"pkg/0.1@user/stable:{package_id}", client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
     def test_compatible_setting_no_binary(self):
@@ -87,8 +87,8 @@ class CompatibleIDsTest(unittest.TestCase):
         # No fallback
         client.run("install . -pr=myprofile --build=missing")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
-        self.assertIn("pkg/0.1@user/stable:c6715d73365c2dd62f68836b2dee8359a312ff12 - Build",
-                      client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable":
+                                     ("c6715d73365c2dd62f68836b2dee8359a312ff12", "Build")})
 
     def test_compatible_setting_no_user_channel(self):
         client = TestClient()
@@ -116,13 +116,11 @@ class CompatibleIDsTest(unittest.TestCase):
 
         # No user/channel
         client.run("create . pkg/0.1@ -pr=myprofile -s compiler.version=4.8")
-        package_id = re.search(r"pkg/0.1:(\S+)", str(client.out)).group(1)
-        self.assertIn(f"pkg/0.1: Package '{package_id}' created",
-                      client.out)
+        package_id = client.created_package_id("pkg/0.1")
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         client.run("install . -pr=myprofile")
-        self.assertIn(f"pkg/0.1:{package_id}", client.out)
+        client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
         self.assertIn("pkg/0.1: Already installed!", client.out)
 
     def test_compatible_option(self):
@@ -159,11 +157,10 @@ class CompatibleIDsTest(unittest.TestCase):
                       f"'{missing_id}' missing. Using compatible package"
                       f" '{package_id}'", client.out)
         # checking the resulting dependencies
-        self.assertIn(f"pkg/0.1@user/stable:{package_id} - Cache",
-                      client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
         client.run("install . -o pkg:optimized=3")
-        self.assertIn(f"pkg/0.1@user/stable:{package_id} - Cache", client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
     def test_visual_package_compatible_with_intel(self):
@@ -206,7 +203,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn(f"bye/0.1@us/ch: Main binary package '{missing_id}'"
                       " missing. Using compatible package "
                       f"'{package_id}'", client.out)
-        self.assertIn(f"bye/0.1@us/ch:{package_id} - Cache", client.out)
+        client.assert_listed_binary({"bye/0.1@us/ch": (package_id, "Cache")})
 
     def test_wrong_base_compatible(self):
         client = TestClient()
@@ -274,7 +271,7 @@ class CompatibleIDsTest(unittest.TestCase):
                       f"'{missing_id}' missing. Using compatible "
                       f"package '{package_id}'",
                       client.out)
-        self.assertIn(f"bye/0.1@us/ch:{package_id} - Cache", client.out)
+        client.assert_listed_binary({"bye/0.1@us/ch": (package_id, "Cache")})
 
     def test_no_valid_compiler_keyword_base(self):
         client = TestClient()
@@ -466,10 +463,10 @@ class CompatibleIDsTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/testing -s os=Linux")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("install . -s os=Windows --build=missing")
-        self.assertIn(f"pkg/0.1@user/testing:{package_id} - Cache", client.out)
+        client.assert_listed_binary({"pkg/0.1@user/testing": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
     def test_compatible_package_python_requires(self):
@@ -493,11 +490,10 @@ class CompatibleIDsTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/testing -s os=Linux")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("install . -s os=Windows")
-        self.assertIn(f"pkg/0.1@user/testing:{package_id} - Cache",
-                      client.out)
+        client.assert_listed_binary({"pkg/0.1@user/testing": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
     @pytest.mark.xfail(reason="lockfiles have been deactivated at the moment")
@@ -560,7 +556,8 @@ class CompatibleIDsTest(unittest.TestCase):
         client.run("install pkgd -s build_type=Debug")
         assert "pkga/0.1: Main binary package '040ce2bd0189e377b2d15eb7246a4274d1c63317' missing" \
                in client.out
-        assert "pkga/0.1:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b - Cache" in client.out
+        client.assert_listed_binary({"pkga/0.1":
+                                         ("e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "Cache")})
 
 
 @pytest.mark.xfail(reason="The conf core.package_id:msvc_visual_incompatible is not passed yet")
