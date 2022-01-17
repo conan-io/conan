@@ -204,15 +204,15 @@ def populated_client():
     # Two package revisions for bar/1.1 (Release)
     for _i in range(2):
         with environment_update({'foo_test': str(_i)}):
-            client.run("create . bar/1.1@ -s build_type=Release")
-    client.run("create . bar/1.1@ -s build_type=Debug")
+            client.run("create . --name=bar --version=1.1 -s build_type=Release")
+    client.run("create . --name=bar --version=1.1 -s build_type=Debug")
 
     prefs = _get_revisions_packages(client, bar_rrev2_release, False)
     assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
 
     # Two recipe revisions for bar/1.1
     client.save({"conanfile.py": conanfile + "\n # THIS IS ANOTHER RECIPE REVISION"})
-    client.run("create . bar/1.1@ -s build_type=Debug")
+    client.run("create . --name=bar --version=1.1 -s build_type=Debug")
 
     client.run("upload '*' -c --all -r default")
     # By default only the latest is uploaded, we want all of them
