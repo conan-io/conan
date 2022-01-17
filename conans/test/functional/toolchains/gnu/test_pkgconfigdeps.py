@@ -483,7 +483,7 @@ def test_duplicated_names_warnings():
                 self.cpp_info.components["cmp3"].set_property("pkg_config_name", "libpkg")
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkgb/1.0@")
+    client.run("create . --name=pkgb --version=1.0")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -504,7 +504,7 @@ def test_duplicated_names_warnings():
                 self.cpp_info.components["cmp4"].set_property("pkg_config_aliases", ["libcmp"])
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("create . pkga/1.0@")
+    client.run("create . --name=pkga --version=1.0")
 
     conanfile = textwrap.dedent("""
         [requires]
@@ -560,7 +560,7 @@ def test_components_and_package_pc_creation_order():
                 self.cpp_info.components["_opencl-other"].set_property("pkg_config_name", "OtherCL")
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . opencl/1.0@")
+    client.run("create . --name=opencl --version=1.0")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -573,7 +573,7 @@ def test_components_and_package_pc_creation_order():
                 self.cpp_info.components["comp"].requires.append("opencl::_opencl-headers")
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("create . pkgb/1.0@")
+    client.run("create . --name=pkgb --version=1.0")
 
     conanfile = textwrap.dedent("""
         [requires]
