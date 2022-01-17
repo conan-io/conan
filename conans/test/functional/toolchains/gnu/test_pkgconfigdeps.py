@@ -43,32 +43,24 @@ def test_pkg_config_dirs():
     pc_path = os.path.join(client.current_folder, "MyLib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
-    expected_content = textwrap.dedent("""\
-        libdir1=/my_absoulte_path/fake/mylib/lib
-        libdir2=${prefix}/lib2
-        includedir1=/my_absoulte_path/fake/mylib/include
 
-        Name: MyLib
-        Description: Conan package: MyLib
-        Version: 0.1
-        Libs: -L"${libdir1}" -L"${libdir2}"
-        Cflags: -I"${includedir1}\"""")
-
-    # Avoiding trailing whitespaces in Jinja template
-    for line in pc_content.splitlines()[1:]:
-        assert line.strip() in expected_content
+    assert 'Name: MyLib' in pc_content
+    assert 'Description: Conan package: MyLib' in pc_content
+    assert 'Version: 0.1' in pc_content
+    assert 'Libs: -L"${libdir1}" -L"${libdir2}"' in pc_content
+    assert 'Cflags: -I"${includedir1}"' in pc_content
 
     def assert_is_abs(path):
         assert os.path.isabs(path) is True
 
     for line in pc_content.splitlines():
-        if line.startswith("includedir="):
-            assert_is_abs(line[len("includedir="):])
-            assert line.endswith("include") is True
-        elif line.startswith("libdir="):
-            assert_is_abs(line[len("libdir="):])
-            assert line.endswith("lib") is True
-        elif line.startswith("libdir3="):
+        if line.startswith("includedir1="):
+            assert_is_abs(line[len("includedir1="):])
+            assert line.endswith("include")
+        elif line.startswith("libdir1="):
+            assert_is_abs(line[len("libdir1="):])
+            assert line.endswith("lib")
+        elif line.startswith("libdir2="):
             assert "${prefix}/lib2" in line
 
 
