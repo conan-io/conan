@@ -4,7 +4,7 @@ from collections import OrderedDict
 from fnmatch import translate
 from typing import Dict
 
-from conans.cli.api.model import PackageConfiguration
+from conans.cli.api.model import PkgConfiguration
 from conans.errors import ConanException
 from conans.model.info import ConanInfo
 from conans.model.package_ref import PkgReference
@@ -15,7 +15,7 @@ from conans.util.files import load
 from conans.util.log import logger
 
 
-def filter_packages(query, results: Dict[PkgReference, PackageConfiguration]):
+def filter_packages(query, results: Dict[PkgReference, PkgConfiguration]):
     if query is None:
         return results
     try:
@@ -33,7 +33,7 @@ def filter_packages(query, results: Dict[PkgReference, PackageConfiguration]):
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def _evaluate_postfix_with_info(postfix, conan_vars_info: PackageConfiguration):
+def _evaluate_postfix_with_info(postfix, conan_vars_info: PkgConfiguration):
 
     # Evaluate conaninfo with the expression
 
@@ -47,7 +47,7 @@ def _evaluate_postfix_with_info(postfix, conan_vars_info: PackageConfiguration):
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def _evaluate(prop_name, prop_value, conan_vars_info: PackageConfiguration):
+def _evaluate(prop_name, prop_value, conan_vars_info: PkgConfiguration):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -104,7 +104,7 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PackageConfiguration]:
+def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PkgConfiguration]:
     """
     param package_layout: Layout for the given reference
     """
@@ -126,6 +126,9 @@ def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PackageConfigur
 
         info = ConanInfo.loads(conan_info_content)
         conan_vars_info = info.serialize_min()
+        pref = pkg_layout.reference
+        # The key shoudln't have the latest package revision, we are asking for package configs
+        pref.revision = None
         result[pkg_layout.reference] = conan_vars_info
 
     return result

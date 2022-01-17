@@ -59,8 +59,8 @@ class CustomConfigurationTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
-        self.client.run("new hello/0.1 --template=cmake_lib")
-        self.client.run("create . --name=hello --version=0.1 -s compiler.version=15 "
+        self.client.run("new cmake_lib -d name=hello -d version=0.1")
+        self.client.run("create . -s compiler.version=15 "
                         "-s build_type=Release -o hello:shared=True -tf=None")
         self.client.run("create . --name=hello --version=0.1 -s compiler.version=15 "
                         "-s build_type=Release -tf=None")
@@ -143,7 +143,7 @@ class CustomSettingsTest(unittest.TestCase):
         settings = get_default_settings_yml()
         settings = settings.replace("Release", "MyRelease")
         save(self.client.cache.settings_path, settings)
-        self.client.run("new hello/0.1 --template=cmake_lib")
+        self.client.run("new cmake_lib -d name=hello -d version=0.1")
         cmake = self.client.load("CMakeLists.txt")
 
         cmake = cmake.replace("cmake_minimum_required", """

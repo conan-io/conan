@@ -361,9 +361,9 @@ def test_mixed_user_channel():
     t.run("remove * -f")
 
     t.run('install --reference="pkg/[>0 <2]@"')
-    assert "pkg/1.1 from 'default' - Downloaded" in t.out
+    t.assert_listed_require({"pkg/1.1": "Downloaded (default)"})
     t.run('install --reference="pkg/[>0 <2]@user/testing"')
-    assert "pkg/1.1@user/testing from 'default' - Downloaded" in t.out
+    t.assert_listed_require({"pkg/1.1@user/testing": "Downloaded (default)"})
 
 
 def test_remote_version_ranges():
@@ -389,7 +389,8 @@ def test_remote_version_ranges():
         t.save({"conanfile.py": GenConanfile().with_requires(f"dep/[{expr}]")})
         t.run("install .")
         assert str(t.out).count("Not found in local cache, looking in remotes") == 1
-        assert f"dep/{solution}:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Download" in t.out
+        t.assert_listed_binary({f"dep/{solution}": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                                                    "Download (default)")})
 
 
 @pytest.mark.skip(reason="TODO: Test that the server is only hit once for dep/*@user/channel")

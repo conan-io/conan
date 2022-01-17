@@ -320,7 +320,7 @@ class InspectRawTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=pkg --version=0.1")
-        client.run("alias pkg/latest@ pkg/0.1@")
+        client.alias("pkg/latest@",  "pkg/0.1")
         client.run("inspect pkg/latest@ -a alias")
         assert "alias: pkg/0.1" in client.out
 

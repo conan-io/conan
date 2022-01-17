@@ -136,4 +136,5 @@ def test_build_type_remove_windows():
     assert "pkg/0.1:1454da99f096a6347c915bbbd244d7137a96d1be - Build" in client.out
     client.run('install --reference=pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
                '-s compiler.version=14 -s build_type=Debug')
-    assert "pkg/0.1:1454da99f096a6347c915bbbd244d7137a96d1be - Cache" in client.out
+    client.assert_listed_binary({"pkg/0.1": ("1454da99f096a6347c915bbbd244d7137a96d1be", "Cache")})
+

@@ -22,7 +22,7 @@ def create(conan_api, parser, *args):
     """
     common_args_export(parser)
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"),
-                                  lockfile=False)  # Lockfile is already in export args
+                                  lockfile=False)
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='The provided reference is a build-require')
     parser.add_argument("--require-override", action="append",

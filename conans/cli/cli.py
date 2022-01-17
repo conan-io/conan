@@ -16,17 +16,16 @@ from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_
 from conans.cli.output import ConanOutput, cli_out_write, Color
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
-from conans.client.conf.config_installer import is_config_install_scheduled
-from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError, \
-    ConanInvalidSystemRequirements
+from conans.errors import ConanInvalidSystemRequirements
+from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
 
 
 CLI_V1_COMMANDS = [
-    'config', 'get', 'new', 'upload',
-    'source', 'build', 'editable', 'imports', 'remove', 'alias',
-    'download', 'inspect', 'lock'
+    'get', 'upload',
+    'source', 'build', 'editable', 'imports',
+    'download', 'inspect'
 ]
 
 
@@ -152,9 +151,6 @@ class Cli:
         except ConanException as exc:
             output.error(exc)
             return ERROR_GENERAL
-
-        if command != "config" and is_config_install_scheduled(self._conan_api):
-            self._conan_api.config_install(None, None)
 
         try:
             command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])

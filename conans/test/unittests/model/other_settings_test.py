@@ -220,7 +220,8 @@ class SayConan(ConanFile):
         client.run("create . -s os=ChromeOS --build missing", assert_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
                                     ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'Neutrino',
-                                     'SunOS', 'Windows', 'WindowsCE', 'WindowsStore', 'baremetal', 'iOS', 'tvOS', 'watchOS']),
+                                     'SunOS', 'VxWorks', 'Windows', 'WindowsCE', 'WindowsStore', 'baremetal', 'iOS', 'tvOS',
+                                     'watchOS']),
                       client.out)
 
         # Now add new settings to config and try again
@@ -242,10 +243,10 @@ class SayConan(ConanFile):
     settings = None
 """
         client.save({CONANFILE: content})
-        client.run("remove say/0.1@ -f")
+        client.run("remove say/0.1 -f")
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
-        conan_info = self._get_conaninfo("say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1", client)
         self.assertEqual(conan_info.settings.dumps(), "")
 
         # Settings is {}
@@ -258,10 +259,10 @@ class SayConan(ConanFile):
     settings = {}
 """
         client.save({CONANFILE: content})
-        client.run("remove say/0.1@ -f")
+        client.run("remove say/0.1 -f")
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
 
-        conan_info = self._get_conaninfo("say/0.1@", client)
+        conan_info = self._get_conaninfo("say/0.1", client)
 
         self.assertEqual(conan_info.settings.dumps(), "")

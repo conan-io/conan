@@ -3,7 +3,7 @@ import textwrap
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 
 def test_dependencies_visit():
@@ -155,3 +155,37 @@ def test_invisible_not_colliding_test_requires():
     client.save({"conanfile.py": app_conanfile})
     client.run("create . --name=app --version=1.0", assert_error=True)
     assert "'gtest' not found in the dependency set" in client.out
+
+
+def test_dependencies_visit_build_requires_profile():
+    """ At validate() time, in Conan 1.X, the build-requires are not available yet, because first
+    the binary package_id is computed, then the build-requires are resolved.
+    It is necessary to avoid in Conan 1.X the caching of the ConanFile.dependencies, because
+    at generate() time it will have all the graph info, including build-requires
+    """
+    # https://github.com/conan-io/conan/issues/10304
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("cmake", "0.1")})
+    client.run("create .")
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+
+            def validate(self):
+                self.output.info("VALIDATE DEPS: {}!!!".format(len(self.dependencies.items())))
+
+            def generate(self):
+                for req, dep in self.dependencies.items():
+                    self.output.info("GENERATE REQUIRE: {}!!!".format(dep.ref))
+                dep = self.dependencies.build["cmake"]
+                self.output.info("GENERATE CMAKE: {}!!!".format(dep.ref))
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile": "[tool_requires]\ncmake/0.1"})
+    client.run("install . -pr:b=default -pr:h=profile --build")  # Use 2 contexts
+
+    # Validate time, build-requires available
+    assert "conanfile.py: VALIDATE DEPS: 1!!!" in client.out
+    # generate time, build-requires already available
+    assert "conanfile.py: GENERATE REQUIRE: cmake/0.1!!!" in client.out
+    assert "conanfile.py: GENERATE CMAKE: cmake/0.1!!!" in client.out

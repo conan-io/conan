@@ -1,4 +1,6 @@
+import os
 import platform
+import shutil
 import textwrap
 
 import pytest
@@ -642,10 +644,12 @@ class TestComponentsCMakeGenerators:
             """)
         client = TestClient()
         for name in ["expected", "variant"]:
-            client.run("new {name}/1.0 -s".format(name=name))
+            client.run("new cmake_lib -d name={name} -d version=1.0 -f".format(name=name))
             client.save({"conanfile.py": conanfile_tpl.format(name=name),
                          "src/CMakeLists.txt": basic_cmake.format(name=name)})
-            client.run("create . --name={name} --version=1.0".format(name=name))
+            shutil.rmtree(os.path.join(client.current_folder, "test_package"))
+            client.run("create .")
+
         middle_cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)

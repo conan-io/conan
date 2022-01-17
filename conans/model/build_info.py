@@ -348,11 +348,20 @@ class CppInfo(object):
 
     def set_relative_base_folder(self, folder):
         """Prepend the folder to all the directories"""
-        for cname, c in self.components.items():
+        for component in self.components.values():
             for varname in _DIRS_VAR_NAMES:
-                origin = getattr(self.components[cname], varname)
+                origin = getattr(component, varname)
                 if origin is not None:
                     origin[:] = [os.path.join(folder, el) for el in origin]
+            if component._generator_properties is not None:
+                updates = {}
+                for prop_name, value in component._generator_properties.items():
+                    if prop_name == "cmake_build_modules":
+                        if isinstance(value, list):
+                            updates[prop_name] = [os.path.join(folder, v) for v in value]
+                        else:
+                            updates[prop_name] = os.path.join(folder, value)
+                component._generator_properties.update(updates)
 
     def get_sorted_components(self):
         """Order the components taking into account if they depend on another component in the
@@ -393,6 +402,7 @@ class CppInfo(object):
                         current_values.extend(component.requires)
 
                 # FIXME: What to do about sysroot?
+                result._generator_properties = copy.copy(self._generator_properties)
             else:
                 result = copy.copy(self.components[None])
             self._aggregated = CppInfo()

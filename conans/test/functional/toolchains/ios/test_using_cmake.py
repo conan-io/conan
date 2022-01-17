@@ -46,6 +46,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
             'ios_profile': textwrap.dedent("""
                 [settings]
                 os=iOS
+                os.sdk=iphoneos
                 os.version=12.0
                 arch=armv8
                 compiler=apple-clang

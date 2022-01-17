@@ -304,10 +304,10 @@ def create_xcode_project(client, project_name, source):
 def test_xcodedeps_build_configurations():
     client = TestClient(path_with_spaces=False)
 
-    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("export .")
 
-    client.run("new bye/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=bye -d version=0.1 -f")
     client.run("export .")
 
     main = textwrap.dedent("""
@@ -347,7 +347,8 @@ def test_frameworks():
     client = TestClient(path_with_spaces=False)
 
     client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                                           .with_package_info(cpp_info={"frameworks": ['CoreFoundation']},
+                                           .with_package_info(cpp_info={"frameworks":
+                                                                        ['CoreFoundation']},
                                                               env_info={})})
     client.run("export hello.py --name=hello --version=0.1")
 
@@ -380,5 +381,6 @@ def test_xcodedeps_dashes_names_and_arch():
     main = "int main(int argc, char *argv[]) { return 0; }"
     create_xcode_project(client, "app", main)
     client.run("install . -s arch=armv8 --build=missing -g XcodeDeps")
-    assert os.path.exists(os.path.join(client.current_folder, "conan_hello_dashes_vars_release_arm64.xcconfig"))
+    assert os.path.exists(os.path.join(client.current_folder,
+                                       "conan_hello_dashes_vars_release_arm64.xcconfig"))
     client.run_command("xcodebuild -project app.xcodeproj -xcconfig conandeps.xcconfig -arch arm64")
