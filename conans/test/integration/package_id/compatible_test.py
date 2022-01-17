@@ -39,15 +39,8 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
-<<<<<<< HEAD
         client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -pr=myprofile -s compiler.version=4.8")
-        package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
-=======
-        client.run("create . pkg/0.1@user/stable -pr=myprofile -s compiler.version=4.8")
         package_id = client.created_package_id("pkg/0.1@user/stable")
->>>>>>> develop2
-        self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}'"
-                      " created", client.out)
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
@@ -120,15 +113,8 @@ class CompatibleIDsTest(unittest.TestCase):
                      "myprofile": profile})
 
         # No user/channel
-<<<<<<< HEAD
         client.run("create . --name=pkg --version=0.1 -pr=myprofile -s compiler.version=4.8")
-        package_id = re.search(r"pkg/0.1:(\S+)", str(client.out)).group(1)
-        self.assertIn(f"pkg/0.1: Package '{package_id}' created",
-                      client.out)
-=======
-        client.run("create . pkg/0.1@ -pr=myprofile -s compiler.version=4.8")
         package_id = client.created_package_id("pkg/0.1")
->>>>>>> develop2
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         client.run("install . -pr=myprofile")
@@ -478,13 +464,8 @@ class CompatibleIDsTest(unittest.TestCase):
                 """)
 
         client.save({"conanfile.py": conanfile})
-<<<<<<< HEAD
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
-=======
-        client.run("create . pkg/0.1@user/testing -s os=Linux")
         package_id = client.created_package_id("pkg/0.1@user/testing")
->>>>>>> develop2
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("install . -s os=Windows --build=missing")
         client.assert_listed_binary({"pkg/0.1@user/testing": (package_id, "Cache")})
@@ -510,13 +491,8 @@ class CompatibleIDsTest(unittest.TestCase):
                 """)
 
         client.save({"conanfile.py": conanfile})
-<<<<<<< HEAD
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
-=======
-        client.run("create . pkg/0.1@user/testing -s os=Linux")
         package_id = client.created_package_id("pkg/0.1@user/testing")
->>>>>>> develop2
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("install . -s os=Windows")
         client.assert_listed_binary({"pkg/0.1@user/testing": (package_id, "Cache")})
@@ -575,9 +551,9 @@ class CompatibleIDsTest(unittest.TestCase):
                      "pkgc/conanfile.py": conanfile.format('requires = "pkga/0.1"'),
                      "pkgd/conanfile.py": conanfile.format('requires = "pkgb/0.1", "pkgc/0.1"')
                      })
-        client.run("create pkga pkga/0.1@ -s build_type=Release")
-        client.run("create pkgb pkgb/0.1@ -s build_type=Release")
-        client.run("create pkgc pkgc/0.1@ -s build_type=Release")
+        client.run("create pkga --name=pkga --version=0.1 -s build_type=Release")
+        client.run("create pkgb --name=pkgb --version=0.1 -s build_type=Release")
+        client.run("create pkgc --name=pkgc --version=0.1 -s build_type=Release")
 
         client.run("install pkgd -s build_type=Debug")
         assert "pkga/0.1: Main binary package '040ce2bd0189e377b2d15eb7246a4274d1c63317' missing" \

@@ -51,16 +51,12 @@ def test_cpp_info_editable():
      """
 
     client.save({"conanfile.py": conan_hello})
-<<<<<<< HEAD
     client.run("create . --name=hello --version=1.0")
-=======
-    client.run("create . hello/1.0@")
     rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("hello/1.0")
     ref.revision = rrev
     pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
     package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
->>>>>>> develop2
 
     conan_consumer = textwrap.dedent("""
     import os
@@ -86,17 +82,8 @@ def test_cpp_info_editable():
     # When hello is not editable
     client2 = TestClient(client.cache_folder)
     client2.save({"conanfile.py": conan_consumer})
-<<<<<<< HEAD
+
     client2.run("create . --name=lib --version=1.0")
-    assert "**includedirs:['package_include']**" in client2.out
-    assert "**libdirs:['lib']**" in client2.out
-    assert "**builddirs:['']**" in client2.out
-    assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in client2.out
-    assert "**libs:['lib_when_package', 'lib_when_package2']**" in client2.out
-    assert "**cxxflags:['my_cxx_flag2']**" in client2.out
-    assert "**cflags:['my_c_flag']**" in client2.out
-=======
-    client2.run("create . lib/1.0@")
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**includedirs:['package_include']**" in out
     assert "**libdirs:['lib']**" in out
@@ -107,21 +94,16 @@ def test_cpp_info_editable():
     assert "**build_modules:['mymodules/mybuildmodule']**" in out
     assert "**cxxflags:['my_cxx_flag2']**" in out
     assert "**cflags:['my_c_flag']**" in out
->>>>>>> develop2
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
     client.run("editable add . hello/1.0@")
 
     # Create the consumer again, now it will use the hello editable
-<<<<<<< HEAD
     client2.run("create . --name=lib --version=1.0")
-    out = str(client2.out).replace("\\", "/").replace("//", "/")
-=======
-    client2.run("create . lib/1.0@")
     base_folder = client.current_folder.replace("\\", "/") + "/"
     out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
->>>>>>> develop2
+
     assert "**includedirs:['my_sources/my_include_source', 'my_build/my_include']**" in out
     assert "**libdirs:['my_build/my_libdir']**" in out
     assert "**builddirs:['my_sources/my_builddir_source']**" in out
@@ -195,16 +177,12 @@ def test_cpp_info_components_editable():
      """
 
     client.save({"conanfile.py": conan_hello})
-<<<<<<< HEAD
     client.run("create . --name=hello --version=1.0")
-=======
-    client.run("create . hello/1.0@")
     rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("hello/1.0")
     ref.revision = rrev
     pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
     package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
->>>>>>> develop2
 
     conan_consumer = textwrap.dedent("""
     import os
@@ -237,23 +215,7 @@ def test_cpp_info_components_editable():
     # When hello is not editable
     client2 = TestClient(client.cache_folder)
     client2.save({"conanfile.py": conan_consumer})
-<<<<<<< HEAD
     client2.run("create . --name=lib --version=1.0")
-    assert "**FOO includedirs:['package_include_foo']**" in client2.out
-    assert "**FOO libdirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**FOO builddirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in client2.out
-    assert "**FOO cxxflags:['my_cxx_flag2_foo']**" in client2.out
-    assert "**FOO cflags:['my_c_flag_foo']**" in client2.out
-
-    assert "**VAR includedirs:['package_include_var']**" in client2.out
-    assert "**VAR libdirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**VAR builddirs:[]**" in client2.out  # The components don't have default dirs
-    assert "**VAR libs:['lib_when_package_var', 'lib_when_package2_var']**" in client2.out
-    assert "**VAR cxxflags:['my_cxx_flag2_var']**" in client2.out
-    assert "**VAR cflags:['my_c_flag_var']**" in client2.out
-=======
-    client2.run("create . lib/1.0@")
 
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**FOO includedirs:['package_include_foo']**" in out
@@ -271,21 +233,17 @@ def test_cpp_info_components_editable():
     assert "**VAR libs:['lib_when_package_var', 'lib_when_package2_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag2_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
->>>>>>> develop2
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
     client.run("editable add . hello/1.0@")
 
     # Create the consumer again, now it will use the hello editable
-<<<<<<< HEAD
+
     client2.run("create . --name=lib --version=1.0")
-    out = str(client2.out).replace("\\", "/").replace("//", "/")
-=======
-    client2.run("create . lib/1.0@")
     base_folder = client.current_folder.replace("\\", "/") + "/"
     out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
->>>>>>> develop2
+
     assert "**FOO includedirs:['my_sources/my_include_source_foo', " \
            "'my_build/my_include_foo']**" in out
     assert "**FOO libdirs:['my_build/my_libdir_foo']**" in out

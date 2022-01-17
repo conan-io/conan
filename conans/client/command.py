@@ -16,12 +16,6 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-<<<<<<< HEAD
-from conans.model.ref import check_valid_ref, validate_recipe_reference
-from conans.util.config_parser import get_bool_from_text
-=======
-from conans.model.ref import get_reference_fields, check_valid_ref
->>>>>>> develop2
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger

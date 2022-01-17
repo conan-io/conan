@@ -9,11 +9,7 @@ from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.download import download
-<<<<<<< HEAD
-from conans.client.cmd.export import export_alias
-=======
-from conans.client.cmd.export import cmd_export
->>>>>>> develop2
+
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version

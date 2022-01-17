@@ -10,28 +10,9 @@ class ConanAliasTest(unittest.TestCase):
 
     def test_repeated_alias(self):
         client = TestClient()
-<<<<<<< HEAD
-        client.run("alias hello/0.X@lasote/channel hello/0.1@lasote/channel")
-        client.run("alias hello/0.X@lasote/channel hello/0.2@lasote/channel")
-        client.run("alias hello/0.X@lasote/channel hello/0.3@lasote/channel")
-
-    def test_existing_python_requires(self):
-        # https://github.com/conan-io/conan/issues/8702
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . --name=test-python-requires --version=0.1 --user=user --channel=testing")
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
-    python_requires = 'test-python-requires/0.1@user/testing'"""})
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        client.run("alias pkg/0.1@user/testing pkg/0.2@user/testing", assert_error=True)
-        self.assertIn("ERROR: Reference 'pkg/0.1@user/testing' is already a package",
-                      client.out)
-=======
         client.alias("hello/0.x@lasote/channel",  "hello/0.1@lasote/channel")
         client.alias("hello/0.x@lasote/channel",  "hello/0.2@lasote/channel")
         client.alias("hello/0.x@lasote/channel",  "hello/0.3@lasote/channel")
->>>>>>> develop2
 
     def test_basic(self):
         client = TestClient(default_server_user=True)

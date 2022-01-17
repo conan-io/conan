@@ -1,5 +1,4 @@
 import os
-import time
 import unittest
 
 import pytest
@@ -135,19 +134,6 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
-<<<<<<< HEAD
-    def test_remove_duplicated_package_id(self):
-        """ The package ID must not be present in both -p argument and package reference
-        """
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
-        self.client.run("remove -f foobar/0.1@user/testing#{}:{} -p {}"
-                        .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID,
-                                NO_SETTINGS_PACKAGE_ID), assert_error=True)
-        self.assertIn("Use package ID only as -p argument or reference, not both", self.client.out)
-
-=======
->>>>>>> develop2
     def test_remove_remote_package_id_reference(self):
         """ Remove remote package ID based on recipe revision. The package must be deleted, but
             the recipe must be preserved.
