@@ -28,7 +28,7 @@ def client():
         self.runenv_info.define_path("RUNTIME_VAR", "c:/path/to/exe")
     """
     client.save({"conanfile.py": conanfile})
-    client.run("create . foo/1.0@")
+    client.run("create . --name=foo --version=1.0")
     save(client.cache.new_config_path, "tools.microsoft.bash:subsystem=cygwin")
     return client
 

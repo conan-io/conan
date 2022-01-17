@@ -52,7 +52,7 @@ def client():
 @pytest.mark.tool_clang(version="12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang(client):
-    client.run("create . pkg/0.1@ -pr=clang")
+    client.run("create . --name=pkg --version=0.1 -pr=clang")
     # clang compilations in Windows will use MinGW Makefiles by default
     assert 'cmake -G "MinGW Makefiles"' in client.out
     assert "main __clang_major__12" in client.out
@@ -65,7 +65,7 @@ def test_clang(client):
 @pytest.mark.tool_clang(version="12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang_cmake_ninja(client):
-    client.run("create . pkg/0.1@ -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja")
+    client.run("create . --name=pkg --version=0.1 -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja")
     assert 'cmake -G "Ninja"' in client.out
     assert "main __clang_major__12" in client.out
     # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
@@ -114,7 +114,7 @@ def test_clang_cmake_visual(client):
         """)
     # TODO: Clang version is unused, it can change, still 11 from inside VS is used
     client.save({"clang": clang_profile})
-    client.run("create . pkg/0.1@ -pr=clang "
+    client.run("create . --name=pkg --version=0.1 -pr=clang "
                '-c tools.cmake.cmaketoolchain:generator="Visual Studio 16"')
     assert 'cmake -G "Visual Studio 16"' in client.out
     assert "main __clang_major__11" in client.out

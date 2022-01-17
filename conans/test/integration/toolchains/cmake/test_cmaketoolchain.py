@@ -204,7 +204,7 @@ def test_find_builddirs(find_builddir):
                 self.cpp_info.builddirs = ["/path/to/builddir"]
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . dep/1.0@")
+    client.run("create . --name=dep --version=1.0")
 
     conanfile = textwrap.dedent("""
             from conans import ConanFile

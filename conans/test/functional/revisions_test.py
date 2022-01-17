@@ -826,12 +826,10 @@ class SCMRevisions(unittest.TestCase):
 
     def test_auto_revision_without_commits(self):
         """If we have a repo but without commits, it has to fail when the revision_mode=scm"""
-        ref = RecipeReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
-        conanfile = GenConanfile().with_revision_mode("scm")
         client.run_command('git init .')
-        client.save({"conanfile.py": str(conanfile)})
-        client.run("create . {}".format(ref), assert_error=True)
+        client.save({"conanfile.py": GenConanfile("lib", "0.1").with_revision_mode("scm")})
+        client.run("create .", assert_error=True)
         # It error, because the revision_mode is explicitly set to scm
         self.assertIn("Cannot detect revision using 'scm' mode from repository at "
                       "'{f}': Unable to get git commit from '{f}'".format(f=client.current_folder),
@@ -1015,7 +1013,7 @@ def test_touching_other_server():
                            ("remote2", None)])  # None server will crash if touched
     c = TestClient(servers=servers, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
-    c.run("create . pkg/0.1@conan/channel -s os=Windows")
+    c.run("create . --name=pkg --version=0.1 --user=conan --channel=channel -s os=Windows")
     c.run("upload * --all -c -r=remote1")
     c.run("remove * -f")
 

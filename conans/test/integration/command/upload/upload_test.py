@@ -36,7 +36,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_dirty(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
-        client.run("create . lasote/testing")
+        client.run("create . --user=lasote --channel=testing")
         ref = RecipeReference.loads("hello/0.1@lasote/testing")
 
         rrev = client.cache.get_latest_recipe_reference(ref)
@@ -122,7 +122,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_with_pref(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         client.run("upload hello0/1.2.1@user/testing:{} -c -r default".format(NO_SETTINGS_PACKAGE_ID))
         self.assertIn("Uploading hello0/1.2.1@user/testing:357add7d387f11a959f3ee7d4fc9c2487dbaa604",
                       client.out)
@@ -130,7 +130,7 @@ class UploadTest(unittest.TestCase):
     def test_pattern_upload(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         client.run("upload hello0/*@user/testing --confirm --all -r default")
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conan_package.tgz", client.out)
@@ -154,7 +154,7 @@ class UploadTest(unittest.TestCase):
 
         for _os, arch in itertools.product(["Macos", "Linux", "Windows"],
                                            ["armv8", "x86_64"]):
-            client.run("create . user/testing -s os=%s -s arch=%s" % (_os, arch))
+            client.run("create . --user=user --channel=testing -s os=%s -s arch=%s" % (_os, arch))
 
         # Check that the right number of packages are picked up by the queries
         client.run("upload hello1/*@user/testing --confirm -q 'os=Windows or os=Macos' -r default")
@@ -183,7 +183,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         ref = RecipeReference.loads("hello0/1.2.1@user/testing")
 
         def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
@@ -210,7 +210,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         pref = client.get_latest_package_reference(RecipeReference.loads("hello0/1.2.1@user/testing"),
                                                    NO_SETTINGS_PACKAGE_ID)
 
@@ -239,7 +239,7 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "include/hello.h": ""})
-        client.run("create . frodo/stable")
+        client.run("create . --user=frodo --channel=stable")
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         latest_rrev = client.cache.get_latest_recipe_reference(ref)
         pkg_ids = client.cache.get_package_references(latest_rrev)
@@ -314,13 +314,13 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
-        client.run("create . frodo/stable")
+        client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable --all -r default")
 
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile,
                       "hello.cpp": ""})
-        client2.run("create . frodo/stable")
+        client2.run("create . --user=frodo --channel=stable")
         client2.run("upload hello0/1.2.1@frodo/stable --all -r default")
         self.assertIn("hello0/1.2.1@frodo/stable#3a26992ac7bfd9de8ca9a821a6ca54dc already "
                       "in server, skipping upload", client2.out)
@@ -355,7 +355,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile_new,
                      "hello.h": ""})
-        client.run("create . frodo/stable")
+        client.run("create . --user=frodo --channel=stable")
 
         # First time upload
         client.run("upload hello/1.0@frodo/stable --all -r default")
@@ -379,7 +379,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*"),
                  "file.txt": ""}
         client.save(files)
-        client.run("create . frodo/stable")
+        client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default --all --skip-upload -r default")
 
         # dry run should not upload
@@ -410,7 +410,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_without_sources(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("upload * --all --confirm -r default")
         client2 = TestClient(servers=client.servers, inputs=["admin", "password",
                                                              "lasote", "mypass"])
@@ -434,7 +434,7 @@ class UploadTest(unittest.TestCase):
         conan_conf = "core:non_interactive=True"
         client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
 
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
         client.run("upload hello0/1.2.1@user/testing -r default", assert_error=True)
 
@@ -450,7 +450,7 @@ class UploadTest(unittest.TestCase):
         client.save(files)
         conan_conf = "core:non_interactive=True"
         client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
         client.run("remote set-user default lasote")
         client.run("upload hello0/1.2.1@user/testing -r default", assert_error=True)
@@ -466,7 +466,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
         conan_conf = "core:non_interactive=True"
         client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
         client.run("remote login default admin -p password")
         client.run("upload hello0/1.2.1@user/testing -r default")
@@ -483,7 +483,7 @@ class UploadTest(unittest.TestCase):
         servers["server2"] = server2
         client = TestClient(servers=servers)
         client.save(files)
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         client.run("remote login server1 lasote -p mypass")
         client.run("remote login server2 lasote -p mypass")
         client.run("upload hello0/1.2.1@user/testing --all -r server1")
@@ -535,7 +535,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_with_pref_and_query(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         client.run("upload hello0/1.2.1@user/testing:{} "
                    "-q 'os=Windows or os=Macos' -r default".format(NO_SETTINGS_PACKAGE_ID),
                    assert_error=True)
@@ -545,7 +545,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_with_package_id_and_query(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         client.run("upload hello0/1.2.1@user/testing:{} "
                    "-q 'os=Windows or os=Macos' -r default".format(NO_SETTINGS_PACKAGE_ID),
                    assert_error=True)
@@ -559,7 +559,7 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile()})
 
-        client.run('create . lib/1.0@')
+        client.run('create . --name=lib --version=1.0')
         self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
         client.run('upload lib/1.0 -c --all -r default')
         assert "Uploading lib/1.0" in client.out
@@ -621,7 +621,7 @@ class UploadTest(unittest.TestCase):
                             inputs=["user", "password"])
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         client.save(files)
-        client.run("create . user/testing")
+        client.run("create . --user=user --channel=testing")
         client.run("remote logout '*'")
         client.run("upload hello0/1.2.1@user/testing --all -r default")
         assert "Uploading hello0/1.2.1@user/testing" in client.out

@@ -67,7 +67,7 @@ def test_create_test_package_no_layout(conanfile):
                 self.output.warning("hey! testing")
     """)
     client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": conanfile_test})
-    client.run("create . lib/1.0@")
+    client.run("create . --name=lib --version=1.0")
     assert "hey! building" in client.out
     assert "hey! testing" in client.out
 
@@ -103,7 +103,7 @@ def test_create_test_package_with_layout(conanfile):
                 self.output.warning("hey! testing")
     """)
     client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": conanfile_test})
-    client.run("create . lib/1.0@")
+    client.run("create . --name=lib --version=1.0")
     assert "hey! building" in client.out
     assert "hey! testing" in client.out
 
@@ -116,10 +116,10 @@ def test_cache_in_layout(conanfile):
     """
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . base/1.0@")
+    client.run("create . --name=base --version=1.0")
 
     client.save({"conanfile.py": conanfile})
-    client.run("create . lib/1.0@")
+    client.run("create . --name=lib --version=1.0")
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("lib/1.0@")
     pref = PkgReference(ref, package_id)
@@ -151,7 +151,7 @@ def test_cache_in_layout(conanfile):
 def test_same_conanfile_local(conanfile):
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . base/1.0@")
+    client.run("create . --name=base --version=1.0")
 
     client.save({"conanfile.py": conanfile})
 
@@ -188,7 +188,7 @@ def test_imports():
         self.copy("*.dll")
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . hello/1.0@")
+    client.run("create . --name=hello --version=1.0")
 
     # Consumer of the hello importing the shared
     conan_file = str(GenConanfile().with_import("from conans import tools").with_import("import os"))
@@ -214,7 +214,7 @@ def test_imports():
     """
 
     client.save({"conanfile.py": conan_file})
-    client.run("create . consumer/1.0@ ")
+    client.run("create . --name=consumer --version=1.0 ")
     assert "Built and imported!" in client.out
 
 
@@ -237,7 +237,7 @@ def test_cpp_package():
              """)
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@")
+    client.run("create . --name=hello --version=1.0")
     rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("hello/1.0")
     ref.revision = rrev
@@ -292,7 +292,7 @@ def test_git_clone_with_source_layout():
         client.save({"cloned.txt": "foo"}, repo)
         client.init_git_repo()
 
-    client.run("create . hello/1.0@")
+    client.run("create . --name=hello --version=1.0")
     latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/1.0@"))
     sf = client.cache.ref_layout(latest_rrev).source()
     assert os.path.exists(os.path.join(sf, "myfile.txt"))

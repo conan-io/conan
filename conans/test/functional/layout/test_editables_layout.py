@@ -51,7 +51,7 @@ def test_cpp_info_editable():
      """
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@")
+    client.run("create . --name=hello --version=1.0")
     rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("hello/1.0")
     ref.revision = rrev
@@ -82,7 +82,8 @@ def test_cpp_info_editable():
     # When hello is not editable
     client2 = TestClient(client.cache_folder)
     client2.save({"conanfile.py": conan_consumer})
-    client2.run("create . lib/1.0@")
+
+    client2.run("create . --name=lib --version=1.0")
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**includedirs:['package_include']**" in out
     assert "**libdirs:['lib']**" in out
@@ -99,9 +100,10 @@ def test_cpp_info_editable():
     client.run("editable add . hello/1.0@")
 
     # Create the consumer again, now it will use the hello editable
-    client2.run("create . lib/1.0@")
+    client2.run("create . --name=lib --version=1.0")
     base_folder = client.current_folder.replace("\\", "/") + "/"
     out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
+
     assert "**includedirs:['my_sources/my_include_source', 'my_build/my_include']**" in out
     assert "**libdirs:['my_build/my_libdir']**" in out
     assert "**builddirs:['my_sources/my_builddir_source']**" in out
@@ -175,7 +177,7 @@ def test_cpp_info_components_editable():
      """
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@")
+    client.run("create . --name=hello --version=1.0")
     rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
     ref = RecipeReference.loads("hello/1.0")
     ref.revision = rrev
@@ -213,7 +215,7 @@ def test_cpp_info_components_editable():
     # When hello is not editable
     client2 = TestClient(client.cache_folder)
     client2.save({"conanfile.py": conan_consumer})
-    client2.run("create . lib/1.0@")
+    client2.run("create . --name=lib --version=1.0")
 
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**FOO includedirs:['package_include_foo']**" in out
@@ -237,9 +239,11 @@ def test_cpp_info_components_editable():
     client.run("editable add . hello/1.0@")
 
     # Create the consumer again, now it will use the hello editable
-    client2.run("create . lib/1.0@")
+
+    client2.run("create . --name=lib --version=1.0")
     base_folder = client.current_folder.replace("\\", "/") + "/"
     out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
+
     assert "**FOO includedirs:['my_sources/my_include_source_foo', " \
            "'my_build/my_include_foo']**" in out
     assert "**FOO libdirs:['my_build/my_libdir_foo']**" in out

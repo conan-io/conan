@@ -99,7 +99,7 @@ class ExportsMethodTest(unittest.TestCase):
                     self.output.info("MYOPT: %s" % self.options.myopt)
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@")
+        client.run("create . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1: MYOPT: myval", client.out)
 
     def test_export_folders(self):

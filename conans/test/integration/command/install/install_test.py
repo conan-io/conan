@@ -66,7 +66,7 @@ def test_install_transitive_pattern(client):
             def package_info(self):
                 self.output.info("PKG OPTION: %s" % self.options.shared)
         """)})
-    client.run("create . pkg/0.1@user/testing -o shared=True")
+    client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     client.save({"conanfile.py": textwrap.dedent("""
         from conans import ConanFile
@@ -78,28 +78,28 @@ def test_install_transitive_pattern(client):
                 self.output.info("PKG2 OPTION: %s" % self.options.shared)
         """)})
 
-    client.run("create . pkg2/0.1@user/testing -o *:shared=True")
+    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     client.run(" install --reference=pkg2/0.1@user/testing -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Priority of non-scoped options
-    client.run("create . pkg2/0.1@user/testing -o shared=header -o *:shared=True")
+    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     client.run(" install --reference=pkg2/0.1@user/testing -o shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option
-    client.run("create . pkg2/0.1@user/testing -o *:shared=True -o pkg2:shared=header")
+    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg2:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     client.run(" install --reference=pkg2/0.1@user/testing -o *:shared=True -o pkg2:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option reverse
-    client.run("create . pkg2/0.1@user/testing -o *:shared=True -o pkg:shared=header "
+    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg:shared=header "
                "--build=missing")
     assert "pkg/0.1@user/testing: Calling build()" in client.out
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
@@ -108,21 +108,21 @@ def test_install_transitive_pattern(client):
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Prevalence of alphabetical pattern
-    client.run("create . pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
+    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     client.run(" install --reference=pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     # Prevalence of last match, even first pattern match
-    client.run("create . pkg2/0.1@user/testing -o pkg2*:shared=header -o *:shared=True")
+    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o pkg2*:shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     client.run(" install --reference=pkg2/0.1@user/testing -o pkg2*:shared=header -o *:shared=True")
     assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
     # Prevalence and override of alphabetical pattern
-    client.run("create . pkg2/0.1@user/testing -o *:shared=True -o pkg*:shared=header")
+    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg*:shared=header")
     assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
     assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
     client.run(" install --reference=pkg2/0.1@user/testing -o *:shared=True -o pkg*:shared=header")
@@ -152,14 +152,6 @@ def test_install_cwd(client):
 
     client.run("install . --build=missing -s os_build=Windows --install-folder=win_dir")
     assert "hello/0.1@lasote/stable#a44254cfa891c2fe4d98ee6aff203222 - Cache" in client.out
-
-
-def test_install_reference_not_conanbuildinfo(client):
-    client.save({"conanfile.py": GenConanfile("hello", "0.1").with_setting("os")})
-    client.run("create . conan/stable")
-    client.save({}, clean_first=True)
-    client.run("install --reference=hello/0.1@conan/stable")
-    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt"))
 
 
 def test_install_with_profile(client):
@@ -260,7 +252,7 @@ def test_install_argument_order(client):
 def test_install_anonymous(client):
     # https://github.com/conan-io/conan/issues/4871
     client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    client.run("create . lasote/testing")
+    client.run("create . --user=lasote --channel=testing")
     client.run("upload * --confirm --all -r default")
 
     client2 = TestClient(servers=client.servers, inputs=[])
@@ -290,7 +282,7 @@ def test_install_without_ref(client):
 
 def test_install_disabled_remote(client):
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . pkg/0.1@lasote/testing")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("upload * --confirm --all -r default")
     client.run("remote disable default")
     client.run("install --reference=pkg/0.1@lasote/testing -r default", assert_error=True)
@@ -308,7 +300,7 @@ def test_install_skip_disabled_remote():
                                              "server3": TestServer()}),
                         inputs=2*["admin", "password"])
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . pkg/0.1@lasote/testing")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("upload * --confirm --all -r default")
     client.run("upload * --confirm --all -r server3")
     client.run("remove * -f")
@@ -320,7 +312,7 @@ def test_install_skip_disabled_remote():
 def test_install_without_update_fail(client):
     # https://github.com/conan-io/conan/issues/9183
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . zlib/1.0@")
+    client.run("create . --name=zlib --version=1.0")
     client.run("upload * --confirm --all -r default")
     client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
     client.run("remote disable default")
@@ -331,7 +323,7 @@ def test_install_without_update_fail(client):
 def test_install_version_range_reference(client):
     # https://github.com/conan-io/conan/issues/5905
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . pkg/0.1@user/channel")
+    client.run("create . --name=pkg --version=0.1 --user=user --channel=channel")
     client.run("install --reference=pkg/[*]@user/channel")
     assert "pkg/0.1@user/channel: Already installed!" in client.out
     client.run("install --reference=pkg/[>0]@user/channel")
@@ -353,16 +345,16 @@ class TestCliOverride:
 
     def test_install_cli_override(self, client):
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . zlib/1.0@")
-        client.run("create . zlib/2.0@")
+        client.run("create . --name=zlib --version=1.0")
+        client.run("create . --name=zlib --version=2.0")
         client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
         client.run("install . --require-override=zlib/2.0")
         assert "zlib/2.0: Already installed" in client.out
 
     def test_install_cli_override_in_conanfile_txt(self, client):
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . zlib/1.0@")
-        client.run("create . zlib/2.0@")
+        client.run("create . --name=zlib --version=1.0")
+        client.run("create . --name=zlib --version=2.0")
         client.save({"conanfile.txt": textwrap.dedent("""\
         [requires]
         zlib/1.0
@@ -372,18 +364,18 @@ class TestCliOverride:
 
     def test_install_ref_cli_override(self, client):
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . zlib/1.0@")
-        client.run("create . zlib/1.1@")
+        client.run("create . --name=zlib --version=1.0")
+        client.run("create . --name=zlib --version=1.1")
         client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
-        client.run("create . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
         client.run("install --reference=pkg/1.0@ --require-override=zlib/1.1")
         assert "zlib/1.1: Already installed" in client.out
 
     def test_create_cli_override(self, client):
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . zlib/1.0@")
-        client.run("create . zlib/2.0@")
+        client.run("create . --name=zlib --version=1.0")
+        client.run("create . --name=zlib --version=2.0")
         client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0"),
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        client.run("create . pkg/0.1@ --require-override=zlib/2.0")
+        client.run("create . --name=pkg --version=0.1 --require-override=zlib/2.0")
         assert "zlib/2.0: Already installed" in client.out

@@ -39,7 +39,7 @@ def test_cmake_no_config(client):
         build_type=Release
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile")
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity" not in client.out
 
 
@@ -56,7 +56,7 @@ def test_cmake_config(client):
         tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile")
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity:Minimal" in client.out
 
 
@@ -73,7 +73,7 @@ def test_cmake_config_error(client):
         tools.microsoft.msbuild:verbosity=non-existing
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile", assert_error=True)
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile", assert_error=True)
     assert "Unknown msbuild verbosity: non-existing" in client.out
 
 
@@ -90,9 +90,9 @@ def test_cmake_config_package(client):
         dep*:tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile")
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity" not in client.out
-    client.run("create . dep/0.1@ -pr=myprofile")
+    client.run("create . --name=dep --version=0.1 -pr=myprofile")
     assert "/verbosity:Minimal" in client.out
 
 
@@ -132,7 +132,7 @@ def test_msbuild_config():
         tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile")
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity:Minimal" in client.out
 
 

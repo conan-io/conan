@@ -4,25 +4,26 @@ import textwrap
 import pytest
 
 from conans.client.tools.apple import XCRun, to_apple_arch
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture
 def client():
-    lib_ref = RecipeReference.loads("foolib/1.0")
     lib_conanfile = textwrap.dedent("""
         from conans import ConanFile
 
         class FooLib(ConanFile):
+            name = "foolib"
+            version = "1.0"
+
             def package_info(self):
                 self.cpp_info.frameworks.extend(['Foundation', 'CoreServices', 'CoreFoundation'])
     """)
 
     t = TestClient()
     t.save({'conanfile.py': lib_conanfile})
-    t.run("create . {}@".format(lib_ref))
+    t.run("create .")
     return t
 
 
@@ -308,8 +309,8 @@ def test_apple_own_framework_cmake_deps():
                  "src/hello.cpp": hello_cpp,
                  "src/Info.plist": infoplist})
     client.run("export . --name=mylibrary --version=1.0")
-    client.run("create . mylibrary/1.0@ -s build_type=Debug")
-    client.run("create . mylibrary/1.0@ -s build_type=Release")
+    client.run("create . --name=mylibrary --version=1.0 -s build_type=Debug")
+    client.run("create . --name=mylibrary --version=1.0 -s build_type=Release")
 
     profile = textwrap.dedent("""
         include(default)
@@ -493,7 +494,7 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
             'test_package/conanfile.py': test_conanfile_py,
             'test_package/CMakeLists.txt': test_cmakelists_txt,
             'test_package/test_package.cpp': test_test_package_cpp})
-    t.run("create . hello/1.0@")
+    t.run("create . --name=hello --version=1.0")
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")

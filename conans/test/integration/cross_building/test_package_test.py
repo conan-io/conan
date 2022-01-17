@@ -51,7 +51,7 @@ class TestPackageTestCase(unittest.TestCase):
             Build:
     """)
 
-    @parameterized.expand([("create conanfile.py name/version@",),
+    @parameterized.expand([("create conanfile.py --name=name --version=version",),
                            ("test test_package/conanfile.py name/version@",)])
     def test_command(self, command):
         t = TestClient()

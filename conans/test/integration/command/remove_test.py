@@ -1,5 +1,4 @@
 import os
-import time
 import unittest
 
 import pytest
@@ -24,10 +23,10 @@ class Test(ConanFile):
     settings = "os"
     """
         client.save({"conanfile.py": conanfile})
-        client.run("create . Test/0.1@lasote/testing -s os=Windows")
-        client.run("create . Test/0.1@lasote/testing -s os=Linux")
+        client.run("create . --name=Test --version=0.1 --user=lasote --channel=testing -s os=Windows")
+        client.run("create . --name=Test --version=0.1 --user=lasote --channel=testing -s os=Linux")
         client.save({"conanfile.py": conanfile.replace("settings", "pass #")})
-        client.run("create . Test2/0.1@lasote/testing")
+        client.run("create . --name=Test2 --version=0.1 --user=lasote --channel=testing")
         client.run("upload * --all --confirm -r default")
         for remote in ("", "-r=default"):
             client.run("remove Test/0.1@lasote/testing -q=os=Windows -f %s" % remote)
@@ -70,7 +69,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
 
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . lib/1.0@")
+        self.client.run("create . --name=lib --version=1.0")
         latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("lib/1.0"))
         ref_layout = self.client.cache.ref_layout(latest_rrev)
         pkg_ids = self.client.cache.get_package_references(latest_rrev)
@@ -82,7 +81,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
 
     def test_remote(self):
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . lib/1.0@")
+        self.client.run("create . --name=lib --version=1.0")
         self.client.run("upload lib/1.0 -r default -c --all")
         self.client.run("remove lib/1.0 -f")
         # we can still install it
@@ -115,7 +114,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
             Package ID is a separated argument: <package>#<rref> -p <pkgid>
         """
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         assert self.client.package_exists(self.pref)
 
         self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
@@ -128,7 +127,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
             Package ID is part of package reference: <package>#<rref>:<pkgid>
         """
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         assert self.client.package_exists(self.pref)
 
         self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
@@ -141,7 +140,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
             Package ID is part of package reference: <package>#<rref>:<pkgid>
         """
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . foobar/0.1@user/testing")
+        self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         self.client.run("upload foobar/0.1@user/testing -r default -c --all")
         self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
@@ -153,9 +152,9 @@ class RemovePackageRevisionsTest(unittest.TestCase):
     def test_remove_all_packages_but_the_recipe_at_remote(self):
         """ Remove all the packages but not the recipe in a remote
         """
-        self.client.save({"conanfile.py": GenConanfile().with_settings("arch")})
-        self.client.run("create . foobar/0.1@user/testing")
-        self.client.run("create . foobar/0.1@user/testing -s arch=x86")
+        self.client.save({"conanfile.py": GenConanfile("foobar", "0.1").with_settings("arch")})
+        self.client.run("create . --user=user --channel=testing")
+        self.client.run("create . --user=user --channel=testing -s arch=x86")
         self.client.run("upload foobar/0.1@user/testing -r default -c --all")
         ref = self.client.cache.get_latest_recipe_reference(
                RecipeReference.loads("foobar/0.1@user/testing"))
@@ -205,15 +204,15 @@ def populated_client():
     # Two package revisions for bar/1.1 (Release)
     for _i in range(2):
         with environment_update({'foo_test': str(_i)}):
-            client.run("create . bar/1.1@ -s build_type=Release")
-    client.run("create . bar/1.1@ -s build_type=Debug")
+            client.run("create . --name=bar --version=1.1 -s build_type=Release")
+    client.run("create . --name=bar --version=1.1 -s build_type=Debug")
 
     prefs = _get_revisions_packages(client, bar_rrev2_release, False)
     assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
 
     # Two recipe revisions for bar/1.1
     client.save({"conanfile.py": conanfile + "\n # THIS IS ANOTHER RECIPE REVISION"})
-    client.run("create . bar/1.1@ -s build_type=Debug")
+    client.run("create . --name=bar --version=1.1 -s build_type=Debug")
 
     client.run("upload '*' -c --all -r default")
     # By default only the latest is uploaded, we want all of them

@@ -76,7 +76,7 @@ class FixSymlinksTestCase(unittest.TestCase):
     def test_error_reported(self):
         t = TestClient()
         t.save({'conanfile.py': self.conanfile})
-        t.run("create . {}@ -o raise_if_error=False".format(self.name_ref))
+        t.run("create . --name=name --version=version -o raise_if_error=False")
 
         # Check the work is done
         pkg_ref = t.get_latest_package_reference(self.name_ref,

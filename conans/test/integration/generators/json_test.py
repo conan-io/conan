@@ -25,7 +25,7 @@ class HelloConan(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py,
                      "header.h": ""})
-        client.run("create . hello/0.1@lasote/testing")
+        client.run("create . --name=hello --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=hello/0.1@lasote/testing -g json")
         conan_json = client.load("conanbuildinfo.json")
         data = json.loads(conan_json)
@@ -54,7 +54,7 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": conanfile_py,
                      "header.h": ""})
         settings = "-sos=Linux -sarch=x86_64"
-        client.run("create . hello/0.1@lasote/testing " + settings)
+        client.run("create . --name=hello --version=0.1 --user=lasote --channel=testing " + settings)
         client.run("install --reference=hello/0.1@lasote/testing -g json " + settings)
 
         conan_json = client.load("conanbuildinfo.json")
@@ -85,7 +85,7 @@ class HelloConan(ConanFile):
         client = TestClient()
         client.save({'conanfile.py': conanfile})
 
-        client.run("create . hello/0.1@lasote/testing")
+        client.run("create . --name=hello --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=hello/0.1@lasote/testing -g json")
 
         my_json = json.loads(client.load("conanbuildinfo.json"))
@@ -134,7 +134,7 @@ class HelloConan(ConanFile):
         client = TestClient()
         client.save({'conanfile.py': conanfile})
 
-        client.run("create . hello/0.1@lasote/testing")
+        client.run("create . --name=hello --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=hello/0.1@lasote/testing -g json")
 
         my_json = client.load("conanbuildinfo.json")
@@ -154,7 +154,7 @@ class HelloConan(ConanFile):
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . bar/0.1.0@user/testing")
+        client.run("create . --name=bar --version=0.1.0 --user=user --channel=testing")
         client.run("install --reference=bar/0.1.0@user/testing -g json")
         conan_json = client.load("conanbuildinfo.json")
         content = json.loads(conan_json)

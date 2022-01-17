@@ -28,7 +28,7 @@ class TestInvalidConfiguration:
     def client(self):
         client = TestClient()
         client.save({"pkg/conanfile.py": self.conanfile})
-        client.run("create pkg pkg/0.1@ -s os=Linux")
+        client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
         return client
 
     def test_invalid(self, client):
@@ -138,7 +138,7 @@ class TestInvalidBuildPackageID:
     def client(self):
         client = TestClient()
         client.save({"pkg/conanfile.py": self.conanfile})
-        client.run("create pkg pkg/0.1@ -s os=Linux")
+        client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
         return client
 
     def test_valid(self, client):

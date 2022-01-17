@@ -36,7 +36,7 @@ class Pkg(ConanFile):
     settings = "os", "compiler"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@lasote/testing", assert_error=True)
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing", assert_error=True)
         self.assertIn("ERROR: settings.yml: None setting can't have subsettings", client.out)
 
     @pytest.mark.xfail(reason="Working in the PackageID broke this")
@@ -59,7 +59,7 @@ class Pkg(ConanFile):
     settings = "compiler", "cppstd"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@lasote/testing")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
         self.assertIn("""Configuration (profile_host):
 [settings]
 compiler=mycomp
@@ -84,7 +84,7 @@ cppstd=11""", client.out)
         save(client.cache.default_profile_path, "")
 
         client.save({"conanfile.py": GenConanfile().with_settings("os", "compiler")})
-        client.run("create . pkg/0.1@lasote/testing -s compiler=gcc")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -s compiler=gcc")
         self.assertIn("544c1d8c53e9d269737e68e00ec66716171d2704", client.out)
         client.run("search pkg/0.1@lasote/testing")
         self.assertNotIn("os: None", client.out)
@@ -93,7 +93,7 @@ cppstd=11""", client.out)
         info = load(info_path)
         self.assertNotIn("os", info)
         # Explicitly specifying None, put it in the conaninfo.txt, but does not affect the hash
-        client.run("create . pkg/0.1@lasote/testing -s compiler=gcc -s os=None")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -s compiler=gcc -s os=None")
         self.assertIn("544c1d8c53e9d269737e68e00ec66716171d2704", client.out)
         client.run("search pkg/0.1@lasote/testing")
         self.assertIn("os: None", client.out)
@@ -112,12 +112,12 @@ cppstd=11""", client.out)
             """))
 
         client.save({"conanfile.py": GenConanfile().with_settings("os")})
-        client.run("create . test/1.9@lasote/testing -s os=Windows")
+        client.run("create . --name=test --version=1.9 --user=lasote --channel=testing -s os=Windows")
         assert "test/1.9@lasote/testing:3475bd55b91ae904ac96fde0f106a136ab951a5e" in client.out
 
         # Now the new one, adding a new setting that allows none
         client.save({"conanfile.py": GenConanfile().with_settings("os", "arch")})
-        client.run("create . test/1.9@lasote/testing -s os=Windows -s arch=None")
+        client.run("create . --name=test --version=1.9 --user=lasote --channel=testing -s os=Windows -s arch=None")
         assert "test/1.9@lasote/testing:3475bd55b91ae904ac96fde0f106a136ab951a5e" in client.out
 
     def test_settings_constraint_error_type(self):
@@ -130,7 +130,7 @@ class Test(ConanFile):
     """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing -s os=Linux")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux")
         self.assertIn("pkg/0.1@user/testing: OS!!: Linux", client.out)
 
     def test_settings_as_a_str(self):

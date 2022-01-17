@@ -215,9 +215,8 @@ def test_mixing_aliases_and_fix_versions():
     client.run("create . ")
     client.alias("ca/latest@",  "ca/1.0@")
 
-    client.save({"conanfile.py": GenConanfile("cb", "1.0")
-                .with_requirement("ca/1.0@")})
-    client.run("create . cb/1.0@")
+    client.save({"conanfile.py": GenConanfile("cb", "1.0").with_requirement("ca/1.0@")})
+    client.run("create . --name=cb --version=1.0")
     client.alias("cb/latest@",  "cb/1.0@")
 
     client.save({"conanfile.py": GenConanfile("cc", "1.0")

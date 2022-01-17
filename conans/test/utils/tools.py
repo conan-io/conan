@@ -764,7 +764,11 @@ class TurboTestClient(TestClient):
     def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        full_str = "{}@".format(repr(ref)) if not ref.user else repr(ref)
+        full_str = f"--name={ref.name} --version={ref.version}"
+        if ref.user:
+            full_str += f" --user={ref.user}"
+        if ref.channel:
+            full_str += f" --channel={ref.channel}"
         self.run("create . {} {}".format(full_str, args or ""),
                  assert_error=assert_error)
 

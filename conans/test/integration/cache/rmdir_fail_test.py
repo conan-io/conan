@@ -11,7 +11,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 def test_fail_rmdir():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . mypkg/0.1@lasote/testing")
+    client.run("create . --name=mypkg --version=0.1 --user=lasote --channel=testing")
     ref = RecipeReference.loads("mypkg/0.1@lasote/testing")
     pref = client.get_latest_package_reference(ref)
     build_folder = client.get_latest_pkg_layout(pref).build()

@@ -16,7 +16,7 @@ class RemoteChecksTest(unittest.TestCase):
 class Pkg(ConanFile):
     pass"""
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@lasote/testing")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("upload Pkg* --all -r=server1 --confirm")
         client.run("upload Pkg* --all -r=server2 --confirm")
 
@@ -69,10 +69,10 @@ class Pkg(ConanFile):
     options = {"opt": [1, 2, 3]}
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@lasote/testing -o pkg:opt=1")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg:opt=1")
         client.run("upload pkg* --all -r=server1 --confirm")
         client.run("remove * -p -f")
-        client.run("create . pkg/0.1@lasote/testing -o pkg:opt=2")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg:opt=2")
         package_id2 = re.search(r"pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
         client.run("upload Pkg* --all -r=server2 --confirm")
         client.run("remove * -p -f")
