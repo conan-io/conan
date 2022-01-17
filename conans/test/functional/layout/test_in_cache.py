@@ -8,7 +8,7 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.fixture
@@ -238,6 +238,9 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@")
+    ref = ConanFileReference.loads("hello/1.0")
+    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+    package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -254,9 +257,10 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_consumer})
     client.run("install .")
-    assert "**includedirs:['foo/include']**" in client.out
-    assert "**libdirs:['foo/libs']**" in client.out
-    assert "**libs:['foo']**" in client.out
+    out = str(client.out).replace(r"\\", "/").replace(package_folder, "")
+    assert "**includedirs:['foo/include']**" in out
+    assert "**libdirs:['foo/libs']**" in out
+    assert "**libs:['foo']**" in out
     cmake = client.load("hello-release-x86_64-data.cmake")
 
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/include")' in cmake
