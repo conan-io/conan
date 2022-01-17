@@ -238,9 +238,11 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . hello/1.0@")
-    ref = ConanFileReference.loads("hello/1.0")
-    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-    package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/") + "/"
+    rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+    ref = RecipeReference.loads("hello/1.0")
+    ref.revision = rrev
+    pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
+    package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
         from conans import ConanFile
