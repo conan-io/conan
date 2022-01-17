@@ -1,9 +1,9 @@
-
-from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag
+from conan.tools import args_to_string
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
-from conan.tools import args_to_string
 from conan.tools.build.cross_building import cross_building
+from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, libcxx_flag, \
+    build_type_link_flags
 from conan.tools.env import Environment
 from conan.tools.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
@@ -38,6 +38,7 @@ class AutotoolsToolchain:
         self.arch_flag = architecture_flag(self._conanfile.settings)
         # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
         self.build_type_flags = build_type_flags(self._conanfile.settings)
+        self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
 
         # Cross build
         self._host = None
@@ -102,6 +103,9 @@ class AutotoolsToolchain:
         if self.build_type_flags:
             self.cxxflags.extend(self.build_type_flags)
             self.cflags.extend(self.build_type_flags)
+
+        if self.build_type_link_flags:
+            self.ldflags.extend(self.build_type_link_flags)
 
         if self.fpic:
             self.cxxflags.append("-fPIC")
