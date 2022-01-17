@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conans.client.tools import environment_append
+from conans.util.env import environment_update
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, load
 import json
@@ -27,26 +27,26 @@ class ConflictDiamondTest(unittest.TestCase):
         files = {CONANFILE: conanfile}
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export . lasote/stable")
+            self.client.run("export . --user=lasote --channel=stable")
 
     def setUp(self):
         self.client = TestClient()
-        self._export("Hello0", "0.1")
-        self._export("Hello0", "0.2")
-        self._export("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._export("Hello2", "0.1", ["Hello0/0.2@lasote/stable"])
+        self._export("hello0", "0.1")
+        self._export("hello0", "0.2")
+        self._export("hello1", "0.1", ["hello0/0.1@lasote/stable"])
+        self._export("Hello2", "0.1", ["hello0/0.2@lasote/stable"])
 
     def test_conflict(self):
         """ There is a conflict in the graph: branches with requirement in different
             version, Conan will raise
         """
-        self._export("Hello3", "0.1", ["Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable"],
+        self._export("Hello3", "0.1", ["hello1/0.1@lasote/stable", "hello2/0.1@lasote/stable"],
                      export=False)
         self.client.run("install . --build missing", assert_error=True)
-        self.assertIn("Conflict in Hello2/0.1@lasote/stable:\n"
-                      "    'Hello2/0.1@lasote/stable' requires 'Hello0/0.2@lasote/stable' "
-                      "while 'Hello1/0.1@lasote/stable' requires 'Hello0/0.1@lasote/stable'.\n"
-                      "    To fix this conflict you need to override the package 'Hello0' in "
+        self.assertIn("Conflict in hello2/0.1@lasote/stable:\n"
+                      "    'hello2/0.1@lasote/stable' requires 'hello0/0.2@lasote/stable' "
+                      "while 'hello1/0.1@lasote/stable' requires 'hello0/0.1@lasote/stable'.\n"
+                      "    To fix this conflict you need to override the package 'hello0' in "
                       "your root package.", self.client.out)
         self.assertNotIn("Generated conaninfo.txt", self.client.out)
 
@@ -55,11 +55,11 @@ class ConflictDiamondTest(unittest.TestCase):
             library, so all the graph will use the version from the consumer project
         """
         self._export("Hello3", "0.1",
-                     ["Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable",
-                      "Hello0/0.1@lasote/stable"], export=False)
+                     ["hello1/0.1@lasote/stable", "hello2/0.1@lasote/stable",
+                      "hello0/0.1@lasote/stable"], export=False)
         self.client.run("install . --build missing", assert_error=False)
-        self.assertIn("Hello2/0.1@lasote/stable: requirement Hello0/0.2@lasote/stable overridden"
-                      " by Hello3/0.1 to Hello0/0.1@lasote/stable",
+        self.assertIn("hello2/0.1@lasote/stable: requirement hello0/0.2@lasote/stable overridden"
+                      " by Hello3/0.1 to hello0/0.1@lasote/stable",
                       self.client.out)
 
 
@@ -70,22 +70,22 @@ def test_create_werror():
 class Pkg(ConanFile):
 pass
     """})
-    client.run("export . LibA/0.1@user/channel")
-    client.run("export conanfile.py LibA/0.2@user/channel")
+    client.run("export . --name=LibA --version=0.1 --user=user --channel=channel")
+    client.run("export conanfile.py --name=LibA --version=0.2 --user=user --channel=channel")
     client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
 requires = "LibA/0.1@user/channel"
     """})
-    client.run("export ./ LibB/0.1@user/channel")
+    client.run("export ./ --name=LibB --version=0.1 --user=user --channel=channel")
     client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
 requires = "LibA/0.2@user/channel"
     """})
-    client.run("export . LibC/0.1@user/channel")
+    client.run("export . --name=LibC --version=0.1 --user=user --channel=channel")
     client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
 requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
     """})
-    client.run("create ./conanfile.py Consumer/0.1@lasote/testing", assert_error=True)
+    client.run("create ./conanfile.py consumer/0.1@lasote/testing", assert_error=True)
     self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
                   client.out)

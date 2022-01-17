@@ -7,10 +7,9 @@ import textwrap
 import unittest
 
 import pytest
-from mock import Mock
 
 from conans.client.remote_manager import uncompress_file
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
@@ -81,8 +80,8 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         t.run("create . user/channel")
 
         # Check if the metadata travels through the Conan commands
-        pref = t.get_latest_prev(ConanFileReference.loads("lib/version@user/channel"),
-                                 NO_SETTINGS_PACKAGE_ID)
+        pref = t.get_latest_package_reference(RecipeReference.loads("lib/version@user/channel"),
+                                              NO_SETTINGS_PACKAGE_ID)
         pkg_folder = t.get_latest_pkg_layout(pref).package()
 
         # 1) When copied to the package folder, the metadata is lost
@@ -93,7 +92,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         self._test_for_metadata(pkg_folder, 'file.txt', dot_file_expected=True)
 
         # 3) In the upload process, the metadata is lost again
-        export_download_folder = t.get_latest_ref_layout(pref).download_export()
+        export_download_folder = t.get_latest_ref_layout(pref.ref).download_export()
         tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
         self.assertFalse(os.path.exists(tgz))
         t.run("upload lib/version@user/channel -r default")

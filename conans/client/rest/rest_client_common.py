@@ -6,7 +6,7 @@ from conans.client.rest import response_to_str
 from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            AuthenticationException, RecipeNotFoundException,
                            PackageNotFoundException)
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -211,7 +211,7 @@ class RestCommonMethods(object):
         if files_to_upload:
             self._upload_recipe(ref, files_to_upload, retry, retry_wait)
         if deleted:
-            self._remove_conanfile_files(ref, deleted)
+            self._remove_recipe_files(ref, deleted)
 
     def get_recipe_snapshot(self, ref):
         # this method is used only for UPLOADING, then it requires the credentials
@@ -229,10 +229,19 @@ class RestCommonMethods(object):
         """
         url = self.router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
-        return [ConanFileReference.loads(reference) for reference in response]
+        # We need to filter the "_/_" user and channel from Artifactory
+        ret = []
+        for reference in response:
+            ref = RecipeReference.loads(reference)
+            if ref.user == "_":
+                ref.user = None
+            if ref.channel == "_":
+                ref.channel = None
+            ret.append(ref)
+        return ret
 
-    def search_packages(self, ref, query):
+    def search_packages(self, ref):
         """Client is filtering by the query"""
-        url = self.router.search_packages(ref, query)
+        url = self.router.search_packages(ref)
         package_infos = self.get_json(url)
         return package_infos

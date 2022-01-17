@@ -1,15 +1,17 @@
 from conans.cli.output import ScopedOutput, ConanOutput
 from conans.client.source import retrieve_exports_sources
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
 from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException, \
     ConanException
 from multiprocessing.pool import ThreadPool
+
+from conans.model.recipe_ref import RecipeReference
 
 
 def download(app, ref, package_ids, recipe):
     remote_manager, cache, loader = app.remote_manager, app.cache, app.loader
     hook_manager = app.hook_manager
-    assert(isinstance(ref, ConanFileReference))
+    assert(isinstance(ref, RecipeReference))
     scoped_output = ScopedOutput(str(ref), ConanOutput())
     remote = app.selected_remote
     if not remote:
@@ -22,13 +24,13 @@ def download(app, ref, package_ids, recipe):
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
     try:
-        if not ref.revision:
-            ref, _ = remote_manager.get_recipe(ref, remote)
+        if ref.revision is None:
+            ref = remote_manager.get_latest_recipe_reference(ref, remote)
+        else:  # to make sure it exists in the server, the get_recipe() is only for valid things
+            ref = remote_manager.get_recipe_revision_reference(ref, remote)
+        remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref)
-    else:
-        if not cache.exists_rrev(ref):
-            ref = remote_manager.get_recipe(ref, remote)
 
     layout = cache.ref_layout(ref)
     conan_file_path = layout.conanfile()
@@ -39,13 +41,13 @@ def download(app, ref, package_ids, recipe):
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
-            scoped_output.info("Getting the complete package list from '%s'..." % ref.full_str())
-            packages_props = remote_manager.search_packages(remote, ref, None)
-            package_ids = list(packages_props.keys())
+            scoped_output.info("Getting the complete package list from '%s'..." % ref.repr_notime())
+            packages = remote_manager.search_packages(remote, ref)
+            package_ids = [p.package_id for p in packages.keys()]
             if not package_ids:
                 scoped_output.warning("No remote binary packages found in remote")
 
-        parallel = cache.config.parallel_download
+        parallel = cache.new_config.get("core.download:parallel", int)
         _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote,
                            scoped_output, parallel)
     hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,
@@ -56,10 +58,10 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
                        parallel):
 
     def _download(package_id):
-        pref = PackageReference(ref, package_id)
+        pref = PkgReference(ref, package_id)
         try:
             if not pref.revision:
-                pref, _ = remote_manager.get_latest_package_revision(pref, remote)
+                pref = remote_manager.get_latest_package_reference(pref, remote)
         except NotFoundException:
             raise PackageNotFoundException(pref)
         else:
@@ -67,9 +69,11 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
 
         if scoped_output and not scoped_output.is_terminal:
             message = f"Downloading {str(pref)}" if not skip_download \
-                else f"Skip {pref.full_str()} download, already in cache"
+                else f"Skip {str(pref)} download, already in cache"
             scoped_output.info(message)
 
+        if not pref.revision:
+            pref = remote_manager.get_latest_package_reference(pref, remote)
         if not skip_download:
             remote_manager.get_package(conanfile, pref, remote)
 

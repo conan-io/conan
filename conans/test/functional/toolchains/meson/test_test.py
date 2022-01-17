@@ -26,6 +26,9 @@ class MesonTest(TestMesonBase):
             settings = "os", "compiler", "build_type", "arch"
             generators = "PkgConfigDeps"
 
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def generate(self):
                 tc = MesonToolchain(self)
                 tc.generate()
@@ -42,7 +45,7 @@ class MesonTest(TestMesonBase):
         """)
 
     def test_reuse(self):
-        self.t.run("new hello/0.1 --template=cmake_lib")
+        self.t.run("new cmake_lib -d name=hello -d version=0.1")
 
         test_package_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 

@@ -10,7 +10,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
-from conans.util.files import save, load
+from conans.util.files import save
 
 
 @pytest.mark.tool_cmake
@@ -25,7 +25,6 @@ class CustomConfigurationTest(unittest.TestCase):
 
             def generate(self):
                 cmake = CMakeDeps(self)
-                cmake.configurations.append("ReleaseShared")
                 if self.dependencies["hello"].options.shared:
                     cmake.configuration = "ReleaseShared"
                 cmake.generate()
@@ -60,7 +59,7 @@ class CustomConfigurationTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(path_with_spaces=False)
-        self.client.run("new hello/0.1 --template=cmake_lib")
+        self.client.run("new cmake_lib -d name=hello -d version=0.1")
         self.client.run("create . hello/0.1@ -s compiler.version=15 "
                         "-s build_type=Release -o hello:shared=True -tf=None")
         self.client.run("create . hello/0.1@ -s compiler.version=15 "
@@ -144,7 +143,7 @@ class CustomSettingsTest(unittest.TestCase):
         settings = get_default_settings_yml()
         settings = settings.replace("Release", "MyRelease")
         save(self.client.cache.settings_path, settings)
-        self.client.run("new hello/0.1 --template=cmake_lib")
+        self.client.run("new cmake_lib -d name=hello -d version=0.1")
         cmake = self.client.load("CMakeLists.txt")
 
         cmake = cmake.replace("cmake_minimum_required", """

@@ -3,16 +3,13 @@ import os
 from conan.tools.env import Environment
 
 
-def runenv_from_cpp_info(conanfile, dep, os_name):
+def runenv_from_cpp_info(dep, os_name):
     """ return an Environment deducing the runtime information from a cpp_info
     """
-    # FIXME: Remove conanfile arg
     dyn_runenv = Environment()
-
-    cpp_info = dep.cpp_info
-    cpp_info = cpp_info.copy()
-    cpp_info.aggregate_components()
+    cpp_info = dep.cpp_info.aggregated_components()
     pkg_folder = dep.package_folder
+    # FIXME: This code is dead, cpp_info cannot be None
     if cpp_info is None:  # This happens when the dependency is a private one = BINARY_SKIP
         return dyn_runenv
 
@@ -72,11 +69,12 @@ class VirtualRunEnv:
 
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-        for _, dep in list(host_req.items()) + list(test_req.items()):
+        for require, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
                 runenv.compose_env(dep.runenv_info)
-            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep,
-                                                    self._conanfile.settings.get_safe("os")))
+            if require.run:  # Only if the require is run (shared or application to be run)
+                _os = self._conanfile.settings.get_safe("os")
+                runenv.compose_env(runenv_from_cpp_info(dep, _os))
 
         return runenv
 

@@ -1,9 +1,8 @@
 content = """
 <html lang="en">
     <head>
-        {# For backwards compatibility we prefer local assets over the ones in internet #}
-        <script type="text/javascript" src="{{ assets.vis_js|default("https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.js") }}"></script>
-        <link href="{{ assets.vis_css|default("https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.css") }}" rel="stylesheet" type="text/css"/>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.js"></script>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.css"" rel="stylesheet" type="text/css"/>
     </head>
 
     <body>

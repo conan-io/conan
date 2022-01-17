@@ -32,7 +32,7 @@ class Lib(ConanFile):
         client.save({"conanfile.py": libconanfile,
                      "License.md": "lib license",
                      "otherfile": ""})
-        client.run("create . Lib/0.1@user/testing")
+        client.run("create . lib/0.1@user/testing")
         self.assertNotIn("Lib deploy()", client.out)
 
         if deploy_to_abs:
@@ -44,7 +44,7 @@ class Lib(ConanFile):
 from conans.tools import save
 
 class Pkg(ConanFile):
-    requires = "Lib/0.1@user/testing"
+    requires = "lib/0.1@user/testing"
 
     def build(self):
         save("myapp.exe", "myexe")
@@ -58,16 +58,16 @@ class Pkg(ConanFile):
         self.copy_deps("*.dll", dst="%s")
 """ % dll_folder.replace("\\", "/")
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
         self.assertNotIn("deploy()", client.out)
 
         def test_install_in(folder):
             client.current_folder = temp_folder()
-            client.run("install Pkg/0.1@user/testing --install-folder=%s" % folder)
+            client.run("install --reference=pkg/0.1@user/testing --install-folder=%s" % folder)
 
-            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.dll' file: mylib.dll",
+            self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.dll' file: mylib.dll",
                           client.out)
-            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.exe' file: myapp.exe",
+            self.assertIn("pkg/0.1@user/testing deploy(): Copied 1 '.exe' file: myapp.exe",
                           client.out)
             deploy_manifest = FileTreeManifest.loads(
                     client.load(os.path.join(folder, "deploy_manifest.txt")))

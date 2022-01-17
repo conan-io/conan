@@ -56,9 +56,6 @@ class _Remotes(object):
     def __bool__(self):
         return bool(self._remotes)
 
-    def __nonzero__(self):
-        return self.__bool__()
-
     def rename(self, remote, new_remote_name):
         if self.get_by_name(new_remote_name):
             raise ConanException("Remote '%s' already exists" % new_remote_name)
@@ -140,18 +137,10 @@ class RemoteRegistry(object):
 
     def initialize_remotes(self):
         if not os.path.exists(self._filename):
-            self._output.warning("Remotes registry file missing, "
-                                 "creating default one in %s" % self._filename)
             remotes = _Remotes()
             remote = Remote(CONAN_CENTER_REMOTE_NAME, "https://center.conan.io", True, False)
             remotes.add(remote)
             self.save_remotes(remotes)
-
-    def reset_remotes(self):
-        if os.path.exists(self._filename):
-            os.chmod(self._filename, stat.S_IWRITE)
-            os.remove(self._filename)
-        self.initialize_remotes()
 
     def _load_remotes(self):
         self.initialize_remotes()

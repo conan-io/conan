@@ -22,5 +22,5 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . name/version@ -s os=Linux', assert_error=True)
-        self.assertIn("Conan v2 incompatible: 'self.cpp_info' access in package_id() method is deprecated", t.out)
+        self.assertIn("'self.cpp_info' access in package_id() method is deprecated", t.out)
 

@@ -48,7 +48,7 @@ tools_locations = {
         "default": "0.28",
         "0.28": {
             "path": {
-                # Using chocolatey in Windows -> choco install pkgconfiglite --version 0.28
+                # Using chocolatey in Windows -> choco install --reference=pkgconfiglite --version 0.28
                 'Windows': "C:/ProgramData/chocolatey/lib/pkgconfiglite/tools/pkg-config-lite-0.28-1/bin"
             }
         }},
@@ -106,11 +106,12 @@ tools_locations = {
         "exe": "make",
         "system": {"path": {'Windows': "C:/cygwin64/bin"}},
     },
-    'bazel':  {
+    'bazel': {
         "default": "system",
         "system": {"path": {'Windows': 'C:/bazel/bin',
                             "Darwin": '/Users/jenkins/bin'}},
     },
+    'premake': {},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",

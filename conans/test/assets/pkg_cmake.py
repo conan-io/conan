@@ -1,12 +1,12 @@
 import textwrap
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 
 
 def pkg_cmake(name, version, requires=None, exe=False):
-    refs = [ConanFileReference.loads(r) for r in requires or []]
+    refs = [RecipeReference.loads(r) for r in requires or []]
     pkg_name = name
     name = name.replace(".", "_")
     conanfile = textwrap.dedent("""\
@@ -79,6 +79,9 @@ def pkg_cmake_test(require_name):
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps", "VirtualRunEnv"
 
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def layout(self):
                 cmake_layout(self)
 
@@ -102,7 +105,7 @@ def pkg_cmake_test(require_name):
 
 
 def pkg_cmake_app(name, version, requires=None):
-    refs = [ConanFileReference.loads(r) for r in requires or []]
+    refs = [RecipeReference.loads(r) for r in requires or []]
     pkg_name = name
     name = name.replace(".", "_")
     conanfile = textwrap.dedent("""\
@@ -118,6 +121,7 @@ def pkg_cmake_app(name, version, requires=None):
             {deps}
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps"
+            package_type = "application"
 
             def layout(self):
                 cmake_layout(self)

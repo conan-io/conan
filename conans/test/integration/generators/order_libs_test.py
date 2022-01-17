@@ -39,7 +39,7 @@ class OrderLibsTest(unittest.TestCase):
         files = {CONANFILE: conanfile}
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export . lasote/stable")
+            self.client.run("export . --user=lasote --channel=stable")
 
     @pytest.mark.xfail(reason="Generator cmake to be removed")
     def test_reuse(self):

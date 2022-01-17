@@ -84,7 +84,7 @@ text=value
         self.assertEqual(config.users, {"lasote": "defaultpass", "pepe": "pepepass"})
         self.assertEqual(config.host_name, "localhost")
         self.assertEqual(config.public_port, 12345)
-        self.assertEqual(config.public_url, "https://localhost:12345/v1")
+        self.assertEqual(config.public_url, "https://localhost:12345/v2")
 
         # Now check with environments
         tmp_storage = temp_folder()
@@ -109,4 +109,4 @@ text=value
         self.assertEqual(config.users, {"lasote": "lasotepass", "pepe2": "pepepass2"})
         self.assertEqual(config.host_name, "remotehost")
         self.assertEqual(config.public_port, 33333)
-        self.assertEqual(config.public_url, "http://remotehost:33333/v1")
+        self.assertEqual(config.public_url, "http://remotehost:33333/v2")

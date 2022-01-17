@@ -1,5 +1,4 @@
 import os
-import textwrap
 
 from conan.tools.files import save_toolchain_args
 from conan.tools.gnu import Autotools

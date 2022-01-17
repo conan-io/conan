@@ -2,11 +2,9 @@ import textwrap
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
-from conans.client.build.cppstd_flags import cppstd_from_settings
-from conans.client.tools.oss import cross_building, get_cross_building_settings
+from conan.tools.build.cross_building import cross_building
 from conans.util.files import save
 
 
@@ -41,6 +39,7 @@ class MesonToolchain(object):
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
     {% if cpp_std %}cpp_std = {{cpp_std}}{% endif %}
+    {% if backend %}backend = {{backend}}{% endif %}
     c_args = {{c_args}} + preprocessor_definitions
     c_link_args = {{c_link_args}}
     cpp_args = {{cpp_args}} + preprocessor_definitions
@@ -66,14 +65,15 @@ class MesonToolchain(object):
     endian = {{endian}}
     """)
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, backend=None):
         self._conanfile = conanfile
+        self._backend = self._get_backend(backend)
         self._build_type = self._conanfile.settings.get_safe("build_type")
         self._base_compiler = self._conanfile.settings.get_safe("compiler.base") or \
                               self._conanfile.settings.get_safe("compiler")
         self._vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
                       self._conanfile.settings.get_safe("compiler.runtime")
-        self._cppstd = cppstd_from_settings(self._conanfile.settings)
+        self._cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._shared = self._conanfile.options.get_safe("shared")
         self._fpic = self._conanfile.options.get_safe("fPIC")
         self._build_env = VirtualBuildEnv(self._conanfile).vars()
@@ -99,6 +99,7 @@ class MesonToolchain(object):
         self.buildtype = self._to_meson_build_type(self._build_type) if self._build_type else None
         self.default_library = self._to_meson_shared(self._shared) \
             if self._shared is not None else None
+        self.backend = self._to_meson_value(self._backend)
 
         # https://mesonbuild.com/Builtin-options.html#base-options
         self.b_vscrt = self._to_meson_vscrt(self._vscrt)
@@ -115,7 +116,18 @@ class MesonToolchain(object):
         self.cpp_link_args = self._to_meson_value(self._env_array('LDFLAGS'))
         self.pkg_config_path = "'%s'" % self._conanfile.generators_folder
 
-        check_using_build_profile(self._conanfile)
+    def _get_backend(self, recipe_backend):
+        # Returns the name of the backend used by Meson
+        conanfile = self._conanfile
+        # Downstream consumer always higher priority
+        backend_conf = conanfile.conf["tools.meson.mesontoolchain:backend"]
+        if backend_conf:
+            return backend_conf
+        # second priority: the recipe one:
+        if recipe_backend:
+            return recipe_backend
+        # if not defined, deduce automatically the default one (ninja)
+        return 'ninja'
 
     @staticmethod
     def _to_meson_value(value):
@@ -210,6 +222,7 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Builtin-options.html#core-options
             "buildtype": self.buildtype,
             "default_library": self.default_library,
+            "backend": self.backend,
             # https://mesonbuild.com/Builtin-options.html#base-options
             "b_vscrt": self.b_vscrt,
             "b_staticpic": self.b_staticpic,
@@ -290,7 +303,11 @@ class MesonToolchain(object):
 
     @property
     def _cross_content(self):
-        os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
+        os_host = self._conanfile.settings.get_safe("os")
+        arch_host = self._conanfile.settings.get_safe("arch")
+        os_build = self._conanfile.settings_build.get_safe('os')
+        arch_build = self._conanfile.settings_build.get_safe('arch')
+
         os_target, arch_target = os_host, arch_host  # TODO: assume target the same as a host for now?
 
         build_machine = self._to_meson_machine(os_build, arch_build)

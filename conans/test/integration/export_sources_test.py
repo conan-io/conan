@@ -1,24 +1,28 @@
+import copy
 import os
+import platform
 import time
 import unittest
 from collections import OrderedDict
 
+import pytest
 from mock import patch
 from parameterized.parameterized import parameterized
 
-from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_SRC_FOLDER, EXPORT_TGZ_NAME
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.server.revision_list import RevisionList
-from conans.test.utils.test_files import scan_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
-from conans.util.files import load, md5sum, save
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import scan_folder, temp_folder
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
+from conans.util.files import load, rmdir
 
 conanfile_py = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports = "*.h", "*.cpp", "*.lic"
     def package(self):
@@ -30,7 +34,7 @@ combined_conanfile = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "*.h", "*.cpp"
     exports = "*.txt", "*.lic"
@@ -44,7 +48,7 @@ nested_conanfile = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "src/*.h", "src/*.cpp"
     exports = "src/*.txt", "src/*.lic"
@@ -58,7 +62,7 @@ overlap_conanfile = """
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     exports_sources = "src/*.h", "*.txt"
     exports = "src/*.txt", "*.h", "src/*.lic"
@@ -77,18 +81,18 @@ class ExportsSourcesTest(unittest.TestCase):
                                ("other", self.other_server)])
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
         self.client = client
-        self.ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
-        self.pref = PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID)
+        self.ref = RecipeReference.loads("hello/0.1@lasote/testing")
+        self.pref = PkgReference(self.ref, NO_SETTINGS_PACKAGE_ID)
 
     def _get_folders(self):
-        latest_rrev = self.client.cache.get_latest_rrev(self.ref)
+        latest_rrev = self.client.cache.get_latest_recipe_reference(self.ref)
         ref_layout = self.client.cache.ref_layout(latest_rrev)
         self.source_folder = ref_layout.source()
         self.export_folder = ref_layout.export()
         self.export_sources_folder = ref_layout.export_sources()
 
-        latest_prev = self.client.cache.get_latest_prev(PackageReference(latest_rrev,
-                                                                         NO_SETTINGS_PACKAGE_ID))
+        latest_prev = self.client.cache.get_latest_package_reference(PkgReference(latest_rrev,
+                                                                     NO_SETTINGS_PACKAGE_ID))
         if latest_prev:
             pkg_layout = self.client.cache.pkg_layout(latest_prev)
             self.package_folder = pkg_layout.package()
@@ -129,7 +133,8 @@ class ExportsSourcesTest(unittest.TestCase):
 
         server = server or self.server
         rev, _ = server.server_store.get_last_revision(self.ref)
-        ref = self.ref.copy_with_rev(rev)
+        ref = copy.copy(self.ref)
+        ref.revision = rev
         self.assertEqual(scan_folder(server.server_store.export(ref)), expected_server)
 
     def _check_export_folder(self, mode, export_folder=None, export_src_folder=None):
@@ -199,7 +204,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     def _check_manifest(self, mode):
         manifest = load(os.path.join(self.client.current_folder,
-                                     ".conan_manifests/Hello/0.1/lasote/testing/export/"
+                                     ".conan_manifests/hello/0.1/lasote/testing/export/"
                                      "conanmanifest.txt"))
 
         if mode == "exports_sources":
@@ -254,12 +259,12 @@ class ExportsSourcesTest(unittest.TestCase):
     def test_export(self, mode):
         self._create_code(mode)
 
-        self.client.run("export . lasote/testing")
+        self.client.run("export . --user=lasote --channel=testing")
         self._get_folders()
         self._check_export_folder(mode)
 
         # now build package
-        self.client.run("install Hello/0.1@lasote/testing --build=missing")
+        self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
         # Source folder and package should be exatly the same
         self._get_folders()
         self._check_export_folder(mode)
@@ -267,16 +272,16 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_package_folder(mode)
 
         # upload to remote
-        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing --all -r default")
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
 
         # remove local
-        self.client.run('remove Hello/0.1@lasote/testing -f')
+        self.client.run('remove hello/0.1@lasote/testing -f')
         self.assertFalse(os.path.exists(self.export_folder))
 
         # install from remote
-        self.client.run("install Hello/0.1@lasote/testing")
+        self.client.run("install --reference=hello/0.1@lasote/testing")
         self.assertFalse(os.path.exists(self.source_folder))
         self._check_export_installed_folder(mode)
         self._check_package_folder(mode)
@@ -286,20 +291,20 @@ class ExportsSourcesTest(unittest.TestCase):
     def test_export_upload(self, mode):
         self._create_code(mode)
 
-        self.client.run("export . lasote/testing")
+        self.client.run("export . --user=lasote --channel=testing")
         self._get_folders()
 
-        self.client.run("upload Hello/0.1@lasote/testing -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self.assertFalse(os.path.exists(self.source_folder))
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
 
         # remove local
-        self.client.run('remove Hello/0.1@lasote/testing -f')
+        self.client.run('remove hello/0.1@lasote/testing -f')
         self.assertFalse(os.path.exists(self.export_folder))
 
         # install from remote
-        self.client.run("install Hello/0.1@lasote/testing --build")
+        self.client.run("install --reference=hello/0.1@lasote/testing --build")
         self._get_folders()
         self._check_export_folder(mode)
         self._check_source_folder(mode)
@@ -312,19 +317,19 @@ class ExportsSourcesTest(unittest.TestCase):
         """
         self._create_code(mode)
 
-        self.client.run("export . lasote/testing")
-        self.client.run("install Hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
-        self.client.run('remove Hello/0.1@lasote/testing -f')
-        self.client.run("install Hello/0.1@lasote/testing")
+        self.client.run("export . --user=lasote --channel=testing")
+        self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
+        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run('remove hello/0.1@lasote/testing -f')
+        self.client.run("install --reference=hello/0.1@lasote/testing")
         self._get_folders()
 
         # upload to remote again, the folder remains as installed
-        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing --all -r default")
         self._check_export_installed_folder(mode)
         self._check_server_folder(mode)
 
-        self.client.run("upload Hello/0.1@lasote/testing --all -r=other")
+        self.client.run("upload hello/0.1@lasote/testing --all -r=other")
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode, self.other_server)
 
@@ -333,15 +338,15 @@ class ExportsSourcesTest(unittest.TestCase):
     def test_update(self, mode):
         self._create_code(mode)
 
-        self.client.run("export . lasote/testing")
-        self.client.run("install Hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload Hello/0.1@lasote/testing --all -r default")
-        self.client.run('remove Hello/0.1@lasote/testing -f')
-        self.client.run("install Hello/0.1@lasote/testing")
+        self.client.run("export . --user=lasote --channel=testing")
+        self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
+        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run('remove hello/0.1@lasote/testing -f')
+        self.client.run("install --reference=hello/0.1@lasote/testing")
 
         # upload to remote again, the folder remains as installed
-        self.client.run("install Hello/0.1@lasote/testing --update")
-        self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.out)
+        self.client.run("install --reference=hello/0.1@lasote/testing --update")
+        self.assertIn("hello/0.1@lasote/testing: Already installed!", self.client.out)
         self._get_folders()
         self._check_export_installed_folder(mode)
 
@@ -350,12 +355,68 @@ class ExportsSourcesTest(unittest.TestCase):
 
         the_time = time.time() + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
-            self.client.run("upload Hello/0.1@lasote/testing --all -r default")
+            self.client.run("upload hello/0.1@lasote/testing --all -r default")
 
-        ref = ConanFileReference.loads('Hello/0.1@lasote/testing')
-        self.client.run(f"remove Hello/0.1@lasote/testing"
-                        f"#{self.client.cache.get_latest_rrev(ref).revision} -f")
+        ref = RecipeReference.loads('hello/0.1@lasote/testing')
+        self.client.run(f"remove hello/0.1@lasote/testing"
+                        f"#{self.client.cache.get_latest_recipe_reference(ref).revision} -f")
 
-        self.client.run("install Hello/0.1@lasote/testing --update")
+        self.client.run("install --reference=hello/0.1@lasote/testing --update")
         self._get_folders()
         self._check_export_installed_folder(mode, updated=True)
+
+
+def test_test_package_copied():
+    """The exclusion of the test_package folder have been removed so now we test that indeed is
+    exported"""
+
+    client = TestClient()
+    client.save({"conanfile.py":
+                     GenConanfile().with_exports("*").with_exports_sources("*"),
+                 "test_package/foo.txt": "bar"})
+    client.run("export . --name foo --version 1.0")
+    assert "Copied 1 '.txt' file" in client.out
+
+
+def absolute_existing_folder():
+    tmp = temp_folder()
+    with open(os.path.join(tmp, "source.cpp"), "a") as _f:
+        _f.write("foo")
+    return tmp
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")
+def test_exports_does_not_follow_symlink():
+    linked_abs_folder = absolute_existing_folder()
+    client = TurboTestClient(default_server_user=True)
+    conanfile = GenConanfile().with_package('self.copy("*")').with_exports_sources("*")
+    client.save({"conanfile.py": conanfile, "foo.txt": "bar"})
+    os.symlink(linked_abs_folder, os.path.join(client.current_folder, "linked_folder"))
+    pref = client.create(RecipeReference.loads("lib/1.0"), conanfile=False)
+    exports_sources_folder = client.get_latest_ref_layout(pref.ref).export_sources()
+    assert os.path.islink(os.path.join(exports_sources_folder, "linked_folder"))
+    assert os.path.exists(os.path.join(exports_sources_folder, "linked_folder", "source.cpp"))
+
+    # Check files have been copied to the build
+    build_folder = client.get_latest_pkg_layout(pref).build()
+    assert os.path.islink(os.path.join(build_folder, "linked_folder"))
+    assert os.path.exists(os.path.join(build_folder, "linked_folder", "source.cpp"))
+
+    # Check package files are there
+    package_folder = client.get_latest_pkg_layout(pref).package()
+    assert os.path.islink(os.path.join(package_folder, "linked_folder"))
+    assert os.path.exists(os.path.join(package_folder, "linked_folder", "source.cpp"))
+
+    # Check that the manifest doesn't contain the symlink nor the source.cpp
+    contents = load(os.path.join(package_folder, "conanmanifest.txt"))
+    assert "foo.txt" in contents
+    assert "linked_folder" not in contents
+    assert "source.cpp" not in contents
+
+    # Now is a broken link, but the files are not in the cache, just a broken link
+    rmdir(linked_abs_folder)
+    assert not os.path.exists(os.path.join(exports_sources_folder, "linked_folder", "source.cpp"))
+    assert not os.path.exists(os.path.join(build_folder, "linked_folder", "source.cpp"))
+    assert not os.path.exists(os.path.join(package_folder, "linked_folder", "source.cpp"))
+
+

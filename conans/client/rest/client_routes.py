@@ -1,8 +1,8 @@
 from urllib.parse import quote, urlencode
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.rest_routes import RestRoutes
-from conans.paths import CONAN_MANIFEST, CONANINFO, ARTIFACTS_PROPERTIES_PUT_PREFIX
+from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 
 
 def _format_ref(url, ref, matrix_params=""):
@@ -15,7 +15,7 @@ def _format_ref(url, ref, matrix_params=""):
 def _format_pref(url, pref, matrix_params=""):
     ref = pref.ref
     url = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
-                     channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
+                     channel=ref.channel or "_", revision=ref.revision, package_id=pref.package_id,
                      p_revision=pref.revision, matrix_params=matrix_params)
     return url
 
@@ -28,11 +28,12 @@ def _remove_put_prefix(artifacts_properties):
         yield key, value
 
 
-class ClientCommonRouter(object):
-    """Search urls shared between v1 and v2"""
+class ClientV2Router:
+    """Builds urls for v2"""
 
-    def __init__(self, base_url, artifacts_properties, matrix_params):
-        self.base_url = base_url
+    def __init__(self, root_url, artifacts_properties, matrix_params):
+        self.root_url = root_url
+        self.base_url = "{}/v2/".format(root_url)
         self.routes = RestRoutes(matrix_params=matrix_params)
 
         if artifacts_properties:
@@ -43,13 +44,14 @@ class ClientCommonRouter(object):
             self._matrix_params_str = ""
 
     def ping(self):
-        return self.base_url + self.routes.ping
+        # FIXME: The v2 ping is not returning capabilities
+        return "{}/v1/".format(self.root_url) + self.routes.ping
 
     def search(self, pattern, ignorecase):
         """URL search recipes"""
         query = ''
         if pattern:
-            if isinstance(pattern, ConanFileReference):
+            if isinstance(pattern, RecipeReference):
                 pattern = repr(pattern)
             params = {"q": pattern}
             if not ignorecase:
@@ -57,13 +59,11 @@ class ClientCommonRouter(object):
             query = "?%s" % urlencode(params)
         return self.base_url + "%s%s" % (self.routes.common_search, query)
 
-    def search_packages(self, ref, query=None):
+    def search_packages(self, ref):
         """URL search packages for a recipe"""
         route = self.routes.common_search_packages_revision \
             if ref.revision else self.routes.common_search_packages
         url = _format_ref(route, ref)
-        if query:
-            url += "?%s" % urlencode({"q": query})
         return self.base_url + url
 
     def oauth_authenticate(self):
@@ -74,22 +74,6 @@ class ClientCommonRouter(object):
 
     def common_check_credentials(self):
         return self.base_url + self.routes.common_check_credentials
-
-
-class ClientV1Router(ClientCommonRouter):
-    """Builds urls for v1"""
-
-    def __init__(self, base_url, artifact_properties, matrix_params):
-        base_url = "{}/v1/".format(base_url)
-        super(ClientV1Router, self).__init__(base_url, artifact_properties, matrix_params)
-
-
-class ClientV2Router(ClientCommonRouter):
-    """Builds urls for v2"""
-
-    def __init__(self, base_url, artifacts_properties, matrix_params):
-        base_url = "{}/v2/".format(base_url)
-        super(ClientV2Router, self).__init__(base_url, artifacts_properties, matrix_params)
 
     def recipe_file(self, ref, path, add_matrix_params=False):
         """Recipe file url"""
@@ -188,5 +172,6 @@ class ClientV2Router(ClientCommonRouter):
     def _format_pref_path(url, pref, path, matrix_params):
         ref = pref.ref
         return url.format(name=ref.name, version=ref.version, username=ref.user or "_",
-                          channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
+                          channel=ref.channel or "_", revision=ref.revision,
+                          package_id=pref.package_id,
                           p_revision=pref.revision, path=path, matrix_params=matrix_params or "")

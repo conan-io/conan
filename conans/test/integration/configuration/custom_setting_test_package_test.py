@@ -10,7 +10,7 @@ class ConditionalReqsTest(unittest.TestCase):
         conanfile = """from conans import ConanFile
 
 class TestConanLib(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
     settings = "os", "build_type", "product"
         """
@@ -35,5 +35,5 @@ class TestConanLib(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . lasote/testing -s os=Windows -s product=onion -s build_type=Release")
-        self.assertIn("Hello/0.1@lasote/testing (test package): Conditional test requirement: "
+        self.assertIn("hello/0.1@lasote/testing (test package): Conditional test requirement: "
                       "Windows, Release, onion", client.out)

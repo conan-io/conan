@@ -64,9 +64,9 @@ def test_double_package_id_call():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . Pkg/0.1@user/testing")
+    client.run("create . pkg/0.1@user/testing")
     out = str(client.out)
-    assert 1 == out.count("Pkg/0.1@user/testing: Calling package_id()")
+    assert 1 == out.count("pkg/0.1@user/testing: Calling package_id()")
 
 
 def test_remove_option_setting():
@@ -86,6 +86,7 @@ def test_remove_option_setting():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
+<<<<<<< HEAD
     client.run("create . pkg/1.0@ -s os=Windows")
     assert "pkg/1.0: OPTION OPT=False" in client.out
     assert "pkg/1.0: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
@@ -95,6 +96,14 @@ def test_remove_option_setting():
     assert "pkg/1.0: OPTION OPT=True" in client.out
     assert "pkg/1.0: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
     _check_conaninfo(client, "pkg/1.0", NO_SETTINGS_PACKAGE_ID)
+=======
+    client.run("create . pkg/0.1@user/testing -s os=Windows")
+    assert "pkg/0.1@user/testing: OPTION OPT=False" in client.out
+    assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
+    client.run("create . pkg/0.1@user/testing -s os=Linux -o pkg:opt=True")
+    assert "pkg/0.1@user/testing: OPTION OPT=True" in client.out
+    assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
+>>>>>>> develop2
 
 
 def test_value_parse():
@@ -134,7 +143,7 @@ def test_value_parse():
     assert "arch: kk=kk" in client.out
     client.run("upload test/0.1@danimtb/testing --all -r default")
     client.run("remove test/0.1@danimtb/testing --force")
-    client.run("install test/0.1@danimtb/testing")
+    client.run("install --reference=test/0.1@danimtb/testing")
     client.run("search test/0.1@danimtb/testing")
     assert "arch: kk=kk" in client.out
 >>>>>>> develop2
@@ -169,7 +178,7 @@ def test_option_in():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . Pkg/0.1@user/testing")
+    client.run("create . pkg/0.1@user/testing")
     assert "fpic is an option!!!" in client.out
     assert "fpic is an info.option!!!" in client.out
     assert "other is not an option!!!" in client.out
@@ -193,9 +202,17 @@ def test_build_type_remove_windows():
     client.save({"conanfile.py": conanfile})
     client.run('create . pkg/1.0@ -s os=Windows -s compiler="Visual Studio" '
                '-s compiler.version=14 -s build_type=Release')
+<<<<<<< HEAD
 
     package_id = "acb7163a9dfed39602e2f1c7acefe25a697de355"
     _check_conaninfo(client, "pkg/1.0", package_id)
     client.run('install pkg/1.0@ -s os=Windows -s compiler="Visual Studio" '
                '-s compiler.version=14 -s build_type=Debug')
     assert f"pkg/1.0:{package_id} - Cache" in client.out
+=======
+    assert "pkg/0.1:1454da99f096a6347c915bbbd244d7137a96d1be - Build" in client.out
+    client.run('install --reference=pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+               '-s compiler.version=14 -s build_type=Debug')
+    client.assert_listed_binary({"pkg/0.1": ("1454da99f096a6347c915bbbd244d7137a96d1be", "Cache")})
+
+>>>>>>> develop2

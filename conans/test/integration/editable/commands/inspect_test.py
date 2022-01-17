@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -26,8 +26,8 @@ class InspectCommandTest(unittest.TestCase):
         """)
 
     def setUp(self):
-        self.ref_parent = ConanFileReference.loads("parent/version@user/name")
-        self.ref = ConanFileReference.loads('lib/version@user/name')
+        self.ref_parent = RecipeReference.loads("parent/version@user/name")
+        self.ref = RecipeReference.loads('lib/version@user/name')
 
         self.t = TestClient()
         self.t.save(files={'conanfile.py': self.conanfile})

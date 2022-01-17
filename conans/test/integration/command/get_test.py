@@ -13,12 +13,12 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 class ConanGetTest(unittest.TestCase):
 
     def setUp(self):
-        self.reference = "Hello0/0.1@lasote/channel"
+        self.reference = "hello0/0.1@lasote/channel"
         self.conanfile = textwrap.dedent('''
             from conans import ConanFile
 
             class HelloConan(ConanFile):
-                name = "Hello0"
+                name = "hello0"
                 version = "0.1"
                 exports_sources = "path*"
                 exports = "other*"
@@ -135,8 +135,8 @@ class ConanGetTest(unittest.TestCase):
             "{}:{}".format(self.reference, fake_package_id)
         args_package = " -p {}".format(fake_package_id) if not use_pkg_reference else ""
 
-        self.client.run('get Hello0/0.1@lasote/channel "." -r default', assert_error=True)
-        self.assertIn("Recipe not found: 'Hello0/0.1@lasote/channel'", self.client.out)
+        self.client.run('get hello0/0.1@lasote/channel "." -r default', assert_error=True)
+        self.assertIn("Recipe not found: 'hello0/0.1@lasote/channel'", self.client.out)
 
         self.client.run('get {} "." -r default {}'.format(args_reference, args_package),
                         assert_error=True)

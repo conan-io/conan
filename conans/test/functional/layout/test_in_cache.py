@@ -4,7 +4,8 @@ import textwrap
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -120,8 +121,8 @@ def test_cache_in_layout(conanfile):
     client.save({"conanfile.py": conanfile})
     client.run("create . lib/1.0@")
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
-    ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, package_id)
+    ref = RecipeReference.loads("lib/1.0@")
+    pref = PkgReference(ref, package_id)
     sf = client.get_latest_ref_layout(ref).source()
     bf = client.get_latest_pkg_layout(pref).build()
     pf = client.get_latest_pkg_layout(pref).package()
@@ -286,7 +287,7 @@ def test_git_clone_with_source_layout():
         client.init_git_repo()
 
     client.run("create . hello/1.0@")
-    latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("hello/1.0@"))
+    latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/1.0@"))
     sf = client.cache.ref_layout(latest_rrev).source()
     assert os.path.exists(os.path.join(sf, "myfile.txt"))
     # The conanfile is cleared from the root before cloning

@@ -63,9 +63,6 @@ class CompilerId(object):
     def __eq__(self, other):
         return self.name == other.name and self._version == other._version
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
 
 UNKNOWN_COMPILER = CompilerId(None, None, None, None)
 
@@ -183,11 +180,12 @@ def _parse_compiler_version(defines):
 def detect_compiler_id(executable, runner=None):
     runner = runner or ConanRunner()
     # use a temporary file, as /dev/null might not be available on all platforms
-    tmpname = tempfile.mktemp(suffix=".c")
+    tmpdir = tempfile.mkdtemp()
+    tmpname = os.path.join(tmpdir, "temp.c")
     with open(tmpname, "wb") as f:
         f.write(b"\n")
 
-    cmd = tempfile.mktemp(suffix=".cmd")
+    cmd = os.path.join(tmpdir, "file.cmd")
     with open(cmd, "wb") as f:
         f.write(b"echo off\nset MSC_CMD_FLAGS\n")
 

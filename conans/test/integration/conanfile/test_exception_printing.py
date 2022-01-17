@@ -1,10 +1,9 @@
 import pytest
 from parameterized import parameterized
 
-from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
-
+from conans.util.env import environment_update
 
 conanfile = """
 from conans import ConanFile
@@ -47,7 +46,7 @@ def test_complete_traceback():
     client = TestClient()
     throw = "self._aux_method()"
     client.save({CONANFILE: conanfile.format(method="source", method_contents=throw)})
-    with tools.environment_append({"CONAN_VERBOSE_TRACEBACK": "1"}):
+    with environment_update({"CONAN_VERBOSE_TRACEBACK": "1"}):
         client.run("create . ", assert_error=True)
         assert "DRLException: Oh! an error!" in client.out
         assert "ERROR: Traceback (most recent call last):" in client.out

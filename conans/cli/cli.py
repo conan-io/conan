@@ -3,6 +3,7 @@ import os
 import pkgutil
 import signal
 import sys
+import textwrap
 from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
@@ -12,23 +13,22 @@ from conans.cli.api.conan_api import ConanAPIV2, ConanAPI
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
-from conans.cli.output import ConanOutput
+from conans.cli.output import ConanOutput, cli_out_write, Color
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
-from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
 
 
 CLI_V1_COMMANDS = [
-    'install', 'config', 'get', 'info', 'new', 'create', 'upload', 'export', 'export-pkg',
-    'test', 'source', 'build', 'editable', 'profile', 'imports', 'remove', 'alias',
-    'download', 'inspect', 'lock', 'frogarian', 'graph'
+    'get', 'create', 'upload',
+    'test', 'source', 'build', 'editable', 'imports', 'alias',
+    'download', 'inspect'
 ]
 
 
-class Cli(object):
+class Cli:
     """A single command of the conan application, with all the first level commands. Manages the
     parsing of parameters and delegates functionality to the conan python api. It can also show the
     help of the tool.
@@ -89,34 +89,58 @@ class Cli(object):
 
         output.writeln("")
 
-    def help_message(self):
-        self._commands["help"].method(self._conan_api, self._commands["help"].parser,
-                                      commands=self._commands, groups=self._groups)
+    def _output_help_cli(self):
+        """
+        Prints a summary of all commands.
+        """
+        max_len = max((len(c) for c in self._commands)) + 1
+        line_format = '{{: <{}}}'.format(max_len)
+
+        for group_name, comm_names in self._groups.items():
+            cli_out_write(group_name, Color.BRIGHT_MAGENTA)
+            for name in comm_names:
+                # future-proof way to ensure tabular formatting
+                cli_out_write(line_format.format(name), Color.GREEN, endline="")
+
+                # Help will be all the lines up to the first empty one
+                docstring_lines = self._commands[name].doc.split('\n')
+                start = False
+                data = []
+                for line in docstring_lines:
+                    line = line.strip()
+                    if not line:
+                        if start:
+                            break
+                        start = True
+                        continue
+                    data.append(line)
+
+                txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" " * (max_len + 2))
+                cli_out_write(txt)
+
+        cli_out_write("")
+        cli_out_write('Conan commands. Type "conan help <command>" for help', Color.BRIGHT_YELLOW)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
         methods
         """
         output = ConanOutput()
-        version = sys.version_info
-        if version.major == 2 or version.minor <= 4:
-            raise ConanException(
-                "Unsupported Python version. Minimum required version is Python 3.5")
         try:
             try:
                 command_argument = args[0][0]
             except IndexError:  # No parameters
-                self.help_message()
+                self._output_help_cli()
                 return SUCCESS
             try:
                 command = self._commands[command_argument]
             except KeyError as exc:
                 if command_argument in ["-v", "--version"]:
-                    output.info("Conan version %s" % client_version)
+                    cli_out_write("Conan version %s" % client_version, fg=Color.BRIGHT_GREEN)
                     return SUCCESS
 
                 if command_argument in ["-h", "--help"]:
-                    self.help_message()
+                    self._output_help_cli()
                     return SUCCESS
 
                 output.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
@@ -127,17 +151,8 @@ class Cli(object):
             output.error(exc)
             return ERROR_GENERAL
 
-        if (
-            command != "config"
-            or (
-                command == "config" and len(args[0]) > 1 and args[0][1] != "install"
-            )
-        ) and is_config_install_scheduled(self._conan_api):
-            self._conan_api.config_install(None, None)
-
         try:
-            command.run(self._conan_api, self._commands[command_argument].parser,
-                        args[0][1:], commands=self._commands, groups=self._groups)
+            command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
             exit_error = SUCCESS
         except SystemExit as exc:
             if exc.code != 0:

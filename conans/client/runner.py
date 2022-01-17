@@ -1,8 +1,8 @@
 import sys
 from subprocess import PIPE, Popen, STDOUT
 
-from conans.client.tools import environment_append
 from conans.errors import ConanException
+from conans.util.env import environment_update
 from conans.util.files import decode_text
 from conans.util.runners import pyinstaller_bundle_env_cleaned
 
@@ -33,7 +33,7 @@ class ConanRunner(object):
         """
 
         user_output = output if output and hasattr(output, "write") else None
-        stream_output = user_output or sys.stdout
+        stream_output = user_output or sys.stderr
         if hasattr(stream_output, "flush"):
             # We do not want output from different streams to get mixed (sys.stdout, os.system)
             stream_output = _UnbufferedWrite(stream_output)
@@ -48,7 +48,7 @@ class ConanRunner(object):
 
         with pyinstaller_bundle_env_cleaned():
             # Remove credentials before running external application
-            with environment_append({'CONAN_LOGIN_ENCRYPTION_KEY': None}):
+            with environment_update({'CONAN_LOGIN_ENCRYPTION_KEY': None}):
                 # TODO: Important, we removed the _simple_os_call (that not use PIPE) because then
                 #       we cannot capture the output of the self.run("command") in testing.
                 #       It might be a different way to solve that but we want to try again to

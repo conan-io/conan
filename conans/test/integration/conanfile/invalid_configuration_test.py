@@ -34,9 +34,9 @@ class MyPkg(ConanFile):
                       self.client.out)
 
     def test_info_method(self):
-        self.client.run("info . %s" % self.settings_msvc15)
+        self.client.run("graph info . %s" % self.settings_msvc15)
 
-        error = self.client.run("info . %s" % self.settings_msvc12,
+        error = self.client.run("graph info . %s" % self.settings_msvc12,
                                 assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("ERROR: conanfile.py: Invalid configuration: "

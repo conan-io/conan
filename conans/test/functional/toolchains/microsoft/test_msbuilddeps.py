@@ -116,7 +116,7 @@ myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan_Hello3.props" />
+    <Import Project="..\conan_hello3.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -287,7 +287,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan_Hello1.props" />
+    <Import Project="..\conan_hello1.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -398,7 +398,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
-vs_versions = [{"vs_version": "15", "msvc_version": "19.1", "ide_year": "2017", "toolset": "v141"}]
+vs_versions = [{"vs_version": "15", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
     vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
@@ -413,11 +413,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_msbuild_generator(self):
         client = TestClient()
-        client.save(pkg_cmake("Hello0", "1.0"))
+        client.save(pkg_cmake("hello0", "1.0"))
         client.run("create . ")
-        client.save(pkg_cmake("Hello3", "1.0"), clean_first=True)
+        client.save(pkg_cmake("hello3", "1.0"), clean_first=True)
         client.run("create . ")
-        client.save(pkg_cmake("Hello1", "1.0", ["Hello0/1.0"]), clean_first=True)
+        client.save(pkg_cmake("hello1", "1.0", ["hello0/1.0"]), clean_first=True)
         client.run("create . ")
 
         conanfile = textwrap.dedent("""
@@ -425,16 +425,16 @@ class MSBuildGeneratorTest(unittest.TestCase):
             from conan.tools.microsoft import MSBuild
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
-                requires = "Hello1/1.0", "Hello3/1.0"
+                requires = "hello1/1.0", "hello3/1.0"
                 generators = "MSBuildDeps", "MSBuildToolchain"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
             """)
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp",
-                                     includes=["Hello1"], calls=["Hello1"])
-        myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["Hello3"],
-                                         calls=["Hello3"])
+                                     includes=["hello1"], calls=["hello1"])
+        myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["hello3"],
+                                         calls=["hello3"])
         files = {"MyProject.sln": sln_file,
                  "MyProject/MyProject.vcxproj": myproject_vcxproj,
                  "MyProject/MyProject.cpp": myproject_cpp,
@@ -448,17 +448,17 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertNotIn("warning MSB4011", client.out)
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("MyProject: Release!", client.out)
-        self.assertIn("Hello3: Release!", client.out)
+        self.assertIn("hello3: Release!", client.out)
         client.run_command(r"x64\Release\MyApp.exe")
         self.assertIn("MyApp: Release!", client.out)
-        self.assertIn("Hello0: Release!", client.out)
-        self.assertIn("Hello1: Release!", client.out)
+        self.assertIn("hello0: Release!", client.out)
+        self.assertIn("hello1: Release!", client.out)
 
     def test_install_reference(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . mypkg/0.1@")
-        client.run("install mypkg/0.1@ -g MSBuildDeps")
+        client.run("install --reference=mypkg/0.1@ -g MSBuildDeps")
         self.assertIn("Generator 'MSBuildDeps' calling 'generate()'", client.out)
         # https://github.com/conan-io/conan/issues/8163
         props = client.load("conan_mypkg_vars_release_x64.props")  # default Release/x64
@@ -497,7 +497,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . mypkg/0.1@")
-        client.run("install mypkg/0.1@ -g MSBuildDeps -s build_type=None", assert_error=True)
+        client.run("install --reference=mypkg/0.1@ -g MSBuildDeps -s build_type=None", assert_error=True)
         self.assertIn("The 'msbuild' generator requires a 'build_type' setting value", client.out)
 
     def test_custom_configuration(self):
@@ -585,10 +585,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp")
         myproject_cpp = gen_function_cpp(name="main", msg="MyProject")
         files = {"MyProject.sln": sln_file,
-                 "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_Hello3.props",
+                 "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_hello3.props",
                                                                           "conandeps.props"),
                  "MyProject/MyProject.cpp": myproject_cpp,
-                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_Hello1.props",
+                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_hello1.props",
                                                               "conandeps.props"),
                  "MyApp/MyApp.cpp": myapp_cpp,
                  "conanfile.py": conanfile}
@@ -630,7 +630,8 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . dep/1.0@")
         client.run("create . tool_build/1.0@")
         client.run("create . tool_test/1.0@")
-        conanfile = GenConanfile().with_requires("dep/1.0").with_build_requires("tool_build/1.0").\
+        conanfile = GenConanfile().with_requires("dep/1.0").\
+            with_tool_requires("tool_build/1.0").\
             with_test_requires("tool_test/1.0")
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/1.0@")
@@ -819,7 +820,7 @@ def check_build_vs_project_with_test_requires(vs_version):
             settings = "os", "build_type", "compiler", "arch"
             generators = "MSBuildDeps", "MSBuildToolchain"
 
-            def build_requirements(self):
+            def requirements(self):
                 self.test_requires("mydep.pkg.team/0.1")
 
             def build(self):
@@ -852,7 +853,7 @@ def test_private_transitive():
     client.run("create dep dep/0.1@")
     client.run("create pkg pkg/0.1@")
     client.run("install consumer -g MSBuildDeps -s arch=x86_64 -s build_type=Release")
-    assert f"dep/0.1:{NO_SETTINGS_PACKAGE_ID} - Skip" in client.out
+    client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     deps_props = client.load("conandeps.props")
     assert "conan_pkg.props" in deps_props
     assert "dep" not in deps_props

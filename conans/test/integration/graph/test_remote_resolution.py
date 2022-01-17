@@ -21,22 +21,22 @@ def test_build_requires_ranges():
         from conans import ConanFile
         class Pkg(ConanFile):
             {}
-            build_requires = "cmake/{}"
+            tool_requires = "cmake/{}"
             def generate(self):
                 for r, d in self.dependencies.items():
                     self.output.info("REQUIRE {{}}: {{}}".format(r.ref, d))
-                dep = self.dependencies.get("cmake", build=True, run=True)
+                dep = self.dependencies.build.get("cmake")
                 self.output.info("CMAKEVER: {{}}!!".format(dep.ref.version))
             """)
     client.save({"pkgc/conanfile.py": conanfile.format("", "[*]"),
                  "pkgb/conanfile.py": conanfile.format("requires = 'pkgc/1.0'", "1.0"),
                  "pkga/conanfile.py": conanfile.format("requires = 'pkgb/1.0'", "[*]"),
                  })
-    client.run("export pkgc pkgc/1.0@")
-    client.run("export pkgb pkgb/1.0@")
-    client.run("export pkga pkga/1.0@")
+    client.run("export pkgc --name=pkgc --version=1.0")
+    client.run("export pkgb --name=pkgb --version=1.0")
+    client.run("export pkga --name=pkga --version=1.0")
 
-    client.run("install pkga/1.0@ --build=missing")
+    client.run("install --reference=pkga/1.0@ --build=missing")
     assert "pkgc/1.0: REQUIRE cmake/0.5: cmake/0.5" in client.out
     assert "pkgc/1.0: CMAKEVER: 0.5!!" in client.out
     assert "pkgb/1.0: REQUIRE cmake/1.0: cmake/1.0" in client.out

@@ -6,7 +6,8 @@ import pytest
 
 from conans.client.remote_manager import RemoteManager
 from conans.errors import ConanConnectionError, ConanException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
@@ -34,8 +35,8 @@ class TestListPackageRevisionsBase:
                f"3fb49604f9c2f729b85ba3115852006824e72cab"
 
     def _get_lastest_package_ref(self, recipe_name):
-        rref = self.client.cache.get_latest_rrev(ConanFileReference.loads(recipe_name))
-        pref = PackageReference(rref, NO_SETTINGS_PACKAGE_ID)
+        rref = self.client.cache.get_latest_recipe_reference(RecipeReference.loads(recipe_name))
+        pref = PkgReference(rref, NO_SETTINGS_PACKAGE_ID)
         return pref
 
 
@@ -132,7 +133,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         self._add_remote("remote1")
         self._add_remote("remote2")
         pref = self._get_fake_package_refence('whatever/0.1')
-        with patch.object(RemoteManager, "get_package_revisions",
+        with patch.object(RemoteManager, "get_package_revisions_references",
                           new=Mock(side_effect=exc)):
             self.client.run(f'list package-revisions {pref} -r="*" -c')
         expected_output = textwrap.dedent(f"""\
@@ -157,7 +158,7 @@ class TestRemotes(TestListPackageRevisionsBase):
 
         expected_output = textwrap.dedent(f"""\
         remote1:
-          {repr(pref)}#.*""")
+          {pref.repr_notime()}""")
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -178,9 +179,9 @@ class TestRemotes(TestListPackageRevisionsBase):
         output = str(self.client.out)
         expected_output = textwrap.dedent(f"""\
         Local Cache:
-          {repr(pref)}#.*
+          {pref.repr_notime()}.*
         remote1:
-          {repr(pref)}#.*
+          {pref.repr_notime()}.*
         remote2:
           There are no matching package references""")
         assert bool(re.match(expected_output, output, re.MULTILINE))

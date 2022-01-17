@@ -1,10 +1,10 @@
 import os
 import sys
 
-from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
+from conan.tools.build.cross_building import cross_building
+from conans.client.tools.oss import OSInfo
 from conans.client.tools.files import which
 from conans.errors import ConanException, ConanInvalidSystemRequirements
-from conans.util.env_reader import get_env
 
 
 def _get_sudo_str():
@@ -25,6 +25,7 @@ def _is_sudo_enabled():
             return False
         if os.name == 'nt':
             return False
+    from conans.util.env import get_env
     return get_env("CONAN_SYSREQUIRES_SUDO", True)
 
 
@@ -62,6 +63,7 @@ class SystemPackageTool(object):
 
     def _get_sysrequire_mode(self):
         allowed_modes = ("enabled", "verify", "disabled")
+        from conans.util.env import get_env
         mode = get_env("CONAN_SYSREQUIRES_MODE", self._default_mode)
         mode_lower = mode.lower()
         if mode_lower not in allowed_modes:
@@ -187,7 +189,8 @@ class SystemPackageTool(object):
         :return: list with all parsed names e.g. ["libusb-dev:armhf libfoobar-dev:armhf"]
         """
         if self._conanfile and self._conanfile.settings and cross_building(self._conanfile):
-            _, build_arch, _, host_arch = get_cross_building_settings(self._conanfile)
+            host_arch = self._conanfile.settings.get_safe("arch")
+            build_arch = self._conanfile.settings_build.get_safe('arch')
             arch = host_arch or build_arch
             parsed_packages = []
             for package in packages:

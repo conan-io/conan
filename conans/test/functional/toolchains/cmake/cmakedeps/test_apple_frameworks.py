@@ -4,14 +4,14 @@ import textwrap
 import pytest
 
 from conans.client.tools.apple import XCRun, to_apple_arch
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture
 def client():
-    lib_ref = ConanFileReference.loads("foolib/1.0")
+    lib_ref = RecipeReference.loads("foolib/1.0")
     lib_conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -193,8 +193,9 @@ timer_cpp = textwrap.dedent("""
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
                          [# FIXME: Skipped because environment changes ('',),
-                          ('-s os=iOS -s os.version=10.0 -s arch=armv8',),
-                          ("-s os=tvOS -s os.version=11.0 -s arch=armv8",)])
+                          ('-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
+                          ("-s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
+
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
@@ -211,12 +212,15 @@ def test_apple_own_framework_cross_build(settings):
     test_conanfile = textwrap.dedent("""
         from conans import ConanFile, tools
         from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
+        from conan.tools.build import cross_building
 
         class TestPkg(ConanFile):
             generators = "CMakeToolchain"
             settings = "os", "arch", "compiler", "build_type"
-            # FIXME
-            test_type = "build_requires", "requires"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+                self.tool_requires(self.tested_reference_str)
 
             def generate(self):
                 cmake = CMakeDeps(self)
@@ -231,7 +235,7 @@ def test_apple_own_framework_cross_build(settings):
                 cmake.build()
 
             def test(self):
-                if not tools.cross_building(self):
+                if not cross_building(self):
                     self.run("timer", env="conanrunenv")
         """)
 
@@ -277,8 +281,9 @@ def test_apple_own_framework_cmake_deps():
             requires = "mylibrary/1.0"
             exports_sources = "CMakeLists.txt", "timer.cpp"
             settings = "os", "arch", "compiler", "build_type"
-            # FIXME
-            test_type = "build_requires"
+
+            def requirements(self):
+                self.tool_requires(self.tested_reference_str)
 
             def generate(self):
                 cmake = CMakeDeps(self)
@@ -302,7 +307,7 @@ def test_apple_own_framework_cmake_deps():
                  "src/hello.h": hello_h,
                  "src/hello.cpp": hello_cpp,
                  "src/Info.plist": infoplist})
-    client.run("export . mylibrary/1.0@")
+    client.run("export . --name=mylibrary --version=1.0")
     client.run("create . mylibrary/1.0@ -s build_type=Debug")
     client.run("create . mylibrary/1.0@ -s build_type=Release")
 
@@ -346,6 +351,10 @@ def test_apple_own_framework_cmake_find_package_multi():
         class TestPkg(ConanFile):
             generators = "CMakeDeps", "CMakeToolchain"
             settings = "build_type", "os", "arch"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -365,7 +374,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     assert "Hello World Release!" in client.out
 
 
-@pytest.mark.xfail(reason="run_environment=True no longer works")
+@pytest.mark.tool_cmake(version="3.19")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
@@ -392,10 +401,12 @@ class HelloConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name", "HELLO")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
-        self.cpp_info.components["libhello"].set_property("cmake_target_name", "libhello")
-
+        self.cpp_info.components["libhello"].set_property("cmake_target_name", "hello::libhello")
         self.cpp_info.components["libhello"].libs = ["hello"]
+        # We need to add the information about the lib/include directories to be able to find them
+        self.cpp_info.components["libhello"].libdirs = ["lib"]
+        self.cpp_info.components["libhello"].includedirs = ["include"]
+
         self.cpp_info.components["libhello"].frameworks.extend(["CoreFoundation"])
         """)
     hello_cpp = textwrap.dedent("""
@@ -431,12 +442,16 @@ install(TARGETS ${PROJECT_NAME}
 import os
 from conans import ConanFile, tools
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
+from conan.tools.build import cross_building
+
 
 class TestPackageConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     generators = "CMakeToolchain"
-    # FIXME
-    test_type = "build_requires", "requires"
+
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+        self.tool_requires(self.tested_reference_str)
 
     def generate(self):
         cmake = CMakeDeps(self)
@@ -450,8 +465,8 @@ class TestPackageConan(ConanFile):
         cmake.build()
 
     def test(self):
-        if not tools.cross_building(self.settings):
-            self.run("test_package", env="conanrunenv")
+        if not cross_building(self):
+            self.run("./test_package", env="conanrunenv")
         """)
     test_test_package_cpp = textwrap.dedent("""
 #include "hello.h"
@@ -494,6 +509,7 @@ def test_m1():
         [settings]
         os=iOS
         os.version=12.0
+        os.sdk=iphoneos
         arch=armv8
         [env]
         CC={cc}
@@ -505,7 +521,7 @@ def test_m1():
 
     client = TestClient(path_with_spaces=False)
     client.save({"m1": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . --profile:build=default --profile:host=m1 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])

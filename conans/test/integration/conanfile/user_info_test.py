@@ -25,30 +25,30 @@ class UserInfoTest(unittest.TestCase):
                     """)
             requires = "'{}'".format(requires) if requires else "None"
             client.save({CONANFILE: base % (name, requires, infolines)}, clean_first=True)
-            client.run("export . lasote/stable")
+            client.run("export . --user=lasote --channel=stable")
 
-        export_lib("LIB_A", "", "self.user_info.VAR1=2")
-        export_lib("LIB_B", "LIB_A/0.1@lasote/stable", "self.user_info.VAR1=2\n        "
+        export_lib("lib_a", "", "self.user_info.VAR1=2")
+        export_lib("lib_b", "lib_a/0.1@lasote/stable", "self.user_info.VAR1=2\n        "
                                                        "self.user_info.VAR2=3")
-        export_lib("LIB_C", "LIB_B/0.1@lasote/stable", "self.user_info.VAR1=2")
-        export_lib("LIB_D", "LIB_C/0.1@lasote/stable", "self.user_info.var1=2")
+        export_lib("lib_c", "lib_b/0.1@lasote/stable", "self.user_info.VAR1=2")
+        export_lib("lib_d", "lib_c/0.1@lasote/stable", "self.user_info.var1=2")
 
         reuse = textwrap.dedent("""
             from conans import ConanFile
 
             class MyConanfile(ConanFile):
-                requires = "LIB_D/0.1@lasote/stable"
+                requires = "lib_d/0.1@lasote/stable"
 
                 def build(self):
-                    assert self.dependencies["LIB_A"].user_info.VAR1=="2"
-                    assert self.dependencies["LIB_B"].user_info.VAR1=="2"
-                    assert self.dependencies["LIB_B"].user_info.VAR2=="3"
-                    assert self.dependencies["LIB_C"].user_info.VAR1=="2"
-                    assert self.dependencies["LIB_C"].user_info.VAR1=="2"
+                    assert self.dependencies["lib_a"].user_info.VAR1=="2"
+                    assert self.dependencies["lib_b"].user_info.VAR1=="2"
+                    assert self.dependencies["lib_b"].user_info.VAR2=="3"
+                    assert self.dependencies["lib_c"].user_info.VAR1=="2"
+                    assert self.dependencies["lib_c"].user_info.VAR1=="2"
                 """)
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("export . reuse/0.1@lasote/stable")
-        client.run('install reuse/0.1@lasote/stable --build')
+        client.run("export . --name=reuse --version=0.1 --user=lasote --channel=stable")
+        client.run('install --reference=reuse/0.1@lasote/stable --build')
         # Now try local command with a consumer
         client.run('install . --build')
         client.run("build .")

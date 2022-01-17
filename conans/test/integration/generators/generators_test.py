@@ -37,7 +37,7 @@ class TestConan(ConanFile):
 
         client.save({"conanfile.py": conanfile})
         client.run("create . mysrc/0.1@user/testing")
-        client.run("install mysrc/0.1@user/testing -g cmake")
+        client.run("install --reference=mysrc/0.1@user/testing -g cmake")
 
         cmake = client.load("conanbuildinfo.cmake")
         src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)

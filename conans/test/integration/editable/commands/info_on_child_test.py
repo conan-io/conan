@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -16,8 +16,8 @@ from conans.test.utils.tools import TestClient
 class InfoCommandTest(unittest.TestCase):
 
     def setUp(self):
-        self.ref = ConanFileReference.loads('lib/version@user/name')
-        self.ref_child = ConanFileReference.loads('child/version@user/name')
+        self.ref = RecipeReference.loads('lib/version@user/name')
+        self.ref_child = RecipeReference.loads('child/version@user/name')
 
         self.t = TestClient(path_with_spaces=False)
         self.t.save({'conanfile.py': GenConanfile()})
@@ -72,10 +72,3 @@ class InfoCommandTest(unittest.TestCase):
                              sorted(["lib/version@user/name",
                                      "parent/version@user/name",
                                      str(project_name)]))
-
-    @parameterized.expand([(True,), (False,)])
-    def test_paths(self, use_local_path):
-        args = "." if use_local_path else self.ref_child
-        self.t.run('info {} --paths'.format(args), assert_error=True)
-        self.assertIn("ERROR: Operation not allowed on a package installed as editable", self.t.out)
-        # TODO: Cannot show paths for a linked/editable package... what to do here?

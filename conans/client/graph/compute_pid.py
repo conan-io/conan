@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import BINARY_INVALID, BINARY_INVALID_BUILD, BINARY_UNKNOWN
-from conans.model.pkg_type import PackageType
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
     ConanException, ConanInvalidBuildConfiguration
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
@@ -13,6 +12,7 @@ def compute_package_id(node, new_config):
     Compute the binary package ID of this node
     """
     conanfile = node.conanfile
+    # Todo: revise this default too. Should have been defined by requirement traits?
     default_package_id_mode = new_config["core.package_id:default_mode"] or "semver_mode"
     default_python_requires_id_mode = new_config["core.package_id:python_default_mode"] or "minor_mode"
 
@@ -25,41 +25,24 @@ def compute_package_id(node, new_config):
     for require, transitive in node.transitive_deps.items():
         dep_package_id = require.package_id_mode
         dep_node = transitive.node
-        dep_conanfile = dep_node.conanfile
+        require.deduce_package_id_mode(node.conanfile.package_type,
+                                       dep_node.conanfile.package_type)
         if require.build:
             if dep_package_id:
                 req_info = RequirementInfo(dep_node.pref, dep_package_id, dep_node.binary)
                 build_data[require] = req_info
         else:
             if dep_package_id is None:  # Automatically deducing package_id
-                if require.headers or require.libs:  # linked
-                    if conanfile.package_type is PackageType.SHARED:
-                        if dep_conanfile.package_type is PackageType.SHARED:
-                            dep_package_id = "minor_mode"
-                        else:
-                            dep_package_id = "recipe_revision_mode"
-                    elif conanfile.package_type is PackageType.STATIC:
-                        if dep_conanfile.package_type is PackageType.HEADER:
-                            dep_package_id = "recipe_revision_mode"
-                        else:
-                            dep_package_id = "minor_mode"
-                    elif conanfile.package_type is PackageType.HEADER:
-                        dep_package_id = "unrelated_mode"
-            req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode,
-                                       dep_node.binary)
+                dep_package_id = default_package_id_mode
+            req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
             data[require] = req_info
 
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
 
-<<<<<<< HEAD
     conanfile.info = ConanInfo.create(conanfile,
                                       conanfile.settings.values,
                                       conanfile.options.values,
-=======
-    conanfile.info = ConanInfo.create(conanfile.settings.values,
-                                      conanfile.options,
->>>>>>> develop2
                                       reqs_info,
                                       build_requires_info,
                                       python_requires=python_requires,
@@ -73,14 +56,14 @@ def compute_package_id(node, new_config):
             conanfile.compatible_packages.append(msvc_compatible)
 
     # Once we are done, call package_id() to narrow and change possible values
-    with conanfile_exception_formatter(str(conanfile), "package_id"):
+    with conanfile_exception_formatter(conanfile, "package_id"):
         with conan_v2_property(conanfile, 'cpp_info',
                                "'self.cpp_info' access in package_id() method is deprecated"):
             conanfile.package_id()
 
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate") and callable(conanfile.validate):
-        with conanfile_exception_formatter(str(conanfile), "validate"):
+        with conanfile_exception_formatter(conanfile, "validate"):
             try:
                 conanfile.validate()
             except ConanInvalidConfiguration as e:
@@ -91,12 +74,8 @@ def compute_package_id(node, new_config):
                 node.binary_error_msg = str(e)
 
     try:
-<<<<<<< HEAD
-        # TODO: Not defining inputs dissallow to build
-=======
         # TODO: What if something is not defined, but still the binary exists and the option is for
         # consumers only?
->>>>>>> develop2
         conanfile.settings.validate()  # All has to be ok!
         conanfile.options.validate()
     except ConanException as e:

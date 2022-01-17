@@ -5,14 +5,14 @@ from parameterized.parameterized import parameterized
 import pytest
 
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import save
 
 conanfile = """
 from conans import ConanFile
 
 class OpenSSLConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 """
 
@@ -62,12 +62,11 @@ class AuthorizeBearerTest(unittest.TestCase):
         if artifacts_properties:
             save(client.cache.artifacts_properties_path, "key=value")
         client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/stable")
-        errors = client.run("upload Hello/0.1@lasote/stable -r default")
+        client.run("export . --user=lasote --channel=stable")
+        errors = client.run("upload hello/0.1@lasote/stable -r default")
         self.assertFalse(errors)
 
-        expected_calls = [('ping', None),
-                          ('get_recipe_revisions', None),
+        expected_calls = [('get_recipe_revisions_references', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('upload_recipe_file', 'Bearer')]

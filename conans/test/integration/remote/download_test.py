@@ -9,7 +9,7 @@ from conans import ConanFile
 import platform
 
 class HelloConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "1.2.1"
 """
 
@@ -29,7 +29,7 @@ class DownloadTest(unittest.TestCase):
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester)
         client2.run("remote add remotename url")
-        client2.run("install foo/bar@ -r remotename", assert_error=True)
+        client2.run("install --reference=foo/bar@ -r remotename", assert_error=True)
         assert "Package 'foo/bar' not resolved: foo/bar was " \
                "not found in remote 'remotename'" in client2.out
 
@@ -42,7 +42,7 @@ class DownloadTest(unittest.TestCase):
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
         client2.run("remote add remotename url")
-        client2.run("install foo/bar@ -r remotename", assert_error=True)
+        client2.run("install --reference=foo/bar@ -r remotename", assert_error=True)
         assert "ERROR: Package 'foo/bar' not resolved" in client2.out
         assert "This server is under maintenance" in client2.out
         assert "not found" not in client2.out

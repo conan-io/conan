@@ -33,7 +33,7 @@ class ExportErrorCommandTestCase(unittest.TestCase):
                                                                 url_value=url_value,
                                                                 rev_value=rev_value)
                           })
-        self.client.run("export . lib/version@user/channel", assert_error=True)
+        self.client.run("export . --name=lib --version=version --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: '{}' is not a valid '{}' repository".format(
                       self.client.current_folder, repo_type.lower()), self.client.out)
 
@@ -60,7 +60,7 @@ class ExportCommandTestCase(unittest.TestCase):
                                                                     rev_value=rev_value)})
         self.client = TestClient()
         self.client.current_folder = self.path
-        self.client.run("export . lib/version@user/channel")
+        self.client.run("export . --name=lib --version=version --user=user --channel=channel")
         if auto_url:
             self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced.",
                           self.client.out)

@@ -11,7 +11,7 @@ class ConanInspectTest(unittest.TestCase):
     def test_inspect_quiet(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("name")})
-        client.run("export . name/version@user/channel")
+        client.run("export . --name=name --version=version --user=user --channel=channel")
         client.run("upload name/version@user/channel --all -r default")
         client.run("remove * -f")
 
@@ -27,10 +27,10 @@ class ConanInspectTest(unittest.TestCase):
     def test_inspect_remote(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
         client.run("upload pkg/0.1@user/channel -r default")
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "arch")})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
 
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: ('os', 'arch')", client.out)
@@ -47,7 +47,7 @@ class ConanInspectTest(unittest.TestCase):
     def test_inspect_not_in_remote(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
 
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: ['os']", client.out)
@@ -61,30 +61,30 @@ class ConanInspectTest(unittest.TestCase):
     def test_name_version(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, inputs=["admin", "password"])
-        client.save({"conanfile.py": GenConanfile().with_name("MyPkg").with_version("1.2.3")})
+        client.save({"conanfile.py": GenConanfile().with_name("mypkg").with_version("1.2.3")})
         client.run("inspect . -a=name")
-        self.assertIn("name: MyPkg", client.out)
+        self.assertIn("name: mypkg", client.out)
         client.run("inspect . -a=version")
         self.assertIn("version: 1.2.3", client.out)
         client.run("inspect . -a=version -a=name")
-        self.assertIn("name: MyPkg", client.out)
+        self.assertIn("name: mypkg", client.out)
         self.assertIn("version: 1.2.3", client.out)
         client.run("inspect . -a=version -a=name --json=file.json")
         contents = client.load("file.json")
         self.assertIn('"version": "1.2.3"', contents)
-        self.assertIn('"name": "MyPkg"', contents)
+        self.assertIn('"name": "mypkg"', contents)
 
-        client.run("export . lasote/testing")
-        client.run("inspect MyPkg/1.2.3@lasote/testing -a=name")
-        self.assertIn("name: MyPkg", client.out)
-        client.run("inspect MyPkg/1.2.3@lasote/testing -a=version")
+        client.run("export . --user=lasote --channel=testing")
+        client.run("inspect mypkg/1.2.3@lasote/testing -a=name")
+        self.assertIn("name: mypkg", client.out)
+        client.run("inspect mypkg/1.2.3@lasote/testing -a=version")
         self.assertIn("version: 1.2.3", client.out)
 
-        client.run("upload MyPkg* --confirm -r default")
+        client.run("upload mypkg* --confirm -r default")
         client.run('remove "*" -f')
-        client.run("inspect MyPkg/1.2.3@lasote/testing -a=name -r=default")
-        self.assertIn("name: MyPkg", client.out)
-        client.run("inspect MyPkg/1.2.3@lasote/testing -a=version -r=default")
+        client.run("inspect mypkg/1.2.3@lasote/testing -a=name -r=default")
+        self.assertIn("name: mypkg", client.out)
+        client.run("inspect mypkg/1.2.3@lasote/testing -a=version -r=default")
         self.assertIn("version: 1.2.3", client.out)
 
     def test_set_name_version(self):
@@ -94,22 +94,22 @@ class ConanInspectTest(unittest.TestCase):
             import os
             class Pkg(ConanFile):
                 def set_name(self):
-                    self.name = "MyPkg"
+                    self.name = "mypkg"
                 def set_version(self):
                     self.version = load(os.path.join(self.recipe_folder, "version.txt"))
             """)
         client.save({"conanfile.py": conanfile,
                      "version.txt": "1.2.3"})
         client.run("inspect . -a=name")
-        self.assertIn("name: MyPkg", client.out)
+        self.assertIn("name: mypkg", client.out)
         client.run("inspect . -a=version")
         self.assertIn("version: 1.2.3", client.out)
 
         client.run("export .")
         client.save({}, clean_first=True)
-        client.run("inspect MyPkg/1.2.3@ -a=name")
-        self.assertIn("name: MyPkg", client.out)
-        client.run("inspect MyPkg/1.2.3@ -a=version")
+        client.run("inspect mypkg/1.2.3@ -a=name")
+        self.assertIn("name: mypkg", client.out)
+        client.run("inspect mypkg/1.2.3@ -a=version")
         self.assertIn("version: 1.2.3", client.out)
 
     def test_attributes_display(self):
@@ -138,7 +138,7 @@ class Pkg(ConanFile):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
-    name = "MyPkg"
+    name = "mypkg"
     version = "1.2.3"
     _private = "Nothing"
     def build(self):
@@ -146,7 +146,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect .")
-        self.assertEqual("""name: MyPkg
+        self.assertEqual("""name: mypkg
 version: 1.2.3
 url: None
 homepage: None
@@ -161,7 +161,7 @@ short_paths: False
 build_policy: None
 revision_mode: hash
 settings: None
-options: None
+options:
 default_options: None
 deprecated: None
 """, client.out)
@@ -170,7 +170,7 @@ deprecated: None
         client = TestClient()
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
-    name = "MyPkg"
+    name = "mypkg"
     version = "1.2.3"
     author = "John Doe"
     url = "https://john.doe.com"
@@ -190,7 +190,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("inspect .")
-        self.assertEqual("""name: MyPkg
+        self.assertEqual("""name: mypkg
 version: 1.2.3
 url: https://john.doe.com
 homepage: https://john.company.site
@@ -206,8 +206,8 @@ build_policy: None
 revision_mode: scm
 settings: ('os', 'arch', 'build_type', 'compiler')
 options:
-    bar: [True, False]
-    foo: [True, False]
+    bar: ['True', 'False']
+    foo: ['True', 'False']
 default_options:
     bar: False
     foo: True
@@ -220,7 +220,7 @@ class InspectRawTest(unittest.TestCase):
         from conans import ConanFile
 
         class Pkg(ConanFile):
-            name = "MyPkg"
+            name = "mypkg"
             version = "1.2.3"
             author = "John Doe"
             url = "https://john.doe.com"
@@ -275,7 +275,7 @@ class InspectRawTest(unittest.TestCase):
         # The output is a dictionary, no order guaranteed, we need to compare as dict
         import ast
         output = ast.literal_eval(str(client.out))
-        self.assertDictEqual(output, {'bar': [True, False], 'foo': [True, False]})
+        self.assertDictEqual(output, {'bar': ['True', 'False'], 'foo': ['True', 'False']})
 
     def test_default_options_list(self):
         client = TestClient()
@@ -289,6 +289,7 @@ class InspectRawTest(unittest.TestCase):
             from conans import ConanFile
 
             class Lib(ConanFile):
+                options = {"dict": [True, False], "list": [True, False]}
                 default_options = {"dict": True, "list": False}
             """)
         client.save({"conanfile.py": conanfile})
@@ -298,9 +299,9 @@ class InspectRawTest(unittest.TestCase):
     def test_initial_inspect_without_registry(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
         os.remove(client.cache.remotes_path)
-        client.run("inspect MyPkg/1.2.3@user/channel --raw=version")
+        client.run("inspect mypkg/1.2.3@user/channel --raw=version")
         self.assertEqual("1.2.3", client.out)
 
     def test_inspect_settings_set(self):
@@ -318,8 +319,8 @@ class InspectRawTest(unittest.TestCase):
     def test_inspect_alias(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . pkg/0.1@")
-        client.run("alias pkg/latest@ pkg/0.1@")
+        client.run("export . --name=pkg --version=0.1")
+        client.alias("pkg/latest@",  "pkg/0.1")
         client.run("inspect pkg/latest@ -a alias")
         assert "alias: pkg/0.1" in client.out
 

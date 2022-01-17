@@ -1,6 +1,5 @@
 import os
 
-from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
 from conan.tools.cmake.cmakedeps.templates.config_version import ConfigVersionTemplate
 from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
@@ -24,7 +23,6 @@ class CMakeDeps(object):
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
 
-        self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
         # Activate the build config files for the specified libraries
         self.build_context_activated = []
         # By default, the build modules are generated for host context only
@@ -32,8 +30,6 @@ class CMakeDeps(object):
         # If specified, the files/targets/variables for the build context will be renamed appending
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
-
-        check_using_build_profile(self._conanfile)
 
         # Enable/Disable checking if a component target exists or not
         self.check_components_exist = False
@@ -81,7 +77,7 @@ class CMakeDeps(object):
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            cmake_find_mode = dep.cpp_info.get_property("cmake_find_mode", "CMakeDeps")
+            cmake_find_mode = dep.cpp_info.get_property("cmake_find_mode")
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
             # Skip from the requirement

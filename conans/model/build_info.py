@@ -3,9 +3,10 @@ import os
 from collections import OrderedDict
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
-                   "_frameworkdirs"]
+                   "_frameworkdirs", "_objects"]
 _FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
-                    "_sharedlinkflags", "_exelinkflags", "_objects"]
+                    "_sharedlinkflags", "_exelinkflags"]
+_ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
 
 
 class DefaultOrderedDict(OrderedDict):
@@ -243,21 +244,16 @@ class _Component(object):
             return []
         return [r for r in self.requires if "::" not in r]
 
-    def set_property(self, property_name, value, generator=None):
+    def set_property(self, property_name, value):
         if self._generator_properties is None:
             self._generator_properties = {}
-        self._generator_properties.setdefault(generator, {})[property_name] = value
+        self._generator_properties[property_name] = value
 
-    def get_property(self, property_name, generator=None):
+    def get_property(self, property_name):
         if self._generator_properties is None:
             return None
-        if generator:
-            try:
-                return self._generator_properties[generator][property_name]
-            except KeyError:
-                pass
-        try:  # generator = None is the dict for all generators
-            return self._generator_properties[None][property_name]
+        try:
+            return self._generator_properties[property_name]
         except KeyError:
             pass
 
@@ -283,6 +279,8 @@ class CppInfo(object):
             self.builddirs = [""]
             self.frameworkdirs = ["Frameworks"]
 
+        self._aggregated = None  # A _NewComponent object with all the components aggregated
+
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
 
@@ -301,10 +299,15 @@ class CppInfo(object):
         return filter(None, self.components.keys())
 
     def merge(self, other, overwrite=False):
+        """Merge 'other' into self. 'other' can be an old cpp_info object
+        Used to merge Layout source + build cpp objects info (editables)
+        :type other: CppInfo
+        """
+
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
 
-        for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+        for varname in _ALL_NAMES:
             other_values = getattr(other, varname)
             if other_values is not None:
                 if not overwrite:
@@ -312,13 +315,12 @@ class CppInfo(object):
                     merge_list(other_values, current_values)
                 else:
                     setattr(self, varname, other_values)
+        if not self.sysroot and other.sysroot:
+            self.sysroot = other.sysroot
 
-        if self._sysroot is None and other._sysroot is not None:
-            self._sysroot = other._sysroot
-
-        if other._requires:
-            current_values = self.components[None].get_init("_requires", [])
-            merge_list(other._requires, current_values)
+        if other.requires:
+            current_values = self.components[None].get_init("requires", [])
+            merge_list(other.requires, current_values)
 
         if other._generator_properties:
             current_values = self.components[None].get_init("_generator_properties", {})
@@ -328,7 +330,7 @@ class CppInfo(object):
         for cname, c in other.components.items():
             if cname is None:
                 continue
-            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            for varname in _ALL_NAMES:
                 other_values = getattr(c, varname)
                 if other_values is not None:
                     if not overwrite:
@@ -336,10 +338,9 @@ class CppInfo(object):
                         merge_list(other_values, current_values)
                     else:
                         setattr(self.components[cname], varname, other_values)
-
-            if c._requires:
-                current_values = self.components[cname].get_init("_requires", [])
-                merge_list(c._requires, current_values)
+            if c.requires:
+                current_values = self.components[cname].get_init("requires", [])
+                merge_list(c.requires, current_values)
 
             if c._generator_properties:
                 current_values = self.components[cname].get_init("_generator_properties", {})
@@ -368,44 +369,39 @@ class CppInfo(object):
                 if not req_processed and name not in processed:
                     processed.append(name)
 
-        return OrderedDict([(cname,  self.components[cname]) for cname in processed])
+        return OrderedDict([(cname, self.components[cname]) for cname in processed])
 
-    def aggregate_components(self):
-        """Aggregates all the components as global values"""
+    def aggregated_components(self):
+        """Aggregates all the components as global values, returning a new CppInfo"""
+        if self._aggregated is None:
+            if self.has_components:
+                result = _Component()
+                for n in _ALL_NAMES:  # Initialize all values, from None => []
+                    setattr(result, n, [])  # TODO: This is a bit dirty
+                # Reversed to make more dependant first
+                for name, component in reversed(self.get_sorted_components().items()):
+                    for n in _ALL_NAMES:
+                        if getattr(component, n):
+                            dest = result.get_init(n, [])
+                            dest.extend([i for i in getattr(component, n) if i not in dest])
 
-        if self.has_components:
-            components = self.get_sorted_components()
-            cnames = list(components.keys())
-            cnames.reverse()  # More dependant first
+                    # NOTE: The properties are not aggregated because they might refer only to the
+                    # component like "cmake_target_name" describing the target name FOR THE component
+                    # not the namespace.
+                    if component.requires:
+                        current_values = result.get_init("requires", [])
+                        current_values.extend(component.requires)
 
-            # Clean global values
-            for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                setattr(self.components[None], n, [])
-
-            for name in cnames:
-                component = components[name]
-                for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                    if getattr(component, n):
-                        dest = getattr(self.components[None], n)
-                        if dest is None:
-                            setattr(self.components[None], n, [])
-                        dest += [i for i in getattr(component, n) if i not in dest]
-
-                # NOTE: The properties are not aggregated because they might refer only to the
-                # component like "cmake_target_name" describing the target name FOR THE component
-                # not the namespace.
-
-                if component.requires:
-                    current_values = self.components[None].get_init("requires", [])
-                    current_values.extend(component.requires)
-
-            # FIXME: What to do about sysroot?
-            # Leave only the aggregated value
-            main_value = self.components[None]
-            self.components = DefaultOrderedDict(lambda: _Component())
-            self.components[None] = main_value
+                # FIXME: What to do about sysroot?
+                result._generator_properties = copy.copy(self._generator_properties)
+            else:
+                result = copy.copy(self.components[None])
+            self._aggregated = CppInfo()
+            self._aggregated.components[None] = result
+        return self._aggregated
 
     def copy(self):
+        # Only used at the moment by layout() editable merging build+source .cpp data
         ret = CppInfo()
         ret._generator_properties = copy.copy(self._generator_properties)
         ret.components = DefaultOrderedDict(lambda: _Component())
@@ -427,7 +423,7 @@ class CppInfo(object):
     def __str__(self):
         ret = []
         for cname, c in self.components.items():
-            for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            for n in _ALL_NAMES:
                 ret.append("Component: '{}' "
                            "Var: '{}' "
                            "Value: '{}'".format(cname, n, getattr(c, n)))

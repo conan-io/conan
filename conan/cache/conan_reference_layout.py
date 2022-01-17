@@ -1,7 +1,6 @@
 import os
 from contextlib import contextmanager
 
-from conan.cache.conan_reference import ConanReference
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANFILE, DATA_YML
@@ -38,13 +37,13 @@ class LayoutBase:
 
 class RecipeLayout(LayoutBase):
     # TODO: cache2.0 fix this in the future when we only have to deal
-    #  with ConanReference and not ConanFileReference and PackageReference
+    #  with ConanReference and not RecipeReference and PkgReference
     @property
     def reference(self):
-        return self._ref.as_conanfile_reference()
+        return self._ref
 
     @reference.setter
-    def reference(self, ref: ConanReference):
+    def reference(self, ref):
         self._ref = ref
 
     @contextmanager
@@ -103,13 +102,18 @@ class RecipeLayout(LayoutBase):
 
 
 class PackageLayout(LayoutBase):
+
+    def __init__(self, ref, base_folder):
+        super().__init__(ref, base_folder)
+        self.build_id = None
+
     @property
     def reference(self):
-        return self._ref.as_package_reference()
+        return self._ref
 
     # TODO: cache2.0 fix this in the future
     @reference.setter
-    def reference(self, ref: ConanReference):
+    def reference(self, ref):
         self._ref = ref
 
     # TODO: cache2.0 locks implementation
@@ -131,7 +135,7 @@ class PackageLayout(LayoutBase):
 
     def system_reqs_package(self):
         return os.path.join(self.base_folder, SYSTEM_REQS_FOLDER,
-                            self._ref.pkgid, SYSTEM_REQS)
+                            self._ref.package_id, SYSTEM_REQS)
 
     def remove_system_reqs(self):
         system_reqs_folder = os.path.join(self.base_folder, SYSTEM_REQS_FOLDER)

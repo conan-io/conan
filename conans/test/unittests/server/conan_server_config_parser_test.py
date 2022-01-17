@@ -69,7 +69,7 @@ demo: %s
         save(conf_path, server_conf)
 
         server_config = ConanServerConfigParser(tmp_dir)
-        self.assertEqual(server_config.public_url, "v1")
+        self.assertEqual(server_config.public_url, "v2")
 
     def test_custom_server_folder_path(self):
         tmp_dir = temp_folder()

@@ -2,17 +2,23 @@ import textwrap
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
 from conans.util.files import save
 
 
 class BazelDeps(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        check_using_build_profile(self._conanfile)
 
     def generate(self):
         local_repositories = []
+
+        for build_dependency in self._conanfile.dependencies.direct_build.values():
+            content = self._get_build_dependency_buildfile_content(build_dependency)
+            filename = self._save_dependendy_buildfile(build_dependency, content)
+
+            local_repository = self._create_new_local_repository(build_dependency, filename)
+            local_repositories.append(local_repository)
+
         for dependency in self._conanfile.dependencies.host.values():
             content = self._get_dependency_buildfile_content(dependency)
             filename = self._save_dependendy_buildfile(dependency, content)
@@ -27,6 +33,18 @@ class BazelDeps(object):
         filename = 'conandeps/{}/BUILD'.format(dependency.ref.name)
         save(filename, buildfile_content)
         return filename
+
+    def _get_build_dependency_buildfile_content(self, dependency):
+        filegroup = textwrap.dedent("""
+            filegroup(
+                name = "{}_binaries",
+                data = glob(["**"]),
+                visibility = ["//visibility:public"],
+            )
+
+        """).format(dependency.ref.name)
+
+        return filegroup
 
     def _get_dependency_buildfile_content(self, dependency):
         template = textwrap.dedent("""
@@ -65,8 +83,7 @@ class BazelDeps(object):
 
         """)
 
-        cpp_info = dependency.cpp_info.copy()
-        cpp_info.aggregate_components()
+        cpp_info = dependency.cpp_info.aggregated_components()
 
         if not cpp_info.libs and not cpp_info.includedirs:
             return None

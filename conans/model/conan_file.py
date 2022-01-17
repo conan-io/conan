@@ -1,10 +1,8 @@
 import os
 import platform
 
-from conan.tools.env import Environment
-from conan.tools.env.environment import environment_wrap_command
 from conans.cli.output import ConanOutput, ScopedOutput
-from conans.errors import ConanException, ConanInvalidConfiguration
+from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos
@@ -59,7 +57,7 @@ class ConanFile:
 
         self.compatible_packages = []
         self._conan_requester = None
-
+        from conan.tools.env import Environment
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
@@ -73,7 +71,9 @@ class ConanFile:
             self.settings = [self.settings]
         self.requires = Requirements(getattr(self, "requires", None),
                                      getattr(self, "build_requires", None),
-                                     getattr(self, "test_requires", None))
+                                     getattr(self, "test_requires", None),
+                                     getattr(self, "tool_requires", None))
+        self.options = Options(self.options or {}, self.default_options)
 
         # user declared variables
         self.user_info = None
@@ -90,12 +90,23 @@ class ConanFile:
         self.folders = Folders()
         self.cpp = Infos()
 
-        self.cpp.package.includedirs = ["include"]
-        self.cpp.package.libdirs = ["lib"]
-        self.cpp.package.bindirs = ["bin"]
-        self.cpp.package.resdirs = ["res"]
-        self.cpp.package.builddirs = [""]
-        self.cpp.package.frameworkdirs = ["Frameworks"]
+    def serialize(self):
+        result = {}
+        for a in ("url", "license", "author", "description", "topics", "homepage", "build_policy",
+                  "revision_mode", "provides", "deprecated", "win_bash"):
+            v = getattr(self, a)
+            if v is not None:
+                result[a] = v
+        result["package_type"] = str(self.package_type)
+        result["settings"] = self.settings.serialize()
+        result["scm"] = getattr(self, "scm", None)
+        if hasattr(self, "python_requires"):
+            result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
+        result.update(self.options.serialize())  # FIXME: The options contain an "options" already
+        result["source_folder"] = self.source_folder
+        result["build_folder"] = self.build_folder
+        result["package_folder"] = self.package_folder
+        return result
 
     @property
     def output(self):
@@ -127,23 +138,12 @@ class ConanFile:
     @property
     def buildenv(self):
         # Lazy computation of the package buildenv based on the profileone
+        from conan.tools.env import Environment
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
             self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
         return self._conan_buildenv
-
-    def initialize(self, settings, buildenv=None):
-        # If we move this to constructor, the python_require inheritance in init fails
-        # and "conan inspect" also breaks
-        self.options = Options(self.options or {}, self.default_options)
-        self._conan_buildenv = buildenv
-        try:
-            settings.constraint(self.settings or [])
-        except Exception as e:
-            raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
-                self.display_name, str(e)))
-        self.settings = settings
 
     @property
     def cpp_info(self):
@@ -157,35 +157,18 @@ class ConanFile:
     def source_folder(self):
         return self.folders.source_folder
 
-    @source_folder.setter
-    def source_folder(self, folder):
-        self.folders.set_base_source(folder)
-
     @property
     def build_folder(self):
         return self.folders.build_folder
-
-    @build_folder.setter
-    def build_folder(self, folder):
-        self.folders.set_base_build(folder)
 
     @property
     def package_folder(self):
         return self.folders.base_package
 
-    @package_folder.setter
-    def package_folder(self, folder):
-        self.folders.set_base_package(folder)
-
     @property
     def install_folder(self):
         # FIXME: Remove in 2.0, no self.install_folder
         return self.folders.base_install
-
-    @install_folder.setter
-    def install_folder(self, folder):
-        # FIXME: Remove in 2.0, no self.install_folder
-        self.folders.set_base_install(folder)
 
     @property
     def generators_folder(self):
@@ -195,10 +178,6 @@ class ConanFile:
     @property
     def imports_folder(self):
         return self.folders.imports_folder
-
-    @imports_folder.setter
-    def imports_folder(self, folder):
-        self.folders.set_base_imports(folder)
 
     def source(self):
         pass
@@ -242,22 +221,17 @@ class ConanFile:
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, with_login=True, env=None):
+    def run(self, command, output=True, cwd=None, ignore_errors=False, env=None):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
-
-        def _run(cmd, _env):
-            # FIXME: run in windows bash is not using output
-            if platform.system() == "Windows":
-                if self.win_bash:  # New, Conan 2.0
-                    from conan.tools.microsoft.subsystems import run_in_windows_bash
-                    return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
-            if _env is None:
-                _env = "conanbuild"
-            wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
-            return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
-
-        retcode = _run(command, env)
+        if platform.system() == "Windows":
+            if self.win_bash:  # New, Conan 2.0
+                from conan.tools.microsoft.subsystems import run_in_windows_bash
+                return run_in_windows_bash(self, command=command, cwd=cwd, env=env)
+        if env is None:
+            env = "conanbuild"
+        from conan.tools.env.environment import environment_wrap_command
+        wrapped_cmd = environment_wrap_command(env, command, cwd=self.generators_folder)
+        retcode = self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))

@@ -21,7 +21,7 @@ compiler.libcxx=libstdc++
 build_type=Release
 [options]
 
-[build_requires]
+[tool_requires]
 [env]
 CC=dpcpp
 CXX=dpcpp

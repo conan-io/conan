@@ -14,7 +14,7 @@ from conans.paths import conan_expand_user
 from conans.server.conf.default_server_conf import default_server_conf
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import mkdir, save
 from conans.util.log import logger
 
@@ -113,7 +113,7 @@ class ConanServerConfigParser(ConfigParser):
     def public_url(self):
         host_name = self.host_name
         ssl_enabled = self.ssl_enabled
-        protocol_version = "v1"
+        protocol_version = "v2"
         if host_name is None and ssl_enabled is None:
             # No hostname and ssl config means that the transfer and the
             # logical endpoint are the same and a relative URL is sufficient
@@ -219,9 +219,7 @@ class ConanServerConfigParser(ConfigParser):
         return timedelta(minutes=float(self._get_conf_server_string("jwt_expire_minutes")))
 
 
-def get_server_store(disk_storage_path, public_url, updown_auth_manager):
+def get_server_store(disk_storage_path, public_url):
     disk_controller_url = "%s/%s" % (public_url, "files")
-    if not updown_auth_manager:
-        raise Exception("Updown auth manager needed for disk controller (not s3)")
-    adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path, updown_auth_manager)
+    adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path)
     return ServerStore(adapter)

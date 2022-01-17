@@ -4,7 +4,7 @@ import pytest
 from mock import patch
 
 from conans.client.remote_manager import RemoteManager
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -17,10 +17,10 @@ class TestVersionRangesCache:
 
     def _mocked_search_recipes(self, remote, pattern, ignorecase=True):
         packages = {
-            "server0": [ConanFileReference.loads("liba/1.0.0"),
-                        ConanFileReference.loads("liba/1.1.0")],
-            "server1": [ConanFileReference.loads("liba/2.0.0"),
-                        ConanFileReference.loads("liba/2.1.0")]
+            "server0": [RecipeReference.loads("liba/1.0.0"),
+                        RecipeReference.loads("liba/1.1.0")],
+            "server1": [RecipeReference.loads("liba/2.0.0"),
+                        RecipeReference.loads("liba/2.1.0")]
         }
         self.counters[remote.name] = self.counters[remote.name] + 1
         return packages[remote.name]

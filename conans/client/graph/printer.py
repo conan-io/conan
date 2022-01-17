@@ -1,10 +1,11 @@
+import copy
 from collections import OrderedDict
 
 
 from conans.client.graph.graph import BINARY_SKIP, RECIPE_CONSUMER, RECIPE_VIRTUAL,\
     RECIPE_EDITABLE
 from conans.cli.output import Color, ConanOutput
-from conans.model.ref import PackageReference
+from conans.model.package_ref import PkgReference
 
 
 def _get_python_requires(conanfile):
@@ -39,7 +40,7 @@ def print_graph(deps_graph):
         python_requires.update(_get_python_requires(node.conanfile))
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
-        pref = PackageReference(node.ref, node.package_id)
+        pref = PkgReference(node.ref, node.package_id)
         if node in build_time_nodes:  # TODO: May use build_require_context information
             build_requires.setdefault(pref, []).append(node)
         else:
@@ -62,7 +63,7 @@ def print_graph(deps_graph):
     if python_requires:
         out.info("Python requires", Color.BRIGHT_YELLOW)
         for p in python_requires:
-            out.info("    %s" % repr(p.copy_clear_rev()), Color.BRIGHT_CYAN)
+            out.info("    %s" % str(p), Color.BRIGHT_CYAN)
     out.info("Packages", Color.BRIGHT_YELLOW)
 
     def _packages(nodes):

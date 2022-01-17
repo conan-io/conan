@@ -20,7 +20,7 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . name/version@ -s os=Linux', assert_error=True)
-        self.assertIn("Conan v2 incompatible: 'self.settings' access in source() method is deprecated", t.out)
+        self.assertIn("'self.settings' access in source() method is deprecated", t.out)
 
     def test_no_options(self):
         # self.setting is not available in 'source'
@@ -36,4 +36,4 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . name/version@ -o shared=False', assert_error=True)
-        self.assertIn("Conan v2 incompatible: 'self.options' access in source() method is deprecated", t.out)
+        self.assertIn("'self.options' access in source() method is deprecated", t.out)

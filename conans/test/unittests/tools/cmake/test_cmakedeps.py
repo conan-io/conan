@@ -4,9 +4,10 @@ from mock import Mock
 from conan.tools.cmake import CMakeDeps
 from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
-from conans.model.dependencies import ConanFileDependencies, Requirement
+from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
+from conans.model.requires import Requirement
 from conans.model.settings import Settings
 
 
@@ -15,26 +16,26 @@ def test_cpp_info_name_cmakedeps():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}))
+                                   "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
     cpp_info = CppInfo("mypkg")
-    cpp_info.set_property("cmake_target_name", "MySuperPkg1")
+    cpp_info.set_property("cmake_target_name", "MySuperPkg1::MySuperPkg1")
     cpp_info.set_property("cmake_file_name", "ComplexFileName1")
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
-    conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
+    conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
-        req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
+        req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
         cmakedeps = CMakeDeps(conanfile)
@@ -50,28 +51,28 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release", "Debug"],
-                                   "arch": ["x86", "x64"]}))
+                                   "arch": ["x86", "x64"]})
     conanfile.settings.build_type = "Debug"
     conanfile.settings.arch = "x64"
 
     cpp_info = CppInfo()
-    cpp_info.set_property("cmake_target_name", "GlobakPkgName1")
-    cpp_info.components["mycomp"].set_property("cmake_target_name", "MySuperPkg1")
-    cpp_info.components["mycomp"].includedirs = ["include"]
     cpp_info.set_property("cmake_file_name", "ComplexFileName1")
+    cpp_info.set_property("cmake_target_name", "GlobakPkgName1::GlobakPkgName1")
+    cpp_info.components["mycomp"].includedirs = ["include"]
+    cpp_info.components["mycomp"].set_property("cmake_target_name", "GlobakPkgName1::MySuperPkg1")
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
-    conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
+    conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
-        req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
+        req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
         cmakedeps = CMakeDeps(conanfile)
@@ -80,7 +81,7 @@ def test_cpp_info_name_cmakedeps_components():
         assert 'set(OriginalDepName_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
-        assert 'set(OriginalDepName_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
+        assert 'set(OriginalDepName_GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
 
@@ -91,10 +92,10 @@ def test_cmake_deps_links_flags():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}))
+                                   "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -106,20 +107,21 @@ def test_cmake_deps_links_flags():
     cpp_info.objects = ["myobject.o"]
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
-    conanfile_dep._conan_node.ref = ConanFileReference.loads("mypkg/1.0")
+    conanfile_dep._conan_node.ref = RecipeReference.loads("mypkg/1.0")
     conanfile_dep._conan_node.context = "host"
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
-        req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
+        req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
         data_cmake = files["mypkg-release-x86-data.cmake"]
-        assert "set(mypkg_SHARED_LINK_FLAGS_RELEASE -NODEFAULTLIB;-OTHERFLAG)" in data_cmake
-        assert "set(mypkg_EXE_LINK_FLAGS_RELEASE -OPT:NOICF)" in data_cmake
-        assert 'set(mypkg_OBJECTS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/myobject.o")' in data_cmake
+        assert 'set(mypkg_SHARED_LINK_FLAGS_RELEASE "-NODEFAULTLIB;-OTHERFLAG")' in data_cmake
+        assert 'set(mypkg_EXE_LINK_FLAGS_RELEASE "-OPT:NOICF")' in data_cmake
+        assert 'set(mypkg_OBJECTS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/myobject.o")' \
+               in data_cmake
 
 
 def test_component_name_same_package():
@@ -131,10 +133,10 @@ def test_component_name_same_package():
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(Settings({"os": ["Windows"],
+    conanfile.settings = Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
-                                   "arch": ["x86"]}))
+                                   "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
@@ -147,18 +149,19 @@ def test_component_name_same_package():
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.context = "host"
-    conanfile_dep._conan_node.ref = ConanFileReference.loads("mypkg/1.0")
-    conanfile_dep.package_folder = "/path/to/folder_dep"
+    conanfile_dep._conan_node.ref = RecipeReference.loads("mypkg/1.0")
+    conanfile_dep.folders.set_base_package("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
-        req = Requirement(ConanFileReference.loads("mypkg/1.0"))
+        req = Requirement(RecipeReference.loads("mypkg/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
         target_cmake = files["mypkg-Target-release.cmake"]
-        assert "$<$<CONFIG:Release>:${mypkg_mypkg_INCLUDE_DIRS_RELEASE}> APPEND)" in target_cmake
+        assert "$<$<CONFIG:Release>:${mypkg_mypkg_mypkg_INCLUDE_DIRS_RELEASE}> APPEND)" \
+               in target_cmake
 
         data_cmake = files["mypkg-release-x86-data.cmake"]
-        assert 'set(mypkg_mypkg_INCLUDE_DIRS_RELEASE ' \
+        assert 'set(mypkg_mypkg_mypkg_INCLUDE_DIRS_RELEASE ' \
                '"${mypkg_PACKAGE_FOLDER_RELEASE}/includedirs1")' in data_cmake

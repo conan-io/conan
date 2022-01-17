@@ -19,7 +19,7 @@ class Error200NoJson(unittest.TestCase):
                             requester_class=RequesterMock,
                             inputs=["admin", "password"])
 
-        client.run("install pkg/ref@user/testing", assert_error=True)
+        client.run("install --reference=pkg/ref@user/testing", assert_error=True)
         self.assertIn("Response from remote is not json, but 'None'", client.out)
 
     def test_error_broken_json(self):
@@ -36,7 +36,7 @@ class Error200NoJson(unittest.TestCase):
                             requester_class=RequesterMock,
                             inputs=["admin", "password"])
 
-        client.run("install pkg/ref@user/testing", assert_error=True)
+        client.run("install --reference=pkg/ref@user/testing", assert_error=True)
         self.assertIn("Remote responded with broken json: <>", client.out)
 
     def test_error_json(self):
@@ -54,5 +54,5 @@ class Error200NoJson(unittest.TestCase):
                             requester_class=RequesterMock,
                             inputs=["admin", "password"])
 
-        client.run("install pkg/ref@user/testing", assert_error=True)
+        client.run("install --reference=pkg/ref@user/testing", assert_error=True)
         self.assertIn("Unexpected server response [1, 2, 3]", client.out)

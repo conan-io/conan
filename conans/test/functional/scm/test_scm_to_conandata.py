@@ -5,11 +5,10 @@ import unittest
 
 import pytest
 import yaml
-from mock import Mock
 
 from conans.client.loader import ConanFileLoader
-from conans.client.tools.env import environment_append
-from conans.model.ref import ConanFileReference
+from conans.util.env import environment_update
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import DATA_YML
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -17,7 +16,7 @@ from conans.util.files import save_files
 
 
 class SCMDataToConanDataTestCase(unittest.TestCase):
-    ref = ConanFileReference.loads("name/version@")
+    ref = RecipeReference.loads("name/version@")
 
     def test_plain_recipe(self):
         conanfile = textwrap.dedent("""
@@ -31,7 +30,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         """)
         t = TestClient()
         t.save({'conanfile.py': conanfile})
-        t.run("export . name/version@")
+        t.run("export . --name=name --version=version")
 
         # Check exported files
         ref_layout = t.get_latest_ref_layout(self.ref)
@@ -47,7 +46,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("inspect name/version@ -a scm")
         self.assertIn("password: None", t.out)
         self.assertIn("username: myuser", t.out)
-        with environment_append({"SECRET": "42"}):
+        with environment_update({"SECRET": "42"}):
             t.run("inspect name/version@ -a scm")
             self.assertIn("password: 42", t.out)
             self.assertIn("username: myuser", t.out)
@@ -63,7 +62,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         """)
         t = TestClient()
         t.save({'conanfile.py': conanfile})
-        t.run("export . name/version@")
+        t.run("export . --name=name --version=version")
 
         # Check exported files
         ref_layout = t.get_latest_ref_layout(self.ref)
@@ -95,7 +94,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t = TestClient()
         commit = t.init_git_repo({'conanfile.py': conanfile})
         t.run_command('git remote add origin https://myrepo.com.git')
-        t.run("export . name/version@")
+        t.run("export . --name=name --version=version")
 
         # Check exported files
         ref_layout = t.get_latest_ref_layout(self.ref)
@@ -126,7 +125,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
                 DATA_YML: yaml.safe_dump({'.conan': {'scm_data': {}}}, default_flow_style=False)})
 
         # It fails with it activated
-        t.run("export . name/version@", assert_error=True)
+        t.run("export . --name=name --version=version", assert_error=True)
         self.assertIn("ERROR: Field '.conan' inside 'conandata.yml' file is"
                       " reserved to Conan usage.", t.out)
 
@@ -143,7 +142,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         commit = t.init_git_repo({'conanfile.py': conanfile,
                                   'conandata.yml': ""})
         t.run_command('git remote add origin https://myrepo.com.git')
-        t.run("export . name/version@")
+        t.run("export . --name=name --version=version")
 
         # Check exported files
         ref_layout = t.get_latest_ref_layout(self.ref)
@@ -199,11 +198,11 @@ def test_auto_can_be_automated():
     commit = t.init_git_repo({'conanfile.py': conanfile,
                               'conandata.yml': ""})
     t.run_command('git remote add origin https://myrepo.com.git')
-    t.run("export . pkg/1.0@")
+    t.run("export . --name=pkg --version=1.0")
 
     def _check(client):
         # Check exported files
-        ref = ConanFileReference.loads("pkg/1.0")
+        ref = RecipeReference.loads("pkg/1.0")
         ref_layout = client.get_latest_ref_layout(ref)
         assert load(ref_layout.conanfile()) == conanfile
         exported_conandata = load(ref_layout.conandata())
@@ -217,17 +216,17 @@ def test_auto_can_be_automated():
     # Now try from another folder, doing a copy and using the env-vars
     t = TestClient(default_server_user=True)
     t.save({"conanfile.py": conanfile})
-    with environment_append({"USER_EXTERNAL_URL": "https://myrepo.com.git",
+    with environment_update({"USER_EXTERNAL_URL": "https://myrepo.com.git",
                              "USER_EXTERNAL_COMMIT": commit}):
-        t.run("export . pkg/1.0@")
+        t.run("export . --name=pkg --version=1.0")
     _check(t)
 
     t.run("upload * -c -r default")
     t.run("remove * -f")
-    t.run("install pkg/1.0@ --build", assert_error=True)
+    t.run("install --reference=pkg/1.0@ --build", assert_error=True)
     assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out
 
-    with environment_append({"USER_EXTERNAL_URL": "https://other.different.url",
+    with environment_update({"USER_EXTERNAL_URL": "https://other.different.url",
                              "USER_EXTERNAL_COMMIT": "invalid commit"}):
-        t.run("install pkg/1.0@ --build", assert_error=True)
+        t.run("install --reference=pkg/1.0@ --build", assert_error=True)
         assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out

@@ -1,11 +1,10 @@
 import logging
 import sys
 
-import tqdm
 from colorama import Fore, Style
 
 from conans.client.userio import color_enabled
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 
 
 class Color(object):
@@ -81,20 +80,9 @@ class ConanOutput(object):
         if self._color and (fg or bg):
             data = "%s%s%s%s" % (fg or '', bg or '', data, Style.RESET_ALL)
 
-        # https://github.com/conan-io/conan/issues/4277
-        # Windows output locks produce IOErrors
-        for _ in range(3):
-            try:
-                if newline:
-                    data = "%s\n" % data
-                self.stream.write(data)
-                break
-            except IOError:
-                import time
-                time.sleep(0.02)
-            except UnicodeError:
-                data = data.encode("utf8").decode("ascii", "ignore")
-
+        if newline:
+            data = "%s\n" % data
+        self.stream.write(data)
         self.stream.flush()
 
     def rewrite_line(self, line):

@@ -1,13 +1,11 @@
-# coding=utf-8
-
 import os
 import textwrap
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.scm import SVNLocalRepoTestCase
-from conans.test.utils.tools import TestClient, load
+from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool_svn
@@ -40,16 +38,17 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         t.run_command('svn copy {url}/trunk {url}/tags/release-1.0'
                       ' -m "Release 1.0"'.format(url=self.project_url))
 
+    @pytest.mark.xfail(reason="Remove with sources is not implemented yet (-sf)")
     def test_auto_tag(self):
         t = TestClient()
-        ref = ConanFileReference.loads("lib/version@issue/testing")
+        ref = RecipeReference.loads("lib/version@issue/testing")
 
         # Clone the tag to local folder
         url = os.path.join(self.project_url, "tags/release-1.0/level1").replace('\\', '/')
         t.run_command('svn co "{url}" "{path}"'.format(url=url, path=t.current_folder))
 
         # Export the recipe (be sure sources are retrieved from the repository)
-        t.run("export . {ref}".format(ref=ref))
+        t.run("export . --name=lib --version=version --user=issue --channel=testing")
 
         scm_info = t.scm_info_cache(ref)
         self.assertEqual(scm_info.revision, '3')
@@ -59,5 +58,5 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         t.run("remove {} -f -sf".format(ref))  # Remove sources caching
 
         # Compile (it will clone the repo)
-        t.run("install {ref} --build=lib".format(ref=ref))
+        t.run("install --reference={ref} --build=lib".format(ref=ref))
         self.assertIn("lib/version@issue/testing: SCM: Getting sources from url:", t.out)

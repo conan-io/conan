@@ -1,8 +1,6 @@
 from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN, MATRIX_PARAMS
-from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import AuthenticationException, ConanException
-from conans.search.search import filter_packages
 from conans.util.log import logger
 
 
@@ -47,7 +45,7 @@ class RestApiClient(object):
     def _capable(self, capability, user=None, password=None):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
-            tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers,
+            tmp = RestV2Methods(self._remote_url, self._token, self._custom_headers,
                                 self._requester, self._config, self._verify_ssl,
                                 self._artifacts_properties)
             capabilities = tmp.server_capabilities(user, password)
@@ -57,6 +55,7 @@ class RestApiClient(object):
 
     def _get_api(self):
         revisions = self._capable(REVISIONS)
+
         if not revisions:
             # TODO: port conan_v2_error to 1.X if not revisions
             raise ConanException("The remote doesn't support revisions. "
@@ -80,11 +79,11 @@ class RestApiClient(object):
     def get_package(self, pref, dest_folder):
         return self._get_api().get_package(pref, dest_folder)
 
-    def get_recipe_path(self, ref, path):
-        return self._get_api().get_recipe_path(ref, path)
+    def get_recipe_file(self, ref, path):
+        return self._get_api().get_recipe_file(ref, path)
 
-    def get_package_path(self, pref, path):
-        return self._get_api().get_package_path(pref, path)
+    def get_package_file(self, pref, path):
+        return self._get_api().get_package_file(pref, path)
 
     def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
         return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
@@ -120,29 +119,38 @@ class RestApiClient(object):
     def search(self, pattern=None, ignorecase=True):
         return self._get_api().search(pattern, ignorecase)
 
-    def search_packages(self, reference, query):
+    def search_packages(self, reference):
         # Do not send the query to the server, as it will fail
         # https://github.com/conan-io/conan/issues/4951
-        package_infos = self._get_api().search_packages(reference, query=None)
-        return filter_packages(query, package_infos)
+        package_infos = self._get_api().search_packages(reference)
+        return package_infos
 
     def remove_recipe(self, ref):
-        return self._get_api().remove_conanfile(ref)
+        return self._get_api().remove_recipe(ref)
 
-    def remove_packages(self, ref, package_ids=None):
-        return self._get_api().remove_packages(ref, package_ids)
+    def remove_all_packages(self, ref):
+        return self._get_api().remove_all_packages(ref)
+
+    def remove_packages(self, prefs):
+        return self._get_api().remove_packages(prefs)
 
     def server_capabilities(self):
         return self._get_api().server_capabilities()
 
-    def get_recipe_revisions(self, ref):
-        return self._get_api().get_recipe_revisions(ref)
+    def get_recipe_revisions_references(self, ref):
+        return self._get_api().get_recipe_revisions_references(ref)
 
-    def get_package_revisions(self, pref, headers=None):
-        return self._get_api().get_package_revisions(pref, headers=headers)
+    def get_package_revisions_references(self, pref, headers=None):
+        return self._get_api().get_package_revisions_references(pref, headers=headers)
 
-    def get_latest_recipe_revision(self, ref):
-        return self._get_api().get_latest_recipe_revision(ref)
+    def get_latest_recipe_reference(self, ref):
+        return self._get_api().get_latest_recipe_reference(ref)
 
-    def get_latest_package_revision(self, pref, headers):
-        return self._get_api().get_latest_package_revision(pref, headers=headers)
+    def get_latest_package_reference(self, pref, headers):
+        return self._get_api().get_latest_package_reference(pref, headers=headers)
+
+    def get_recipe_revision_reference(self, ref):
+        return self._get_api().get_recipe_revision_reference(ref)
+
+    def get_package_revision_reference(self, pref):
+        return self._get_api().get_package_revision_reference(pref)

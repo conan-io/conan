@@ -1,7 +1,7 @@
-from conans.client.tools import no_op
 from conans.errors import conanfile_exception_formatter
 from conans.model.pkg_type import PackageType
-from conans.model.requires import BuildRequirements, TestRequirements
+from conans.model.requires import BuildRequirements, TestRequirements, ToolRequirements
+from conans.util.env import no_op
 
 
 def run_configure_method(conanfile, down_options, profile_options, ref):
@@ -9,13 +9,13 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
 
     # Avoid extra time manipulating the sys.path for python
     with no_op():  # TODO: Remove this in a later refactor
-        with conanfile_exception_formatter(str(conanfile), "config_options"):
+        with conanfile_exception_formatter(conanfile, "config_options"):
             conanfile.config_options()
 
         # Assign only the current package options values, but none of the dependencies
         conanfile.options.apply_downstream(down_options, profile_options, ref)
 
-        with conanfile_exception_formatter(str(conanfile), "configure"):
+        with conanfile_exception_formatter(conanfile, "configure"):
             conanfile.configure()
 
         self_options, up_options = conanfile.options.get_upstream_options(down_options, ref)
@@ -26,13 +26,17 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
 
         PackageType.compute_package_type(conanfile)
 
+        conanfile.build_requires = BuildRequirements(conanfile.requires)
+        conanfile.test_requires = TestRequirements(conanfile.requires)
+        conanfile.tool_requires = ToolRequirements(conanfile.requires)
+
         if hasattr(conanfile, "requirements"):
-            with conanfile_exception_formatter(str(conanfile), "requirements"):
+            with conanfile_exception_formatter(conanfile, "requirements"):
                 conanfile.requirements()
 
         # TODO: Maybe this could be integrated in one single requirements() method
         if hasattr(conanfile, "build_requirements"):
-            with conanfile_exception_formatter(str(conanfile), "build_requirements"):
+            with conanfile_exception_formatter(conanfile, "build_requirements"):
                 conanfile.build_requires = BuildRequirements(conanfile.requires)
                 conanfile.test_requires = TestRequirements(conanfile.requires)
                 conanfile.build_requirements()

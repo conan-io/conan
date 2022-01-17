@@ -1,15 +1,14 @@
-import unittest
-
 from conans.test.utils.tools import TestClient
 
 
-class CliHelpTest(unittest.TestCase):
+def test_help_command():
+    client = TestClient()
 
-    def test_help_command(self):
-        client = TestClient()
+    client.run("--help")
+    assert "Consumer commands" in client.out
 
-        client.run("help")
-        self.assertIn("Shows help for a specific command", client.out)
+    client.run("search --help")
+    assert "Searches for package recipes in a remote or remotes" in client.out
 
-        client.run("help search")
-        self.assertIn("Searches for package recipes in a remote or remotes", client.out)
+    client.run("list recipes --help")
+    assert "Search query to find package recipe reference" in client.out

@@ -8,7 +8,7 @@ conanfile = """
 from conans import ConanFile, tools
 
 class AConan(ConanFile):
-    name = "Hello0"
+    name = "hello0"
     version = "0.1"
 
     def build(self):
@@ -25,8 +25,8 @@ class InLocalCacheTest(unittest.TestCase):
     def test_in_local_cache_flag(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export . lasote/stable")
-        client.run("install Hello0/0.1@lasote/stable --build missing")
+        client.run("export . --user=lasote --channel=stable")
+        client.run("install --reference=hello0/0.1@lasote/stable --build missing")
         self.assertIn("build() IN LOCAL CACHE=> True", client.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.out)
 
@@ -43,14 +43,14 @@ class InLocalCacheTest(unittest.TestCase):
         # Confirm that we have the flag depending on the recipe too
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         conanfile_reuse = """
 from conans import ConanFile, tools
 
 class OtherConan(ConanFile):
-    name = "Hello1"
+    name = "hello1"
     version = "0.1"
-    requires = "Hello0/0.1@lasote/stable"
+    requires = "hello0/0.1@lasote/stable"
 
     def build(self):
         pass
@@ -59,7 +59,7 @@ class OtherConan(ConanFile):
         client.run("install . --build")
         self.assertIn("build() IN LOCAL CACHE=> True", client.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.out)
-        client.run("export . lasote/stable")
-        client.run("install Hello1/0.1@lasote/stable --build")
+        client.run("export . --user=lasote --channel=stable")
+        client.run("install --reference=hello1/0.1@lasote/stable --build")
         self.assertIn("build() IN LOCAL CACHE=> True", client.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.out)

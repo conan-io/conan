@@ -3,10 +3,10 @@ import os
 import textwrap
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
-    BINARY_MISSING, BINARY_INVALID, BINARY_ERROR
+    BINARY_MISSING, BINARY_INVALID, BINARY_ERROR, BINARY_INVALID_BUILD
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 
 
@@ -29,7 +29,7 @@ class _InstallPackageReference:
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
-        result.package_id = node.pref.id
+        result.package_id = node.pref.package_id
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
@@ -129,17 +129,17 @@ class _InstallRecipeReference:
                 self.depends.append(dep.dst.ref)
 
     def serialize(self):
-        return {"ref": repr(self.ref),
-                "depends": [repr(ref) for ref in self.depends],
+        return {"ref": self.ref.repr_notime(),
+                "depends": [ref.repr_notime() for ref in self.depends],
                 "packages": [p.serialize() for p in self.packages],
                 }
 
     @staticmethod
     def deserialize(data, filename):
         result = _InstallRecipeReference()
-        result.ref = ConanFileReference.loads(data["ref"])
+        result.ref = RecipeReference.loads(data["ref"])
         for d in data["depends"]:
-            result.depends.append(ConanFileReference.loads(d))
+            result.depends.append(RecipeReference.loads(d))
         for p in data["packages"]:
             install_node = _InstallPackageReference.deserialize(p, filename)
             result.packages.append(install_node)
@@ -233,7 +233,7 @@ class InstallGraph:
             for package in install_node.packages:
                 if package.binary == BINARY_MISSING:
                     missing.append(package)
-                elif package.binary in (BINARY_INVALID, BINARY_ERROR):
+                elif package.binary in (BINARY_INVALID, BINARY_INVALID_BUILD, BINARY_ERROR):
                     invalid.append(package)
 
         if invalid:
@@ -251,9 +251,9 @@ def raise_missing(missing, out):
     # TODO: Remove out argument
     # TODO: A bit dirty access to .pref
     missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
-    missing_prefs = list(sorted(missing_prefs))
-    for pref in missing_prefs:
-        out.error("Missing binary: %s" % str(pref))
+    missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
+    for pref_str in missing_prefs_str:
+        out.error("Missing binary: %s" % pref_str)
     out.writeln("")
 
     # Report details just the first one
@@ -277,15 +277,16 @@ def raise_missing(missing, out):
        - Package ID: %s
        ''' % (ref, settings_text, options_text, dependencies_text, requires_text, package_id))
     conanfile.output.warning(msg)
-    missing_pkgs = "', '".join([str(pref.ref) for pref in missing_prefs])
+    missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
     if len(missing_prefs) >= 5:
         build_str = "--build=missing"
     else:
-        build_str = " ".join(["--build=%s" % pref.ref.name for pref in missing_prefs])
+        build_str = " ".join(list(sorted(["--build=%s" % pref.ref.name for pref in missing_prefs])))
 
     raise ConanException(textwrap.dedent('''\
        Missing prebuilt package for '%s'
-       Try to build from sources with '%s'
-       Use 'conan search <reference> --table table.html'
-       Or read 'http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-       ''' % (missing_pkgs, build_str)))
+       Use 'conan search %s --table=table.html -r=remote' and open the table.html file to see available packages
+       Or try to build locally from sources with '%s'
+
+       More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
+       ''' % (missing_pkgs, ref, build_str)))

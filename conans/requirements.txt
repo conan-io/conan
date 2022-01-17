@@ -5,9 +5,7 @@ colorama>=0.3.3, <0.5.0
 PyYAML>=3.11, <6.0
 patch-ng>=1.17.4, <1.18
 fasteners>=0.14.1
-node-semver==0.6.1
 distro>=1.0.2, <=1.6.0
 pygments>=2.0, <3.0
-tqdm>=4.28.1, <5
-Jinja2>=2.9, <3
+Jinja2>=2.9, <4.0.0
 python-dateutil>=2.7.0, <3

@@ -1,13 +1,14 @@
 import json
 import textwrap
 
-import pytest
-
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.xfail(reason="lockfiles wip")
 def test_options():
+    """ lockfiles no longer contains option or any other configuration information. Instead
+    the ``graph build-order`` applying a lockfile will return the necessary options to build
+    it in order
+    """
     client = TestClient()
     ffmpeg = textwrap.dedent("""
         from conans import ConanFile
@@ -28,20 +29,21 @@ def test_options():
 
     client.save({"ffmepg/conanfile.py": ffmpeg,
                  "variant/conanfile.py": variant})
-    client.run("export ffmepg ffmpeg/1.0@")
-    client.run("export variant nano/1.0@")
+    client.run("export ffmepg --name=ffmpeg --version=1.0")
+    client.run("export variant --name=nano --version=1.0")
 
     client.run("lock create --reference=nano/1.0@ --build --lockfile-out=conan.lock")
-    lockfile = client.load("conan.lock")
-    # assert '"options": "variation=nano"' in lockfile
 
-    client.run("lock build-order conan.lock --lockfile-out=conan.lock --build=missing "
-               "--json=build_order.json")
+    client.run("graph build-order --reference=nano/1.0@ "
+               "--lockfile=conan.lock --lockfile-out=conan.lock --build=missing "
+               "--format=json", redirect_stdout="build_order.json")
 
     json_file = client.load("build_order.json")
     to_build = json.loads(json_file)
-    f = to_build[0]
+    ffmpeg = to_build[0][0]
+    ref = ffmpeg["ref"]
+    options = " ".join(f"-o {option}" for option in ffmpeg["packages"][0]["options"])
 
-    cmd = "install {} --build={} {} --lockfile=conan.lock".format(f[0], f[0], f[3])
+    cmd = "install --reference={} --build={} {} --lockfile=conan.lock".format(ref, ref, options)
     client.run(cmd)
     assert "ffmpeg/1.0: Variation nano!!" in client.out

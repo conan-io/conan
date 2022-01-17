@@ -26,6 +26,8 @@ class Pkg(ConanFile):
 """
         test_conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
+    def requirements(self):
+        self.requires(self.tested_reference_str)
     def build(self):
         self.output.info("Test SYSROOT: %s"
                           % self.dependencies["sysroot"].cpp_info.sysroot)
@@ -34,8 +36,8 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: PKG SYSROOT: HelloSysRoot", client.out)
-        self.assertIn("Pkg/0.1@user/testing (test package): Test SYSROOT: HelloSysRoot", client.out)
+        client.run("create . pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing: PKG SYSROOT: HelloSysRoot", client.out)
+        self.assertIn("pkg/0.1@user/testing (test package): Test SYSROOT: HelloSysRoot", client.out)
 
         client.run("install .")

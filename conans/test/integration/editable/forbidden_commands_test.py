@@ -5,9 +5,9 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient
 
 
 class ForbiddenRemoveTest(unittest.TestCase):
@@ -21,11 +21,11 @@ class ForbiddenRemoveTest(unittest.TestCase):
             class APck(ConanFile):
                 pass
             """)
-        ref = ConanFileReference.loads('lib/version@user/name')
+        ref = RecipeReference.loads('lib/version@user/name')
         t = TestClient()
         t.save(files={'conanfile.py': conanfile,
                       "mylayout": "", })
-        t.run("export . lib/version@user/name")
+        t.run("export . --name=lib --version=version --user=user --channel=name")
         t.run('editable add . {}'.format(ref))
         self.assertTrue(t.cache.installed_as_editable(ref))
         t.run('remove {} --force'.format(ref), assert_error=True)
@@ -43,7 +43,7 @@ class ForbiddenRemoveTest(unittest.TestCase):
 class ForbiddenCommandsTest(unittest.TestCase):
 
     def setUp(self):
-        self.ref = ConanFileReference.loads('lib/version@user/name')
+        self.ref = RecipeReference.loads('lib/version@user/name')
         self.t = TestClient(default_server_user=True)
         self.t.save({'conanfile.py': GenConanfile()})
         self.t.run('editable add . {}'.format(self.ref))

@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool_cmake
-@pytest.mark.parametrize("package", ["hello", "ZLIB"])
+@pytest.mark.parametrize("package", ["hello", "zlib"])
 @pytest.mark.parametrize("find_package", ["module", "config"])
 def test_cmaketoolchain_path_find(package, find_package):
     """Test with user "Hello" and also ZLIB one, to check that package ZLIB
@@ -50,7 +50,7 @@ def test_cmaketoolchain_path_find(package, find_package):
         """).format(package=package)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install {}/0.1@ -g CMakeToolchain".format(package))
+    client.run("install --reference={}/0.1@ -g CMakeToolchain".format(package))
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared" not in client.out
@@ -59,7 +59,7 @@ def test_cmaketoolchain_path_find(package, find_package):
 
     # If using the CMakeDeps generator, the in-package .cmake will be ignored
     # But it is still possible to include(owncmake)
-    client.run("install {}/0.1@ -g CMakeToolchain -g CMakeDeps".format(package))
+    client.run("install --reference={}/0.1@ -g CMakeToolchain -g CMakeDeps".format(package))
     with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared '{package}::{package}'".format(package=package) in client.out
@@ -116,7 +116,7 @@ def test_cmaketoolchain_path_find_real_config():
         """)
 
     client.save({"CMakeLists.txt": consumer}, clean_first=True)
-    client.run("install hello/0.1@ -g CMakeToolchain")
+    client.run("install --reference=hello/0.1@ -g CMakeToolchain")
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     # If it didn't fail, it found the helloConfig.cmake
@@ -124,7 +124,7 @@ def test_cmaketoolchain_path_find_real_config():
 
     # If using the CMakeDeps generator, the in-package .cmake will be ignored
     # But it is still possible to include(owncmake)
-    client.run("install hello/0.1@ -g CMakeToolchain -g CMakeDeps")
+    client.run("install --reference=hello/0.1@ -g CMakeToolchain -g CMakeDeps")
     with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "Conan: Target declared 'hello::hello'" in client.out

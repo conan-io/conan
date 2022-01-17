@@ -1,126 +1,65 @@
-from conans.cli.api.subapi import api_method
+from typing import Dict
+
+from conans.cli.api.model import Remote, PkgConfiguration
 from conans.cli.conan_app import ConanApp
-from conans.search.search import search_packages
+from conans.errors import NotFoundException
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
+from conans.search.search import get_packages_search_info, filter_packages
 
 
 class ListAPI:
+    """
+    Get references from the recipes and packages in the cache or a remote
+    """
 
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    def _get_revisions(self, ref, getter_name, remote=None):
-        """
-        Get all the recipe/package revisions given a reference from cache or remote.
-
-        :param ref: `PackageReference` or `ConanFileReference` without the revisions
-        :param getter_name: `string` method that should be called by either app.remote_manager
-                            or app.cache (remote or local search) to get all the revisions, e.g.:
-                                >> app.remote_manager.get_package_revisions(ref, remote=remote)
-                                >> app.cache.get_package_revisions(ref)
-        :param remote: `Remote` object
-        :return: `list` of `dict` with all the results, e.g.,
-                    [
-                      {
-                        "revision": "80b7cbe095ac7f38844b6511e69e453a",
-                        "time": "2021-07-20 00:56:25 UTC"
-                      }
-                    ]
-        """
+    def recipe_revisions(self, ref: RecipeReference, remote=None):
+        assert ref.revision is None, "recipe_revisions: ref already have a revision"
         app = ConanApp(self.conan_api.cache_folder)
-        # Let's get all the revisions from a remote server
         if remote:
-            results = getattr(app.remote_manager, getter_name)(ref, remote=remote)
+            results = app.remote_manager.get_recipe_revisions_references(ref, remote=remote)
         else:
-            # Let's get the revisions from the local cache
-            revs = getattr(app.cache, getter_name)(ref)
-            results = []
-            for revision in revs:
-                if getter_name == "get_recipe_revisions":
-                    timestamp = app.cache.get_recipe_timestamp(revision)
-                else:
-                    timestamp = app.cache.get_package_timestamp(revision)
-                result = {
-                    "revision": revision.revision,
-                    "time": timestamp
-                }
-                results.append(result)
+            results = app.cache.get_recipe_revisions_references(ref, only_latest_rrev=False)
+
         return results
 
-    @api_method
-    def get_package_revisions(self, reference, remote=None):
-        """
-        Get all the package revisions given a reference from cache or remote.
-
-        :param reference: `PackageReference` without the revision
-        :param remote: `Remote` object
-        :return: `list` of `dict` with all the results, e.g.,
-                    [
-                      {
-                        "revision": "80b7cbe095ac7f38844b6511e69e453a",
-                        "time": "2021-07-20 00:56:25 UTC"
-                      }
-                    ]
-        """
-        # Method name to get remotely/locally the revisions
-        getter_name = 'get_package_revisions'
-        return self._get_revisions(reference, getter_name, remote=remote)
-
-    @api_method
-    def get_recipe_revisions(self, reference, remote=None):
-        """
-        Get all the recipe revisions given a reference from cache or remote.
-
-        :param reference: `ConanFileReference` without the revision
-        :param remote: `Remote` object
-        :return: `list` of `dict` with all the results, e.g.,
-                  [
-                      {
-                        "revision": "80b7cbe095ac7f38844b6511e69e453a",
-                        "time": "2021-07-20 00:56:25 UTC"
-                      }
-                  ]
-        """
-        # Method name to get remotely/locally the revisions
-        getter_name = 'get_recipe_revisions'
-        return self._get_revisions(reference, getter_name, remote=remote)
-
-    @api_method
-    def get_package_ids(self, reference, remote=None):
-        """
-        Get all the Package IDs given a recipe revision from cache or remote.
-
-        Note: if reference does not have the revision, we'll return the Package IDs for
-        the latest recipe revision by default
-
-        :param reference: `ConanFileReference` with/without revision
-        :param remote: `Remote` object
-        :return: `dict` with the reference revision and the results with the package_id as keys, e.g.
-                  {
-                    "reference": "libcurl/7.77.0#2a9c4fcc8d76d891e4db529efbe24242",
-                    "results": {
-                        "d5f16437dd4989cc688211b95c24525589acaafd": {
-                            "settings": {"compiler": "apple-clang",...},
-                            "options": {'options': {'shared': 'False',...}},
-                            "requires": ['mylib/1.0.8:3df6ebb8a308d309e882b21988fd9ea103560e16',...]
-                        }
-                    }
-                  }
-        """
+    def package_revisions(self, pref: PkgReference, remote: Remote=None):
+        assert pref.ref.revision is not None, "package_revisions requires a recipe revision, " \
+                                              "check latest first if needed"
         app = ConanApp(self.conan_api.cache_folder)
         if remote:
-            rrev, _ = reference, None if reference.revision else \
-                app.remote_manager.get_latest_recipe_revision(reference, remote)
-            packages_props = app.remote_manager.search_packages(remote, rrev, None)
+            results = app.remote_manager.get_package_revisions_references(pref, remote=remote)
         else:
-            rrev = reference if reference.revision else app.cache.get_latest_rrev(reference)
-            package_ids = app.cache.get_package_ids(rrev)
-            package_layouts = []
-            for pkg in package_ids:
-                latest_prev = app.cache.get_latest_prev(pkg)
-                package_layouts.append(app.cache.pkg_layout(latest_prev))
-            packages_props = search_packages(package_layouts, None)
+            refs = app.cache.get_package_revisions_references(pref, only_latest_prev=False)
+            results = []
+            for ref in refs:
+                timestamp = app.cache.get_package_timestamp(ref)
+                ref.timestamp = timestamp
+                results.append(ref)
+        return results
 
-        return {
-            "reference": repr(rrev),
-            "results": packages_props
-        }
+    def packages_configurations(self, ref: RecipeReference,
+                                remote=None) -> Dict[PkgReference, PkgConfiguration]:
+        assert ref.revision is not None, "packages: ref should have a revision. " \
+                                         "Check latest if needed."
+        if not remote:
+            app = ConanApp(self.conan_api.cache_folder)
+            prefs = app.cache.get_package_references(ref)
+            packages = get_packages_search_info(app.cache, prefs)
+            results = {pref: PkgConfiguration(data) for pref, data in packages.items()}
+        else:
+            app = ConanApp(self.conan_api.cache_folder)
+            packages = app.remote_manager.search_packages(remote, ref)
+            results = {pref: PkgConfiguration(data) for pref, data in packages.items()}
+        return results
+
+    def filter_packages_configurations(self, pkg_configurations, query):
+        """
+        :param pkg_configurations: Dict[PkgReference, PkgConfiguration]
+        :param query: str like "os=Windows AND (arch=x86 OR compiler=gcc)"
+        :return: Dict[PkgReference, PkgConfiguration]
+        """
+        return filter_packages(query, pkg_configurations)

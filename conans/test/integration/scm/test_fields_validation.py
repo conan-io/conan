@@ -18,7 +18,7 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
         client = TestClient()
         client.save({'conanfile.py': conanfile})
-        client.run("export . name/version@user/channel", assert_error=True)
+        client.run("export . --name=name --version=version --user=user --channel=channel", assert_error=True)
 
         self.assertIn("ERROR: SCM value for 'username' must be of"
                       " type 'str' (found 'bool')", client.out)
@@ -33,7 +33,7 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
         client = TestClient()
         client.save({'conanfile.py': conanfile})
-        client.run("export . name/version@user/channel", assert_error=True)
+        client.run("export . --name=name --version=version --user=user --channel=channel", assert_error=True)
 
         self.assertIn("ERROR: SCM value for 'revision' must be of type"
                       " 'str' or 'int' (found 'bool')", client.out)
@@ -48,7 +48,7 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
         client = TestClient()
         client.save({'conanfile.py': conanfile})
-        client.run("export . name/version@user/channel", assert_error=True)
+        client.run("export . --name=name --version=version --user=user --channel=channel", assert_error=True)
 
         self.assertIn("ERROR: SCM value for 'verify_ssl' must be of type 'bool' (found 'str')",
                       client.out)
@@ -63,4 +63,4 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
         client = TestClient()
         client.save({'conanfile.py': conanfile})
-        client.run("export . name/version@user/channel")
+        client.run("export . --name=name --version=version --user=user --channel=channel")

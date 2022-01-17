@@ -6,7 +6,7 @@ import pytest
 
 from conans.client.remote_manager import RemoteManager
 from conans.errors import ConanException, ConanConnectionError
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -28,7 +28,8 @@ class TestListPackageIdsBase:
         self.client.run("upload --force --all -r {} {}".format(remote, reference))
 
     def _upload_full_recipe(self, remote, reference):
-        self.client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_file("file.h", "0.1")})
+        self.client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_file("file.h",
+                                                                                       "0.1")})
         self.client.run("create . user/channel")
         self.client.run("upload --force --all -r {} {}".format(remote, "pkg/0.1@user/channel"))
 
@@ -45,38 +46,38 @@ class TestListPackageIdsBase:
         return f"{recipe_name}#fca0383e6a43348f7989f11ab8f0a92d"
 
     def _get_lastest_recipe_ref(self, recipe_name):
-        return self.client.cache.get_latest_rrev(ConanFileReference.loads(recipe_name))
+        return self.client.cache.get_latest_recipe_reference(RecipeReference.loads(recipe_name))
 
 
 class TestParams(TestListPackageIdsBase):
 
     @pytest.mark.parametrize("ref", [
         "whatever",
-        "whatever/",
-        "whatever/1"
+        "whatever/"
     ])
     def test_fail_if_reference_is_not_correct(self, ref):
-        self.client.run(f"list package-ids {ref}", assert_error=True)
+        self.client.run(f"list packages {ref}", assert_error=True)
         assert f"ERROR: {ref} is not a valid recipe reference, provide a " \
-               f"reference in the form name/version[@user/channel][#RECIPE_REVISION]" in self.client.out
+               f"reference in the form name/version[@user/channel][#RECIPE_REVISION]" \
+               in self.client.out
 
     def test_query_param_is_required(self):
         self._add_remote("remote1")
 
-        self.client.run("list package-ids", assert_error=True)
+        self.client.run("list packages", assert_error=True)
         assert "error: the following arguments are required: reference" in self.client.out
 
-        self.client.run("list package-ids -c", assert_error=True)
+        self.client.run("list packages -c", assert_error=True)
         assert "error: the following arguments are required: reference" in self.client.out
 
-        self.client.run('list package-ids -r="*"', assert_error=True)
+        self.client.run('list packages -r="*"', assert_error=True)
         assert "error: the following arguments are required: reference" in self.client.out
 
-        self.client.run("list package-ids --remote remote1 --cache", assert_error=True)
+        self.client.run("list packages --remote remote1 --cache", assert_error=True)
         assert "error: the following arguments are required: reference" in self.client.out
 
     def test_wildcard_not_accepted(self):
-        self.client.run('list package-ids -r="*" -c test_*', assert_error=True)
+        self.client.run('list packages -r="*" -c test_*', assert_error=True)
         expected_output = "ERROR: test_* is not a valid recipe reference, provide a " \
                           "reference in the form name/version[@user/channel][#RECIPE_REVISION]"
         assert expected_output in self.client.out
@@ -89,10 +90,10 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching recipe references
+          There are no packages
         """)
 
-        self.client.run(f"list package-ids {self._get_fake_recipe_refence('whatever/0.1')}")
+        self.client.run(f"list packages {self._get_fake_recipe_refence('whatever/0.1')}")
         assert expected_output == self.client.out
 
     def test_search_no_matching_recipes(self):
@@ -101,19 +102,19 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching recipe references
+          There are no packages
         remote1:
-          There are no matching recipe references
+          There are no packages
         remote2:
-          There are no matching recipe references
+          There are no packages
         """)
 
         rrev = self._get_fake_recipe_refence('whatever/0.1')
-        self.client.run(f'list package-ids -c -r="*" {rrev}')
+        self.client.run(f'list packages -c -r="*" {rrev}')
         assert expected_output == self.client.out
 
     def test_fail_if_no_configured_remotes(self):
-        self.client.run('list package-ids -r="*" whatever/1.0', assert_error=True)
+        self.client.run('list packages -r="*" whatever/1.0', assert_error=True)
         assert "Remotes for pattern '*' can't be found or are disabled" in self.client.out
 
     def test_search_disabled_remote(self):
@@ -122,7 +123,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self.client.run("remote disable remote1")
         # He have to put both remotes instead of using "-a" because of the
         # disbaled remote won't appear
-        self.client.run("list package-ids whatever/1.0 -r remote1 -r remote2", assert_error=True)
+        self.client.run("list packages whatever/1.0 -r remote1 -r remote2", assert_error=True)
         assert "Remotes for pattern 'remote1' can't be found or are disabled" in self.client.out
 
     @pytest.mark.parametrize("exc,output", [
@@ -136,10 +137,10 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         rrev = self._get_fake_recipe_refence("whatever/1.0")
         with patch.object(RemoteManager, "search_packages",
                           new=Mock(side_effect=exc)):
-            self.client.run(f'list package-ids {rrev} -r="*" -c')
+            self.client.run(f'list packages {rrev} -r="*" -c')
         expected_output = textwrap.dedent(f"""\
         Local Cache:
-          There are no matching recipe references
+          There are no packages
         remote1:
           {output}
         remote2:
@@ -154,12 +155,12 @@ class TestRemotes(TestListPackageIdsBase):
         self.client.save({
             "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
         })
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
-        self.client.run(f"list package-ids {repr(rrev)}")
+        self.client.run(f"list packages {rrev.repr_notime()}")
         expected_output = textwrap.dedent(f"""\
         Local Cache:
-          There are no matching recipe references
+          There are no packages
         """)
         assert expected_output == str(self.client.out)
 
@@ -170,7 +171,7 @@ class TestRemotes(TestListPackageIdsBase):
         self._add_remote(remote_name)
         self._upload_full_recipe(remote_name, recipe_name)
         rrev = self._get_lastest_recipe_ref(recipe_name)
-        self.client.run(f"list package-ids -r remote1 {repr(rrev)}")
+        self.client.run(f"list packages -r remote1 {rrev.repr_notime()}")
 
         expected_output = textwrap.dedent("""\
         remote1:
@@ -183,7 +184,7 @@ class TestRemotes(TestListPackageIdsBase):
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        """ % repr(rrev))
+        """ % rrev.repr_notime())
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
     def test_search_with_full_reference_but_package_has_no_properties(self):
@@ -192,12 +193,12 @@ class TestRemotes(TestListPackageIdsBase):
         self._add_remote(remote_name)
         self._upload_recipe(remote_name, recipe_name)
         rrev = self._get_lastest_recipe_ref(recipe_name)
-        self.client.run(f"list package-ids -r remote1 {repr(rrev)}")
+        self.client.run(f"list packages -r remote1 {rrev.repr_notime()}")
 
         expected_output = textwrap.dedent("""\
         remote1:
           %s:.{40}
-        """ % repr(rrev))
+        """ % rrev.repr_notime())
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -207,7 +208,7 @@ class TestRemotes(TestListPackageIdsBase):
         ref = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
         self._upload_full_recipe(remote_name, ref)
-        self.client.run(f'list package-ids -r="*" -c {ref}')
+        self.client.run(f'list packages -r="*" -c {ref}')
         # Now, let's check that we're using the latest one by default
         rrev = self._get_lastest_recipe_ref(ref)
         expected_output = textwrap.dedent("""\
@@ -231,7 +232,7 @@ class TestRemotes(TestListPackageIdsBase):
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        """ % {"rrev": repr(rrev)})
+        """ % {"rrev": rrev.repr_notime()})
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -250,7 +251,7 @@ class TestRemotes(TestListPackageIdsBase):
 
         # Getting the latest recipe ref
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
-        self.client.run(f'list package-ids -r="*" -c {repr(rrev)}')
+        self.client.run(f'list packages -r="*" -c {rrev.repr_notime()}')
         output = str(self.client.out)
         expected_output = textwrap.dedent("""\
         Local Cache:
@@ -274,8 +275,8 @@ class TestRemotes(TestListPackageIdsBase):
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
         remote2:
-          There are no matching recipe references
-        """ % {"rrev": repr(rrev)})
+          There are no packages
+        """ % {"rrev": rrev.repr_notime()})
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):
@@ -291,5 +292,5 @@ class TestRemotes(TestListPackageIdsBase):
         self._upload_recipe(remote1, remote1_recipe2)
 
         rrev = self._get_fake_recipe_refence(remote1_recipe1)
-        self.client.run(f"list package-ids -r wrong_remote {rrev}", assert_error=True)
+        self.client.run(f"list packages -r wrong_remote {rrev}", assert_error=True)
         assert expected_output in self.client.out

@@ -1,27 +1,22 @@
+import copy
 import os
-import shutil
-from io import StringIO
 from typing import List
 
-from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
-from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conans.assets.templates import dict_loader
-from conans.cli.output import ConanOutput
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, get_default_client_conf, \
-    get_default_settings_yml
+from conans.client.conf import ConanClientConfigParser, get_default_client_conf, default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
-from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
-from conans.util.locks import Lock
+from conans.util.files import load, save, mkdir
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -33,6 +28,7 @@ TEMPLATES_FOLDER = "templates"
 GENERATORS_FOLDER = "generators"
 
 
+# TODO: Rename this to ClientHome
 class ClientCache(object):
     """ Class to represent/store/compute all the paths involved in the execution
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
@@ -40,10 +36,8 @@ class ClientCache(object):
 
     def __init__(self, cache_folder):
         self.cache_folder = cache_folder
-        self._output = ConanOutput()
 
         # Caching
-        self._no_lock = None
         self._config = None
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
@@ -57,122 +51,96 @@ class ClientCache(object):
     def closedb(self):
         self._data_cache.closedb()
 
-    def update_package(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                       new_path=None, new_timestamp=None, new_build_id=None):
-        new_ref = ConanReference(new_ref) if new_ref else None
-        return self._data_cache.update_package(ConanReference(old_ref), new_ref, new_path,
-                                               new_timestamp, new_build_id)
-
-    def dump(self):
-        out = StringIO()
-        self._data_cache.dump(out)
-        return out.getvalue()
+    def create_export_recipe_layout(self, ref: RecipeReference):
+        return self._data_cache.create_export_recipe_layout(ref)
 
     def assign_rrev(self, layout: RecipeLayout):
         return self._data_cache.assign_rrev(layout)
 
-    def assign_prev(self, layout: PackageLayout, ref: ConanReference):
-        return self._data_cache.assign_prev(layout, ref)
+    def create_build_pkg_layout(self, ref):
+        return self._data_cache.create_build_pkg_layout(ref)
 
-    def ref_layout(self, ref):
-        # It must exists
-        assert ref.revision is not None
-        return self._data_cache.get_reference_layout(ConanReference(ref))
+    def assign_prev(self, layout: PackageLayout):
+        return self._data_cache.assign_prev(layout)
 
-    def pkg_layout(self, ref):
-        return self._data_cache.get_package_layout(ConanReference(ref))
+    def ref_layout(self, ref: RecipeReference):
+        return self._data_cache.get_reference_layout(ref)
 
-    def create_export_recipe_layout(self, ref):
-        return self._data_cache.create_export_recipe_layout(ConanReference(ref))
+    def pkg_layout(self, ref: PkgReference):
+        return self._data_cache.get_package_layout(ref)
 
-    def create_temp_pkg_layout(self, ref):
-        return self._data_cache.create_tmp_package_layout(ConanReference(ref))
+    def get_or_create_ref_layout(self, ref: RecipeReference):
+        return self._data_cache.get_or_create_ref_layout(ref)
 
-    def get_or_create_ref_layout(self, ref: ConanReference):
-        return self._data_cache.get_or_create_reference_layout(ConanReference(ref))
-
-    def get_or_create_pkg_layout(self, ref: ConanReference):
-        return self._data_cache.get_or_create_package_layout(ConanReference(ref))
+    def get_or_create_pkg_layout(self, ref: PkgReference):
+        return self._data_cache.get_or_create_pkg_layout(ref)
 
     def remove_recipe_layout(self, layout):
-        layout.remove()
-        self._data_cache.remove_recipe(ConanReference(layout.reference))
+        self._data_cache.remove_recipe(layout)
 
     def remove_package_layout(self, layout):
-        layout.remove()
-        self._data_cache.remove_package(ConanReference(layout.reference))
+        self._data_cache.remove_package(layout)
 
     def get_recipe_timestamp(self, ref):
-        return self._data_cache.get_recipe_timestamp(ConanReference(ref))
+        return self._data_cache.get_recipe_timestamp(ref)
 
     def get_package_timestamp(self, ref):
-        return self._data_cache.get_package_timestamp(ConanReference(ref))
+        return self._data_cache.get_package_timestamp(ref)
 
-    def set_recipe_timestamp(self, ref, timestamp):
-        return self._data_cache.update_recipe_timestamp(ConanReference(ref), new_timestamp=timestamp)
+    def update_recipe_timestamp(self, ref):
+        """ when the recipe already exists in cache, but we get a new timestamp from a server
+        that would affect its order in our cache """
+        return self._data_cache.update_recipe_timestamp(ref)
 
-    def set_package_timestamp(self, ref, timestamp):
-        return self._data_cache.update_package(ConanReference(ref), new_timestamp=timestamp)
+    def set_package_timestamp(self, pref):
+        return self._data_cache.update_package_timestamp(pref)
 
-    def all_refs(self, only_latest_rrev=False):
-        # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
-        #  this part in the future
-        #  check that we are returning not only the latest ref but all of them
-        return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}", validate=False) for ref in
-                self._data_cache.list_references(only_latest_rrev=only_latest_rrev)]
+    def all_refs(self):
+        return self._data_cache.list_references()
 
     def exists_rrev(self, ref):
-        matching_rrevs = self.get_recipe_revisions(ref)
-        return len(matching_rrevs) > 0
+        # Used just by inspect to check before calling get_recipe()
+        return self._data_cache.exists_rrev(ref)
 
-    def exists_prev(self, ref):
-        matching_prevs = self.get_package_revisions(ref)
-        return len(matching_prevs) > 0
+    def exists_prev(self, pref):
+        # Used just by download to skip downloads if prev already exists in cache
+        return self._data_cache.exists_prev(pref)
 
-    def get_package_revisions(self, ref, only_latest_prev=False):
-        return [
-            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
-                                   validate=False) for pref in
-            self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
+    def get_package_revisions_references(self, ref, only_latest_prev=False):
+        return self._data_cache.get_package_revisions_references(ref, only_latest_prev)
 
-    def get_package_ids(self, ref: ConanReference) -> List[PackageReference]:
-        return [
-            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}',
-                                   validate=False) for pref in
-            self._data_cache.get_package_ids(ConanReference(ref))]
+    def get_package_references(self, ref: RecipeReference) -> List[PkgReference]:
+        return self._data_cache.get_package_references(ref)
 
-    def get_build_id(self, ref):
-        return self._data_cache.get_build_id(ConanReference(ref))
+    def get_matching_build_id(self, ref, build_id):
+        return self._data_cache.get_matching_build_id(ref, build_id)
 
-    def get_recipe_revisions(self, ref, only_latest_rrev=False):
-        return [ConanFileReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
-                self._data_cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev)]
+    def get_recipe_revisions_references(self, ref, only_latest_rrev=False):
+        return self._data_cache.get_recipe_revisions_references(ref, only_latest_rrev)
 
-    def get_latest_rrev(self, ref):
-        rrevs = self.get_recipe_revisions(ref, True)
-        return rrevs[0] if rrevs else None
+    def get_latest_recipe_reference(self, ref):
+        return self._data_cache.get_latest_recipe_reference(ref)
 
-    def get_latest_prev(self, ref):
-        prevs = self.get_package_revisions(ref, True)
-        return prevs[0] if prevs else None
+    def get_latest_package_reference(self, pref):
+        return self._data_cache.get_latest_package_reference(pref)
 
     @property
     def store(self):
         return self._store_folder
 
     def editable_path(self, ref):
-        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
+        _tmp = copy.copy(ref)
+        _tmp.revision = None
+        edited_ref = self.editable_packages.get(_tmp)
         if edited_ref:
             conanfile_path = edited_ref["path"]
             return conanfile_path
 
     def installed_as_editable(self, ref):
-        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
+        _tmp = copy.copy(ref)
+        _tmp.revision = None
+        edited_ref = self.editable_packages.get(_tmp)
         return bool(edited_ref)
-
-    @property
-    def config_install_file(self):
-        return os.path.join(self.cache_folder, "config_install.json")
 
     @property
     def remotes_path(self):
@@ -181,11 +149,6 @@ class ClientCache(object):
     @property
     def remotes_registry(self) -> RemoteRegistry:
         return RemoteRegistry(self)
-
-    def _no_locks(self):
-        if self._no_lock is None:
-            self._no_lock = self.config.cache_no_locks
-        return self._no_lock
 
     @property
     def artifacts_properties_path(self):
@@ -295,40 +258,14 @@ class ClientCache(object):
                     generators.append(generator)
         return generators
 
-    def remove_locks(self):
-        folders = list_folder_subdirs(self._store_folder, 4)
-        for folder in folders:
-            conan_folder = os.path.join(self._store_folder, folder)
-            Lock.clean(conan_folder)
-            shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
-
-    def get_template(self, template_name, user_overrides=False):
-        # TODO: It can be initialized only once together with the Conan app
-        loaders = [dict_loader]
-        if user_overrides:
-            loaders.insert(0, FileSystemLoader(os.path.join(self.cache_folder, 'templates')))
-        env = Environment(loader=ChoiceLoader(loaders),
-                          autoescape=select_autoescape(['html', 'xml']))
-        return env.get_template(template_name)
-
     def initialize_config(self):
+        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
         if not os.path.exists(self.conan_conf_path):
-            save(self.conan_conf_path, normalize(get_default_client_conf()))
-
-    def reset_config(self):
-        if os.path.exists(self.conan_conf_path):
-            remove(self.conan_conf_path)
-        self.initialize_config()
-
-    def reset_default_profile(self):
-        if os.path.exists(self.default_profile_path):
-            remove(self.default_profile_path)
+            save(self.conan_conf_path, get_default_client_conf())
 
     def initialize_settings(self):
+        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
         if not os.path.exists(self.settings_path):
-            save(self.settings_path, normalize(get_default_settings_yml()))
-
-    def reset_settings(self):
-        if os.path.exists(self.settings_path):
-            remove(self.settings_path)
-        self.initialize_settings()
+            settings_yml = default_settings_yml
+            save(self.settings_path, settings_yml)
+            save(self.settings_path + ".orig", settings_yml)  # stores a copy, to check migrations

@@ -1,3 +1,5 @@
+import os.path
+
 from conans.cli.output import ConanOutput
 from conans.client.generators import write_generators
 from conans.client.graph.build_mode import BuildMode
@@ -6,8 +8,11 @@ from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.model.conan_file import ConanFile
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 
+
+# FIXME: this is duplicated in the new API until all commands that use this function are migrated
+#  this should be replaced by a call to APIV2.graph.load_graph + APIV2.install.install_binaries
 
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, build_modes=None, generators=None,
@@ -17,7 +22,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
 
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
-    @param ref_or_path: ConanFileReference or path to user space conanfile
+    @param ref_or_path: RecipeReference or path to user space conanfile
     @param install_folder: where the output files will be saved
     @param build_modes: List of build_modes specified
     @param update: Check for updated in the upstream remotes (and update)
@@ -80,7 +85,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile)
 
-        if not create_reference and isinstance(ref_or_path, ConanFileReference):
+        if not create_reference and isinstance(ref_or_path, RecipeReference):
             # The conanfile loaded is a virtual one. The one w deploy is the first level one
             neighbours = deps_graph.root.neighbors()
             deploy_conanfile = neighbours[0].conanfile

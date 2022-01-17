@@ -5,13 +5,13 @@ import unittest
 
 import mock
 import pytest
-from mock.mock import Mock
 from parameterized import parameterized
 
 from conans.cli.output import ConanOutput
 from conans.client.cmd.export import _capture_scm_auto_fields
 from conans.client.tools.scm import Git
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
+from conans.server.store.server_store import ref_dir_repr
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.test_files import temp_folder
@@ -24,7 +24,7 @@ from conans.util.files import save
 class CaptureExportSCMDataTest(unittest.TestCase):
 
     def setUp(self):
-        ref = ConanFileReference.loads("name/version@user/channel")
+        ref = RecipeReference.loads("name/version@user/channel")
         tmp_dir = temp_folder()
 
         # Need a real repo to get a working SCM object
@@ -34,7 +34,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
                                                       folder=self.git.folder)
 
         # Mock the cache item (return the cache_ref_folder)
-        self.cache_ref_folder = os.path.join(temp_folder(), ref.dir_repr())
+        self.cache_ref_folder = os.path.join(temp_folder(), ref_dir_repr(ref))
 
     @parameterized.expand([(True, ), (False, )])
     def test_url_auto_revision_auto(self, _, local_origin):

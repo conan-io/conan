@@ -4,8 +4,10 @@ import pytest
 from mock import Mock
 
 from conan.tools.cmake import CMakeToolchain
-from conan.tools.cmake.toolchain import Block, GenericSystemBlock
+from conan.tools.cmake.toolchain import Block
 from conans import ConanFile
+from conans.client.conf import get_default_settings_yml
+from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings
@@ -14,11 +16,11 @@ from conans.model.settings import Settings
 @pytest.fixture
 def conanfile():
     c = ConanFile(None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": ["Windows"],
+    settings = Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}))
+                           "arch": ["x86"]})
+    c.settings = settings
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "gcc"
@@ -117,26 +119,9 @@ def test_add_new_block(conanfile):
     assert 'CMAKE_BUILD_TYPE' in content
 
 
-def test_extend_block(conanfile):
-    toolchain = CMakeToolchain(conanfile)
-
-    class MyBlock(GenericSystemBlock):
-        template = "Hello {{build_type}}!!"
-
-        def context(self):
-            c = super(MyBlock, self).context()
-            c["build_type"] = c["build_type"] + "Super"
-            return c
-
-    toolchain.blocks["generic_system"] = MyBlock
-    content = toolchain.content
-    assert 'Hello ReleaseSuper!!' in content
-    assert 'CMAKE_BUILD_TYPE' not in content
-
-
 def test_user_toolchain(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.blocks["user_toolchain"].user_toolchain = "myowntoolchain.cmake"
+    toolchain.blocks["user_toolchain"].values["paths"] = ["myowntoolchain.cmake"]
     content = toolchain.content
     assert 'include("myowntoolchain.cmake")' in content
 
@@ -148,11 +133,10 @@ def test_user_toolchain(conanfile):
 @pytest.fixture
 def conanfile_apple():
     c = ConanFile(None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": {"Macos": {"version": ["10.15"]}},
+    c.settings = Settings({"os": {"Macos": {"version": ["10.15"]}},
                            "compiler": {"apple-clang": {"libcxx": ["libc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}))
+                           "arch": ["x86"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "apple-clang"
@@ -177,17 +161,18 @@ def test_osx_deployment_target(conanfile_apple):
 @pytest.fixture
 def conanfile_msvc():
     c = ConanFile(None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": ["Windows"],
-                           "compiler": {"msvc": {"version": ["19.3"], "cppstd": ["20"]}},
+    c.settings = Settings({"os": ["Windows"],
+                           "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"],
+                                                 "update": [None]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}))
+                           "arch": ["x86"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "msvc"
-    c.settings.compiler.version = "19.3"
+    c.settings.compiler.version = "193"
     c.settings.compiler.cppstd = "20"
     c.settings.os = "Windows"
+    c.settings_build = c.settings
     c.conf = Conf()
     c.folders.set_base_generators(".")
     c._conan_node = Mock()
@@ -206,11 +191,10 @@ def test_toolset(conanfile_msvc):
 @pytest.fixture
 def conanfile_linux():
     c = ConanFile(Mock(), None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": ["Linux"],
+    c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86_64"]}))
+                           "arch": ["x86_64"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86_64"
     c.settings.compiler = "gcc"
@@ -235,16 +219,13 @@ def test_no_fpic_when_not_an_option(conanfile_linux):
 @pytest.fixture
 def conanfile_linux_shared():
     c = ConanFile(Mock(), None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.options = {
-        "fPIC": [True, False],
-        "shared": [True, False],
-    }
-    c.default_options = {"fPIC": False, "shared": True, }
-    c.initialize(Settings({"os": ["Linux"],
+    c.options = Options({"fPIC": [True, False],
+                         "shared": [True, False]},
+                        {"fPIC": False, "shared": True, })
+    c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86_64"]}))
+                           "arch": ["x86_64"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86_64"
     c.settings.compiler = "gcc"
@@ -280,12 +261,12 @@ def test_fpic_when_not_shared(conanfile_linux_shared):
 def conanfile_windows_fpic():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.options = {"fPIC": [True, False], }
-    c.default_options = {"fPIC": True, }
-    c.initialize(Settings({"os": ["Windows"],
+    c.options = Options({"fPIC": [True, False]},
+                        {"fPIC": True})
+    c.settings = Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}))
+                           "arch": ["x86"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "gcc"
@@ -310,12 +291,12 @@ def test_no_fpic_on_windows(conanfile_windows_fpic):
 def conanfile_linux_fpic():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
-    c.options = {"fPIC": [True, False], }
-    c.default_options = {"fPIC": False, }
-    c.initialize(Settings({"os": ["Linux"],
+    c.options = Options({"fPIC": [True, False]},
+                        {"fPIC": False,})
+    c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86_64"]}))
+                           "arch": ["x86_64"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86_64"
     c.settings.compiler = "gcc"
@@ -343,3 +324,107 @@ def test_fpic_enabled(conanfile_linux_fpic):
     toolchain = CMakeToolchain(conanfile_linux_fpic)
     content = toolchain.content
     assert 'set(CMAKE_POSITION_INDEPENDENT_CODE ON' in content
+
+
+def test_libcxx_abi_flag():
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.settings = Settings.loads(get_default_settings_yml())
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86_64"
+    c.settings.compiler = "gcc"
+    c.settings.compiler.version = "11"
+    c.settings.compiler.cppstd = "20"
+    c.settings.compiler.libcxx = "libstdc++"
+    c.settings.os = "Linux"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert '-D_GLIBCXX_USE_CXX11_ABI=0' in content
+    c.settings.compiler.libcxx = "libstdc++11"
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    # by default, no flag is output anymore, it is assumed the compiler default
+    assert 'GLIBCXX_USE_CXX11_ABI' not in content
+    # recipe workaround for older distros
+    toolchain.blocks["libcxx"].values["glibcxx"] = "1"
+    content = toolchain.content
+    assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
+
+    # but maybe the conf is better
+    c.conf["tools.gnu:define_libcxx11_abi"] = True
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert '-D_GLIBCXX_USE_CXX11_ABI=1' in content
+
+
+@pytest.mark.parametrize("os,os_sdk,arch,expected_sdk", [
+    ("Macos", None, "x86_64", "macosx"),
+    ("Macos", None, "armv7", "macosx"),
+    ("iOS", "iphonesimulator", "armv8", "iphonesimulator"),
+    ("watchOS", "watchsimulator", "armv8", "watchsimulator")
+])
+def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
+    """
+    Testing if CMAKE_OSX_SYSROOT is correctly set.
+    Issue related: https://github.com/conan-io/conan/issues/10275
+    """
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.settings = Settings.loads(get_default_settings_yml())
+    c.settings.os = os
+    c.settings.os.sdk = os_sdk
+    c.settings.build_type = "Release"
+    c.settings.arch = arch
+    c.settings.compiler = "apple-clang"
+    c.settings.compiler.version = "13.0"
+    c.settings.compiler.libcxx = "libc++"
+    c.settings.compiler.cppstd = "17"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert 'set(CMAKE_OSX_SYSROOT %s CACHE STRING "" FORCE)' % expected_sdk in content
+
+
+@pytest.mark.parametrize("os,os_sdk,arch,expected_sdk", [
+    ("iOS", None, "x86_64", ""),
+    ("watchOS", None, "armv8", ""),
+    ("tvOS", None, "x86_64", "")
+])
+def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
+    """
+    Testing if CMAKE_OSX_SYSROOT is correctly set.
+    Issue related: https://github.com/conan-io/conan/issues/10275
+    """
+    c = ConanFile(Mock(), None)
+    c.settings = "os", "compiler", "build_type", "arch"
+    c.settings = Settings.loads(get_default_settings_yml())
+    c.settings.os = os
+    c.settings.os.sdk = os_sdk
+    c.settings.build_type = "Release"
+    c.settings.arch = arch
+    c.settings.compiler = "apple-clang"
+    c.settings.compiler.version = "13.0"
+    c.settings.compiler.libcxx = "libc++"
+    c.settings.compiler.cppstd = "17"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+
+    with pytest.raises(ConanException) as excinfo:
+        CMakeToolchain(c).content()
+        assert "Please, specify a suitable value for os.sdk." % expected_sdk in str(excinfo.value)

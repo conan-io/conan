@@ -12,11 +12,11 @@ class LoopDetectionTest(unittest.TestCase):
             'pkg2.py': GenConanfile().with_require('pkg3/0.1@lasote/stable'),
             'pkg3.py': GenConanfile().with_require('pkg1/0.1@lasote/stable'),
         })
-        client.run('export pkg1.py pkg1/0.1@lasote/stable')
-        client.run('export pkg2.py pkg2/0.1@lasote/stable')
-        client.run('export pkg3.py pkg3/0.1@lasote/stable')
+        client.run('export pkg1.py --name=pkg1 --version=0.1 --user=lasote --channel=stable')
+        client.run('export pkg2.py --name=pkg2 --version=0.1 --user=lasote --channel=stable')
+        client.run('export pkg3.py --name=pkg3 --version=0.1 --user=lasote --channel=stable')
 
-        client.run("install pkg3/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --reference=pkg3/0.1@lasote/stable --build", assert_error=True)
         # TODO: Complete with better diagnostics
         self.assertIn("ERROR: graph loop",
                       client.out)
@@ -24,7 +24,7 @@ class LoopDetectionTest(unittest.TestCase):
     def test_self_loop(self):
         client = TestClient()
         client.save({'pkg1.py': GenConanfile().with_require('pkg1/0.1@lasote/stable'), })
-        client.run('export pkg1.py pkg1/0.1@lasote/stable')
-        client.run("install pkg1/0.1@lasote/stable --build", assert_error=True)
+        client.run('export pkg1.py --name=pkg1 --version=0.1 --user=lasote --channel=stable')
+        client.run("install --reference=pkg1/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("ERROR: graph loop",
                       client.out)

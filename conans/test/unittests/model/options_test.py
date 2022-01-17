@@ -4,7 +4,7 @@ import pytest
 
 from conans.errors import ConanException
 from conans.model.options import Options
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 
 
 class TestOptions:
@@ -78,6 +78,42 @@ class TestOptions:
             static=True""")
         assert text == expected
 
+    def test_freeze(self):
+        assert self.sut.static
+
+        self.sut.freeze()
+        # Should be freezed now
+        # same value should not raise
+        self.sut.static = True
+
+        # Different value should raise
+        with pytest.raises(ConanException) as e:
+            self.sut.static = False
+        assert "Incorrect attempt to modify option 'static'" in str(e.value)
+        assert "static=True" in self.sut.dumps()
+
+        # Removal of options with values should rais
+        with pytest.raises(ConanException) as e:
+            del self.sut.static
+        assert "Incorrect attempt to remove option 'static'" in str(e.value)
+        assert "static" in self.sut.dumps()
+
+        # Test None is possible to change
+        sut2 = Options({"static": [True, False],
+                        "other": [True, False]})
+        sut2.freeze()
+        sut2.static = True
+        assert "static=True" in sut2.dumps()
+        # But not twice
+        with pytest.raises(ConanException) as e:
+            sut2.static = False
+        assert "Incorrect attempt to modify option 'static'" in str(e.value)
+        assert "static=True" in sut2.dumps()
+
+        # can remove other, not assigned yet
+        del sut2.other
+        assert "other" not in sut2.dumps()
+
 
 class TestOptionsLoad:
     def test_load(self):
@@ -108,7 +144,7 @@ class TestOptionsPropagate:
         sut = Options(options, values)
         assert sut.static
 
-        ref = ConanFileReference.loads("boost/1.0")
+        ref = RecipeReference.loads("boost/1.0")
         # if ref!=None option MUST be preceded by boost:
         down_options = Options(options_values={"zlib:other": 1, "boost:static": False})
         sut.apply_downstream(down_options, Options(), ref)
@@ -117,7 +153,7 @@ class TestOptionsPropagate:
         # Should be freezed now
         with pytest.raises(ConanException) as e:
             sut.static = True
-        assert "Incorrect attempt to modify options 'static'" in str(e.value)
+        assert "Incorrect attempt to modify option 'static'" in str(e.value)
 
         self_options, up_options = sut.get_upstream_options(down_options, ref)
         assert up_options.dumps() == "zlib:other=1"
@@ -219,9 +255,9 @@ class TestOptionsNone:
 
         options = {"Boost": boost_values,
                    "Poco": poco_values,
-                   "Hello1": hello1_values}
-        down_ref = ConanFileReference.loads("Hello0/0.1@diego/testing")
-        own_ref = ConanFileReference.loads("Hello1/0.1@diego/testing")
+                   "hello1": hello1_values}
+        down_ref = RecipeReference.loads("hello0/0.1@diego/testing")
+        own_ref = RecipeReference.loads("hello1/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "4"),
                                                      ("path", "NOTDEF"),
@@ -242,11 +278,11 @@ class TestOptionsNone:
         hello1_values.add_option("optimized", "2")
         options2 = {"Boost": boost_values,
                     "Poco": poco_values,
-                    "Hello1": hello1_values}
-        down_ref = ConanFileReference.loads("Hello2/0.1@diego/testing")
+                    "hello1": hello1_values}
+        down_ref = RecipeReference.loads("hello2/0.1@diego/testing")
 
-        with self.assertRaisesRegex(ConanException, "Hello2/0.1@diego/testing tried to change "
-                                     "Hello1/0.1@diego/testing option optimized to 2"):
+        with self.assertRaisesRegex(ConanException, "hello2/0.1@diego/testing tried to change "
+                                     "hello1/0.1@diego/testing option optimized to 2"):
             self.sut.propagate_upstream(options2, down_ref, own_ref)
 
         self.assertEqual(self.sut.values.dumps(),
@@ -266,8 +302,8 @@ Poco:deps_bundled=True
         boost_values.add_option("path", "FuzzBuzz")
 
         options = {"Boost.*": boost_values}
-        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
-        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
+        own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "FuzzBuzz"),
@@ -285,8 +321,8 @@ Poco:deps_bundled=True
 
         options = {"Boost.*": boost_values,
                    "*": boost_values2}
-        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
-        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
+        own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "2"),
                                                      ("path", "FuzzBuzz"),
@@ -304,8 +340,8 @@ Poco:deps_bundled=True
 
         options = {"Boost.*": boost_values,
                    "*": boost_values2}
-        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
-        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
+        own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [('optimized', '4'),
                                                      ('path', 'NOTDEF'),
@@ -319,8 +355,8 @@ Poco:deps_bundled=True
         boost_values.add_option("path", "FuzzBuzz")
 
         options = {"*": boost_values}
-        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
-        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
+        own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "FuzzBuzz"),
@@ -334,8 +370,8 @@ Poco:deps_bundled=True
         boost_values.add_option("fake_option", "FuzzBuzz")
 
         options = {"Boost.*": boost_values}
-        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
-        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = RecipeReference.loads("consumer/0.1@diego/testing")
+        own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "NOTDEF"),
@@ -348,8 +384,8 @@ Poco:deps_bundled=True
         boost_values.add_option("fake_option", "FuzzBuzz")
 
         options = {"OpenSSL.*": boost_values}
-        down_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
-        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
+        own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "NOTDEF"),
@@ -379,8 +415,8 @@ class OptionsValuesPropagationUpstreamNone(unittest.TestCase):
         other_options = PackageOptionValues()
         other_options.add_option("opt", None)
         options = {"whatever.*": other_options}
-        down_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
-        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
+        own_ref = RecipeReference.loads("Boost.Assert/0.1@diego/testing")
         sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(sut.values.as_list(), [("opt", "a"),
                                                 ("whatever.*:opt", "None"),

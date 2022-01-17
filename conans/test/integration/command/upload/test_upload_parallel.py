@@ -1,5 +1,6 @@
 import textwrap
 
+import pytest
 from mock import patch
 from requests import ConnectionError
 
@@ -29,6 +30,7 @@ def test_upload_parallel_error():
     assert "Execute upload again to retry upload the failed files" in client.out
 
 
+@pytest.mark.xfail(reason="Upload parallel not migrated yet")
 def test_upload_parallel_success():
     """Upload 2 packages in parallel with success"""
 
@@ -48,6 +50,7 @@ def test_upload_parallel_success():
     assert "lib1/1.0@user/channel" in client.out
 
 
+@pytest.mark.xfail(reason="Upload parallel not migrated yet")
 def test_upload_parallel_fail_on_interaction():
     """Upload 2 packages in parallel and fail because non_interactive forced"""
 
@@ -65,6 +68,7 @@ def test_upload_parallel_fail_on_interaction():
            "Conan interactive mode disabled. [Remote: default]" in client.out
 
 
+@pytest.mark.xfail(reason="Upload parallel not migrated yet")
 def test_beat_character_long_upload():
     client = TestClient(default_server_user=True)
     slow_conanfile = textwrap.dedent("""

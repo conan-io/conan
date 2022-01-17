@@ -1,23 +1,24 @@
 import os
 import re
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
 def test_cmake_lib_template():
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     # Local flow works
     client.run("install . -if=install")
     client.run("build . -if=install")
 
-    client.run("export-pkg . hello/0.1@")
+    client.run("export-pkg .")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    ref = ConanFileReference.loads("hello/0.1")
-    ref = client.cache.get_latest_rrev(ref)
-    pref = PackageReference(ref, package_id)
-    pref = client.cache.get_latest_prev(pref)
+    ref = RecipeReference.loads("hello/0.1")
+    ref = client.cache.get_latest_recipe_reference(ref)
+    pref = PkgReference(ref, package_id)
+    pref = client.cache.get_latest_package_reference(pref)
     package_folder = client.get_latest_pkg_layout(pref).package()
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 
@@ -35,7 +36,7 @@ def test_cmake_lib_template():
 
 def test_cmake_exe_template():
     client = TestClient(path_with_spaces=False)
-    client.run("new greet/0.1 --template=cmake_exe")
+    client.run("new cmake_exe -d name=greet -d version=0.1")
     # Local flow works
     client.run("install . -if=install")
     client.run("build . -if=install")

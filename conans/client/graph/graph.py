@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.model.ref import PackageReference
+from conans.model.package_ref import PkgReference
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -45,6 +45,7 @@ class Node(object):
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
+        self.pref_timestamp = None
         if conanfile is not None:
             conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
@@ -138,18 +139,29 @@ class Node(object):
         if not self.dependants:
             return
         assert len(self.dependants) == 1
-        d = self.dependants[0]
+        dependant = self.dependants[0]
 
         # TODO: Implement an optimization where the requires is checked against a graph global
         # print("    Lets check_downstream one more")
-        down_require = d.require.transform_downstream(self.conanfile.package_type, require, None)
+        down_require = dependant.require.transform_downstream(self.conanfile.package_type,
+                                                              require, None)
 
         if down_require is None:
-            # print("    No need to check dowstream more")
+            # print("    No need to check downstream more")
             return
 
-        source_node = d.src
+        source_node = dependant.src
         return source_node.check_downstream_exists(down_require)
+
+    def check_loops(self, new_node):
+        if self.ref == new_node.ref:
+            return self
+        if not self.dependants:
+            return
+        assert len(self.dependants) == 1
+        dependant = self.dependants[0]
+        source_node = dependant.src
+        return source_node.check_loops(new_node)
 
     @property
     def package_id(self):
@@ -167,7 +179,7 @@ class Node(object):
     @property
     def pref(self):
         assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
-        return PackageReference(self.ref, self.package_id, self.prev)
+        return PkgReference(self.ref, self.package_id, self.prev, self.pref_timestamp)
 
     def add_edge(self, edge):
         if edge.src == self:
@@ -188,6 +200,20 @@ class Node(object):
     def __repr__(self):
         return repr(self.conanfile)
 
+    def serialize(self):
+        result = OrderedDict()
+        result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
+        result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
+        result["recipe"] = self.recipe
+        result["package_id"] = self.package_id
+        from conans.client.installer import build_id
+        result["build_id"] = build_id(self.conanfile)
+        result["binary"] = self.binary
+        result.update(self.conanfile.serialize())
+        result["context"] = self.context
+        result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
+        return result
+
 
 class Edge(object):
     def __init__(self, src, dst, require):
@@ -200,6 +226,7 @@ class DepsGraph(object):
     def __init__(self):
         self.nodes = []
         self.aliased = {}
+        self.resolved_ranges = {}
         self.error = False
 
     def __repr__(self):
@@ -263,3 +290,12 @@ class DepsGraph(object):
     def report_graph_error(self):
         if self.error:
             raise self.error
+
+    def serialize(self):
+        for i, n in enumerate(self.nodes):
+            n.id = i
+        result = OrderedDict()
+        result["nodes"] = [n.serialize() for n in self.nodes]
+        result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
+        return result
+

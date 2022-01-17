@@ -7,7 +7,7 @@ import pytest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.scm import Git, SVN
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.model.scm import SCMData
 from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.test_files import temp_folder
@@ -59,7 +59,7 @@ def _quoted(item):
 class GitSCMTest(unittest.TestCase):
 
     def setUp(self):
-        self.ref = ConanFileReference.loads("lib/0.1@user/channel")
+        self.ref = RecipeReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
 
     def _commit_contents(self):
@@ -77,14 +77,11 @@ class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
     scm = ["Other stuff"]
-
-    def build(self):
-        self.output.info("scm: {}".format(self.scm))
 '''
         self.client.save({"conanfile.py": conanfile})
         # nothing breaks
-        self.client.run("create . user/channel")
-        self.assertIn("['Other stuff']", self.client.out)
+        self.client.run("create . user/channel", assert_error=True)
+        self.assertIn("'scm' attribute must be a dictionary", self.client.out)
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
@@ -112,6 +109,7 @@ class ConanLib(ConanFile):
         self.assertIn("othersubfolder", os.listdir(folder))
         self.assertTrue(os.path.exists(os.path.join(folder, "othersubfolder", "myfile")))
 
+    @pytest.mark.xfail(reason="Remove source folders not implemented yet")
     def test_auto_filesystem_remote_git(self):
         # https://github.com/conan-io/conan/issues/3109
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
@@ -124,10 +122,10 @@ class ConanLib(ConanFile):
             self.client.run_command("git add .")
             self.client.run_command('git commit -m  "commiting"')
         self.client.run_command('git clone "%s" .' % repo)
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
         self.assertIn("WARN: Repo origin looks like a local path", self.client.out)
         self.client.run("remove lib/0.1* -s -f")  # Remove the source folder, it will get from url
-        self.client.run("install lib/0.1@user/channel --build")
+        self.client.run("install --reference=lib/0.1@user/channel --build")
         self.assertIn("lib/0.1@user/channel: SCM: Getting sources from url:", self.client.out)
 
     def test_auto_git(self):
@@ -135,7 +133,7 @@ class ConanLib(ConanFile):
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
         self.client.save({"conanfile.py": conanfile, "myfile.txt": "My file is copied"})
         self.client.init_git_repo()
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
         self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced",
                       self.client.out)
 
@@ -176,7 +174,7 @@ class ConanLib(ConanFile):
         self.client.run_command('git remote add origin https://myrepo.com.git')
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
@@ -224,10 +222,11 @@ class ConanLib(ConanFile):
         self.client.run("create conan/ user/channel")
 
         # Check that the conanfile is on the source/conan
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         source_folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "conan", "conanfile.py")))
 
+    @pytest.mark.xfail(reason="Remove source folders not implemented yet")
     def test_deleted_source_folder(self):
         path, _ = create_local_git_repo({"myfile": "contents"}, branch="my_release")
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")
@@ -235,20 +234,20 @@ class ConanLib(ConanFile):
         self.client.init_git_repo()
         self.client.run_command('git remote add origin "%s"' % path.replace("\\", "/"))
         self.client.run_command('git push origin master')
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
 
         # delete old source, but it doesn't matter because the sources are in the cache
         rmdir(self.client.current_folder)
         new_curdir = temp_folder()
         self.client.current_folder = new_curdir
 
-        self.client.run("install lib/0.1@user/channel --build")
+        self.client.run("install --reference=lib/0.1@user/channel --build")
         self.assertNotIn("Getting sources from url: '%s'" % path.replace("\\", "/"),
                          self.client.out)
 
         # If the remove the source folder, then it is fetched from the "remote" doing an install
         self.client.run("remove lib/0.1@user/channel -f -s")
-        self.client.run("install lib/0.1@user/channel --build")
+        self.client.run("install --reference=lib/0.1@user/channel --build")
         self.assertIn("SCM: Getting sources from url: '%s'" % path.replace("\\", "/"),
                       self.client.out)
 
@@ -272,8 +271,8 @@ class ConanLib(ConanFile):
 
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
-        pref = self.client.get_latest_prev(ConanFileReference.loads("lib/0.1@user/channel"),
-                                           NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_package_reference(RecipeReference.loads("lib/0.1@user/channel"),
+                                                        NO_SETTINGS_PACKAGE_ID)
         bf = self.client.get_latest_pkg_layout(pref).build()
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
@@ -382,12 +381,12 @@ class ConanLib(ConanFile):
         self.client.init_git_repo()
         cmd = 'git remote add origin "%s"' % curdir
         self.client.run_command(cmd)
-        self.client.run("export . lasote/channel")
+        self.client.run("export . --user=lasote --channel=channel")
         self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
         client2 = TestClient(servers=self.servers)
-        client2.run("install lib/0.1@lasote/channel --build")
+        client2.run("install --reference=lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
     def test_source_removed_in_local_cache(self):
@@ -442,7 +441,7 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         submodule_path, _ = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
@@ -474,7 +473,7 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         submodule_path, subsubmodule_path = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
@@ -486,7 +485,7 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         submodule_path, subsubmodule_path = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
@@ -591,34 +590,21 @@ class ConanLib(ConanFile):
             """)
         commit = self.client.init_git_repo({"conanfile.py": conanfile})
 
-        self.client.run("export . user/channel")
+        self.client.run("export . --user=user --channel=channel")
         scm_info = self.client.scm_info_cache("issue/3831@user/channel")
         self.assertEqual(commit, scm_info.revision)
+
+    def test_git_version(self):
+        git = Git()
+        self.assertNotIn("Error retrieving git", str(git.version))
 
 
 @pytest.mark.tool_svn
 class SVNSCMTest(SVNLocalRepoTestCase):
 
     def setUp(self):
-        self.ref = ConanFileReference.loads("lib/0.1@user/channel")
+        self.ref = RecipeReference.loads("lib/0.1@user/channel")
         self.client = TestClient()
-
-    def test_scm_other_type_ignored(self):
-        conanfile = '''
-from conans import ConanFile, tools
-
-class ConanLib(ConanFile):
-    name = "lib"
-    version = "0.1"
-    scm = ["Other stuff"]
-
-    def build(self):
-        self.output.info("scm: {}".format(self.scm))
-'''
-        self.client.save({"conanfile.py": conanfile})
-        # nothing breaks
-        self.client.run("create . user/channel")
-        self.assertIn("['Other stuff']", self.client.out)
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
@@ -642,7 +628,7 @@ class ConanLib(ConanFile):
         conanfile = conanfile.replace('"onesubfolder"', '"othersubfolder"')
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         self.assertIn("othersubfolder", os.listdir(folder))
         self.assertTrue(os.path.exists(os.path.join(folder, "othersubfolder", "myfile")))
@@ -693,7 +679,7 @@ class ConanLib(ConanFile):
                                                                  path=self.client.current_folder))
         self.client.run("create . user/channel")
 
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
@@ -708,7 +694,7 @@ class ConanLib(ConanFile):
         self.client.run("create conan/ user/channel")
 
         # Check that the conanfile is on the source/conan
-        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        ref = RecipeReference.loads("lib/0.1@user/channel")
         source_folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "conan", "conanfile.py")))
 
@@ -732,8 +718,8 @@ class ConanLib(ConanFile):
 
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
-        pref = self.client.get_latest_prev(ConanFileReference.loads("lib/0.1@user/channel"),
-                                           NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_package_reference(RecipeReference.loads("lib/0.1@user/channel"),
+                                                        NO_SETTINGS_PACKAGE_ID)
         bf = self.client.get_latest_pkg_layout(pref).build()
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
@@ -813,12 +799,12 @@ class ConanLib(ConanFile):
         project_url = project_url.replace(" ", "%20")
         self.client.run_command('svn co "{url}" "{path}"'.format(url=project_url,
                                                                  path=self.client.current_folder))
-        self.client.run("export . lasote/channel")
+        self.client.run("export . --user=lasote --channel=channel")
         self.client.run("upload lib* -c -r myremote")
 
         # Take other client, the old client folder will be used as a remote
         client2 = TestClient(servers=self.servers)
-        client2.run("install lib/0.1@lasote/channel --build")
+        client2.run("install --reference=lib/0.1@lasote/channel --build")
         self.assertIn("My file is copied", client2.out)
 
     def test_source_removed_in_local_cache(self):
@@ -905,7 +891,7 @@ class ConanLib(ConanFile):
                           "Use --ignore-dirty to force it.", self.client.out)
 
             # We confirm that the replacement hasn't been done
-            ref = ConanFileReference.loads("lib/0.1@")
+            ref = RecipeReference.loads("lib/0.1@")
             folder = self.client.get_latest_ref_layout(ref).export()
             conanfile_contents = load(os.path.join(folder, "conanfile.py"))
             self.assertIn('"revision": "auto"', conanfile_contents)
@@ -969,7 +955,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
             client.run_command('svn propset svn:needs-lock yes {}'.format(item))
         client.run_command('svn commit -m "lock some files"')
 
-        client.run("export . user/channel")
+        client.run("export . --user=user --channel=channel")
 
 
 @pytest.mark.tool_git
@@ -989,13 +975,11 @@ class SCMBlockUploadTest(unittest.TestCase):
                       "Use --ignore-dirty to force it.", client.out)
         # The upload has to fail, no "auto" fields are allowed
         client.run("upload lib/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("ERROR: lib/0.1@user/channel: Upload recipe to 'default' failed:"
-                      " The recipe contains invalid data in the 'scm' attribute (some 'auto'"
-                      " values or missing fields 'type', 'url' or 'revision'). Use '--force'"
-                      " to ignore", client.out)
+        self.assertIn("The lib/0.1@user/channel recipe contains invalid data in the "
+                      "'scm' attribute ", client.out)
         # The upload with --force should work
         client.run("upload lib/0.1@user/channel -r default --force")
-        self.assertIn("Uploading lib/0.1@user/channel to remote", client.out)
+        self.assertIn("Uploading lib/0.1@user/channel", client.out)
 
     def test_export_blocking_type_none(self):
         client = TestClient(default_server_user=True)
@@ -1009,7 +993,7 @@ class SCMBlockUploadTest(unittest.TestCase):
                 }
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg/0.1@user/channel", assert_error=True)
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: SCM not supported: None", client.out)
 
     def test_create_blocking_url_none(self):
@@ -1044,9 +1028,7 @@ class SCMBlockUploadTest(unittest.TestCase):
         create_local_git_repo(folder=client.current_folder)
         client.run("create . pkg/0.1@user/channel")
         client.run("upload pkg/0.1@user/channel -r default", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Upload recipe to 'default' failed: The recipe"
-                      " contains invalid data in the 'scm' attribute (some 'auto' values or"
-                      " missing fields 'type', 'url' or 'revision'). Use '--force' to ignore",
+        self.assertIn("The pkg/0.1@user/channel recipe contains invalid data in the 'scm' attribute",
                       client.out)
         client.run("upload pkg/0.1@user/channel -r default --force")
 
@@ -1072,9 +1054,9 @@ class TestConan(ConanFile):
         client.run("create . danimtb/testing")
         client.run("upload test/1.0@danimtb/testing -r upload_repo")
         self.assertIn("Uploading conan_sources.tgz", client.out)
-        ref = ConanFileReference("test", "1.0", "danimtb", "testing")
+        ref = RecipeReference("test", "1.0", "danimtb", "testing")
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
-        ref = ref.copy_with_rev(rev)
+        ref.revision = rev
         export_sources_path = os.path.join(servers["upload_repo"].server_store.export(ref),
                                            "conan_sources.tgz")
         self.assertTrue(os.path.exists(export_sources_path))
@@ -1096,7 +1078,7 @@ class TestConan(ConanFile):
         client.run("upload test/1.0@danimtb/testing -r upload_repo")
         self.assertNotIn("Uploading conan_sources.tgz", client.out)
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
-        ref = ref.copy_with_rev(rev)
+        ref.revision = rev
         export_sources_path = os.path.join(servers["upload_repo"].server_store.export(ref),
                                            "conan_sources.tgz")
         self.assertFalse(os.path.exists(export_sources_path))

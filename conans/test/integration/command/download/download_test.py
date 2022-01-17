@@ -2,7 +2,7 @@ import os
 import unittest
 from collections import OrderedDict
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import (TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient,
                                      GenConanfile)
 from conans.util.files import load
@@ -14,7 +14,7 @@ class DownloadTest(unittest.TestCase):
         client = TurboTestClient(default_server_user=True)
         # Test download of the recipe only
         conanfile = str(GenConanfile().with_name("pkg").with_version("0.1"))
-        ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
+        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
         client.create(ref, conanfile)
         client.upload_all(ref)
         client.remove_all()
@@ -46,9 +46,9 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "file.h": "myfile.h",
                      "otherfile.cpp": "C++code"})
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
 
-        ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
+        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
         client.run("upload pkg/0.1@lasote/stable -r default")
         client.run("remove pkg/0.1@lasote/stable -f")
 
@@ -61,7 +61,7 @@ class Pkg(ConanFile):
     def test_download_reference_without_packages(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
-        client.run("export . user/stable")
+        client.run("export . --user=user --channel=stable")
         client.run("upload pkg/0.1@user/stable -r default")
         client.run("remove pkg/0.1@user/stable -f")
 
@@ -69,7 +69,7 @@ class Pkg(ConanFile):
         # Check 'No remote binary packages found' warning
         self.assertIn("WARN: No remote binary packages found in remote", client.out)
         # Check at least conanfile.py is downloaded
-        ref = ConanFileReference.loads("pkg/0.1@user/stable")
+        ref = RecipeReference.loads("pkg/0.1@user/stable")
         self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).conanfile()))
 
     def test_download_reference_with_packages(self):
@@ -80,14 +80,14 @@ class Pkg(ConanFile):
     version = "0.1"
     settings = "os"
 """
-        ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
+        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
 
         client.create(ref, conanfile)
         client.upload_all(ref)
         client.remove_all()
 
         client.run("download pkg/0.1@lasote/stable")
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         ref_layout = client.get_latest_ref_layout(ref)
         pkg_layout = client.get_latest_pkg_layout(pref)
 
@@ -101,7 +101,7 @@ class Pkg(ConanFile):
 
     def test_download_wrong_id(self):
         client = TurboTestClient(default_server_user=True)
-        ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
+        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
         client.export(ref)
         client.upload_all(ref)
         client.remove_all()
@@ -122,16 +122,16 @@ class Pkg(ConanFile):
 
         client = TurboTestClient(servers=servers, inputs=["admin", "password"])
 
-        ref = ConanFileReference.loads("pkg/0.1")
+        ref = RecipeReference.loads("pkg/0.1")
         client.create(ref)
         client.upload_all(ref)
         client.remove_all()
 
         client.run("download pkg/0.1:{}".format(NO_SETTINGS_PACKAGE_ID))
 
-        rrev = client.cache.get_latest_rrev(ref)
-        pkgids = client.cache.get_package_ids(rrev)
-        prev = client.cache.get_latest_prev(pkgids[0])
+        rrev = client.cache.get_latest_recipe_reference(ref)
+        pkgids = client.cache.get_package_references(rrev)
+        prev = client.cache.get_latest_package_reference(pkgids[0])
         package_folder = client.cache.pkg_layout(prev).package()
 
         # Check not 'No remote binary packages found' warning
@@ -159,16 +159,16 @@ class Pkg(ConanFile):
     def test_download_package_argument(self):
         client = TurboTestClient(default_server_user=True)
 
-        ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
+        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
         client.create(ref)
         client.upload_all(ref)
         client.remove_all()
 
         client.run("download pkg/0.1@lasote/stable -p {}".format(NO_SETTINGS_PACKAGE_ID))
 
-        rrev = client.cache.get_latest_rrev(ref)
-        pkgids = client.cache.get_package_ids(rrev)
-        prev = client.cache.get_latest_prev(pkgids[0])
+        rrev = client.cache.get_latest_recipe_reference(ref)
+        pkgids = client.cache.get_package_references(rrev)
+        prev = client.cache.get_latest_package_reference(pkgids[0])
         package_folder = client.cache.pkg_layout(prev).package()
 
         # Check not 'No remote binary packages found' warning

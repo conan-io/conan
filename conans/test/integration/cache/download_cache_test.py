@@ -30,61 +30,41 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("create . mypkg/0.1@user/testing")
         client.run("upload * --all --confirm -r default")
         cache_folder = temp_folder()
-        log_trace_file = os.path.join(temp_folder(), "mylog.txt")
         conan_conf = textwrap.dedent("""
             [storage]
             path = ./data
             download_cache = {}
-            [log]
-            trace_file = {}
-        """.format(cache_folder, log_trace_file))
+        """.format(cache_folder))
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
-        content = load(log_trace_file)
-        self.assertEqual(6, content.count('"_action": "DOWNLOAD"'))
-        # 6 files cached, plus "locks" folder = 7
-        self.assertEqual(7, len(os.listdir(cache_folder)))
+        client.run("install --reference=mypkg/0.1@user/testing")
+        # TODO: Verify it doesn't really download
 
-        os.remove(log_trace_file)
         client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
-        content = load(log_trace_file)
-        self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
-        self.assertIn("DOWNLOADED_RECIPE", content)
-        self.assertIn("DOWNLOADED_PACKAGE", content)
+        client.run("install --reference=mypkg/0.1@user/testing")
+        # TODO: Verify it doesn't really download
 
         # removing the config downloads things
         conan_conf = textwrap.dedent("""
             [storage]
             path = ./data
-            [log]
-            trace_file = {}
-            """.format(log_trace_file))
+            """)
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-        os.remove(log_trace_file)
         client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
-        content = load(log_trace_file)
-
-        self.assertEqual(6, content.count('"_action": "DOWNLOAD"'))
-
+        client.run("install --reference=mypkg/0.1@user/testing")
+        # TODO: Verify it doesn't really download
         # restoring config cache works again
-        os.remove(log_trace_file)
         conan_conf = textwrap.dedent("""
             [storage]
             path = ./data
             download_cache = {}
-            [log]
-            trace_file = {}
-            """.format(cache_folder, log_trace_file))
+            """.format(cache_folder))
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
-        content = load(log_trace_file)
-        self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
+        client.run("install --reference=mypkg/0.1@user/testing")
+        # TODO: Verify it doesn't really download
 
     def test_dirty_download(self):
         # https://github.com/conan-io/conan/issues/8578
@@ -103,7 +83,7 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("create . pkg/0.1@")
         client.run("upload * --all -c -r default")
         client.run("remove * -f")
-        client.run("install pkg/0.1@")
+        client.run("install --reference=pkg/0.1@")
         for f in os.listdir(cache_folder):
             # damage the file
             path = os.path.join(cache_folder, f)
@@ -112,7 +92,7 @@ class DownloadCacheTest(unittest.TestCase):
                 set_dirty(path)
 
         client.run("remove * -f")
-        client.run("install pkg/0.1@")
+        client.run("install --reference=pkg/0.1@")
         assert "pkg/0.1: Downloaded package" in client.out
 
     def test_user_downloads_cached_newtools(self):
@@ -219,7 +199,7 @@ class DownloadCacheTest(unittest.TestCase):
             """.format(cache_folder))
         client2.save({"conan.conf": conan_conf}, path=client2.cache.cache_folder)
 
-        client2.run("install mypkg/0.1@user/testing")
+        client2.run("install --reference=mypkg/0.1@user/testing")
         self.assertEqual("header", client2.load("header.h"))
 
         # modify non-revisioned pkg
@@ -229,7 +209,7 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("upload * --all --confirm -r default")
 
         client2.run("remove * -f")
-        client2.run("install mypkg/0.1@user/testing")
+        client2.run("install --reference=mypkg/0.1@user/testing")
         self.assertEqual("header2", client2.load("header.h"))
 
 

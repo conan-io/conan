@@ -59,6 +59,6 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
 
         t = TestClient()
         t.save({'pyreq.py': pyreq, 'conanfile.py': conanfile})
-        t.run("export pyreq.py base/1.0@")
+        t.run("export pyreq.py --name=base --version=1.0")
         t.run("install conanfile.py")
         self.assertEqual(str(t.out).count("Generator 'CMakeDeps' calling 'generate()'"), 1)

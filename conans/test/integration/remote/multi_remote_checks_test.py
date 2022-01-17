@@ -16,7 +16,7 @@ class RemoteChecksTest(unittest.TestCase):
 class Pkg(ConanFile):
     pass"""
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@lasote/testing")
+        client.run("create . pkg/0.1@lasote/testing")
         client.run("upload Pkg* --all -r=server1 --confirm")
         client.run("upload Pkg* --all -r=server2 --confirm")
 
@@ -24,41 +24,39 @@ class Pkg(ConanFile):
         client.run("remove * -f")
 
         # Exported recipe gets binary from default remote
-        client.run("export . Pkg/0.1@lasote/testing")
-        client.run("install Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+        client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
+        client.run("install --reference=pkg/0.1@lasote/testing")
+        client.assert_listed_binary(
+            {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server1)")})
+        self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
                       "%s from remote 'server1'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
         # Explicit remote also defines the remote
         client.run("remove * -f")
-        client.run("export . Pkg/0.1@lasote/testing")
-        client.run("install Pkg/0.1@lasote/testing -r=server2")
-        self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+        client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
+        client.run("install --reference=pkg/0.1@lasote/testing -r=server2")
+        client.assert_listed_binary(
+            {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
+        self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
                       "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
         # Ordered search of binary works
         client.run("remove * -f")
         client.run("remove * -f -r=server1")
-        client.run("export . Pkg/0.1@lasote/testing")
-        client.run("install Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+        client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
+        client.run("install --reference=pkg/0.1@lasote/testing")
+        client.assert_listed_binary(
+            {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
+        self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
                       "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
         # Download recipe and binary from the remote2 by iterating
         client.run("remove * -f")
         client.run("remove * -f -r=server1")
-        client.run("install Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing from 'server2' - Downloaded", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
+        client.run("install --reference=pkg/0.1@lasote/testing")
+        client.assert_listed_binary(
+            {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
+        self.assertIn("pkg/0.1@lasote/testing: Retrieving package "
                       "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID, client.out)
 
     def test_binaries_from_different_remotes(self):
@@ -71,30 +69,27 @@ class Pkg(ConanFile):
     options = {"opt": [1, 2, 3]}
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@lasote/testing -o Pkg:opt=1")
-        client.run("upload Pkg* --all -r=server1 --confirm")
+        client.run("create . pkg/0.1@lasote/testing -o pkg:opt=1")
+        client.run("upload pkg* --all -r=server1 --confirm")
         client.run("remove * -p -f")
-        client.run("create . Pkg/0.1@lasote/testing -o Pkg:opt=2")
-        package_id2 = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
+        client.run("create . pkg/0.1@lasote/testing -o pkg:opt=2")
+        package_id2 = re.search(r"pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
         client.run("upload Pkg* --all -r=server2 --confirm")
         client.run("remove * -p -f")
 
         # recipe is cached, takes binary from server2
-        client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2")
-        self.assertIn("Pkg/0.1@lasote/testing from local cache - Cache", client.out)
-        self.assertIn(f"Pkg/0.1@lasote/testing:{package_id2} - Download", client.out)
-        self.assertIn(f"Pkg/0.1@lasote/testing: Retrieving package {package_id2} "
+        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2")
+        client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Download (server2)")})
+        self.assertIn(f"pkg/0.1@lasote/testing: Retrieving package {package_id2} "
                       "from remote 'server2'", client.out)
 
         # Nothing to update
-        client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2 -u")
-        self.assertIn("Pkg/0.1@lasote/testing from 'server2' - Cache", client.out)
-        self.assertIn(f"Pkg/0.1@lasote/testing:{package_id2} - Cache",
-                      client.out)
+        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=2 -r=server2 -u")
+        client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Cache")})
 
         # Build missing
-        client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=3 -r=server2", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'Pkg/0.1@lasote/testing'", client.out)
+        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=3 -r=server2", assert_error=True)
+        self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'", client.out)
 
-        client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=3", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'Pkg/0.1@lasote/testing'", client.out)
+        client.run("install --reference=pkg/0.1@lasote/testing -o pkg:opt=3", assert_error=True)
+        self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'", client.out)

@@ -9,8 +9,9 @@ from mock import mock
 
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+
 # TODO: 2.0: add some unittests for the new cache on getting the fields that replace the metadata
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
 
@@ -18,7 +19,7 @@ from conans.test.utils.tools import redirect_output
 class UpdateRevisionInMetadataTests(unittest.TestCase):
 
     def setUp(self):
-        ref = ConanFileReference.loads("lib/version@user/channel")
+        ref = RecipeReference.loads("lib/version@user/channel")
         # FIXME: 2.0: PackageCacheLayout does not exist anymore
         # self.package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref,
         #                                          short_paths=False, no_lock=True)

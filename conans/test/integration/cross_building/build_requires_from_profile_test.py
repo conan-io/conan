@@ -14,7 +14,7 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         compiler=Visual Studio
         compiler.version=16
 
-        [build_requires]
+        [tool_requires]
         br2/version
     """)
 
@@ -27,7 +27,7 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         compiler.libcxx=libc++
         build_type=Release
 
-        [build_requires]
+        [tool_requires]
         br3/version
     """)
 
@@ -49,9 +49,9 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
                 'br1.py': GenConanfile(),
                 'br2.py': GenConanfile(),
                 'br3.py': GenConanfile()})
-        t.run("export br1.py br1/version@")
-        t.run("export br2.py br2/version@")
-        t.run("export br3.py br3/version@")
+        t.run("export br1.py --name=br1 --version=version")
+        t.run("export br2.py --name=br2 --version=version")
+        t.run("export br3.py --name=br3 --version=version")
         t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build")
 
 
@@ -99,7 +99,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
     profile_host = textwrap.dedent("""
         [settings]
         os = Linux
-        [build_requires]
+        [tool_requires]
         mytoolchain/1.0
         """)
     profile_build = textwrap.dedent("""
@@ -203,13 +203,13 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
     profile_host = textwrap.dedent("""
         [settings]
         os = Linux
-        [build_requires]
+        [tool_requires]
         mytoolchain/1.0
         """)
     profile_build = textwrap.dedent("""
         [settings]
         os = Windows
-        [build_requires]
+        [tool_requires]
         creator/1.0
         """)
 

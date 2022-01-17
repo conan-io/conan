@@ -1,7 +1,8 @@
 import unittest
 
 from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.server.service.authorize import BasicAuthorizer
 
 
@@ -9,10 +10,10 @@ class AuthorizerTest(unittest.TestCase):
 
     def setUp(self):
         unittest.TestCase.setUp(self)
-        self.openssl_ref = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
-        self.openssl_pref = PackageReference(self.openssl_ref, "123123123")
-        self.openssl_ref2 = ConanFileReference.loads("openssl/2.0.2@lasote/testing")
-        self.openssl_pref2 = PackageReference(self.openssl_ref2, "123123123")
+        self.openssl_ref = RecipeReference.loads("openssl/2.0.1@lasote/testing")
+        self.openssl_pref = PkgReference(self.openssl_ref, "123123123")
+        self.openssl_ref2 = RecipeReference.loads("openssl/2.0.2@lasote/testing")
+        self.openssl_pref2 = PkgReference(self.openssl_ref2, "123123123")
 
     def test_invalid_rule(self):
         """Invalid rule input"""
@@ -58,7 +59,7 @@ class AuthorizerTest(unittest.TestCase):
         authorizer = BasicAuthorizer(read_perms, write_perms)
         # Pepe can read any openssl/2.0.1
         authorizer.check_read_conan("pepe", self.openssl_ref)
-        tmp_ref = ConanFileReference.loads("openssl/2.0.1@alfred/testing")
+        tmp_ref = RecipeReference.loads("openssl/2.0.1@alfred/testing")
         authorizer.check_read_conan("pepe", tmp_ref)
         self.assertRaises(ForbiddenException,
                           authorizer.check_read_conan, "juan", self.openssl_ref)
@@ -73,11 +74,11 @@ class AuthorizerTest(unittest.TestCase):
         authorizer = BasicAuthorizer(read_perms, write_perms)
         # Pepe can read openssl/2.0.1 from any channel but only from lasote
         authorizer.check_read_conan("pepe", self.openssl_ref)
-        tmp_ref = ConanFileReference.loads("openssl/2.0.1@alfred/testing")
+        tmp_ref = RecipeReference.loads("openssl/2.0.1@alfred/testing")
         self.assertRaises(ForbiddenException,
                           authorizer.check_read_conan, "pepe", tmp_ref)
 
-        tmp_ref = ConanFileReference.loads("openssl/2.0.1@lasote/otherchannel")
+        tmp_ref = RecipeReference.loads("openssl/2.0.1@lasote/otherchannel")
         authorizer.check_read_conan("pepe", tmp_ref)
 
     def test_permissions(self):

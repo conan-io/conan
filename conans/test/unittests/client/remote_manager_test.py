@@ -19,7 +19,7 @@ class RemoteManagerTest(unittest.TestCase):
             "Two_file.txt": os.path.join(folder, "Two_file.txt"),
         }
 
-        path = compress_files(files, {}, PACKAGE_TGZ_NAME, dest_dir=folder)
+        path = compress_files(files, PACKAGE_TGZ_NAME, dest_dir=folder)
         self.assertTrue(os.path.exists(path))
         expected_path = os.path.join(folder, PACKAGE_TGZ_NAME)
         self.assertEqual(path, expected_path)

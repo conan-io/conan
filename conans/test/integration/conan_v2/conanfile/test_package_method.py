@@ -13,10 +13,10 @@ class ConanfileSourceTestCase(ConanV2ModeTestCase):
             from conans import ConanFile
 
             class Recipe(ConanFile):
-            
+
                 def package(self):
                     self.info.header_only()
         """)
         t.save({'conanfile.py': conanfile})
         t.run('create . name/version@ -s os=Linux', assert_error=True)
-        self.assertIn("Conan v2 incompatible: 'self.info' access in package() method is deprecated", t.out)
+        self.assertIn("'self.info' access in package() method is deprecated", t.out)

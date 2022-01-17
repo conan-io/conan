@@ -4,7 +4,7 @@ import tempfile
 
 from conans.client.cmd.build import cmd_build
 from conans.client.manager import deps_install
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 from conans.util.files import rmdir
 
 

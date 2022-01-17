@@ -1,10 +1,7 @@
-import unittest
-
+import pytest
 from requests import Response
 
-from conans.client import tools
 from conans.test.utils.tools import TestClient, TestRequester
-from conans.util.files import save
 
 
 conanfile = """
@@ -27,41 +24,34 @@ class MyRequester(TestRequester):
         return resp
 
 
-class RequesterTest(unittest.TestCase):
+class TestRequester:
 
     def test_requester_timeout(self):
-
         client = TestClient(requester_class=MyRequester)
-        conf = """
-[general]
-request_timeout=2
-"""
-        save(client.cache.conan_conf_path, conf)
+        client.save({"global.conf": "core.net.http:timeout=4.3"}, path=client.cache.cache_folder)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . foo/1.0@")
+        assert "TIMEOUT: 4.3" in client.out
 
-        with tools.environment_append({"CONAN_REQUEST_TIMEOUT": "4.3"}):
-            client = TestClient(requester_class=MyRequester)
-            client.save({"conanfile.py": conanfile})
-            client.run("create . foo/1.0@")
-            assert "TIMEOUT: 4.3" in client.out
+    def test_requester_timeout_tuple(self):
+        client = TestClient(requester_class=MyRequester)
+        client.save({"global.conf": "core.net.http:timeout=(2, 3.4)"},
+                    path=client.cache.cache_folder)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . foo/1.0@")
+        assert "TIMEOUT: (2, 3.4)" in client.out
 
     def test_requester_timeout_errors(self):
         client = TestClient(requester_class=MyRequester)
-        conf = """
-[general]
-request_timeout=any_string
-"""
-        save(client.cache.conan_conf_path, conf)
-        with self.assertRaisesRegex(Exception,
-                                   "Specify a numeric parameter for 'request_timeout'"):
-            client.run("install Lib/1.0@conan/stable")
+        client.save({"global.conf": "core.net.http:timeout=invalid"}, path=client.cache.cache_folder)
+        with pytest.raises(Exception) as e:
+            client.run("install --reference=Lib/1.0@conan/stable")
+        assert "Conf 'core.net.http:timeout' value 'invalid' must be" in str(e.value)
 
     def test_no_request_timeout(self):
         # Test that not having timeout works
         client = TestClient(requester_class=MyRequester)
-        conf = """
-[general]
-"""
-        save(client.cache.conan_conf_path, conf)
+        client.save({"global.conf": "core.net.http:timeout=None"}, path=client.cache.cache_folder)
         client.save({"conanfile.py": conanfile})
         client.run("create . foo/1.0@")
         assert "TIMEOUT: NOT SPECIFIED" in client.out

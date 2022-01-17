@@ -43,11 +43,11 @@ class InstallMissingDependency(unittest.TestCase):
 
         dep1_conanfile = GenConanfile()
         client.save({"conanfile.py": dep1_conanfile}, clean_first=True)
-        client.run("export . dep1/1.0@")
-        client.run("export . dep2/1.0@")
+        client.run("export . --name=dep1 --version=1.0")
+        client.run("export . --name=dep2 --version=1.0")
 
         conanfile = GenConanfile().with_require("dep1/1.0").with_require("dep2/1.0")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . pkg/1.0@", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'dep1/1.0', 'dep2/1.0'", client.out)
-        self.assertIn("Try to build from sources with '--build=dep1 --build=dep2'", client.out)
+        self.assertIn("Or try to build locally from sources with '--build=dep1 --build=dep2'", client.out)

@@ -118,7 +118,7 @@ class ConanLib(ConanFile):
 '''
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export . lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
         client.run("upload lib/0.1@lasote/stable -r default")
         client.run("remote list-users")
         assert 'default:\n  Username: admin\n  authenticated: True' in client.out
@@ -146,13 +146,8 @@ class ConanLib(ConanFile):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers,  inputs=[])
-        conan_conf = textwrap.dedent("""
-                                    [storage]
-                                    path = ./data
-                                    [general]
-                                    non_interactive=True
-                                """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        conan_conf = "core:non_interactive=True"
+        client.save({"global.conf": conan_conf}, path=client.cache.cache_folder)
         client.run('remote login default admin -p', assert_error=True)
         self.assertIn('ERROR: Conan interactive mode disabled', client.out)
         self.assertNotIn("Please enter a password for \"admin\" account:", client.out)
@@ -193,7 +188,7 @@ class ConanLib(ConanFile):
         servers["other_server"] = other_server
         client = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass"])
         client.run("remote list-users -f json")
-        info = json.loads(str(client.out))
+        info = json.loads(client.stdout)
         assert info == [
                             {
                                 "name": "default",
@@ -209,7 +204,7 @@ class ConanLib(ConanFile):
 
         client.run('remote set-user default bad_user')
         client.run("remote list-users -f json")
-        info = json.loads(str(client.out))
+        info = json.loads(client.stdout)
         assert info == [
             {
                 "name": "default",
@@ -225,7 +220,7 @@ class ConanLib(ConanFile):
 
         client.run('remote set-user default lasote')
         client.run("remote list-users -f json")
-        info = json.loads(str(client.out))
+        info = json.loads(client.stdout)
         assert info == [
             {
                 "name": "default",
@@ -241,7 +236,7 @@ class ConanLib(ConanFile):
 
         client.run("remote login default lasote -p mypass")
         client.run("remote list-users -f json")
-        info = json.loads(str(client.out))
+        info = json.loads(client.stdout)
         assert info == [
             {
                 "name": "default",
@@ -257,7 +252,7 @@ class ConanLib(ConanFile):
 
         client.run("remote login default danimtb -p passpass")
         client.run("remote list-users -f json")
-        info = json.loads(str(client.out))
+        info = json.loads(client.stdout)
         assert info == [
             {
                 "name": "default",
@@ -272,7 +267,7 @@ class ConanLib(ConanFile):
         ]
         client.run("remote set-user other_server lasote")
         client.run("remote list-users -f json")
-        info = json.loads(str(client.out))
+        info = json.loads(client.stdout)
         assert info == [
             {
                 "name": "default",
@@ -289,7 +284,7 @@ class ConanLib(ConanFile):
         client.run("remote logout '*'")
         client.run("remote set-user default danimtb")
         client.run("remote list-users -f json")
-        info = json.loads(str(client.out))
+        info = json.loads(client.stdout)
         assert info == [
             {
                 "name": "default",

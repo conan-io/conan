@@ -31,7 +31,6 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 "file_name": self.file_name,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
-                "target_namespace": self.target_namespace,
                 "check_components_exist": self.cmakedeps.check_components_exist,
                 "targets_include_file": targets_include}
 
@@ -48,13 +47,13 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
         {% if is_module %}
         include(FindPackageHandleStandardArgs)
-        set({{ pkg_name }}_FOUND 1)
-        set({{ pkg_name }}_VERSION "{{ version }}")
+        set({{ file_name }}_FOUND 1)
+        set({{ file_name }}_VERSION "{{ version }}")
 
-        find_package_handle_standard_args({{ pkg_name }}
-                                          REQUIRED_VARS {{ pkg_name }}_VERSION
-                                          VERSION_VAR {{ pkg_name }}_VERSION)
-        mark_as_advanced({{ pkg_name }}_FOUND {{ pkg_name }}_VERSION)
+        find_package_handle_standard_args({{ file_name }}
+                                          REQUIRED_VARS {{ file_name }}_VERSION
+                                          VERSION_VAR {{ file_name }}_VERSION)
+        mark_as_advanced({{ file_name }}_FOUND {{ file_name }}_VERSION)
         {% endif %}
 
         include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
@@ -62,10 +61,21 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         include(CMakeFindDependencyMacro)
 
         foreach(_DEPENDENCY {{ '${' + pkg_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
+            # Check that we have not already called a find_package with the transitive dependency
             if(NOT {{ '${_DEPENDENCY}' }}_FOUND)
+            {% if is_module %}
+                find_dependency({{ '${_DEPENDENCY}' }} REQUIRED MODULE)
+            {% else %}
                 find_dependency({{ '${_DEPENDENCY}' }} REQUIRED NO_MODULE)
+            {% endif %}
             endif()
         endforeach()
+
+        set({{ file_name }}_VERSION_STRING "{{ version }}")
+        set({{ file_name }}_INCLUDE_DIRS {{ '${' + pkg_name + '_INCLUDE_DIRS' + config_suffix + '}' }} )
+        set({{ file_name }}_INCLUDE_DIR {{ '${' + pkg_name + '_INCLUDE_DIRS' + config_suffix + '}' }} )
+        set({{ file_name }}_LIBRARIES {{ '${' + pkg_name + '_LIBRARIES' + config_suffix + '}' }} )
+        set({{ file_name }}_DEFINITIONS {{ '${' + pkg_name + '_DEFINITIONS' + config_suffix + '}' }} )
 
         # Only the first installed configuration is included to avoid the collision
         foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS' + config_suffix + '}' }} )
@@ -76,9 +86,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         {% if check_components_exist %}
         # Check that the specified components in the find_package(Foo COMPONENTS x y z) are there
         # This is the variable filled by CMake with the requested components in find_package
-        if({{ target_namespace }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ '${'+target_namespace+'_FIND_COMPONENTS}' }})
-                if (TARGET {{ target_namespace }}::${_FIND_COMPONENT})
+        if({{ file_name }}_FIND_COMPONENTS)
+            foreach(_FIND_COMPONENT {{ '${'+file_name+'_FIND_COMPONENTS}' }})
+                if (TARGET ${_FIND_COMPONENT})
                     conan_message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
                 else()
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")

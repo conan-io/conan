@@ -7,7 +7,7 @@ import pytest
 from mock import patch
 
 from conans.client.hook_manager import HookManager
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONAN_MANIFEST
 from conans.test.utils.tools import TurboTestClient
 
@@ -32,7 +32,7 @@ class PostPackageTestCase(unittest.TestCase):
             hook_manager.hooks["post_package"] = [("_", post_package_hook)]
 
         with patch.object(HookManager, "load_hooks", new=mocked_load_hooks):
-            pref = t.create(ConanFileReference.loads("name/version@user/channel"))
+            pref = t.create(RecipeReference.loads("name/version@user/channel"))
 
         # Check that we are considering the same file
         pkg_layout = t.get_latest_pkg_layout(pref)
@@ -62,7 +62,7 @@ class PostPackageTestCase(unittest.TestCase):
             hook_manager.hooks["post_package"] = [("_", post_package_hook)]
 
         with patch.object(HookManager, "load_hooks", new=mocked_load_hooks):
-            pref = t.export_pkg(ref=ConanFileReference.loads("name/version@user/channel"),
+            pref = t.export_pkg(ref=RecipeReference.loads("name/version@user/channel"),
                                 args="--package-folder=.")
 
         # Check that we are considering the same file

@@ -6,7 +6,7 @@ from shutil import which
 from conans.cli.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.util.env_reader import get_env
+from conans.util.env import get_env
 
 
 

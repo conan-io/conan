@@ -23,7 +23,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . bar/0.1.0@user/testing")
-        client.run("install bar/0.1.0@user/testing -g markdown")
+        client.run("install --reference=bar/0.1.0@user/testing -g markdown")
         content = client.load("bar.md")
 
         self.assertIn("Generates the file FindFooBar.cmake", content)
@@ -51,7 +51,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "bm.cmake": "Content of build_module" })
         client.run("create . bar/0.1.0@user/testing")
-        client.run("install bar/0.1.0@user/testing -g markdown")
+        client.run("install --reference=bar/0.1.0@user/testing -g markdown")
         content = client.load("bar.md")
 
         self.assertIn("Generates the file FindFooBar.cmake", content)

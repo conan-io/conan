@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -299,16 +300,14 @@ def create_xcode_project(client, project_name, source):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.xfail(reason="The xcconfig syntax needs at leats Xcode 13 because of "
-                          "support for macros in overriding parameters with condition sets")
 @pytest.mark.tool_cmake()
 def test_xcodedeps_build_configurations():
     client = TestClient(path_with_spaces=False)
 
-    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("export .")
 
-    client.run("new bye/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=bye -d version=0.1 -f")
     client.run("export .")
 
     main = textwrap.dedent("""
@@ -343,16 +342,15 @@ def test_xcodedeps_build_configurations():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.xfail(reason="The xcconfig syntax needs at leats Xcode 13 because of "
-                          "support for macros in overriding parameters with condition sets")
 @pytest.mark.tool_cmake()
 def test_frameworks():
     client = TestClient(path_with_spaces=False)
 
     client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                                           .with_package_info(cpp_info={"frameworks": ['CoreFoundation']},
+                                           .with_package_info(cpp_info={"frameworks":
+                                                                        ['CoreFoundation']},
                                                               env_info={})})
-    client.run("export hello.py hello/0.1@")
+    client.run("export hello.py --name=hello --version=0.1")
 
     main = textwrap.dedent("""
         #include <CoreFoundation/CoreFoundation.h>
@@ -371,3 +369,18 @@ def test_frameworks():
                        "-configuration Release -arch x86_64".format(project_name))
     client.run_command("./build/Release/{}".format(project_name))
     assert "Hello!" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_xcodedeps_dashes_names_and_arch():
+    # https://github.com/conan-io/conan/issues/9949
+    client = TestClient(path_with_spaces=False)
+    client.save({"conanfile.py": GenConanfile().with_name("hello-dashes").with_version("0.1")})
+    client.run("export .")
+    client.save({"conanfile.txt": "[requires]\nhello-dashes/0.1\n"}, clean_first=True)
+    main = "int main(int argc, char *argv[]) { return 0; }"
+    create_xcode_project(client, "app", main)
+    client.run("install . -s arch=armv8 --build=missing -g XcodeDeps")
+    assert os.path.exists(os.path.join(client.current_folder,
+                                       "conan_hello_dashes_vars_release_arm64.xcconfig"))
+    client.run_command("xcodebuild -project app.xcodeproj -xcconfig conandeps.xcconfig -arch arm64")

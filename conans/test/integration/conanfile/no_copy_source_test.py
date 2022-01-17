@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -16,7 +16,7 @@ from conans.util.files import save, load
 import os
 
 class ConanFileToolsTest(ConanFile):
-    name = "Pkg"
+    name = "pkg"
     version = "0.1"
     exports_sources = "*"
     no_copy_source = True
@@ -32,14 +32,14 @@ class ConanFileToolsTest(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "file.h": "myfile.h contents"})
-        client.run("export . lasote/testing")
-        client.run("install Pkg/0.1@lasote/testing --build")
+        client.run("export . --user=lasote --channel=testing")
+        client.run("install --reference=pkg/0.1@lasote/testing --build")
         self.assertIn("Source files: myfile.h contents", client.out)
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
 
-        latest_rrev = client.cache.get_latest_rrev(ref)
-        pkg_ids = client.cache.get_package_ids(latest_rrev)
-        latest_prev = client.cache.get_latest_prev(pkg_ids[0])
+        latest_rrev = client.cache.get_latest_recipe_reference(ref)
+        pkg_ids = client.cache.get_package_references(latest_rrev)
+        latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
         layout = client.cache.pkg_layout(latest_prev)
         build_folder = layout.build()
         package_folder = layout.package()
@@ -56,7 +56,7 @@ from conans.util.files import save, load
 import os
 
 class ConanFileToolsTest(ConanFile):
-    name = "Pkg"
+    name = "pkg"
     version = "0.1"
     no_copy_source = %s
 
@@ -69,10 +69,10 @@ class ConanFileToolsTest(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile % "True"})
         client.run("create . lasote/testing --build")
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
 
-        latest_rrev = client.cache.get_latest_rrev(ref)
-        latest_prev = client.cache.get_latest_prev(latest_rrev)
+        latest_rrev = client.cache.get_latest_recipe_reference(ref)
+        latest_prev = client.cache.get_latest_package_reference(latest_rrev)
         layout = client.cache.pkg_layout(latest_prev)
         package_folder = layout.package()
 
@@ -81,10 +81,10 @@ class ConanFileToolsTest(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile % "False"})
         client.run("create . lasote/testing --build")
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
 
-        latest_rrev = client.cache.get_latest_rrev(ref)
-        latest_prev = client.cache.get_latest_prev(latest_rrev)
+        latest_rrev = client.cache.get_latest_recipe_reference(ref)
+        latest_prev = client.cache.get_latest_package_reference(latest_rrev)
         layout = client.cache.pkg_layout(latest_prev)
         package_folder = layout.package()
 

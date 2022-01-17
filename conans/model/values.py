@@ -43,17 +43,11 @@ class Values(object):
     def __bool__(self):
         return self._value.lower() not in ["false", "none", "0", "off", ""]
 
-    def __nonzero__(self):
-        return self.__bool__()
-
     def __str__(self):
         return self._value
 
     def __eq__(self, other):
         return str(other) == self.__str__()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     @classmethod
     def loads(cls, text):

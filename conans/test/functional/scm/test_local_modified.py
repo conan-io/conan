@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 from conans.test.utils.scm import create_local_git_repo
 
@@ -54,7 +54,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
         """ Using the install command, it won't be taken into account """
         t2 = TestClient(cache_folder=self.t.cache_folder)
         t2.save({'conanfile.txt': "[requires]\n{}".format(self.reference)})
-        ref = ConanFileReference.loads(self.reference)
+        ref = RecipeReference.loads(self.reference)
         t2.run("install . --build={}".format(ref.name))
         self.assertNotIn(self.new_content, t2.out)
         self.assertIn(">>>> I'm {}".format(self.reference), self.t.out)

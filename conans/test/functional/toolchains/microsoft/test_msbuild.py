@@ -307,13 +307,13 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 @pytest.mark.tool_visual_studio(version='15')
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2017():
-    check_msvc_runtime_flag("15", "19.1")
+    check_msvc_runtime_flag("15", "191")
 
 
 @pytest.mark.tool_visual_studio(version='17')
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag_vs2022():
-    check_msvc_runtime_flag("17", "19.3")
+    check_msvc_runtime_flag("17", "193")
 
 
 def check_msvc_runtime_flag(vs_version, msvc_version):
@@ -342,10 +342,10 @@ def check_msvc_runtime_flag(vs_version, msvc_version):
     assert "MSVC FLAG=MD!!" in client.out
 
 
-vs_versions = [{"vs_version": "15", "msvc_version": "19.1", "ide_year": "2017", "toolset": "v141"}]
+vs_versions = [{"vs_version": "15", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
-    vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
+    vs_versions.append({"vs_version": "17", "msvc_version": "193", "ide_year": "2022", "toolset": "v143"})
 
 
 @parameterized_class(vs_versions)
@@ -424,8 +424,8 @@ class WinTest(unittest.TestCase):
         client.run_command(command_str)
 
     @parameterized.expand([("Visual Studio", "15", "MT", "17"),
-                           ("msvc", "19.1", "static", "17"),
-                           ("msvc", "19.0", "static", "14")]
+                           ("msvc", "191", "static", "17"),
+                           ("msvc", "190", "static", "14")]
                           )
     @pytest.mark.tool_cmake
     def test_toolchain_win_vs2017(self, compiler, version, runtime, cppstd):
@@ -435,7 +435,7 @@ class WinTest(unittest.TestCase):
             self.check_toolchain_win(compiler, version, runtime, cppstd)
 
     @parameterized.expand([("Visual Studio", "17", "MT", "17"),
-                           ("msvc", "19.3", "static", "17")]
+                           ("msvc", "193", "static", "17")]
                           )
     def test_toolchain_win_vs2022(self, compiler, version, runtime, cppstd):
         if self.vs_version != "17":
@@ -464,7 +464,7 @@ class WinTest(unittest.TestCase):
         settings_h = " ".join('-s:h %s="%s"' % (k, v) for k, v in settings if v)
         settings_b = " ".join('-s:b %s="%s"' % (k, v) for k, v in settings if v)
 
-        client.run("new hello/0.1 -m=cmake_lib")
+        client.run("new cmake_lib -d name=hello -d version=0.1")
         client.run("create . hello/0.1@ %s" % settings_h)
 
         # Prepare the actual consumer package
@@ -509,7 +509,7 @@ class WinTest(unittest.TestCase):
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
 
-        client.run("new hello/0.1 --template=cmake_lib")
+        client.run("new cmake_lib -d name=hello -d version=0.1")
         client.run("create . hello/0.1@ %s -tf=None" % (settings,))
 
         # Prepare the actual consumer package
@@ -527,7 +527,7 @@ class WinTest(unittest.TestCase):
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
         self.assertIn("Hello World Debug", client.out)
-        check_exe_run(client.out, "main", "msvc", "19.0", "Debug", "x86_64", "14",
+        check_exe_run(client.out, "main", "msvc", "190", "Debug", "x86_64", "14",
                       {"DEFINITIONS_BOTH": 'True',
                        "DEFINITIONS_BOTH2": "True",
                        "DEFINITIONS_BOTH_INT": "123",
@@ -545,7 +545,7 @@ class WinTest(unittest.TestCase):
                     ("compiler.cppstd", "17")]
 
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
-        client.run("new hello/0.1 -m=cmake_lib")
+        client.run("new cmake_lib -d name=hello -d version=0.1")
         configs = [("Release", "x86", True), ("Release", "x86_64", True),
                    ("Debug", "x86", False), ("Debug", "x86_64", False)]
         for build_type, arch, shared in configs:

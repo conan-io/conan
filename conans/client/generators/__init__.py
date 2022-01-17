@@ -1,4 +1,5 @@
 import os
+import traceback
 
 from conan.tools.microsoft.subsystems import deduce_subsystem
 from conans.errors import ConanException, conanfile_exception_formatter
@@ -10,7 +11,7 @@ _generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
-               "VCVars", "deploy", "IntelCC", "XcodeDeps"]
+               "VCVars", "deploy", "IntelCC", "XcodeDeps", "PremakeDeps"]
 
 
 def _get_generator_class(generator_name):
@@ -68,6 +69,9 @@ def _get_generator_class(generator_name):
     elif generator_name == "XcodeDeps":
         from conan.tools.apple import XcodeDeps
         return XcodeDeps
+    elif generator_name == "PremakeDeps":
+        from conan.tools.premake import PremakeDeps
+        return PremakeDeps
     else:
         raise ConanException("Internal Conan error: Generator '{}' "
                              "not complete".format(generator_name))
@@ -82,33 +86,35 @@ def write_generators(conanfile):
         if generator_class:
             try:
                 generator = generator_class(conanfile)
-                conanfile.output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
+                conanfile.output.highlight(f"Generator '{generator_name}' calling 'generate()'")
                 mkdir(new_gen_folder)
                 with chdir(new_gen_folder):
                     generator.generate()
                 continue
             except Exception as e:
+                # When a generator fails, it is very useful to have the whole stacktrace
+                conanfile.output.error(traceback.format_exc())
                 raise ConanException("Error in generator '{}': {}".format(generator_name, str(e)))
 
     if hasattr(conanfile, "generate"):
         conanfile.output.highlight("Calling generate()")
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
-            with conanfile_exception_formatter(str(conanfile), "generate"):
+            with conanfile_exception_formatter(conanfile, "generate"):
                 conanfile.generate()
 
-    if conanfile.virtualbuildenv or conanfile.virtualrunenv:
+    if conanfile.virtualbuildenv:
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
-
-            if conanfile.virtualbuildenv:
-                from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-                env = VirtualBuildEnv(conanfile)
-                env.generate()
-            if conanfile.virtualrunenv:
-                from conan.tools.env import VirtualRunEnv
-                env = VirtualRunEnv(conanfile)
-                env.generate()
+            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+            env = VirtualBuildEnv(conanfile)
+            env.generate()
+    if conanfile.virtualrunenv:
+        mkdir(new_gen_folder)
+        with chdir(new_gen_folder):
+            from conan.tools.env import VirtualRunEnv
+            env = VirtualRunEnv(conanfile)
+            env.generate()
 
     conanfile.output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)

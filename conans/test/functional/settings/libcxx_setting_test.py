@@ -41,7 +41,7 @@ class LibcxxSettingTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": file_content,
                      "CMakeLists.txt": cmakelists})
-        client.run("export . pkg/0.1@lasote/testing")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
 
         if platform.system() == "SunOS":
             client.run('build . -s compiler=sun-cc -s compiler.libcxx=libCstd')

@@ -4,14 +4,13 @@ import stat
 
 from conans.cli.output import ConanOutput
 from conans.cli.output import ScopedOutput
-from conans.client import tools
 from conans.client.file_copier import FileCopier, report_copied_files
-from conans.client.tools import no_op
+from conans.util.env import no_op
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.util.dates import timestamp_now
-from conans.util.env_reader import get_env
-from conans.util.files import load, md5sum, mkdir
+from conans.util.env import get_env
+from conans.util.files import load, md5sum, mkdir, chdir
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
@@ -79,7 +78,7 @@ def run_imports(conanfile):
     file_importer = _FileImporter(conanfile, conanfile.imports_folder)
     conanfile.copy = file_importer
     with no_op():  # TODO: Remove this in a later refactor
-        with tools.chdir(conanfile.imports_folder):
+        with chdir(conanfile.imports_folder):
             conanfile.imports()
     copied_files = file_importer.copied_files
     _make_files_writable(copied_files)
@@ -114,7 +113,7 @@ def run_deploy(conanfile, install_folder):
     conanfile.copy = file_copier
     conanfile.folders.set_base_install(install_folder)
     with no_op():  # TODO: Remove this in a later refactor
-        with tools.chdir(install_folder):
+        with chdir(install_folder):
             conanfile.deploy()
 
     copied_files = file_importer.copied_files
@@ -183,6 +182,6 @@ class _FileImporter(object):
                             src_dirs += src_dir
 
             for src_dir in src_dirs:
-                files = file_copier(pattern, src=src_dir, links=True, ignore_case=ignore_case,
+                files = file_copier(pattern, src=src_dir, ignore_case=ignore_case,
                                     excludes=excludes, keep_path=keep_path)
                 self.copied_files.update(files)

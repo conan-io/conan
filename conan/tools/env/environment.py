@@ -152,8 +152,6 @@ class Environment:
     def __bool__(self):
         return bool(self._values)
 
-    __nonzero__ = __bool__
-
     def copy(self):
         e = Environment()
         e._values = self._values.copy()
@@ -216,9 +214,6 @@ class Environment:
         """
         return other._values == self._values
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
     def vars(self, conanfile, scope="build"):
         return EnvVars(conanfile, self, scope)
 
@@ -272,7 +267,7 @@ class EnvVars:
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
                     if /I "%%a" == "%%v" (
-                        echo set %%a=%%b>> "deactivate_{filename}"
+                        echo set "%%a=%%b">> "deactivate_{filename}"
                         set foundenvvar=1
                     )
                 )
@@ -290,20 +285,47 @@ class EnvVars:
         result = [capture]
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
-            result.append('set {}={}'.format(varname, value))
+            result.append('set "{}={}"'.format(varname, value))
+
         content = "\n".join(result)
         save(filename, content)
 
     def save_ps1(self, filename, generate_deactivate=True,):
-        # FIXME: This is broken and doesnt work
-        deactivate = ""
+        deactivate = textwrap.dedent("""\
+            echo "Capturing current environment in deactivate_{filename}"
+
+            "echo `"Restoring environment`"" | Out-File -FilePath "deactivate_{filename}"
+            $vars = (Get-ChildItem env:*).name
+            $updated_vars = @({vars})
+
+            foreach ($var in $updated_vars)
+            {{
+                if ($var -in $vars)
+                {{
+                    $var_value = (Get-ChildItem env:$var).value
+                    Add-Content "deactivate_{filename}" "`n`$env:$var = `"$var_value`""
+                }}
+                else
+                {{
+                    Add-Content "deactivate_{filename}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
+                }}
+            }}
+        """).format(
+            filename=os.path.basename(filename),
+            vars=",".join(['"{}"'.format(var) for var in self._values.keys()])
+        )
+
         capture = textwrap.dedent("""\
-               {deactivate}
-               """).format(deactivate=deactivate if generate_deactivate else "")
+            {deactivate}
+            echo "Configuring environment variables"
+        """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("$env:{name}", self._pathsep)
-            result.append('$env:{}={}'.format(varname, value))
+            value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep)
+            if value:
+                result.append('$env:{}="{}"'.format(varname, value))
+            else:
+                result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
         content = "\n".join(result)
         save(filename, content)
@@ -317,7 +339,7 @@ class EnvVars:
                value=$(printenv $v)
                if [ -n "$value" ]
                then
-                   echo export "$v=$value" >> deactivate_{filename}
+                   echo export "$v='$value'" >> deactivate_{filename}
                else
                    echo unset $v >> deactivate_{filename}
                fi
@@ -365,8 +387,6 @@ class ProfileEnvironment:
 
     def __bool__(self):
         return bool(self._environments)
-
-    __nonzero__ = __bool__
 
     def get_profile_env(self, ref):
         """ computes package-specific Environment
@@ -423,12 +443,17 @@ class ProfileEnvironment:
                 else:
                     pattern, name = None, pattern_name[0]
 
+                # strip whitespaces before/after =
+                # values are not strip() unless they are a path, to preserve potential whitespaces
+                name = name.strip()
+
                 # When loading from profile file, latest line has priority
                 env = Environment()
                 if method == "unset":
                     env.unset(name)
                 else:
-                    if value.startswith("(path)"):
+                    if value.strip().startswith("(path)"):
+                        value = value.strip()
                         value = value[6:]
                         method = method + "_path"
                     getattr(env, method)(name, value)

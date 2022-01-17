@@ -6,7 +6,7 @@ import unittest
 import pytest
 
 from conans.client.tools import replace_in_file
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
@@ -73,6 +73,42 @@ class CMakeGeneratorTest(unittest.TestCase):
                      "CMakeLists.txt": cmakelists})
         client.run("create . lib/1.0@ -s compiler='Visual Studio' -s compiler.toolset=v140")
         self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
+
+    @pytest.mark.slow
+    @pytest.mark.tool_visual_studio(version="17")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
+    def test_check_msvc_compiler(self):
+        """
+        Checking if MSVC 19.X compiler is being called via CMake
+        while using compiler=msvc in Conan profile.
+
+        Issue related: https://github.com/conan-io/conan/issues/10185
+        """
+        file_content = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class ConanFileMSVCTest(ConanFile):
+                generators = "cmake"
+                exports_sources = "CMakeLists.txt"
+                settings = "os", "arch", "compiler"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                """)
+        client = TestClient()
+        cmakelists = textwrap.dedent("""
+            PROJECT(Hello)
+            cmake_minimum_required(VERSION 2.8)
+            include("${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+            CONAN_BASIC_SETUP()
+            """)
+        client.save({"conanfile.py": file_content,
+                     "CMakeLists.txt": cmakelists})
+        client.run("create . lib/1.0@ -s compiler=msvc -s compiler.version=193")
+        self.assertIn("-- The C compiler identification is MSVC 19.3", client.out)
+        self.assertIn("-- The CXX compiler identification is MSVC 19.3", client.out)
 
     @pytest.mark.slow
     def test_no_output(self):
@@ -167,13 +203,13 @@ class CMakeGeneratorTest(unittest.TestCase):
                                                  env_info={})\
             .with_package_file("lib/lib1.lib", " ").with_package_file("lib/liblib1.a", " ")\
             .with_package_file("lib/lib11.lib", " ").with_package_file("lib/liblib11.a", " ")
-        mylib_ref = ConanFileReference("mylib", "1.0", "us", "ch")
+        mylib_ref = RecipeReference("mylib", "1.0", "us", "ch")
 
         myotherlib = GenConanfile().with_package_info(cpp_info={"libs": ["lib2"],
                                                                 "system_libs": ["sys2"]},
                                                       env_info={}).with_require(mylib_ref) \
             .with_package_file("lib/lib2.lib", " ").with_package_file("lib/liblib2.a", " ")
-        myotherlib_ref = ConanFileReference("myotherlib", "1.0", "us", "ch")
+        myotherlib_ref = RecipeReference("myotherlib", "1.0", "us", "ch")
 
         client = TurboTestClient()
         client.create(mylib_ref, mylib)

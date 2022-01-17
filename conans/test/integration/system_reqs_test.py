@@ -5,7 +5,8 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
 
@@ -34,13 +35,13 @@ class SystemReqsTest(unittest.TestCase):
         client.save(files)
         client.run("create . user/channel")
         self.assertIn("*+Running system requirements+*", client.out)
-        client.run("install Test/0.1@user/channel")
+        client.run("install --reference=Test/0.1@user/channel")
         self.assertNotIn("*+Running system requirements+*", client.out)
-        ref = ConanFileReference.loads("Test/0.1@user/channel")
-        pref = client.get_latest_prev(ref)
+        ref = RecipeReference.loads("Test/0.1@user/channel")
+        pref = client.get_latest_package_reference(ref)
         reqs_file = client.get_latest_pkg_layout(pref).system_reqs_package()
         os.unlink(reqs_file)
-        client.run("install Test/0.1@user/channel")
+        client.run("install --reference=Test/0.1@user/channel")
         self.assertIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(reqs_file))
 
@@ -60,19 +61,19 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        client.run("export . user/testing")
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("export . --user=user --channel=testing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
         self.assertIn("*+Running system requirements+*", client.out)
-        ref = ConanFileReference.loads("Test/0.1@user/testing")
-        pref = PackageReference(ref, package_id)
+        ref = RecipeReference.loads("Test/0.1@user/testing")
+        pref = PkgReference(ref, package_id)
         pkg_layout = client.get_latest_pkg_layout(pref)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs()))
         load_file = load(pkg_layout.system_reqs_package())
         self.assertIn("Installed my stuff", load_file)
 
         # Run again
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         pkg_layout = client.get_latest_pkg_layout(pref)
         self.assertNotIn("*+Running system requirements+*", client.out)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs()))
@@ -80,8 +81,8 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("Installed my stuff", load_file)
 
         # Run with different option
-        client.run("install Test/0.1@user/testing -o myopt=False --build missing")
-        pref2 = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        client.run("install --reference=Test/0.1@user/testing -o myopt=False --build missing")
+        pref2 = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
         pkg_layout = client.get_latest_pkg_layout(pref)
         pkg_layout2 = client.get_latest_pkg_layout(pref2)
         self.assertIn("*+Running system requirements+*", client.out)
@@ -108,18 +109,18 @@ class SystemReqsTest(unittest.TestCase):
                                                    "self.global_system_requirements=True")
         }
         client.save(files)
-        client.run("export . user/testing")
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("export . --user=user --channel=testing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         self.assertIn("*+Running system requirements+*", client.out)
-        ref = ConanFileReference.loads("Test/0.1@user/testing")
-        pref = PackageReference(ref, "a527106fd9f2e3738a55b02087c20c0a63afce9d")
+        ref = RecipeReference.loads("Test/0.1@user/testing")
+        pref = PkgReference(ref, "a527106fd9f2e3738a55b02087c20c0a63afce9d")
         pkg_layout = client.get_latest_pkg_layout(pref)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
         load_file = load(pkg_layout.system_reqs())
         self.assertIn("Installed my stuff", load_file)
 
         # Run again
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         self.assertNotIn("*+Running system requirements+*", client.out)
         pkg_layout = client.get_latest_pkg_layout(pref)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
@@ -127,9 +128,9 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("Installed my stuff", load_file)
 
         # Run with different option
-        client.run("install Test/0.1@user/testing -o myopt=False --build missing")
+        client.run("install --reference=Test/0.1@user/testing -o myopt=False --build missing")
         self.assertNotIn("*+Running system requirements+*", client.out)
-        pref2 = PackageReference(ref, "54c9626b48cefa3b819e64316b49d3b1e1a78c26")
+        pref2 = PkgReference(ref, "54c9626b48cefa3b819e64316b49d3b1e1a78c26")
         pkg_layout = client.get_latest_pkg_layout(pref)
         pkg_layout2 = client.get_latest_pkg_layout(pref2)
         self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
@@ -152,23 +153,23 @@ class SystemReqsTest(unittest.TestCase):
             base_conanfile.replace("%GLOBAL%", "").replace('"Installed my stuff"', 'None')
         }
         client.save(files)
-        client.run("export . user/testing")
-        client.run("install Test/0.1@user/testing --build missing")
+        client.run("export . --user=user --channel=testing")
+        client.run("install --reference=Test/0.1@user/testing --build missing")
         package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
 
         self.assertIn("*+Running system requirements+*", client.out)
-        ref = ConanFileReference.loads("Test/0.1@user/testing")
+        ref = RecipeReference.loads("Test/0.1@user/testing")
         self.assertFalse(os.path.exists(client.cache.package_layout(ref).system_reqs()))
-        pref = PackageReference(ref, package_id)
+        pref = PkgReference(ref, package_id)
         load_file = load(client.cache.package_layout(pref.ref).system_reqs_package(pref))
         self.assertEqual('', load_file)
 
     def test_remove_system_reqs(self):
-        ref = ConanFileReference.loads("Test/0.1@user/channel")
+        ref = RecipeReference.loads("Test/0.1@user/channel")
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(pref).system_reqs())
 
         # create package to populate system_reqs folder
@@ -194,8 +195,8 @@ class SystemReqsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(system_reqs_path))
 
         # Wildcard system_reqs removal
-        ref_other = ConanFileReference.loads("Test/0.1@user/channel_other")
-        pref_other = client.get_latest_prev(ref_other)
+        ref_other = RecipeReference.loads("Test/0.1@user/channel_other")
+        pref_other = client.get_latest_package_reference(ref_other)
         system_reqs_path_other = os.path.dirname(client.get_latest_pkg_layout(pref_other).system_reqs())
 
         client.run("create . user/channel_other")
@@ -246,11 +247,11 @@ class SystemReqsTest(unittest.TestCase):
                        "-p f0ba3ca2c218df4a877080ba99b65834b9413798")
 
     def test_permission_denied_remove_system_reqs(self):
-        ref = ConanFileReference.loads("Test/0.1@user/channel")
+        ref = RecipeReference.loads("Test/0.1@user/channel")
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(pref).system_reqs())
 
         # create package to populate system_reqs folder
@@ -272,11 +273,11 @@ class SystemReqsTest(unittest.TestCase):
         os.chmod(system_reqs_path, current | stat.S_IWRITE)
 
     def test_duplicate_remove_system_reqs(self):
-        ref = ConanFileReference.loads("Test/0.1@user/channel")
+        ref = RecipeReference.loads("Test/0.1@user/channel")
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        pref = client.get_latest_prev(ref)
+        pref = client.get_latest_package_reference(ref)
         system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(pref).system_reqs())
 
         # create package to populate system_reqs folder

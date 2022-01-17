@@ -91,8 +91,8 @@ class TestProvidesTest(GraphManagerTest):
         self._check_node(br_lib, "br_lib/0.1#123", deps=[], dependents=[br])
 
         # node, include, link, build, run
-        _check_transitive(app, [(br, True, True, False, None)])
-        _check_transitive(br, [(br_lib, True, True, False, None)])
+        _check_transitive(app, [(br, True, True, False, False)])
+        _check_transitive(br, [(br_lib, True, True, False, False)])
 
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.1
@@ -151,7 +151,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         # app (provides libjpeg) -(build)-> br/v1 -> br_lib/v1(provides libjpeg)
         self.recipe_conanfile("br_lib/0.1", GenConanfile().with_provides("libjpeg"))
         self.recipe_cache("br/0.1", ["br_lib/0.1"])
-        path = self.consumer_conanfile(GenConanfile("app", "0.1").with_build_requires("br/0.1").
+        path = self.consumer_conanfile(GenConanfile("app", "0.1").with_tool_requires("br/0.1").
                                        with_provides("libjpeg"))
 
         deps_graph = self.build_consumer(path)
@@ -167,12 +167,12 @@ class ProvidesBuildRequireTest(GraphManagerTest):
 
         # node, include, link, build, run
         _check_transitive(app, [(br, False, False, True, True)])
-        _check_transitive(br, [(br_lib, True, True, False, None)])
+        _check_transitive(br, [(br_lib, True, True, False, False)])
 
     def test_transitive_br_no_conflict(self):
         # app (provides libjpeg) -> lib/v1 -(br)-> br/v1(provides libjpeg)
         self.recipe_conanfile("br/0.1", GenConanfile().with_provides("libjpeg"))
-        self.recipe_conanfile("lib/0.1", GenConanfile().with_build_requires("br/0.1"))
+        self.recipe_conanfile("lib/0.1", GenConanfile().with_tool_requires("br/0.1"))
         path = self.consumer_conanfile(GenConanfile("app", "0.1").with_requires("lib/0.1").
                                        with_provides("libjpeg"))
 
@@ -188,7 +188,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         self._check_node(br, "br/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])
+        _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(br, False, False, True, True)])
 
     def test_transitive_test_require_conflict(self):
@@ -217,8 +217,8 @@ class ProvidesBuildRequireTest(GraphManagerTest):
         #   \ -(build)-> br2/v1 (provides libjpeg)
         self.recipe_conanfile("br1/0.1", GenConanfile().with_provides("libjpeg"))
         self.recipe_conanfile("br2/0.1", GenConanfile().with_provides("libjpeg"))
-        path = self.consumer_conanfile(GenConanfile("app", "0.1").with_build_requires("br1/0.1",
-                                                                                      "br2/0.1"))
+        path = self.consumer_conanfile(GenConanfile("app", "0.1")
+                                       .with_tool_requires("br1/0.1", "br2/0.1"))
         deps_graph = self.build_consumer(path, install=False)
 
         assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
@@ -254,7 +254,7 @@ def test_conditional():
     t.save({'requires.py': GenConanfile("req", "v1").with_provides("libjpeg"),
             'app.py': conanfile})
     t.run("create requires.py")
-    t.run("install app.py app/version@")
-    t.run("install app.py app/version@ -o app:conflict=True", assert_error=True)
+    t.run("install app.py --name=app --version=version")
+    t.run("install app.py --name=app --version=version -o app:conflict=True", assert_error=True)
     # TODO: Improve the error diagnostics
     assert "ERROR: provide conflict" in t.out

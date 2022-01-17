@@ -5,13 +5,13 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools._compilers import architecture_flag, use_win_mingw
-from conan.tools.cmake.utils import is_multi_configuration, get_file_name
+from conan.tools.build.flags import architecture_flag, libcxx_flag
+from conan.tools.build import build_jobs, use_win_mingw
+from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
-from conan.tools.microsoft.visual import vs_ide_version
+from conan.tools.microsoft.visual import vs_ide_version, is_msvc
 from conans.errors import ConanException
 from conans.util.files import load, save
 
@@ -116,6 +116,8 @@ class VSRuntimeBlock(Block):
                 config_dict = dict(matches)
 
         build_type = settings.get_safe("build_type")  # FIXME: change for configuration
+        if build_type is None:
+            return None
         runtime = settings.get_safe("compiler.runtime")
         if compiler == "Visual Studio":
             config_dict[build_type] = {"MT": "MultiThreaded",
@@ -153,7 +155,7 @@ class FPicBlock(Block):
 class GLibCXXBlock(Block):
     template = textwrap.dedent("""
         {% if set_libcxx %}
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ set_libcxx }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ set_libcxx }}")
         {% endif %}
         {% if glibcxx %}
         add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
@@ -164,31 +166,15 @@ class GLibCXXBlock(Block):
         libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
         if not libcxx:
             return None
+        lib = libcxx_flag(self._conanfile)
         compiler = self._conanfile.settings.get_safe("compiler")
-        lib = glib = None
-        if compiler == "apple-clang":
-            # In apple-clang 2 only values atm are "libc++" and "libstdc++"
-            lib = "-stdlib={}".format(libcxx)
-        elif compiler == "clang" or compiler == "intel-cc":
-            if libcxx == "libc++":
-                lib = "-stdlib=libc++"
-            elif libcxx == "libstdc++" or libcxx == "libstdc++11":
-                lib = "-stdlib=libstdc++"
-            # FIXME, something to do with the other values? Android c++_shared?
-        elif compiler == "sun-cc":
-            lib = {"libCstd": "Cstd",
-                   "libstdcxx": "stdcxx4",
-                   "libstlport": "stlport4",
-                   "libstdc++": "stdcpp"
-                   }.get(libcxx)
-            if lib:
-                lib = "-library={}".format(lib)
-        elif compiler == "gcc":
+        glib = None
+        if compiler in ['clang', 'apple-clang', 'gcc']:
             # we might want to remove this "1", it is the default in most distros
-            if libcxx == "libstdc++11":
-                glib = "1"
-            elif libcxx == "libstdc++":
+            if libcxx == "libstdc++":
                 glib = "0"
+            elif libcxx == "libstdc++11" and self._conanfile.conf["tools.gnu:define_libcxx11_abi"]:
+                glib = "1"
         return {"set_libcxx": lib, "glibcxx": glib}
 
 
@@ -210,10 +196,10 @@ class SkipRPath(Block):
 
 class ArchitectureBlock(Block):
     template = textwrap.dedent("""
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ arch_flag }}")
-        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ arch_flag }}")
-        set(CONAN_SHARED_LINKER_FLAGS "${CONAN_SHARED_LINKER_FLAGS} {{ arch_flag }}")
-        set(CONAN_EXE_LINKER_FLAGS "${CONAN_EXE_LINKER_FLAGS} {{ arch_flag }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_flag }}")
         """)
 
     def context(self):
@@ -225,7 +211,7 @@ class ArchitectureBlock(Block):
 
 class CppStdBlock(Block):
     template = textwrap.dedent("""
-        message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
+        message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -247,7 +233,7 @@ class CppStdBlock(Block):
 
 class SharedLibBock(Block):
     template = textwrap.dedent("""
-        message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
+        message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS = {{ shared_libs }}")
         set(BUILD_SHARED_LIBS {{ shared_libs }})
         """)
 
@@ -261,16 +247,20 @@ class SharedLibBock(Block):
 
 class ParallelBlock(Block):
     template = textwrap.dedent("""
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} /MP{{ parallel }}")
-        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} /MP{{ parallel }}")
+        string(APPEND CONAN_CXX_FLAGS " /MP{{ parallel }}")
+        string(APPEND CONAN_C_FLAGS " /MP{{ parallel }}")
         """)
 
     def context(self):
         # TODO: Check this conf
-        max_cpu_count = self._conanfile.conf["tools.cmake.cmaketoolchain:msvc_parallel_compile"]
 
-        if max_cpu_count:
-            return {"parallel": max_cpu_count}
+        compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler not in ("Visual Studio", "msvc") or "Visual" not in self._toolchain.generator:
+            return
+
+        jobs = build_jobs(self._conanfile)
+        if jobs:
+            return {"parallel": jobs}
 
 
 class AndroidSystemBlock(Block):
@@ -341,22 +331,21 @@ class AppleSystemBlock(Block):
                 "armv8": "arm64",
                 "armv8_32": "arm64_32"}.get(arch, arch)
 
-    # TODO: refactor, comes from conans.client.tools.apple.py
     def _apple_sdk_name(self):
-        """returns proper SDK name suitable for OS and architecture
-        we're building for (considering simulators)"""
-        arch = self._conanfile.settings.get_safe('arch')
+        """
+        Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
+        there could be several ones depending on the OS architecture.
+
+        Note: In case of MacOS it'll be the same for all the architectures.
+        """
         os_ = self._conanfile.settings.get_safe('os')
-        if arch.startswith('x86'):
-            return {'Macos': 'macosx',
-                    'iOS': 'iphonesimulator',
-                    'watchOS': 'watchsimulator',
-                    'tvOS': 'appletvsimulator'}.get(os_)
+        os_sdk = self._conanfile.settings.get_safe('os.sdk')
+        if os_sdk:
+            return os_sdk
+        elif os_ == "Macos":  # it has only a single value for all the architectures for now
+            return "macosx"
         else:
-            return {'Macos': 'macosx',
-                    'iOS': 'iphoneos',
-                    'watchOS': 'watchos',
-                    'tvOS': 'appletvos'}.get(os_)
+            raise ConanException("Please, specify a suitable value for os.sdk.")
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
@@ -393,10 +382,10 @@ class FindConfigFiles(Block):
         {% endif %}
         # To support the generators based on find_package()
         {% if cmake_module_path %}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        list(PREPEND CMAKE_MODULE_PATH {{ cmake_module_path }})
         {% endif %}
         {% if cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        list(PREPEND CMAKE_PREFIX_PATH {{ cmake_prefix_path }})
         {% endif %}
         {% if android_prefix_path %}
         set(CMAKE_FIND_ROOT_PATH {{ android_prefix_path }} ${CMAKE_FIND_ROOT_PATH})
@@ -426,11 +415,10 @@ class FindConfigFiles(Block):
         # Read the buildirs
         build_paths = []
         for req in host_req:
-            cppinfo = req.cpp_info.copy()
-            cppinfo.aggregate_components()
+            cppinfo = req.cpp_info.aggregated_components()
             build_paths.extend([os.path.join(req.package_folder,
                                        p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
-                                 for p in cppinfo.builddirs])
+                                for p in cppinfo.builddirs])
 
         if self._toolchain.find_builddirs:
             build_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
@@ -449,28 +437,32 @@ class FindConfigFiles(Block):
 
 class UserToolchain(Block):
     template = textwrap.dedent("""
-        {% if user_toolchain %}
+        {% for user_toolchain in paths %}
         include("{{user_toolchain}}")
-        {% endif %}
+        {% endfor %}
         """)
-
-    user_toolchain = None
 
     def context(self):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
-        user_toolchain = user_toolchain or self.user_toolchain
-        if user_toolchain:
-            user_toolchain = user_toolchain.replace("\\", "/")
-        return {"user_toolchain": user_toolchain}
+        toolchains = [user_toolchain.replace("\\", "/")] if user_toolchain else []
+        return {"paths": toolchains if toolchains else []}
 
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
-        set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} ${CONAN_CXX_FLAGS}")
-        set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} ${CONAN_C_FLAGS}")
-        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CMAKE_SHARED_LINKER_FLAGS_INIT} ${CONAN_SHARED_LINKER_FLAGS}")
-        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CMAKE_EXE_LINKER_FLAGS_INIT} ${CONAN_EXE_LINKER_FLAGS}")
+        if(DEFINED CONAN_CXX_FLAGS)
+          string(APPEND CMAKE_CXX_FLAGS_INIT " ${CONAN_CXX_FLAGS}")
+        endif()
+        if(DEFINED CONAN_C_FLAGS)
+          string(APPEND CMAKE_C_FLAGS_INIT " ${CONAN_C_FLAGS}")
+        endif()
+        if(DEFINED CONAN_SHARED_LINKER_FLAGS)
+          string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " ${CONAN_SHARED_LINKER_FLAGS}")
+        endif()
+        if(DEFINED CONAN_EXE_LINKER_FLAGS)
+          string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
+        endif()
         """)
 
 
@@ -505,8 +497,19 @@ class GenericSystemBlock(Block):
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
         {% endif %}
         {% if compiler %}
+        if(NOT DEFINED ENV{CC})
         set(CMAKE_C_COMPILER {{ compiler }})
-        set(CMAKE_CXX_COMPILER {{ compiler }})
+        endif()
+        {% endif %}
+        {% if compiler_cpp %}
+        if(NOT DEFINED ENV{CXX})
+        set(CMAKE_CXX_COMPILER {{ compiler_cpp }})
+        endif()
+        {% endif %}
+        {% if compiler_rc %}
+        if(NOT DEFINED ENV{RC})
+        set(CMAKE_RC_COMPILER {{ compiler_rc }})
+        endif()
         {% endif %}
         {% if build_type %}
         set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
@@ -534,14 +537,12 @@ class GenericSystemBlock(Block):
             return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
             compiler_version = str(settings.compiler.version)
-            version_components = compiler_version.split(".")
-            if len(version_components) >= 2:  # there is a 19.XX
-                minor = version_components[1]
-                if len(minor) >= 2:  # It is a full one, like 19.28, not generic 19.2
-                    # The equivalent of compiler 19.26 is toolset 14.26
-                    return "version=14.{}".format(minor)
-                else:
-                    return "v14{}".format(minor)
+            compiler_update = str(settings.compiler.update)
+            if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
+                # The equivalent of compiler 19.26 is toolset 14.26
+                return "version=14.{}{}".format(compiler_version[-1], compiler_update)
+            else:
+                return "v14{}".format(compiler_version[-1])
         elif compiler == "clang":
             if generator and "Visual" in generator:
                 if "Visual Studio 16" in generator:
@@ -578,48 +579,59 @@ class GenericSystemBlock(Block):
         system_processor = self._conanfile.conf["tools.cmake.cmaketoolchain:system_processor"]
 
         settings = self._conanfile.settings
-        if hasattr(self._conanfile, "settings_build"):
-            os_ = settings.get_safe("os")
-            arch = settings.get_safe("arch")
-            settings_build = self._conanfile.settings_build
-            os_build = settings_build.get_safe("os")
-            arch_build = settings_build.get_safe("arch")
+        assert hasattr(self._conanfile, "settings_build")
+        os_ = settings.get_safe("os")
+        arch = settings.get_safe("arch")
+        settings_build = self._conanfile.settings_build
+        os_build = settings_build.get_safe("os")
+        arch_build = settings_build.get_safe("arch")
 
-            if system_name is None:  # Try to deduce
-                # Handled by AppleBlock, or AndroidBlock, not here
-                if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS', 'Android'):
-                    cmake_system_name_map = {"Neutrino": "QNX",
-                                             "": "Generic",
-                                             None: "Generic"}
-                    if os_ != os_build:
+        if system_name is None:  # Try to deduce
+            # Handled by AppleBlock, or AndroidBlock, not here
+            if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS', 'Android'):
+                cmake_system_name_map = {"Neutrino": "QNX",
+                                         "": "Generic",
+                                         None: "Generic"}
+                if os_ != os_build:
+                    system_name = cmake_system_name_map.get(os_, os_)
+                elif arch is not None and arch != arch_build:
+                    if not ((arch_build == "x86_64") and (arch == "x86") or
+                            (arch_build == "sparcv9") and (arch == "sparc") or
+                            (arch_build == "ppc64") and (arch == "ppc32")):
                         system_name = cmake_system_name_map.get(os_, os_)
-                    elif arch is not None and arch != arch_build:
-                        if not ((arch_build == "x86_64") and (arch == "x86") or
-                                (arch_build == "sparcv9") and (arch == "sparc") or
-                                (arch_build == "ppc64") and (arch == "ppc32")):
-                            system_name = cmake_system_name_map.get(os_, os_)
 
-            if system_name is not None and system_version is None:
-                system_version = settings.get_safe("os.version")
+        if system_name is not None and system_version is None:
+            system_version = settings.get_safe("os.version")
 
-            if system_name is not None and system_processor is None:
-                if arch != arch_build:
-                    system_processor = arch
+        if system_name is not None and system_processor is None:
+            if arch != arch_build:
+                system_processor = arch
 
         return system_name, system_version, system_processor
+
+    def _get_compiler(self, generator):
+        compiler = self._conanfile.settings.get_safe("compiler")
+        os_ = self._conanfile.settings.get_safe("os")
+
+        compiler_c = compiler_cpp = compiler_rc = None
+
+        # TODO: Check if really necessary now that conanvcvars is used
+        if "Ninja" in str(generator) and is_msvc(self._conanfile):
+            compiler_c = compiler_cpp = "cl"
+        elif os_ == "Windows" and compiler == "clang" and "Visual" not in str(generator):
+            compiler_rc = "clang"
+            compiler_c = "clang"
+            compiler_cpp = "clang++"
+
+        return compiler_c, compiler_cpp, compiler_rc
 
     def context(self):
         # build_type (Release, Debug, etc) is only defined for single-config generators
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
-        compiler = self._conanfile.settings.get_safe("compiler")
-        # TODO: Check if really necessary now that conanvcvars is used
-        if (generator is not None and "Ninja" in generator
-                and (compiler is not None and "Visual" in compiler or compiler == "msvc")):
-            compiler = "cl"
-        else:
-            compiler = None  # compiler defined by default
+
+        compiler, compiler_cpp, compiler_rc = self._get_compiler(generator)
 
         build_type = self._conanfile.settings.get_safe("build_type")
         build_type = build_type if not is_multi_configuration(generator) else None
@@ -627,6 +639,8 @@ class GenericSystemBlock(Block):
         system_name, system_version, system_processor = self._get_cross_build()
 
         return {"compiler": compiler,
+                "compiler_rc": compiler_rc,
+                "compiler_cpp": compiler_cpp,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
                 "build_type": build_type,
@@ -648,6 +662,8 @@ class ToolchainBlocks:
         del self._blocks[name]
 
     def __setitem__(self, name, block_type):
+        # Create a new class inheriting Block with the elements of the provided one
+        block_type = type('proxyUserBlock', (Block,), dict(block_type.__dict__))
         self._blocks[name] = block_type(self._conanfile, self._toolchain)
 
     def __getitem__(self, name):
@@ -692,7 +708,9 @@ class CMakeToolchain(object):
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
         include_guard()
 
-        message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
+        if(CMAKE_TOOLCHAIN_FILE)
+            message("Using Conan toolchain: ${CMAKE_TOOLCHAIN_FILE}.")
+        endif()
 
         {% for conan_block in conan_blocks %}
         {{ conan_block }}
@@ -740,8 +758,6 @@ class CMakeToolchain(object):
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
-
-        check_using_build_profile(self._conanfile)
 
     def _context(self):
         """ Returns dict, the context for the template

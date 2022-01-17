@@ -31,14 +31,14 @@ class TestVersionRanges(GraphManagerTest):
             self.recipe_cache(f"libb/{v}")
 
         for expr, solution in [(">0.0", "2.2.1"),
-                               (">0.1,<1", "0.3"),
-                               (">0.1,<1||2.1", "2.1"),
+                               (">0.1 <1", "0.3"),
+                               (">0.1 <1||2.1", "2.1"),
                                ("", "2.2.1"),
                                ("~0", "0.3"),
-                               ("~=1", "1.2.1"),
+                               ("~1", "1.2.1"),
                                ("~1.1", "1.1.2"),
-                               ("~=2", "2.2.1"),
-                               ("~=2.1", "2.1"),
+                               ("~2", "2.2.1"),
+                               ("~2.1", "2.1"),
                                ]:
             consumer = self.recipe_consumer("app/0.1", [f"libb/[{expr}]"])
             deps_graph = self.build_consumer(consumer)
@@ -360,10 +360,10 @@ def test_mixed_user_channel():
     t.run("upload * --all --confirm -r default")
     t.run("remove * -f")
 
-    t.run('install "pkg/[>0 <2]@"')
-    assert "pkg/1.1 from 'default' - Downloaded" in t.out
-    t.run('install "pkg/[>0 <2]@user/testing"')
-    assert "pkg/1.1@user/testing from 'default' - Downloaded" in t.out
+    t.run('install --reference="pkg/[>0 <2]@"')
+    t.assert_listed_require({"pkg/1.1": "Downloaded (default)"})
+    t.run('install --reference="pkg/[>0 <2]@user/testing"')
+    t.assert_listed_require({"pkg/1.1@user/testing": "Downloaded (default)"})
 
 
 def test_remote_version_ranges():
@@ -376,20 +376,25 @@ def test_remote_version_ranges():
     t.run("upload * --all --confirm -r default")
     # TODO: Deprecate the comma separator for expressions
     for expr, solution in [(">0.0", "2.2.1"),
-                           (">0.1,<1", "0.3"),
-                           (">0.1,<1||2.1", "2.1"),
+                           (">0.1 <1", "0.3"),
+                           (">0.1 <1||2.1", "2.1"),
                            ("", "2.2.1"),
                            ("~0", "0.3"),
-                           ("~=1", "1.2.1"),
+                           ("~1", "1.2.1"),
                            ("~1.1", "1.1.2"),
-                           ("~=2", "2.2.1"),
-                           ("~=2.1", "2.1"),
+                           ("~2", "2.2.1"),
+                           ("~2.1", "2.1"),
                            ]:
         t.run("remove * -f")
         t.save({"conanfile.py": GenConanfile().with_requires(f"dep/[{expr}]")})
         t.run("install .")
         assert str(t.out).count("Not found in local cache, looking in remotes") == 1
+<<<<<<< HEAD
         assert f"dep/{solution}:da39a3ee5e6b4b0d3255bfef95601890afd80709 - Download" in t.out
+=======
+        t.assert_listed_binary({f"dep/{solution}": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                                                    "Download (default)")})
+>>>>>>> develop2
 
 
 @pytest.mark.skip(reason="TODO: Test that the server is only hit once for dep/*@user/channel")
@@ -414,6 +419,6 @@ def test_different_user_channel_resolved_correctly():
     client.run("upload lib/1.0@conan/testing -r=server2 --all")
 
     client2 = TestClient(servers=servers)
-    client2.run("install lib/[>=1.0]@conan/testing")
+    client2.run("install --reference=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
            f"from remote 'server2' " in client2.out

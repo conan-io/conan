@@ -8,9 +8,13 @@ class PackageType(Enum):
     STATIC = "static-library"
     SHARED = "shared-library"
     HEADER = "header-library"
+    BUILD_SCRIPTS = "build-scripts"
     APP = "application"
     PYTHON = "python-require"
     UNKNOWN = "unknown"
+
+    def __str__(self):
+        return self.value
 
     @staticmethod
     def compute_package_type(conanfile):
@@ -38,7 +42,11 @@ class PackageType(Enum):
 
         conanfile_type = conanfile.package_type
         if conanfile_type is not None:  # Explicit definition in recipe
-            conanfile_type = PackageType(conanfile_type)
+            try:
+                conanfile_type = PackageType(conanfile_type)
+            except ValueError:
+                raise ConanException(f"{conanfile}: Invalid package type '{conanfile_type}'. "
+                                     f"Valid types: {[i.value for i in PackageType]}")
             if conanfile_type is PackageType.LIBRARY:
                 conanfile_type = deduce_from_options()
                 if conanfile_type is PackageType.UNKNOWN:

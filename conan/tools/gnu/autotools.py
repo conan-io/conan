@@ -1,7 +1,7 @@
 import os
 
+from conan.tools.build import build_jobs
 from conan.tools.files import load_toolchain_args
-from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
 
 
@@ -43,7 +43,9 @@ class Autotools(object):
         str_args = self._make_args
         jobs = ""
         if "-j" not in str_args and "nmake" not in make_program.lower():
-            jobs = make_jobs_cmd_line_arg(self._conanfile) or ""
+            njobs = build_jobs(self._conanfile)
+            if njobs:
+                jobs = "-j{}".format(njobs)
         command = join_arguments([make_program, target, str_args, jobs])
         self._conanfile.run(command)
 

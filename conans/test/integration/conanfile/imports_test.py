@@ -3,7 +3,7 @@ import re
 import textwrap
 import unittest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 conanfile = """from conans import ConanFile
@@ -25,24 +25,24 @@ conanfile_txt = """
 class ImportTest(unittest.TestCase):
     def _set_up(self):
         client = TestClient()
-        client.save({"conanfile.py": conanfile % "LibA",
+        client.save({"conanfile.py": conanfile % "liba",
                      "LICENSE.txt": "LicenseA"})
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
 
-        client.save({"conanfile.py": conanfile % "LibB" + "    requires='LibA/0.1@lasote/testing'",
+        client.save({"conanfile.py": conanfile % "libb" + "    requires='liba/0.1@lasote/testing'",
                      "LICENSE.md": "LicenseB"}, clean_first=True)
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
 
-        client.save({"conanfile.py": conanfile % "LibC" + "    requires='LibB/0.1@lasote/testing'",
+        client.save({"conanfile.py": conanfile % "libc" + "    requires='libb/0.1@lasote/testing'",
                      "license.txt": "LicenseC"}, clean_first=True)
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
         return client
 
     def test_repackage(self):
         client = self._set_up()
         conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
-    requires='LibC/0.1@lasote/testing'
+    requires='libc/0.1@lasote/testing'
     keep_imports = True
     def imports(self):
         self.copy("license*", dst="licenses", folder=True, ignore_case=True)
@@ -51,20 +51,21 @@ class TestConan(ConanFile):
         self.copy("*")
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing --build=missing")
-        package_id = re.search(r"Pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
-        self.assertIn("Pkg/0.1@user/testing package(): Packaged 1 '.md' file: LICENSE.md",
+        client.run("create . pkg/0.1@user/testing --build=missing")
+        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.md' file: LICENSE.md",
                       client.out)
-        pref = client.get_latest_prev(ConanFileReference.loads("Pkg/0.1@user/testing"), package_id)
+        pref = client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@user/testing"),
+                                                   package_id)
         pkg_folder = client.get_latest_pkg_layout(pref).package()
-        self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibA/LICENSE.txt")))
-        self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibB/LICENSE.md")))
-        self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibC/license.txt")))
+        self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/liba/LICENSE.txt")))
+        self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/libb/LICENSE.md")))
+        self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/libc/license.txt")))
 
     def test_imports_folders(self):
         client = self._set_up()
 
-        testconanfile = conanfile % "LibD" + "    requires='LibC/0.1@lasote/testing'"
+        testconanfile = conanfile % "libd" + "    requires='libc/0.1@lasote/testing'"
         testconanfile += """
     def imports(self):
         self.copy("license*", dst="licenses", folder=True, ignore_case=True)
@@ -74,24 +75,24 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": testconanfile}, clean_first=True)
         client.run("install . --build=missing")
         self.assertIn("IMPORTED FOLDERS: [", client.out)
-        self.assertEqual(client.load("licenses/LibA/LICENSE.txt"), "LicenseA")
-        self.assertEqual(client.load("licenses/LibB/LICENSE.md"), "LicenseB")
-        self.assertEqual(client.load("licenses/LibC/license.txt"), "LicenseC")
+        self.assertEqual(client.load("licenses/liba/LICENSE.txt"), "LicenseA")
+        self.assertEqual(client.load("licenses/libb/LICENSE.md"), "LicenseB")
+        self.assertEqual(client.load("licenses/libc/license.txt"), "LicenseC")
 
     def test_imports_folders_txt(self):
         client = self._set_up()
 
         conanfile = """[requires]
-LibC/0.1@lasote/testing
+libc/0.1@lasote/testing
 [imports]
 ., license* -> licenses @ folder=True, ignore_case=True, excludes=*.md # comment
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . --build=missing")
-        self.assertEqual(client.load("licenses/LibA/LICENSE.txt"), "LicenseA")
+        self.assertEqual(client.load("licenses/liba/LICENSE.txt"), "LicenseA")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder,
-                                                     "licenses/LibB/LICENSE.md")))
-        self.assertEqual(client.load("licenses/LibC/license.txt"), "LicenseC")
+                                                     "licenses/libb/LICENSE.md")))
+        self.assertEqual(client.load("licenses/libc/license.txt"), "LicenseC")
 
     def test_imports_wrong_args_txt(self):
         client = TestClient()
@@ -119,16 +120,16 @@ LibC/0.1@lasote/testing
         client = self._set_up()
 
         conanfile = """[requires]
-LibC/0.1@lasote/testing
+libc/0.1@lasote/testing
 [imports]
 ., license* -> lic@myfolder @ folder=True, ignore_case=True, excludes=*.md # comment
 ., *.md -> lic@myfolder @ # This is mandatory, otherwise it will fail
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . --build=missing")
-        self.assertEqual(client.load("lic@myfolder/LibA/LICENSE.txt"), "LicenseA")
+        self.assertEqual(client.load("lic@myfolder/liba/LICENSE.txt"), "LicenseA")
         self.assertEqual(client.load("lic@myfolder/LICENSE.md"), "LicenseB")
-        self.assertEqual(client.load("lic@myfolder/LibC/license.txt"), "LicenseC")
+        self.assertEqual(client.load("lic@myfolder/libc/license.txt"), "LicenseC")
 
     def test_conanfile_txt_multi_excludes(self):
         # https://github.com/conan-io/conan/issues/2293
@@ -144,11 +145,11 @@ LibC/0.1@lasote/testing
                      "a.dll": "",
                      "Foo/b.dll": "",
                      "Baz/b.dll": ""})
-        client.run("create . Pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
 
         consumer = textwrap.dedent("""
             [requires]
-            Pkg/0.1@user/testing
+            pkg/0.1@user/testing
             [imports]
             bin, *.dll ->  @ excludes=Foo/*.dll Baz/*.dll
             """)
@@ -160,12 +161,12 @@ LibC/0.1@lasote/testing
 
     def test_imports_keep_path(self):
         client = TestClient()
-        client.save({"conanfile.py": conanfile % "LibC",
+        client.save({"conanfile.py": conanfile % "libc",
                      "path/to/license.txt": "LicenseC"}, clean_first=True)
-        client.run("export . lasote/testing")
+        client.run("export . --user=lasote --channel=testing")
 
         # keep_path = True AND conanfile.py
-        testconanfile = conanfile % "LibD" + "    requires='LibC/0.1@lasote/testing'"
+        testconanfile = conanfile % "libd" + "    requires='libc/0.1@lasote/testing'"
         testconanfile += """
     def imports(self):
         self.copy("*license*", dst="licenses", keep_path=True)
@@ -183,7 +184,7 @@ LibC/0.1@lasote/testing
                                                     "licenses/license.txt")))
 
         # keep_path = True AND conanfile.txt
-        testconanfile = conanfile_txt % "LibC/0.1@lasote/testing"
+        testconanfile = conanfile_txt % "libc/0.1@lasote/testing"
         testconanfile += """
 [imports]:
 ., *license* -> ./licenses @ keep_path=True

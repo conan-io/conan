@@ -24,27 +24,27 @@ class RequireOverrideTest(unittest.TestCase):
 
     def test_override(self):
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("export . libA/1.0@user/channel")
-        # It is necessary to create libA/2.0 to have a conflict, otherwise it is missing
-        self.client.run("export . libA/2.0@user/channel")
+        self.client.run("export . --name=liba --version=1.0 --user=user --channel=channel")
+        # It is necessary to create liba/2.0 to have a conflict, otherwise it is missing
+        self.client.run("export . --name=liba --version=2.0 --user=user --channel=channel")
 
         for req_method in (False, True):
-            self._save(req_method, ["libA/1.0@user/channel"])
-            self.client.run("export . libB/1.0@user/channel")
-            self._save(req_method, ["libA/2.0@user/channel"])
-            self.client.run("export . libC/1.0@user/channel")
-            self._save(req_method, ["libB/1.0@user/channel", "libC/1.0@user/channel"])
+            self._save(req_method, ["liba/1.0@user/channel"])
+            self.client.run("export . --name=libb --version=1.0 --user=user --channel=channel")
+            self._save(req_method, ["liba/2.0@user/channel"])
+            self.client.run("export . --name=libC --version=1.0 --user=user --channel=channel")
+            self._save(req_method, ["libb/1.0@user/channel", "libC/1.0@user/channel"])
             self.client.run("info .", assert_error=True)
             self.assertIn("Conflict in libC/1.0@user/channel:\n"
-                "    'libC/1.0@user/channel' requires 'libA/2.0@user/channel' while "
-                "'libB/1.0@user/channel' requires 'libA/1.0@user/channel'.\n"
+                "    'libC/1.0@user/channel' requires 'liba/2.0@user/channel' while "
+                "'libb/1.0@user/channel' requires 'liba/1.0@user/channel'.\n"
                 "    To fix this conflict you need to override the package 'libA' in your root"
                 " package.", self.client.out)
 
-            self._save(req_method, ["libB/1.0@user/channel", "libC/1.0@user/channel",
-                                    ("libA/1.0@user/channel", "override")])
+            self._save(req_method, ["libb/1.0@user/channel", "libC/1.0@user/channel",
+                                    ("liba/1.0@user/channel", "override")])
             self.client.run("info .")
-            self.assertIn("libA/2.0@user/channel overridden", self.client.out)
+            self.assertIn("liba/2.0@user/channel overridden", self.client.out)
 
     def test_can_override_even_versions_with_build_metadata(self):
         # https://github.com/conan-io/conan/issues/5900

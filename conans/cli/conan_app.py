@@ -31,10 +31,10 @@ class ConanApp(object):
 
         self.hook_manager = HookManager(self.cache.hooks_path, self.config.hooks)
         # Wraps an http_requester to inject proxies, certs, etc
-        self.requester = ConanRequester(self.config)
+        self.requester = ConanRequester(self.cache.new_config)
         # To handle remote connections
         artifacts_properties = self.cache.read_artifacts_properties()
-        rest_client_factory = RestApiClientFactory(self.requester, self.config,
+        rest_client_factory = RestApiClientFactory(self.requester, self.cache.new_config,
                                                    artifacts_properties=artifacts_properties)
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(rest_client_factory, self.cache)

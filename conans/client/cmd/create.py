@@ -4,7 +4,7 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.test import install_build_and_test
 from conans.client.manager import deps_install
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 
 
 def _get_test_conanfile_path(tf, conanfile_path):
@@ -30,7 +30,7 @@ def _get_test_conanfile_path(tf, conanfile_path):
 def create(app, ref, profile_host, profile_build, graph_lock, root_ref, build_modes,
            test_build_folder, test_folder, conanfile_path, is_build_require=False,
            require_overrides=None):
-    assert isinstance(ref, ConanFileReference), "ref needed"
+    assert isinstance(ref, RecipeReference), "ref needed"
     assert profile_host is not None
     assert profile_build is not None
 
