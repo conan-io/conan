@@ -165,8 +165,8 @@ def test_dependencies_visit_build_requires_profile():
     """
     # https://github.com/conan-io/conan/issues/10304
     client = TestClient()
-    client.save({"conanfile.py": GenConanfile()})
-    client.run("create . cmake/0.1@")
+    client.save({"conanfile.py": GenConanfile("cmake", "0.1")})
+    client.run("create .")
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         class Pkg(ConanFile):
