@@ -464,8 +464,13 @@ class WinTest(unittest.TestCase):
         settings_h = " ".join('-s:h %s="%s"' % (k, v) for k, v in settings if v)
         settings_b = " ".join('-s:b %s="%s"' % (k, v) for k, v in settings if v)
 
+<<<<<<< HEAD
         client.run("new hello/0.1 -m=cmake_lib")
         client.run("create . --name=hello --version=0.1 %s" % settings_h)
+=======
+        client.run("new cmake_lib -d name=hello -d version=0.1")
+        client.run("create . hello/0.1@ %s" % settings_h)
+>>>>>>> develop2
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -509,8 +514,13 @@ class WinTest(unittest.TestCase):
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
 
+<<<<<<< HEAD
         client.run("new hello/0.1 --template=cmake_lib")
         client.run("create . --name=hello --version=0.1 %s -tf=None" % (settings,))
+=======
+        client.run("new cmake_lib -d name=hello -d version=0.1")
+        client.run("create . hello/0.1@ %s -tf=None" % (settings,))
+>>>>>>> develop2
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -545,7 +555,7 @@ class WinTest(unittest.TestCase):
                     ("compiler.cppstd", "17")]
 
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
-        client.run("new hello/0.1 -m=cmake_lib")
+        client.run("new cmake_lib -d name=hello -d version=0.1")
         configs = [("Release", "x86", True), ("Release", "x86_64", True),
                    ("Debug", "x86", False), ("Debug", "x86_64", False)]
         for build_type, arch, shared in configs:

@@ -37,7 +37,7 @@ def test_package_from_system():
     assert not os.path.exists(os.path.join(client.current_folder, "dep2-config.cmake"))
     assert not os.path.exists(os.path.join(client.current_folder, "custom_dep2-config.cmake"))
     contents = client.load("dep1-release-x86_64-data.cmake")
-    assert 'set(dep1_FIND_DEPENDENCY_NAMES ${dep1_FIND_DEPENDENCY_NAMES} custom_dep2)' in contents
+    assert 'list(APPEND dep1_FIND_DEPENDENCY_NAMES custom_dep2)' in contents
 
 
 def test_test_package():

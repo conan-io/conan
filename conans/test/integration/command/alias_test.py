@@ -8,14 +8,9 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 class ConanAliasTest(unittest.TestCase):
 
-    def test_alias_different_name(self):
-        client = TestClient()
-        client.run("alias myalias/1.0@user/channel lib/1.0@user/channel", assert_error=True)
-        self.assertIn("An alias can only be defined to a package with the same name",
-                      client.out)
-
     def test_repeated_alias(self):
         client = TestClient()
+<<<<<<< HEAD
         client.run("alias hello/0.X@lasote/channel hello/0.1@lasote/channel")
         client.run("alias hello/0.X@lasote/channel hello/0.2@lasote/channel")
         client.run("alias hello/0.X@lasote/channel hello/0.3@lasote/channel")
@@ -32,6 +27,11 @@ class Pkg(ConanFile):
         client.run("alias pkg/0.1@user/testing pkg/0.2@user/testing", assert_error=True)
         self.assertIn("ERROR: Reference 'pkg/0.1@user/testing' is already a package",
                       client.out)
+=======
+        client.alias("hello/0.x@lasote/channel",  "hello/0.1@lasote/channel")
+        client.alias("hello/0.x@lasote/channel",  "hello/0.2@lasote/channel")
+        client.alias("hello/0.x@lasote/channel",  "hello/0.3@lasote/channel")
+>>>>>>> develop2
 
     def test_basic(self):
         client = TestClient(default_server_user=True)
@@ -39,13 +39,13 @@ class Pkg(ConanFile):
             client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("0.%s" % i)})
             client.run("export . --user=lasote --channel=channel")
 
-        client.run("alias hello/0.X@lasote/channel hello/0.1@lasote/channel")
+        client.alias("hello/0.x@lasote/channel",  "hello/0.1@lasote/channel")
         conanfile_chat = textwrap.dedent("""
             from conans import ConanFile
             class TestConan(ConanFile):
                 name = "chat"
                 version = "1.0"
-                requires = "hello/(0.X)@lasote/channel"
+                requires = "hello/(0.x)@lasote/channel"
                 """)
         client.save({"conanfile.py": conanfile_chat}, clean_first=True)
         client.run("export . --user=lasote --channel=channel")
@@ -53,8 +53,8 @@ class Pkg(ConanFile):
 
         client.run("install . --build=missing")
 
-        self.assertIn("hello/0.1@lasote/channel from local", client.out)
-        assert "hello/0.X@lasote/channel: hello/0.1@lasote/channel" in client.out
+        client.assert_listed_require({"hello/0.1@lasote/channel": "Cache"})
+        assert "hello/0.x@lasote/channel: hello/0.1@lasote/channel" in client.out
 
         ref = RecipeReference.loads("chat/1.0@lasote/channel")
         pref = client.get_latest_package_reference(ref)
@@ -62,16 +62,16 @@ class Pkg(ConanFile):
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
 
         self.assertIn("hello/0.1", conaninfo)
-        self.assertNotIn("hello/0.X", conaninfo)
+        self.assertNotIn("hello/0.x", conaninfo)
 
         client.run('upload "*" --all --confirm -r default')
         client.run('remove "*" -f')
 
         client.run("install .")
-        self.assertIn("hello/0.1@lasote/channel from 'default'", client.out)
-        self.assertNotIn("hello/0.X@lasote/channel from", client.out)
+        client.assert_listed_require({"hello/0.1@lasote/channel": "Downloaded (default)"})
+        self.assertNotIn("hello/0.x@lasote/channel from", client.out)
 
-        client.run("alias hello/0.X@lasote/channel hello/0.2@lasote/channel")
+        client.alias("hello/0.x@lasote/channel",  "hello/0.2@lasote/channel")
         client.run("install . --build=missing")
         self.assertIn("hello/0.2", client.out)
         self.assertNotIn("hello/0.1", client.out)
@@ -97,21 +97,3 @@ class Pkg(ConanFile):
         reference2 = "pkga/0.2@user/testing"
         t.save({"conanfile.py": conanfile.format(reference2)})
         t.run("export . --name=pkga --version=0.2 --user=user --channel=testing")
-
-        # Now create an alias overriding one of them
-        alias = reference2
-        t.run("alias {alias} {reference}".format(alias=alias, reference=reference1),
-              assert_error=True)
-        self.assertIn("ERROR: Reference '{}' is already a package".format(alias), t.out)
-
-        # Check that the package is not damaged
-        t.run("inspect {} -a description".format(reference2))
-        self.assertIn("description: {}".format(reference2), t.out)
-
-        # Remove it, and create the alias again (twice, override an alias is allowed)
-        t.run("remove {} -f".format(reference2))
-        t.run("alias {alias} {reference}".format(alias=alias, reference=reference1))
-        t.run("alias {alias} {reference}".format(alias=alias, reference=reference1))
-
-        t.run("inspect {} -a description".format(reference2))
-        self.assertIn("description: None", t.out)  # The alias conanfile doesn't have description

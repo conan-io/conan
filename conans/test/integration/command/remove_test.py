@@ -1,11 +1,15 @@
 import os
+import time
 import unittest
 
 import pytest
 
+from conans.cli.api.conan_api import ConanAPIV2
+from conans.errors import NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
+from conans.util.env import environment_update
 
 
 class RemoveOutdatedTest(unittest.TestCase):
@@ -114,7 +118,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         assert self.client.package_exists(self.pref)
 
-        self.client.run("remove -f foobar/0.1@user/testing#{} -p {}"
+        self.client.run("remove -f foobar/0.1@user/testing#{}:{}"
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
@@ -131,6 +135,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
+<<<<<<< HEAD
     def test_remove_duplicated_package_id(self):
         """ The package ID must not be present in both -p argument and package reference
         """
@@ -141,6 +146,8 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                                 NO_SETTINGS_PACKAGE_ID), assert_error=True)
         self.assertIn("Use package ID only as -p argument or reference, not both", self.client.out)
 
+=======
+>>>>>>> develop2
     def test_remove_remote_package_id_reference(self):
         """ Remove remote package ID based on recipe revision. The package must be deleted, but
             the recipe must be preserved.
@@ -173,3 +180,228 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("search foobar/0.1@user/testing -r default")
         self.assertNotIn("arch=x86_64", self.client.out)
         self.assertNotIn("arch=x86", self.client.out)
+
+
+# populated packages of bar
+bar_rrev = "bar/1.1#54ebd2321a1375c524eb7174c272927b"
+bar_rrev2 = "bar/1.1#b305dca03567ef3ebaeddc22f7f45376"
+bar_rrev2_debug = '{}:040ce2bd0189e377b2d15eb7246a4274d1c63317'.format(bar_rrev2)
+bar_rrev2_release = '{}:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b'.format(bar_rrev2)
+
+bar_rrev2_release_prev1 = "{}#61ceea29651eaf24b902e4ccdd49cc44".format(bar_rrev2_release)
+bar_rrev2_release_prev2 = "{}#c1c8d8ef1f9f9278d7963f6e35527bc7".format(bar_rrev2_release)
+
+
+@pytest.fixture()
+def populated_client():
+    """
+    foo/1.0@ (one revision) no packages
+    foo/1.0@user/channel (one revision)  no packages
+    fbar/1.1@ (one revision)  no packages
+
+    bar/1.0@ (two revision) => Debug, Release => (two package revision each)
+    """
+    # To generate different package revisions
+    package_lines = 'save(self, os.path.join(self.package_folder, "foo.txt"), ' \
+                    'os.getenv("foo_test", "Na"))'
+    client = TestClient(default_server_user=True)
+    conanfile = str(GenConanfile().with_settings("build_type")
+                                  .with_package(package_lines)
+                                  .with_import("from conan.tools.files import save")
+                                  .with_import("import os")
+                                  .with_import("import time"))
+    client.save({"conanfile.py": conanfile})
+    client.run("export . --name foo --version 1.0")
+    client.run("export . --name foo --version 1.0 --user user --channel channel")
+    client.run("export . --name fbar --version 1.1")
+
+    # Two package revisions for bar/1.1 (Release)
+    for _i in range(2):
+        with environment_update({'foo_test': str(_i)}):
+            client.run("create . bar/1.1@ -s build_type=Release")
+    client.run("create . bar/1.1@ -s build_type=Debug")
+
+    prefs = _get_revisions_packages(client, bar_rrev2_release, False)
+    assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
+
+    # Two recipe revisions for bar/1.1
+    client.save({"conanfile.py": conanfile + "\n # THIS IS ANOTHER RECIPE REVISION"})
+    client.run("create . bar/1.1@ -s build_type=Debug")
+
+    client.run("upload '*' -c --all -r default")
+    # By default only the latest is uploaded, we want all of them
+    client.run("upload {} -c --all -r default".format(bar_rrev))
+    client.run("upload {} -c --all -r default".format(bar_rrev2))
+    client.run("upload {} -c -r default".format(bar_rrev2_release_prev1))
+    client.run("upload {} -c -r default".format(bar_rrev2_release_prev2))
+
+    return client
+
+
+@pytest.mark.parametrize("with_remote", [True, False])
+@pytest.mark.parametrize("data", [
+    {"remove": "foo*", "recipes": ['bar/1.1', 'fbar/1.1']},
+    {"remove": "foo/*", "recipes": ['bar/1.1', 'fbar/1.1']},
+    {"remove": "*", "recipes": []},
+    {"remove": "*/*", "recipes": []},
+    {"remove": "*/*#*", "recipes": []},
+    {"remove": "*/*#z*", "recipes": ['foo/1.0@user/channel', 'foo/1.0', 'bar/1.1', 'fbar/1.1']},
+    {"remove": "f*", "recipes": ["bar/1.1"]},
+    {"remove": "*/1.1", "recipes": ["foo/1.0", "foo/1.0@user/channel"]},
+    {"remove": "*/*@user/*", "recipes": ["foo/1.0", "fbar/1.1", "bar/1.1"]},
+    {"remove": "*/*@*", "recipes": ['foo/1.0', 'fbar/1.1', 'bar/1.1']},
+    {"remove": "*/*#*:*", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0', 'fbar/1.1']},
+    {"remove": "foo/1.0@user/channel -p", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0',
+                                                      'fbar/1.1']},
+    # These are errors
+    {"remove": "foo", "error": True,
+     "error_msg": 'ERROR: Invalid expression, specify a version or a wildcard. e.g: foo*\n'},
+    {"remove": "*/*@", "error": True},
+    {"remove": "*#", "error": True},
+    {"remove": "*/*#", "error": True},
+])
+def test_new_remove_recipes_expressions(populated_client, with_remote, data):
+
+    with populated_client.mocked_servers():
+        r = "-r default" if with_remote else ""
+        error = data.get("error", False)
+        populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
+        if not error:
+            assert _get_all_recipes(populated_client, with_remote) == set(data["recipes"])
+        elif data.get("error_msg"):
+            assert data.get("error_msg") in populated_client.out
+
+
+@pytest.mark.parametrize("with_remote", [True, False])
+@pytest.mark.parametrize("data", [
+    {"remove": "bar/*#*", "rrevs": []},
+    {"remove": "bar/1.1#z*", "rrevs": [bar_rrev, bar_rrev2]},
+    {"remove": "bar/1.1#*3*", "rrevs": []},
+    {"remove": "bar/1.1#*76", "rrevs": [bar_rrev]},
+    {"remove": "bar*#*50", "error": True, "error_msg": "Invalid expression, specify version"},
+])
+def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, data):
+
+    with populated_client.mocked_servers():
+        r = "-r default" if with_remote else ""
+        error = data.get("error", False)
+        populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
+        if not error:
+            rrevs = _get_revisions_recipes(populated_client, "bar/1.1", with_remote)
+            assert rrevs == set(data["rrevs"])
+
+
+@pytest.mark.parametrize("with_remote", [True, False])
+@pytest.mark.parametrize("data", [
+    {"remove": "bar/1.1#*:*", "prefs": []},
+    {"remove": "bar/1.1#*:*#*", "prefs": []},
+    {"remove": "bar/1.1#z*:*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1#*:*#kk*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1#*:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "prefs": [bar_rrev2_debug]},
+    {"remove": "bar/1.1#*:*cb50cd8036fe8b", "prefs": [bar_rrev2_debug]},
+    {"remove": "{}:*bd0189e377b2d15e*".format(bar_rrev2), "prefs": [bar_rrev2_release]},
+    {"remove": "*/*#*:*bd0189e377b2d15eb72*", "prefs": [bar_rrev2_release]},
+    {"remove": '*/*#*:* -p build_type="fake"', "prefs": [bar_rrev2_release, bar_rrev2_debug]},
+    {"remove": '*/*#*:* -p build_type="Release"', "prefs": [bar_rrev2_debug]},
+    {"remove": '*/*#*:* -p build_type="Debug"', "prefs": [bar_rrev2_release]},
+    # Errors
+    {"remove": '*/*#*:*#* -p', "error": True,
+     "error_msg": "The -p argument cannot be used with a package reference"},
+    {"remove": "bar/1.1#*:", "error": True, "error_msg": 'Specify a package ID value'},
+    {"remove": "bar/1.1#*:234234#", "error": True, "error_msg": 'Specify a package revision'},
+    {"remove": "bar/1.1:234234", "error": True,
+     "error_msg": 'ERROR: Specify a recipe revision or a wildcard. e.g: bar/1.1#*\n'},
+    {"remove": "bar/1.1 -p os=Windows", "error": True,
+     "error_msg": 'ERROR: Specify a recipe revision or a wildcard. e.g: bar/1.1#*\n'},
+])
+def test_new_remove_package_expressions(populated_client, with_remote, data):
+    # Remove the ones we are not testing here
+    r = "-r default" if with_remote else ""
+    populated_client.run("remove f/* -f {}".format(r))
+
+    pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
+    assert pids == {bar_rrev2_debug, bar_rrev2_release}
+
+    with populated_client.mocked_servers():
+        error = data.get("error", False)
+        populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
+        if not error:
+            pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
+            assert pids == set(data["prefs"])
+        elif data.get("error_msg"):
+            assert data.get("error_msg") in populated_client.out
+
+
+@pytest.mark.parametrize("with_remote", [True, False])
+@pytest.mark.parametrize("data", [
+    {"remove": '{}#*kk*'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev1,
+                                                              bar_rrev2_release_prev2]},
+    {"remove": '{}#*'.format(bar_rrev2_release), "prevs": []},
+    {"remove": '{}#c1c* -p "build_type=Debug"'.format(bar_rrev2_release),
+     "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
+    {"remove": '{}#c1c* -p "build_type=Release"'.format(bar_rrev2_release),
+     "prevs": [bar_rrev2_release_prev1]},
+    {"remove": '{}#* -p "build_type=Release"'.format(bar_rrev2_release), "prevs": []},
+    {"remove": '{}#* -p "build_type=Debug"'.format(bar_rrev2_release),
+     "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
+    # Errors
+    {"remove": '{}#'.format(bar_rrev2_release), "error": True,
+     "error_msg": "Specify a package revision"},
+])
+def test_new_remove_package_revisions_expressions(populated_client, with_remote, data):
+    # Remove the ones we are not testing here
+    r = "-r default" if with_remote else ""
+    populated_client.run("remove f/* -f {}".format(r))
+
+    prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
+    assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
+
+    with populated_client.mocked_servers():
+        error = data.get("error", False)
+        populated_client.run("remove {} -f {}".format(data["remove"], r), assert_error=error)
+        if not error:
+            prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
+            assert set(prefs) == set(data["prevs"])
+        elif data.get("error_msg"):
+            assert data.get("error_msg") in populated_client.out
+
+
+def _get_all_recipes(client, with_remote):
+    api = ConanAPIV2(client.cache_folder)
+    remote = api.remotes.get("default") if with_remote else None
+    with client.mocked_servers():
+        return set([r.repr_notime() for r in api.search.recipes("*", remote=remote)])
+
+
+def _get_all_packages(client, ref, with_remote):
+    ref = RecipeReference.loads(ref)
+    api = ConanAPIV2(client.cache_folder)
+    remote = api.remotes.get("default") if with_remote else None
+    with client.mocked_servers():
+        try:
+            return set([r.repr_notime() for r in api.list.packages_configurations(ref, remote=remote)])
+        except NotFoundException:
+            return set()
+
+
+def _get_revisions_recipes(client, ref, with_remote):
+    ref = RecipeReference.loads(ref)
+    api = ConanAPIV2(client.cache_folder)
+    remote = api.remotes.get("default") if with_remote else None
+    with client.mocked_servers():
+        try:
+            return set([r.repr_notime() for r in api.list.recipe_revisions(ref, remote=remote)])
+        except NotFoundException:
+            return set()
+
+
+def _get_revisions_packages(client, pref, with_remote):
+    pref = PkgReference.loads(pref)
+    api = ConanAPIV2(client.cache_folder)
+    remote = api.remotes.get("default") if with_remote else None
+    with client.mocked_servers():
+        try:
+            return set([r.repr_notime() for r in api.list.package_revisions(pref, remote=remote)])
+        except NotFoundException:
+            return set()
+

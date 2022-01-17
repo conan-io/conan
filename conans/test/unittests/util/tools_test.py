@@ -261,10 +261,8 @@ class ToolsTest(unittest.TestCase):
         original_temp = temp_folder()
         patched_temp = os.path.join(original_temp, "dir with spaces")
         payload = "hello world"
-        with patch("tempfile.mktemp") as mktemp:
-            mktemp.return_value = patched_temp
-            output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
-            self.assertIn(payload, str(output))
+        output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
+        self.assertIn(payload, str(output))
 
 
 class CollectLibTestCase(unittest.TestCase):

@@ -109,6 +109,7 @@ class ConanLib(ConanFile):
         self.assertIn("othersubfolder", os.listdir(folder))
         self.assertTrue(os.path.exists(os.path.join(folder, "othersubfolder", "myfile")))
 
+    @pytest.mark.xfail(reason="Remove source folders not implemented yet")
     def test_auto_filesystem_remote_git(self):
         # https://github.com/conan-io/conan/issues/3109
         conanfile = base_git.format(directory="None", url=_quoted("auto"), revision="auto")
@@ -225,6 +226,7 @@ class ConanLib(ConanFile):
         source_folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "conan", "conanfile.py")))
 
+    @pytest.mark.xfail(reason="Remove source folders not implemented yet")
     def test_deleted_source_folder(self):
         path, _ = create_local_git_repo({"myfile": "contents"}, branch="my_release")
         conanfile = base_git.format(url=_quoted("auto"), revision="auto")

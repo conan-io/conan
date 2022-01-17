@@ -12,14 +12,16 @@ from conans.cli.output import ConanOutput
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import ConanAPIV1, ProfileData
 from conans.client.conan_command_output import CommandOutputer
-from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
-from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+<<<<<<< HEAD
 from conans.model.ref import check_valid_ref, validate_recipe_reference
 from conans.util.config_parser import get_bool_from_text
+=======
+from conans.model.ref import get_reference_fields, check_valid_ref
+>>>>>>> develop2
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
@@ -102,50 +104,6 @@ class Command(object):
         assert isinstance(conan_api, ConanAPIV1)
         self._conan_api = conan_api
         self._out = ConanOutput()
-
-    def new(self, *args):
-        """
-        Creates a new package recipe template with a 'conanfile.py' and optionally,
-        'test_package' testing files.
-        """
-        parser = argparse.ArgumentParser(description=self.new.__doc__,
-                                         prog="conan new",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("name", help='Package name, e.g.: "poco/1.9.4" or complete reference'
-                                         ' for CI scripts: "poco/1.9.4@user/channel"')
-        parser.add_argument("-t", "--test", action='store_true', default=False,
-                            help='Create test_package skeleton to test package')
-        parser.add_argument("-i", "--header", action='store_true', default=False,
-                            help='Create a headers only package template')
-        parser.add_argument("-c", "--pure-c", action='store_true', default=False,
-                            help='Create a C language package only package, '
-                                 'deleting "self.settings.compiler.libcxx" setting '
-                                 'in the configure method')
-        parser.add_argument("-s", "--sources", action='store_true', default=False,
-                            help='Create a package with embedded sources in "src" folder, '
-                                 'using "exports_sources" instead of retrieving external code with '
-                                 'the "source()" method')
-        parser.add_argument("-b", "--bare", action='store_true', default=False,
-                            help='Create the minimum package recipe, without build() method. '
-                            'Useful in combination with "export-pkg" command')
-        parser.add_argument("-m", "--template",
-                            help='Use the given template to generate a conan project')
-        parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
-                            help='Generate a .gitignore with the known patterns to excluded')
-        parser.add_argument('-d', '--define', action='append')
-
-        args = parser.parse_args(*args)
-
-        defines = args.define or []
-        defines = dict((n, v) for n, v in (d.split('=') for d in defines))
-
-        self._warn_python_version()
-        ref = RecipeReference.loads(args.name)
-        validate_recipe_reference(ref)
-        self._conan_api.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
-                            exports_sources=args.sources, bare=args.bare,
-                            gitignore=args.gitignore, template=args.template,
-                            defines=defines)
 
     def inspect(self, *args):
         """
@@ -293,78 +251,6 @@ class Command(object):
         self._warn_python_version()
         return self._conan_api.download(reference=reference, packages=packages_list,
                                         remote_name=args.remote, recipe=args.recipe)
-
-    def config(self, *args):
-        """
-        Manages Conan configuration.
-
-        Used to edit conan.conf, or install config files.
-        """
-        parser = argparse.ArgumentParser(description=self.config.__doc__,
-                                         prog="conan config",
-                                         formatter_class=SmartFormatter)
-
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        home_subparser = subparsers.add_parser('home', help='Retrieve the Conan home directory')
-        install_subparser = subparsers.add_parser('install', help='Install a full configuration '
-                                                                  'from a local or remote zip file')
-        init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
-        subparsers.add_parser('list', help='List Conan configuration properties')
-
-        home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                                    help='json file path where the config home will be written to')
-        install_subparser.add_argument("item", nargs="?",
-                                       help="git repository, local file or folder or zip file (local or "
-                                       "http) where the configuration is stored")
-
-        install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
-                                       help='Verify SSL connection when downloading file')
-        install_subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url"],
-                                       help='Type of remote config')
-        install_subparser.add_argument("-a", "--args",
-                                       help='String with extra arguments for "git clone"')
-        install_subparser.add_argument("-sf", "--source-folder",
-                                       help='Install files only from a source subfolder from the '
-                                       'specified origin')
-        install_subparser.add_argument("-tf", "--target-folder",
-                                       help='Install to that path in the conan cache')
-        install_subparser.add_argument("-l", "--list", default=False, action='store_true',
-                                       help='List stored configuration origins')
-        install_subparser.add_argument("-r", "--remove", type=int,
-                                       help='Remove configuration origin by index in list (index '
-                                            'provided by --list argument)')
-        init_subparser.add_argument('-f', '--force', default=False, action='store_true',
-                                    help='Overwrite existing Conan configuration files')
-
-        args = parser.parse_args(*args)
-
-        if args.subcommand == "home":
-            conan_home = self._conan_api.config_home()
-            self._out.info(conan_home)
-            if args.json:
-                CommandOutputer().json_output({"home": conan_home}, args.json, os.getcwd())
-            return conan_home
-        elif args.subcommand == "install":
-            if args.list:
-                configs = self._conan_api.config_install_list()
-                for index, config in enumerate(configs):
-                    self._out.info("%s: %s" % (index, config))
-                return
-            elif args.remove is not None:
-                self._conan_api.config_install_remove(index=args.remove)
-                return
-            verify_ssl = get_bool_from_text(args.verify_ssl)
-            return self._conan_api.config_install(args.item, verify_ssl, args.type, args.args,
-                                              source_folder=args.source_folder,
-                                              target_folder=args.target_folder)
-        elif args.subcommand == 'init':
-            return self._conan_api.config_init(force=args.force)
-        elif args.subcommand == "list":
-            self._out.info("Supported Conan *experimental* global.conf and [conf] properties:")
-            for key, value in DEFAULT_CONFIGURATION.items():
-                self._out.info("{}: {}".format(key, value))
 
     def source(self, *args):
         """
@@ -521,75 +407,6 @@ class Command(object):
                             profile_names=args.profile_host, profile_build=profile_build,
                             lockfile=args.lockfile)
 
-    def remove(self, *args):
-        """
-        Removes packages or binaries matching pattern from local cache or remote.
-
-        It can also be used to remove the temporary source or build folders in the
-        local conan cache. If no remote is specified, the removal will be done
-        by default in the local conan cache.
-        """
-        parser = argparse.ArgumentParser(description=self.remove.__doc__,
-                                         prog="conan remove",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument('pattern_or_reference', nargs="?", help=_PATTERN_OR_REFERENCE_HELP)
-        parser.add_argument('-b', '--builds', nargs="*", action=Extender,
-                            help=("By default, remove all the build folders or select one, "
-                                  "specifying the package ID"))
-        parser.add_argument('-f', '--force', default=False, action='store_true',
-                            help='Remove without requesting a confirmation')
-        parser.add_argument("-l", "--locks", default=False, action="store_true",
-                            help="Remove locks")
-        parser.add_argument('-p', '--packages', nargs="*", action=Extender,
-                            help="Remove all packages of the specified reference if "
-                                 "no specific package ID is provided")
-        parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
-        parser.add_argument('-r', '--remote', action=OnceArgument,
-                            help='Will remove from the specified remote')
-        parser.add_argument('-s', '--src', default=False, action="store_true",
-                            help='Remove source folders')
-        parser.add_argument('-t', '--system-reqs', default=False, action="store_true",
-                            help='Remove system_reqs folders')
-        args = parser.parse_args(*args)
-
-        self._warn_python_version()
-
-        if args.packages is not None and args.query:
-            raise ConanException("'-q' and '-p' parameters can't be used at the same time")
-
-        if args.builds is not None and args.query:
-            raise ConanException("'-q' and '-b' parameters can't be used at the same time")
-
-        if args.system_reqs:
-            if args.packages:
-                raise ConanException("'-t' and '-p' parameters can't be used at the same time")
-            if not args.pattern_or_reference:
-                raise ConanException("Please specify a valid pattern or reference to be cleaned")
-
-            if check_valid_ref(args.pattern_or_reference):
-                return self._conan_api.remove_system_reqs(args.pattern_or_reference)
-
-            return self._conan_api.remove_system_reqs_by_pattern(args.pattern_or_reference)
-        else:
-            if not args.pattern_or_reference:
-                raise ConanException('Please specify a pattern to be removed ("*" for all)')
-
-        try:
-            pref = PkgReference.loads(args.pattern_or_reference)
-            packages = [pref.package_id]
-            pattern_or_reference = repr(pref.ref)
-        except ConanException:
-            pref = None
-            pattern_or_reference = args.pattern_or_reference
-            packages = args.packages
-
-        if pref and args.packages:
-            raise ConanException("Use package ID only as -p argument or reference, not both")
-
-        return self._conan_api.remove(pattern=pattern_or_reference, query=args.query,
-                                  packages=packages, builds=args.builds, src=args.src,
-                                  force=args.force, remote_name=args.remote)
-
     def upload(self, *args):
         """
         Uploads a recipe and binary packages to a remote.
@@ -714,26 +531,6 @@ class Command(object):
         else:
             CommandOutputer().print_file_contents(ret, path, args.raw)
 
-    def alias(self, *args):
-        """
-        Creates and exports an 'alias package recipe'.
-
-        An "alias" package is a symbolic name (reference) for another package
-        (target). When some package depends on an alias, the target one will be
-        retrieved and used instead, so the alias reference, the symbolic name,
-        does not appear in the final dependency graph.
-        """
-        parser = argparse.ArgumentParser(description=self.alias.__doc__,
-                                         prog="conan alias",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument('reference', help='Alias reference. e.g.: mylib/1.X@user/channel')
-        parser.add_argument('target', help='Target reference. e.g.: mylib/1.12@user/channel')
-        args = parser.parse_args(*args)
-
-        self._warn_python_version()
-
-        self._conan_api.export_alias(args.reference, args.target)
-
     def editable(self, *args):
         """
         Manages editable packages (packages that reside in the user workspace, but
@@ -775,71 +572,6 @@ class Command(object):
             for k, v in self._conan_api.editable_list().items():
                 self._out.info("%s" % k)
                 self._out.info("    Path: %s" % v["path"])
-
-    def lock(self, *args):
-        """
-        Generates and manipulates lock files.
-        """
-        parser = argparse.ArgumentParser(description=self.lock.__doc__,
-                                         prog="conan lock",
-                                         formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        merge_cmd = subparsers.add_parser('merge', help="merge 2 or more lockfiles")
-        merge_cmd.add_argument('--lockfile', action="append", help='Path to lockfile to be merged')
-        merge_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
-                               help="Filename of the created lockfile")
-
-        create_cmd = subparsers.add_parser('create',
-                                           help='Create a lockfile from a conanfile or a reference')
-        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile, including filename, "
-                                                        "like 'path/conanfile.py'")
-        create_cmd.add_argument("--name", action=OnceArgument,
-                                help='Provide a package name if not specified in conanfile')
-        create_cmd.add_argument("--version", action=OnceArgument,
-                                help='Provide a package version if not specified in conanfile')
-        create_cmd.add_argument("--user", action=OnceArgument,
-                                help='Provide a user')
-        create_cmd.add_argument("--channel", action=OnceArgument,
-                                help='Provide a channel')
-        create_cmd.add_argument("--reference", action=OnceArgument,
-                                help='Provide a package reference instead of a conanfile')
-        create_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
-                                help="Path to lockfile to be used as a base")
-        create_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
-                                help="Filename of the created lockfile")
-        create_cmd.add_argument("--clean", action="store_true", help="remove unused")
-        _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
-                                      lockfile=False)
-
-        args = parser.parse_args(*args)
-        self._warn_python_version()
-
-        if args.subcommand == "merge":
-            self._conan_api.lock_merge(args.lockfile, args.lockfile_out)
-        elif args.subcommand == "create":
-            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build,
-                                        conf=args.conf_build)
-            profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
-                                       options=args.options_host, env=args.env_host,
-                                       conf=args.conf_host)
-
-            self._conan_api.lock_create(path=args.path,
-                                    reference=args.reference,
-                                    name=args.name,
-                                    version=args.version,
-                                    user=args.user,
-                                    channel=args.channel,
-                                    profile_host=profile_host,
-                                    profile_build=profile_build,
-                                    remote_name=args.remote,
-                                    update=args.update,
-                                    build=args.build,
-                                    lockfile=args.lockfile,
-                                    lockfile_out=args.lockfile_out,
-                                    clean=args.clean)
 
     def _commands(self):
         """ Returns a list of available commands.
@@ -888,11 +620,6 @@ class Command(object):
             command = args[0][0]
             commands = self._commands()
             method = commands[command]
-
-            if (command != "config" or
-               (command == "config" and len(args[0]) > 1 and args[0][1] != "install")) and \
-               is_config_install_scheduled(self._conan_api):
-                self._conan_api.config_install(None, None)
 
             method(args[0][1:])
         except KeyboardInterrupt as exc:

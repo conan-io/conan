@@ -49,7 +49,7 @@ def test_shared_link_flags():
     """)
 
     client = TestClient()
-    client.run("new hello/1.0 -m cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=1.0")
     client.save({"conanfile.py": conanfile})
     client.run("create .")
     t = os.path.join("test_package", "cmake-build-release", "conan", "hello-release-x86_64-data.cmake")

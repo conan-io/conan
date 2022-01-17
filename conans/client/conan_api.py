@@ -1,6 +1,4 @@
-import json
 import os
-
 from collections import OrderedDict
 from collections import namedtuple
 
@@ -11,16 +9,18 @@ from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.download import download
+<<<<<<< HEAD
 from conans.client.cmd.export import export_alias
+=======
+from conans.client.cmd.export import cmd_export
+>>>>>>> develop2
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
-from conans.client.graph.printer import print_graph
 from conans.client.importer import run_imports, undo_imports
 from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.profile_loader import ProfileLoader
-from conans.client.remover import ConanRemover
 from conans.client.source import config_source_local
 from conans.errors import (ConanException, RecipeNotFoundException,
                            NotFoundException)
@@ -31,7 +31,7 @@ from conans.model.ref import check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_recipes
-from conans.util.files import mkdir, save_files, load, save, discarded_file
+from conans.util.files import mkdir, load, discarded_file
 
 
 class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env", "conf"])):
@@ -95,21 +95,6 @@ class ConanAPIV1(object):
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
         check_required_conan_version(self.cache_folder)
-
-    @api_method
-    def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-            cwd=None, template=None, defines=None, gitignore=None):
-        from conans.client.cmd.new import cmd_new
-        app = ConanApp(self.cache_folder)
-        cwd = os.path.abspath(cwd or os.getcwd())
-        ref = RecipeReference.loads(name)
-        files = cmd_new(ref.name, ref.version, header=header, pure_c=pure_c, test=test,
-                        exports_sources=exports_sources, bare=bare, gitignore=gitignore,
-                        template=template, cache=app.cache, defines=defines)
-
-        save_files(cwd, files)
-        for f in sorted(files):
-            ConanOutput().success("File saved: %s" % f)
 
     @api_method
     def inspect(self, path, attributes, remote_name=None):
@@ -198,51 +183,6 @@ class ConanAPIV1(object):
             download(app, ref, packages, recipe)
         else:
             raise ConanException("Provide a valid full reference without wildcards.")
-
-    @api_method
-    def config_install_list(self):
-        app = ConanApp(self.cache_folder)
-        if not os.path.isfile(app.cache.config_install_file):
-            return []
-        return json.loads(load(app.cache.config_install_file))
-
-    @api_method
-    def config_install_remove(self, index):
-        app = ConanApp(self.cache_folder)
-        if not os.path.isfile(app.cache.config_install_file):
-            raise ConanException("There is no config data. Need to install config first.")
-        configs = json.loads(load(app.cache.config_install_file))
-        try:
-            configs.pop(index)
-        except Exception as e:
-            raise ConanException("Config %s can't be removed: %s" % (index, str(e)))
-        save(app.cache.config_install_file, json.dumps(configs))
-
-    @api_method
-    def config_install(self, path_or_url, verify_ssl, config_type=None, args=None,
-                       source_folder=None, target_folder=None):
-        from conans.client.conf.config_installer import configuration_install
-        app = ConanApp(self.cache_folder)
-        return configuration_install(app, path_or_url, verify_ssl,
-                                     config_type=config_type, args=args,
-                                     source_folder=source_folder, target_folder=target_folder)
-
-    @api_method
-    def config_home(self):
-        return self.cache_folder
-
-    @api_method
-    def config_init(self, force=False):
-        app = ConanApp(self.cache_folder)
-        app.cache.reset_default_profile()
-        if force:
-            app.cache.reset_config()
-            app.cache.remotes_registry.reset_remotes()
-            app.cache.reset_settings()
-        else:
-            app.cache.initialize_config()
-            app.cache.remotes_registry.initialize_remotes()
-            app.cache.initialize_settings()
 
     @api_method
     def build(self, conanfile_path, name=None, version=None, user=None, channel=None,
@@ -363,16 +303,6 @@ class ConanAPIV1(object):
         undo_imports(manifest_path)
 
     @api_method
-    def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
-               remote_name=None):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-        remover = ConanRemover(app)
-        remover.remove(pattern, src, builds, packages, force=force,
-                       packages_query=query)
-
-    @api_method
     def upload(self, pattern, remote_name=None, all_packages=False, confirm=False,
                retry=None, retry_wait=None, integrity_check=False, policy=None, query=None,
                parallel_upload=False):
@@ -452,28 +382,6 @@ class ConanAPIV1(object):
                 return app.remote_manager.get_recipe_file(ref, path, remote), path
 
     @api_method
-    def export_alias(self, reference, target_reference):
-        app = ConanApp(self.cache_folder)
-        ref = RecipeReference.loads(reference)
-        target_ref = RecipeReference.loads(target_reference)
-
-        if ref.name != target_ref.name:
-            raise ConanException("An alias can only be defined to a package with the same name")
-
-        # Do not allow to create an alias of a recipe that already has revisions
-        # with that name
-        latest_rrev = app.cache.get_latest_recipe_reference(ref)
-        if latest_rrev:
-            alias_conanfile_path = app.cache.ref_layout(latest_rrev).conanfile()
-            if os.path.exists(alias_conanfile_path):
-                conanfile = app.loader.load_basic(alias_conanfile_path)
-                if not getattr(conanfile, 'alias', None):
-                    raise ConanException("Reference '{}' is already a package, remove it before "
-                                         "creating and alias with the same name".format(ref))
-
-        return export_alias(ref, target_ref, app.cache)
-
-    @api_method
     def editable_add(self, path, reference, cwd):
         app = ConanApp(self.cache_folder)
         # Retrieve conanfile.py from target_path
@@ -501,84 +409,6 @@ class ConanAPIV1(object):
     def editable_list(self):
         app = ConanApp(self.cache_folder)
         return {str(k): v for k, v in app.cache.editable_packages.edited_refs.items()}
-
-    @api_method
-    def lock_merge(self, lockfiles, lockfile_out):
-        result = Lockfile()
-        for lockfile in lockfiles:
-            lockfile = _make_abs_path(lockfile)
-            graph_lock = Lockfile.load(lockfile)
-            result.merge(graph_lock)
-
-        lockfile_out = _make_abs_path(lockfile_out)
-        result.save(lockfile_out)
-        ConanOutput().info("Generated lockfile: %s" % lockfile_out)
-
-    @api_method
-    def lock_create(self, path, lockfile_out,
-                    reference=None, name=None, version=None, user=None, channel=None,
-                    profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
-                    lockfile=None, clean=False):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)], update=update)
-        # profile_host is mandatory
-        profile_host = profile_host or ProfileData(None, None, None, None, None)
-        profile_build = profile_build or ProfileData(None, None, None, None, None)
-        cwd = os.getcwd()
-
-        if path and reference:
-            raise ConanException("Both path and reference arguments were provided. Please provide "
-                                 "only one of them")
-
-        if path:
-            ref_or_path = _make_abs_path(path, cwd)
-            if os.path.isdir(ref_or_path):
-                raise ConanException("Path argument must include filename "
-                                     "like 'conanfile.py' or 'path/conanfile.py'")
-            if not os.path.isfile(ref_or_path):
-                raise ConanException("Conanfile does not exist in %s" % ref_or_path)
-        else:  # reference
-            ref_or_path = RecipeReference.loads(reference)
-
-        graph_lock = None
-        if lockfile:
-            lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock= Lockfile.load(lockfile)
-
-        profile_loader = ProfileLoader(app.cache)
-        profiles = [profile_loader.get_default_host()] if not profile_host.profiles \
-            else profile_host.profiles
-        phost = profile_loader.from_cli_args(profiles, profile_host.settings,
-                                             profile_host.options, profile_host.env,
-                                             profile_host.conf, cwd)
-
-        # Only work on the profile_build if something is provided
-        profiles = [profile_loader.get_default_build()] if not profile_build.profiles \
-            else profile_build.profiles
-        pbuild = profile_loader.from_cli_args(profiles, profile_build.settings,
-                                              profile_build.options, profile_build.env,
-                                              profile_build.conf, cwd)
-
-        root_ref = RecipeReference(name, version, user, channel)
-
-        # FIXME: Using update as check_update?
-        deps_graph = app.graph_manager.load_graph(ref_or_path, None, phost, pbuild, graph_lock,
-                                                  root_ref, build,)
-        if deps_graph.error:
-            raise deps_graph.error
-
-        print_graph(deps_graph)
-
-        # The computed graph-lock by the graph expansion
-        if lockfile is None or clean:
-            graph_lock = Lockfile(deps_graph)
-        else:
-            graph_lock.update_lock(deps_graph)
-
-        lockfile_out = _make_abs_path(lockfile_out or "conan.lock")
-        graph_lock.save(lockfile_out)
-        ConanOutput().info("Generated lockfile: %s" % lockfile_out)
 
 
 def get_graph_info(profile_host, profile_build, cwd, cache,

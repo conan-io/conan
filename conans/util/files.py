@@ -6,7 +6,6 @@ import platform
 import re
 import shutil
 import stat
-import sys
 import tarfile
 import tempfile
 
@@ -17,12 +16,8 @@ from contextlib import contextmanager
 from conans.util.log import logger
 
 
-def walk(top, **kwargs):
-    return os.walk(top, **kwargs)
-
-
 def make_read_only(folder_path):
-    for root, _, files in walk(folder_path):
+    for root, _, files in os.walk(folder_path):
         for f in files:
             full_path = os.path.join(root, f)
             make_file_read_only(full_path)
@@ -112,19 +107,12 @@ def touch(fname, times=None):
 
 
 def touch_folder(folder):
-    for dirname, _, filenames in walk(folder):
+    for dirname, _, filenames in os.walk(folder):
         for fname in filenames:
             try:
                 os.utime(os.path.join(dirname, fname), None)
             except Exception:
                 pass
-
-
-def normalize(text):
-    if platform.system() == "Windows":
-        return re.sub("\r?\n", "\r\n", text)
-    else:
-        return text
 
 
 def md5(content):
@@ -230,17 +218,6 @@ def load(path, binary=False, encoding="auto"):
         return tmp if binary else decode_text(tmp, encoding)
 
 
-def relative_dirs(path):
-    """ Walks a dir and return a list with the relative paths """
-    ret = []
-    for dirpath, _, fnames in walk(path):
-        for filename in fnames:
-            tmp = os.path.join(dirpath, filename)
-            tmp = tmp[len(path) + 1:]
-            ret.append(tmp)
-    return ret
-
-
 def get_abs_path(folder, origin):
     if folder:
         if os.path.isabs(folder):
@@ -283,26 +260,6 @@ def mkdir(path):
     if os.path.exists(path):
         return
     os.makedirs(path)
-
-
-def path_exists(path, basedir):
-    """Case sensitive, for windows, optional
-    basedir for skip caps check for tmp folders in testing for example (returned always
-    in lowercase for some strange reason)"""
-    exists = os.path.exists(path)
-    if not exists or sys.platform == "linux2":
-        return exists
-
-    path = os.path.normpath(path)
-    path = os.path.relpath(path, basedir)
-    chunks = path.split(os.sep)
-    tmp = basedir
-
-    for chunk in chunks:
-        if chunk and chunk not in os.listdir(tmp):
-            return False
-        tmp = os.path.normpath(tmp + os.sep + chunk)
-    return True
 
 
 def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
@@ -365,19 +322,6 @@ def tar_extract(fileobj, destination_dir):
     the_tar.close()
 
 
-def list_folder_subdirs(basedir, level):
-    ret = []
-    for root, dirs, _ in walk(basedir):
-        rel_path = os.path.relpath(root, basedir)
-        if rel_path == ".":
-            continue
-        dir_split = rel_path.split(os.sep)
-        if len(dir_split) == level:
-            ret.append("/".join(dir_split))
-            dirs[:] = []  # Stop iterate subdirs
-    return ret
-
-
 def exception_message_safe(exc):
     try:
         return str(exc)
@@ -403,7 +347,7 @@ def discarded_file(filename):
 def gather_files(folder):
     file_dict = {}
     symlinked_folders = {}
-    for root, dirs, files in walk(folder):
+    for root, dirs, files in os.walk(folder):
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):

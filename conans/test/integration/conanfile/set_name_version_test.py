@@ -28,11 +28,12 @@ class SetVersionNameTest(unittest.TestCase):
                       client.out)
         # installing it doesn't break
         client.run("install --reference=pkg/2.1%s --build=missing" % (user_channel or "@"))
-        self.assertIn(f"pkg/2.1%s:{NO_SETTINGS_PACKAGE_ID} - Build" % user_channel,
-                      client.out)
+        client.assert_listed_require({f"pkg/2.1{user_channel}": "Cache"})
+        client.assert_listed_binary({f"pkg/2.1{user_channel}": (NO_SETTINGS_PACKAGE_ID, "Build")})
+
         client.run("install --reference=pkg/2.1%s --build=missing" % (user_channel or "@"))
-        self.assertIn(f"pkg/2.1%s:{NO_SETTINGS_PACKAGE_ID} - Cache" % user_channel,
-                      client.out)
+        client.assert_listed_require({f"pkg/2.1{user_channel}": "Cache"})
+        client.assert_listed_binary({f"pkg/2.1{user_channel}": (NO_SETTINGS_PACKAGE_ID, "Cache")})
 
         # Local flow should also work
         client.run("install .")
@@ -54,11 +55,9 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("export . --user=user --channel=testing")
         self.assertIn("pkg/2.1@user/testing: A new conanfile.py version was exported", client.out)
         client.run("install --reference=pkg/2.1@user/testing --build=missing")
-        self.assertIn(f"pkg/2.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Build",
-                      client.out)
+        client.assert_listed_binary({f"pkg/2.1@user/testing": (NO_SETTINGS_PACKAGE_ID, "Build")})
         client.run("install --reference=pkg/2.1@user/testing")
-        self.assertIn(f"pkg/2.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Cache",
-                      client.out)
+        client.assert_listed_binary({f"pkg/2.1@user/testing": (NO_SETTINGS_PACKAGE_ID, "Cache")})
         # Local flow should also work
         client.run("install .")
         self.assertIn("conanfile.py (pkg/2.1):", client.out)

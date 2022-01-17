@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.package_ref import PkgReference
@@ -122,6 +123,7 @@ class BuildIdTest(unittest.TestCase):
         self._check_conaninfo(client)
 
     @parameterized.expand([(True, ), (False,)])
+    @pytest.mark.xfail(reason="Remove build folders not implemented yet")
     def test_basic(self, python_consumer):
         client = TestClient()
 

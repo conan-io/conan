@@ -145,23 +145,6 @@ class TestConan(ConanFile):
         client.run("install %s" % install_args)
         self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
 
-    def test_new(self):
-        client = TestClient()
-        client.run("new hello/0.1 --bare")
-        client.save({"lib/libmycoollib.a": ""})
-        settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
-                    '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("export-pkg . --user=lasote --channel=stable  %s" % settings)
-        self.assertIn("hello/0.1@lasote/stable: A new conanfile.py version was exported",
-                      client.out)
-        self.assertNotIn("hello/0.1@lasote/stable package(): WARN: No files in this package!",
-                         client.out)  # --bare include a now mandatory package() method!
-
-        self.assertIn("Packaged 1 '.a' file: libmycoollib.a", client.out)
-        self._consume(client, settings + " . -g CMakeDeps")
-        cmakeinfo = client.load("hello-release-data.cmake")
-        self.assertIn("set(hello_LIBS_RELEASE mycoollib)", cmakeinfo)
-
     def test_build_folders(self):
         client = TestClient()
         conanfile = """
@@ -494,7 +477,7 @@ def test_build_policy_never():
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
 
     client.run("install --reference=pkg/1.0@ --build")
-    assert "pkg/1.0:{} - Cache".format(NO_SETTINGS_PACKAGE_ID) in client.out
+    client.assert_listed_require({"pkg/1.0": "Cache"})
     assert "pkg/1.0: Calling build()" not in client.out
 
 

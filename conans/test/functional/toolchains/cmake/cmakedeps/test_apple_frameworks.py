@@ -194,8 +194,9 @@ timer_cpp = textwrap.dedent("""
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
                          [# FIXME: Skipped because environment changes ('',),
-                          ('-s os=iOS -s os.version=10.0 -s arch=armv8',),
-                          ("-s os=tvOS -s os.version=11.0 -s arch=armv8",)])
+                          ('-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
+                          ("-s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
+
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
@@ -509,6 +510,7 @@ def test_m1():
         [settings]
         os=iOS
         os.version=12.0
+        os.sdk=iphoneos
         arch=armv8
         [env]
         CC={cc}
@@ -520,7 +522,7 @@ def test_m1():
 
     client = TestClient(path_with_spaces=False)
     client.save({"m1": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . --profile:build=default --profile:host=m1 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])

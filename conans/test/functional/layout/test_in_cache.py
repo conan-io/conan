@@ -254,9 +254,10 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_consumer})
     client.run("install .")
-    assert "**includedirs:['foo/include']**" in client.out
-    assert "**libdirs:['foo/libs']**" in client.out
-    assert "**libs:['foo']**" in client.out
+    out = str(client.out).replace(r"\\", "/").replace(package_folder, "")
+    assert "**includedirs:['foo/include']**" in out
+    assert "**libdirs:['foo/libs']**" in out
+    assert "**libs:['foo']**" in out
     cmake = client.load("hello-release-x86_64-data.cmake")
 
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/foo/include")' in cmake

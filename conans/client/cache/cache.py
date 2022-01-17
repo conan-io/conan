@@ -5,7 +5,6 @@ from typing import List
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conans.cli.output import ConanOutput
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, get_default_client_conf, default_settings_yml
@@ -16,7 +15,7 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
-from conans.util.files import load, normalize, save, remove, mkdir
+from conans.util.files import load, save, mkdir
 
 
 CONAN_CONF = 'conan.conf'
@@ -37,7 +36,6 @@ class ClientCache(object):
 
     def __init__(self, cache_folder):
         self.cache_folder = cache_folder
-        self._output = ConanOutput()
 
         # Caching
         self._config = None
@@ -143,10 +141,6 @@ class ClientCache(object):
         _tmp.revision = None
         edited_ref = self.editable_packages.get(_tmp)
         return bool(edited_ref)
-
-    @property
-    def config_install_file(self):
-        return os.path.join(self.cache_folder, "config_install.json")
 
     @property
     def remotes_path(self):
@@ -265,25 +259,13 @@ class ClientCache(object):
         return generators
 
     def initialize_config(self):
+        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
         if not os.path.exists(self.conan_conf_path):
-            save(self.conan_conf_path, normalize(get_default_client_conf()))
-
-    def reset_config(self):
-        if os.path.exists(self.conan_conf_path):
-            remove(self.conan_conf_path)
-        self.initialize_config()
-
-    def reset_default_profile(self):
-        if os.path.exists(self.default_profile_path):
-            remove(self.default_profile_path)
+            save(self.conan_conf_path, get_default_client_conf())
 
     def initialize_settings(self):
+        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
         if not os.path.exists(self.settings_path):
             settings_yml = default_settings_yml
             save(self.settings_path, settings_yml)
             save(self.settings_path + ".orig", settings_yml)  # stores a copy, to check migrations
-
-    def reset_settings(self):
-        if os.path.exists(self.settings_path):
-            remove(self.settings_path)
-        self.initialize_settings()
