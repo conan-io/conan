@@ -56,6 +56,25 @@ def architecture_flag(settings):
     return ""
 
 
+def build_type_link_flags(settings):
+    """
+    returns link flags specific to the build type (Debug, Release, etc.)
+    [-debug]
+    """
+    compiler = settings.get_safe("compiler")
+    build_type = settings.get_safe("build_type")
+    if not compiler or not build_type:
+        return []
+
+    # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
+    # Modules/Platform/Windows-MSVC.cmake
+    if compiler in ["msvc", "Visual Studio"]:
+        if build_type in ("Debug", "RelWithDebInfo"):
+            return ["-debug"]
+
+    return []
+
+
 def build_type_flags(settings):
     """
     returns flags specific to the build type (Debug, Release, etc.)
@@ -65,7 +84,7 @@ def build_type_flags(settings):
     build_type = settings.get_safe("build_type")
     vs_toolset = settings.get_safe("compiler.toolset")
     if not compiler or not build_type:
-        return ""
+        return []
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake

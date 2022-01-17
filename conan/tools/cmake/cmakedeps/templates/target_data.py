@@ -59,10 +59,18 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               ########### AGGREGATED COMPONENTS AND DEPENDENCIES FOR THE MULTI CONFIG #####################
               #############################################################################################
 
-              set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_names }})
+              {% if components_names %}
+              list(APPEND {{ pkg_name }}_COMPONENT_NAMES {{ components_names }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_NAMES)
-              set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ pkg_name }}_FIND_DEPENDENCY_NAMES} {{ dependency_filenames }})
+              {% else %}
+              set({{ pkg_name }}_COMPONENT_NAMES "")
+              {% endif %}
+              {% if dependency_filenames %}
+              list(APPEND {{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ dependency_filenames }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
+              {% else %}
+              set({{ pkg_name }}_FIND_DEPENDENCY_NAMES "")
+              {% endif %}
 
               ########### VARIABLES #######################################################################
               #############################################################################################
@@ -109,6 +117,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_SHARED_LINK_FLAGS{{ config_suffix }}}>
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ ':${' }}{{ pkg_name }}_{{ comp_variable_name }}_EXE_LINK_FLAGS{{ config_suffix }}}>
               )
+              list(APPEND {{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ cpp.build_modules_paths }})
               {%- endfor %}
           """)
         return ret
