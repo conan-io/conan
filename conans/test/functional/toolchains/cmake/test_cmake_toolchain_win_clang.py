@@ -3,11 +3,10 @@ import textwrap
 
 import pytest
 
-from conans.client.tools import environment_append
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
-from conans.util.files import save
+from conans.util.env import environment_update
 
 
 @pytest.fixture
@@ -78,7 +77,7 @@ def test_clang_cmake_ninja(client):
 @pytest.mark.tool_clang(version="12")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_clang_cmake_ninja_custom_cxx(client):
-    with environment_append({"CXX": "/no/exist/clang++"}):
+    with environment_update({"CXX": "/no/exist/clang++"}):
         client.run("create . pkg/0.1@ -pr=clang -c tools.cmake.cmaketoolchain:generator=Ninja",
                    assert_error=True)
         assert 'Could not find compiler' in client.out
