@@ -174,7 +174,7 @@ class MSBuildDeps(object):
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
             'exe_flags': " ".join(cpp_info.exelinkflags),
-            'dependencies': ";".join(deps),
+            'dependencies': ";".join(deps) if not build else "",
             'host_context': not build
         }
         formatted_template = Template(self._vars_props, trim_blocks=True,
@@ -196,6 +196,7 @@ class MSBuildDeps(object):
         else:
             ca_exclude = self.exclude_code_analysis
 
+        deps = [] if build else deps  # build-requires do not propagate dependencies
         template = Template(self._conf_props, trim_blocks=True, lstrip_blocks=True)
         content_multi = template.render(host_context=not build,
                                         name=dep_name, ca_exclude=ca_exclude,
