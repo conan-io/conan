@@ -82,7 +82,6 @@ def test_cpp_info_editable():
     # When hello is not editable
     client2 = TestClient(client.cache_folder)
     client2.save({"conanfile.py": conan_consumer})
-
     client2.run("create . --name=lib --version=1.0")
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**includedirs:['package_include']**" in out
@@ -239,7 +238,6 @@ def test_cpp_info_components_editable():
     client.run("editable add . hello/1.0@")
 
     # Create the consumer again, now it will use the hello editable
-
     client2.run("create . --name=lib --version=1.0")
     base_folder = client.current_folder.replace("\\", "/") + "/"
     out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
