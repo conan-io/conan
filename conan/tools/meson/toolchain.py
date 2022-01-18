@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from jinja2 import Template
@@ -7,7 +8,63 @@ from conan.tools.apple.apple import to_apple_arch
 from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import VCVars
+from conans.errors import ConanException
 from conans.util.files import save
+
+
+def apple_flags(conanfile):
+    # SDK path is mandatory
+    sdk_path = conanfile.conf["tools.meson.mesontoolchain:sdk_path"]
+    if not sdk_path:
+        raise ConanException("You must provide a valid SDK path.")
+
+    os_version = conanfile.settings.get_safe("os.version")
+    os_subsystem = conanfile.settings.get_safe("os.subsystem")
+    # os.path.basename(sdk_path).split(".")[0].lower()
+    if conanfile.settings.get_safe("os") == "Macos":
+        os_sdk = "macosx"
+    else:
+        os_sdk = conanfile.settings.get_safe("os.sdk")
+    arch = to_apple_arch(conanfile.settings.get_safe("arch"))
+    apple_version_flag = apple_min_version_flag(os_version, os_sdk, os_subsystem)
+    flags = [apple_version_flag, "-isysroot", sdk_path, "-arch", arch]
+    return flags
+
+
+# FIXME: 2.0: Remove this method and use the common one from conan.tools.apple.apple
+#             Depends on https://github.com/conan-io/conan/pull/10277
+def apple_min_version_flag(os_version, os_sdk, subsystem):
+    """compiler flag name which controls deployment target"""
+    flag = {'macosx': '-mmacosx-version-min',
+            'iphoneos': '-mios-version-min',
+            'iphonesimulator': '-mios-simulator-version-min',
+            'watchos': '-mwatchos-version-min',
+            'watchsimulator': '-mwatchos-simulator-version-min',
+            'appletvos': '-mtvos-version-min',
+            'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
+    if subsystem == 'catalyst':
+        # especial case, despite Catalyst is macOS, it requires an iOS version argument
+        flag = '-mios-version-min'
+    if not flag:
+        return ''
+    return "%s=%s" % (flag, os_version)
+
+
+def apple_sdk_name(self):
+    """
+    Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
+    there could be several ones depending on the OS architecture.
+
+    Note: In case of MacOS it'll be the same for all the architectures.
+    """
+    os_ = self._conanfile.settings.get_safe('os')
+    os_sdk = self._conanfile.settings.get_safe('os.sdk')
+    if os_sdk:
+        return os_sdk
+    elif os_ == "Macos":  # it has only a single value for all the architectures for now
+        return "macosx"
+    else:
+        raise ConanException("Please, specify a suitable value for os.sdk.")
 
 
 class MesonToolchain(object):
@@ -153,9 +210,7 @@ class MesonToolchain(object):
         # TODO: What is known by the toolchain, from settings, MUST be defined here
         flags = []
         if cross_building(conanfile):
-            arch = self._conanfile.settings.get_safe("arch")
-            if arch:
-                flags.append("-arch " + to_apple_arch(arch))
+            flags = apple_flags(conanfile)
         """
         deployment_flag = apple_deployment_target_flag(self.os, self.os_version)
         sysroot_flag = " -isysroot " + self.xcrun.sdk_path

@@ -70,9 +70,10 @@ class IOSMesonTestCase(unittest.TestCase):
             include(default)
             [settings]
             {settings}
+            [conf]
+            {conf}
             """)
-        settings = '\n'.join(["%s = %s" % (s[0], s[1]) for s in self.settings()])
-        return template.format(settings=settings)
+        return template
 
     @parameterized.expand([('armv8', 'iOS', '10.0', 'iphoneos'),
                            ('armv7', 'iOS', '10.0', 'iphoneos'),
@@ -84,10 +85,15 @@ class IOSMesonTestCase(unittest.TestCase):
         self.os = os_
         self.os_sdk = sdk
         self.os_version = os_version
+        xcrun = XCRun(None, sdk)
+        sdk_path = xcrun.sdk_path
 
         hello_h = gen_function_h(name="hello")
         hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+        settings = '\n'.join(["%s = %s" % (s[0], s[1]) for s in self.settings()])
+        profile = self.profile().format(settings=settings,
+                                        conf="tools.meson.mesontoolchain:sdk_path=%s" % sdk_path)
 
         self.t = TestClient()
 
@@ -97,10 +103,9 @@ class IOSMesonTestCase(unittest.TestCase):
                      "hello.h": hello_h,
                      "hello.cpp": hello_cpp,
                      "main.cpp": app,
-                     "profile_host": self.profile()})
+                     "profile_host": profile})
 
         self.t.run("install . --profile:build=default --profile:host=profile_host")
-
         self.t.run("build .")
 
         libhello = os.path.join(self.t.current_folder, "build", "libhello.a")
@@ -108,7 +113,6 @@ class IOSMesonTestCase(unittest.TestCase):
         demo = os.path.join(self.t.current_folder, "build", "demo")
         self.assertTrue(os.path.isfile(demo))
 
-        xcrun = XCRun(None, sdk)
         lipo = xcrun.find('lipo')
 
         self.t.run_command('"%s" -info "%s"' % (lipo, libhello))
