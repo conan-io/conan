@@ -30,8 +30,7 @@ def remove(conan_api: ConanAPIV2, parser, *args):
                         help='Will remove from the specified remote')
     args = parser.parse_args(*args)
 
-    app = ConanApp(conan_api.cache_folder)
-    ui = UserInput(app.cache.new_config["core:non_interactive"])
+    ui = UserInput(conan_api.config.get("core:non_interactive"))
     remote = conan_api.remotes.get(args.remote) if args.remote else None
     remove_all_packages = args.package_query is None
     query = args.package_query if args.package_query != _not_specified_ else None
@@ -40,7 +39,7 @@ def remove(conan_api: ConanAPIV2, parser, *args):
         return args.force or ui.request_boolean(message)
 
     def raise_if_package_not_found(_prefs):
-        if not _prefs and "*" not in args.reference:
+        if not _prefs and "*" not in args.reference and args.package_query == _not_specified_:
             raise ConanException("Binary package not found: '{}'".format(args.reference))
 
     if ":" in args.reference:

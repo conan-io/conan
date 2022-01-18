@@ -203,7 +203,7 @@ class UploadTest(unittest.TestCase):
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
         client.run("install --reference=hello0/1.2.1@frodo/stable --build -r default")
-        client.run("upload hello* --confirm --retry 3 --retry-wait=0 --all")
+        client.run("upload hello* --confirm --retry 3 --retry-wait=0")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
     def test_upload_error_with_config(self):
@@ -280,7 +280,7 @@ class UploadTest(unittest.TestCase):
                                     retry_wait=0
                                 """)
         client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-        client.run("upload hello* --confirm --all")
+        client.run("upload hello* --confirm")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
     def test_upload_same_package_dont_compress(self):
@@ -289,11 +289,11 @@ class UploadTest(unittest.TestCase):
         expected_manifest = FileTreeManifest.create(package_path)
         expected_manifest.save(package_path)
 
-        self.client.run("upload %s --all" % str(self.ref))
+        self.client.run("upload %s" % str(self.ref))
         self.assertIn("Compressing recipe", self.client.out)
         self.assertIn("Compressing package", str(self.client.out))
 
-        self.client.run("upload %s --all" % str(self.ref))
+        self.client.run("upload %s" % str(self.ref))
         self.assertNotIn("Compressing recipe", self.client.out)
         self.assertNotIn("Compressing package", str(self.client.out))
         self.assertIn("Package is up to date", str(self.client.out))
@@ -365,7 +365,7 @@ class UploadTest(unittest.TestCase):
         """Upload recipe and package together"""
         # Try to upload all conans and packages
         self.client.run('user -p mypass -r default lasote')
-        self.client.run('upload %s --all -r default' % str(self.ref))
+        self.client.run('upload %s -r default' % str(self.ref))
         lines = [line.strip() for line in str(self.client.out).splitlines()
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading to remote 'default':",
@@ -393,7 +393,7 @@ class UploadTest(unittest.TestCase):
     def test_force(self):
         # Tries to upload a package exported after than remote version.
         # Upload all recipes and packages
-        self.client.run('upload %s --all -r default' % str(self.ref))
+        self.client.run('upload %s -r default' % str(self.ref))
 
         rev = self.client.cache.get_latest_recipe_reference(self.ref).revision
         prev = self.client.cache.get_latest_package_reference(self.ref).revision
@@ -443,7 +443,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . danimtb/testing")
 
         # Test conflict parameter error
-        client.run("upload test/0.1@danimtb/* --all -p ewvfw --json upload.json", assert_error=True)
+        client.run("upload test/0.1@danimtb/* -p ewvfw --json upload.json", assert_error=True)
 
         json_path = os.path.join(client.current_folder, "upload.json")
         self.assertTrue(os.path.exists(json_path))
@@ -453,7 +453,7 @@ class UploadTest(unittest.TestCase):
         self.assertEqual(0, len(output["uploaded"]))
 
         # Test invalid reference error
-        client.run("upload fake/0.1@danimtb/testing --all --json upload.json", assert_error=True)
+        client.run("upload fake/0.1@danimtb/testing --json upload.json", assert_error=True)
         json_path = os.path.join(client.current_folder, "upload.json")
         self.assertTrue(os.path.exists(json_path))
         json_content = load(json_path)
@@ -462,7 +462,7 @@ class UploadTest(unittest.TestCase):
         self.assertEqual(0, len(output["uploaded"]))
 
         # Test normal upload
-        client.run("upload test/0.1@danimtb/testing --all --json upload.json")
+        client.run("upload test/0.1@danimtb/testing --json upload.json")
         self.assertTrue(os.path.exists(json_path))
         json_content = load(json_path)
         output = json.loads(json_content)

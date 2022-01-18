@@ -32,10 +32,9 @@ class SearchAPI:
     @api_method
     def recipe_revisions(self, expression, remote=None, none_revision_allowed=True):
         """
-        :param ref: A RecipeReference that can contain "*" at any field
+        :param expression: A RecipeReference that can contain "*" at any field
         :param remote: Remote in case we want to check the references in a remote
-        :param none_revision_allowed: Allow a None field as a revision in the expression
-        :return: a list of complete RecipeRefernce
+        :return: a list of complete RecipeReference
         """
         if "/" not in expression:
             if "*" not in expression:
@@ -66,11 +65,14 @@ class SearchAPI:
             if ref.revision is not None:
                 _tmp = RecipeReference.loads(repr(_r))
                 _tmp.revision = None
-                for _rrev in self.conan_api.list.recipe_revisions(_tmp, remote):
-                    if fnmatch.fnmatch(_rrev.revision, ref.revision):
-                        ret.append(_rrev)
+                if ref.revision == "latest":
+                    ret.append(self.conan_api.list.latest_recipe_revision(_tmp, remote))
+                else:
+                    for _rrev in self.conan_api.list.recipe_revisions(_tmp, remote):
+                        if fnmatch.fnmatch(_rrev.revision, ref.revision):
+                            ret.append(_rrev)
             else:
-                if not none_revision_allowed:
+                if not none_revision_allowed:  # package reference without recipe revision
                     raise ConanException("Specify a recipe revision or a wildcard. "
                                          "e.g: {}#*".format(expression))
                 ret.extend(self.conan_api.list.recipe_revisions(_r, remote))
@@ -85,6 +87,9 @@ class SearchAPI:
         :param expression: lib*/1*#*:9283*
         :param query: package configuration query like "os=Windows AND (arch=x86 OR compiler=gcc)"
         :param remote: Remote object
+        :param latest_revision: If the package revision is not specified:
+              - When False: Resolve to all the package revisions
+              - When True: Resolve the latest package revision
         :return: a List of PkgReference
         """
         if ":" in expression:
@@ -103,6 +108,7 @@ class SearchAPI:
             package_id_expr = package_expr
             package_revision_expr = "*"
 
+        # If we are specifing a pref, we need a recipe ref in the expression (at least a wildcard)
         refs = self.recipe_revisions(recipe_expr, remote, none_revision_allowed=False)
         ret = []
         for ref in refs:
@@ -114,7 +120,12 @@ class SearchAPI:
             prefs = self.conan_api.list.filter_packages_configurations(filtered_configurations,
                                                                        query).keys()
             for pref in prefs:
-                prevs = self.conan_api.list.package_revisions(pref, remote)
+                if package_revision_expr == "latest":
+                    ret = self.conan_api.list.latest_package_revision(pref, remote)
+                    prevs = [ret] if ret else []
+                else:
+                    prevs = self.conan_api.list.package_revisions(pref, remote)
+
                 for prev in prevs:
                     if fnmatch.fnmatch(prev.revision, package_revision_expr):
                         ret.append(prev)

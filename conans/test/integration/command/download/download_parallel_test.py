@@ -17,7 +17,7 @@ def test_basic_parallel_download():
         client.run("create . pkg/0.1@user/testing -o pkg:myoption=%s" % i)
         package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
         package_ids.append(package_id)
-    client.run("upload * --all --confirm -r default")
+    client.run("upload * --confirm -r default")
     client.run("remove * -f")
 
     # Lets download the packages

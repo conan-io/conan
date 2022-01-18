@@ -12,7 +12,7 @@ class ConanInspectTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("name")})
         client.run("export . --name=name --version=version --user=user --channel=channel")
-        client.run("upload name/version@user/channel --all -r default")
+        client.run("upload name/version@user/channel -r default")
         client.run("remove * -f")
 
         # If the recipe exists, it doesn't show extra output
@@ -28,7 +28,7 @@ class ConanInspectTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
         client.run("export . --user=user --channel=channel")
-        client.run("upload pkg/0.1@user/channel -r default")
+        client.run("upload pkg/0.1@user/channel -r default --only-recipe")
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "arch")})
         client.run("export . --user=user --channel=channel")
 
@@ -80,7 +80,7 @@ class ConanInspectTest(unittest.TestCase):
         client.run("inspect mypkg/1.2.3@lasote/testing -a=version")
         self.assertIn("version: 1.2.3", client.out)
 
-        client.run("upload mypkg* --confirm -r default")
+        client.run("upload mypkg* --confirm -r default --only-recipe")
         client.run('remove "*" -f')
         client.run("inspect mypkg/1.2.3@lasote/testing -a=name -r=default")
         self.assertIn("name: mypkg", client.out)

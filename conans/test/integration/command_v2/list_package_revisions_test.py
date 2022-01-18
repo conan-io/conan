@@ -27,7 +27,7 @@ class TestListPackageRevisionsBase:
     def _upload_recipe(self, remote, reference):
         self.client.save({'conanfile.py': GenConanfile()})
         self.client.run("create . {}".format(reference))
-        self.client.run("upload --force --all -r {} {}".format(remote, reference))
+        self.client.run("upload --force -r {} {}".format(remote, reference))
 
     @staticmethod
     def _get_fake_package_refence(recipe_name):

@@ -1016,7 +1016,7 @@ def test_touching_other_server():
     c = TestClient(servers=servers, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
     c.run("create . pkg/0.1@conan/channel -s os=Windows")
-    c.run("upload * --all -c -r=remote1")
+    c.run("upload * -c -r=remote1")
     c.run("remove * -f")
 
     # This is OK, binary found

@@ -50,7 +50,7 @@ def test_install_system_requirements(client):
     client.run("export . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run(" install --reference=pkg/0.1@lasote/testing --build")
     assert "Running system requirements!!" in client.out
-    client.run("upload * --all --confirm -r default")
+    client.run("upload * --confirm -r default")
     client.run('remove "*" -f')
     client.run(" install --reference=pkg/0.1@lasote/testing")
     assert "Running system requirements!!" in client.out
@@ -261,7 +261,7 @@ def test_install_anonymous(client):
     # https://github.com/conan-io/conan/issues/4871
     client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     client.run("create . lasote/testing")
-    client.run("upload * --confirm --all -r default")
+    client.run("upload * --confirm -r default")
 
     client2 = TestClient(servers=client.servers, inputs=[])
     client2.run("install --reference=pkg/0.1@lasote/testing")
@@ -273,7 +273,7 @@ def test_install_without_ref(client):
     client.run('create .')
     assert "lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
-    client.run('upload lib/1.0 -c --all -r default')
+    client.run('upload lib/1.0 -c -r default')
     assert "Uploading lib/1.0" in client.out
 
     client.run('remove "*" -f')
@@ -285,13 +285,13 @@ def test_install_without_ref(client):
 
     # Try this syntax to upload too
     client.run('install --reference=lib/1.0@')
-    client.run('upload lib/1.0@ -c --all -r default')
+    client.run('upload lib/1.0 -c -r default')
 
 
 def test_install_disabled_remote(client):
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . pkg/0.1@lasote/testing")
-    client.run("upload * --confirm --all -r default")
+    client.run("upload * --confirm -r default")
     client.run("remote disable default")
     client.run("install --reference=pkg/0.1@lasote/testing -r default", assert_error=True)
     assert "Remote 'default' is disabled" in client.out
@@ -309,8 +309,8 @@ def test_install_skip_disabled_remote():
                         inputs=2*["admin", "password"])
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . pkg/0.1@lasote/testing")
-    client.run("upload * --confirm --all -r default")
-    client.run("upload * --confirm --all -r server3")
+    client.run("upload * --confirm -r default")
+    client.run("upload * --confirm -r server3")
     client.run("remove * -f")
     client.run("remote disable default")
     client.run("install --reference=pkg/0.1@lasote/testing", assert_error=False)
@@ -321,7 +321,7 @@ def test_install_without_update_fail(client):
     # https://github.com/conan-io/conan/issues/9183
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . zlib/1.0@")
-    client.run("upload * --confirm --all -r default")
+    client.run("upload * --confirm -r default")
     client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
     client.run("remote disable default")
     client.run("install .")

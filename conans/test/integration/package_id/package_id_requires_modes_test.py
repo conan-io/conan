@@ -480,7 +480,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         t.run("create package1.py pkg1/1.0@")
         t.run("create package2.py pkg2/1.0@")
         t.run("create package3.py pkg3/1.0@")
-        t.run("upload * --all -c -r default")
+        t.run("upload * -c -r default")
         t.run("remove * -f")
 
         # If we build pkg1, we need a new packageID for pkg2

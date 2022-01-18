@@ -73,7 +73,7 @@ def test_value_parse():
     client.run("create . danimtb/testing")
     client.run("search test/0.1@danimtb/testing")
     assert "arch: kk=kk" in client.out
-    client.run("upload test/0.1@danimtb/testing --all -r default")
+    client.run("upload test/0.1@danimtb/testing -r default")
     client.run("remove test/0.1@danimtb/testing --force")
     client.run("install --reference=test/0.1@danimtb/testing")
     client.run("search test/0.1@danimtb/testing")

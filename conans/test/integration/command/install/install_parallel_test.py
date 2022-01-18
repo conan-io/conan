@@ -17,7 +17,7 @@ class InstallParallelTest(unittest.TestCase):
 
         for i in range(counter):
             client.run("create . pkg%s/0.1@user/testing" % i)
-        client.run("upload * --all --confirm -r default")
+        client.run("upload * --confirm -r default")
         client.run("remove * -f")
 
         # Lets consume the packages

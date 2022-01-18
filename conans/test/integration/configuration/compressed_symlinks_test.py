@@ -110,7 +110,7 @@ def test_package_with_symlinks(package_files):
     assert_folder_symlinks(package_folder)
 
     # Zip and upload
-    client.run("upload '*' -c -r default --all")
+    client.run("upload '*' -c -r default")
 
     # Client 2 install
     client2.run("install --reference lib/1.0@")

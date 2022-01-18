@@ -56,7 +56,7 @@ def test_resolve_recipe_revisions(mode_remote):
     pref2_2 = client.create(ref2, GenConanfile().with_build_msg("change2"))
     pref2_3 = client.create(ref2, GenConanfile().with_build_msg("change3"))
 
-    client.run("upload '*' -c --all -r default")
+    client.run("upload '*' -c -r default")
 
     api = ConanAPIV2(client.cache_folder)
     remote = api.remotes.get("default") if mode_remote else None
@@ -119,7 +119,7 @@ def test_resolve_package_revisions(mode_remote):
     prefs = _create_packages(RecipeReference.loads("foo/1.0"))
     prefs.extend(_create_packages(RecipeReference.loads("bar/2.0")))
 
-    client.run("upload '*' -c --all -r default")
+    client.run("upload '*' -c -r default")
 
     api = ConanAPIV2(client.cache_folder)
     remote = api.remotes.get("default") if mode_remote else None

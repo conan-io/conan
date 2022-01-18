@@ -272,7 +272,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_package_folder(mode)
 
         # upload to remote
-        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
 
@@ -294,7 +294,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("export . --user=lasote --channel=testing")
         self._get_folders()
 
-        self.client.run("upload hello/0.1@lasote/testing -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default --only-recipe")
         self.assertFalse(os.path.exists(self.source_folder))
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode)
@@ -319,17 +319,17 @@ class ExportsSourcesTest(unittest.TestCase):
 
         self.client.run("export . --user=lasote --channel=testing")
         self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self.client.run('remove hello/0.1@lasote/testing -f')
         self.client.run("install --reference=hello/0.1@lasote/testing")
         self._get_folders()
 
         # upload to remote again, the folder remains as installed
-        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self._check_export_installed_folder(mode)
         self._check_server_folder(mode)
 
-        self.client.run("upload hello/0.1@lasote/testing --all -r=other")
+        self.client.run("upload hello/0.1@lasote/testing -r=other")
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode, self.other_server)
 
@@ -340,7 +340,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
         self.client.run("export . --user=lasote --channel=testing")
         self.client.run("install --reference=hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload hello/0.1@lasote/testing --all -r default")
+        self.client.run("upload hello/0.1@lasote/testing -r default")
         self.client.run('remove hello/0.1@lasote/testing -f')
         self.client.run("install --reference=hello/0.1@lasote/testing")
 
@@ -355,7 +355,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
         the_time = time.time() + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
-            self.client.run("upload hello/0.1@lasote/testing --all -r default")
+            self.client.run("upload hello/0.1@lasote/testing#latest -r default")
 
         ref = RecipeReference.loads('hello/0.1@lasote/testing')
         self.client.run(f"remove hello/0.1@lasote/testing"

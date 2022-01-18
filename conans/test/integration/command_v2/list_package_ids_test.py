@@ -25,13 +25,13 @@ class TestListPackageIdsBase:
     def _upload_recipe(self, remote, reference):
         self.client.save({'conanfile.py': GenConanfile()})
         self.client.run("create . {}".format(reference))
-        self.client.run("upload --force --all -r {} {}".format(remote, reference))
+        self.client.run("upload --force -r {} {}".format(remote, reference))
 
     def _upload_full_recipe(self, remote, reference):
         self.client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_file("file.h",
                                                                                        "0.1")})
         self.client.run("create . user/channel")
-        self.client.run("upload --force --all -r {} {}".format(remote, "pkg/0.1@user/channel"))
+        self.client.run("upload --force -r {} {}".format(remote, "pkg/0.1@user/channel"))
 
         self.client.save({'conanfile.py': GenConanfile().with_require("pkg/0.1@user/channel")
                                                         .with_settings("os", "build_type", "arch")
@@ -39,7 +39,7 @@ class TestListPackageIdsBase:
                                                         .with_default_option("shared", False)
                           })
         self.client.run("create . {}".format(reference))
-        self.client.run("upload --force --all -r {} {}".format(remote, reference))
+        self.client.run("upload --force -r {} {}".format(remote, reference))
 
     @staticmethod
     def _get_fake_recipe_refence(recipe_name):

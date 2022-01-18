@@ -382,7 +382,7 @@ class ConanLib(ConanFile):
         cmd = 'git remote add origin "%s"' % curdir
         self.client.run_command(cmd)
         self.client.run("export . --user=lasote --channel=channel")
-        self.client.run("upload lib* -c -r myremote")
+        self.client.run("upload lib* -c -r myremote --only-recipe")
 
         # Take other client, the old client folder will be used as a remote
         client2 = TestClient(servers=self.servers)

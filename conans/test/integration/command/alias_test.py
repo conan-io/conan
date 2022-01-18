@@ -45,7 +45,7 @@ class ConanAliasTest(unittest.TestCase):
         self.assertIn("hello/0.1", conaninfo)
         self.assertNotIn("hello/0.x", conaninfo)
 
-        client.run('upload "*" --all --confirm -r default')
+        client.run('upload "*" --confirm -r default')
         client.run('remove "*" -f')
 
         client.run("install .")
