@@ -80,18 +80,12 @@ def test(conan_api, parser, *args):
                                        conanfile_folder=conanfile_folder)
     conanfile = deps_graph.root.conanfile
 
-    if hasattr(conanfile, "layout"):
-        conanfile.folders.set_base_build(conanfile_folder)
-        conanfile.folders.set_base_source(conanfile_folder)
-        conanfile.folders.set_base_package(conanfile_folder)
-        conanfile.folders.set_base_generators(conanfile_folder)
-        conanfile.folders.set_base_install(conanfile_folder)
-    else:
-        conanfile.folders.set_base_build(conanfile_folder)
-        conanfile.folders.set_base_source(conanfile_folder)
-        conanfile.folders.set_base_package(conanfile_folder)
-        conanfile.folders.set_base_generators(conanfile_folder)
-        conanfile.folders.set_base_install(conanfile_folder)
+    # TODO: This will need to adapt if --build-folder is used
+    conanfile.folders.set_base_build(conanfile_folder)
+    conanfile.folders.set_base_source(conanfile_folder)
+    conanfile.folders.set_base_package(conanfile_folder)
+    conanfile.folders.set_base_generators(conanfile_folder)
+    conanfile.folders.set_base_install(conanfile_folder)
 
     out.highlight("\n-------- Testing the package: Building ----------")
     mkdir(conanfile.build_folder)
@@ -104,4 +98,3 @@ def test(conan_api, parser, *args):
     with conanfile_exception_formatter(conanfile, "test"):
         with chdir(conanfile.build_folder):
             conanfile.test()
-
