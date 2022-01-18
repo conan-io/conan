@@ -247,6 +247,7 @@ class ConanFile(object):
     def new_cpp_info(self):
         if not self._conan_new_cpp_info:
             self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
+            self._conan_new_cpp_info.set_relative_base_folder(self.package_folder)
         return self._conan_new_cpp_info
 
     @property

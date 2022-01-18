@@ -34,7 +34,8 @@ class GnuDepsFlags(object):
 
     _GCC_LIKE = ['clang', 'apple-clang', 'gcc']
 
-    def _format_defines(self, defines):
+    @staticmethod
+    def _format_defines(defines):
         return ["-D%s" % define for define in defines] if defines else []
 
     def _format_frameworks(self, frameworks):

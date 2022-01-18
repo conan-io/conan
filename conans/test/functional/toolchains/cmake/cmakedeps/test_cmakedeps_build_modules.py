@@ -1,272 +1,164 @@
-import os
-import platform
 import textwrap
-import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.skip(reason="CMakeDeps build modules is ongoing effort")
 @pytest.mark.tool_cmake
-class TestCMakeDepsGenerator:
-
-    @pytest.mark.parametrize("use_components", [False, True])
-    def test_build_modules_alias_target(self, use_components):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile
-
-            class Conan(ConanFile):
-                name = "hello"
-                version = "1.0"
-                settings = "os", "arch", "compiler", "build_type"
-                exports_sources = ["target-alias.cmake"]
-
-                def package(self):
-                    self.copy("target-alias.cmake", dst="share/cmake")
-
-                def package_info(self):
-                    module = os.path.join("share", "cmake", "target-alias.cmake")
-            %s
-            """)
-        if use_components:
-            info = textwrap.dedent("""\
-                self.cpp_info.name = "namespace"
-                self.cpp_info.filenames["CMakeDeps"] = "hello"
-                self.cpp_info.components["comp"].libs = ["hello"]
-                self.cpp_info.components["comp"].build_modules["CMakeDeps"].append(module)
-                """)
-        else:
-            info = textwrap.dedent("""\
-                self.cpp_info.libs = ["hello"]
-                self.cpp_info.build_modules["CMakeDeps"].append(module)
-                """)
-        target_alias = textwrap.dedent("""
-            add_library(otherhello INTERFACE IMPORTED)
-            target_link_libraries(otherhello INTERFACE {target_name})
-            """).format(target_name="namespace::comp" if use_components else "hello::hello")
-        conanfile = conanfile % "\n".join(["        %s" % line for line in info.splitlines()])
-        client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
-        client.run("create .")
-
-        consumer = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-            class Conan(ConanFile):
-                name = "consumer"
-                version = "1.0"
-                settings = "os", "compiler", "build_type", "arch"
-                exports_sources = ["CMakeLists.txt"]
-                generators = "CMakeDeps"
-                requires = "hello/1.0"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-            """)
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.0)
-            project(test)
-            find_package(hello)
-            get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
-            message("otherhello link libraries: ${tmp}")
-            """)
-        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-        client.run("create .")
-        if use_components:
-            assert "otherhello link libraries: namespace::comp" in client.out
-        else:
-            assert "otherhello link libraries: hello::hello" in client.out
-
-
-@pytest.mark.slow
-@pytest.mark.tool_cmake
-class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
-
-    def test_build_modules(self):
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile
-
-            class Conan(ConanFile):
-                name = "test"
-                version = "1.0"
-                exports_sources = ["my-module.cmake", "FindFindModule.cmake"]
-
-                def package(self):
-                    self.copy("*.cmake", dst="share/cmake")
-
-                def package_info(self):
-                    # Only first module is defined
-                    # (the other one should be found by CMAKE_MODULE_PATH in builddirs)
-                    builddir = os.path.join("share", "cmake")
-                    module = os.path.join(builddir, "my-module.cmake")
-                    self.cpp_info.build_modules.append(module)
-                    self.cpp_info.builddirs = [builddir]
-        """)
-        # This is a module that has other find_package() calls
-        my_module = textwrap.dedent("""
-            find_package(FindModule REQUIRED)
-            """)
-        # This is a module that defines some functionality
-        find_module = textwrap.dedent("""
-            function(conan_message MESSAGE_OUTPUT)
-                message(${ARGV${0}})
-            endfunction()
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile, "my-module.cmake": my_module,
-                     "FindFindModule.cmake": find_module})
-        client.run("create .")
-        ref = ConanFileReference("test", "1.0", None, None)
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
-        package_path = client.cache.package_layout(ref).package(pref)
-        modules_path = os.path.join(package_path, "share", "cmake")
-        self.assertEqual(set(os.listdir(modules_path)),
-                         {"FindFindModule.cmake", "my-module.cmake"})
-        consumer = textwrap.dedent("""
-            from conans import ConanFile
-            from conan.tools.cmake import CMake
-
-            class Conan(ConanFile):
-                name = "consumer"
-                version = "1.0"
-                settings = "os", "compiler", "build_type", "arch"
-                exports_sources = ["CMakeLists.txt"]
-                generators = "CMakeDeps", "CMakeToolchain"
-                requires = "test/1.0"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
-            """)
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.0)
-            project(test)
-            find_package(test)
-            conan_message("Printing using a external module!")
-            """)
-        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-        client.run("create .")
-        self.assertIn("Printing using a external module!", client.out)
-
-
-@pytest.mark.skip(reason="CMakeDeps build modules is ongoing effort")
-@pytest.mark.tool_cmake
-class TestNoNamespaceTarget:
-    """ This test case uses build-modules feature to create a target without a namespace. This
-        target uses targets create by Conan (build_modules are included after Conan targets)
-    """
-
+@pytest.mark.parametrize("use_components", [False, True])
+def test_build_modules_alias_target(use_components):
+    client = TestClient()
     conanfile = textwrap.dedent("""
         import os
         from conans import ConanFile
-        from conant.tools.cmake import CMake
 
-        class Recipe(ConanFile):
-            settings = "os", "compiler", "arch", "build_type"
-            exports_sources = ["src/*", "build-module.cmake"]
-            generators = "cmake"
+        class Conan(ConanFile):
+            name = "hello"
+            version = "1.0"
+            settings = "os", "arch", "compiler", "build_type"
+            exports_sources = ["target-alias.cmake"]
 
-            def layout(self):
-                self.folders.source = "src"
+            def package(self):
+                self.copy("target-alias.cmake", dst="share/cmake")
+
+            def package_info(self):
+                module = os.path.join("share", "cmake", "target-alias.cmake")
+                {}
+        """)
+    if use_components:
+        info = """
+        self.cpp_info.components["comp"].set_property("cmake_build_modules", [module])
+        """
+    else:
+        info = """
+        self.cpp_info.set_property("cmake_build_modules", [module])
+        """
+    target_alias = textwrap.dedent("""
+        add_library(otherhello INTERFACE IMPORTED)
+        target_link_libraries(otherhello INTERFACE {target_name})
+        """).format(target_name="namespace::comp" if use_components else "hello::hello")
+    conanfile = conanfile.format(info)
+    client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
+    client.run("create .")
+
+    consumer = textwrap.dedent("""
+        from conans import ConanFile, CMake
+
+        class Conan(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = ["CMakeLists.txt"]
+            generators = "CMakeDeps", "CMakeToolchain"
+            requires = "hello/1.0"
 
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
-                cmake.build()
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.0)
+        project(test)
+        find_package(hello CONFIG)
+        get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
+        message("otherhello link libraries: ${tmp}")
+        """)
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run("create .")
+    if use_components:
+        assert "otherhello link libraries: namespace::comp" in client.out
+    else:
+        assert "otherhello link libraries: hello::hello" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_build_modules_components_selection_is_not_possible():
+    """
+    If openssl declares different cmake_build_modules on ssl and crypto, in the consumer both
+    are included even if the cpp_info of the consumer declares:
+        def package_info(self):
+            self.cpp_info.requires = ["openssl::crypto"]
+    Because that information is defined later, not at "generate" time (building time).
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+
+        class Conan(ConanFile):
+            name = "openssl"
+            version = "1.0"
+            settings = "os", "arch", "compiler", "build_type"
+            exports_sources = ["ssl.cmake", "crypto.cmake", "root.cmake"]
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.dll", dst="bin", keep_path=False)
-                self.copy("*.dylib*", dst="lib", keep_path=False)
-                self.copy("*.so", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
-                self.copy("build-module.cmake", dst="share/cmake")
+                self.copy("*.cmake", dst="share/cmake")
 
             def package_info(self):
-                self.cpp_info.libs = ["library"]
-                module = os.path.join("share", "cmake", "build-module.cmake")
-                self.cpp_info.build_modules['cmake_find_package'] = [module, ]
-                self.cpp_info.build_modules['CMakeDeps'] = [module, ]
-    """)
+                ssl_module = os.path.join("share", "cmake", "ssl.cmake")
+                self.cpp_info.components["ssl"].set_property("cmake_build_modules", [ssl_module])
 
-    build_module = textwrap.dedent("""
-        message(">> Build-module is included")
+                crypto_module = os.path.join("share", "cmake", "crypto.cmake")
+                self.cpp_info.components["crypto"].set_property("cmake_build_modules", [crypto_module])
 
-        if(NOT TARGET nonamespace)
-            add_library(nonamespace INTERFACE IMPORTED)
-            target_link_libraries(nonamespace INTERFACE library::library)
-        endif()
-    """)
+                root_module = os.path.join("share", "cmake", "root.cmake")
+                self.cpp_info.set_property("cmake_build_modules", [root_module])
+        """)
+
+    ssl_cmake = textwrap.dedent("""
+        function(ssl_message MESSAGE_OUTPUT)
+            message("SSL MESSAGE:${ARGV${0}}")
+        endfunction()
+        """)
+    crypto_cmake = textwrap.dedent("""
+        function(crypto_message MESSAGE_OUTPUT)
+            message("CRYPTO MESSAGE:${ARGV${0}}")
+        endfunction()
+        """)
+    root_cmake = textwrap.dedent("""
+        function(root_message MESSAGE_OUTPUT)
+            message("ROOT MESSAGE:${ARGV${0}}")
+        endfunction()
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "ssl.cmake": ssl_cmake,
+                 "crypto.cmake": crypto_cmake,
+                 "root.cmake": root_cmake})
+    client.run("create .")
 
     consumer = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.0)
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        project(consumer)
+        from conans import ConanFile, CMake
 
-        find_package(library)
+        class Conan(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = ["CMakeLists.txt"]
+            generators = "CMakeDeps", "CMakeToolchain"
+            requires = "openssl/1.0"
 
-        get_target_property(LIBS1 library::library INTERFACE_LINK_LIBRARIES)
-        message(">> library::library libs: ${LIBS1}")
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
 
-        get_target_property(LIBS2 nonamespace INTERFACE_LINK_LIBRARIES)
-        message(">> nonamespace libs: ${LIBS2}")
+            def package_info(self):
+                self.cpp_info.requires = ["openssl::crypto"]
+        """)
 
-        add_executable(consumer main.cpp)
-        target_link_libraries(consumer nonamespace)
-    """)
+    cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(test)
+            find_package(openssl CONFIG)
+            crypto_message("hello!")
+            ssl_message("hello!")
+            root_message("hello!")
+            """)
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    # As we are requiring only "crypto" but it doesn't matter, it is not possible to include
+    # only crypto build_modules
+    client.run("create .")
+    assert "SSL MESSAGE:hello!" in client.out
+    assert "CRYPTO MESSAGE:hello!" in client.out
+    assert "ROOT MESSAGE:hello!" in client.out
 
-    main = textwrap.dedent("""
-        #include "library.h"
-
-        int main() {
-            library();
-        }
-    """)
-
-    @classmethod
-    def setup_class(cls):
-        cls.t = t = TestClient()
-        # Create a library providing a build-module
-        t.run('new library/version -s')
-        t.save({'conanfile.py': cls.conanfile,
-                'build-module.cmake': cls.build_module})
-        t.run('create conanfile.py library/version@ -s build_type=Debug')
-        t.run('create conanfile.py library/version@ -s build_type=Release')
-        # Prepare project to consume the targets
-        t.save({'CMakeLists.txt': cls.consumer, 'main.cpp': cls.main}, clean_first=True)
-
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-    @pytest.mark.tool_visual_studio
-    def test_multi_generator_windows(self):
-        t = self.t
-        with t.chdir('multi_windows'):
-            t.run('install library/version@ -g CMakeDeps -s build_type=Release')
-            t.run('install library/version@ -g CMakeDeps -s build_type=Debug')
-            generator = '-G "Visual Studio 15 Win64"'
-            t.run_command(
-                'cmake .. {} -DCMAKE_PREFIX_PATH:PATH="{}"'.format(generator, t.current_folder))
-            assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
-            assert '>> nonamespace libs: library::library' in t.out
-            t.run_command('cmake --build . --config Release')  # Compiles and links.
-
-    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
-    @pytest.mark.tool_xcodebuild
-    @pytest.mark.tool_cmake(version="3.19")
-    def test_multi_generator_macos(self):
-        t = self.t
-        with t.chdir('multi_macos'):
-            t.run('install library/version@ -g CMakeDeps -s build_type=Release')
-            t.run('install library/version@ -g CMakeDeps -s build_type=Debug')
-            t.run_command('cmake .. -G Xcode -DCMAKE_PREFIX_PATH:PATH="{}"'.format(t.current_folder))
-            assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
-            assert '>> nonamespace libs: library::library' in t.out
-            t.run_command('cmake --build . --config Release')  # Compiles and links.

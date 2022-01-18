@@ -59,6 +59,9 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
                         comp,
                         comp_requires_gennames)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
+                # Mechanism to avoid overwriting the component PC file in case of being
+                # the same as the root package one.
+                # Issue related: https://github.com/conan-io/conan/issues/10341
                 if pkg_genname not in comp_gennames:
                     ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info,
                                                                               comp_gennames)

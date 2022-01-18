@@ -1,3 +1,4 @@
+import os
 import re
 import tempfile
 import unittest
@@ -69,7 +70,8 @@ class MockRequester(object):
 
 class DownloaderUnitTest(unittest.TestCase):
     def setUp(self):
-        self.target = tempfile.mktemp()
+        d = tempfile.mkdtemp()
+        self.target = os.path.join(d, "target")
         self.out = TestBufferConanOutput()
 
     def test_succeed_download_to_file_if_not_interrupted(self):

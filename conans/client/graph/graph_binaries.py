@@ -157,6 +157,10 @@ class GraphBinariesAnalyzer(object):
                 node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
+
+            # this line fixed the compatible_packages with private case.
+            # https://github.com/conan-io/conan/issues/9880
+            node._package_id = previous_node.package_id
             return True
         self._evaluated[pref] = [node]
 
@@ -383,6 +387,8 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(str(conanfile), "validate"):
                 try:
                     conanfile.validate()
+                    # FIXME: this shouldn't be necessary in Conan 2.0
+                    conanfile._conan_dependencies = None
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
 

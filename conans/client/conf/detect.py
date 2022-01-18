@@ -265,6 +265,11 @@ def _detect_compiler_version(result, output, profile_path):
             result.append(("compiler.base.version", "4.8"))
         else:
             result.append(("compiler.base.version", "4.4"))
+    elif compiler == "msvc":
+        # Add default mandatory fields for MSVC compiler
+        result.append(("compiler.cppstd", "14"))
+        result.append(("compiler.runtime", "dynamic"))
+        result.append(("compiler.runtime_type", "Release"))
 
 
 def _detect_os_arch(result, output):

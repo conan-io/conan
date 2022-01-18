@@ -523,6 +523,35 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
+    def test_compatible_diamond(self):
+        # https://github.com/conan-io/conan/issues/9880
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                {}
+                settings = "build_type"
+                def package_id(self):
+                    if self.settings.build_type == "Debug":
+                        compatible_pkg = self.info.clone()
+                        compatible_pkg.settings.build_type = "Release"
+                        self.compatible_packages.append(compatible_pkg)
+                """)
+
+        client.save({"pkga/conanfile.py": conanfile.format(""),
+                     "pkgb/conanfile.py": conanfile.format('requires = ("pkga/0.1", "private"), '),
+                     "pkgc/conanfile.py": conanfile.format('requires = "pkga/0.1"'),
+                     "pkgd/conanfile.py": conanfile.format('requires = "pkgb/0.1", "pkgc/0.1"')
+                     })
+        client.run("create pkga pkga/0.1@ -s build_type=Release")
+        client.run("create pkgb pkgb/0.1@ -s build_type=Release")
+        client.run("create pkgc pkgc/0.1@ -s build_type=Release")
+
+        client.run("install pkgd -s build_type=Debug")
+        assert "pkga/0.1: Main binary package '5a67a79dbc25fd0fa149a0eb7a20715189a0d988' missing" \
+               in client.out
+        assert "pkga/0.1:4024617540c4f240a6a5e8911b0de9ef38a11a72 - Cache" in client.out
+
 
 def test_msvc_visual_incompatible():
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")

@@ -14,7 +14,7 @@ from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import save_toolchain_args
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
-from conan.tools.microsoft.visual import vs_ide_version
+from conan.tools.microsoft.visual import vs_ide_version, is_msvc
 from conans.errors import ConanException
 from conans.util.files import load, save
 
@@ -158,7 +158,7 @@ class FPicBlock(Block):
 class GLibCXXBlock(Block):
     template = textwrap.dedent("""
         {% if set_libcxx %}
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ set_libcxx }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ set_libcxx }}")
         {% endif %}
         {% if glibcxx %}
         add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
@@ -215,10 +215,10 @@ class SkipRPath(Block):
 
 class ArchitectureBlock(Block):
     template = textwrap.dedent("""
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ arch_flag }}")
-        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ arch_flag }}")
-        set(CONAN_SHARED_LINKER_FLAGS "${CONAN_SHARED_LINKER_FLAGS} {{ arch_flag }}")
-        set(CONAN_EXE_LINKER_FLAGS "${CONAN_EXE_LINKER_FLAGS} {{ arch_flag }}")
+        string(APPEND CONAN_CXX_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_C_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ arch_flag }}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ arch_flag }}")
         """)
 
     def context(self):
@@ -230,7 +230,7 @@ class ArchitectureBlock(Block):
 
 class CppStdBlock(Block):
     template = textwrap.dedent("""
-        message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
+        message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -266,8 +266,8 @@ class SharedLibBock(Block):
 
 class ParallelBlock(Block):
     template = textwrap.dedent("""
-        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} /MP{{ parallel }}")
-        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} /MP{{ parallel }}")
+        string(APPEND CONAN_CXX_FLAGS " /MP{{ parallel }}")
+        string(APPEND CONAN_C_FLAGS " /MP{{ parallel }}")
         """)
 
     def context(self):
@@ -350,22 +350,21 @@ class AppleSystemBlock(Block):
                 "armv8": "arm64",
                 "armv8_32": "arm64_32"}.get(arch, arch)
 
-    # TODO: refactor, comes from conans.client.tools.apple.py
     def _apple_sdk_name(self):
-        """returns proper SDK name suitable for OS and architecture
-        we're building for (considering simulators)"""
-        arch = self._conanfile.settings.get_safe('arch')
+        """
+        Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
+        there could be several ones depending on the OS architecture.
+
+        Note: In case of MacOS it'll be the same for all the architectures.
+        """
         os_ = self._conanfile.settings.get_safe('os')
-        if arch.startswith('x86'):
-            return {'Macos': 'macosx',
-                    'iOS': 'iphonesimulator',
-                    'watchOS': 'watchsimulator',
-                    'tvOS': 'appletvsimulator'}.get(os_)
+        os_sdk = self._conanfile.settings.get_safe('os.sdk')
+        if os_sdk:
+            return os_sdk
+        elif os_ == "Macos":  # it has only a single value for all the architectures for now
+            return "macosx"
         else:
-            return {'Macos': 'macosx',
-                    'iOS': 'iphoneos',
-                    'watchOS': 'watchos',
-                    'tvOS': 'appletvos'}.get(os_)
+            raise ConanException("Please, specify a suitable value for os.sdk.")
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
@@ -402,10 +401,10 @@ class FindConfigFiles(Block):
         {% endif %}
         # To support the generators based on find_package()
         {% if cmake_module_path %}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        list(PREPEND CMAKE_MODULE_PATH {{ cmake_module_path }})
         {% endif %}
         {% if cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        list(PREPEND CMAKE_PREFIX_PATH {{ cmake_prefix_path }})
         {% endif %}
         {% if android_prefix_path %}
         set(CMAKE_FIND_ROOT_PATH {{ android_prefix_path }} ${CMAKE_FIND_ROOT_PATH})
@@ -471,10 +470,18 @@ class UserToolchain(Block):
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
-        set(CMAKE_CXX_FLAGS_INIT "${CMAKE_CXX_FLAGS_INIT} ${CONAN_CXX_FLAGS}")
-        set(CMAKE_C_FLAGS_INIT "${CMAKE_C_FLAGS_INIT} ${CONAN_C_FLAGS}")
-        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CMAKE_SHARED_LINKER_FLAGS_INIT} ${CONAN_SHARED_LINKER_FLAGS}")
-        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CMAKE_EXE_LINKER_FLAGS_INIT} ${CONAN_EXE_LINKER_FLAGS}")
+        if(DEFINED CONAN_CXX_FLAGS)
+          string(APPEND CMAKE_CXX_FLAGS_INIT " ${CONAN_CXX_FLAGS}")
+        endif()
+        if(DEFINED CONAN_C_FLAGS)
+          string(APPEND CMAKE_C_FLAGS_INIT " ${CONAN_C_FLAGS}")
+        endif()
+        if(DEFINED CONAN_SHARED_LINKER_FLAGS)
+          string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " ${CONAN_SHARED_LINKER_FLAGS}")
+        endif()
+        if(DEFINED CONAN_EXE_LINKER_FLAGS)
+          string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
+        endif()
         """)
 
 
@@ -509,8 +516,19 @@ class GenericSystemBlock(Block):
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
         {% endif %}
         {% if compiler %}
+        if(NOT DEFINED ENV{CC})
         set(CMAKE_C_COMPILER {{ compiler }})
-        set(CMAKE_CXX_COMPILER {{ compiler }})
+        endif()
+        {% endif %}
+        {% if compiler_cpp %}
+        if(NOT DEFINED ENV{CXX})
+        set(CMAKE_CXX_COMPILER {{ compiler_cpp }})
+        endif()
+        {% endif %}
+        {% if compiler_rc %}
+        if(NOT DEFINED ENV{RC})
+        set(CMAKE_RC_COMPILER {{ compiler_rc }})
+        endif()
         {% endif %}
         {% if build_type %}
         set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
@@ -610,18 +628,29 @@ class GenericSystemBlock(Block):
 
         return system_name, system_version, system_processor
 
+    def _get_compiler(self, generator):
+        compiler = self._conanfile.settings.get_safe("compiler")
+        os_ = self._conanfile.settings.get_safe("os")
+
+        compiler_c = compiler_cpp = compiler_rc = None
+
+        # TODO: Check if really necessary now that conanvcvars is used
+        if "Ninja" in str(generator) and is_msvc(self._conanfile):
+            compiler_c = compiler_cpp = "cl"
+        elif os_ == "Windows" and compiler == "clang" and "Visual" not in str(generator):
+            compiler_rc = "clang"
+            compiler_c = "clang"
+            compiler_cpp = "clang++"
+
+        return compiler_c, compiler_cpp, compiler_rc
+
     def context(self):
         # build_type (Release, Debug, etc) is only defined for single-config generators
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
-        compiler = self._conanfile.settings.get_safe("compiler")
-        # TODO: Check if really necessary now that conanvcvars is used
-        if (generator is not None and "Ninja" in generator
-                and (compiler is not None and "Visual" in compiler or compiler == "msvc")):
-            compiler = "cl"
-        else:
-            compiler = None  # compiler defined by default
+
+        compiler, compiler_cpp, compiler_rc = self._get_compiler(generator)
 
         build_type = self._conanfile.settings.get_safe("build_type")
         build_type = build_type if not is_multi_configuration(generator) else None
@@ -629,6 +658,8 @@ class GenericSystemBlock(Block):
         system_name, system_version, system_processor = self._get_cross_build()
 
         return {"compiler": compiler,
+                "compiler_rc": compiler_rc,
+                "compiler_cpp": compiler_cpp,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
                 "build_type": build_type,

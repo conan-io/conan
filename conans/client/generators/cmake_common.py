@@ -472,7 +472,7 @@ class CMakeCommonMacros:
                 # https://cmake.org/cmake/help/v3.14/variable/MSVC_VERSION.html
                 if(
                     # 1930 = VS 17.0 (v143 toolset)
-                    (CONAN_COMPILER_VERSION STREQUAL "17" AND NOT MSVC_VERSION EQUAL 1930) OR
+                    (CONAN_COMPILER_VERSION STREQUAL "17" AND NOT((MSVC_VERSION EQUAL 1930) OR (MSVC_VERSION GREATER 1930))) OR
                     # 1920-1929 = VS 16.0 (v142 toolset)
                     (CONAN_COMPILER_VERSION STREQUAL "16" AND NOT((MSVC_VERSION GREATER 1919) AND (MSVC_VERSION LESS 1930))) OR
                     # 1910-1919 = VS 15.0 (v141 toolset)
