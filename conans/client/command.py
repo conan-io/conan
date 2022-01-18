@@ -256,13 +256,8 @@ class Command(object):
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='Path to a json file where the install information will be '
-                                 'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        parser.add_argument("--lockfile-node-id", action=OnceArgument,
-                            help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
 
@@ -295,9 +290,6 @@ class Command(object):
         except ConanException as exc:
             info = exc.info
             raise
-        finally:
-            if args.json and info:
-                CommandOutputer().json_output(info, args.json, os.getcwd())
 
     def imports(self, *args):
         """
