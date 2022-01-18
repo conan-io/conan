@@ -40,10 +40,10 @@ class _MesonAppleBlock(object):
                  "-arch", arch]  # architecture
         # FIXME: If user enters their own flags? Should we check it?
         context.update({
-            "c_args": flags,
-            "c_link_args": flags,
-            "cpp_args": flags,
-            "cpp_link_args": flags
+            "c_args": to_meson_value(flags),
+            "c_link_args": to_meson_value(flags),
+            "cpp_args": to_meson_value(flags),
+            "cpp_link_args": to_meson_value(flags)
         })
 
     # FIXME: 2.0: Remove this method and use the common one from conan.tools.apple.apple
@@ -216,10 +216,10 @@ class MesonToolchain(object):
         self.as_ = build_env.get("AS")
         self.windres = build_env.get("WINDRES")
         self.pkgconfig = build_env.get("PKG_CONFIG")
-        self.c_args = build_env.get('CFLAGS')
-        self.c_link_args = build_env.get('LDFLAGS')
-        self.cpp_args = build_env.get('CXXFLAGS')
-        self.cpp_link_args = build_env.get('LDFLAGS')
+        self.c_args = build_env.get('CFLAGS', [])
+        self.c_link_args = build_env.get('LDFLAGS', [])
+        self.cpp_args = build_env.get('CXXFLAGS', [])
+        self.cpp_link_args = build_env.get('LDFLAGS', [])
 
         # Define all the existing blocks
         self.blocks = [
