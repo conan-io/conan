@@ -119,7 +119,6 @@ def test_info_build_order_options():
     c.run("export dep2 --name=dep2 --version=0.1")
 
     c.run("graph build-order  consumer --build=missing --format=json")
-
     bo_json = json.loads(c.stdout)
 
     result = [

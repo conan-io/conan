@@ -351,7 +351,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_export_installed_folder(mode)
 
         self.client.save({f"license.lic": "mylicense"})
-        self.client.run("create . lasote/testing")
+        self.client.run("create . --user=lasote --channel=testing")
 
         the_time = time.time() + 10
         with patch.object(RevisionList, '_now', return_value=the_time):

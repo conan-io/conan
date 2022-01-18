@@ -64,7 +64,7 @@ def test_double_package_id_call():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@user/testing")
+    client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
     out = str(client.out)
     assert 1 == out.count("pkg/0.1@user/testing: Calling package_id()")
 
@@ -87,6 +87,7 @@ def test_remove_option_setting():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
 <<<<<<< HEAD
+<<<<<<< HEAD
     client.run("create . pkg/1.0@ -s os=Windows")
     assert "pkg/1.0: OPTION OPT=False" in client.out
     assert "pkg/1.0: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
@@ -98,9 +99,12 @@ def test_remove_option_setting():
     _check_conaninfo(client, "pkg/1.0", NO_SETTINGS_PACKAGE_ID)
 =======
     client.run("create . pkg/0.1@user/testing -s os=Windows")
+=======
+    client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Windows")
+>>>>>>> develop2
     assert "pkg/0.1@user/testing: OPTION OPT=False" in client.out
     assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
-    client.run("create . pkg/0.1@user/testing -s os=Linux -o pkg:opt=True")
+    client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux -o pkg:opt=True")
     assert "pkg/0.1@user/testing: OPTION OPT=True" in client.out
     assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
 >>>>>>> develop2
@@ -178,7 +182,7 @@ def test_option_in():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@user/testing")
+    client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
     assert "fpic is an option!!!" in client.out
     assert "fpic is an info.option!!!" in client.out
     assert "other is not an option!!!" in client.out
@@ -200,7 +204,11 @@ def test_build_type_remove_windows():
                    del self.info.settings.compiler.runtime
         """)
     client.save({"conanfile.py": conanfile})
+<<<<<<< HEAD
     client.run('create . pkg/1.0@ -s os=Windows -s compiler="Visual Studio" '
+=======
+    client.run('create . --name=pkg --version=0.1 -s os=Windows -s compiler="Visual Studio" '
+>>>>>>> develop2
                '-s compiler.version=14 -s build_type=Release')
 <<<<<<< HEAD
 

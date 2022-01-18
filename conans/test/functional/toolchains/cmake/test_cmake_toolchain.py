@@ -82,7 +82,7 @@ def test_cmake_toolchain_user_toolchain_from_dep():
         """)
     client.save({"conanfile.py": conanfile,
                  "mytoolchain.cmake": 'message(STATUS "mytoolchain.cmake !!!running!!!")'})
-    client.run("create . toolchain/0.1@")
+    client.run("create . --name=toolchain --version=0.1")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -99,7 +99,7 @@ def test_cmake_toolchain_user_toolchain_from_dep():
 
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": gen_cmakelists()}, clean_first=True)
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
     assert "mytoolchain.cmake !!!running!!!" in client.out
 
 
@@ -139,10 +139,10 @@ def test_cmake_toolchain_multiple_user_toolchain():
         """)
     client.save({"conanfile.py": conanfile,
                  "mytoolchain.cmake": 'message(STATUS "mytoolchain1.cmake !!!running!!!")'})
-    client.run("create . toolchain1/0.1@")
+    client.run("create . --name=toolchain1 --version=0.1")
     client.save({"conanfile.py": conanfile,
                  "mytoolchain.cmake": 'message(STATUS "mytoolchain2.cmake !!!running!!!")'})
-    client.run("create . toolchain2/0.1@")
+    client.run("create . --name=toolchain2 --version=0.1")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -174,7 +174,7 @@ def test_cmake_toolchain_multiple_user_toolchain():
 
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": gen_cmakelists()}, clean_first=True)
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
     assert "mytoolchain1.cmake !!!running!!!" in client.out
     assert "mytoolchain2.cmake !!!running!!!" in client.out
 

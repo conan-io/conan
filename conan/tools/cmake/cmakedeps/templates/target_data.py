@@ -125,18 +125,19 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def _get_global_cpp_cmake(self):
         global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.require)
+        return _TargetDataContext(global_cppinfo, pfolder_var_name, self.conanfile.package_folder,
+                                  self.require)
 
     def _get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
-
+        pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         direct_visible_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
                                                                   "direct": True})
         for comp_name, comp in sorted_comps.items():
-            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-            deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name)
+            deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name,
+                                                self.conanfile.package_folder, self.require)
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
@@ -170,7 +171,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
 class _TargetDataContext(object):
 
-    def __init__(self, cpp_info, pfolder_var_name, require=None):
+    def __init__(self, cpp_info, pfolder_var_name, package_folder, require=None):
 
         def join_paths(paths):
             """
@@ -179,12 +180,17 @@ class _TargetDataContext(object):
             """
             ret = []
             for p in paths:
-                norm_path = p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-                if os.path.isabs(p):
-                    ret.append('"{}"'.format(norm_path))
-                else:
+                assert os.path.isabs(p), "{} is not absolute".format(p)
+
+                if p.startswith(package_folder):
                     # Prepend the {{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }}
-                    ret.append('"${%s}/%s"' % (pfolder_var_name, norm_path))
+                    rel = p[len(package_folder):]
+                    rel = rel.replace('\\', '/').replace('$', '\\$').replace('"', '\\"').lstrip("/")
+                    norm_path = ("${%s}/%s" % (pfolder_var_name, rel))
+                else:
+                    norm_path = p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+                ret.append('"{}"'.format(norm_path))
+
             return "\n\t\t\t".join(ret)
 
         def join_flags(separator, values):

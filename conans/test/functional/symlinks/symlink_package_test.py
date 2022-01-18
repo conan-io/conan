@@ -45,4 +45,4 @@ class TestlinksTestConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_package})
 
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")

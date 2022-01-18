@@ -3,6 +3,7 @@
 import os
 import textwrap
 
+from conans.model.recipe_ref import RecipeReference
 from conans.util.env import environment_update
 
 
@@ -65,7 +66,9 @@ class TestWorkflow(object):
         try:
             path_to_conanfile = path_to_conanfile.replace('\\', '/')
             t.current_folder = working_dir
-            t.run("create {} {}".format(path_to_conanfile, self.lib1_ref))
+            r = RecipeReference.loads(self.lib1_ref)
+            n = f"--name={r.name} --version={r.version} --user={r.user} --channel={r.channel}"
+            t.run("create {} {}".format(path_to_conanfile, n))
             self.assertIn(">>>> I'm {}".format(self.lib1_ref), t.out)
             self.assertIn(">>>> content: {}".format(self.lib1_ref), t.out)
         finally:

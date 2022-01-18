@@ -42,7 +42,7 @@ class InitTest(unittest.TestCase):
         client.run("inspect .")
         self.assertIn("description: MyDescription", client.out)
         self.assertIn("license: MIT", client.out)
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("inspect pkg/0.1@user/testing")
         self.assertIn("description: MyDescription", client.out)
         self.assertIn("license: MIT", client.out)

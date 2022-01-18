@@ -16,7 +16,6 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import get_reference_fields, check_valid_ref
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
@@ -155,123 +154,6 @@ class Command(object):
             else:
                 json_output_file = args.json
             save(json_output_file, json_output)
-
-    def test(self, *args):
-        """
-        Tests a package consuming it from a conanfile.py with a test() method.
-
-        This command installs the conanfile dependencies (including the tested
-        package), calls a 'conan build' to build test apps and finally executes
-        the test() method. The testing recipe does not require name or version,
-        neither definition of package() or package_info() methods. The package
-        to be tested must exist in the local cache or any configured remote.
-        """
-        parser = argparse.ArgumentParser(description=self.test.__doc__,
-                                         prog="conan test",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
-                            ' to a recipe file with test() method'
-                            ' e.g. conan test_package/conanfile.py pkg/version@user/channel')
-        parser.add_argument("reference",
-                            help='pkg/version@user/channel of the package to be tested')
-        parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
-                            help="Working directory of the build process.")
-
-        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        args = parser.parse_args(*args)
-
-        self._warn_python_version()
-
-        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build,
-                                    conf=args.conf_build)
-        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
-
-        return self._conan_api.test(args.path, args.reference,
-                                args.profile_host, args.settings_host, args.options_host,
-                                args.env_host, conf=args.conf_host, remote_name=args.remote,
-                                update=args.update, build_modes=args.build,
-                                test_build_folder=args.test_build_folder,
-                                lockfile=args.lockfile, profile_build=profile_build)
-
-    def create(self, *args):
-        """
-        Builds a binary package for a recipe (conanfile.py).
-
-        Uses the specified configuration in a profile or in -s settings, -o
-        options, etc. If a 'test_package' folder (the name can be configured
-        with -tf) is found, the command will run the consumer project to ensure
-        that the package has been created correctly. Check 'conan test' command
-        to know more about 'test_folder' project.
-        """
-        parser = argparse.ArgumentParser(description=self.create.__doc__,
-                                         prog="conan create",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference", nargs='?', default=None,
-                            help='user/channel, version@user/channel or pkg/version@user/channel '
-                            '(if name or version declared in conanfile.py, they should match)')
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='json file path where the install information will be written to')
-        parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
-                            help='Working directory for the build of the test project.')
-        parser.add_argument("-tf", "--test-folder", action=OnceArgument,
-                            help='Alternative test folder name. By default it is "test_package". '
-                                 'Use "None" to skip the test stage')
-        parser.add_argument("--ignore-dirty", default=False, action='store_true',
-                            help='When using the "scm" feature with "auto" values, capture the'
-                                 ' revision and url even if there are uncommitted changes')
-        parser.add_argument("--build-require", action='store_true', default=False,
-                            help='The provided reference is a build-require')
-        parser.add_argument("--require-override", action="append",
-                            help="Define a requirement override")
-
-        _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
-
-        args = parser.parse_args(*args)
-        self._warn_python_version()
-
-        name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                               user_channel_input=True)
-
-        if any([user, channel]) and not all([user, channel]):
-            # Or user/channel or nothing, but not partial
-            raise ConanException("Invalid parameter '%s', "
-                                 "specify the full reference or user/channel" % args.reference)
-
-        if args.test_folder == "None":
-            # Now if parameter --test-folder=None (string None) we have to skip tests
-            args.test_folder = False
-
-        cwd = os.getcwd()
-
-        info = None
-        try:
-            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build,
-                                        conf=args.conf_build)
-            # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
-            #       to the API
-
-            info = self._conan_api.create(args.path, name=name, version=version, user=user,
-                                          channel=channel, profile_names=args.profile_host,
-                                          settings=args.settings_host, conf=args.conf_host,
-                                          options=args.options_host, env=args.env_host,
-                                          test_folder=args.test_folder,
-                                          build_modes=args.build,
-                                          remote_name=args.remote, update=args.update,
-                                          test_build_folder=args.test_build_folder,
-                                          lockfile=args.lockfile,
-                                          lockfile_out=args.lockfile_out,
-                                          ignore_dirty=args.ignore_dirty,
-                                          profile_build=profile_build,
-                                          is_build_require=args.build_require,
-                                          require_overrides=args.require_override)
-        except ConanException as exc:
-            raise
-        finally:
-            if args.json and info:
-                CommandOutputer().json_output(info, args.json, cwd)
 
     def download(self, *args):
         """

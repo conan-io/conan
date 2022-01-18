@@ -130,7 +130,7 @@ int main() {
                      "src/main.cpp": main_cpp})
 
         # Build consumer project
-        client.run("create . pkg/0.0@user/testing")
+        client.run("create . --name=pkg --version=0.0 --user=user --channel=testing")
         self.assertIn("    MyLib/0.1@user/editable from user folder - Editable", client.out)
         self.assertIn("    MyLib/0.1@user/editable:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Editable", client.out)
@@ -150,7 +150,7 @@ int main() {
 
         # Modify editable and build again
         client_editable.update_hello_word(hello_word="EDITED")
-        client.run("create . pkg/0.0@user/testing")
+        client.run("create . --name=pkg --version=0.0 --user=user --channel=testing")
         self.assertIn("Hello EDITED!", client.out)
         if use_repo_file:  # Repo file will override folders from cache
             self.assertIn("...using inrepo", client.out)

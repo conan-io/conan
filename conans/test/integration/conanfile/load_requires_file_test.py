@@ -19,13 +19,13 @@ class Test(ConanFile):
     requires = reqs()
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . hello0/0.1@user/channel")
+        client.run("create . --name=hello0 --version=0.1 --user=user --channel=channel")
 
         for i in (0, 1, 2):
             reqs = "hello%s/0.1@user/channel" % i
             client.save({"conanfile.py": conanfile,
                          "reqs.txt": reqs})
-            client.run("create . hello%s/0.1@user/channel" % (i + 1))
+            client.run("create . --name=hello%s --version=0.1 --user=user --channel=channel" % (i + 1))
 
         client.run("install --reference=hello3/0.1@user/channel")
         client.assert_listed_require({"hello0/0.1@user/channel": "Cache",

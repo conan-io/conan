@@ -465,7 +465,7 @@ class WinTest(unittest.TestCase):
         settings_b = " ".join('-s:b %s="%s"' % (k, v) for k, v in settings if v)
 
         client.run("new cmake_lib -d name=hello -d version=0.1")
-        client.run("create . hello/0.1@ %s" % settings_h)
+        client.run("create . %s" % settings_h)
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -510,7 +510,7 @@ class WinTest(unittest.TestCase):
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
 
         client.run("new cmake_lib -d name=hello -d version=0.1")
-        client.run("create . hello/0.1@ %s -tf=None" % (settings,))
+        client.run("create . %s -tf=None" % (settings,))
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -555,7 +555,7 @@ class WinTest(unittest.TestCase):
             if os.path.exists(build_test_folder):
                 shutil.rmtree(build_test_folder)
             runtime = "MT" if build_type == "Release" else "MTd"
-            client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
+            client.run("create . --name=hello --version=0.1 %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
         # Prepare the actual consumer package

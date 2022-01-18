@@ -21,7 +21,7 @@ def test_update_binaries():
                 self.copy("file.txt")
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@lasote/testing")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("upload pkg/0.1@lasote/testing --all -r default")
 
     client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
@@ -29,7 +29,7 @@ def test_update_binaries():
     value = load(os.path.join(client2.current_folder, "file.txt"))
 
     time.sleep(1)  # Make sure the new timestamp is later
-    client.run("create . pkg/0.1@lasote/testing")  # Because of random, this should be NEW prev
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")  # Because of random, this should be NEW prev
     client.run("upload pkg/0.1@lasote/testing --all -r default")
 
     client2.run("install --reference=pkg/0.1@lasote/testing")
@@ -43,11 +43,11 @@ def test_update_binaries():
 
     # Now check newer local modifications are not overwritten
     time.sleep(1)  # Make sure the new timestamp is later
-    client.run("create . pkg/0.1@lasote/testing")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("upload pkg/0.1@lasote/testing --all -r default")
 
     client2.save({"conanfile.py": conanfile})
-    client2.run("create . pkg/0.1@lasote/testing")
+    client2.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client2.run("install --reference=pkg/0.1@lasote/testing")
     value2 = load(os.path.join(client2.current_folder, "file.txt"))
     client2.run("install --reference=pkg/0.1@lasote/testing --update -r default")
@@ -135,7 +135,7 @@ def test_reuse():
 def test_update_binaries_failed():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . pkg/0.1@lasote/testing")
+    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("install --reference=pkg/0.1@lasote/testing --update")
     assert "pkg/0.1@lasote/testing: WARN: Can't update, there are no remotes configured or " \
            "enabled" in client.out

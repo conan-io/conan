@@ -102,7 +102,7 @@ class GitShallowTestCase(unittest.TestCase):
                                                url="https://github.com/conan-io/conan.git",
                                                rev=revision)})
 
-        client.run("create . {}".format(self.ref))
+        client.run(f"create . --name={self.ref.name} --version={self.ref.version} --user={self.ref.user} --channel={self.ref.channel}")
 
         if self.shallow in [None, True] and shallow_works:
             self.assertIn(">>> describe-fails", client.out)

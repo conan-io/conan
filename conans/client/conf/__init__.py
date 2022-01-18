@@ -46,6 +46,8 @@ os:
     Neutrino:
         version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
     baremetal:
+    VxWorks:
+        version: ["7"]
 arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
 compiler:
     sun-cc:

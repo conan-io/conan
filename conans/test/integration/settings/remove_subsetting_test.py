@@ -80,7 +80,7 @@ class ConanLib(ConanFile):
 """
         client.save({"conanfile.py": base,
                      "test_package/conanfile.py": test})
-        client.run("create . user/testing -s arch=x86_64 -s compiler=gcc "
+        client.run("create . --user=user --channel=testing -s arch=x86_64 -s compiler=gcc "
                    "-s compiler.version=4.9 -s compiler.libcxx=libstdc++11")
         self.assertNotIn("LIBCXX", client.out)
 
