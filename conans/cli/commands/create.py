@@ -91,10 +91,6 @@ def create(conan_api, parser, *args):
     conan_api.graph.analyze_binaries(deps_graph, build_modes, remote=remote, update=args.update)
     print_graph_packages(deps_graph)
 
-    # TODO: Keeping old printing to avoid many tests fail: TO REMOVE
-    out.highlight("\nLegacy graph output (to be removed):")
-    print_graph(deps_graph)
-
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
                                        remote=remote, update=args.update)
