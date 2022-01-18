@@ -714,11 +714,14 @@ class TestClient(object):
         prev = self.cache.get_package_revisions_references(pref)
         return True if prev else False
 
-    def assert_listed_require(self, requires):
+    def assert_listed_require(self, requires, build=False, python=False):
         """ parses the current command output, and extract the first "Requirements" section
         """
         lines = self.out.splitlines()
-        line_req = lines.index("Requirements")
+        header = "Requirements" if not build else "Build requirements"
+        if python:
+            header = "Python requires"
+        line_req = lines.index(header)
         reqs = []
         for line in lines[line_req+1:]:
             if not line.startswith("    "):

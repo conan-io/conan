@@ -15,7 +15,7 @@ def test_private_skip():
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     client.run("create . --name=app --version=1.0")
-    assert f"dep/1.0:{NO_SETTINGS_PACKAGE_ID} - Skip" in client.out
+    client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
 
 def test_private_no_skip():
@@ -28,11 +28,11 @@ def test_private_no_skip():
 
     # But if we want to build pkg, no skip
     client.run("create . --name=app --version=1.0 --build=app --build=pkg")
-    assert f"dep/1.0:{NO_SETTINGS_PACKAGE_ID} - Cache" in client.out
+    client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Cache")})
 
     client.run("remove dep/1.0 -p -f")  # Dep binary is removed not used at all
     client.run("create . --name=app --version=1.0 --build=app --build=pkg", assert_error=True)
-    assert f"dep/1.0:{NO_SETTINGS_PACKAGE_ID} - Missing" in client.out
+    client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Missing")})
 
 
 def test_consumer_no_skip():
@@ -42,7 +42,7 @@ def test_consumer_no_skip():
     client.run("create . --name=dep --version=1.0")
     client.save({"conanfile.py": GenConanfile().with_requires("dep/1.0")})
     client.run("create . --name=pkg --version=1.0")
-    package_id = re.search(r"pkg/1.0:(\S+)", str(client.out)).group(1)
+    package_id = client.created_package_id("pkg/1.0")
     client.save({"conanfile.py": GenConanfile().with_requirement("pkg/1.0", visible=False)})
 
     client.run("install . ")
@@ -56,7 +56,7 @@ def test_shared_link_static_skip():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_shared_option(False)})
     client.run("create . --name=dep --version=1.0")
-    package_id = re.search(r"dep/1.0:(\S+)", str(client.out)).group(1)
+    package_id = client.created_package_id("dep/1.0")
     client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0").
                 with_shared_option(True)})
     client.run("create . --name=pkg --version=1.0")
