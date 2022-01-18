@@ -55,19 +55,6 @@ class GitShallowTestCase(unittest.TestCase):
             shallow_attrib_str = '"shallow": {}'.format(self.shallow)
         return shallow_attrib_str
 
-    def _check_info_values(self, client):
-        client.run("inspect {} -a scm".format(self.ref))  # Check we get a loadable conanfile.py
-        if self.shallow in [None]:
-            self.assertNotIn('shallow', str(client.out))
-        elif self.shallow in [True]:  # This is the default value
-            not_appears = 'shallow' not in str(client.out)
-            value_explicit = 'shallow: True' in str(client.out)
-            self.assertTrue(not_appears or value_explicit)
-        elif self.shallow in ['None']:
-            self.assertIn('shallow: None', str(client.out))
-        else:
-            self.assertIn('shallow: False', str(client.out))
-
     def test_export_scm_to_conandata(self):
         # Check the shallow value is stored and propagated with the proper value
         client = TestClient()
@@ -84,8 +71,6 @@ class GitShallowTestCase(unittest.TestCase):
             self.assertIn('shallow: null', content)
         else:
             self.assertIn('shallow: false', content)
-
-        self._check_info_values(client)
 
     # FIXME : https://github.com/conan-io/conan/issues/8449
     # scm_to_conandata=1 changes behavior for shallow=None

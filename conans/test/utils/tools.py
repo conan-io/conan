@@ -660,12 +660,6 @@ class TestClient(object):
         SCMInfo = namedtuple('SCMInfo', ['revision', 'type', 'url', 'shallow', 'verify_ssl'])
         return SCMInfo(revision, scm_type, url, shallow, verify_ssl)
 
-    def scm_info(self, reference):
-        self.run("inspect %s -a=scm --json=scm.json" % reference)
-        data = json.loads(self.load("scm.json"))
-        os.unlink(os.path.join(self.current_folder, "scm.json"))
-        return self._create_scm_info(data)
-
     def scm_info_cache(self, reference):
         import yaml
 
