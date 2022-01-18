@@ -64,4 +64,4 @@ def test_shared_link_static_skip():
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     client.run("create . --name=app --version=1.0")
-    assert f"dep/1.0:{package_id} - Skip" in client.out
+    client.assert_listed_binary({"dep/1.0": (package_id, "Skip")})
