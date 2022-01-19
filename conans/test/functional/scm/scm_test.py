@@ -1052,7 +1052,7 @@ class TestConan(ConanFile):
         client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.save({"conanfile.py": conanfile + exports_sources, "include/file": "content"})
         client.run("create .")
-        client.run("upload test/1.0@ -r upload_repo")
+        client.run("upload test/1.0 -r upload_repo")
         self.assertIn("Uploading conan_sources.tgz", client.out)
         ref = RecipeReference("test", "1.0")
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision

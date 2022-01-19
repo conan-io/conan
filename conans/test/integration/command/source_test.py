@@ -195,7 +195,7 @@ class ConanLib(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "sources.cpp": "sources"})
         client.run("create . --name=hello --version=0.1")
-        client.run("upload hello/0.1@ -r server0")
+        client.run("upload hello/0.1 -r server0")
         client.run("remove * -f")
 
         # install from server0 that has the sources, upload to server1 (does not have the package)
