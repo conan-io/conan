@@ -78,9 +78,10 @@ class IOSMesonTestCase(unittest.TestCase):
     @parameterized.expand([('armv8', 'iOS', '10.0', 'iphoneos'),
                            ('armv7', 'iOS', '10.0', 'iphoneos'),
                            ('x86', 'iOS', '10.0', 'iphonesimulator'),
-                           ('x86_64', 'iOS', '10.0', 'iphonesimulator')
+                           ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
+                           ('armv8', 'Macos', None, None)  # m1
                            ])
-    def test_meson_toolchain(self, arch, os_, os_version, sdk):
+    def test_ios_meson_toolchain_cross_compiling(self, arch, os_, os_version, sdk):
         self.arch = arch
         self.os = os_
         self.os_sdk = sdk

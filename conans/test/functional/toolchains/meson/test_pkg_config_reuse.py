@@ -41,9 +41,7 @@ class MesonPkgConfigTest(TestMesonBase):
     def test_reuse(self):
         self.t.run("new hello/0.1 -s")
         self.t.run("create . hello/0.1@ %s" % self._settings_str)
-
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
-
         # Prepare the actual consumer package
         self.t.save({"conanfile.py": self._conanfile_py,
                      "meson.build": self._meson_build,
@@ -53,7 +51,6 @@ class MesonPkgConfigTest(TestMesonBase):
         # Build in the cache
         self.t.run("install . %s" % self._settings_str)
         self.assertIn("conanfile.py: Generator pkg_config created hello.pc", self.t.out)
-
         self.t.run("build .")
         self.t.run_command(os.path.join("build", "demo"))
 

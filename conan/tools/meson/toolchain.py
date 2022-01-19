@@ -14,19 +14,17 @@ from conans.util.files import save
 
 class _MesonAppleBlock(object):
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, toolchain):
         self._conanfile = conanfile
-        # Settings
-        self._os = conanfile.settings.get_safe("os")
+        self._toolchain = toolchain
 
-    def update_context(self, context):
-        if not is_apple_os(self._os) or not cross_building(self._conanfile):
-            return {}
-
-        # SDK path is mandatory
+        os_ = conanfile.settings.get_safe("os")
+        if not is_apple_os(os_):
+            return
+        # SDK path is mandatory for cross-building
         sdk_path = self._conanfile.conf["tools.meson.mesontoolchain:sdk_path"]
-        if not sdk_path:
-            raise ConanException("You must provide a valid SDK path.")
+        if not sdk_path and self._toolchain.cross_build:
+            raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
         os_version = self._conanfile.settings.get_safe("os.version")
         os_subsystem = self._conanfile.settings.get_safe("os.subsystem")
@@ -34,17 +32,16 @@ class _MesonAppleBlock(object):
         # os_sdk = os.path.basename(sdk_path).split(".")[0].lower()
         os_sdk = _MesonAppleBlock.apple_sdk_name(self._conanfile)
         arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
-        apple_version_flag = _MesonAppleBlock.apple_min_version_flag(os_version, os_sdk, os_subsystem)
-        flags = [apple_version_flag,  # deployment target flag
-                 "-isysroot", sdk_path,  # sysroot
-                 "-arch", arch]  # architecture
-        # FIXME: If user enters their own flags? Should we check it?
-        context.update({
-            "c_args": to_meson_value(flags),
-            "c_link_args": to_meson_value(flags),
-            "cpp_args": to_meson_value(flags),
-            "cpp_link_args": to_meson_value(flags)
-        })
+        # Calculating main flags
+        deployment_target_flag = " " + _MesonAppleBlock.apple_min_version_flag(os_version, os_sdk,
+                                                                               os_subsystem)
+        sysroot_flag = " -isysroot " + sdk_path if sdk_path else ""
+        arch_flag = " -arch " + arch
+        # Adding all the flags needed (it does not matter if they are duplicated)
+        self._toolchain.c_args = deployment_target_flag + sysroot_flag + arch_flag
+        self._toolchain.c_link_args = deployment_target_flag + sysroot_flag + arch_flag
+        self._toolchain.cpp_args = deployment_target_flag + sysroot_flag + arch_flag
+        self._toolchain.cpp_link_args = deployment_target_flag + sysroot_flag + arch_flag
 
     # FIXME: 2.0: Remove this method and use the common one from conan.tools.apple.apple
     #             Depends on https://github.com/conan-io/conan/pull/10277
@@ -61,7 +58,7 @@ class _MesonAppleBlock(object):
         if subsystem == 'catalyst':
             # special case, despite Catalyst is macOS, it requires an iOS version argument
             flag = '-mios-version-min'
-        if not flag:
+        if not flag or not os_version:
             return ''
         return "%s=%s" % (flag, os_version)
 
@@ -191,7 +188,7 @@ class MesonToolchain(object):
                 os_target = settings_target.get_safe("os")
                 arch_target = settings_target.get_safe("arch")
                 self.cross_build["target"] = to_meson_machine(os_target, arch_target)
-            if os_host in ("iOS", "watchOS", "tvOS"):  # default cross-compiler in Apple is common
+            if is_apple_os(os_host):  # default cross-compiler in Apple is common
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
         else:
@@ -216,18 +213,18 @@ class MesonToolchain(object):
         self.as_ = build_env.get("AS")
         self.windres = build_env.get("WINDRES")
         self.pkgconfig = build_env.get("PKG_CONFIG")
-        self.c_args = build_env.get('CFLAGS', [])
-        self.c_link_args = build_env.get('LDFLAGS', [])
-        self.cpp_args = build_env.get('CXXFLAGS', [])
-        self.cpp_link_args = build_env.get('LDFLAGS', [])
+        self.c_args = build_env.get("CFLAGS", "")
+        self.c_link_args = build_env.get("LDFLAGS", "")
+        self.cpp_args = build_env.get("CXXFLAGS", "")
+        self.cpp_link_args = build_env.get("LDFLAGS", "")
 
         # Define all the existing blocks
         self.blocks = [
-            _MesonAppleBlock(conanfile)
+            _MesonAppleBlock(conanfile, self)
         ]
 
     def _context(self):
-        context = {
+        return {
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in  self.project_options.items()},
             # https://mesonbuild.com/Builtin-options.html#directories
@@ -253,17 +250,14 @@ class MesonToolchain(object):
             "b_ndebug": to_meson_value(self._b_ndebug),
             # https://mesonbuild.com/Builtin-options.html#compiler-options
             "cpp_std": self._cpp_std,
-            "c_args": to_meson_value(self.c_args),
-            "c_link_args": to_meson_value(self.c_link_args),
-            "cpp_args": to_meson_value(self.cpp_args),
-            "cpp_link_args": to_meson_value(self.cpp_link_args),
+            "c_args": to_meson_value(self.c_args.strip().split()),
+            "c_link_args": to_meson_value(self.c_link_args.strip().split()),
+            "cpp_args": to_meson_value(self.cpp_args.strip().split()),
+            "cpp_link_args": to_meson_value(self.cpp_link_args.strip().split()),
             "pkg_config_path": self.pkg_config_path,
             "preprocessor_definitions": self.preprocessor_definitions,
             "cross_build": self.cross_build
         }
-        for block in self.blocks:
-            block.update_context(context)
-        return context
 
     @property
     def content(self):
