@@ -263,9 +263,8 @@ def _handle_system_requirements(conan_file, pref, cache, out):
     package_layout = cache.package_layout(pref.ref)
     system_reqs_path = package_layout.system_reqs()
     system_reqs_package_path = package_layout.system_reqs_package(pref)
-    # TODO: check if we want to remove this and always run the system_requirements
-    #if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
-    #     return
+    if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
+         return
 
     ret = call_system_requirements(conan_file, out)
 
