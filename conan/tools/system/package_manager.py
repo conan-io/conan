@@ -1,37 +1,36 @@
-from conans.errors import ConanException
-
 CHECK_METHODS = ["check"]
-MODIFY_METHODS = ["install", "update"]
+INSTALL_METHODS = ["install", "update"]
+
+MODE_CHECK = "check"
+MODE_INSTALL = "install"
 
 
-class Tool(object):
+class SystemPackageManagerTool(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._active_tool = self._conanfile.conf["tools.system.package_manager:tool"]
         self._sudo = self._conanfile.conf["tools.system.package_manager:sudo"]
         self._sudo_askpass = self._conanfile.conf["tools.system.package_manager:sudo_askpass"]
-        self._mode = self._conanfile.conf["tools.system.package_manager:mode"] or "check" # install, check
+        self._mode = self._conanfile.conf[
+                         "tools.system.package_manager:mode"] or MODE_CHECK  # install, check
 
     def packager_method(wrapped):
         def wrapper(self, *args, **kwargs):
-            # function to make all checks
-            wrapped(self, *args, **kwargs)
-        return wrapper
+            method_name = wrapped.__name__
+            if self._active_tool == self.__class__.tool_name:
+                if method_name in INSTALL_METHODS and self._mode == MODE_CHECK:
+                    self._conanfile.output.warn("Can't {}. Please update packages manually or set "
+                                                "'tools.system.package_manager:mode' to "
+                                                "'install'".format(method_name))
+                else:
+                    wrapped(self, *args, **kwargs)
+            else:
+                self._conanfile.output.warn("Ignoring call to {}.{}. Set "
+                                            "'tools.system.package_manager:tool' to activate tool "
+                                            "as the system package manager "
+                                            "tool".format(self.__class__.__name__, method_name))
 
-    # def __getattribute__(self, name):
-    #     if name not in CHECK_METHODS + MODIFY_METHODS:
-    #         return object.__getattribute__(self, name)
-    #     if self._active_tool == self.__class__.name:
-    #         try:
-    #             if name in MODIFY_METHODS and self._mode != "install":
-    #                 self._conanfile.output.warn(
-    #                     "Can't {}. Please update packages manually or set "
-    #                     "'tools.system.package_manager:mode' to 'install'".format(name))
-    #             else:
-    #                 return object.__getattribute__(self, name)
-    #         except AttributeError:
-    #             raise ConanException("There is no {} method defined in tool: {}".format(name,
-    #                                                                                     self.__class__.name))
+        return wrapper
 
     @property
     def sudo_str(self):
@@ -40,27 +39,27 @@ class Tool(object):
         return "{}{}".format(sudo, askpass)
 
 
-class Apt(Tool):
+class Apt(SystemPackageManagerTool):
     # TODO: apt? apt-get?
-    name = "apt-get"
+    tool_name = "apt-get"
 
-    @Tool.packager_method
+    @SystemPackageManagerTool.packager_method
     def install(self, packages, recommends=False):
         recommends_str = '' if recommends else '--no-install-recommends '
-        command = "{}{} install -y {}{}".format(self.sudo_str, self.name, recommends_str,
+        command = "{}{} install -y {}{}".format(self.sudo_str, self.tool_name, recommends_str,
                                                 " ".join(packages))
         return self._conanfile.run(command)
 
-    @Tool.packager_method
+    @SystemPackageManagerTool.packager_method
     def update(self):
-        command = "{}{} update".format(self.sudo_str, self.name)
+        command = "{}{} update".format(self.sudo_str, self.tool_name)
         return self._conanfile.run(command)
 
     def check(self, packages):
         not_installed = [pkg for pkg in packages if not self.check_package(pkg)]
         return not_installed
 
-    @Tool.packager_method
+    @SystemPackageManagerTool.packager_method
     def check_package(self, package):
         command = "dpkg-query -W -f='${Status}' {} | grep -q \"ok installed\"".format(package)
         return self._conanfile.run(command)
