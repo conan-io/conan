@@ -3,7 +3,8 @@ import textwrap
 
 import pytest
 
-from conan.tools.system.package_manager import Apt
+from conan.tools.system.package_manager import Apt, Dnf, Yum
+from conans import Settings
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
@@ -18,6 +19,7 @@ from conans.test.utils.tools import TestClient
 def test_sudo_str(sudo, sudo_askpass, expected_str):
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
+    conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:sudo"] = sudo
     conanfile.conf["tools.system.package_manager:sudo_askpass"] = sudo_askpass
     apt = Apt(conanfile)
@@ -31,6 +33,7 @@ def test_sudo_str(sudo, sudo_askpass, expected_str):
 def test_apt_install_recommends(recommends, recommends_str):
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
+    conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = "apt-get"
     conanfile.conf["tools.system.package_manager:mode"] = "install"
     apt = Apt(conanfile)
@@ -41,6 +44,7 @@ def test_apt_install_recommends(recommends, recommends_str):
 def test_apt_install_mode_check():
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
+    conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = "apt-get"
     apt = Apt(conanfile)
     apt.install(["package1", "package2"])
@@ -51,6 +55,7 @@ def test_apt_install_mode_check():
 def test_apt_update_mode_check():
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
+    conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = "apt-get"
     conanfile.conf["tools.system.package_manager:mode"] = "check"
     apt = Apt(conanfile)
@@ -62,6 +67,7 @@ def test_apt_update_mode_check():
 def test_apt_update_mode_install():
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
+    conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = "apt-get"
     conanfile.conf["tools.system.package_manager:mode"] = "install"
     apt = Apt(conanfile)
@@ -77,10 +83,34 @@ def test_apt_check():
         from conans import ConanFile
         from conan.tools.system import Apt
         class MyPkg(ConanFile):
+            settings = "arch"
             def system_requirements(self):
                 apt = Apt(self)
                 not_installed = apt.check(["non-existing1", "non-existing2"])
                 print(not_installed)
         """)})
-    client.run("create . test/1.0@ -c tools.system.package_manager:tool=apt-get")
-    assert "['non-existing1', 'non-existing2']" in client.out
+    client.run("create . test/1.0@ -c tools.system.package_manager:tool=apt-get -s:b arch=armv8 "
+               "-s:h arch=x86")
+    assert "['non-existing1:i386', 'non-existing2:i386']" in client.out
+
+
+def test_yum_update_mode_install():
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    conanfile.settings = Settings()
+    conanfile.conf["tools.system.package_manager:tool"] = "yum"
+    conanfile.conf["tools.system.package_manager:mode"] = "install"
+    yum = Yum(conanfile)
+    yum.update()
+    assert yum._conanfile.command == "yum check-update -y"
+
+
+def test_dnf_update_mode_install():
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    conanfile.settings = Settings()
+    conanfile.conf["tools.system.package_manager:tool"] = "dnf"
+    conanfile.conf["tools.system.package_manager:mode"] = "install"
+    dnf = Dnf(conanfile)
+    dnf.update()
+    assert dnf._conanfile.command == "dnf check-update -y"
