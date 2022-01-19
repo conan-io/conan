@@ -5,9 +5,9 @@ from collections import OrderedDict
 from conans.model.build_info import DefaultOrderedDict
 
 _DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
-                   "frameworkdirs"]
+                   "frameworkdirs", "objects"]
 _FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "cxxflags",
-                    "sharedlinkflags", "exelinkflags", "objects"]
+                    "sharedlinkflags", "exelinkflags"]
 _ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
 
 
@@ -138,11 +138,20 @@ class NewCppInfo(object):
 
     def set_relative_base_folder(self, folder):
         """Prepend the folder to all the directories"""
-        for cname, c in self.components.items():
+        for component in self.components.values():
             for varname in _DIRS_VAR_NAMES:
-                origin = getattr(self.components[cname], varname)
+                origin = getattr(component, varname)
                 if origin is not None:
                     origin[:] = [os.path.join(folder, el) for el in origin]
+            if component._generator_properties is not None:
+                updates = {}
+                for prop_name, value in component._generator_properties.items():
+                    if prop_name == "cmake_build_modules":
+                        if isinstance(value, list):
+                            updates[prop_name] = [os.path.join(folder, v) for v in value]
+                        else:
+                            updates[prop_name] = os.path.join(folder, value)
+                component._generator_properties.update(updates)
 
     def get_sorted_components(self):
         """Order the components taking into account if they depend on another component in the
@@ -190,15 +199,6 @@ class NewCppInfo(object):
             self._aggregated = NewCppInfo()
             self._aggregated.components[None] = result
         return self._aggregated
-
-    def copy(self):
-        # Only used at the moment by layout() editable merging build+source .cpp data
-        ret = NewCppInfo()
-        ret._generator_properties = copy.copy(self._generator_properties)
-        ret.components = DefaultOrderedDict(lambda: _NewComponent())
-        for comp_name in self.components:
-            ret.components[comp_name] = copy.copy(self.components[comp_name])
-        return ret
 
     @property
     def required_components(self):

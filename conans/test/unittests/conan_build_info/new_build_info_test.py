@@ -15,17 +15,6 @@ def test_components_order():
     assert sorted_c == ["c2", "c3", "c4", "c1"]
 
 
-def test_generator_properties_copy():
-    cppinfo = NewCppInfo()
-    cppinfo.set_property("foo", "foo_value")
-    cppinfo.set_property("foo2", "foo2_value")
-
-    copied = cppinfo.copy()
-
-    assert copied.get_property("foo") == "foo_value"
-    assert copied.get_property("foo2") == "foo2_value"
-
-
 def test_component_aggregation():
     cppinfo = NewCppInfo()
 

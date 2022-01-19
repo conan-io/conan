@@ -209,5 +209,5 @@ def test_cmaketoolchain_no_warnings():
     client.run("install .")
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake "
                        "-Werror=dev --warn-uninitialized")
-    assert "Using Conan toolchain"
+    assert "Using Conan toolchain" in client.out
     # The real test is that there are no errors, it returns successfully

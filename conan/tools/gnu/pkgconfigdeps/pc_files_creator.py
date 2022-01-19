@@ -61,9 +61,16 @@ def _get_components_pc_files_and_content(conanfile, dep, components_info):
 
 def _get_package_with_components_pc_files_and_content(conanfile, dep, package_info, components_info):
     """
-    Get the PC files and content for dependencies with components
+    Get the PC files and content for dependencies with components.
+    The PC files will be saved in this order:
+        1- Package components.
+        2- Root component.
+
+    Note: If the root-package PC name matches with any other of the components one, the first one
+    is not going to be created. Components have more priority than root package.
     """
     pc_files = {}
+    # First, let's load all the components PC files
     pc_files.update(_get_components_pc_files_and_content(conanfile, dep, components_info))
     description = "Conan package: %s" % package_info.name
     pc_name, pc_content = get_alias_pc_filename_and_content(
@@ -72,6 +79,9 @@ def _get_package_with_components_pc_files_and_content(conanfile, dep, package_in
         package_info.requires,
         description
     )
+    # Second, let's load the root package's PC file ONLY
+    # if it does not already exist in components one
+    # Issue related: https://github.com/conan-io/conan/issues/10341
     if pc_name in pc_files:
         conanfile.output.warn("[%s] The PC package name %s already exists and it matches with "
                               "another component one. Please, review all the "

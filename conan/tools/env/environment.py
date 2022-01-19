@@ -450,12 +450,17 @@ class ProfileEnvironment:
                 else:
                     pattern, name = None, pattern_name[0]
 
+                # strip whitespaces before/after =
+                # values are not strip() unless they are a path, to preserve potential whitespaces
+                name = name.strip()
+
                 # When loading from profile file, latest line has priority
                 env = Environment()
                 if method == "unset":
                     env.unset(name)
                 else:
-                    if value.startswith("(path)"):
+                    if value.strip().startswith("(path)"):
+                        value = value.strip()
                         value = value[6:]
                         method = method + "_path"
                     getattr(env, method)(name, value)
