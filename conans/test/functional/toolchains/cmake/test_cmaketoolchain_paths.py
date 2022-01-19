@@ -6,7 +6,8 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-ios10_armv8_settings = "-s os=iOS -s os.version=10.0 -s arch=armv8"
+ios10_armv8_settings = "-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8"
+
 
 class _FindRootPathModes(object):
     def __init__(self, package=None, library=None, framework=None, include=None, program=None):
@@ -16,6 +17,7 @@ class _FindRootPathModes(object):
         self.include = include
         self.program = program
 
+
 find_root_path_modes_default = _FindRootPathModes()
 find_root_path_modes_cross_build = _FindRootPathModes(
     package="ONLY",
@@ -24,6 +26,7 @@ find_root_path_modes_cross_build = _FindRootPathModes(
     include="ONLY",
     program="NEVER",
 )
+
 
 def _cmake_command_toolchain(find_root_path_modes):
     cmake_command = "cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake"
