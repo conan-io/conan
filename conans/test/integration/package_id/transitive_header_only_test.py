@@ -28,10 +28,12 @@ class TransitiveIdsTest(unittest.TestCase):
                                                    .with_requirement("liba/1.1", force=True)})
         client.run("create . --name=libd --version=1.0", assert_error=True)
         # both B and C require a new binary
-        self.assertIn("liba/1.1:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Cache", client.out)
-        self.assertIn("libb/1.0:46c8f4521a594111030a345f3e9226be694a7af9 - Missing", client.out)
-        self.assertIn("libc/1.0:46f469d728bc56e1ed16b9c55694c9c01242aab2 - Missing", client.out)
-        self.assertIn("libd/1.0:0a6175c4d1f80c58309f6181970cc5a9a7bf1183 - Build", client.out)
+        client.assert_listed_binary(
+            {"liba/1.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604", "Cache"),
+             "libb/1.0": ("46c8f4521a594111030a345f3e9226be694a7af9", "Missing"),
+             "libc/1.0": ("46f469d728bc56e1ed16b9c55694c9c01242aab2", "Missing"),
+             "libd/1.0": ("0a6175c4d1f80c58309f6181970cc5a9a7bf1183", "Build")
+             })
 
     def test_transitive_major_mode(self):
         # https://github.com/conan-io/conan/issues/6450
@@ -54,7 +56,8 @@ class TransitiveIdsTest(unittest.TestCase):
                                                    .with_package_id(major_mode)})
         client.run("create . --name=libc --version=1.0")
         # Check the LibC ref with RREV keeps the same
-        self.assertIn("libc/1.0:de5eb15e850454460888e474aa49c3e3e0bca1ff - Build", client.out)
+        client.assert_listed_binary({"libc/1.0": ("de5eb15e850454460888e474aa49c3e3e0bca1ff",
+                                                  "Build")})
         # LibD -> LibC
         client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")})
         client.run("create . --name=libd --version=1.0")
@@ -62,13 +65,15 @@ class TransitiveIdsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require("libd/1.0")
                                                    .with_requirement("liba/1.1", force=True)})
         client.run("create . --name=libe --version=1.0", assert_error=True)
-        self.assertIn("liba/1.1:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Cache", client.out)
-        self.assertIn("libb/1.0:46c8f4521a594111030a345f3e9226be694a7af9 - Missing", client.out)
         # Check the LibC ref with RREV keeps the same, it is in cache, not missing
-        self.assertIn("libc/1.0:de5eb15e850454460888e474aa49c3e3e0bca1ff - Cache", client.out)
         # But LibD package ID changes and is missing, because it depends transitively on LibA
-        self.assertIn("libd/1.0:0a6175c4d1f80c58309f6181970cc5a9a7bf1183 - Missing", client.out)
-        self.assertIn("libe/1.0:8058c868f0bea030a54158bf13965fd976401b03 - Build", client.out)
+        client.assert_listed_binary(
+            {"liba/1.1": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604", "Cache"),
+             "libb/1.0": ("46c8f4521a594111030a345f3e9226be694a7af9", "Missing"),
+             "libc/1.0": ("de5eb15e850454460888e474aa49c3e3e0bca1ff", "Cache"),
+             "libd/1.0": ("0a6175c4d1f80c58309f6181970cc5a9a7bf1183", "Missing"),
+             "libe/1.0": ("8058c868f0bea030a54158bf13965fd976401b03", "Build")
+             })
 
     @pytest.mark.xfail(reason="package_id have changed")
     def test_transitive_unrelated(self):
@@ -173,6 +178,7 @@ class TransitiveIdsTest(unittest.TestCase):
 
         # USE THE NEW FIXED PACKAGE_ID
         client.run("create . --name=libd --version=1.0", assert_error=True)
-        self.assertIn("liba/2.0:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Cache", client.out)
-        self.assertIn("libb/1.0:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Cache", client.out)
-        self.assertIn("libc/1.0:663774e443032ab6e9ba77f5e36244a5404787f6 - Missing", client.out)
+        client.assert_listed_binary({"liba/2.0": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604", "Cache"),
+                                     "libb/1.0": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604", "Cache"),
+                                     "libc/1.0": ("663774e443032ab6e9ba77f5e36244a5404787f6", "Missing"),
+                                     })
