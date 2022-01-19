@@ -11,7 +11,7 @@ class DownloadRevisionsTest(unittest.TestCase):
     def test_download_revs_enabled_with_fake_rrev(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/1.0@user/channel")
+        client.run("create . --name=pkg --version=1.0 --user=user --channel=channel")
         client.run("upload * --confirm -r default")
         client.run("remove * -f")
         client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)

@@ -187,7 +187,7 @@ class Pkg(ConanFile):
         # https://github.com/conan-io/conan/issues/6009
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
         client.run("upload * --confirm -r default")
         client.run("remove * -f")
 

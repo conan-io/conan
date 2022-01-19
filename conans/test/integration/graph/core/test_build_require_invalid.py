@@ -28,7 +28,7 @@ class TestInvalidConfiguration:
     def client(self):
         client = TestClient()
         client.save({"pkg/conanfile.py": self.conanfile})
-        client.run("create pkg pkg/0.1@ -s os=Linux")
+        client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
         return client
 
     def test_invalid(self, client):
@@ -50,7 +50,7 @@ class TestInvalidConfiguration:
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s os=Linux")
-        assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
+        client.assert_listed_binary({"pkg/0.1": (self.linux_package_id, "Cache")})
         assert "pkg/0.1: Already installed!" in client.out
 
     def test_invalid_build_require(self, client):
@@ -63,7 +63,7 @@ class TestInvalidConfiguration:
         conanfile_consumer = GenConanfile().with_tool_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s:b os=Linux -s:h os=Windows")
-        assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
+        client.assert_listed_binary({"pkg/0.1": (self.linux_package_id, "Cache")}, build=True)
         assert "pkg/0.1: Already installed!" in client.out
 
 
@@ -138,18 +138,18 @@ class TestInvalidBuildPackageID:
     def client(self):
         client = TestClient()
         client.save({"pkg/conanfile.py": self.conanfile})
-        client.run("create pkg pkg/0.1@ -s os=Linux")
+        client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
         return client
 
     def test_valid(self, client):
         conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s os=Windows")
-        assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
+        client.assert_listed_binary({"pkg/0.1": (self.linux_package_id, "Cache")})
         assert "pkg/0.1: Already installed!" in client.out
 
         client.run("install consumer -s os=Linux")
-        assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
+        client.assert_listed_binary({"pkg/0.1": (self.linux_package_id, "Cache")})
         assert "pkg/0.1: Already installed!" in client.out
 
     def test_invalid_try_build(self, client):
@@ -157,18 +157,18 @@ class TestInvalidBuildPackageID:
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s os=Windows --build", assert_error=True)
         # Only when trying to build, it will try to build the Windows one
-        assert "pkg/0.1:INVALID - Invalid" in client.out
+        client.assert_listed_binary({"pkg/0.1": ("INVALID", "Invalid")})
         assert "pkg/0.1: Invalid: Package does not work in Windows!" in client.out
 
     def test_valid_build_require_two_profiles(self, client):
         conanfile_consumer = GenConanfile().with_tool_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
         client.run("install consumer -s:b os=Linux -s:h os=Windows")
-        assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
+        client.assert_listed_binary({"pkg/0.1": (self.linux_package_id, "Cache")}, build=True)
         assert "pkg/0.1: Already installed!" in client.out
 
         client.run("install consumer -s:b os=Windows -s:h os=Windows")
-        assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
+        client.assert_listed_binary({"pkg/0.1": (self.linux_package_id, "Cache")}, build=True)
         assert "pkg/0.1: Already installed!" in client.out
 
 

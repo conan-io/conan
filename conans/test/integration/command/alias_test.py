@@ -34,7 +34,7 @@ class ConanAliasTest(unittest.TestCase):
 
         client.run("install . --build=missing")
 
-        self.assertIn("hello/0.1@lasote/channel from local", client.out)
+        client.assert_listed_require({"hello/0.1@lasote/channel": "Cache"})
         assert "hello/0.x@lasote/channel: hello/0.1@lasote/channel" in client.out
 
         ref = RecipeReference.loads("chat/1.0@lasote/channel")
@@ -49,7 +49,7 @@ class ConanAliasTest(unittest.TestCase):
         client.run('remove "*" -f')
 
         client.run("install .")
-        self.assertIn("hello/0.1@lasote/channel from 'default'", client.out)
+        client.assert_listed_require({"hello/0.1@lasote/channel": "Downloaded (default)"})
         self.assertNotIn("hello/0.x@lasote/channel from", client.out)
 
         client.alias("hello/0.x@lasote/channel",  "hello/0.2@lasote/channel")

@@ -1,9 +1,7 @@
-import unittest
-
 from conans.test.utils.tools import TestClient
 
 
-class LoadRequirementsTextFileTest(unittest.TestCase):
+class TestLoadRequirementsTextFileTest:
 
     def test_load_reqs_from_text_file(self):
         client = TestClient()
@@ -21,16 +19,16 @@ class Test(ConanFile):
     requires = reqs()
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . hello0/0.1@user/channel")
+        client.run("create . --name=hello0 --version=0.1 --user=user --channel=channel")
 
         for i in (0, 1, 2):
             reqs = "hello%s/0.1@user/channel" % i
             client.save({"conanfile.py": conanfile,
                          "reqs.txt": reqs})
-            client.run("create . hello%s/0.1@user/channel" % (i + 1))
+            client.run("create . --name=hello%s --version=0.1 --user=user --channel=channel" % (i + 1))
 
         client.run("install --reference=hello3/0.1@user/channel")
-        self.assertIn("hello0/0.1@user/channel from local", client.out)
-        self.assertIn("hello1/0.1@user/channel from local", client.out)
-        self.assertIn("hello2/0.1@user/channel from local", client.out)
-        self.assertIn("hello3/0.1@user/channel from local", client.out)
+        client.assert_listed_require({"hello0/0.1@user/channel": "Cache",
+                                      "hello1/0.1@user/channel": "Cache",
+                                      "hello2/0.1@user/channel": "Cache",
+                                      "hello3/0.1@user/channel": "Cache"})

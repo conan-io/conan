@@ -186,7 +186,7 @@ AA*: c/1.0@private_user/channel
 
             """)
         self.client.save({'conanfile.py': conanfile})
-        self.client.run("create . name/version@user/channel --json=myfile.json")
+        self.client.run("create . --name=name --version=version --user=user --channel=channel --json=myfile.json")
         my_json = self.client.load("myfile.json")
         my_json = json.loads(my_json)
 

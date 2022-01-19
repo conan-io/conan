@@ -43,8 +43,8 @@ def test_package_from_system():
 def test_test_package():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . gtest/1.0@")
-    client.run("create . cmake/1.0@")
+    client.run("create . --name=gtest --version=1.0")
+    client.run("create . --name=cmake --version=1.0")
 
     client.save({"conanfile.py": GenConanfile().with_tool_requires("cmake/1.0").
                 with_test_requires("gtest/1.0")})
@@ -85,7 +85,7 @@ def test_components_error():
             """)
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@")
+    client.run("create . --name=hello --version=1.0")
 
 
 def test_cpp_info_component_objects():
@@ -99,7 +99,7 @@ def test_cpp_info_component_objects():
             """)
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@ -s arch=x86_64 -s build_type=Release")
+    client.run("create . --name=hello --version=1.0 -s arch=x86_64 -s build_type=Release")
     client.run("install --reference=hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
     with open(os.path.join(client.current_folder, "hello-Target-release.cmake")) as f:
         content = f.read()
@@ -151,6 +151,6 @@ def test_cpp_info_component_error_aggregate():
     client.save({"hello/conanfile.py": conan_hello,
                  "consumer/conanfile.py": consumer,
                  "consumer/test_package/conanfile.py": test_package})
-    client.run("create hello hello/1.0@")
-    client.run("create consumer consumer/1.0@")
+    client.run("create hello --name=hello --version=1.0")
+    client.run("create consumer --name=consumer --version=1.0")
     assert "consumer/1.0 (test package): Running test()" in client.out

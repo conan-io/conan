@@ -14,7 +14,7 @@ class Pkg(ConanFile):
         self.cpp_info.sysroot = "HelloSysRoot"
 """
         client.save({"conanfile.py": sysroot})
-        client.run("create . sysroot/0.1@user/testing")
+        client.run("create . --name=sysroot --version=0.1 --user=user --channel=testing")
 
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -36,7 +36,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: PKG SYSROOT: HelloSysRoot", client.out)
         self.assertIn("pkg/0.1@user/testing (test package): Test SYSROOT: HelloSysRoot", client.out)
 

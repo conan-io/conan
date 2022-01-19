@@ -58,8 +58,8 @@ def test_cmake_virtualenv():
                  "consumer/CMakeLists.txt": cmakelists},
                 clean_first=True)
 
-    client.run("create cmakewrapper cmakewrapper/0.1@")
-    client.run("create consumer consumer/0.1@")
+    client.run("create cmakewrapper --name=cmakewrapper --version=0.1")
+    client.run("create consumer --name=consumer --version=0.1")
     assert "MYCMAKE WRAPPER!!" in client.out
     assert "consumer/0.1: Created package" in client.out
 
@@ -107,7 +107,7 @@ def test_complete():
     client.save({"conanfile.py": mycmake_conanfile,
                  "CMakeLists.txt": mycmake_cmakelists,
                  "main.cpp": mycmake_main}, clean_first=True)
-    client.run("create . mycmake/1.0@")
+    client.run("create . --name=mycmake --version=1.0")
 
     mylib = textwrap.dedent(r"""
         from conans import ConanFile
@@ -151,7 +151,7 @@ def test_complete():
                  "CMakeLists.txt": cmakelists},
                 clean_first=True)
 
-    client.run("create . myapp/0.1@ -s:b build_type=Release -s:h build_type=Debug")
+    client.run("create . --name=myapp --version=0.1 -s:b build_type=Release -s:h build_type=Debug")
     first, last = str(client.out).split("RUNNING MYAPP")
     assert "mycmake: Release!" in first
     assert "myopenssl/1.0: Hello World Release!" in first

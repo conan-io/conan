@@ -14,7 +14,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "source.txt": "somesource"})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("upload pkg/0.1@user/testing -r default")
 
         # Failure because remote is removed
@@ -175,7 +175,7 @@ class MultiRemoteTest(unittest.TestCase):
 
         client = TestClient(servers=servers)
         client.save({"conanfile.py": GenConanfile("mylib", "0.1")})
-        client.run("create . lasote/testing")
+        client.run("create . --user=lasote --channel=testing")
         client.run("remote login s1 admin -p password")
         client.run("upload mylib* -r s1 -c")
 
@@ -202,6 +202,7 @@ class MultiRemoteTest(unittest.TestCase):
         refs = ["hello0/0.1@lasote/stable", "hello1/0.1@lasote/stable", "hello2/0.1@lasote/stable"]
         client2.save({"conanfile.py": GenConanfile("helloX", "0.1").with_requires(*refs)})
         client2.run("install . --build=missing")
-        self.assertIn("hello0/0.1@lasote/stable from 'remote0'", client2.out)
-        self.assertIn("hello1/0.1@lasote/stable from 'remote1'", client2.out)
-        self.assertIn("hello2/0.1@lasote/stable from 'remote2'", client2.out)
+        client2.assert_listed_require({"hello0/0.1@lasote/stable": "Downloaded (remote0)",
+                                       "hello1/0.1@lasote/stable": "Downloaded (remote1)",
+                                       "hello2/0.1@lasote/stable": "Downloaded (remote2)",
+                                       })

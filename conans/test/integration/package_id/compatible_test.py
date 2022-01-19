@@ -39,16 +39,14 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
-        client.run("create . pkg/0.1@user/stable -pr=myprofile -s compiler.version=4.8")
-        package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
-        self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}'"
-                      " created", client.out)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -pr=myprofile -s compiler.version=4.8")
+        package_id = client.created_package_id("pkg/0.1@user/stable")
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
         client.run("install . -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
-        self.assertIn(f"pkg/0.1@user/stable:{package_id}", client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
     def test_compatible_setting_no_binary(self):
@@ -87,8 +85,8 @@ class CompatibleIDsTest(unittest.TestCase):
         # No fallback
         client.run("install . -pr=myprofile --build=missing")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
-        self.assertIn("pkg/0.1@user/stable:c6715d73365c2dd62f68836b2dee8359a312ff12 - Build",
-                      client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable":
+                                     ("c6715d73365c2dd62f68836b2dee8359a312ff12", "Build")})
 
     def test_compatible_setting_no_user_channel(self):
         client = TestClient()
@@ -115,14 +113,12 @@ class CompatibleIDsTest(unittest.TestCase):
                      "myprofile": profile})
 
         # No user/channel
-        client.run("create . pkg/0.1@ -pr=myprofile -s compiler.version=4.8")
-        package_id = re.search(r"pkg/0.1:(\S+)", str(client.out)).group(1)
-        self.assertIn(f"pkg/0.1: Package '{package_id}' created",
-                      client.out)
+        client.run("create . --name=pkg --version=0.1 -pr=myprofile -s compiler.version=4.8")
+        package_id = client.created_package_id("pkg/0.1")
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         client.run("install . -pr=myprofile")
-        self.assertIn(f"pkg/0.1:{package_id}", client.out)
+        client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
         self.assertIn("pkg/0.1: Already installed!", client.out)
 
     def test_compatible_option(self):
@@ -143,7 +139,7 @@ class CompatibleIDsTest(unittest.TestCase):
                                      % self.options.optimized)
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/stable")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
         package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}' created", client.out)
 
@@ -159,11 +155,10 @@ class CompatibleIDsTest(unittest.TestCase):
                       f"'{missing_id}' missing. Using compatible package"
                       f" '{package_id}'", client.out)
         # checking the resulting dependencies
-        self.assertIn(f"pkg/0.1@user/stable:{package_id} - Cache",
-                      client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
         client.run("install . -o pkg:optimized=3")
-        self.assertIn(f"pkg/0.1@user/stable:{package_id} - Cache", client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
     def test_visual_package_compatible_with_intel(self):
@@ -199,18 +194,18 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile visual_profile" % repr(ref))
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile visual_profile")
         package_id = re.search(r"bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
         client.run("install --reference=%s -pr intel_profile" % repr(ref))
         missing_id = "c1b60feb368929efd9e60fd47dbfa45969742332"
         self.assertIn(f"bye/0.1@us/ch: Main binary package '{missing_id}'"
                       " missing. Using compatible package "
                       f"'{package_id}'", client.out)
-        self.assertIn(f"bye/0.1@us/ch:{package_id} - Cache", client.out)
+        client.assert_listed_binary({"bye/0.1@us/ch": (package_id, "Cache")})
 
     def test_wrong_base_compatible(self):
         client = TestClient()
-        ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -230,7 +225,8 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile visual_profile" % repr(ref), assert_error=True)
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile visual_profile", assert_error=True)
         self.assertIn("The compiler 'Visual Studio' has no 'base' sub-setting", client.out)
 
     def test_intel_package_compatible_with_base(self):
@@ -266,7 +262,8 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile intel_profile" % repr(ref))
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile intel_profile")
         package_id = re.search(r"bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
         client.run("install --reference=%s -pr visual_profile" % repr(ref))
         missing_id = "6e399d2c50620569974e4d894ee9651ee7861be9"
@@ -274,11 +271,10 @@ class CompatibleIDsTest(unittest.TestCase):
                       f"'{missing_id}' missing. Using compatible "
                       f"package '{package_id}'",
                       client.out)
-        self.assertIn(f"bye/0.1@us/ch:{package_id} - Cache", client.out)
+        client.assert_listed_binary({"bye/0.1@us/ch": (package_id, "Cache")})
 
     def test_no_valid_compiler_keyword_base(self):
         client = TestClient()
-        ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -300,7 +296,8 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile visual_profile" % repr(ref), assert_error=True)
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile visual_profile", assert_error=True)
         self.assertIn("Specify 'compiler' as a keywork "
                       "argument. e.g: 'parent_compiler(compiler=\"intel\")'", client.out)
 
@@ -338,7 +335,8 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "intel_profile": intel_profile,
                      "visual_profile": visual_profile})
-        client.run("create . %s --profile intel_profile" % repr(ref))
+        client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
+                   "--profile intel_profile")
         client.run("install --reference=%s -pr visual_profile" % repr(ref), assert_error=True)
         self.assertIn("Missing prebuilt package for 'bye/0.1@us/ch'", client.out)
 
@@ -415,14 +413,15 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
         # Create package with gcc 4.8
-        client.run("create . pkg/0.1@user/stable -pr=myprofile -s compiler.version=4.8")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable "
+                   "-pr=myprofile -s compiler.version=4.8")
         package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}'"
                       " created", client.out)
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("create . consumer/0.1@user/stable -pr=myprofile")
+        client.run("create . --name=consumer --version=0.1 --user=user --channel=stable -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
         self.assertIn(f"pkg/0.1@user/stable:{package_id} - Cache",
                       client.out)
@@ -433,13 +432,13 @@ class CompatibleIDsTest(unittest.TestCase):
 
         # Create package with gcc 4.9
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/stable -pr=myprofile")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: Package 'c6715d73365c2dd62f68836b2dee8359a312ff12'"
                       " created", client.out)
 
         # Consume it
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("create . consumer/0.1@user/stable -pr=myprofile")
+        client.run("create . --name=consumer --version=0.1 --user=user --channel=stable -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
         self.assertIn("pkg/0.1@user/stable:c6715d73365c2dd62f68836b2dee8359a312ff12 - Cache",
                       client.out)
@@ -465,11 +464,11 @@ class CompatibleIDsTest(unittest.TestCase):
                 """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing -s os=Linux")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux")
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("install . -s os=Windows --build=missing")
-        self.assertIn(f"pkg/0.1@user/testing:{package_id} - Cache", client.out)
+        client.assert_listed_binary({"pkg/0.1@user/testing": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
     def test_compatible_package_python_requires(self):
@@ -492,12 +491,11 @@ class CompatibleIDsTest(unittest.TestCase):
                 """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing -s os=Linux")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux")
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("install . -s os=Windows")
-        self.assertIn(f"pkg/0.1@user/testing:{package_id} - Cache",
-                      client.out)
+        client.assert_listed_binary({"pkg/0.1@user/testing": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
     @pytest.mark.xfail(reason="lockfiles have been deactivated at the moment")
@@ -518,7 +516,7 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/stable -s os=Linux")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -s os=Linux")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: OS: Linux!", client.out)
         self.assertIn("pkg/0.1@user/stable: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'"
                       " created", client.out)
@@ -553,14 +551,15 @@ class CompatibleIDsTest(unittest.TestCase):
                      "pkgc/conanfile.py": conanfile.format('requires = "pkga/0.1"'),
                      "pkgd/conanfile.py": conanfile.format('requires = "pkgb/0.1", "pkgc/0.1"')
                      })
-        client.run("create pkga pkga/0.1@ -s build_type=Release")
-        client.run("create pkgb pkgb/0.1@ -s build_type=Release")
-        client.run("create pkgc pkgc/0.1@ -s build_type=Release")
+        client.run("create pkga --name=pkga --version=0.1 -s build_type=Release")
+        client.run("create pkgb --name=pkgb --version=0.1 -s build_type=Release")
+        client.run("create pkgc --name=pkgc --version=0.1 -s build_type=Release")
 
         client.run("install pkgd -s build_type=Debug")
         assert "pkga/0.1: Main binary package '040ce2bd0189e377b2d15eb7246a4274d1c63317' missing" \
                in client.out
-        assert "pkga/0.1:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b - Cache" in client.out
+        client.assert_listed_binary({"pkga/0.1":
+                                         ("e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", "Cache")})
 
 
 @pytest.mark.xfail(reason="The conf core.package_id:msvc_visual_incompatible is not passed yet")
@@ -579,7 +578,7 @@ def test_msvc_visual_incompatible():
         """)
     client.save({"conanfile.py": conanfile,
                  "profile": profile})
-    client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
+    client.run('create . --name=pkg --version=0.1 -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
                '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
     client.run("install --reference=pkg/0.1@ -pr=profile")
     assert "Using compatible package" in client.out

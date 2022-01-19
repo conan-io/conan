@@ -47,6 +47,7 @@ def test_bazeldeps_interface_buildfiles():
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
     conanfile_dep._conan_node = Mock()
+    conanfile_dep.folders.set_base_package("")
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/2.0")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:

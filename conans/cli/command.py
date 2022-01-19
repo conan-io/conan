@@ -117,7 +117,7 @@ class BaseConanCommand(object):
                                                                        list(self._formatters)))
 
         if info is None:
-            raise ConanException("Format {formatarg} was specified, but command didn't return "
+            raise ConanException(f"Format {formatarg} was specified, but command didn't return "
                                  "anything to format")
         result = formatter(info)
         cli_out_write(result, endline="")

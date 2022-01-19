@@ -24,10 +24,11 @@ class TestListPackageRevisionsBase:
         self.client.update_servers()
         self.client.run("remote login {} username -p passwd".format(remote_name))
 
-    def _upload_recipe(self, remote, reference):
+    def _upload_recipe(self, remote, ref):
         self.client.save({'conanfile.py': GenConanfile()})
-        self.client.run("create . {}".format(reference))
-        self.client.run("upload --force -r {} {}".format(remote, reference))
+        ref = RecipeReference.loads(ref)
+        self.client.run(f"create . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
+        self.client.run("upload --force -r {} {}".format(remote, ref))
 
     @staticmethod
     def _get_fake_package_refence(recipe_name):

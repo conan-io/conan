@@ -195,7 +195,7 @@ def test_token_expired():
 
     c = TestClient(servers={"default": server}, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile()})
-    c.run("create . pkg/0.1@user/stable")
+    c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
     c.run("upload * -r=default -c")
     user, token, _ = c.cache.localdb.get_login(server.fake_url)
     assert user == "admin"

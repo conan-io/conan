@@ -25,7 +25,7 @@ def test_upload_parallel_error():
     client.save({"conanfile.py": GenConanfile()})
     client.run('remote login default admin -p password')
     for index in range(4):
-        client.run('create . lib{}/1.0@user/channel'.format(index))
+        client.run('create . --name=lib{} --version=1.0 --user=user --channel=channel'.format(index))
     client.run('upload lib* --parallel -c -r default --retry-wait=0', assert_error=True)
     assert "Connection fails with lib2 and lib4 references!" in client.out
     assert "Execute upload again to retry upload the failed files" in client.out
@@ -37,9 +37,9 @@ def test_upload_parallel_success():
 
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile()})
-    client.run('create . lib0/1.0@user/channel')
+    client.run('create . --name=lib0 --version=1.0 --user=user --channel=channel')
     assert "lib0/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
-    client.run('create . lib1/1.0@user/channel')
+    client.run('create . --name=lib1 --version=1.0 --user=user --channel=channel')
     assert "lib1/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
     client.run('remote login default admin -p password')
     client.run('upload lib* --parallel -c -r default')
@@ -59,7 +59,7 @@ def test_upload_parallel_fail_on_interaction():
     client.save({"conanfile.py": GenConanfile()})
     num_references = 2
     for index in range(num_references):
-        client.run('create . lib{}/1.0@user/channel'.format(index))
+        client.run('create . --name=lib{} --version=1.0 --user=user --channel=channel'.format(index))
         assert "lib{}/1.0@user/channel: Package '{}' created".format(
             index,
             NO_SETTINGS_PACKAGE_ID) in client.out
@@ -81,7 +81,7 @@ def test_beat_character_long_upload():
         """)
     client.save({"conanfile.py": slow_conanfile,
                  "hello.cpp": ""})
-    client.run("create . pkg/0.1@user/stable")
+    client.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
     client.run("remote login default admin --password=password")
     with patch("conans.util.progress_bar.TIMEOUT_BEAT_SECONDS", -1):
         with patch("conans.util.progress_bar.TIMEOUT_BEAT_CHARACTER", "%&$"):

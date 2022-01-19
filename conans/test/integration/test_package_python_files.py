@@ -27,7 +27,7 @@ def test_package_python_files():
                  "myfile.pyc": "",
                  "myfile.pyo": "",
                  ".DS_Store": ""})
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
     ref = RecipeReference.loads("pkg/0.1")
     ref_layout = client.get_latest_ref_layout(ref)
     export = ref_layout.export()
