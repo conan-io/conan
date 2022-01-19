@@ -337,7 +337,7 @@ class UploadExecutor:
         return ref
 
     def upload_package(self, package, remote, retry=None, retry_wait=None):
-        self._output.info(f"Uploading {package.pref}")
+        self._output.info(f"Uploading {package.pref.repr_reduced()}")
         pref = package.pref
         cache_files = package.files
         assert (pref.revision is not None), "Cannot upload a package without PREV"
@@ -346,9 +346,9 @@ class UploadExecutor:
         ref_layout = self._app.cache.ref_layout(pref.ref)
         conanfile_path = ref_layout.conanfile()
         self._app.hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref,
-                                   package_id=pref.package_id,
-                                   remote=remote)
+                                       reference=pref.ref,
+                                       package_id=pref.package_id,
+                                       remote=remote)
         t1 = time.time()
         self._app.remote_manager.upload_package(pref, cache_files, remote, retry, retry_wait)
         duration = time.time() - t1

@@ -43,10 +43,6 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote) if args.remote else None
 
-    if ":" in args.reference and args.package_query:
-        raise ConanException("'--package-query' argument cannot be used together with full "
-                             "reference")
-
     upload_bundle = _get_upload_references(conan_api, args)
 
     if not upload_bundle.recipes:
@@ -92,7 +88,7 @@ def _get_upload_references(conan_api: ConanAPIV2, args):
             raise ConanException("There are no packages matching {}".format(args.reference))
         ret.add_prefs(prefs)
     else:
-        # Upload the latests recipes and all the packages from the latest revisions
+        # Upload the recipes and all the packages
         refs = conan_api.search.recipe_revisions(args.reference)
         for ref in refs:
             if not args.only_recipe:

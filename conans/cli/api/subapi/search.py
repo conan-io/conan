@@ -121,13 +121,13 @@ class SearchAPI:
                                                                        query).keys()
             for pref in prefs:
                 if package_revision_expr == "latest":
-                    ret = self.conan_api.list.latest_package_revision(pref, remote)
-                    prevs = [ret] if ret else []
+                    latest = self.conan_api.list.latest_package_revision(pref, remote)
+                    if latest:
+                        ret.append(latest)
                 else:
                     prevs = self.conan_api.list.package_revisions(pref, remote)
-
-                for prev in prevs:
-                    if fnmatch.fnmatch(prev.revision, package_revision_expr):
-                        ret.append(prev)
+                    for prev in prevs:
+                        if fnmatch.fnmatch(prev.revision, package_revision_expr):
+                            ret.append(prev)
 
         return ret

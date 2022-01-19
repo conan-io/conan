@@ -149,9 +149,8 @@ class RestV2Methods(RestCommonMethods):
     def _upload_package(self, pref, files_to_upload, retry, retry_wait):
         urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
                 for fn in files_to_upload}
-
-        short_pref_name = "%s:%s" % (pref.ref, pref.package_id[0:4])
-        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=short_pref_name)
+        self._upload_files(files_to_upload, urls, retry, retry_wait,
+                           display_name=pref.repr_reduced())
 
     def _upload_files(self, files, urls, retry, retry_wait, display_name=None):
         t1 = time.time()

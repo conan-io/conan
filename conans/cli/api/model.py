@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List
 
 
@@ -83,7 +84,11 @@ class UploadBundle:
         self.recipes.append(RecipeUploadData(ref))
 
     def add_prefs(self, prefs):
-        self.recipes.append(RecipeUploadData(prefs[0].ref, prefs))
+        refs = defaultdict(list)
+        for pref in prefs:
+            refs[pref.ref].append(pref)
+        for ref, prefs in refs.items():
+            self.recipes.append(RecipeUploadData(ref, prefs))
 
     @property
     def any_upload(self):
