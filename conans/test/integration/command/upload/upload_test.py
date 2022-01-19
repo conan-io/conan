@@ -4,7 +4,7 @@ import platform
 import stat
 import textwrap
 import unittest
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 import pytest
 import requests
@@ -17,6 +17,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
+from conans.util.env import environment_update
 from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
 
 conanfile = """from conans import ConanFile
@@ -667,3 +668,56 @@ class UploadTest(unittest.TestCase):
                                                                         pref.package_id))[
             0]
         self.assertIn(pref.revision, search_result["revision"])
+
+
+@pytest.fixture(scope="module")
+def populate_client():
+    ret = defaultdict(list)
+    client = TurboTestClient(default_server_user=True)
+
+    package_lines = 'save(self, os.path.join(self.package_folder, "foo.txt"), ' \
+                    'os.getenv("foo_test", "Na"))'
+    conanfile = str(GenConanfile().with_settings("build_type").with_package(package_lines)\
+                              .with_import("from conan.tools.files import save")\
+                              .with_import("import os")\
+                              .with_import("import time"))
+    for ref in ["foo/1.0", "bar/1.1"]:
+        for i in range(2):
+            conanfile += "\n"*i  # Create 2 rrev
+            for j in range(2):  # Create 2 prev
+                with environment_update({'foo_test': str(j)}):
+                    pref = client.create(ref, args="-s build_type=Debug", conanfile=conanfile)
+                    ret[pref.ref].append(pref)
+                    pref = client.create(ref, args="-s build_type=Release", conanfile=conanfile)
+                    ret[pref.ref].append(pref)
+    return client, ret
+
+
+@pytest.mark.parametrize("data", [
+    {"upload": "foo*", "refs": ['foo/1.0']},
+    {"upload": "foo/*", "recipes": ['foo/1.0']},
+    {"upload": "*", "recipes": ['foo/1.0']},
+    {"upload": "*/*", "recipes": []},
+    {"upload": "*/*#*", "recipes": []},
+    {"upload": "*/*#z*", "recipes": ['foo/1.0@user/channel', 'foo/1.0', 'bar/1.1', 'fbar/1.1']},
+    {"upload": "f*", "recipes": ["bar/1.1"]},
+    {"upload": "*/1.1", "recipes": ["foo/1.0", "foo/1.0@user/channel"]},
+    {"upload": "*/*@user/*", "recipes": ["foo/1.0", "fbar/1.1", "bar/1.1"]},
+    {"upload": "*/*@*", "recipes": ['foo/1.0', 'fbar/1.1', 'bar/1.1']},
+    {"upload": "*/*#*:*", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0', 'fbar/1.1']},
+    {"upload": "foo/1.0@user/channel -p", "recipes": ['bar/1.1', 'foo/1.0@user/channel', 'foo/1.0',
+                                                      'fbar/1.1']},
+    # These are errors
+    {"upload": "foo", "error": True,
+     "error_msg": 'ERROR: Invalid expression, specify a version or a wildcard. e.g: foo*\n'},
+    {"upload": "*/*@", "error": True},
+    {"upload": "*#", "error": True},
+    {"upload": "*/*#", "error": True},
+])
+def test_upload_recipe_selection(populate_client, data):
+    client, refs = populate_client
+    # Clean previous test executions (client module scope)
+    client.run("remove '*' -f -r default")
+    # Upload the pattern
+    client.run("upload {} -c -r default".format(data["upload"]))
+
