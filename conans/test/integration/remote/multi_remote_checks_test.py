@@ -1,4 +1,3 @@
-import re
 import unittest
 from collections import OrderedDict
 
@@ -73,7 +72,7 @@ class Pkg(ConanFile):
         client.run("upload pkg* -r=server1 --confirm")
         client.run("remove * -p -f")
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg:opt=2")
-        package_id2 = re.search(r"pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
+        package_id2 = client.created_package_id("pkg/0.1@lasote/testing")
         client.run("upload Pkg* -r=server2 --confirm")
         client.run("remove * -p -f")
 

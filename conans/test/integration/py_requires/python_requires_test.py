@@ -42,7 +42,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
@@ -107,8 +107,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        self.assertIn("Python requires", str(client.out).splitlines())
-        self.assertIn("    base/1.1@user/testing", str(client.out).splitlines())
+        client.assert_listed_require({"base/1.1@user/testing": "Cache"}, python=True)
         self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
@@ -269,7 +268,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
@@ -720,16 +719,16 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Check that all the graph is printed properly
         #   - requirements
-        self.assertIn("    project/1.0@user/test from local cache - Cache", client.out)
+        client.assert_listed_require({"project/1.0@user/test": "Cache"})
         #   - python requires
-        self.assertIn("    python_requires11/1.0@user/test", client.out)
-        self.assertIn("    python_requires0/1.0@user/test", client.out)
-        self.assertIn("    python_requires22/1.0@user/test", client.out)
-        self.assertIn("    python_requires1/1.0@user/test", client.out)
-        self.assertIn("    python_requires2/1.0@user/test", client.out)
+        client.assert_listed_require({"python_requires11/1.0@user/test": "Cache",
+                                      "python_requires0/1.0@user/test": "Cache",
+                                      "python_requires22/1.0@user/test": "Cache",
+                                      "python_requires1/1.0@user/test": "Cache",
+                                      "python_requires2/1.0@user/test": "Cache"}, python=True)
         #   - packages
-        self.assertIn("    project/1.0@user/test:f9d5c46e6766f3cad7ae39c013485379b7b62e68 - Build",
-                      client.out)
+        client.assert_listed_binary({"project/1.0@user/test":
+                                     ("f9d5c46e6766f3cad7ae39c013485379b7b62e68", "Build")})
 
         #   - no mention to alias
         self.assertNotIn("alias", client.out)
