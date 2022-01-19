@@ -309,14 +309,6 @@ class ConfigInstallTest(unittest.TestCase):
     def test_failed_install_http(self):
         """ should install from a http zip
         """
-        conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    general.retry_wait=0
-                """)
-        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
-
         self.client.run('config install httpnonexisting', assert_error=True)
         self.assertIn("ERROR: Failed conan config install: "
                       "Error while installing config from httpnonexisting", self.client.out)
