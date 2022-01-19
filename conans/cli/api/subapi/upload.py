@@ -52,7 +52,7 @@ class UploadAPI:
         preparator.prepare(upload_data, remote, force)
 
     @api_method
-    def bundle(self, upload_bundle, remote, retry, retry_wait, force=False):
+    def upload_bundle(self, upload_bundle, remote, retry, retry_wait, force=False):
         app = ConanApp(self.conan_api.cache_folder)
         app.load_remotes([remote])
         preparator = PackagePreparator(app)

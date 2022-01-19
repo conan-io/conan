@@ -57,8 +57,8 @@ def upload(conan_api: ConanAPIV2, parser, *args):
 
     if not upload_bundle.any_upload:
         return
-    conan_api.upload.bundle(upload_bundle, remote, retry=args.retry, retry_wait=args.retry_wait,
-                            force=args.force)
+    conan_api.upload.upload_bundle(upload_bundle, remote, retry=args.retry, retry_wait=args.retry_wait,
+                                   force=args.force)
 
     # print(json.dumps(upload_bundle.serialize()))
 

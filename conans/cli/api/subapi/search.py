@@ -87,9 +87,6 @@ class SearchAPI:
         :param expression: lib*/1*#*:9283*
         :param query: package configuration query like "os=Windows AND (arch=x86 OR compiler=gcc)"
         :param remote: Remote object
-        :param latest_revision: If the package revision is not specified:
-              - When False: Resolve to all the package revisions
-              - When True: Resolve the latest package revision
         :return: a List of PkgReference
         """
         if ":" in expression:

@@ -35,7 +35,7 @@ class PkgConfiguration:
         self.requires = data.get("requires", [])
 
 
-class RecipeUploadData:
+class _RecipeUploadData:
     def __init__(self, ref, prefs=None):
         self.ref = ref
         self.upload = True
@@ -43,7 +43,7 @@ class RecipeUploadData:
         self.dirty = None
         self.build_always = None
         self.files = None
-        self.packages = [PackageUploadData(p) for p in prefs or []]
+        self.packages = [_PackageUploadData(p) for p in prefs or []]
 
     def serialize(self):
         return {
@@ -57,7 +57,7 @@ class RecipeUploadData:
         }
 
 
-class PackageUploadData:
+class _PackageUploadData:
     def __init__(self, pref):
         self.pref = pref
         self.upload = True
@@ -75,20 +75,20 @@ class PackageUploadData:
 
 class UploadBundle:
     def __init__(self):
-        self.recipes: List[RecipeUploadData] = []
+        self.recipes: List[_RecipeUploadData] = []
 
     def serialize(self):
         return [r.serialize() for r in self.recipes]
 
     def add_ref(self, ref):
-        self.recipes.append(RecipeUploadData(ref))
+        self.recipes.append(_RecipeUploadData(ref))
 
     def add_prefs(self, prefs):
         refs = defaultdict(list)
         for pref in prefs:
             refs[pref.ref].append(pref)
         for ref, prefs in refs.items():
-            self.recipes.append(RecipeUploadData(ref, prefs))
+            self.recipes.append(_RecipeUploadData(ref, prefs))
 
     @property
     def any_upload(self):
