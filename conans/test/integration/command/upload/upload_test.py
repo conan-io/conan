@@ -741,6 +741,21 @@ def test_upload_package_selection(populate_client):
     bar_revs = [r for r in refs.keys() if r.name == "bar"]
     bar_first, bar_latest = bar_revs
 
+    # Uploading the recipe uploads all the package revisions
+    # Clean the server test executions (client module scope)
+    client.run("remove '*' -f -r default")
+    # Upload the pattern
+    client.run("upload foo/1.0 -c -r default")
+    for ref in foo_revs:
+        for pref in (get_prev(ref, "Release", True),
+                     get_prev(ref, "Release", False),
+                     get_prev(ref, "Debug", False),
+                     get_prev(ref, "Debug", True)):
+            tmp = PkgReference.loads(pref.repr_notime())
+            tmp.revision = None
+            client.run("list package-revisions {} -r default".format(tmp.repr_notime()))
+            assert pref.repr_notime() in client.out
+
     # Foo all revision upload
     for pattern in ("foo/*#latest:*#latest",
                     "foo/*#{}:*#latest".format(foo_latest.revision)):

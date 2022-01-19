@@ -43,7 +43,7 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote) if args.remote else None
 
-    upload_bundle = _get_upload_references(conan_api, args)
+    upload_bundle = conan_api.upload.get_bundle(args.reference, args.package_query, args.only_recipe)
 
     if not upload_bundle.recipes:
         raise ConanException("No recipes found matching pattern '{}'".format(args.reference))
@@ -76,29 +76,3 @@ def _ask_confirm_upload(conan_api, upload_data):
                 msg = "Are you sure you want to upload package '%s'?" % package.pref.repr_notime()
                 if not ui.request_boolean(msg):
                     package.upload = False
-
-
-def _get_upload_references(conan_api: ConanAPIV2, args):
-    ret = UploadBundle()
-    query = args.package_query
-    if ":" in args.reference or query:
-        # We are uploading the selected packages and the recipes belonging to that
-        prefs = conan_api.search.package_revisions(args.reference, query=query)
-        if not prefs:
-            raise ConanException("There are no packages matching {}".format(args.reference))
-        ret.add_prefs(prefs)
-    else:
-        # Upload the recipes and all the packages
-        refs = conan_api.search.recipe_revisions(args.reference)
-        for ref in refs:
-            if not args.only_recipe:
-                configurations = conan_api.list.packages_configurations(ref)
-                tmp = conan_api.list.filter_packages_configurations(configurations, query)
-                if tmp:
-                    latests_prefs = [conan_api.list.latest_package_revision(p) for p in tmp]
-                    ret.add_prefs(latests_prefs)
-                else:
-                    ret.add_ref(ref)
-            else:
-                ret.add_ref(ref)
-    return ret

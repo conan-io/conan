@@ -42,32 +42,25 @@ def remove(conan_api: ConanAPIV2, parser, *args):
         if not _prefs and "*" not in args.reference and args.package_query == _not_specified_:
             raise ConanException("Binary package not found: '{}'".format(args.reference))
 
-    if ":" in args.reference:
-        if remove_all_packages:
-            raise ConanException("The -p argument cannot be used with a package reference")
+    if ":" in args.reference and remove_all_packages:
+        raise ConanException("The -p argument cannot be used with a package reference")
 
+    if ":" in args.reference or query:
         prefs = conan_api.search.package_revisions(args.reference, remote=remote, query=query)
         raise_if_package_not_found(prefs)
-        if confirmation("Remove {} package revisions from '{}'?".format(len(prefs), args.reference)):
-            for pref in prefs:
+        for pref in prefs:
+            if confirmation("Remove the package '{}'?".format(pref.repr_notime())):
                 conan_api.remove.package(pref, remote=remote)
     else:
-        if query:
-            prefs = conan_api.search.package_revisions(args.reference, remote=remote, query=query)
-            raise_if_package_not_found(prefs)
-            for pref in prefs:
-                if confirmation("Remove the package '{}'?".format(pref.repr_notime())):
-                    conan_api.remove.package(pref, remote=remote)
+        refs = conan_api.search.recipe_revisions(args.reference, remote=remote)
+        if not refs and "*" not in args.reference:
+            raise ConanException("Recipe not found: '{}'".format(args.reference))
+        if remove_all_packages:
+            for ref in refs:
+                if confirmation("Remove all packages from '{}'?".format(ref.repr_notime())):
+                    conan_api.remove.all_recipe_packages(ref, remote=remote)
         else:
-            refs = conan_api.search.recipe_revisions(args.reference, remote=remote)
-            if not refs and "*" not in args.reference:
-                raise ConanException("Recipe not found: '{}'".format(args.reference))
-            if remove_all_packages:
-                for ref in refs:
-                    if confirmation("Remove all packages from '{}'?".format(ref.repr_notime())):
-                        conan_api.remove.all_recipe_packages(ref, remote=remote)
-            else:
-                for ref in refs:
-                    if confirmation("Remove the recipe and all the packages of '{}'?"
-                                    "".format(ref.repr_notime())):
-                        conan_api.remove.recipe(ref, remote=remote)
+            for ref in refs:
+                if confirmation("Remove the recipe and all the packages of '{}'?"
+                                "".format(ref.repr_notime())):
+                    conan_api.remove.recipe(ref, remote=remote)
