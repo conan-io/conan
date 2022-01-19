@@ -1,11 +1,6 @@
-CHECK_METHODS = ["check"]
-INSTALL_METHODS = ["install", "update"]
-
-MODE_CHECK = "check"
-MODE_INSTALL = "install"
-
-
 class SystemPackageManagerTool(object):
+    install_methods = ["install", "update"]
+    mode_check = "check"
     tool_name = None
     install_command = ""
     update_command = ""
@@ -16,7 +11,7 @@ class SystemPackageManagerTool(object):
         self._active_tool = self._conanfile.conf["tools.system.package_manager:tool"]
         self._sudo = self._conanfile.conf["tools.system.package_manager:sudo"]
         self._sudo_askpass = self._conanfile.conf["tools.system.package_manager:sudo_askpass"]
-        self._mode = self._conanfile.conf["tools.system.package_manager:mode"] or MODE_CHECK
+        self._mode = self._conanfile.conf["tools.system.package_manager:mode"] or self.mode_check
         self._arch = self._conanfile.settings.get_safe("arch")
         self._arch_names = {}
         self._arch_separator = ""
@@ -38,7 +33,7 @@ class SystemPackageManagerTool(object):
         def wrapper(self, *args, **kwargs):
             method_name = wrapped.__name__
             if self._active_tool == self.__class__.tool_name:
-                if method_name in INSTALL_METHODS and self._mode == MODE_CHECK:
+                if method_name in self.install_methods and self._mode == self.mode_check:
                     self._conanfile.output.warn("Can't {}. Please update packages manually or set "
                                                 "'tools.system.package_manager:mode' to "
                                                 "'install'".format(method_name))
