@@ -1075,7 +1075,7 @@ class TestConan(ConanFile):
         client.run_command("git commit -m \"initial commit\"")
         client.run("create . ")
         self.assertIn("Repo origin deduced by 'auto': https://github.com/fake/fake.git", client.out)
-        client.run("upload test/1.0@ -r upload_repo")
+        client.run("upload test/1.0 -r upload_repo")
         self.assertNotIn("Uploading conan_sources.tgz", client.out)
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
         ref.revision = rev
