@@ -158,7 +158,7 @@ class MesonToolchain(object):
                     self._conanfile.settings.get_safe("compiler"))
 
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        self._cpp_std = to_meson_cppstd(compiler, cppstd) if cppstd else None
+        self._cpp_std = to_cppstd_flag(compiler, cppstd)
 
         if compiler == "Visual Studio":
             vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
@@ -249,7 +249,7 @@ class MesonToolchain(object):
             "b_staticpic": to_meson_value(self._b_staticpic),
             "b_ndebug": to_meson_value(self._b_ndebug),
             # https://mesonbuild.com/Builtin-options.html#compiler-options
-            "cpp_std": self._cpp_std,
+            "cpp_std": to_meson_value(self._cpp_std),
             "c_args": to_meson_value(self.c_args.strip().split()),
             "c_link_args": to_meson_value(self.c_link_args.strip().split()),
             "cpp_args": to_meson_value(self.cpp_args.strip().split()),

@@ -1,4 +1,4 @@
-__all__ = ["to_meson_machine", "to_meson_value", "to_meson_cppstd"]
+__all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag"]
 
 # https://mesonbuild.com/Reference-tables.html#operating-system-names
 _meson_system_map = {
@@ -47,18 +47,18 @@ _meson_cpu_family_map = {
     'x86_64': ('x86_64', 'x86_64', 'little')
 }
 
-_meson_vs_cppstd_map = {
-    '14': "'vc++14'",
-    '17': "'vc++17'",
-    '20': "'vc++latest'"
+_vs_cppstd_map = {
+    '14': "vc++14",
+    '17': "vc++17",
+    '20': "vc++latest"
 }
 
-_meson_cppstd_map = {
-    '98': "'c++03'", 'gnu98': "'gnu++03'",
-    '11': "'c++11'", 'gnu11': "'gnu++11'",
-    '14': "'c++14'", 'gnu14': "'gnu++14'",
-    '17': "'c++17'", 'gnu17': "'gnu++17'",
-    '20': "'c++1z'", 'gnu20': "'gnu++1z'"
+_cppstd_map = {
+    '98': "c++03", 'gnu98': "gnu++03",
+    '11': "c++11", 'gnu11': "gnu++11",
+    '14': "c++14", 'gnu14': "gnu++14",
+    '17': "c++17", 'gnu17': "gnu++17",
+    '20': "c++1z", 'gnu20': "gnu++1z"
 }
 
 
@@ -87,8 +87,9 @@ def to_meson_value(value):
     return value
 
 
-def to_meson_cppstd(compiler, cppstd):
+# FIXME: Move to another more common module
+def to_cppstd_flag(compiler, cppstd):
     if compiler == "Visual Studio":
-        return _meson_vs_cppstd_map.get(cppstd, "'none'")
+        return _vs_cppstd_map.get(cppstd)
     else:
-        return _meson_cppstd_map.get(cppstd, "'none'")
+        return _cppstd_map.get(cppstd)
