@@ -264,7 +264,7 @@ def _handle_system_requirements(conan_file, pref, cache, out):
     system_reqs_path = package_layout.system_reqs()
     system_reqs_package_path = package_layout.system_reqs_package(pref)
     if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
-         return
+        return
 
     ret = call_system_requirements(conan_file, out)
 
