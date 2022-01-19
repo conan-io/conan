@@ -23,7 +23,7 @@ class SystemPackageManagerTool(object):
                                                 "'tools.system.package_manager:mode' to "
                                                 "'install'".format(method_name))
                 else:
-                    wrapped(self, *args, **kwargs)
+                    return wrapped(self, *args, **kwargs)
             else:
                 self._conanfile.output.warn("Ignoring call to {}.{}. Set "
                                             "'tools.system.package_manager:tool' to activate tool "
@@ -55,11 +55,11 @@ class Apt(SystemPackageManagerTool):
         command = "{}{} update".format(self.sudo_str, self.tool_name)
         return self._conanfile.run(command)
 
+    @SystemPackageManagerTool.packager_method
     def check(self, packages):
-        not_installed = [pkg for pkg in packages if not self.check_package(pkg)]
+        not_installed = [pkg for pkg in packages if self.check_package(pkg) != 0]
         return not_installed
 
-    @SystemPackageManagerTool.packager_method
     def check_package(self, package):
-        command = "dpkg-query -W -f='${Status}' {} | grep -q \"ok installed\"".format(package)
-        return self._conanfile.run(command)
+        command = "dpkg-query -W -f='${{Status}}' {} | grep -q \"ok installed\"".format(package)
+        return self._conanfile.run(command, ignore_errors=True)

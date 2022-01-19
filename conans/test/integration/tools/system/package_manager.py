@@ -1,8 +1,12 @@
+import platform
+import textwrap
+
 import pytest
 
 from conan.tools.system.package_manager import Apt
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock
+from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.parametrize("sudo, sudo_askpass, expected_str", [
@@ -63,3 +67,20 @@ def test_apt_update_mode_install():
     apt = Apt(conanfile)
     apt.update()
     assert apt._conanfile.command == "apt-get update"
+
+
+@pytest.mark.tool_apt_get
+@pytest.mark.skipif(platform.system() != "Linux", reason="Requires apt")
+def test_apt_check():
+    client = TestClient()
+    client.save({"conanfile.py": textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.system import Apt
+        class MyPkg(ConanFile):
+            def system_requirements(self):
+                apt = Apt(self)
+                not_installed = apt.check(["non-existing1", "non-existing2"])
+                print(not_installed)
+        """)})
+    client.run("create . test/1.0@ -c tools.system.package_manager:tool=apt-get")
+    assert "['non-existing1', 'non-existing2']" in client.out
