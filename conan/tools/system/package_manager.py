@@ -18,7 +18,7 @@ class SystemPackageManagerTool(object):
         self._sudo_askpass = self._conanfile.conf["tools.system.package_manager:sudo_askpass"]
         self._mode = self._conanfile.conf["tools.system.package_manager:mode"] or MODE_CHECK
         self._arch = self._conanfile.settings.get_safe("arch")
-        self._arch_names = None
+        self._arch_names = {}
         self._arch_separator = ""
 
     def get_package_name(self, package):
@@ -63,7 +63,7 @@ class SystemPackageManagerTool(object):
     @method_decorator  # noqa
     def update(self):
         command = self.update_command.format(sudo=self.sudo_str,
-                                              tool=self.tool_name)
+                                             tool=self.tool_name)
         return self._conanfile.run(command)
 
     @method_decorator  # noqa
@@ -113,7 +113,7 @@ class Yum(SystemPackageManagerTool):
     tool_name = "yum"
     install_command = "{sudo}{tool} install -y {packages}"
     update_command = "{sudo}{tool} check-update -y"
-    check_command = "{tool} -q"
+    check_command = "rpm -q {package}"
 
     def __init__(self, conanfile, arch_names=None):
         super(Yum, self).__init__(conanfile)
@@ -135,7 +135,7 @@ class Dnf(Yum):
 class Brew(SystemPackageManagerTool):
     tool_name = "brew"
     install_command = "{sudo}{tool} install {packages}"
-    update_command = "{sudo}{tool} update}"
+    update_command = "{sudo}{tool} update"
     check_command = 'test -n "$({tool} ls --versions {package})"'
 
 
@@ -155,7 +155,7 @@ class PkgUtil(SystemPackageManagerTool):
 
 class Chocolatey(SystemPackageManagerTool):
     tool_name = "choco"
-    install_command = "{tool} --install --yes {package}"
+    install_command = "{tool} --install --yes {packages}"
     update_command = "{tool} outdated"
     check_command = '{tool} search --local-only --exact {package} | ' \
                     'findstr /c:"1 packages installed."'
@@ -175,6 +175,6 @@ class PacMan(SystemPackageManagerTool):
 
 class Zypper(SystemPackageManagerTool):
     tool_name = "zypper"
-    install_command = "{sudo}{tool}  --non-interactive in {packages}"
+    install_command = "{sudo}{tool} --non-interactive in {packages}"
     update_command = "{sudo}{tool} --non-interactive ref"
     check_command = "rpm -q {package}"
