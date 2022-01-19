@@ -399,23 +399,45 @@ class FindFiles(Block):
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
-        {% if generators_folder or host_build_paths_root or host_build_paths_noroot or build_build_paths %}
-        set(CMAKE_MODULE_PATH {{ generators_folder }} {{ host_build_paths_root }} {{ host_build_paths_noroot }} {{ build_build_paths }} ${CMAKE_MODULE_PATH})
+
+        # Definition of CMAKE_MODULE_PATH
+        {% if build_build_paths %}
+        # Explicitly defined "buildirs" of "build" context dependencies
+        list(PREPEND CMAKE_MODULE_PATH {{ build_build_paths }})
         {% endif %}
-        {% if generators_folder or host_build_paths_noroot %}
-        set(CMAKE_PREFIX_PATH {{ generators_folder }} {{ host_build_paths_noroot }} ${CMAKE_PREFIX_PATH})
+        {% if host_build_paths_noroot %}
+        # Explicitly defined "builddirs" of "host" dependencies
+        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_noroot }})
+        {% endif %}
+        {% if host_build_paths_root %}
+        # The root (which is the default builddirs) path of dependencies in the host context
+        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_root }})
+        {% endif %}
+        {% if generators_folder %}
+        # the generators folder (where conan generates files, like this toolchain)
+        list(PREPEND CMAKE_MODULE_PATH {{ generators_folder }})
+        {% endif %}
+
+        # Definition of CMAKE_PREFIX_PATH, CMAKE_XXXXX_PATH
+        {% if host_build_paths_noroot %}
+        # The explicitly defined "builddirs" of "host" context dependencies must be in PREFIX_PATH
+        list(PREPEND CMAKE_PREFIX_PATH {{ host_build_paths_noroot }})
+        {% endif %}
+        {% if generators_folder %}
+        # The Conan local "generators" folder, where this toolchain is saved.
+        list(PREPEND CMAKE_PREFIX_PATH {{ generators_folder }} )
         {% endif %}
         {% if cmake_program_path %}
-        set(CMAKE_PROGRAM_PATH {{ cmake_program_path }} ${CMAKE_PROGRAM_PATH})
+        list(PREPEND CMAKE_PROGRAM_PATH {{ cmake_program_path }})
         {% endif %}
         {% if cmake_library_path %}
-        set(CMAKE_LIBRARY_PATH {{ cmake_library_path }} ${CMAKE_LIBRARY_PATH})
+        list(PREPEND CMAKE_LIBRARY_PATH {{ cmake_library_path }})
         {% endif %}
         {% if is_apple and cmake_framework_path %}
-        set(CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }} ${CMAKE_FRAMEWORK_PATH})
+        list(PREPEND CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }})
         {% endif %}
         {% if cmake_include_path %}
-        set(CMAKE_INCLUDE_PATH {{ cmake_include_path }} ${CMAKE_INCLUDE_PATH})
+        list(PREPEND CMAKE_INCLUDE_PATH {{ cmake_include_path }})
         {% endif %}
 
         {% if cross_building %}
@@ -465,12 +487,16 @@ class FindFiles(Block):
         host_include_paths = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            host_build_paths_root.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p == ""])
-            host_build_paths_noroot.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs if p != ""])
+            host_build_paths_root.extend([os.path.join(req.package_folder, p)
+                                          for p in cppinfo.builddirs if p == ""])
+            host_build_paths_noroot.extend([os.path.join(req.package_folder, p)
+                                            for p in cppinfo.builddirs if p != ""])
             host_lib_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.libdirs])
             if is_apple_:
-                host_framework_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.frameworkdirs])
-            host_include_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.includedirs])
+                host_framework_paths.extend([os.path.join(req.package_folder, p)
+                                             for p in cppinfo.frameworkdirs])
+            host_include_paths.extend([os.path.join(req.package_folder, p)
+                                       for p in cppinfo.includedirs])
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
@@ -478,7 +504,8 @@ class FindFiles(Block):
         build_bin_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.aggregated_components()
-            build_build_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.builddirs])
+            build_build_paths.extend([os.path.join(req.package_folder, p)
+                                      for p in cppinfo.builddirs])
             build_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
 
         return {
