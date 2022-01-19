@@ -3,11 +3,83 @@ import textwrap
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.apple import to_apple_arch, is_apple_os
 from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import VirtualBuildEnv
+from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars
+from conans.errors import ConanException
 from conans.util.files import save
+
+
+class _MesonAppleBlock(object):
+
+    def __init__(self, conanfile, toolchain):
+        self._conanfile = conanfile
+        self._toolchain = toolchain
+
+        os_ = conanfile.settings.get_safe("os")
+        if not is_apple_os(os_):
+            return
+        # SDK path is mandatory for cross-building
+        sdk_path = self._conanfile.conf["tools.meson.mesontoolchain:sdk_path"]
+        if not sdk_path and self._toolchain.cross_build:
+            raise ConanException("You must provide a valid SDK path for cross-compilation.")
+
+        os_version = self._conanfile.settings.get_safe("os.version")
+        os_subsystem = self._conanfile.settings.get_safe("os.subsystem")
+        # It's better if os.sdk field appears in settings instead of inferring it from SDK path
+        # os_sdk = os.path.basename(sdk_path).split(".")[0].lower()
+        os_sdk = _MesonAppleBlock.apple_sdk_name(self._conanfile)
+        arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+        # Calculating main flags
+        deployment_target_flag = " " + _MesonAppleBlock.apple_min_version_flag(os_version, os_sdk,
+                                                                               os_subsystem)
+        sysroot_flag = " -isysroot " + sdk_path if sdk_path else ""
+        arch_flag = " -arch " + arch
+        # Adding all the flags needed (it does not matter if they are duplicated)
+        self._toolchain.c_args = deployment_target_flag + sysroot_flag + arch_flag
+        self._toolchain.c_link_args = deployment_target_flag + sysroot_flag + arch_flag
+        self._toolchain.cpp_args = deployment_target_flag + sysroot_flag + arch_flag
+        self._toolchain.cpp_link_args = deployment_target_flag + sysroot_flag + arch_flag
+
+    # FIXME: 2.0: Remove this method and use the common one from conan.tools.apple.apple
+    #             Depends on https://github.com/conan-io/conan/pull/10277
+    @staticmethod
+    def apple_min_version_flag(os_version, os_sdk, subsystem):
+        """compiler flag name which controls deployment target"""
+        flag = {'macosx': '-mmacosx-version-min',
+                'iphoneos': '-mios-version-min',
+                'iphonesimulator': '-mios-simulator-version-min',
+                'watchos': '-mwatchos-version-min',
+                'watchsimulator': '-mwatchos-simulator-version-min',
+                'appletvos': '-mtvos-version-min',
+                'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
+        if subsystem == 'catalyst':
+            # special case, despite Catalyst is macOS, it requires an iOS version argument
+            flag = '-mios-version-min'
+        if not flag or not os_version:
+            return ''
+        return "%s=%s" % (flag, os_version)
+
+    # FIXME: 2.0: Remove this method and use the common one from conan.tools.apple.apple
+    #             Depends on https://github.com/conan-io/conan/pull/10277
+    @staticmethod
+    def apple_sdk_name(conanfile):
+        """
+        Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
+        there could be several ones depending on the OS architecture.
+
+        Note: In case of MacOS it'll be the same for all the architectures.
+        """
+        os_ = conanfile.settings.get_safe('os')
+        os_sdk = conanfile.settings.get_safe('os.sdk')
+        if os_sdk:
+            return os_sdk
+        elif os_ == "Macos":  # it has only a single value for all the architectures for now
+            return "macosx"
+        else:
+            raise ConanException("Please, specify a suitable value for os.sdk.")
 
 
 class MesonToolchain(object):
@@ -86,7 +158,7 @@ class MesonToolchain(object):
                     self._conanfile.settings.get_safe("compiler"))
 
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        self._cpp_std = self._to_meson_cppstd(compiler, cppstd) if cppstd else None
+        self._cpp_std = to_cppstd_flag(compiler, cppstd)
 
         if compiler == "Visual Studio":
             vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
@@ -100,7 +172,6 @@ class MesonToolchain(object):
 
         self.project_options = {}
         self.preprocessor_definitions = {}
-
         self.pkg_config_path = self._conanfile.generators_folder
 
         check_using_build_profile(self._conanfile)
@@ -110,14 +181,14 @@ class MesonToolchain(object):
         default_comp_cpp = ""
         if cross_building(conanfile, skip_x64_x86=True):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
-            self.cross_build["build"] = self._to_meson_machine(os_build, arch_build)
-            self.cross_build["host"] = self._to_meson_machine(os_host, arch_host)
+            self.cross_build["build"] = to_meson_machine(os_build, arch_build)
+            self.cross_build["host"] = to_meson_machine(os_host, arch_host)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
                 arch_target = settings_target.get_safe("arch")
-                self.cross_build["target"] = self._to_meson_machine(os_target, arch_target)
-            if os_host in ("iOS", "watchOS", "tvOS"):  # default cross-compiler in Apple is common
+                self.cross_build["target"] = to_meson_machine(os_target, arch_target)
+            if is_apple_os(os_host):  # default cross-compiler in Apple is common
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
         else:
@@ -131,6 +202,7 @@ class MesonToolchain(object):
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
 
+        # Read the VirtualBuildEnv to update the variables
         build_env = VirtualBuildEnv(self._conanfile).vars()
         self.c = build_env.get("CC") or default_comp
         self.cpp = build_env.get("CXX") or default_comp_cpp
@@ -141,59 +213,20 @@ class MesonToolchain(object):
         self.as_ = build_env.get("AS")
         self.windres = build_env.get("WINDRES")
         self.pkgconfig = build_env.get("PKG_CONFIG")
+        self.c_args = build_env.get("CFLAGS", "")
+        self.c_link_args = build_env.get("LDFLAGS", "")
+        self.cpp_args = build_env.get("CXXFLAGS", "")
+        self.cpp_link_args = build_env.get("LDFLAGS", "")
 
-        """
-        # https://mesonbuild.com/Builtin-options.html#compiler-options
-        self.c_args = _to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CFLAGS'))
-        self.c_link_args = _to_meson_value(self._env_array('LDFLAGS'))
-        self.cpp_args = _to_meson_value(self._env_array('CPPFLAGS') +
-                                             self._env_array('CXXFLAGS'))
-        self.cpp_link_args = _to_meson_value(self._env_array('LDFLAGS'))"""
+        # Define all the existing blocks
+        self.blocks = [
+            _MesonAppleBlock(conanfile, self)
+        ]
 
-        # TODO: What is known by the toolchain, from settings, MUST be defined here
-        flags = []
-        if cross_building(conanfile):
-            arch = self._conanfile.settings.get_safe("arch")
-            if arch:
-                flags.append("-arch " + to_apple_arch(arch))
-        """
-        deployment_flag = apple_deployment_target_flag(self.os, self.os_version)
-        sysroot_flag = " -isysroot " + self.xcrun.sdk_path
-        flags = deployment_flag + sysroot_flag
-        """
-        self.c_args = flags
-        self.c_link_args = flags
-        self.cpp_args = flags
-        self.cpp_link_args = flags
-
-    @staticmethod
-    def _to_meson_cppstd(compiler, cppstd):
-        if compiler == "Visual Studio":
-            return {'14': "'vc++14'",
-                    '17': "'vc++17'",
-                    '20': "'vc++latest'"}.get(cppstd, "'none'")
-        return {'98': "'c++03'", 'gnu98': "'gnu++03'",
-                '11': "'c++11'", 'gnu11': "'gnu++11'",
-                '14': "'c++14'", 'gnu14': "'gnu++14'",
-                '17': "'c++17'", 'gnu17': "'gnu++17'",
-                '20': "'c++1z'", 'gnu20': "'gnu++1z'"}.get(cppstd, "'none'")
-
-    @property
     def _context(self):
-
-        def _to_meson_value(value):
-            # https://mesonbuild.com/Machine-files.html#data-types
-            if isinstance(value, str):
-                return "'%s'" % value
-            elif isinstance(value, bool):
-                return 'true' if value else "false"
-            elif isinstance(value, list):
-                return '[%s]' % ', '.join([str(_to_meson_value(val)) for val in value])
-            return value
-
-        context = {
+        return {
             # https://mesonbuild.com/Machine-files.html#project-specific-options
-            "project_options": {k: _to_meson_value(v) for k, v in  self.project_options.items()},
+            "project_options": {k: to_meson_value(v) for k, v in  self.project_options.items()},
             # https://mesonbuild.com/Builtin-options.html#directories
             # TODO : we don't manage paths like libdir here (yet?)
             # https://mesonbuild.com/Machine-files.html#binaries
@@ -208,82 +241,32 @@ class MesonToolchain(object):
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
-            "buildtype": _to_meson_value(self._buildtype),
-            "default_library": _to_meson_value(self._default_library),
+            "buildtype": to_meson_value(self._buildtype),
+            "default_library": to_meson_value(self._default_library),
             "backend": self._backend,
             # https://mesonbuild.com/Builtin-options.html#base-options
             "b_vscrt": self._b_vscrt,
-            "b_staticpic": _to_meson_value(self._b_staticpic),
-            "b_ndebug": _to_meson_value(self._b_ndebug),
+            "b_staticpic": to_meson_value(self._b_staticpic),
+            "b_ndebug": to_meson_value(self._b_ndebug),
             # https://mesonbuild.com/Builtin-options.html#compiler-options
-            "cpp_std": self._cpp_std,
-            "c_args": _to_meson_value(self.c_args),
-            "c_link_args": _to_meson_value(self.c_link_args),
-            "cpp_args": _to_meson_value(self.cpp_args),
-            "cpp_link_args": _to_meson_value(self.cpp_link_args),
+            "cpp_std": to_meson_value(self._cpp_std),
+            "c_args": to_meson_value(self.c_args.strip().split()),
+            "c_link_args": to_meson_value(self.c_link_args.strip().split()),
+            "cpp_args": to_meson_value(self.cpp_args.strip().split()),
+            "cpp_link_args": to_meson_value(self.cpp_link_args.strip().split()),
             "pkg_config_path": self.pkg_config_path,
             "preprocessor_definitions": self.preprocessor_definitions,
             "cross_build": self.cross_build
         }
-        return context
 
-    @staticmethod
-    def _to_meson_machine(machine_os, machine_arch):
-        # https://mesonbuild.com/Reference-tables.html#operating-system-names
-        system_map = {'Android': 'android',
-                      'Macos': 'darwin',
-                      'iOS': 'darwin',
-                      'watchOS': 'darwin',
-                      'tvOS': 'darwin',
-                      'FreeBSD': 'freebsd',
-                      'Emscripten': 'emscripten',
-                      'Linux': 'linux',
-                      'SunOS': 'sunos',
-                      'Windows': 'windows',
-                      'WindowsCE': 'windows',
-                      'WindowsStore': 'windows'}
-        # https://mesonbuild.com/Reference-tables.html#cpu-families
-        cpu_family_map = {'armv4': ('arm', 'armv4', 'little'),
-                          'armv4i': ('arm', 'armv4i', 'little'),
-                          'armv5el': ('arm', 'armv5el', 'little'),
-                          'armv5hf': ('arm', 'armv5hf', 'little'),
-                          'armv6': ('arm', 'armv6', 'little'),
-                          'armv7': ('arm', 'armv7', 'little'),
-                          'armv7hf': ('arm', 'armv7hf', 'little'),
-                          'armv7s': ('arm', 'armv7s', 'little'),
-                          'armv7k': ('arm', 'armv7k', 'little'),
-                          'armv8': ('aarch64', 'armv8', 'little'),
-                          'armv8_32': ('aarch64', 'armv8_32', 'little'),
-                          'armv8.3': ('aarch64', 'armv8.3', 'little'),
-                          'avr': ('avr', 'avr', 'little'),
-                          'mips': ('mips', 'mips', 'big'),
-                          'mips64': ('mips64', 'mips64', 'big'),
-                          'ppc32be': ('ppc', 'ppc', 'big'),
-                          'ppc32': ('ppc', 'ppc', 'little'),
-                          'ppc64le': ('ppc64', 'ppc64', 'little'),
-                          'ppc64': ('ppc64', 'ppc64', 'big'),
-                          's390': ('s390', 's390', 'big'),
-                          's390x': ('s390x', 's390x', 'big'),
-                          'sh4le': ('sh4', 'sh4', 'little'),
-                          'sparc': ('sparc', 'sparc', 'big'),
-                          'sparcv9': ('sparc64', 'sparc64', 'big'),
-                          'wasm': ('wasm32', 'wasm32', 'little'),
-                          'x86': ('x86', 'x86', 'little'),
-                          'x86_64': ('x86_64', 'x86_64', 'little')}
-        system = system_map.get(machine_os, machine_os.lower())
-        default_cpu_tuple = (machine_arch.lower(), machine_arch.lower(), 'little')
-        cpu_tuple = cpu_family_map.get(machine_arch, default_cpu_tuple)
-        cpu_family, cpu, endian = cpu_tuple[0], cpu_tuple[1], cpu_tuple[2]
-        context = {
-            'system': system,
-            'cpu_family': cpu_family,
-            'cpu': cpu,
-            'endian': endian,
-        }
-        return context
+    @property
+    def content(self):
+        context = self._context()
+        content = Template(self._meson_file_template).render(context)
+        return content
 
     def generate(self):
-        content = Template(self._meson_file_template).render(self._context)
         filename = self.native_filename if not self.cross_build else self.cross_filename
-        save(filename, content)
+        save(filename, self.content)
+        # FIXME: Should we check the OS and compiler to call VCVars?
         VCVars(self._conanfile).generate()
