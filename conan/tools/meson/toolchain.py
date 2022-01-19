@@ -7,7 +7,7 @@ from conan.tools.apple.apple import to_apple_arch, is_apple_os
 from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
-from conan.tools.microsoft import VCVars
+from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -144,7 +144,7 @@ class MesonToolchain(object):
                            "Release": "release",
                            "MinSizeRel": "minsize",
                            "RelWithDebInfo": "debugoptimized"}.get(build_type, build_type)
-        self._b_ndebug = "true" if self._buildtype != "Debug" else "false"
+        self._b_ndebug = "true" if self._buildtype != "debug" else "false"
 
         # https://mesonbuild.com/Builtin-options.html#base-options
         fpic = self._conanfile.options.get_safe("fPIC")
@@ -154,19 +154,16 @@ class MesonToolchain(object):
         # Do not adjust "debug" if already adjusted "buildtype"
         self._default_library = ("shared" if shared else "static") if shared is not None else None
 
-        compiler = (self._conanfile.settings.get_safe("compiler.base") or
-                    self._conanfile.settings.get_safe("compiler"))
-
+        compiler = self._conanfile.settings.get_safe("compiler")
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, cppstd)
 
         if compiler == "Visual Studio":
-            vscrt = self._conanfile.settings.get_safe("compiler.base.runtime") or \
-                    self._conanfile.settings.get_safe("compiler.runtime")
+            vscrt = self._conanfile.settings.get_safe("compiler.runtime")
             self._b_vscrt = str(vscrt).lower()
         elif compiler == "msvc":
-            # TODO: Fill here the msvc model
-            pass
+            vscrt = msvc_runtime_flag(self._conanfile)
+            self._b_vscrt = str(vscrt).lower()
         else:
             self._b_vscrt = None
 
@@ -226,7 +223,7 @@ class MesonToolchain(object):
     def _context(self):
         return {
             # https://mesonbuild.com/Machine-files.html#project-specific-options
-            "project_options": {k: to_meson_value(v) for k, v in  self.project_options.items()},
+            "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
             # https://mesonbuild.com/Builtin-options.html#directories
             # TODO : we don't manage paths like libdir here (yet?)
             # https://mesonbuild.com/Machine-files.html#binaries
