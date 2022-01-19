@@ -8,6 +8,7 @@ from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
+from conan.tools.apple.apple import is_apple_os
 from conan.tools.build import build_jobs
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.cross_building import cross_building
@@ -476,7 +477,7 @@ class FindFiles(Block):
             find_package_prefer_config = "OFF"
 
         os_ = self._conanfile.settings.get_safe("os")
-        is_apple_ = os_ and os_ in ["Macos", "iOS", "watchOS", "tvOS"]
+        is_apple_ = is_apple_os(os_)
 
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
@@ -487,16 +488,14 @@ class FindFiles(Block):
         host_include_paths = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            host_build_paths_root.extend([os.path.join(req.package_folder, p)
-                                          for p in cppinfo.builddirs if p == ""])
-            host_build_paths_noroot.extend([os.path.join(req.package_folder, p)
-                                            for p in cppinfo.builddirs if p != ""])
-            host_lib_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.libdirs])
+            # If the builddir is the package_folder, then it is the default "root" one
+            nf = os.path.normpath(req.package_folder)
+            host_build_paths_root.extend(p for p in cppinfo.builddirs if os.path.normpath(p) == nf)
+            host_build_paths_noroot.extend(p for p in cppinfo.builddirs if os.path.normpath(p) != nf)
+            host_lib_paths.extend(cppinfo.libdirs)
             if is_apple_:
-                host_framework_paths.extend([os.path.join(req.package_folder, p)
-                                             for p in cppinfo.frameworkdirs])
-            host_include_paths.extend([os.path.join(req.package_folder, p)
-                                       for p in cppinfo.includedirs])
+                host_framework_paths.extend(cppinfo.frameworkdirs)
+            host_include_paths.extend(cppinfo.includedirs)
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
@@ -504,9 +503,8 @@ class FindFiles(Block):
         build_bin_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.aggregated_components()
-            build_build_paths.extend([os.path.join(req.package_folder, p)
-                                      for p in cppinfo.builddirs])
-            build_bin_paths.extend([os.path.join(req.package_folder, p) for p in cppinfo.bindirs])
+            build_build_paths.extend(cppinfo.builddirs)
+            build_bin_paths.extend(cppinfo.bindirs)
 
         return {
             "find_package_prefer_config": find_package_prefer_config,
