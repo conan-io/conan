@@ -19,7 +19,7 @@ class SystemPackageManagerTool(object):
         self._sudo_askpass = self._conanfile.conf["tools.system.package_manager:sudo_askpass"]
         self._mode = self._conanfile.conf["tools.system.package_manager:mode"] or self.mode_check
         self._arch = self._conanfile.settings_build.get_safe('arch') \
-            if self._conanfile.context == CONTEXT_BUILD else self._conanfile.settings_host.get_safe('arch')
+            if self._conanfile.context == CONTEXT_BUILD else self._conanfile.settings.get_safe('arch')
         self._arch_names = {}
         self._arch_separator = ""
 
