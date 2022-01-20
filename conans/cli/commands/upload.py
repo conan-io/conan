@@ -11,15 +11,16 @@ from conans.errors import ConanException
 def upload(conan_api: ConanAPIV2, parser, *args):
     """
     Uploads a recipe and binary packages to a remote.
-    By default, only the latest revisions matching the reference are uploaded, unles
-    is specified.
-    By default, if a recipe reference is specified, it will upload the latest revision of all the
-    binary packages, unles --only-recipe is specified.
+    By default, all the matching references are uploaded (all revisions).
+    By default, if a recipe reference is specified, it will upload all the revisions for all the
+    binary packages, unless --only-recipe is specified. You can use the "latest" placeholder at the
+    "reference" argument to specify the latest revision of the recipe or the package.
     """
     _not_specified_ = object()
 
     parser.add_argument('reference', help="Recipe reference or package reference, can contain * as "
-                                          "wildcard at any reference field. e.g: 'lib/*'.")
+                                          "wildcard at any reference field. A placeholder 'latest'"
+                                          "can be used in the revision fields: e.g: 'lib/*#latest'.")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="Only upload packages matching a specific query. e.g: os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
@@ -27,7 +28,7 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     parser.add_argument("-r", "--remote", action=OnceArgument, required=True,
                         help='Upload to this specific remote')
     parser.add_argument("--only-recipe", action='store_true', default=False,
-                        help='Upload only the recipe')
+                        help='Upload only the recipe/s, not the binary packages.')
     parser.add_argument("--force", action='store_true', default=False,
                         help='Ignore the missing fields in the scm attribute and override '
                              'remote recipe and packages with local regardless of recipe date')
