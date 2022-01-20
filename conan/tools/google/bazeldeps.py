@@ -16,14 +16,14 @@ class BazelDeps(object):
 
         for build_dependency in self._conanfile.dependencies.direct_build.values():
             content = self._get_build_dependency_buildfile_content(build_dependency)
-            filename = self._save_dependendy_buildfile(build_dependency, content)
+            filename = self._save_dependency_buildfile(build_dependency, content)
 
             local_repository = self._create_new_local_repository(build_dependency, filename)
             local_repositories.append(local_repository)
 
         for dependency in self._conanfile.dependencies.host.values():
             content = self._get_dependency_buildfile_content(dependency)
-            filename = self._save_dependendy_buildfile(dependency, content)
+            filename = self._save_dependency_buildfile(dependency, content)
 
             local_repository = self._create_new_local_repository(dependency, filename)
             local_repositories.append(local_repository)
@@ -31,8 +31,8 @@ class BazelDeps(object):
         content = self._get_main_buildfile_content(local_repositories)
         self._save_main_buildfiles(content)
 
-    def _save_dependendy_buildfile(self, dependency, buildfile_content):
-        filename = 'conandeps/{}/BUILD'.format(dependency.ref.name)
+    def _save_dependency_buildfile(self, dependency, buildfile_content):
+        filename = 'conandeps/{}/BUILD.bazel'.format(dependency.ref.name)
         save(filename, buildfile_content)
         return filename
 
@@ -154,8 +154,8 @@ class BazelDeps(object):
         return content
 
     def _save_main_buildfiles(self, content):
-        # A BUILD file must exist, even if it's empty, in order for bazel
-        # to detect it as a bazel package and allow to load the .bzl files
-        save("conandeps/BUILD", "")
+        # A BUILD.bazel file must exist, even if it's empty, in order for Bazel
+        # to detect it as a Bazel package and to allow to load the .bzl files
+        save("conandeps/BUILD.bazel", "")
 
         save("conandeps/dependencies.bzl", content)
