@@ -23,11 +23,6 @@ from conans.util.log import logger
 
 
 CLI_V1_COMMANDS = [
-<<<<<<< HEAD
-    'get',
-=======
-    'upload',
->>>>>>> origin/develop2
     'source', 'build', 'editable', 'imports',
     'download'
 ]
