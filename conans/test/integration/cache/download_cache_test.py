@@ -30,12 +30,7 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
         client.run("upload * --all --confirm -r default")
         cache_folder = temp_folder()
-        conan_conf = textwrap.dedent("""
-            [storage]
-            path = ./data
-            download_cache = {}
-        """.format(cache_folder))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        #client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("remove * -f")
         client.run("install --reference=mypkg/0.1@user/testing")
@@ -46,21 +41,11 @@ class DownloadCacheTest(unittest.TestCase):
         # TODO: Verify it doesn't really download
 
         # removing the config downloads things
-        conan_conf = textwrap.dedent("""
-            [storage]
-            path = ./data
-            """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("remove * -f")
         client.run("install --reference=mypkg/0.1@user/testing")
         # TODO: Verify it doesn't really download
         # restoring config cache works again
-        conan_conf = textwrap.dedent("""
-            [storage]
-            path = ./data
-            download_cache = {}
-            """.format(cache_folder))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
+        # client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.run("remove * -f")
         client.run("install --reference=mypkg/0.1@user/testing")
@@ -70,14 +55,6 @@ class DownloadCacheTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/8578
         client = TestClient(default_server_user=True)
         cache_folder = temp_folder()
-
-        conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    download_cache = {}
-                    [log]
-                    """.format(cache_folder))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
         client.run("create . --name=pkg --version=0.1")
