@@ -56,7 +56,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         client.save({"pkg.py": GenConanfile()})
         client.run("create pkg.py --name=pkg --veersion=1.1 --user=lasote --channel=testing")
         client.run("create pkg.py --name=pkg --veersion=1.2 --user=lasote --channel=testing")
-        client.run("upload Pkg* -r=default --confirm")
+        client.run("upload pkg* -r=default --confirm")
         client.run("remove pkg/1.2@lasote/testing -f")
 
         client.save({"consumer.py": GenConanfile().with_requirement("pkg/[~1]@lasote/testing")})
@@ -97,7 +97,7 @@ class HelloReuseConan(ConanFile):
         client.run("create . --name=pkg --version=1.1 --user=lasote --channel=testing")
         client.save({"conanfile.py": conanfile.format("1.2")})
         client.run("create . --name=pkg --version=1.2 --user=lasote --channel=testing")
-        client.run("upload Pkg* -r=default --confirm")
+        client.run("upload pkg* -r=default --confirm")
         consumer = """from conans import ConanFile
 class HelloReuseConan(ConanFile):
     requires = "pkg/[~1]@lasote/testing"
@@ -120,7 +120,7 @@ class HelloReuseConan(ConanFile):
                                        "pkg/1.2@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
                                        1)
 
-        client2.run("upload Pkg* -r=default --confirm")
+        client2.run("upload pkg* -r=default --confirm")
 
         client.run("install .")
         # Resolves to local package

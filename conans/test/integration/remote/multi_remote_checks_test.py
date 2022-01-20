@@ -16,8 +16,8 @@ class Pkg(ConanFile):
     pass"""
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
-        client.run("upload Pkg* -r=server1 --confirm")
-        client.run("upload Pkg* -r=server2 --confirm")
+        client.run("upload pkg* -r=server1 --confirm")
+        client.run("upload pkg* -r=server2 --confirm")
 
         # It takes the default remote
         client.run("remove * -f")
@@ -73,7 +73,7 @@ class Pkg(ConanFile):
         client.run("remove * -p -f")
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg:opt=2")
         package_id2 = client.created_package_id("pkg/0.1@lasote/testing")
-        client.run("upload Pkg* -r=server2 --confirm")
+        client.run("upload pkg* -r=server2 --confirm")
         client.run("remove * -p -f")
 
         # recipe is cached, takes binary from server2

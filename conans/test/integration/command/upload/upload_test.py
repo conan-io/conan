@@ -164,7 +164,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload hello1/*@user/testing --confirm -q 'os=Windows or os=Macos' -r default")
         for i in range(1, 5):
             self.assertIn("Uploading package %d/4" % i, client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
+        self.assertNotIn("already in server, skipping upload", client.out)
 
         client.run("upload hello1/*@user/testing --confirm -q 'os=Linux and arch=x86_64' -r default")
         self.assertIn("Uploading package 1/1", client.out)
@@ -172,7 +172,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload hello1/*@user/testing --confirm -q 'arch=armv8' -r default")
         for i in range(1, 4):
             self.assertIn("Uploading package %d/3" % i, client.out)
-        self.assertIn("Package is up to date, upload skipped", client.out)
+        self.assertIn("already in server, skipping upload", client.out)
 
         # Check that a query not matching any packages doesn't upload any packages
         client.run("upload hello1/*@user/testing --confirm -q 'arch=sparc' -r default")

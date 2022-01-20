@@ -35,10 +35,6 @@ def upload(conan_api: ConanAPIV2, parser, *args):
                         help='Perform an integrity check, using the manifests, before upload')
     parser.add_argument('-c', '--confirm', default=False, action='store_true',
                         help='Upload all matching recipes without confirmation')
-    parser.add_argument('--retry', default=None, type=int, action=OnceArgument,
-                        help="In case of fail retries to upload again the specified times.")
-    parser.add_argument('--retry-wait', default=None, type=int, action=OnceArgument,
-                        help='Waits specified seconds before retry again')
 
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote) if args.remote else None
@@ -57,8 +53,7 @@ def upload(conan_api: ConanAPIV2, parser, *args):
 
     if not upload_bundle.any_upload:
         return
-    conan_api.upload.upload_bundle(upload_bundle, remote, retry=args.retry, retry_wait=args.retry_wait,
-                                   force=args.force)
+    conan_api.upload.upload_bundle(upload_bundle, remote, force=args.force)
 
     # print(json.dumps(upload_bundle.serialize()))
 

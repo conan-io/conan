@@ -280,7 +280,7 @@ class UploadExecutor:
         self._app = app
         self._output = ConanOutput()
 
-    def upload(self, upload_data, retry, retry_wait, remote, force):
+    def upload(self, upload_data, remote, force):
 
         if upload_data.any_upload:
             self._output.info("Uploading artifacts")
@@ -293,14 +293,14 @@ class UploadExecutor:
                                      " again the recipe ('conan export' or 'conan create') to"
                                      " fix these issues.")
             if recipe.upload:
-                self.upload_recipe(recipe, remote, retry, retry_wait)
+                self.upload_recipe(recipe, remote)
             if recipe.build_always and recipe.packages:
                 # TODO: Maybe do not raise? Allow it with --force?
                 raise ConanException("Conanfile '%s' has build_policy='always', "
                                      "no packages can be uploaded" % str(recipe.ref))
             for package in recipe.packages:
                 if package.upload:
-                    self.upload_package(package, remote, retry, retry_wait)
+                    self.upload_package(package, remote)
 
     def _recipe_files_to_upload(self, ref, files, remote, force):
         if not force:
@@ -313,7 +313,7 @@ class UploadExecutor:
         deleted = set(remote_snapshot).difference(files)
         return files, deleted
 
-    def upload_recipe(self, recipe, remote, retry, retry_wait):
+    def upload_recipe(self, recipe, remote):
         self._output.info(f"Uploading {recipe.ref}")
         t1 = time.time()
         ref = recipe.ref
@@ -327,8 +327,7 @@ class UploadExecutor:
                                    reference=ref, remote=remote)
 
         upload_ref = ref
-        self._app.remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote, retry,
-                                               retry_wait)
+        self._app.remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote)
 
         duration = time.time() - t1
         log_recipe_upload(ref, duration, cache_files, remote.name)
@@ -336,7 +335,7 @@ class UploadExecutor:
                                        reference=ref, remote=remote)
         return ref
 
-    def upload_package(self, package, remote, retry=None, retry_wait=None):
+    def upload_package(self, package, remote):
         self._output.info(f"Uploading {package.pref.repr_reduced()}")
         pref = package.pref
         cache_files = package.files
@@ -350,7 +349,7 @@ class UploadExecutor:
                                        package_id=pref.package_id,
                                        remote=remote)
         t1 = time.time()
-        self._app.remote_manager.upload_package(pref, cache_files, remote, retry, retry_wait)
+        self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
         log_package_upload(pref, duration, cache_files, remote)
         self._app.hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
