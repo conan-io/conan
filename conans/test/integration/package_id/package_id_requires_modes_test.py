@@ -279,13 +279,6 @@ class PackageIDTest(unittest.TestCase):
         """
 
         channel = "user/testing"
-        conan_conf = textwrap.dedent("""
-                        [storage]
-                        path = ./data
-                        [general]
-                        default_package_id_mode=patch_mode'
-                """.format())
-        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
         self._export("liba", "0.1.0", channel=channel, package_id_text=None, requires=None)
         self.client.run("create . --name=liba --version=0.1.0 --user=user --channel=testing")
         self._export("libb", "0.1.0", channel=channel, package_id_text=None,
@@ -316,14 +309,6 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_transitive_multi_mode_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
-        conan_conf = textwrap.dedent("""
-                        [storage]
-                        path = ./data
-                        [general]
-                        default_package_id_mode=full_package_mode'
-                """.format())
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=dep1 --version=1.0 --user=user --channel=testing")
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")})
@@ -342,13 +327,6 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_transitive_multi_mode2_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
-        conan_conf = textwrap.dedent("""
-                        [storage]
-                        path = ./data
-                        [general]
-                        default_package_id_mode=package_revision_mode'
-                """.format())
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         # This is mandatory, otherwise it doesn't work
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=dep1 --version=1.0 --user=user --channel=testing")
@@ -376,13 +354,6 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_transitive_multi_mode_build_requires(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
-        conan_conf = textwrap.dedent("""
-                        [storage]
-                        path = ./data
-                        [general]
-                        default_package_id_mode=package_revision_mode'
-                """.format())
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=dep1 --version=1.0 --user=user --channel=testing")
         client.run("create . --name=tool --version=1.0 --user=user --channel=testing")
@@ -413,14 +384,6 @@ class PackageIDErrorTest(unittest.TestCase):
     def test_package_revision_mode_editable(self):
         # Package revision mode crash when using editables
         client = TestClient()
-        conan_conf = textwrap.dedent("""
-                        [storage]
-                        path = ./data
-                        [general]
-                        default_package_id_mode=package_revision_mode'
-                """.format())
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-
         client.save({"conanfile.py": GenConanfile()})
         client.run("editable add . dep1/1.0@user/testing")
 

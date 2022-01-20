@@ -79,13 +79,6 @@ class TransitiveIdsTest(unittest.TestCase):
     def test_transitive_unrelated(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
-        conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    default_package_id_mode=full_version_mode
-                """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         # LibA
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=1.0")
@@ -114,13 +107,6 @@ class TransitiveIdsTest(unittest.TestCase):
     def test_transitive_second_level_header_only(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
-        conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    default_package_id_mode=full_version_mode
-                """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         # LibA
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=1.0")
@@ -145,13 +131,6 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . --name=libe --version=1.0", assert_error=True)  # LibD is NOT missing!
         self.assertIn("libd/1.0:119e0b2903330cef59977f8976cb82a665b510c1 - Cache", client.out)
         # USE THE NEW FIXED PACKAGE_ID
-        conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    full_transitive_package_id=1
-                """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         client.run("create . --name=libe --version=1.0", assert_error=True)
         self.assertIn("liba/2.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
         self.assertIn("libb/1.0:e71235a6f57633221a2b85f9b6aca14cda69e1fd - Missing", client.out)

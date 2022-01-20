@@ -8,13 +8,6 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 def test_package_python_files():
     client = TestClient(default_server_user=True)
-    conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    keep_python_files=True
-            """.format())
-    client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile

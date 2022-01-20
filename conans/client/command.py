@@ -99,62 +99,6 @@ class Command(object):
         self._conan_api = conan_api
         self._out = ConanOutput()
 
-    def inspect(self, *args):
-        """
-        Displays conanfile attributes, like name, version, and options. Works locally,
-        in local cache and remote.
-        """
-        parser = argparse.ArgumentParser(description=self.inspect.__doc__,
-                                         prog="conan inspect",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
-                            " (conanfile.py) or to a recipe file. e.g., "
-                            "./my_project/conanfile.py. It could also be a reference")
-        parser.add_argument("-a", "--attribute", help='The attribute to be displayed, e.g "name"',
-                            nargs="?", action=Extender)
-        parser.add_argument("-r", "--remote", help='look in the specified remote server',
-                            action=OnceArgument)
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='json output file')
-        parser.add_argument('--raw', default=None, action=OnceArgument,
-                            help='Print just the value of the requested attribute')
-
-        args = parser.parse_args(*args)
-
-        if args.raw and args.attribute:
-            raise ConanException("Argument '--raw' is incompatible with '-a'")
-
-        if args.raw and args.json:
-            raise ConanException("Argument '--raw' is incompatible with '--json'")
-
-        attributes = [args.raw, ] if args.raw else args.attribute
-        quiet = bool(args.raw)
-
-        result = self._conan_api.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
-        for k, v in result.items():
-            if args.raw:
-                self._out.write(str(v))
-            else:
-                if isinstance(v, dict):
-                    self._out.writeln("%s:" % k)
-                    for ok, ov in sorted(v.items()):
-                        self._out.writeln("    %s: %s" % (ok, ov))
-                else:
-                    self._out.writeln("%s: %s" % (k, str(v)))
-
-        if args.json:
-            def dump_custom_types(obj):
-                if isinstance(obj, set):
-                    return sorted(list(obj))
-                raise TypeError
-
-            json_output = json.dumps(result, default=dump_custom_types)
-            if not os.path.isabs(args.json):
-                json_output_file = os.path.join(os.getcwd(), args.json)
-            else:
-                json_output_file = args.json
-            save(json_output_file, json_output)
-
     def download(self, *args):
         """
         Downloads recipe and binaries to the local cache, without using settings.
@@ -274,13 +218,8 @@ class Command(object):
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='Path to a json file where the install information will be '
-                                 'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        parser.add_argument("--lockfile-node-id", action=OnceArgument,
-                            help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
 
@@ -313,9 +252,6 @@ class Command(object):
         except ConanException as exc:
             info = exc.info
             raise
-        finally:
-            if args.json and info:
-                CommandOutputer().json_output(info, args.json, os.getcwd())
 
     def imports(self, *args):
         """
@@ -441,51 +377,6 @@ class Command(object):
         finally:
             if args.json and info:
                 CommandOutputer().json_output(info, args.json, os.getcwd())
-
-    def get(self, *args):
-        """
-        Gets a file or list a directory of a given reference or package.
-        """
-        parser = argparse.ArgumentParser(description=self.get.__doc__,
-                                         prog="conan get",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument('reference', help=_REF_OR_PREF_HELP)
-        parser.add_argument('path',
-                            help='Path to the file or directory. If not specified will get the '
-                                 'conanfile if only a reference is specified and a conaninfo.txt '
-                                 'file contents if the package is also specified',
-                            default=None, nargs="?")
-        parser.add_argument("-p", "--package", default=None,
-                            help="Package ID [DEPRECATED: use full reference instead]",
-                            action=OnceArgument)
-        parser.add_argument("-r", "--remote", action=OnceArgument,
-                            help='Get from this specific remote')
-        parser.add_argument("-raw", "--raw", action='store_true', default=False,
-                            help='Do not decorate the text')
-        args = parser.parse_args(*args)
-
-        try:
-            pref = PkgReference.loads(args.reference)
-        except ConanException:
-            reference = args.reference
-            package_id = args.package
-
-            if package_id:
-                self._out.warning("Usage of `--package` argument is deprecated."
-                               " Use a full reference instead: "
-                               "`conan get [...] {}:{}`".format(reference, package_id))
-        else:
-            reference = repr(pref.ref)
-            package_id = pref.package_id
-            if args.package:
-                raise ConanException("Use a full package reference (preferred) or the `--package`"
-                                     " command argument, but not both.")
-
-        ret, path = self._conan_api.get_path(reference, package_id, args.path, args.remote)
-        if isinstance(ret, list):
-            CommandOutputer().print_dir_list(ret, path, args.raw)
-        else:
-            CommandOutputer().print_file_contents(ret, path, args.raw)
 
     def editable(self, *args):
         """

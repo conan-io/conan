@@ -51,14 +51,6 @@ class MyConanfile(ConanFile):
         client = TestClient()
         save(client.cache.new_config_path, "core:default_profile={}".format(default_profile_path))
 
-        conan_conf = textwrap.dedent("""
-                [storage]
-                path = ./data
-                [general]
-                default_profile={}
-        """.format(default_profile_path))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-
         client.save({CONANFILE: br})
         client.run("export . --user=lasote --channel=stable")
         client.run('install --reference=mylib/0.1@lasote/stable --build')

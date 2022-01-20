@@ -18,8 +18,6 @@ class ReadOnlyTest(unittest.TestCase):
         self.client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
         self.client.run("--version")
         conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
                             [general]
                             read_only_cache=True
                         """)
