@@ -378,48 +378,6 @@ class Command(object):
             if args.json and info:
                 CommandOutputer().json_output(info, args.json, os.getcwd())
 
-    def editable(self, *args):
-        """
-        Manages editable packages (packages that reside in the user workspace, but
-        are consumed as if they were in the cache).
-
-        Use the subcommands 'add', 'remove' and 'list' to create, remove or list
-        packages currently installed in this mode.
-        """
-        parser = argparse.ArgumentParser(description=self.editable.__doc__,
-                                         prog="conan editable",
-                                         formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
-        add_parser.add_argument('path', help='Path to the package folder in the user workspace')
-        add_parser.add_argument('reference', help='Package reference e.g.: mylib/1.X@user/channel')
-
-        remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
-        remove_parser.add_argument('reference',
-                                   help='Package reference e.g.: mylib/1.X@user/channel')
-
-        subparsers.add_parser('list', help='List packages in editable mode')
-
-        args = parser.parse_args(*args)
-        self._warn_python_version()
-
-        if args.subcommand == "add":
-            self._conan_api.editable_add(args.path, args.reference, cwd=os.getcwd())
-            self._out.success("Reference '{}' in editable mode".format(args.reference))
-        elif args.subcommand == "remove":
-            ret = self._conan_api.editable_remove(args.reference)
-            if ret:
-                self._out.success("Removed editable mode for reference '{}'".format(args.reference))
-            else:
-                self._out.warning("Reference '{}' was not installed "
-                               "as editable".format(args.reference))
-        elif args.subcommand == "list":
-            for k, v in self._conan_api.editable_list().items():
-                self._out.info("%s" % k)
-                self._out.info("    Path: %s" % v["path"])
-
     def _commands(self):
         """ Returns a list of available commands.
         """
