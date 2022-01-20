@@ -1,15 +1,43 @@
 import platform
 import textwrap
 
+import mock
 import pytest
 
 from conan.tools.system.package_manager import Apt, Dnf, Yum, Brew, Pkg, PkgUtil, Chocolatey, Zypper, \
-    PacMan
+    PacMan, SystemPackageManagerTool
 from conans import Settings
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
+
+
+@pytest.mark.parametrize("platform, tool", [
+    ("Linux", "apt-get"),
+    ("Windows", "choco"),
+    ("Darwin", "brew"),
+    ("Solaris", "pkgutil"),
+])
+def test_package_manager_platform(platform, tool):
+    with mock.patch("platform.system", return_value=platform):
+        with mock.patch("distro.id", return_value=''):
+            assert tool == SystemPackageManagerTool.get_default_tool()
+
+
+@pytest.mark.parametrize("distro, tool", [
+    ("ubuntu", "apt-get"),
+    ("debian", "apt-get"),
+    ("pidora", "yum"),
+    ("fedora", "dnf"),
+    ("arch", "pacman"),
+    ("opensuse", "zypper"),
+    ("freebsd", "pkg"),
+])
+def test_package_manager_distro(distro, tool):
+    with mock.patch("platform.system", return_value="Linux"):
+        with mock.patch("distro.id", return_value=distro):
+            assert tool == SystemPackageManagerTool.get_default_tool()
 
 
 @pytest.mark.parametrize("sudo, sudo_askpass, expected_str", [
@@ -43,7 +71,8 @@ def test_apt_install_recommends(recommends, recommends_str):
     assert apt._conanfile.command == "apt-get install -y {}package1 package2".format(recommends_str)
 
 
-@pytest.mark.parametrize("tool_class", [Apt, Yum, Dnf, Brew, Pkg, PkgUtil, Chocolatey, PacMan, Zypper])
+@pytest.mark.parametrize("tool_class",
+                         [Apt, Yum, Dnf, Brew, Pkg, PkgUtil, Chocolatey, PacMan, Zypper])
 def test_tools_install_mode_check(tool_class):
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
@@ -56,7 +85,8 @@ def test_tools_install_mode_check(tool_class):
                                          "set tools.system.package_manager:mode' to 'install'"
 
 
-@pytest.mark.parametrize("tool_class", [Apt, Yum, Dnf, Brew, Pkg, PkgUtil, Chocolatey, PacMan, Zypper])
+@pytest.mark.parametrize("tool_class",
+                         [Apt, Yum, Dnf, Brew, Pkg, PkgUtil, Chocolatey, PacMan, Zypper])
 def test_tools_update_mode_check(tool_class):
     conanfile = ConanFileMock()
     conanfile.conf = Conf()

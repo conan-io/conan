@@ -1,3 +1,5 @@
+import platform
+
 from conans.errors import ConanException
 
 
@@ -11,13 +13,34 @@ class SystemPackageManagerTool(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._active_tool = self._conanfile.conf["tools.system.package_manager:tool"]
+        self._active_tool = self._conanfile.conf[
+                                "tools.system.package_manager:tool"] or self.get_default_tool()
         self._sudo = self._conanfile.conf["tools.system.package_manager:sudo"]
         self._sudo_askpass = self._conanfile.conf["tools.system.package_manager:sudo_askpass"]
         self._mode = self._conanfile.conf["tools.system.package_manager:mode"] or self.mode_check
         self._arch = self._conanfile.settings.get_safe("arch")
         self._arch_names = {}
         self._arch_separator = ""
+
+    @staticmethod
+    def get_default_tool():
+        os_name = platform.system()
+        if os_name in ["Linux", "FreeBSD"]:
+            import distro
+            os_name = distro.id() or os_name
+        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian"],
+                           "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
+                                   "almalinux"],
+                           "dnf": ["fedora", "rhel", "centos", "mageia"],
+                           "brew": ["Darwin"],
+                           "pacman": ["arch", "manjaro"],
+                           "choco": ["Windows"],
+                           "zypper": ["opensuse", "sles"],
+                           "pkg": ["freebsd"],
+                           "pkgutil": ["Solaris"]}
+        for tool, distros in manager_mapping.items():
+            if os_name in distros:
+                return tool
 
     def get_package_name(self, package):
         # TODO: should we only add the arch if cross-building?
@@ -42,6 +65,7 @@ class SystemPackageManagerTool(object):
                                          "'install'".format(method_name))
                 else:
                     return wrapped(self, *args, **kwargs)
+
         return wrapper
 
     @method_decorator  # noqa
@@ -60,8 +84,7 @@ class SystemPackageManagerTool(object):
 
     @method_decorator  # noqa
     def update(self):
-        command = self.update_command.format(sudo=self.sudo_str,
-                                             tool=self.tool_name)
+        command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
         return self._conanfile.run(command)
 
     @method_decorator  # noqa
