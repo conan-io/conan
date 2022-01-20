@@ -19,7 +19,24 @@ from conans.test.utils.mocks import ConanFileMock
 def test_package_manager_platform(platform, tool):
     with mock.patch("platform.system", return_value=platform):
         with mock.patch("distro.id", return_value=''):
-            assert tool == SystemPackageManagerTool.get_default_tool()
+            with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+                context_mock.return_value = "host"
+                conanfile = ConanFileMock()
+                conanfile.settings = Settings()
+                manager = SystemPackageManagerTool(conanfile)
+                assert tool == manager.get_default_tool()
+
+
+def test_msys2():
+    with mock.patch("platform.system", return_value="Windows"):
+        with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+            context_mock.return_value = "host"
+            conanfile = ConanFileMock()
+            conanfile.conf = Conf()
+            conanfile.settings = Settings()
+            conanfile.conf["tools.microsoft.bash:subsystem"] = "msys2"
+            manager = SystemPackageManagerTool(conanfile)
+            assert manager.get_default_tool() == "pacman"
 
 
 @pytest.mark.parametrize("distro, tool", [
@@ -34,7 +51,12 @@ def test_package_manager_platform(platform, tool):
 def test_package_manager_distro(distro, tool):
     with mock.patch("platform.system", return_value="Linux"):
         with mock.patch("distro.id", return_value=distro):
-            assert tool == SystemPackageManagerTool.get_default_tool()
+            with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
+                context_mock.return_value = "host"
+                conanfile = ConanFileMock()
+                conanfile.settings = Settings()
+                manager = SystemPackageManagerTool(conanfile)
+                assert tool == manager.get_default_tool()
 
 
 @pytest.mark.parametrize("sudo, sudo_askpass, expected_str", [

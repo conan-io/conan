@@ -23,18 +23,19 @@ class SystemPackageManagerTool(object):
         self._arch_names = {}
         self._arch_separator = ""
 
-    @staticmethod
-    def get_default_tool():
+    def get_default_tool(self):
         os_name = platform.system()
         if os_name in ["Linux", "FreeBSD"]:
             import distro
             os_name = distro.id() or os_name
+        if os_name == "Windows" and self._conanfile.conf["tools.microsoft.bash:subsystem"] == "msys2":
+            os_name = "msys2"
         manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
                                    "almalinux"],
                            "dnf": ["fedora", "rhel", "centos", "mageia"],
                            "brew": ["Darwin"],
-                           "pacman": ["arch", "manjaro"],
+                           "pacman": ["arch", "manjaro", "msys2"],
                            "choco": ["Windows"],
                            "zypper": ["opensuse", "sles"],
                            "pkg": ["freebsd"],
