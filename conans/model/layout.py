@@ -17,8 +17,10 @@ class Folders(object):
         self._base_install = None
         self._base_source = None
         self._base_build = None
+        self._local_base_build = False
         self._base_package = None
         self._base_generators = None
+        self._local_base_generators = False
         self._base_imports = None
 
         self.source = ""
@@ -52,14 +54,17 @@ class Folders(object):
             return None
         if not self.build:
             return self._base_build
+        if self._local_base_build:
+            return self._base_build
         return os.path.join(self._base_build, self.build)
 
     @property
     def base_build(self):
         return self._base_build
 
-    def set_base_build(self, folder):
+    def set_base_build(self, folder, local=False):
         self._base_build = folder
+        self._local_base_build = local
 
     @property
     def base_install(self):
@@ -86,10 +91,13 @@ class Folders(object):
             return None
         if not self.generators:
             return self._base_generators
+        if self._local_base_generators:
+            return self._base_generators
         return os.path.join(self._base_generators, self.generators)
 
-    def set_base_generators(self, folder):
+    def set_base_generators(self, folder, local=False):
         self._base_generators = folder
+        self._local_base_generators = local
 
     @property
     def imports_folder(self):
