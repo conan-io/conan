@@ -28,7 +28,7 @@ class SystemPackageManagerTool(object):
         if os_name in ["Linux", "FreeBSD"]:
             import distro
             os_name = distro.id() or os_name
-        if os_name == "Windows" and self._conanfile.conf["tools.microsoft.bash:subsystem"] == "msys2":
+        elif os_name == "Windows" and self._conanfile.conf["tools.microsoft.bash:subsystem"] == "msys2":
             os_name = "msys2"
         manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
