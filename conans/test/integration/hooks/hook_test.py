@@ -184,8 +184,6 @@ class HookTest(unittest.TestCase):
         client.save({hook_path: complete_hook, "conanfile.py": conanfile_basic})
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
         conan_conf = textwrap.dedent("""
-                [storage]
-                path = ./data
                 [hooks]
                 complete_hook/complete_hook.py'
         """.format())
@@ -427,8 +425,6 @@ class HookTest(unittest.TestCase):
                      hook_path: my_hook,
                      "conanfile.py": conanfile_basic})
         conan_conf = textwrap.dedent("""
-                [storage]
-                path = ./data
                 [hooks]
                 my_hook/my_hook.py
         """.format())
