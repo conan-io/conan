@@ -55,20 +55,28 @@ class SystemPackageManagerTool(object):
         askpass = "-A " if self._sudo and self._sudo_askpass else ""
         return "{}{}".format(sudo, askpass)
 
-    def method_decorator(wrapped):
+    def check_enabled_tool(wrapped):
         def wrapper(self, *args, **kwargs):
-            method_name = wrapped.__name__
             if self._active_tool == self.__class__.tool_name:
-                if method_name in self.install_methods and self._mode == self.mode_check:
-                    raise ConanException("Can't {}. Please update packages manually or set "
-                                         "'tools.system.package_manager:mode' to "
-                                         "'install'".format(method_name))
-                else:
-                    return wrapped(self, *args, **kwargs)
+                return wrapped(self, *args, **kwargs)
 
         return wrapper
 
-    @method_decorator  # noqa
+    def check_mode(wrapped):
+        def wrapper(self, *args, **kwargs):
+            method_name = wrapped.__name__
+            if method_name in self.install_methods and self._mode == self.mode_check:
+                raise ConanException("Can't {}. Please update packages manually or set "
+                                     "'tools.system.package_manager:mode' to "
+                                     "'install'".format(method_name))
+            else:
+                return wrapped(self, *args, **kwargs)
+
+        return wrapper
+
+
+    @check_enabled_tool  # noqa
+    @check_mode  # noqa
     def install(self, packages, update=False, check=False, **kwargs):
         if update:
             self.update()
@@ -82,12 +90,14 @@ class SystemPackageManagerTool(object):
                                                   **kwargs)
             return self._conanfile.run(command)
 
-    @method_decorator  # noqa
+    @check_enabled_tool  # noqa
+    @check_mode  # noqa
     def update(self):
         command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
         return self._conanfile.run(command)
 
-    @method_decorator  # noqa
+    @check_enabled_tool  # noqa
+    @check_mode  # noqa
     def check(self, packages):
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
         return missing
@@ -118,7 +128,8 @@ class Apt(SystemPackageManagerTool):
 
         self._arch_separator = ":"
 
-    @SystemPackageManagerTool.method_decorator
+    @SystemPackageManagerTool.check_enabled_tool  # noqa
+    @SystemPackageManagerTool.check_mode  # noqa
     def install(self, packages, update=False, check=False, recommends=False):
         recommends_str = '' if recommends else '--no-install-recommends '
         return super(Apt, self).install(packages, update=update, check=check,
