@@ -149,17 +149,9 @@ _t_default_client_conf = textwrap.dedent("""
 
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
 
-    # cpu_count = 1             # environment CONAN_CPU_COUNT
-
     # Change the default location for building test packages to a temporary folder
     # which is deleted after the test.
     # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
-
-    [storage]
-    # This is the default path, but you can write your own. It must be an absolute path or a
-    # path beginning with "~" (if the environment var CONAN_HOME is specified, this directory, even
-    # with "~/", will be relative to the conan user home, not to the system user home)
-    path = ./data
     """)
 
 

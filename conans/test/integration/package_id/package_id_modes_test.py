@@ -53,13 +53,6 @@ def test_package_revision_mode():
     # TODO: These 2 little simplifications can reduce test time by 30-40%, to do in test framework
     save(client.cache.settings_path, "")
     save(client.cache.default_profile_path, "")
-    conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    default_package_id_mode=package_revision_mode'
-            """.format())
-    client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
     client.save({"liba/conanfile.py": GenConanfile("liba", "0.1.1"),
                  "libb/conanfile.py": GenConanfile("libb", "0.1").with_require("liba/0.1.1"),
                  "app/conanfile.py": GenConanfile("app", "0.1").with_require("libb/0.1")})

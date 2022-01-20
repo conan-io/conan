@@ -19,8 +19,6 @@ class DeployImportFilePermissionTest(unittest.TestCase):
         client = TestClient()
         if ro_cache:
             conan_conf = textwrap.dedent("""
-                                        [storage]
-                                        path = ./data
                                         [general]
                                         read_only_cache=True
                                     """)

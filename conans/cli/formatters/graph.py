@@ -63,7 +63,7 @@ def print_graph_basic(graph):
     if deprecated:
         output.info("Deprecated", Color.BRIGHT_YELLOW)
         for d, reason in deprecated.items():
-            reason = reason if isinstance(reason, str) else ""
+            reason = f": {reason}" if reason else ""
             output.info("    {}{}".format(d, reason), Color.BRIGHT_CYAN)
 
 

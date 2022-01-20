@@ -99,44 +99,6 @@ class Command(object):
         self._conan_api = conan_api
         self._out = ConanOutput()
 
-    def test(self, *args):
-        """
-        Tests a package consuming it from a conanfile.py with a test() method.
-
-        This command installs the conanfile dependencies (including the tested
-        package), calls a 'conan build' to build test apps and finally executes
-        the test() method. The testing recipe does not require name or version,
-        neither definition of package() or package_info() methods. The package
-        to be tested must exist in the local cache or any configured remote.
-        """
-        parser = argparse.ArgumentParser(description=self.test.__doc__,
-                                         prog="conan test",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
-                            ' to a recipe file with test() method'
-                            ' e.g. conan test_package/conanfile.py pkg/version@user/channel')
-        parser.add_argument("reference",
-                            help='pkg/version@user/channel of the package to be tested')
-        parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
-                            help="Working directory of the build process.")
-
-        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        args = parser.parse_args(*args)
-
-        self._warn_python_version()
-
-        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build,
-                                    conf=args.conf_build)
-        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
-
-        return self._conan_api.test(args.path, args.reference,
-                                args.profile_host, args.settings_host, args.options_host,
-                                args.env_host, conf=args.conf_host, remote_name=args.remote,
-                                update=args.update, build_modes=args.build,
-                                test_build_folder=args.test_build_folder,
-                                lockfile=args.lockfile, profile_build=profile_build)
-
     def download(self, *args):
         """
         Downloads recipe and binaries to the local cache, without using settings.
