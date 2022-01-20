@@ -353,35 +353,6 @@ class ConanAPIV1(object):
             else:
                 return app.remote_manager.get_recipe_file(ref, path, remote), path
 
-    @api_method
-    def editable_add(self, path, reference, cwd):
-        app = ConanApp(self.cache_folder)
-        # Retrieve conanfile.py from target_path
-        target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
-
-        # Check the conanfile is there, and name/version matches
-        ref = RecipeReference.loads(reference)
-        target_conanfile = app.loader.load_basic(target_path)
-        if (target_conanfile.name and target_conanfile.name != ref.name) or \
-                (target_conanfile.version and target_conanfile.version != ref.version):
-            raise ConanException("Name and version from reference ({}) and target "
-                                 "conanfile.py ({}/{}) must match".
-                                 format(ref, target_conanfile.name, target_conanfile.version))
-
-        app.cache.editable_packages.add(ref, target_path)
-
-    @api_method
-    def editable_remove(self, reference):
-        app = ConanApp(self.cache_folder)
-        # TODO: Validate the input reference
-        ref = RecipeReference.loads(reference)
-        return app.cache.editable_packages.remove(ref)
-
-    @api_method
-    def editable_list(self):
-        app = ConanApp(self.cache_folder)
-        return {str(k): v for k, v in app.cache.editable_packages.edited_refs.items()}
-
 
 def get_graph_info(profile_host, profile_build, cwd, cache,
                    name=None, version=None, user=None, channel=None, lockfile=None):
