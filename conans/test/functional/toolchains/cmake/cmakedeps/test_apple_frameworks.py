@@ -212,8 +212,7 @@ def test_apple_own_framework_cross_build(settings):
     test_conanfile = textwrap.dedent("""
         import os
         from conans import ConanFile, tools
-        from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
-        from conan.tools.layout import cmake_layout
+        from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
         from conan.tools.build import cross_building
 
         class TestPkg(ConanFile):
