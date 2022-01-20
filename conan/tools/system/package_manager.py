@@ -1,3 +1,6 @@
+from conans.errors import ConanException
+
+
 class SystemPackageManagerTool(object):
     install_methods = ["install", "update"]
     mode_check = "check"
@@ -34,26 +37,25 @@ class SystemPackageManagerTool(object):
             method_name = wrapped.__name__
             if self._active_tool == self.__class__.tool_name:
                 if method_name in self.install_methods and self._mode == self.mode_check:
-                    self._conanfile.output.warn("Can't {}. Please update packages manually or set "
-                                                "'tools.system.package_manager:mode' to "
-                                                "'install'".format(method_name))
+                    raise ConanException("Can't {}. Please update packages manually or set "
+                                         "'tools.system.package_manager:mode' to "
+                                         "'install'".format(method_name))
                 else:
                     return wrapped(self, *args, **kwargs)
-            else:
-                self._conanfile.output.warn("Ignoring call to {}.{}. Set "
-                                            "'tools.system.package_manager:tool' to activate tool "
-                                            "as the system package manager "
-                                            "tool".format(self.__class__.__name__, method_name))
-
         return wrapper
 
     @method_decorator  # noqa
-    def install(self, packages):
+    def install(self, packages, update=False, check=False):
+        if update:
+            self.update()
+        if check:
+            packages = self.check(packages)
         packages_arch = [self.get_package_name(package) for package in packages]
-        command = self.install_command.format(sudo=self.sudo_str,
-                                              tool=self.tool_name,
-                                              packages=" ".join(packages_arch))
-        return self._conanfile.run(command)
+        if packages_arch:
+            command = self.install_command.format(sudo=self.sudo_str,
+                                                  tool=self.tool_name,
+                                                  packages=" ".join(packages_arch))
+            return self._conanfile.run(command)
 
     @method_decorator  # noqa
     def update(self):
@@ -63,9 +65,8 @@ class SystemPackageManagerTool(object):
 
     @method_decorator  # noqa
     def check(self, packages):
-        not_installed = [pkg for pkg in packages if
-                         self.check_package(self.get_package_name(pkg)) != 0]
-        return not_installed
+        missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
+        return missing
 
     def check_package(self, package):
         command = self.check_command.format(tool=self.tool_name,

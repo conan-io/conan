@@ -6,6 +6,7 @@ import pytest
 from conan.tools.system.package_manager import Apt, Dnf, Yum, Brew, Pkg, PkgUtil, Chocolatey, Zypper, \
     PacMan
 from conans import Settings
+from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
@@ -49,9 +50,10 @@ def test_tools_install_mode_check(tool_class):
     conanfile.settings = Settings()
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
     tool = tool_class(conanfile)
-    tool.install(["package1", "package2"])
-    assert str(conanfile.output) == "WARN: Can't install. Please update packages manually or set " \
-                                    "'tools.system.package_manager:mode' to 'install'\n"
+    with pytest.raises(ConanException) as exc_info:
+        tool.install(["package1", "package2"])
+        assert exc_info.value.args[0] == "Can't install. Please update packages manually or " \
+                                         "set tools.system.package_manager:mode' to 'install'"
 
 
 @pytest.mark.parametrize("tool_class", [Apt, Yum, Dnf, Brew, Pkg, PkgUtil, Chocolatey, PacMan, Zypper])
@@ -62,9 +64,10 @@ def test_tools_update_mode_check(tool_class):
     conanfile.conf["tools.system.package_manager:tool"] = tool_class.tool_name
     conanfile.conf["tools.system.package_manager:mode"] = "check"
     tool = tool_class(conanfile)
-    tool.update()
-    assert str(conanfile.output) == "WARN: Can't update. Please update packages manually or set " \
-                                    "'tools.system.package_manager:mode' to 'install'\n"
+    with pytest.raises(ConanException) as exc_info:
+        tool.update()
+        assert exc_info.value.args[0] == "Can't install. Please update packages manually or " \
+                                         "set tools.system.package_manager:mode' to 'install'"
 
 
 @pytest.mark.parametrize("tool_class, result", [
