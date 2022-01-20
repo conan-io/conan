@@ -45,7 +45,7 @@ class SystemPackageManagerTool(object):
         return wrapper
 
     @method_decorator  # noqa
-    def install(self, packages, update=False, check=False):
+    def install(self, packages, update=False, check=False, **kwargs):
         if update:
             self.update()
         if check:
@@ -54,7 +54,8 @@ class SystemPackageManagerTool(object):
         if packages_arch:
             command = self.install_command.format(sudo=self.sudo_str,
                                                   tool=self.tool_name,
-                                                  packages=" ".join(packages_arch))
+                                                  packages=" ".join(packages_arch),
+                                                  **kwargs)
             return self._conanfile.run(command)
 
     @method_decorator  # noqa
@@ -95,14 +96,10 @@ class Apt(SystemPackageManagerTool):
         self._arch_separator = ":"
 
     @SystemPackageManagerTool.method_decorator
-    def install(self, packages, recommends=False):
+    def install(self, packages, update=False, check=False, recommends=False):
         recommends_str = '' if recommends else '--no-install-recommends '
-        packages_arch = [self.get_package_name(package) for package in packages]
-        command = self.install_command.format(sudo=self.sudo_str,
-                                              tool=self.tool_name,
-                                              recommends=recommends_str,
-                                              packages=" ".join(packages_arch))
-        return self._conanfile.run(command)
+        return super(Apt, self).install(packages, update=update, check=check,
+                                        recommends=recommends_str)
 
 
 class Yum(SystemPackageManagerTool):
