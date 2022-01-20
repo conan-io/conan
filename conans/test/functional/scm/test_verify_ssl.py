@@ -51,19 +51,6 @@ class GitVerifySSLTestCase(unittest.TestCase):
         url, _ = create_local_git_repo(files=files, commits=4, tags=['v0', ])
         self.client.run_command('git clone "{}" .'.format(url))
 
-    def _check_info_values(self, client):
-        client.run("inspect {} -a scm".format(self.ref))  # Check we get a loadable conanfile.py
-        if self.verify_ssl in [None]:
-            self.assertNotIn('verify_ssl', str(client.out))
-        elif self.verify_ssl in [True]:  # This is the default value
-            not_appears = 'verify_ssl' not in str(client.out)
-            value_explicit = 'verify_ssl: True' in str(client.out)
-            self.assertTrue(not_appears or value_explicit)
-        elif self.verify_ssl in ['None']:
-            self.assertIn('verify_ssl: None', str(client.out))
-        else:
-            self.assertIn('verify_ssl: False', str(client.out))
-
     def test_export_scm_to_conandata(self):
         # Check the verify_ssl value is stored and propagated with the proper value
         self.client.run(f"export . --name={self.ref.name} --version={self.ref.version} --user={self.ref.user} --channel={self.ref.channel}")
@@ -74,5 +61,3 @@ class GitVerifySSLTestCase(unittest.TestCase):
             self.assertIn('verify_ssl: null', content)
         else:
             self.assertIn('verify_ssl: false', content)
-
-        self._check_info_values(self.client)

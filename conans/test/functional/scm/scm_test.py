@@ -146,12 +146,6 @@ class ConanLib(ConanFile):
         self.assertIn("SCM: Getting sources from folder: %s" % curdir, self.client.out)
         self.assertIn("My file is copied", self.client.out)
 
-        # check blank lines are respected in replacement
-        self.client.run("get lib/0.1@user/channel")
-        self.assertIn("""}
-
-    def build(self):""", self.client.out)
-
         # Export again but now with absolute reference, so no sources are copied from the local dir
         git = Git(curdir)
         self.client.save({"conanfile.py": base_git.format(url=_quoted(curdir),
