@@ -125,10 +125,6 @@ def test_user_toolchain(conanfile):
     content = toolchain.content
     assert 'include("myowntoolchain.cmake")' in content
 
-    toolchain = CMakeToolchain(conanfile)
-    content = toolchain.content
-    assert 'include(' not in content
-
 
 @pytest.fixture
 def conanfile_apple():
