@@ -1,4 +1,3 @@
-import re
 import textwrap
 import time
 import unittest
@@ -140,7 +139,7 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
-        package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("pkg/0.1@user/stable")
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}' created", client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
@@ -196,7 +195,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "visual_profile": visual_profile})
         client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
                    "--profile visual_profile")
-        package_id = re.search(r"bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("bye/0.1@us/ch")
         client.run("install --reference=%s -pr intel_profile" % repr(ref))
         missing_id = "c1b60feb368929efd9e60fd47dbfa45969742332"
         self.assertIn(f"bye/0.1@us/ch: Main binary package '{missing_id}'"
@@ -264,7 +263,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "visual_profile": visual_profile})
         client.run("create . --name=bye --version=0.1 --user=us --channel=ch "
                    "--profile intel_profile")
-        package_id = re.search(r"bye/0.1@us/ch:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("bye/0.1@us/ch")
         client.run("install --reference=%s -pr visual_profile" % repr(ref))
         missing_id = "6e399d2c50620569974e4d894ee9651ee7861be9"
         self.assertIn("bye/0.1@us/ch: Main binary package "
@@ -415,7 +414,7 @@ class CompatibleIDsTest(unittest.TestCase):
         # Create package with gcc 4.8
         client.run("create . --name=pkg --version=0.1 --user=user --channel=stable "
                    "-pr=myprofile -s compiler.version=4.8")
-        package_id = re.search(r"pkg/0.1@user/stable:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("pkg/0.1@user/stable")
         self.assertIn(f"pkg/0.1@user/stable: Package '{package_id}'"
                       " created", client.out)
 
@@ -423,11 +422,10 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=stable -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
-        self.assertIn(f"pkg/0.1@user/stable:{package_id} - Cache",
-                      client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
         consumer_id = "fdd83a0f601bb72cc84b64ca6451f18b158b1100"
-        self.assertIn(f"consumer/0.1@user/stable:{consumer_id} - Build", client.out)
+        client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
         # Create package with gcc 4.9
@@ -440,11 +438,11 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=stable -pr=myprofile")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!", client.out)
-        self.assertIn("pkg/0.1@user/stable:c6715d73365c2dd62f68836b2dee8359a312ff12 - Cache",
-                      client.out)
+        client.assert_listed_binary({"pkg/0.1@user/stable":
+                                         ("c6715d73365c2dd62f68836b2dee8359a312ff12", "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
         consumer_id = "8ad16e61b38b9b8ea3c4059d391d0c3267607f59"
-        self.assertIn(f"consumer/0.1@user/stable:{consumer_id} - Build", client.out)
+        client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
     def test_build_missing(self):

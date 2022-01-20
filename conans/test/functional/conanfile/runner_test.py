@@ -74,8 +74,6 @@ class ConanFileToolsTest(ConanFile):
         # A runner logging everything
         client = TestClient()
         conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
                             [log]
                             print_run_commands=True
                             run_to_file=True
@@ -91,8 +89,6 @@ class ConanFileToolsTest(ConanFile):
         # A runner logging everything
         client = TestClient()
         conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
                             [log]
                             print_run_commands=True
                             run_to_file=False
@@ -108,8 +104,6 @@ class ConanFileToolsTest(ConanFile):
 
         client = TestClient()
         conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
                             [log]
                             print_run_commands=False
                             run_to_file=True
@@ -125,8 +119,6 @@ class ConanFileToolsTest(ConanFile):
 
         client = TestClient()
         conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
                             [log]
                             print_run_commands=False
                             run_to_file=False
@@ -142,8 +134,6 @@ class ConanFileToolsTest(ConanFile):
 
         client = TestClient()
         conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
                             [log]
                             print_run_commands=False
                             run_to_file=False
@@ -159,8 +149,6 @@ class ConanFileToolsTest(ConanFile):
 
         client = TestClient()
         conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
                             [log]
                             print_run_commands=False
                             run_to_file=True

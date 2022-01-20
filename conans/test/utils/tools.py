@@ -403,7 +403,6 @@ class TestClient(object):
 
         # Once the client is ready, modify the configuration
         mkdir(self.current_folder)
-        self.tune_conan_conf(cache_folder, cpu_count)
 
         self.out = ""
         self.stdout = RedirectedTestOutput()
@@ -430,16 +429,6 @@ class TestClient(object):
     @property
     def storage_folder(self):
         return self.cache.store
-
-    def tune_conan_conf(self, cache_folder, cpu_count):
-        # Create the default
-        cache = self.cache
-        _ = cache.config
-
-        if cpu_count:
-            replace_in_file(cache.conan_conf_path,
-                            "# cpu_count = 1", "cpu_count = %s" % cpu_count,
-                            strict=not bool(cache_folder))
 
     def update_servers(self):
         api = self.get_conan_api()
@@ -714,11 +703,14 @@ class TestClient(object):
         prev = self.cache.get_package_revisions_references(pref)
         return True if prev else False
 
-    def assert_listed_require(self, requires):
+    def assert_listed_require(self, requires, build=False, python=False):
         """ parses the current command output, and extract the first "Requirements" section
         """
         lines = self.out.splitlines()
-        line_req = lines.index("Requirements")
+        header = "Requirements" if not build else "Build requirements"
+        if python:
+            header = "Python requires"
+        line_req = lines.index(header)
         reqs = []
         for line in lines[line_req+1:]:
             if not line.startswith("    "):

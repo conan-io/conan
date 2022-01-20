@@ -1,5 +1,4 @@
 import os
-import re
 import textwrap
 import unittest
 
@@ -52,7 +51,7 @@ class TestConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing --build=missing")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.md' file: LICENSE.md",
                       client.out)
         pref = client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@user/testing"),

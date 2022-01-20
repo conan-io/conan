@@ -24,7 +24,7 @@ class TestDeprecated:
         t.save({'taskflow.py': GenConanfile("cpp-taskflow", "1.0").with_deprecated('"taskflow"')})
         t.run("create taskflow.py")
 
-        assert "Deprecated\n    cpp-taskflow/1.0 in favor of 'taskflow'" in t.out
+        assert "Deprecated\n    cpp-taskflow/1.0: taskflow" in t.out
 
         t.run("create taskflow.py --user=conan --channel=stable")
-        assert "Deprecated\n    cpp-taskflow/1.0@conan/stable in favor of 'taskflow'" in t.out
+        assert "Deprecated\n    cpp-taskflow/1.0@conan/stable: taskflow" in t.out

@@ -41,8 +41,6 @@ class ConanTraceTest(unittest.TestCase):
         def _install_a_package(print_commands_to_output, generate_run_log_file):
             client = TestClient(servers=self.servers)
             conan_conf = textwrap.dedent("""
-                                        [storage]
-                                        path = ./data
                                         [log]
                                         print_run_commands={}
                                         run_to_file={}

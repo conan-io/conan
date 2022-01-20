@@ -91,7 +91,7 @@ def test_auto_package_no_components():
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . --name=lib --version=1.0")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+    package_id = client.created_package_id("lib/1.0")
 
     ref = RecipeReference.loads("lib/1.0@")
     prev = get_latest_package_reference(client.cache, ref, package_id)
@@ -184,7 +184,7 @@ def test_auto_package_with_components():
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . --name=lib --version=1.0")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+    package_id = client.created_package_id("lib/1.0")
 
     ref = RecipeReference.loads("lib/1.0@")
     pref = get_latest_package_reference(client.cache, ref, package_id)
@@ -282,7 +282,7 @@ def test_auto_package_default_patterns():
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . --name=lib --version=1.0")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+    package_id = client.created_package_id("lib/1.0")
     ref = RecipeReference.loads("lib/1.0@")
     pref = get_latest_package_reference(client.cache, ref, package_id)
     p_folder = client.cache.pkg_layout(pref).package()

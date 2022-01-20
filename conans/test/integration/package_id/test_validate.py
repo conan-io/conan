@@ -69,6 +69,7 @@ class TestValidate(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         print(client.out)
+        client.assert_listed_binary({"pkg/0.1": ("INVALID", "Invalid")})
         client.run("graph info --reference=pkg/0.1@ -s os=Windows")
         self.assertIn("pkg/0.1: Main binary package 'cf2e4ff978548fafd099ad838f9ecb8858bf25cb' "
                       "missing. Using compatible package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8'",
@@ -98,6 +99,7 @@ class TestValidate(unittest.TestCase):
 
         client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
+        client.assert_listed_binary({"pkg/0.1": ("INVALID", "Invalid")})
 
         client.run("graph info --reference=pkg/0.1@ -s os=Windows")
         self.assertIn("package_id: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
@@ -274,6 +276,8 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")})
         error = client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
+        client.assert_listed_binary({"dep/0.1": ("INVALID", "Invalid")})
+        client.assert_listed_binary({"pkg/0.1": ("INVALID", "Invalid")})
         self.assertIn("ERROR: There are invalid packages (packages that cannot "
                       "exist for this configuration):", client.out)
         self.assertIn("dep/0.1: Invalid: Windows not supported", client.out)

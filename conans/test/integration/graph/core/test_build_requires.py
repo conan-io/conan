@@ -649,8 +649,7 @@ def test_tool_requires():
     """)
     client.save({"conanfile.py": consumer})
     client.run("create . --name=consumer --version=1.0")
-    assert """Build requirements
-    tool1/1.0 from local cache - Cache
-    tool2/1.0 from local cache - Cache
-    tool3/1.0 from local cache - Cache
-    tool4/1.0 from local cache - Cache""" in client.out
+    client.assert_listed_require({"tool1/1.0": "Cache",
+                                  "tool2/1.0": "Cache",
+                                  "tool3/1.0": "Cache",
+                                  "tool4/1.0": "Cache"}, build=True)

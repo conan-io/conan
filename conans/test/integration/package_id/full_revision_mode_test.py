@@ -183,14 +183,13 @@ class FullRevisionModeTest(unittest.TestCase):
         save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=liba --version=0.1 --user=user --channel=testing")
-        self.assertIn(f"liba/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Build",
-                      client.out)
+        client.assert_listed_binary({"liba/0.1@user/testing": (NO_SETTINGS_PACKAGE_ID, "Build")})
         prev = "a397cb03d51fb3b129c78d2968e2676f"
         self.assertIn(f"liba/0.1@user/testing: Created package revision {prev}", client.out)
         client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
         client.run("create . --name=libb --version=0.1 --user=user --channel=testing")
         libb_pkgid = "af0c44b853e4651ccafc636d601d9c65d3fa44a8"
-        self.assertIn(f"libb/0.1@user/testing:{libb_pkgid} - Build", client.out)
+        client.assert_listed_binary({"libb/0.1@user/testing": (libb_pkgid, "Build")})
 
         client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
         client.run("create . --name=libc --version=0.1 --user=user --channel=testing")
@@ -331,7 +330,7 @@ def test_package_revision_mode_full_transitive_package_id():
     client.run("export tool --name=tool --version=0.1")
     client.run("export pkga --name=pkga --version=0.1")
     client.run("create pkgb --name=pkgb --version=0.1 -pr=profile --build=missing")
-    assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
+    client.assert_listed_binary({"pkgb/0.1": ("Package_ID_unknown", "Unknown")})
     assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
     pkg_id = "fbdb93dfebd237827767fd6bc7b235c1af5012dd"
     assert f"pkgb/0.1: Package '{pkg_id}' created" in client.out
