@@ -43,7 +43,7 @@ class UploadAPI:
         checker.check(upload_data)
 
     @api_method
-    def simulate(self, upload_data, remote, force=False):
+    def prepare(self, upload_data, remote, force=False):
         """Compress the recipes and packages and fill the upload_data objects
         with the complete information. It doesn't perform the upload"""
         app = ConanApp(self.conan_api.cache_folder)
