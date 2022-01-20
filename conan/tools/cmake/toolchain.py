@@ -801,6 +801,10 @@ class CMakeToolchain(object):
             message("Using Conan toolchain: ${CMAKE_TOOLCHAIN_FILE}.")
         endif()
 
+        if(${CMAKE_VERSION} VERSION_LESS "3.15")
+            message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.15")
+        endif()
+
         {% for conan_block in conan_blocks %}
         {{ conan_block }}
         {% endfor %}
