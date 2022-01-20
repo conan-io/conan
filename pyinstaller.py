@@ -87,7 +87,11 @@ def pyinstall(source_folder):
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
     conan_build_info_path = os.path.join(source_folder, "conans/build_info/command.py")
-    hidden = ("--hidden-import=glob --hidden-import=conan.tools.microsoft "
+    hidden = ("--hidden-import=glob "  # core stdlib
+              "--hidden-import=pathlib "
+              "--hidden-import=distutils.dir_util "
+              # The conan.tools integration
+              "--hidden-import=conan.tools.microsoft "
               "--hidden-import=conan.tools.gnu --hidden-import=conan.tools.cmake "
               "--hidden-import=conan.tools.meson --hidden-import=conan.tools.apple "
               "--hidden-import=conan.tools.build --hidden-import=conan.tools.env "
@@ -95,7 +99,6 @@ def pyinstall(source_folder):
               "--hidden-import=conan.tools.google --hidden-import=conan.tools.intel "
               "--hidden-import=conan.tools.layout --hidden-import=conan.tools.premake "
               "--hidden-import=conan.tools.qbs")
-    hidden += " --hidden-import=distutils.dir_util"
     if platform.system() != "Windows":
         hidden += " --hidden-import=setuptools.msvc"
         win_ver = ""
