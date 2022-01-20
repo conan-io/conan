@@ -193,10 +193,9 @@ timer_cpp = textwrap.dedent("""
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
-                         [# FIXME: Skipped because environment changes ('',),
-                          ('-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
-                          ("-s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
-
+         [('',),
+          ('-pr:b default -s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
+          ("-pr:b default -s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
@@ -211,13 +210,18 @@ def test_apple_own_framework_cross_build(settings):
     """)
 
     test_conanfile = textwrap.dedent("""
+        import os
         from conans import ConanFile, tools
         from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
+        from conan.tools.layout import cmake_layout
         from conan.tools.build import cross_building
 
         class TestPkg(ConanFile):
             generators = "CMakeToolchain"
             settings = "os", "arch", "compiler", "build_type"
+
+            def layout(self):
+                cmake_layout(self)
 
             def requirements(self):
                 self.requires(self.tested_reference_str)
@@ -237,7 +241,8 @@ def test_apple_own_framework_cross_build(settings):
 
             def test(self):
                 if not cross_building(self):
-                    self.run("timer", env="conanrunenv")
+                    cmd = os.path.join(self.cpp.build.bindirs[0], "timer")
+                    self.run(cmd, env="conanrunenv")
         """)
 
     client.save({'conanfile.py': conanfile,
