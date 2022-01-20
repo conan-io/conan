@@ -56,12 +56,6 @@ class DownloadCacheTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         cache_folder = temp_folder()
 
-        conan_conf = textwrap.dedent("""
-                    download_cache = {}
-                    [log]
-                    """.format(cache_folder))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-
         client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
         client.run("create . --name=pkg --version=0.1")
         client.run("upload * --all -c -r default")
