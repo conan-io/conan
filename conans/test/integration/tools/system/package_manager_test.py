@@ -1,3 +1,5 @@
+import platform
+
 import mock
 import pytest
 from mock.mock import PropertyMock
@@ -16,6 +18,7 @@ from conans.test.utils.mocks import ConanFileMock
     ("Darwin", "brew"),
     ("Solaris", "pkgutil"),
 ])
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_manager_platform(platform, tool):
     with mock.patch("platform.system", return_value=platform):
         with mock.patch("distro.id", return_value=''):
@@ -27,6 +30,7 @@ def test_package_manager_platform(platform, tool):
                 assert tool == manager.get_default_tool()
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
 def test_msys2():
     with mock.patch("platform.system", return_value="Windows"):
         with mock.patch('conans.ConanFile.context', new_callable=PropertyMock) as context_mock:
@@ -48,6 +52,7 @@ def test_msys2():
     ("opensuse", "zypper"),
     ("freebsd", "pkg"),
 ])
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_manager_distro(distro, tool):
     with mock.patch("platform.system", return_value="Linux"):
         with mock.patch("distro.id", return_value=distro):
