@@ -3,7 +3,7 @@ import textwrap
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools.apple.apple import to_apple_arch, is_apple_os
+from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
 from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
@@ -12,7 +12,7 @@ from conans.errors import ConanException
 from conans.util.files import save
 
 
-class _MesonAppleBlock(object):
+class _MesonAppleFlagsBlock(object):
 
     def __init__(self, conanfile, toolchain):
         self._conanfile = conanfile
@@ -26,60 +26,37 @@ class _MesonAppleBlock(object):
         if not sdk_path and self._toolchain.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
-        os_version = self._conanfile.settings.get_safe("os.version")
-        os_subsystem = self._conanfile.settings.get_safe("os.subsystem")
-        # It's better if os.sdk field appears in settings instead of inferring it from SDK path
-        # os_sdk = os.path.basename(sdk_path).split(".")[0].lower()
-        os_sdk = _MesonAppleBlock.apple_sdk_name(self._conanfile)
-        arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
-        # Calculating main flags
-        deployment_target_flag = " " + _MesonAppleBlock.apple_min_version_flag(os_version, os_sdk,
-                                                                               os_subsystem)
-        sysroot_flag = " -isysroot " + sdk_path if sdk_path else ""
-        arch_flag = " -arch " + arch
-        # Adding all the flags needed (it does not matter if they are duplicated)
-        self._toolchain.c_args = deployment_target_flag + sysroot_flag + arch_flag
-        self._toolchain.c_link_args = deployment_target_flag + sysroot_flag + arch_flag
-        self._toolchain.cpp_args = deployment_target_flag + sysroot_flag + arch_flag
-        self._toolchain.cpp_link_args = deployment_target_flag + sysroot_flag + arch_flag
-
-    # FIXME: 2.0: Remove this method and use the common one from conan.tools.apple.apple
-    #             Depends on https://github.com/conan-io/conan/pull/10277
-    @staticmethod
-    def apple_min_version_flag(os_version, os_sdk, subsystem):
-        """compiler flag name which controls deployment target"""
-        flag = {'macosx': '-mmacosx-version-min',
-                'iphoneos': '-mios-version-min',
-                'iphonesimulator': '-mios-simulator-version-min',
-                'watchos': '-mwatchos-version-min',
-                'watchsimulator': '-mwatchos-simulator-version-min',
-                'appletvos': '-mtvos-version-min',
-                'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
-        if subsystem == 'catalyst':
-            # special case, despite Catalyst is macOS, it requires an iOS version argument
-            flag = '-mios-version-min'
-        if not flag or not os_version:
-            return ''
-        return "%s=%s" % (flag, os_version)
-
-    # FIXME: 2.0: Remove this method and use the common one from conan.tools.apple.apple
-    #             Depends on https://github.com/conan-io/conan/pull/10277
-    @staticmethod
-    def apple_sdk_name(conanfile):
-        """
-        Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
-        there could be several ones depending on the OS architecture.
-
-        Note: In case of MacOS it'll be the same for all the architectures.
-        """
-        os_ = conanfile.settings.get_safe('os')
+        # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
         os_sdk = conanfile.settings.get_safe('os.sdk')
-        if os_sdk:
-            return os_sdk
-        elif os_ == "Macos":  # it has only a single value for all the architectures for now
-            return "macosx"
-        else:
+        if not os_sdk and os_ != "Macos":
             raise ConanException("Please, specify a suitable value for os.sdk.")
+
+        arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+        # Calculating the main Apple flags
+        deployment_target_flag = apple_min_version_flag(conanfile)
+        sysroot_flag = "-isysroot " + sdk_path if sdk_path else ""
+        arch_flag = "-arch " + arch if arch else ""
+
+        self.apple_flags = {}
+        if deployment_target_flag:
+            flag_ = deployment_target_flag.split("=")[0]
+            self.apple_flags[flag_] = deployment_target_flag
+        if sysroot_flag:
+            self.apple_flags["-isysroot"] = sysroot_flag
+        if arch_flag:
+            self.apple_flags["-arch"] = arch_flag
+
+    def add_flags(self):
+        for flag, arg_value in self.apple_flags.items():
+            v = " " + arg_value
+            if flag not in self._toolchain.c_args:
+                self._toolchain.c_args += v
+            if flag not in self._toolchain.c_link_args:
+                self._toolchain.c_link_args += v
+            if flag not in self._toolchain.cpp_args:
+                self._toolchain.cpp_args += v
+            if flag not in self._toolchain.cpp_link_args:
+                self._toolchain.cpp_link_args += v
 
 
 class MesonToolchain(object):
@@ -217,10 +194,14 @@ class MesonToolchain(object):
 
         # Define all the existing blocks
         self.blocks = [
-            _MesonAppleBlock(conanfile, self)
+            _MesonAppleFlagsBlock(conanfile, self)
         ]
 
     def _context(self):
+        # Process all the blocks
+        for block in self.blocks:
+            block.add_flags()
+
         return {
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
