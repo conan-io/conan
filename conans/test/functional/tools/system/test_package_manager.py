@@ -73,7 +73,7 @@ def test_brew_check():
 
 @pytest.mark.tool_brew
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
-def test_brew_install_precheck():
+def test_brew_install_check_mode():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
         from conans import ConanFile
@@ -87,3 +87,20 @@ def test_brew_install_precheck():
     client.run("create . test/1.0@", assert_error=True)
     assert "System requirements: 'non-existing1, non-existing2' are missing but " \
            "can't install because tools.system.package_manager:mode is 'check'" in client.out
+
+
+@pytest.mark.tool_brew
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
+def test_brew_install_install_mode():
+    client = TestClient()
+    client.save({"conanfile.py": textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.system import Brew
+        class MyPkg(ConanFile):
+            settings = "arch"
+            def system_requirements(self):
+                brew = Brew(self)
+                brew.install(["non-existing1", "non-existing2"])
+        """)})
+    client.run("create . test/1.0@ -c tools.system.package_manager:mode=install", assert_error=True)
+    assert "Error: No formulae found in taps." in client.out
