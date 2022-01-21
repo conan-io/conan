@@ -73,10 +73,12 @@ class _SystemPackageManagerTool(object):
             packages = self.check(packages)
 
         if self._mode == self.mode_check and packages:
-            raise ConanException("Can't install because tools.system.package_manager:mode is '{}'."
+            raise ConanException("System requirements: '{}' are missing but can't install "
+                                 "because tools.system.package_manager:mode is '{}'."
                                  "Please update packages manually or set "
                                  "'tools.system.package_manager:mode' "
-                                 "to '{}'".format(self.mode_check, self.mode_install))
+                                 "to '{}'".format(", ".join(packages),
+                                                  self.mode_check, self.mode_install))
         elif packages:
             packages_arch = [self.get_package_name(package) for package in packages]
             if packages_arch:

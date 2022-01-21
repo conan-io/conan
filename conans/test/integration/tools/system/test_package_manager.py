@@ -106,7 +106,8 @@ def test_tools_install_mode_check(tool_class):
         tool = tool_class(conanfile)
         with pytest.raises(ConanException) as exc_info:
             tool.install(["package1", "package2"])
-        assert exc_info.value.args[0] == "Can't install because tools.system.package_manager:mode " \
+        assert exc_info.value.args[0] == "System requirements: 'package1, package2' are missing but " \
+                                         "can't install because tools.system.package_manager:mode " \
                                          "is 'check'.Please update packages manually or set " \
                                          "'tools.system.package_manager:mode' to 'install'"
 
