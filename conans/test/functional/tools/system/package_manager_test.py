@@ -58,7 +58,7 @@ def test_build_require():
 
 @pytest.mark.tool_brew
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
-@pytest.mark.skip(reason="brew update takes a lot of time")
+@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
 def test_brew_check():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
