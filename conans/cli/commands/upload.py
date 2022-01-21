@@ -56,7 +56,6 @@ def upload(conan_api: ConanAPIV2, parser, *args):
         return
     conan_api.upload.upload_bundle(upload_bundle, remote, force=args.force)
 
-    # print(json.dumps(upload_bundle.serialize()))
 
 
 def _ask_confirm_upload(conan_api, upload_data):
