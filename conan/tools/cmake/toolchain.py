@@ -383,17 +383,8 @@ class FindFiles(Block):
         {% endif %}
 
         # Definition of CMAKE_MODULE_PATH
-        {% if build_build_paths %}
-        # Explicitly defined "buildirs" of "build" context dependencies
-        list(PREPEND CMAKE_MODULE_PATH {{ build_build_paths }})
-        {% endif %}
-        {% if host_build_paths_noroot %}
-        # Explicitly defined "builddirs" of "host" dependencies
-        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_noroot }})
-        {% endif %}
-        {% if host_build_paths_root %}
-        # The root (which is the default builddirs) path of dependencies in the host context
-        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_root }})
+        {% if build_paths %}
+        list(PREPEND CMAKE_MODULE_PATH {{ build_paths }})
         {% endif %}
         {% if generators_folder %}
         # the generators folder (where conan generates files, like this toolchain)
@@ -401,9 +392,9 @@ class FindFiles(Block):
         {% endif %}
 
         # Definition of CMAKE_PREFIX_PATH, CMAKE_XXXXX_PATH
-        {% if host_build_paths_noroot %}
+        {% if build_paths %}
         # The explicitly defined "builddirs" of "host" context dependencies must be in PREFIX_PATH
-        list(PREPEND CMAKE_PREFIX_PATH {{ host_build_paths_noroot }})
+        list(PREPEND CMAKE_PREFIX_PATH {{ build_paths }})
         {% endif %}
         {% if generators_folder %}
         # The Conan local "generators" folder, where this toolchain is saved.
@@ -462,17 +453,13 @@ class FindFiles(Block):
 
         # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
-        host_build_paths_root = []
-        host_build_paths_noroot = []
+        build_paths = []
         host_lib_paths = []
         host_framework_paths = []
         host_include_paths = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            # If the builddir is the package_folder, then it is the default "root" one
-            nf = os.path.normpath(req.package_folder)
-            host_build_paths_root.extend(p for p in cppinfo.builddirs if os.path.normpath(p) == nf)
-            host_build_paths_noroot.extend(p for p in cppinfo.builddirs if os.path.normpath(p) != nf)
+            build_paths.extend(cppinfo.builddirs)
             host_lib_paths.extend(cppinfo.libdirs)
             if is_apple_:
                 host_framework_paths.extend(cppinfo.frameworkdirs)
@@ -480,19 +467,16 @@ class FindFiles(Block):
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
-        build_build_paths = []
         build_bin_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.aggregated_components()
-            build_build_paths.extend(cppinfo.builddirs)
+            build_paths.extend(cppinfo.builddirs)
             build_bin_paths.extend(cppinfo.bindirs)
 
         return {
             "find_package_prefer_config": find_package_prefer_config,
             "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
-            "host_build_paths_root": self._join_paths(host_build_paths_root),
-            "host_build_paths_noroot": self._join_paths(host_build_paths_noroot),
-            "build_build_paths": self._join_paths(build_build_paths),
+            "build_paths": self._join_paths(build_paths),
             "cmake_program_path": self._join_paths(build_bin_paths),
             "cmake_library_path": self._join_paths(host_lib_paths),
             "cmake_framework_path": self._join_paths(host_framework_paths),
