@@ -107,7 +107,7 @@ class MesonToolchain(object):
             os_host = conanfile.settings.get_safe("os")
             arch_host = conanfile.settings.get_safe("arch")
             os_build = conanfile.settings_build.get_safe('os')
-            arch_build = conanfile.settings_build.get_safe('arch'),
+            arch_build = conanfile.settings_build.get_safe('arch')
             self.cross_build["build"] = to_meson_machine(os_build, arch_build)
             self.cross_build["host"] = to_meson_machine(os_host, arch_host)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
