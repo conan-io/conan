@@ -150,7 +150,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
+def testModules = ["conans/test/functional/toolchains/cmake/test_cmaketoolchain_paths.py", "conans/test/unittests", "conans/test/integration", "conans/test/functional"]
 
 void deployToPypiTest() {
     node("Linux") {
@@ -158,7 +158,7 @@ void deployToPypiTest() {
             def scmVars = checkout scm
             checkout scm
             stage("Deploy conan to pypitesting") {
-                withCredentials([string(credentialsId: 'TWINE_USERNAME', variable: 'TWINE_USERNAME'), 
+                withCredentials([string(credentialsId: 'TWINE_USERNAME', variable: 'TWINE_USERNAME'),
                                  string(credentialsId: 'TWINE_PASSWORD', variable: 'TWINE_PASSWORD')]) {
                     def deployConan = "python -m pip install twine && " \
                                     + "python .ci/bump_dev_version.py && " \
@@ -168,7 +168,7 @@ void deployToPypiTest() {
                 }
             }
             stage("Deploy conan-server to pypitesting") {
-                withCredentials([string(credentialsId: 'TWINE_USERNAME_SERVER', variable: 'TWINE_USERNAME'), 
+                withCredentials([string(credentialsId: 'TWINE_USERNAME_SERVER', variable: 'TWINE_USERNAME'),
                                  string(credentialsId: 'TWINE_PASSWORD_SERVER', variable: 'TWINE_PASSWORD')]) {
                     def deployServer = "rm -rf dist/ rm setup.py && mv setup_server.py setup.py && python setup.py sdist && " \
                                      + "python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*"
@@ -177,7 +177,7 @@ void deployToPypiTest() {
             }
         }
         finally {}
-    }    
+    }
 }
 
 try {
