@@ -48,6 +48,9 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     if args.check:
         conan_api.upload.check_integrity(upload_bundle)
 
+    # Check if the recipes/packages are in the remote
+    conan_api.upload.check_upstream(upload_bundle, remote, args.force)
+
     # If only if search with "*" we ask for confirmation
     if not args.confirm and "*" in args.reference:
         _ask_confirm_upload(conan_api, upload_bundle)
@@ -55,8 +58,6 @@ def upload(conan_api: ConanAPIV2, parser, *args):
     if not upload_bundle.any_upload:
         return
     conan_api.upload.upload_bundle(upload_bundle, remote, force=args.force)
-
-    # print(json.dumps(upload_bundle.serialize()))
 
 
 def _ask_confirm_upload(conan_api, upload_data):
