@@ -41,7 +41,7 @@ class GitShallowTestCase(unittest.TestCase):
             def build(self):
                 try:
                     mybuf = StringIO()
-                    out = self.run("git describe --tags", output=mybuf)
+                    out = self.run("git describe --tags", stdout=mybuf)
                     self.output.info(">>> tags: {{}}".format(mybuf.getvalue()))
                 except ConanException:
                     self.output.info(">>> describe-fails")

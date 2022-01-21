@@ -218,7 +218,7 @@ class ConanFile:
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, cwd=None, ignore_errors=False, env=None, quiet=False, shell=True):
+    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env=None, quiet=False, shell=True):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         if platform.system() == "Windows":
             if self.win_bash:  # New, Conan 2.0
@@ -230,7 +230,7 @@ class ConanFile:
         wrapped_cmd = environment_wrap_command(env, command, cwd=self.generators_folder)
         from conans.util.runners import conan_run
         ConanOutput().writeln(f"{self.display_name}: RUN: {command if not quiet else '*hidden*'}")
-        retcode = conan_run(wrapped_cmd, cwd=cwd, shell=shell)
+        retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing" % retcode)
