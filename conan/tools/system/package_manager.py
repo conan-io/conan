@@ -4,7 +4,7 @@ from conans.client.graph.graph import CONTEXT_BUILD
 from conans.errors import ConanException
 
 
-class SystemPackageManagerTool(object):
+class _SystemPackageManagerTool(object):
     install_methods = ["install", "update"]
     mode_check = "check"
     tool_name = None
@@ -109,7 +109,7 @@ class SystemPackageManagerTool(object):
         return self._conanfile.run(command, ignore_errors=True)
 
 
-class Apt(SystemPackageManagerTool):
+class Apt(_SystemPackageManagerTool):
     # TODO: apt? apt-get?
     tool_name = "apt-get"
     install_command = "{sudo}{tool} install -y {recommends}{packages}"
@@ -129,15 +129,15 @@ class Apt(SystemPackageManagerTool):
 
         self._arch_separator = ":"
 
-    @SystemPackageManagerTool.check_enabled_tool  # noqa
-    @SystemPackageManagerTool.check_mode  # noqa
+    @_SystemPackageManagerTool.check_enabled_tool  # noqa
+    @_SystemPackageManagerTool.check_mode  # noqa
     def install(self, packages, update=False, check=False, recommends=False):
         recommends_str = '' if recommends else '--no-install-recommends '
         return super(Apt, self).install(packages, update=update, check=check,
                                         recommends=recommends_str)
 
 
-class Yum(SystemPackageManagerTool):
+class Yum(_SystemPackageManagerTool):
     tool_name = "yum"
     install_command = "{sudo}{tool} install -y {packages}"
     update_command = "{sudo}{tool} check-update -y"
@@ -160,28 +160,28 @@ class Dnf(Yum):
     tool_name = "dnf"
 
 
-class Brew(SystemPackageManagerTool):
+class Brew(_SystemPackageManagerTool):
     tool_name = "brew"
     install_command = "{sudo}{tool} install {packages}"
     update_command = "{sudo}{tool} update"
     check_command = 'test -n "$({tool} ls --versions {package})"'
 
 
-class Pkg(SystemPackageManagerTool):
+class Pkg(_SystemPackageManagerTool):
     tool_name = "pkg"
     install_command = "{sudo}{tool} install -y {packages}"
     update_command = "{sudo}{tool} update"
     check_command = "{tool} info {package}"
 
 
-class PkgUtil(SystemPackageManagerTool):
+class PkgUtil(_SystemPackageManagerTool):
     tool_name = "pkgutil"
     install_command = "{sudo}{tool} --install --yes {packages}"
     update_command = "{sudo}{tool} --catalog"
     check_command = 'test -n "`{tool} --list {package}`"'
 
 
-class Chocolatey(SystemPackageManagerTool):
+class Chocolatey(_SystemPackageManagerTool):
     tool_name = "choco"
     install_command = "{tool} --install --yes {packages}"
     update_command = "{tool} outdated"
@@ -189,7 +189,7 @@ class Chocolatey(SystemPackageManagerTool):
                     'findstr /c:"1 packages installed."'
 
 
-class PacMan(SystemPackageManagerTool):
+class PacMan(_SystemPackageManagerTool):
     tool_name = "pacman"
     install_command = "{sudo}{tool} -S --noconfirm {packages}"
     update_command = "{sudo}{tool} -Syyu --noconfirm"
@@ -201,7 +201,7 @@ class PacMan(SystemPackageManagerTool):
         self._arch_separator = "-"
 
 
-class Zypper(SystemPackageManagerTool):
+class Zypper(_SystemPackageManagerTool):
     tool_name = "zypper"
     install_command = "{sudo}{tool} --non-interactive in {packages}"
     update_command = "{sudo}{tool} --non-interactive ref"

@@ -3,7 +3,7 @@ import pytest
 from mock.mock import PropertyMock
 
 from conan.tools.system.package_manager import Apt, Dnf, Yum, Brew, Pkg, PkgUtil, Chocolatey, Zypper, \
-    PacMan, SystemPackageManagerTool
+    PacMan, _SystemPackageManagerTool
 from conans import Settings
 from conans.errors import ConanException
 from conans.model.conf import Conf
@@ -23,7 +23,7 @@ def test_package_manager_platform(platform, tool):
                 context_mock.return_value = "host"
                 conanfile = ConanFileMock()
                 conanfile.settings = Settings()
-                manager = SystemPackageManagerTool(conanfile)
+                manager = _SystemPackageManagerTool(conanfile)
                 assert tool == manager.get_default_tool()
 
 
@@ -35,7 +35,7 @@ def test_msys2():
             conanfile.conf = Conf()
             conanfile.settings = Settings()
             conanfile.conf["tools.microsoft.bash:subsystem"] = "msys2"
-            manager = SystemPackageManagerTool(conanfile)
+            manager = _SystemPackageManagerTool(conanfile)
             assert manager.get_default_tool() == "pacman"
 
 
@@ -55,7 +55,7 @@ def test_package_manager_distro(distro, tool):
                 context_mock.return_value = "host"
                 conanfile = ConanFileMock()
                 conanfile.settings = Settings()
-                manager = SystemPackageManagerTool(conanfile)
+                manager = _SystemPackageManagerTool(conanfile)
                 assert tool == manager.get_default_tool()
 
 
