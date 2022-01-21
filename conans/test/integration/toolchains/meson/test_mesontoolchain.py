@@ -64,8 +64,6 @@ def test_apple_meson_keep_user_flags(build_env, expected_args):
     """)
 
     cross = textwrap.dedent("""
-    include(default)
-
     [settings]
     os = iOS
     os.version = 10.0
