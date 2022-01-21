@@ -5,8 +5,8 @@ from conans.errors import ConanException
 
 
 class _SystemPackageManagerTool(object):
-    install_methods = ["install", "update"]
     mode_check = "check"
+    mode_install = "install"
     tool_name = None
     install_command = ""
     update_command = ""
@@ -64,41 +64,42 @@ class _SystemPackageManagerTool(object):
 
         return wrapper
 
-    def check_mode(wrapped):
-        def wrapper(self, *args, **kwargs):
-            method_name = wrapped.__name__
-            if method_name in self.install_methods and self._mode == self.mode_check:
-                raise ConanException("Can't {}. Please update packages manually or set "
-                                     "'tools.system.package_manager:mode' to "
-                                     "'install'".format(method_name))
-            else:
-                return wrapped(self, *args, **kwargs)
-
-        return wrapper
-
     @check_enabled_tool  # noqa
-    @check_mode  # noqa
-    def install(self, packages, update=False, check=False, **kwargs):
+    def install(self, packages, update=False, check=True, **kwargs):
         if update:
             self.update()
+
         if check:
             packages = self.check(packages)
-        packages_arch = [self.get_package_name(package) for package in packages]
-        if packages_arch:
-            command = self.install_command.format(sudo=self.sudo_str,
-                                                  tool=self.tool_name,
-                                                  packages=" ".join(packages_arch),
-                                                  **kwargs)
-            return self._conanfile.run(command)
+
+        if self._mode == self.mode_check and packages:
+            raise ConanException("Can't install because tools.system.package_manager:mode is '{}'."
+                                 "Please update packages manually or set "
+                                 "'tools.system.package_manager:mode' "
+                                 "to '{}'".format(self.mode_check, self.mode_install))
+        elif packages:
+            packages_arch = [self.get_package_name(package) for package in packages]
+            if packages_arch:
+                command = self.install_command.format(sudo=self.sudo_str,
+                                                      tool=self.tool_name,
+                                                      packages=" ".join(packages_arch),
+                                                      **kwargs)
+                return self._conanfile.run(command)
+        else:
+            self._conanfile.output.info("System requirements: {} already "
+                                        "installed".format(" ".join(packages)))
 
     @check_enabled_tool  # noqa
-    @check_mode  # noqa
     def update(self):
+        if self._mode == self.mode_check:
+            raise ConanException("Can't update because tools.system.package_manager:mode is '{}'."
+                                 "Please update packages manually or set "
+                                 "'tools.system.package_manager:mode' "
+                                 "to '{}'".format(self.mode_check, self.mode_install))
         command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
         return self._conanfile.run(command)
 
     @check_enabled_tool  # noqa
-    @check_mode  # noqa
     def check(self, packages):
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
         return missing
@@ -130,7 +131,6 @@ class Apt(_SystemPackageManagerTool):
         self._arch_separator = ":"
 
     @_SystemPackageManagerTool.check_enabled_tool  # noqa
-    @_SystemPackageManagerTool.check_mode  # noqa
     def install(self, packages, update=False, check=False, recommends=False):
         recommends_str = '' if recommends else '--no-install-recommends '
         return super(Apt, self).install(packages, update=update, check=check,
