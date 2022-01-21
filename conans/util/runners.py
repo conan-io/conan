@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 from contextlib import contextmanager
+from io import StringIO
 
 from conans.client.tools.files import load
 from conans.errors import CalledProcessErrorWithStderr, ConanException
@@ -43,19 +44,27 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=False):
     @param stdout: Instead of print to sys.stdout print to that stream. Could be None
     @param cwd: Move to directory to execute
     """
-
     stdout = stdout or sys.stderr
     stderr = stderr or sys.stderr
+
+    out = subprocess.PIPE if isinstance(stdout, StringIO) else stdout
+    err = subprocess.PIPE if isinstance(stderr, StringIO) else stderr
 
     with pyinstaller_bundle_env_cleaned():
         # Remove credentials before running external application
         with environment_update({'CONAN_LOGIN_ENCRYPTION_KEY': None}):
             try:
-                proc = subprocess.Popen(command, shell=shell, stdout=stdout, stderr=stderr, cwd=cwd)
+                proc = subprocess.Popen(command, shell=shell, stdout=out, stderr=err, cwd=cwd)
             except Exception as e:
                 raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
-            proc.communicate()
+            proc_stdout, proc_stderr = proc.communicate()
+            # If the output is piped, like user provided a StringIO or testing, the communicate
+            # will capture and return something when thing finished
+            if proc_stdout:
+                stdout.write(proc_stdout.decode("utf-8", errors="ignore"))
+            if proc_stderr:
+                stderr.write(proc_stderr.decode("utf-8", errors="ignore"))
             return proc.returncode
 
 
