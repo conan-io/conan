@@ -12,53 +12,6 @@ from conans.errors import ConanException
 from conans.util.files import save
 
 
-class _MesonAppleFlagsBlock(object):
-
-    def __init__(self, conanfile, toolchain):
-        self._conanfile = conanfile
-        self._toolchain = toolchain
-
-        os_ = conanfile.settings.get_safe("os")
-        if not is_apple_os(os_):
-            return
-        # SDK path is mandatory for cross-building
-        sdk_path = self._conanfile.conf["tools.meson.mesontoolchain:sdk_path"]
-        if not sdk_path and self._toolchain.cross_build:
-            raise ConanException("You must provide a valid SDK path for cross-compilation.")
-
-        # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
-        os_sdk = conanfile.settings.get_safe('os.sdk')
-        if not os_sdk and os_ != "Macos":
-            raise ConanException("Please, specify a suitable value for os.sdk.")
-
-        arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
-        # Calculating the main Apple flags
-        deployment_target_flag = apple_min_version_flag(conanfile)
-        sysroot_flag = "-isysroot " + sdk_path if sdk_path else ""
-        arch_flag = "-arch " + arch if arch else ""
-
-        self.apple_flags = {}
-        if deployment_target_flag:
-            flag_ = deployment_target_flag.split("=")[0]
-            self.apple_flags[flag_] = deployment_target_flag
-        if sysroot_flag:
-            self.apple_flags["-isysroot"] = sysroot_flag
-        if arch_flag:
-            self.apple_flags["-arch"] = arch_flag
-
-    def add_flags(self):
-        for flag, arg_value in self.apple_flags.items():
-            v = " " + arg_value
-            if flag not in self._toolchain.c_args:
-                self._toolchain.c_args += v
-            if flag not in self._toolchain.c_link_args:
-                self._toolchain.c_link_args += v
-            if flag not in self._toolchain.cpp_args:
-                self._toolchain.cpp_args += v
-            if flag not in self._toolchain.cpp_link_args:
-                self._toolchain.cpp_link_args += v
-
-
 class MesonToolchain(object):
     native_filename = "conan_meson_native.ini"
     cross_filename = "conan_meson_cross.ini"
@@ -192,16 +145,51 @@ class MesonToolchain(object):
         self.cpp_args = build_env.get("CXXFLAGS", "")
         self.cpp_link_args = build_env.get("LDFLAGS", "")
 
-        # Define all the existing blocks
-        self.blocks = [
-            _MesonAppleFlagsBlock(conanfile, self)
-        ]
+        self._add_apple_flags()
+
+    def _add_apple_flags(self):
+        conanfile = self._conanfile
+        os_ = conanfile.settings.get_safe("os")
+        if not is_apple_os(os_):
+            return
+
+        # SDK path is mandatory for cross-building
+        sdk_path = conanfile.conf["tools.meson.mesontoolchain:sdk_path"]
+        if not sdk_path and self.cross_build:
+            raise ConanException("You must provide a valid SDK path for cross-compilation.")
+
+        # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
+        os_sdk = conanfile.settings.get_safe('os.sdk')
+        if not os_sdk and os_ != "Macos":
+            raise ConanException("Please, specify a suitable value for os.sdk.")
+
+        arch = to_apple_arch(conanfile.settings.get_safe("arch"))
+        # Calculating the main Apple flags
+        deployment_target_flag = apple_min_version_flag(conanfile)
+        sysroot_flag = "-isysroot " + sdk_path if sdk_path else ""
+        arch_flag = "-arch " + arch if arch else ""
+
+        apple_flags = {}
+        if deployment_target_flag:
+            flag_ = deployment_target_flag.split("=")[0]
+            apple_flags[flag_] = deployment_target_flag
+        if sysroot_flag:
+            apple_flags["-isysroot"] = sysroot_flag
+        if arch_flag:
+            apple_flags["-arch"] = arch_flag
+
+        for flag, arg_value in apple_flags.items():
+            v = " " + arg_value
+            if flag not in self.c_args:
+                self.c_args += v
+            if flag not in self.c_link_args:
+                self.c_link_args += v
+            if flag not in self.cpp_args:
+                self.cpp_args += v
+            if flag not in self.cpp_link_args:
+                self.cpp_link_args += v
 
     def _context(self):
-        # Process all the blocks
-        for block in self.blocks:
-            block.add_flags()
-
         return {
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
