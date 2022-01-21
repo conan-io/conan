@@ -5,7 +5,8 @@ import tempfile
 from contextlib import contextmanager
 
 from conans.client.tools.files import load
-from conans.errors import CalledProcessErrorWithStderr
+from conans.errors import CalledProcessErrorWithStderr, ConanException
+from conans.util.env import environment_update
 from conans.util.log import logger
 
 
@@ -32,6 +33,30 @@ else:
     @contextmanager
     def pyinstaller_bundle_env_cleaned():
         yield
+
+
+def conan_run(command, stdout=None, stderr=None, cwd=None, shell=False):
+    """
+    @param shell:
+    @param stderr:
+    @param command: Command to execute
+    @param stdout: Instead of print to sys.stdout print to that stream. Could be None
+    @param cwd: Move to directory to execute
+    """
+
+    stdout = stdout or sys.stderr
+    stderr = stderr or sys.stderr
+
+    with pyinstaller_bundle_env_cleaned():
+        # Remove credentials before running external application
+        with environment_update({'CONAN_LOGIN_ENCRYPTION_KEY': None}):
+            try:
+                proc = subprocess.Popen(command, shell=shell, stdout=stdout, stderr=stderr, cwd=cwd)
+            except Exception as e:
+                raise ConanException("Error while running cmd\n%s" % (str(e)))
+
+            proc.communicate()
+            return proc.returncode
 
 
 def version_runner(cmd, shell=False):
