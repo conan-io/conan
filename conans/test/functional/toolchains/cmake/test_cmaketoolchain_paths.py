@@ -358,7 +358,10 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     with client.chdir("build"):
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
     assert "Found hello lib" in client.out
-
+    print("\n\n\n\n")
+    print("BUILD_FOLDER: {}".format(build_folder))
+    print(" HOST_FOLDER: {}".format(host_folder))
+    print("      OUTPUT: {}\n\n\n".format(str(client.out).split("Found hello lib: ")[1].splitlines()[0]))
     assert host_folder in client.out
     assert build_folder not in client.out
 
