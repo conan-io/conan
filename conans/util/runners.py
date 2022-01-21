@@ -36,7 +36,7 @@ else:
         yield
 
 
-def conan_run(command, stdout=None, stderr=None, cwd=None, shell=False):
+def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
     """
     @param shell:
     @param stderr:
