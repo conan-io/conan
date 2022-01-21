@@ -57,15 +57,20 @@ class _SystemPackageManagerTool(object):
         askpass = "-A " if self._sudo and self._sudo_askpass else ""
         return "{}{}".format(sudo, askpass)
 
-    def check_enabled_tool(wrapped):
-        def wrapper(self, *args, **kwargs):
-            if self._active_tool == self.__class__.tool_name:
-                return wrapped(self, *args, **kwargs)
+    def run(self, method, *args, **kwargs):
+        if self._active_tool == self.__class__.tool_name:
+            return method(*args, **kwargs)
 
-        return wrapper
+    def install(self, *args, **kwargs):
+        return self.run(self._install, *args, **kwargs)
 
-    @check_enabled_tool  # noqa
-    def install(self, packages, update=False, check=True, **kwargs):
+    def update(self, *args, **kwargs):
+        return self.run(self._update, *args, **kwargs)
+
+    def check(self, *args, **kwargs):
+        return self.run(self._check, *args, **kwargs)
+
+    def _install(self, packages, update=False, check=True, **kwargs):
         if update:
             self.update()
 
@@ -91,8 +96,7 @@ class _SystemPackageManagerTool(object):
             self._conanfile.output.info("System requirements: {} already "
                                         "installed".format(" ".join(packages)))
 
-    @check_enabled_tool  # noqa
-    def update(self):
+    def _update(self):
         if self._mode == self.mode_check:
             raise ConanException("Can't update because tools.system.package_manager:mode is '{}'."
                                  "Please update packages manually or set "
@@ -101,8 +105,7 @@ class _SystemPackageManagerTool(object):
         command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
         return self._conanfile.run(command)
 
-    @check_enabled_tool  # noqa
-    def check(self, packages):
+    def _check(self, packages):
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
         return missing
 
@@ -132,7 +135,6 @@ class Apt(_SystemPackageManagerTool):
 
         self._arch_separator = ":"
 
-    @_SystemPackageManagerTool.check_enabled_tool  # noqa
     def install(self, packages, update=False, check=False, recommends=False):
         recommends_str = '' if recommends else '--no-install-recommends '
         return super(Apt, self).install(packages, update=update, check=check,
