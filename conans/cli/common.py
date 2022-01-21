@@ -72,8 +72,8 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
-    parser.add_argument("-r", "--remote", action=OnceArgument,
-                        help='Look in the specified remote server')
+    parser.add_argument("-r", "--remote", action=Extender, default=None,
+                        help='Look in the specified remote or remotes server')
 
     if not update_help:
         update_help = ("Will check the remote and in case a newer version and/or revision of "
