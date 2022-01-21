@@ -334,10 +334,11 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     client.save({"conanfile.py": conanfile, "libhello.a": "", "hello.lib": ""})
     pref_host = client.create(RecipeReference.loads("hello_host/0.1"), conanfile, args=settings)
     host_folder = client.get_latest_pkg_layout(pref_host).base_folder
+    host_folder_hash = host_folder.replace("\\", "/").split("/")[-1]
     pref_build = client.create(RecipeReference.loads("hello_build/0.1"),
                                conanfile, args="--build-require")
     build_folder = client.get_latest_pkg_layout(pref_build).base_folder
-
+    build_folder_hash = build_folder.replace("\\", "/").split("/")[-1]
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         class PkgConan(ConanFile):
@@ -358,12 +359,10 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     with client.chdir("build"):
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
     assert "Found hello lib" in client.out
-    print("\n\n\n\n")
-    print("BUILD_FOLDER: {}".format(build_folder))
-    print(" HOST_FOLDER: {}".format(host_folder))
-    print("      OUTPUT: {}\n\n\n".format(str(client.out).split("Found hello lib: ")[1].splitlines()[0]))
-    assert host_folder in client.out
-    assert build_folder not in client.out
+    # The hash of the cache folder
+    assert build_folder_hash != host_folder_hash
+    assert host_folder_hash in client.out
+    assert build_folder_hash not in client.out
 
 
 @pytest.mark.tool_cmake

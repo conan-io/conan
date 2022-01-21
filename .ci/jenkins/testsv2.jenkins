@@ -150,7 +150,7 @@ void runTestsModule(String moduleName, String branchName, String jobName) {
     parallel(paralellRuns)
 }
 
-def testModules = [ "conans/test/functional"]
+def testModules = ["conans/test/functional/toolchains/cmake/test_cmaketoolchain_paths.py", "conans/test/unittests", "conans/test/integration", "conans/test/functional"]
 
 void deployToPypiTest() {
     node("Linux") {
