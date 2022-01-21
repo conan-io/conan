@@ -112,9 +112,11 @@ def test_tools_install_mode_check(tool_class):
         with pytest.raises(ConanException) as exc_info:
             tool.install(["package1", "package2"])
         assert exc_info.value.args[0] == "System requirements: 'package1, package2' are missing but " \
-                                         "can't install because tools.system.package_manager:mode " \
-                                         "is 'check'.Please update packages manually or set " \
-                                         "'tools.system.package_manager:mode' to 'install'"
+                                         "can't install because tools.system.package_manager:mode is " \
+                                         "'check'.Please update packages manually or set " \
+                                         "'tools.system.package_manager:mode' to 'install' in the [conf] " \
+                                         "section of the profile, or in the command line using " \
+                                         "'-c tools.system.package_manager:mode=install'"
 
 
 @pytest.mark.parametrize("tool_class",
@@ -130,9 +132,12 @@ def test_tools_update_mode_check(tool_class):
         tool = tool_class(conanfile)
         with pytest.raises(ConanException) as exc_info:
             tool.update()
-        assert exc_info.value.args[0] == "Can't update because tools.system.package_manager:mode " \
-                                         "is 'check'.Please update packages manually or set " \
-                                         "'tools.system.package_manager:mode' to 'install'"
+        assert exc_info.value.args[0] == "Can't update because tools.system.package_manager:mode is " \
+                                         "'check'.Please update packages manually or set " \
+                                         "'tools.system.package_manager:mode' to 'install' in the [conf] " \
+                                         "section of the profile, or in the command line using " \
+                                         "'-c tools.system.package_manager:mode=install'"
+
 
 
 @pytest.mark.parametrize("tool_class, result", [

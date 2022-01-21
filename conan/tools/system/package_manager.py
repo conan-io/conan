@@ -78,12 +78,15 @@ class _SystemPackageManagerTool(object):
             packages = self.check(packages)
 
         if self._mode == self.mode_check and packages:
-            raise ConanException("System requirements: '{}' are missing but can't install "
-                                 "because tools.system.package_manager:mode is '{}'."
+            raise ConanException("System requirements: '{0}' are missing but can't install "
+                                 "because tools.system.package_manager:mode is '{1}'."
                                  "Please update packages manually or set "
                                  "'tools.system.package_manager:mode' "
-                                 "to '{}'".format(", ".join(packages),
-                                                  self.mode_check, self.mode_install))
+                                 "to '{2}' in the [conf] section of the profile, "
+                                 "or in the command line using "
+                                 "'-c tools.system.package_manager:mode={2}'".format(", ".join(packages),
+                                                                                     self.mode_check,
+                                                                                     self.mode_install))
         elif packages:
             packages_arch = [self.get_package_name(package) for package in packages]
             if packages_arch:
@@ -98,10 +101,13 @@ class _SystemPackageManagerTool(object):
 
     def _update(self):
         if self._mode == self.mode_check:
-            raise ConanException("Can't update because tools.system.package_manager:mode is '{}'."
+            raise ConanException("Can't update because tools.system.package_manager:mode is '{0}'."
                                  "Please update packages manually or set "
                                  "'tools.system.package_manager:mode' "
-                                 "to '{}'".format(self.mode_check, self.mode_install))
+                                 "to '{1}' in the [conf] section of the profile, "
+                                 "or in the command line using "
+                                 "'-c tools.system.package_manager:mode={1}'".format(self.mode_check,
+                                                                                     self.mode_install))
         command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
         return self._conanfile.run(command)
 
