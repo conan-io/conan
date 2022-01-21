@@ -102,19 +102,74 @@ class UploadChecker:
         self._output.writeln("")
 
 
+class UploadUpstreamChecker:
+
+    def __init__(self, app: ConanApp):
+        self._app = app
+        self._output = ConanOutput()
+
+    def check(self, upload_bundle, remote, force):
+        for recipe in upload_bundle.recipes:
+            if recipe.upload:
+                self._check_upstream_recipe(recipe, remote, force)
+                for package in recipe.packages:
+                    if package.upload:
+                        self._check_upstream_package(package, remote, force)
+
+    def _check_upstream_recipe(self, recipe, remote, force):
+        self._output.info("Checking which revisions exist in the remote server")
+        ref = recipe.ref
+        try:
+            assert ref.revision
+            # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
+            server_ref = self._app.remote_manager.get_recipe_revision_reference(ref, remote)
+            assert server_ref
+        except NotFoundException:
+            recipe.force = False
+        else:
+            if force:
+                self._output.info("{} already in server, forcing upload".format(ref.repr_notime()))
+                recipe.force = True
+            else:
+                self._output.info("{} already in server, skipping upload".format(ref.repr_notime()))
+                recipe.upload = False
+                recipe.force = False
+
+    def _check_upstream_package(self, package, remote, force):
+        pref = package.pref
+        assert (pref.revision is not None), "Cannot upload a package without PREV"
+        assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
+
+        try:
+            # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
+            server_revisions = self._app.remote_manager.get_package_revision_reference(pref, remote)
+            assert server_revisions
+        except NotFoundException:
+            if package.upload is not False:
+                package.upload = True
+            package.force = False
+        else:
+            if force:
+                self._output.info("{} already in server, forcing upload".format(pref.repr_notime()))
+                package.force = True
+            else:
+                self._output.info("{} already in server, skipping upload".format(pref.repr_notime()))
+                package.upload = False
+                package.force = False
+
+
 class PackagePreparator:
     def __init__(self, app: ConanApp):
         self._app = app
         self._output = ConanOutput()
 
-    def prepare(self, upload_bundle, remote, force):
+    def prepare(self, upload_bundle):
         self._output.info("Preparing artifacts to upload")
         for recipe in upload_bundle.recipes:
             layout = self._app.cache.ref_layout(recipe.ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
-            if recipe.upload:
-                self._check_upstream_recipe(recipe, remote, force)
+
             if recipe.upload:
                 self._prepare_recipe(recipe, conanfile, self._app.enabled_remotes)
             if conanfile.build_policy == "always":
@@ -122,8 +177,6 @@ class PackagePreparator:
             else:
                 recipe.build_always = False
                 for package in recipe.packages:
-                    if package.upload:
-                        self._check_upstream_package(package, remote, force)
                     if package.upload:
                         self._prepare_package(package)
 
@@ -232,47 +285,6 @@ class PackagePreparator:
         return {PACKAGE_TGZ_NAME: package_tgz,
                 CONANINFO: files[CONANINFO],
                 CONAN_MANIFEST: files[CONAN_MANIFEST]}
-
-    def _check_upstream_recipe(self, recipe, remote, force):
-        self._output.info("Checking which revisions exist in the remote server")
-        ref = recipe.ref
-        try:
-            assert ref.revision
-            # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_ref = self._app.remote_manager.get_recipe_revision_reference(ref, remote)
-            assert server_ref
-        except NotFoundException:
-            recipe.force = False
-        else:
-            if force:
-                self._output.info("{} already in server, forcing upload".format(ref.repr_notime()))
-                recipe.force = True
-            else:
-                self._output.info("{} already in server, skipping upload".format(ref.repr_notime()))
-                recipe.upload = False
-                recipe.force = False
-
-    def _check_upstream_package(self, package, remote, force):
-        pref = package.pref
-        assert (pref.revision is not None), "Cannot upload a package without PREV"
-        assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
-
-        try:
-            # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._app.remote_manager.get_package_revision_reference(pref, remote)
-            assert server_revisions
-        except NotFoundException:
-            if package.upload is not False:
-                package.upload = True
-            package.force = False
-        else:
-            if force:
-                self._output.info("{} already in server, forcing upload".format(pref.repr_notime()))
-                package.force = True
-            else:
-                self._output.info("{} already in server, skipping upload".format(pref.repr_notime()))
-                package.upload = False
-                package.force = False
 
 
 class UploadExecutor:

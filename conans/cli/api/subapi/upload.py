@@ -1,7 +1,8 @@
 from conans.cli.api.model import UploadBundle
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.client.cmd.uploader import UploadChecker, PackagePreparator, UploadExecutor
+from conans.client.cmd.uploader import UploadChecker, PackagePreparator, UploadExecutor, \
+    UploadUpstreamChecker
 from conans.errors import ConanException
 
 
@@ -43,20 +44,22 @@ class UploadAPI:
         checker.check(upload_data)
 
     @api_method
-    def prepare(self, upload_data, remote, force=False):
+    def prepare(self, upload_data):
         """Compress the recipes and packages and fill the upload_data objects
-        with the complete information. It doesn't perform the upload"""
+        with the complete information. It doesn't perform the upload nor checks upstream to see
+        if the recipe is still there"""
         app = ConanApp(self.conan_api.cache_folder)
-        app.load_remotes([remote])
         preparator = PackagePreparator(app)
-        preparator.prepare(upload_data, remote, force)
+        preparator.prepare(upload_data)
 
     @api_method
     def upload_bundle(self, upload_bundle, remote, force=False):
         app = ConanApp(self.conan_api.cache_folder)
         app.load_remotes([remote])
-        preparator = PackagePreparator(app)
-        preparator.prepare(upload_bundle, remote, force)
+        PackagePreparator(app).prepare(upload_bundle)
+
+        if not force:
+            UploadUpstreamChecker(app).check(upload_bundle, remote, force)
 
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)

@@ -1,8 +1,7 @@
 from conans.cli.api.helpers.new.cmake_lib import source_cpp, source_h, test_main
 
 conanfile_exe = '''from conans import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake
-from conan.tools.layout import cmake_layout
+from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 
 class {{class_name or name}}Recipe(ConanFile):

@@ -59,8 +59,7 @@ class MesonInstall(TestMesonBase):
     _test_package_conanfile_py = textwrap.dedent("""
         import os
         from conan import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan.tools.cmake import CMake, cmake_layout
         from conan.tools.build import cross_building
 
         class TestConan(ConanFile):
