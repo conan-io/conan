@@ -47,6 +47,7 @@ cpp_link_args = ['-flag3', '-mios-version-min=10.0', '-isysroot', '/my/sdk/path'
 """)
 
 
+@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.parametrize("build_env,expected_args", [
     (build_env_1, expected_args_1),
     (build_env_2, expected_args_2),
