@@ -53,7 +53,7 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=False):
             try:
                 proc = subprocess.Popen(command, shell=shell, stdout=stdout, stderr=stderr, cwd=cwd)
             except Exception as e:
-                raise ConanException("Error while running cmd\n%s" % (str(e)))
+                raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
             proc.communicate()
             return proc.returncode
