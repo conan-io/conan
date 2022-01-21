@@ -334,10 +334,11 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     client.save({"conanfile.py": conanfile, "libhello.a": "", "hello.lib": ""})
     pref_host = client.create(RecipeReference.loads("hello_host/0.1"), conanfile, args=settings)
     host_folder = client.get_latest_pkg_layout(pref_host).base_folder
+    host_folder_hash = host_folder.replace("\\", "/").split("/")[-1]
     pref_build = client.create(RecipeReference.loads("hello_build/0.1"),
                                conanfile, args="--build-require")
     build_folder = client.get_latest_pkg_layout(pref_build).base_folder
-
+    build_folder_hash = build_folder.replace("\\", "/").split("/")[-1]
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         class PkgConan(ConanFile):
@@ -358,9 +359,10 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     with client.chdir("build"):
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
     assert "Found hello lib" in client.out
-
-    assert host_folder in client.out
-    assert build_folder not in client.out
+    # The hash of the cache folder
+    assert build_folder_hash != host_folder_hash
+    assert host_folder_hash in client.out
+    assert build_folder_hash not in client.out
 
 
 @pytest.mark.tool_cmake
@@ -399,9 +401,11 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
 
     pref_host = client.create(RecipeReference.loads("hello_host/0.1"), conanfile, args=settings)
     host_folder = client.get_latest_pkg_layout(pref_host).base_folder
+    host_folder_hash = host_folder.replace("\\", "/").split("/")[-1]
     pref_build = client.create(RecipeReference.loads("hello_build/0.1"),
                                conanfile, args="--build-require")
     build_folder = client.get_latest_pkg_layout(pref_build).base_folder
+    build_folder_hash = build_folder.replace("\\", "/").split("/")[-1]
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -423,5 +427,5 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     with client.chdir("build"):
         client.run_command(_cmake_command_toolchain(find_root_path_modes))
     assert "Found hello prog" in client.out
-    assert host_folder not in client.out
-    assert build_folder in client.out
+    assert host_folder_hash not in client.out
+    assert build_folder_hash in client.out
