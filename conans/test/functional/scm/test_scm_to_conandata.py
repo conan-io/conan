@@ -211,7 +211,7 @@ def test_auto_can_be_automated():
         t.run("export . --name=pkg --version=1.0")
     _check(t)
 
-    t.run("upload * -c -r default")
+    t.run("upload * -c -r default --only-recipe")
     t.run("remove * -f")
     t.run("install --reference=pkg/1.0@ --build", assert_error=True)
     assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out

@@ -18,7 +18,7 @@ class MyConanfile(ConanFile):
 '''
         client.save({CONANFILE: conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=stable")
-        client.run("upload '*' -c --all -r default")
+        client.run("upload '*' -c -r default")
         self.assertEqual(str(client.out).count("seconds to retry..."), 0)
 
     def test_recipe_download_retry(self):
@@ -27,7 +27,7 @@ class MyConanfile(ConanFile):
 
         client.save({CONANFILE: GenConanfile()})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=stable")
-        client.run("upload '*' -c --all -r default")
+        client.run("upload '*' -c -r default")
 
         class Response(object):
             ok = None
