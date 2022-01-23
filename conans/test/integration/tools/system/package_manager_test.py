@@ -6,9 +6,9 @@ from mock.mock import PropertyMock
 
 from conan.tools.system.package_manager import Apt, Dnf, Yum, Brew, Pkg, PkgUtil, Chocolatey, Zypper, \
     PacMan, _SystemPackageManagerTool
-from conans import Settings
 from conans.errors import ConanException
 from conans.model.conf import Conf
+from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock
 
 

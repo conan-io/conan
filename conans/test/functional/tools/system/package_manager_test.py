@@ -22,7 +22,7 @@ def test_apt_check():
                 not_installed = apt.check(["non-existing1", "non-existing2"])
                 print("missing:", not_installed)
         """)})
-    client.run("create . test/1.0@ -s:b arch=armv8 -s:h arch=x86")
+    client.run("create . --name=test --version=1.0 -s:b arch=armv8 -s:h arch=x86")
     assert "dpkg-query: no packages found matching non-existing1:i386" in client.out
     assert "dpkg-query: no packages found matching non-existing2:i386" in client.out
     assert "missing: ['non-existing1', 'non-existing2']" in client.out
@@ -43,14 +43,15 @@ def test_build_require():
                 not_installed = apt.check(["non-existing1", "non-existing2"])
                 print("missing:", not_installed)
         """)})
-    client.run("export tool_require.py tool_require/1.0@")
+    client.run("export tool_require.py --name=tool_require --version=1.0")
     client.save({"consumer.py": textwrap.dedent("""
         from conans import ConanFile
         class consumer(ConanFile):
             settings = "arch", "os"
             tool_requires = "tool_require/1.0"
         """)})
-    client.run("create consumer.py consumer/1.0@ -s:b arch=armv8 -s:h arch=x86 --build=missing")
+    client.run("create consumer.py --name=consumer --version=1.0 "
+               "-s:b arch=armv8 -s:h arch=x86 --build=missing")
     assert "dpkg-query: no packages found matching non-existing1:arm64" in client.out
     assert "dpkg-query: no packages found matching non-existing2:arm64" in client.out
     assert "missing: ['non-existing1', 'non-existing2']" in client.out
@@ -71,7 +72,7 @@ def test_brew_check():
                 not_installed = brew.check(["non-existing1", "non-existing2"])
                 print("missing:", not_installed)
         """)})
-    client.run("create . test/1.0@")
+    client.run("create . --name=test --version=1.0")
     assert "missing: ['non-existing1', 'non-existing2']" in client.out
 
 
