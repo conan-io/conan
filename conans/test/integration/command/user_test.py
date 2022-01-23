@@ -119,7 +119,7 @@ class ConanLib(ConanFile):
         files = {"conanfile.py": base}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("upload lib/0.1@lasote/stable -r default")
+        client.run("upload lib/0.1@lasote/stable -r default --only-recipe")
         client.run("remote list-users")
         assert 'default:\n  Username: admin\n  authenticated: True' in client.out
         client.run("remote logout default")
@@ -128,7 +128,7 @@ class ConanLib(ConanFile):
         client.run("remote list-users")
         assert 'default:\n  No user' in client.out
         # --force will force re-authentication, otherwise not necessary to auth
-        client.run("upload lib/0.1@lasote/stable -r default --force")
+        client.run("upload lib/0.1@lasote/stable -r default --force --only-recipe")
         client.run("remote list-users")
         assert 'default:\n  Username: admin\n  authenticated: True' in client.out
 

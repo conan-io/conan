@@ -135,21 +135,28 @@ class PackagesDBTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_package_references(self, ref: RecipeReference):
+    def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         # Return the latest revisions
         assert ref.revision, "To search for package id's you must provide a recipe revision."
         # we select the latest prev for each package_id
-        query = f'SELECT {self.columns.reference}, ' \
-                f'{self.columns.rrev}, ' \
-                f'{self.columns.pkgid}, ' \
-                f'{self.columns.prev}, ' \
-                f'{self.columns.path}, ' \
-                f'MAX({self.columns.timestamp}), ' \
-                f'{self.columns.build_id} ' \
-                f'FROM {self.table_name} ' \
-                f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
-                f'AND {self.columns.reference} = "{str(ref)}" ' \
-                f'GROUP BY {self.columns.pkgid} '
+        if only_latest_prev:
+            query = f'SELECT {self.columns.reference}, ' \
+                    f'{self.columns.rrev}, ' \
+                    f'{self.columns.pkgid}, ' \
+                    f'{self.columns.prev}, ' \
+                    f'{self.columns.path}, ' \
+                    f'MAX({self.columns.timestamp}), ' \
+                    f'{self.columns.build_id} ' \
+                    f'FROM {self.table_name} ' \
+                    f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
+                    f'AND {self.columns.reference} = "{str(ref)}" ' \
+                    f'GROUP BY {self.columns.pkgid} '
+        else:
+            query = f'SELECT * FROM {self.table_name} ' \
+                    f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
+                    f'AND {self.columns.reference} = "{str(ref)}" ' \
+                    f'AND {self.columns.prev} IS NOT NULL ' \
+                    f'ORDER BY {self.columns.timestamp} DESC'
         r = self._conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))

@@ -78,7 +78,7 @@ class MyPackage(ConanFile):
         self.assertIn("Packaging this test package", client.out)
         self.assertIn("Building package from source as defined by build_policy='always'",
                       client.out)
-        client.run("upload test/1.9@lasote/stable -r default")
+        client.run("upload test/1.9@lasote/stable -r default --only-recipe")
 
     def test_build_policies_in_conanfile(self):
         client = TestClient(default_server_user=True)
@@ -96,7 +96,7 @@ class MyPackage(ConanFile):
         self.assertNotIn("Building", client.out)
 
         # Try now to upload all packages, should not crash because of the "missing" build policy
-        client.run("upload hello0/1.0@lasote/stable --all -r default")
+        client.run("upload hello0/1.0@lasote/stable -r default")
 
         #  --- Build policy to always ---
         conanfile = str(base) + "\n    build_policy = 'always'"
@@ -116,7 +116,7 @@ class MyPackage(ConanFile):
                       client.out)
 
         # Try now to upload all packages, should crash because of the "always" build policy
-        client.run("upload hello0/1.0@lasote/stable --all -r default", assert_error=True)
+        client.run("upload hello0/1.0@lasote/stable -r default", assert_error=True)
         self.assertIn("no packages can be uploaded", client.out)
 
     def test_reuse(self):
@@ -130,7 +130,7 @@ class MyPackage(ConanFile):
         self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).package()))
 
         # Upload
-        client.run("upload %s --all -r default" % str(ref))
+        client.run("upload %s -r default" % str(ref))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)

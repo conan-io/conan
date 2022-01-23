@@ -139,10 +139,8 @@ def test_windows_cross_compiling_x86():
                  "main.cpp": main_cpp,
                  "x86": profile_x86})
     profile_str = "--profile:build=default --profile:host=x86"
-    client.run("install . %s" % profile_str)
-    client.run("build .")
+    client.run("build . %s" % profile_str)
     client.run_command(os.path.join("build", "demo"))
-
     assert "main _M_IX86 defined" in client.out
     assert "main _MSC_VER19" in client.out
     assert "main _MSVC_LANG2014" in client.out

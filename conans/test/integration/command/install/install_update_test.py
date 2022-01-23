@@ -22,7 +22,7 @@ def test_update_binaries():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
-    client.run("upload pkg/0.1@lasote/testing --all -r default")
+    client.run("upload pkg/0.1@lasote/testing -r default")
 
     client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install --reference=pkg/0.1@lasote/testing")
@@ -30,7 +30,7 @@ def test_update_binaries():
 
     time.sleep(1)  # Make sure the new timestamp is later
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")  # Because of random, this should be NEW prev
-    client.run("upload pkg/0.1@lasote/testing --all -r default")
+    client.run("upload pkg/0.1@lasote/testing -r default")
 
     client2.run("install --reference=pkg/0.1@lasote/testing")
     new_value = load(os.path.join(client2.current_folder, "file.txt"))
@@ -44,7 +44,7 @@ def test_update_binaries():
     # Now check newer local modifications are not overwritten
     time.sleep(1)  # Make sure the new timestamp is later
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
-    client.run("upload pkg/0.1@lasote/testing --all -r default")
+    client.run("upload pkg/0.1@lasote/testing -r default")
 
     client2.save({"conanfile.py": conanfile})
     client2.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
@@ -65,7 +65,7 @@ def test_update_not_date():
                 with_requirement("hello0/1.0@lasote/stable")},
                 clean_first=True)
     client.run("install . --build")
-    client.run("upload hello0/1.0@lasote/stable --all -r default")
+    client.run("upload hello0/1.0@lasote/stable -r default")
 
     prev = client.get_latest_package_reference("hello0/1.0@lasote/stable")
 
@@ -111,7 +111,7 @@ def test_reuse():
                  "header.h": "content1"})
     client.run("export . --user=lasote --channel=stable")
     client.run("install --reference=hello0/1.0@lasote/stable --build")
-    client.run("upload hello0/1.0@lasote/stable --all -r default")
+    client.run("upload hello0/1.0@lasote/stable -r default")
 
     client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install --reference=hello0/1.0@lasote/stable")
@@ -122,7 +122,7 @@ def test_reuse():
     sleep(1)
     client.run("export . --user=lasote --channel=stable")
     client.run("install --reference=hello0/1.0@lasote/stable --build")
-    client.run("upload hello0/1.0@lasote/stable --all -r default")
+    client.run("upload hello0/1.0@lasote/stable -r default")
 
     client2.run("install --reference=hello0/1.0@lasote/stable --update")
     ref = RecipeReference.loads("hello0/1.0@lasote/stable")
