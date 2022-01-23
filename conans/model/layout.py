@@ -16,6 +16,7 @@ class Folders(object):
     def __init__(self):
         self._base_install = None
         self._base_source = None
+        self._local_base_source = False
         self._base_build = None
         self._local_base_build = False
         self._base_package = None
@@ -38,6 +39,8 @@ class Folders(object):
             return None
         if not self.source:
             return self._base_source
+        if self._local_base_source:
+            return self._base_source
 
         return os.path.join(self._base_source, self.source)
 
@@ -45,8 +48,9 @@ class Folders(object):
     def base_source(self):
         return self._base_source
 
-    def set_base_source(self, folder):
+    def set_base_source(self, folder, local=False):
         self._base_source = folder
+        self._local_base_source = local
 
     @property
     def build_folder(self):
