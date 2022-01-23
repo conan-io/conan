@@ -2,14 +2,12 @@ import platform
 import textwrap
 
 import pytest
-import six
 
 from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool_apt_get
 @pytest.mark.skipif(platform.system() != "Linux", reason="Requires apt")
-@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
 def test_apt_check():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
@@ -30,7 +28,6 @@ def test_apt_check():
 
 @pytest.mark.tool_apt_get
 @pytest.mark.skipif(platform.system() != "Linux", reason="Requires apt")
-@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
 def test_build_require():
     client = TestClient()
     client.save({"tool_require.py": textwrap.dedent("""
@@ -59,7 +56,6 @@ def test_build_require():
 
 @pytest.mark.tool_brew
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
-@pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
 def test_brew_check():
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
