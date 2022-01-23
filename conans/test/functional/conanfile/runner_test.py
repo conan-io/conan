@@ -51,13 +51,13 @@ class Pkg(ConanFile):
             class Pkg(ConanFile):
                 def source(self):
                     my_buf = StringIO()
-                    self.run('echo "Hello"', stdout=my_buf)
+                    self.run('echo Hello', stdout=my_buf)
                     self.output.info("Buffer got msgs {}".format(my_buf.getvalue()))
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        self.assertIn('conanfile.py: Buffer got msgs "Hello"', client.out)
+        self.assertIn('conanfile.py: Buffer got msgs Hello', client.out)
 
     def test_credentials_removed(self):
         conanfile = textwrap.dedent("""
