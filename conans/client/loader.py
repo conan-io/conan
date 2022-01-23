@@ -171,7 +171,6 @@ class ConanFileLoader:
         else:
             conanfile.display_name = os.path.basename(conanfile_path)
         conanfile.output.scope = conanfile.display_name
-        conanfile.in_local_cache = False
         try:
             conanfile.develop = True
 
