@@ -106,11 +106,12 @@ class ClientCache(object):
         # Used just by download to skip downloads if prev already exists in cache
         return self._data_cache.exists_prev(pref)
 
-    def get_package_revisions_references(self, ref, only_latest_prev=False):
-        return self._data_cache.get_package_revisions_references(ref, only_latest_prev)
+    def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
+        return self._data_cache.get_package_revisions_references(pref, only_latest_prev)
 
-    def get_package_references(self, ref: RecipeReference) -> List[PkgReference]:
-        return self._data_cache.get_package_references(ref)
+    def get_package_references(self, ref: RecipeReference, only_latest_prev=True) -> List[PkgReference]:
+        """Get the latest package references"""
+        return self._data_cache.get_package_references(ref, only_latest_prev)
 
     def get_matching_build_id(self, ref, build_id):
         return self._data_cache.get_matching_build_id(ref, build_id)

@@ -220,10 +220,10 @@ class HookTest(unittest.TestCase):
         self._check_package(conanfile_cache_path, client.out, in_cache=True)
         self._check_package_info(client.out)
 
-        client.run("upload basic/0.1@danimtb/testing -r default")
+        client.run("upload basic/0.1@danimtb/testing -r default --only-recipe")
         self._check_upload(conanfile_cache_path, client.out)
         self._check_upload_recipe(conanfile_cache_path, client.out)
-        client.run("upload basic/0.1@danimtb/testing -r default --all")
+        client.run("upload basic/0.1@danimtb/testing -r default")
         self._check_upload(conanfile_cache_path, client.out)
         self._check_upload_recipe(conanfile_cache_path, client.out)
         self._check_upload_package(conanfile_cache_path, client.out)

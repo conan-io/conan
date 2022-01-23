@@ -37,7 +37,7 @@ class TestUpdateFlows:
         # will be older than the ones we create in local
         self.server_times[remote] = self.the_time
         with patch.object(RevisionList, '_now', return_value=self.the_time):
-            client.run(f"upload {ref} -r {remote} --all -c")
+            client.run(f"upload {ref} -r {remote} -c")
 
     def test_revision_fixed_version(self):
         # NOTES:

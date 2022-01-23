@@ -357,7 +357,7 @@ def test_mixed_user_channel():
     t.run("create . --name=pkg --version=1.0 --user=user --channel=testing")
     t.run("create . --name=pkg --version=1.1 --user=user --channel=testing")
     t.run("create . --name=pkg --version=2.0 --user=user --channel=testing")
-    t.run("upload * --all --confirm -r default")
+    t.run("upload * --confirm -r default")
     t.run("remove * -f")
 
     t.run('install --reference="pkg/[>0 <2]@"')
@@ -373,7 +373,7 @@ def test_remote_version_ranges():
     t.save({"conanfile.py": GenConanfile()})
     for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
         t.run(f"create . --name=dep --version={v}")
-    t.run("upload * --all --confirm -r default")
+    t.run("upload * --confirm -r default")
     # TODO: Deprecate the comma separator for expressions
     for expr, solution in [(">0.0", "2.2.1"),
                            (">0.1 <1", "0.3"),
@@ -411,8 +411,8 @@ def test_different_user_channel_resolved_correctly():
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=lib --version=1.0 --user=conan --channel=stable")
     client.run("create . --name=lib --version=1.0 --user=conan --channel=testing")
-    client.run("upload lib/1.0@conan/stable -r=server1 --all")
-    client.run("upload lib/1.0@conan/testing -r=server2 --all")
+    client.run("upload lib/1.0@conan/stable -r=server1")
+    client.run("upload lib/1.0@conan/testing -r=server2")
 
     client2 = TestClient(servers=servers)
     client2.run("install --reference=lib/[>=1.0]@conan/testing")

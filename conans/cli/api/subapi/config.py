@@ -21,3 +21,7 @@ class ConfigAPI:
                                      config_type=config_type, args=args,
                                      source_folder=source_folder, target_folder=target_folder)
 
+    @api_method
+    def get(self, name):
+        app = ConanApp(self.conan_api.cache_folder)
+        return app.cache.new_config.get(name)

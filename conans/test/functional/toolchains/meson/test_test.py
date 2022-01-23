@@ -18,7 +18,7 @@ class MesonTest(TestMesonBase):
 
     _test_package_conanfile_py = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.meson import Meson, MesonToolchain
 
 
@@ -28,6 +28,9 @@ class MesonTest(TestMesonBase):
 
             def requirements(self):
                 self.requires(self.tested_reference_str)
+
+            def layout(self):
+                self.folders.build = "build"
 
             def generate(self):
                 tc = MesonToolchain(self)

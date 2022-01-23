@@ -27,13 +27,13 @@ class TestListPackageIdsBase:
         ref = RecipeReference.loads(ref)
         self.client.run(f"create . --name={ref.name} --version={ref.version} "
                         f"--user={ref.user} --channel={ref.channel}")
-        self.client.run("upload --force --all -r {} {}".format(remote, ref))
+        self.client.run("upload --force -r {} {}".format(remote, ref))
 
     def _upload_full_recipe(self, remote, ref):
         self.client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_file("file.h",
                                                                                        "0.1")})
         self.client.run("create . --user=user --channel=channel")
-        self.client.run("upload --force --all -r {} {}".format(remote, "pkg/0.1@user/channel"))
+        self.client.run("upload --force -r {} {}".format(remote, "pkg/0.1@user/channel"))
 
         self.client.save({'conanfile.py': GenConanfile().with_require("pkg/0.1@user/channel")
                                                         .with_settings("os", "build_type", "arch")
@@ -42,7 +42,7 @@ class TestListPackageIdsBase:
                           })
         self.client.run(f"create . --name={ref.name} --version={ref.version} "
                         f"--user={ref.user} --channel={ref.channel}")
-        self.client.run("upload --force --all -r {} {}".format(remote, ref))
+        self.client.run("upload --force -r {} {}".format(remote, ref))
 
     @staticmethod
     def _get_fake_recipe_refence(recipe_name):

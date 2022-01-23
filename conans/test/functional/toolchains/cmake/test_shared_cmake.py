@@ -13,7 +13,7 @@ def test_shared_cmake_toolchain():
     client.run("create . -o chat:shared=True -o hello:shared=True")
     client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
     client.run("create . -o chat:shared=True -o hello:shared=True")
-    client.run("upload * --all -c -r default")
+    client.run("upload * -c -r default")
     client.run("remove * -f")
 
     client = TestClient(servers=client.servers)
