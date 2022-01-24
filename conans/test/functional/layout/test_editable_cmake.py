@@ -21,16 +21,17 @@ def editable_cmake(generator, build_folder=None):
     c.save(pkg_cmake_app("pkg", "0.1", requires=["dep/0.1"]),
            path=os.path.join(c.current_folder, "pkg"))
 
+    output_folder = '--output-folder="{}"'.format(build_folder) if build_folder else ""
     build_folder = '--build-folder="{}"'.format(build_folder) if build_folder else ""
 
     def build_dep():
-        c.run("install . -if=install_release {}".format(build_folder))
+        c.run("install . -if=install_release {}".format(output_folder))
         c.run("build . -if=install_release {}".format(build_folder))
-        c.run("install . -s build_type=Debug -if=install_debug {}".format(build_folder))
+        c.run("install . -s build_type=Debug -if=install_debug {}".format(output_folder))
         c.run("build . -if=install_debug {}".format(build_folder))
 
     with c.chdir("dep"):
-        c.run("editable add . dep/0.1@ {}".format(build_folder))
+        c.run("editable add . dep/0.1@ {}".format(output_folder))
         build_dep()
 
     def build_pkg(msg):
