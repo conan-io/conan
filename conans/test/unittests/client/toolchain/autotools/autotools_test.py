@@ -1,6 +1,5 @@
 import os
 
-from mock import Mock
 
 from conan.tools.files import save_toolchain_args
 from conan.tools.gnu import Autotools
@@ -19,7 +18,8 @@ def test_configure_arguments():
         "make_args": "my_make_args"}
     )
     runner = RunnerMock()
-    conanfile = ConanFile(runner=runner)
+    conanfile = ConanFile()
+    conanfile.run = runner
     conanfile.settings = MockSettings({})
     conanfile.folders.set_base_install(tmp)
     conanfile.folders.set_base_source(tmp)

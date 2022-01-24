@@ -146,12 +146,6 @@ class ConanLib(ConanFile):
         self.assertIn("SCM: Getting sources from folder: %s" % curdir, self.client.out)
         self.assertIn("My file is copied", self.client.out)
 
-        # check blank lines are respected in replacement
-        self.client.run("get lib/0.1@user/channel")
-        self.assertIn("""}
-
-    def build(self):""", self.client.out)
-
         # Export again but now with absolute reference, so no sources are copied from the local dir
         git = Git(curdir)
         self.client.save({"conanfile.py": base_git.format(url=_quoted(curdir),
@@ -382,7 +376,7 @@ class ConanLib(ConanFile):
         cmd = 'git remote add origin "%s"' % curdir
         self.client.run_command(cmd)
         self.client.run("export . --user=lasote --channel=channel")
-        self.client.run("upload lib* -c -r myremote")
+        self.client.run("upload lib* -c -r myremote --only-recipe")
 
         # Take other client, the old client folder will be used as a remote
         client2 = TestClient(servers=self.servers)
@@ -1052,7 +1046,7 @@ class TestConan(ConanFile):
         client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.save({"conanfile.py": conanfile + exports_sources, "include/file": "content"})
         client.run("create .")
-        client.run("upload test/1.0@ -r upload_repo")
+        client.run("upload test/1.0 -r upload_repo")
         self.assertIn("Uploading conan_sources.tgz", client.out)
         ref = RecipeReference("test", "1.0")
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
@@ -1075,7 +1069,7 @@ class TestConan(ConanFile):
         client.run_command("git commit -m \"initial commit\"")
         client.run("create . ")
         self.assertIn("Repo origin deduced by 'auto': https://github.com/fake/fake.git", client.out)
-        client.run("upload test/1.0@ -r upload_repo")
+        client.run("upload test/1.0 -r upload_repo")
         self.assertNotIn("Uploading conan_sources.tgz", client.out)
         rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
         ref.revision = rev

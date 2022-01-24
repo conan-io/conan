@@ -193,8 +193,9 @@ class MyConanfile(ConanFile):
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
         with environment_update({'CONAN_DEFAULT_PROFILE': profile_path}):
-            client.run("create . --name=name --version=version --user=user --channel=channel", assert_error=True)
-            self.assertIn("The default profile file doesn't exist", client.out)
+            client.run("create . --name=name --version=version --user=user --channel=channel",
+                       assert_error=True)
+            self.assertIn("You need to create a default profile", client.out)
 
 
 def test_conf_default_two_profiles():

@@ -23,9 +23,8 @@ from conans.util.log import logger
 
 
 CLI_V1_COMMANDS = [
-    'get', 'upload',
-    'source', 'build', 'editable', 'imports',
-    'download', 'inspect'
+    'source', 'build', 'imports',
+    'download'
 ]
 
 

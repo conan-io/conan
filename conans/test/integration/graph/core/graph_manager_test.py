@@ -384,6 +384,35 @@ class TestLinear(GraphManagerTest):
                                 (liba, False, False, False, False)])
         _check_transitive(libb, [(liba, True, False, False, False)])
 
+    def test_multiple_levels_transitive_headers(self):
+        # app -> libcc0.1 -> libb0.1  -> liba0.1
+        self.recipe_cache("liba/0.1")
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_package_type("static-library")
+                                                        .with_requirement("liba/0.1",
+                                                                          transitive_headers=True))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("static-library")
+                                                        .with_requirement("libb/0.1",
+                                                                          transitive_headers=True))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (libb, True, True, False, False),
+                                (liba, True, True, False, False)])
+
 
 class TestDiamond(GraphManagerTest):
 

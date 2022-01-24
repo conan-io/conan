@@ -31,7 +31,6 @@ from conans.cli.cli import Cli, CLI_V1_COMMANDS
 from conans.client.cache.cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
-from conans.client.runner import ConanRunner
 from conans.util.env import environment_update
 from conans.client.tools.files import replace_in_file
 from conans.errors import NotFoundException
@@ -541,11 +540,11 @@ class TestClient(object):
                             save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
 
     def run_command(self, command, cwd=None, assert_error=False):
-        runner = ConanRunner()
         from conans.test.utils.mocks import RedirectedTestOutput
         self.out = RedirectedTestOutput()  # Initialize each command
         with redirect_output(self.out):
-            ret = runner(command, cwd=cwd or self.current_folder)
+            from conans.util.runners import conan_run
+            ret = conan_run(command, cwd=cwd or self.current_folder)
         self._handle_cli_result(command, assert_error=assert_error, error=ret)
         return ret
 
@@ -648,12 +647,6 @@ class TestClient(object):
                 verify_ssl = data["scm"]["verify_ssl"]
         SCMInfo = namedtuple('SCMInfo', ['revision', 'type', 'url', 'shallow', 'verify_ssl'])
         return SCMInfo(revision, scm_type, url, shallow, verify_ssl)
-
-    def scm_info(self, reference):
-        self.run("inspect %s -a=scm --json=scm.json" % reference)
-        data = json.loads(self.load("scm.json"))
-        os.unlink(os.path.join(self.current_folder, "scm.json"))
-        return self._create_scm_info(data)
 
     def scm_info_cache(self, reference):
         import yaml
@@ -782,7 +775,7 @@ class TurboTestClient(TestClient):
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(ref.repr_notime(), remote, args or ""),
+        self.run("upload {} -c -r {} {}".format(ref.repr_notime(), remote, args or ""),
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)

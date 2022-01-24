@@ -270,6 +270,10 @@ class Requirement:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
             downstream_require = require.copy_requirement()
+            if pkg_type in (PackageType.SHARED, PackageType.STATIC, PackageType.APP):
+                downstream_require.headers = False
+            if pkg_type in (PackageType.SHARED, PackageType.APP):
+                downstream_require.libs = False
 
         assert require.visible, "at this point require should be visible"
 

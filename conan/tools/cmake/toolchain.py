@@ -5,8 +5,9 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
+from conan.tools.apple.apple import is_apple_os
 from conan.tools.build.flags import architecture_flag, libcxx_flag
-from conan.tools.build import build_jobs, use_win_mingw
+from conan.tools.build import build_jobs, use_win_mingw, cross_building
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import save_toolchain_args
 from conan.tools.intel import IntelCC
@@ -375,28 +376,78 @@ class AppleSystemBlock(Block):
         return ctxt_toolchain
 
 
-class FindConfigFiles(Block):
+class FindFiles(Block):
     template = textwrap.dedent("""
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
-        # To support the generators based on find_package()
-        {% if cmake_module_path %}
-        list(PREPEND CMAKE_MODULE_PATH {{ cmake_module_path }})
+
+        # Definition of CMAKE_MODULE_PATH
+        {% if build_build_paths %}
+        # Explicitly defined "buildirs" of "build" context dependencies
+        list(PREPEND CMAKE_MODULE_PATH {{ build_build_paths }})
         {% endif %}
-        {% if cmake_prefix_path %}
-        list(PREPEND CMAKE_PREFIX_PATH {{ cmake_prefix_path }})
+        {% if host_build_paths_noroot %}
+        # Explicitly defined "builddirs" of "host" dependencies
+        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_noroot }})
         {% endif %}
-        {% if android_prefix_path %}
-        set(CMAKE_FIND_ROOT_PATH {{ android_prefix_path }} ${CMAKE_FIND_ROOT_PATH})
+        {% if host_build_paths_root %}
+        # The root (which is the default builddirs) path of dependencies in the host context
+        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_root }})
+        {% endif %}
+        {% if generators_folder %}
+        # the generators folder (where conan generates files, like this toolchain)
+        list(PREPEND CMAKE_MODULE_PATH {{ generators_folder }})
         {% endif %}
 
-        # To support cross building to iOS, watchOS and tvOS where CMake looks for config files
-        # only in the system frameworks unless you declare the XXX_DIR variables
-        {% if cross_ios %}
-            set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+        # Definition of CMAKE_PREFIX_PATH, CMAKE_XXXXX_PATH
+        {% if host_build_paths_noroot %}
+        # The explicitly defined "builddirs" of "host" context dependencies must be in PREFIX_PATH
+        list(PREPEND CMAKE_PREFIX_PATH {{ host_build_paths_noroot }})
         {% endif %}
-        """)
+        {% if generators_folder %}
+        # The Conan local "generators" folder, where this toolchain is saved.
+        list(PREPEND CMAKE_PREFIX_PATH {{ generators_folder }} )
+        {% endif %}
+        {% if cmake_program_path %}
+        list(PREPEND CMAKE_PROGRAM_PATH {{ cmake_program_path }})
+        {% endif %}
+        {% if cmake_library_path %}
+        list(PREPEND CMAKE_LIBRARY_PATH {{ cmake_library_path }})
+        {% endif %}
+        {% if is_apple and cmake_framework_path %}
+        list(PREPEND CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }})
+        {% endif %}
+        {% if cmake_include_path %}
+        list(PREPEND CMAKE_INCLUDE_PATH {{ cmake_include_path }})
+        {% endif %}
+
+        {% if cross_building %}
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_PACKAGE OR CMAKE_FIND_ROOT_PATH_MODE_PACKAGE STREQUAL "ONLY")
+            set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
+        endif()
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_PROGRAM OR CMAKE_FIND_ROOT_PATH_MODE_PROGRAM STREQUAL "ONLY")
+            set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
+        endif()
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_LIBRARY OR CMAKE_FIND_ROOT_PATH_MODE_LIBRARY STREQUAL "ONLY")
+            set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
+        endif()
+        {% if is_apple %}
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK OR CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK STREQUAL "ONLY")
+            set(CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK "BOTH")
+        endif()
+        {% endif %}
+        if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_INCLUDE OR CMAKE_FIND_ROOT_PATH_MODE_INCLUDE STREQUAL "ONLY")
+            set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
+        endif()
+        {% endif %}
+    """)
+
+    @staticmethod
+    def _join_paths(paths):
+        return " ".join(['"{}"'.format(p.replace('\\', '/')
+                                        .replace('$', '\\$')
+                                        .replace('"', '\\"')) for p in paths])
 
     def context(self):
         # To find the generated cmake_find_package finders
@@ -407,32 +458,48 @@ class FindConfigFiles(Block):
             find_package_prefer_config = "OFF"
 
         os_ = self._conanfile.settings.get_safe("os")
-        android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
+        is_apple_ = is_apple_os(os_)
 
+        # Read information from host context
         host_req = self._conanfile.dependencies.host.values()
-        cross_ios = os_ in ('iOS', "watchOS", "tvOS")
-
-        # Read the buildirs
-        build_paths = []
+        host_build_paths_root = []
+        host_build_paths_noroot = []
+        host_lib_paths = []
+        host_framework_paths = []
+        host_include_paths = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            build_paths.extend([os.path.join(req.package_folder,
-                                       p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
-                                for p in cppinfo.builddirs])
+            # If the builddir is the package_folder, then it is the default "root" one
+            nf = os.path.normpath(req.package_folder)
+            host_build_paths_root.extend(p for p in cppinfo.builddirs if os.path.normpath(p) == nf)
+            host_build_paths_noroot.extend(p for p in cppinfo.builddirs if os.path.normpath(p) != nf)
+            host_lib_paths.extend(cppinfo.libdirs)
+            if is_apple_:
+                host_framework_paths.extend(cppinfo.frameworkdirs)
+            host_include_paths.extend(cppinfo.includedirs)
 
-        if self._toolchain.find_builddirs:
-            build_paths = " ".join(['"{}"'.format(b.replace('\\', '/')
-                                                   .replace('$', '\\$')
-                                                   .replace('"', '\\"')) for b in build_paths])
-        else:
-            build_paths = ""
+        # Read information from build context
+        build_req = self._conanfile.dependencies.build.values()
+        build_build_paths = []
+        build_bin_paths = []
+        for req in build_req:
+            cppinfo = req.cpp_info.aggregated_components()
+            build_build_paths.extend(cppinfo.builddirs)
+            build_bin_paths.extend(cppinfo.bindirs)
 
-        return {"find_package_prefer_config": find_package_prefer_config,
-                "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
-                "cmake_module_path": "${CMAKE_CURRENT_LIST_DIR} " + build_paths,
-                "android_prefix_path": android_prefix,
-                "cross_ios": cross_ios,
-                "generators_folder": "${CMAKE_CURRENT_LIST_DIR}"}
+        return {
+            "find_package_prefer_config": find_package_prefer_config,
+            "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
+            "host_build_paths_root": self._join_paths(host_build_paths_root),
+            "host_build_paths_noroot": self._join_paths(host_build_paths_noroot),
+            "build_build_paths": self._join_paths(build_build_paths),
+            "cmake_program_path": self._join_paths(build_bin_paths),
+            "cmake_library_path": self._join_paths(host_lib_paths),
+            "cmake_framework_path": self._join_paths(host_framework_paths),
+            "cmake_include_path": self._join_paths(host_include_paths),
+            "is_apple": is_apple_,
+            "cross_building": cross_building(self._conanfile),
+        }
 
 
 class UserToolchain(Block):
@@ -752,7 +819,7 @@ class CMakeToolchain(object):
                                        ("parallel", ParallelBlock),
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
                                        ("try_compile", TryCompileBlock),
-                                       ("find_paths", FindConfigFiles),
+                                       ("find_paths", FindFiles),
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock)])
 

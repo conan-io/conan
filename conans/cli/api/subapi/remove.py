@@ -1,7 +1,7 @@
 from conans.cli.api.model import Remote
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.errors import RecipeNotFoundException, ConanException, PackageNotFoundException
+from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 

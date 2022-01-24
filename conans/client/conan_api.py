@@ -9,7 +9,6 @@ from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.download import download
-from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.importer import run_imports, undo_imports
 from conans.client.manager import deps_install
@@ -275,20 +274,6 @@ class ConanAPIV1(object):
         undo_imports(manifest_path)
 
     @api_method
-    def upload(self, pattern, remote_name=None, all_packages=False, confirm=False,
-               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None,
-               parallel_upload=False):
-        """ Uploads a package recipe and the generated binary packages to a specified remote
-        """
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-        uploader = CmdUpload(app)
-        uploader.upload(pattern, all_packages, confirm,
-                        retry, retry_wait, integrity_check, policy, query=query,
-                        parallel_upload=parallel_upload)
-
-    @api_method
     def remove_system_reqs(self, reference):
         try:
             app = ConanApp(self.cache_folder)
@@ -352,35 +337,6 @@ class ConanAPIV1(object):
                 return app.remote_manager.get_package_file(pref, path, remote), path
             else:
                 return app.remote_manager.get_recipe_file(ref, path, remote), path
-
-    @api_method
-    def editable_add(self, path, reference, cwd):
-        app = ConanApp(self.cache_folder)
-        # Retrieve conanfile.py from target_path
-        target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
-
-        # Check the conanfile is there, and name/version matches
-        ref = RecipeReference.loads(reference)
-        target_conanfile = app.loader.load_basic(target_path)
-        if (target_conanfile.name and target_conanfile.name != ref.name) or \
-                (target_conanfile.version and target_conanfile.version != ref.version):
-            raise ConanException("Name and version from reference ({}) and target "
-                                 "conanfile.py ({}/{}) must match".
-                                 format(ref, target_conanfile.name, target_conanfile.version))
-
-        app.cache.editable_packages.add(ref, target_path)
-
-    @api_method
-    def editable_remove(self, reference):
-        app = ConanApp(self.cache_folder)
-        # TODO: Validate the input reference
-        ref = RecipeReference.loads(reference)
-        return app.cache.editable_packages.remove(ref)
-
-    @api_method
-    def editable_list(self):
-        app = ConanApp(self.cache_folder)
-        return {str(k): v for k, v in app.cache.editable_packages.edited_refs.items()}
 
 
 def get_graph_info(profile_host, profile_build, cwd, cache,

@@ -40,47 +40,39 @@ def pre_source(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
     assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path={}".format(conanfile_path))
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("reference={}".format(repr(kwargs["reference"])))
 
 def post_source(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
     assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path={}".format(conanfile_path))
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("reference={}".format(repr(kwargs["reference"])))
 
 def pre_build(output, conanfile, **kwargs):
     assert conanfile
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
-        output.info("package_id={}".format(kwargs["package_id"]))
-    else:
-        output.info("conanfile_path={}".format(kwargs["conanfile_path"]))
+    output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("package_id={}".format(kwargs["package_id"]))
+    output.info("conanfile_path={}".format(kwargs["conanfile_path"]))
 
 def post_build(output, conanfile, **kwargs):
     assert conanfile
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
-        output.info("package_id={}".format(kwargs["package_id"]))
-    else:
-        output.info("conanfile_path={}".format(kwargs["conanfile_path"]))
+    output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("package_id={}".format(kwargs["package_id"]))
+    output.info("conanfile_path={}".format(kwargs["conanfile_path"]))
 
 def pre_package(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
     assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path={}".format(conanfile_path))
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
-        output.info("package_id={}".format(kwargs["package_id"]))
+    output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("package_id={}".format(kwargs["package_id"]))
 
 def post_package(output, conanfile, conanfile_path, **kwargs):
     assert conanfile
     assert conanfile.recipe_folder == os.path.dirname(conanfile_path)
     output.info("conanfile_path={}".format(conanfile_path))
-    if conanfile.in_local_cache:
-        output.info("reference={}".format(repr(kwargs["reference"])))
-        output.info("package_id={}".format(kwargs["package_id"]))
+    output.info("reference={}".format(repr(kwargs["reference"])))
+    output.info("package_id={}".format(kwargs["package_id"]))
 
 def pre_upload(output, conanfile_path, reference, remote, **kwargs):
     output.info("conanfile_path={}".format(conanfile_path))
@@ -220,10 +212,10 @@ class HookTest(unittest.TestCase):
         self._check_package(conanfile_cache_path, client.out, in_cache=True)
         self._check_package_info(client.out)
 
-        client.run("upload basic/0.1@danimtb/testing -r default")
+        client.run("upload basic/0.1@danimtb/testing -r default --only-recipe")
         self._check_upload(conanfile_cache_path, client.out)
         self._check_upload_recipe(conanfile_cache_path, client.out)
-        client.run("upload basic/0.1@danimtb/testing -r default --all")
+        client.run("upload basic/0.1@danimtb/testing -r default")
         self._check_upload(conanfile_cache_path, client.out)
         self._check_upload_recipe(conanfile_cache_path, client.out)
         self._check_upload_package(conanfile_cache_path, client.out)

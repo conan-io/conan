@@ -1,6 +1,5 @@
 conanfile_sources_v2 = '''from conan import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake
-from conan.tools.layout import cmake_layout
+from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
 
 
 class {{class_name or name}}Recipe(ConanFile):

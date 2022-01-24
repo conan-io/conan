@@ -103,9 +103,9 @@ def test_bazeldeps_main_buildfile():
 
 
 def test_bazeldeps_build_dependency_buildfiles():
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile()
 
-    conanfile_dep = ConanFile(Mock(), None)
+    conanfile_dep = ConanFile()
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
