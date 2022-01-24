@@ -27,6 +27,10 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
                 scm = {"type": "git", "url": "myurl", "revision": "myrev",
                        "username": "myuser", "password": os.environ.get("SECRET", None),
                        "verify_ssl": False, "shallow": False}
+
+                def init(self):
+                    self.output.info("name: {}".format(self.scm["username"]))
+                    self.output.info("password: {}".format(self.scm["password"]))
         """)
         t = TestClient()
         t.save({'conanfile.py': conanfile})
@@ -43,13 +47,13 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
                               "verify_ssl": False, "shallow": False})
 
         # Check the recipe gets the proper values
-        t.run("inspect name/version@ -a scm")
-        self.assertIn("password: None", t.out)
-        self.assertIn("username: myuser", t.out)
+        t.run("install --reference=name/version@", assert_error=True)
+        assert "name/version: name: myuser" in t.out
+        assert "name/version: password: None" in t.out
         with environment_update({"SECRET": "42"}):
-            t.run("inspect name/version@ -a scm")
-            self.assertIn("password: 42", t.out)
-            self.assertIn("username: myuser", t.out)
+            t.run("install --reference=name/version@", assert_error=True)
+            assert "name/version: name: myuser" in t.out
+            assert "name/version: password: 42" in t.out
 
     def test_save_special_chars(self):
         conanfile = textwrap.dedent("""
@@ -74,14 +78,6 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
                                                            "revision": 123, "subfolder": "weir\"d",
                                                            "submodule": "don't"})
 
-        # Check the recipe gets the proper values
-        t.run("inspect name/version@ -a scm")
-        self.assertIn("revision: 123", t.out)
-        self.assertIn('subfolder: weir"d', t.out)
-        self.assertIn("submodule: don't", t.out)
-        self.assertIn("revision: 123", t.out)
-        self.assertIn('url: weir"d', t.out)
-
     @pytest.mark.tool_git
     def test_auto_is_replaced(self):
         conanfile = textwrap.dedent("""
@@ -104,12 +100,6 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         conan_data = yaml.safe_load(exported_conandata)
         self.assertDictEqual(conan_data['.conan']['scm'],
                              {"type": "git", "url": 'https://myrepo.com.git', "revision": commit})
-
-        # Check the recipe gets the proper values
-        t.run("inspect name/version@ -a scm")
-        self.assertIn("revision: {}".format(commit), t.out)
-        self.assertIn("type: git", t.out)
-        self.assertIn("url: https://myrepo.com.git", t.out)
 
     def test_existing_field(self):
         conanfile = textwrap.dedent("""
@@ -155,7 +145,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
 
 
 class ParseSCMFromConanDataTestCase(unittest.TestCase):
-    loader = ConanFileLoader(runner=None)
+    loader = ConanFileLoader()
 
     def test_parse_data(self):
         conanfile = textwrap.dedent("""
@@ -221,7 +211,7 @@ def test_auto_can_be_automated():
         t.run("export . --name=pkg --version=1.0")
     _check(t)
 
-    t.run("upload * -c -r default")
+    t.run("upload * -c -r default --only-recipe")
     t.run("remove * -f")
     t.run("install --reference=pkg/1.0@ --build", assert_error=True)
     assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out

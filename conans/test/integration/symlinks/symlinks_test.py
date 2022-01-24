@@ -159,7 +159,7 @@ class TestConan(ConanFile):
         client.run("install conanfile.txt --build")
         pref = PkgReference.loads("hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
 
-        client.run("upload hello/0.1@lasote/stable --all -r default")
+        client.run("upload hello/0.1@lasote/stable -r default")
         client.run('remove "*" -f')
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
         client.run("install conanfile.txt")
@@ -318,7 +318,7 @@ class SymlinkExportSources(unittest.TestCase):
         self.assertEqual(os.path.realpath(local_content),
                          os.path.join(t.current_folder, relpath_v1, 'headers', 'content'))
 
-        t.run("create . user/channel")
+        t.run("create . --user=user --channel=channel")
 
         # Check that things are in place (in the cache): exists and points to 'source' directory
         layout = t.get_latest_ref_layout(RecipeReference.loads("symlinks/1.0.0@user/channel"))

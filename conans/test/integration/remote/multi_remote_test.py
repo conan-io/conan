@@ -14,8 +14,8 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "source.txt": "somesource"})
-        client.run("create . pkg/0.1@user/testing")
-        client.run("upload pkg/0.1@user/testing --all -r default")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        client.run("upload pkg/0.1@user/testing -r default")
 
         # Failure because remote is removed
         servers = OrderedDict(client.servers)
@@ -23,7 +23,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client2 = TestClient(servers=servers, inputs=["user", "password"])
         client2.run("install --reference=pkg/0.1@user/testing")
         client2.run("remote remove default")
-        client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
+        client2.run("upload pkg/0.1@user/testing -r=new_server", assert_error=True)
         self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
                       "not found in local cache.", client2.out)
         self.assertIn("Probably it was installed from a remote that is no longer available.",
@@ -33,7 +33,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         client2 = TestClient(servers=servers, inputs=2*["admin", "password"])
         client2.run("install --reference=pkg/0.1@user/testing")
         client2.run("remove * -r=default -f")
-        client2.run("upload pkg/0.1@user/testing --all -r=new_server", assert_error=True)
+        client2.run("upload pkg/0.1@user/testing -r=new_server", assert_error=True)
         self.assertIn("pkg/0.1@user/testing Error while compressing: The 'pkg/0.1@user/testing' ",
                       client2.out)
         self.assertIn("The 'pkg/0.1@user/testing' package has 'exports_sources' but sources "
@@ -64,8 +64,8 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Upload hello0 to local and default from client_a
         self._create(client_a, "hello0", "0.0")
-        client_a.run("upload hello0/0.0@lasote/stable -r local")
-        client_a.run("upload hello0/0.0@lasote/stable -r default")
+        client_a.run("upload hello0/0.0@lasote/stable -r local --only-recipe")
+        client_a.run("upload hello0/0.0@lasote/stable -r default --only-recipe")
         sleep(1)  # For timestamp and updates checks
 
         # Download hello0 from local with client_b
@@ -73,7 +73,7 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Update hello0 with client_a and reupload
         self._create(client_a, "hello0", "0.0", modifier="\n")
-        client_a.run("upload hello0/0.0@lasote/stable -r local")
+        client_a.run("upload hello0/0.0@lasote/stable -r local --only-recipe")
         self.assertIn("Uploading hello0/0.0@lasote/stable", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
@@ -90,7 +90,7 @@ class MultiRemotesTest(unittest.TestCase):
         # Upload hello0 to local and default from client_a
         sleep(1)  # For timestamp and updates checks
         self._create(client_a, "hello0", "0.0", modifier="\n\n")
-        client_a.run("upload hello0/0.0@lasote/stable -r default")
+        client_a.run("upload hello0/0.0@lasote/stable#latest -r default --only-recipe")
 
         # Now client_b checks for updates without -r parameter
         # TODO: cache2.0 conan info not yet implemented with new cache
@@ -121,11 +121,11 @@ class MultiRemotesTest(unittest.TestCase):
 
         self._create(client, "hello0", "0.0")
         client.run("install --reference=hello0/0.0@lasote/stable --build missing")
-        client.run("upload hello0/0.0@lasote/stable --all -r default")
+        client.run("upload hello0/0.0@lasote/stable -r default")
         sleep(1)  # For timestamp and updates checks
         self._create(client, "hello0", "0.0", modifier=" ")
         client.run("install --reference=hello0/0.0@lasote/stable --build missing")
-        client.run("upload hello0/0.0@lasote/stable --all -r local")
+        client.run("upload hello0/0.0@lasote/stable#latest -r local")
         client.run("remove '*' -f")
 
         client.run("install --reference=hello0/0.0@lasote/stable")
@@ -145,7 +145,7 @@ class MultiRemotesTest(unittest.TestCase):
         client_b = TestClient(servers=self.servers, inputs=3*["admin", "password"])
         self._create(client_b, "hello0", "0.0", modifier="  ")
         client_b.run("install --reference=hello0/0.0@lasote/stable --build missing")
-        client_b.run("upload hello0/0.0@lasote/stable --all -r local")
+        client_b.run("upload hello0/0.0@lasote/stable -r local")
         client.run("install --reference=hello0/0.0@lasote/stable --update")
         self.assertIn("hello0/0.0@lasote/stable#63f23b4c9afec3ea44dbec2f9ffab49b - Updated",
                       client.out)
@@ -175,7 +175,7 @@ class MultiRemoteTest(unittest.TestCase):
 
         client = TestClient(servers=servers)
         client.save({"conanfile.py": GenConanfile("mylib", "0.1")})
-        client.run("create . lasote/testing")
+        client.run("create . --user=lasote --channel=testing")
         client.run("remote login s1 admin -p password")
         client.run("upload mylib* -r s1 -c")
 
@@ -202,6 +202,7 @@ class MultiRemoteTest(unittest.TestCase):
         refs = ["hello0/0.1@lasote/stable", "hello1/0.1@lasote/stable", "hello2/0.1@lasote/stable"]
         client2.save({"conanfile.py": GenConanfile("helloX", "0.1").with_requires(*refs)})
         client2.run("install . --build=missing")
-        self.assertIn("hello0/0.1@lasote/stable from 'remote0'", client2.out)
-        self.assertIn("hello1/0.1@lasote/stable from 'remote1'", client2.out)
-        self.assertIn("hello2/0.1@lasote/stable from 'remote2'", client2.out)
+        client2.assert_listed_require({"hello0/0.1@lasote/stable": "Downloaded (remote0)",
+                                       "hello1/0.1@lasote/stable": "Downloaded (remote1)",
+                                       "hello2/0.1@lasote/stable": "Downloaded (remote2)",
+                                       })

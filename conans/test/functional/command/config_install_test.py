@@ -118,7 +118,7 @@ class ConfigInstallTest(unittest.TestCase):
         save_files(folder, {"remotes.txt": remotes})
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
         conf = load(client.cache.conan_conf_path)
         conf = conf.replace("path = ./data", "")
         save(client.cache.conan_conf_path, conf)
@@ -309,14 +309,6 @@ class ConfigInstallTest(unittest.TestCase):
     def test_failed_install_http(self):
         """ should install from a http zip
         """
-        conan_conf = textwrap.dedent("""
-                    [storage]
-                    path = ./data
-                    [general]
-                    general.retry_wait=0
-                """)
-        self.client.save({"conan.conf": conan_conf}, path=self.client.cache.cache_folder)
-
         self.client.run('config install httpnonexisting', assert_error=True)
         self.assertIn("ERROR: Failed conan config install: "
                       "Error while installing config from httpnonexisting", self.client.out)

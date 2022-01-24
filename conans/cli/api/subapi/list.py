@@ -16,6 +16,16 @@ class ListAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
+    def latest_recipe_revision(self, ref: RecipeReference, remote=None):
+        assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
+        app = ConanApp(self.conan_api.cache_folder)
+        if remote:
+            ret = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
+        else:
+            ret = app.cache.get_latest_recipe_reference(ref)
+
+        return ret
+
     def recipe_revisions(self, ref: RecipeReference, remote=None):
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
         app = ConanApp(self.conan_api.cache_folder)
@@ -25,6 +35,16 @@ class ListAPI:
             results = app.cache.get_recipe_revisions_references(ref, only_latest_rrev=False)
 
         return results
+
+    def latest_package_revision(self, pref: PkgReference, remote=None):
+        assert pref.revision is None, "latest_package_revision: ref already have a revision"
+        app = ConanApp(self.conan_api.cache_folder)
+        if remote:
+            ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
+        else:
+            ret = app.cache.get_latest_package_reference(pref)
+
+        return ret
 
     def package_revisions(self, pref: PkgReference, remote: Remote=None):
         assert pref.ref.revision is not None, "package_revisions requires a recipe revision, " \

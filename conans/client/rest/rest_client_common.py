@@ -207,9 +207,9 @@ class RestCommonMethods(object):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
+    def upload_recipe(self, ref, files_to_upload, deleted):
         if files_to_upload:
-            self._upload_recipe(ref, files_to_upload, retry, retry_wait)
+            self._upload_recipe(ref, files_to_upload)
         if deleted:
             self._remove_recipe_files(ref, deleted)
 
@@ -220,8 +220,8 @@ class RestCommonMethods(object):
         snap = self._get_snapshot(url)
         return snap
 
-    def upload_package(self, pref, files_to_upload, retry, retry_wait):
-        self._upload_package(pref, files_to_upload, retry, retry_wait)
+    def upload_package(self, pref, files_to_upload):
+        self._upload_package(pref, files_to_upload)
 
     def search(self, pattern=None, ignorecase=True):
         """

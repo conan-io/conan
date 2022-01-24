@@ -12,7 +12,7 @@ from conans.model.settings import Settings
 
 
 def test_cpp_info_name_cmakedeps():
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile()
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
@@ -23,7 +23,7 @@ def test_cpp_info_name_cmakedeps():
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
-    cpp_info = CppInfo("mypkg")
+    cpp_info = CppInfo(set_defaults=True)
     cpp_info.set_property("cmake_target_name", "MySuperPkg1::MySuperPkg1")
     cpp_info.set_property("cmake_file_name", "ComplexFileName1")
 
@@ -33,6 +33,8 @@ def test_cpp_info_name_cmakedeps():
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
+    # necessary, as the interface doesn't do it now automatically
+    conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
@@ -70,6 +72,8 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
+    # necessary, as the interface doesn't do it now automatically
+    conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
@@ -99,7 +103,7 @@ def test_cmake_deps_links_flags():
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
 
-    cpp_info = CppInfo("mypkg")
+    cpp_info = CppInfo()
     # https://github.com/conan-io/conan/issues/8811 regression, fix with explicit - instead of /
     cpp_info.sharedlinkflags = ["-NODEFAULTLIB", "-OTHERFLAG"]
     cpp_info.exelinkflags = ["-OPT:NOICF"]
@@ -110,6 +114,8 @@ def test_cmake_deps_links_flags():
     conanfile_dep._conan_node.ref = RecipeReference.loads("mypkg/1.0")
     conanfile_dep._conan_node.context = "host"
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
+    # necessary, as the interface doesn't do it now automatically
+    conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
@@ -151,6 +157,8 @@ def test_component_name_same_package():
     conanfile_dep._conan_node.context = "host"
     conanfile_dep._conan_node.ref = RecipeReference.loads("mypkg/1.0")
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
+    # necessary, as the interface doesn't do it now automatically
+    conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("mypkg/1.0"))

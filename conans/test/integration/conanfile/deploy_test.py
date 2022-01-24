@@ -32,7 +32,7 @@ class Lib(ConanFile):
         client.save({"conanfile.py": libconanfile,
                      "License.md": "lib license",
                      "otherfile": ""})
-        client.run("create . lib/0.1@user/testing")
+        client.run("create . --name=lib --version=0.1 --user=user --channel=testing")
         self.assertNotIn("Lib deploy()", client.out)
 
         if deploy_to_abs:
@@ -58,7 +58,7 @@ class Pkg(ConanFile):
         self.copy_deps("*.dll", dst="%s")
 """ % dll_folder.replace("\\", "/")
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertNotIn("deploy()", client.out)
 
         def test_install_in(folder):

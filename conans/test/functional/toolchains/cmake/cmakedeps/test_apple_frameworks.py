@@ -4,25 +4,26 @@ import textwrap
 import pytest
 
 from conans.client.tools.apple import XCRun, to_apple_arch
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture
 def client():
-    lib_ref = RecipeReference.loads("foolib/1.0")
     lib_conanfile = textwrap.dedent("""
         from conans import ConanFile
 
         class FooLib(ConanFile):
+            name = "foolib"
+            version = "1.0"
+
             def package_info(self):
                 self.cpp_info.frameworks.extend(['Foundation', 'CoreServices', 'CoreFoundation'])
     """)
 
     t = TestClient()
     t.save({'conanfile.py': lib_conanfile})
-    t.run("create . {}@".format(lib_ref))
+    t.run("create .")
     return t
 
 
@@ -192,10 +193,9 @@ timer_cpp = textwrap.dedent("""
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
-                         [# FIXME: Skipped because environment changes ('',),
-                          ('-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
-                          ("-s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
-
+         [('',),
+          ('-pr:b default -s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
+          ("-pr:b default -s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
@@ -210,13 +210,17 @@ def test_apple_own_framework_cross_build(settings):
     """)
 
     test_conanfile = textwrap.dedent("""
+        import os
         from conans import ConanFile, tools
-        from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
+        from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
         from conan.tools.build import cross_building
 
         class TestPkg(ConanFile):
             generators = "CMakeToolchain"
             settings = "os", "arch", "compiler", "build_type"
+
+            def layout(self):
+                cmake_layout(self)
 
             def requirements(self):
                 self.requires(self.tested_reference_str)
@@ -236,7 +240,8 @@ def test_apple_own_framework_cross_build(settings):
 
             def test(self):
                 if not cross_building(self):
-                    self.run("timer", env="conanrunenv")
+                    cmd = os.path.join(self.cpp.build.bindirs[0], "timer")
+                    self.run(cmd, env="conanrunenv")
         """)
 
     client.save({'conanfile.py': conanfile,
@@ -308,8 +313,8 @@ def test_apple_own_framework_cmake_deps():
                  "src/hello.cpp": hello_cpp,
                  "src/Info.plist": infoplist})
     client.run("export . --name=mylibrary --version=1.0")
-    client.run("create . mylibrary/1.0@ -s build_type=Debug")
-    client.run("create . mylibrary/1.0@ -s build_type=Release")
+    client.run("create . --name=mylibrary --version=1.0 -s build_type=Debug")
+    client.run("create . --name=mylibrary --version=1.0 -s build_type=Release")
 
     profile = textwrap.dedent("""
         include(default)
@@ -493,7 +498,7 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
             'test_package/conanfile.py': test_conanfile_py,
             'test_package/CMakeLists.txt': test_cmakelists_txt,
             'test_package/test_package.cpp': test_test_package_cpp})
-    t.run("create . hello/1.0@")
+    t.run("create . --name=hello --version=1.0")
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")

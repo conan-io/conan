@@ -76,7 +76,6 @@ class GraphManager(object):
     def _load_root_node(self, reference, create_reference, profile_build, profile_host,
                         graph_lock, root_ref,
                         is_build_require, require_overrides):
-
         profile_host.dev_reference = create_reference  # Make sure the created one has develop=True
 
         # create (without test_package), install|info|graph|export-pkg <ref>

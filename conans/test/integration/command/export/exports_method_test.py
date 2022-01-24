@@ -99,7 +99,7 @@ class ExportsMethodTest(unittest.TestCase):
                     self.output.info("MYOPT: %s" % self.options.myopt)
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@")
+        client.run("create . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1: MYOPT: myval", client.out)
 
     def test_export_folders(self):
@@ -238,7 +238,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         client.run("export . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1 export_sources() method: Copied 1 '.txt' file: myfile.txt",
                       client.out)
-        client.run("upload pkg/0.1@ -r default")
+        client.run("upload pkg/0.1 -r default")
         client.run("remove * -f")
         client.run("install --reference=pkg/0.1@ --build")
         self.assertIn("Downloading conan_sources.tgz", client.out)

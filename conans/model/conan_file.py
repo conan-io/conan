@@ -1,4 +1,3 @@
-import os
 import platform
 
 from conans.cli.output import ConanOutput, ScopedOutput
@@ -8,7 +7,6 @@ from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
 from conans.model.requires import Requirements
-from conans.paths import RUN_LOG_NAME
 
 
 class ConanFile:
@@ -35,7 +33,6 @@ class ConanFile:
     generators = []
     revision_mode = "hash"
 
-    in_local_cache = True
     develop = False
 
     # Settings and Options
@@ -50,10 +47,9 @@ class ConanFile:
     # Run in windows bash
     win_bash = None
 
-    def __init__(self, runner, display_name=""):
+    def __init__(self, display_name=""):
         self.display_name = display_name
         # something that can run commands, as os.sytem
-        self._conan_runner = runner
 
         self.compatible_packages = []
         self._conan_requester = None
@@ -221,7 +217,7 @@ class ConanFile:
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, output=True, cwd=None, ignore_errors=False, env=None):
+    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env=None, quiet=False, shell=True):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         if platform.system() == "Windows":
             if self.win_bash:  # New, Conan 2.0
@@ -231,10 +227,12 @@ class ConanFile:
             env = "conanbuild"
         from conan.tools.env.environment import environment_wrap_command
         wrapped_cmd = environment_wrap_command(env, command, cwd=self.generators_folder)
-        retcode = self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
+        from conans.util.runners import conan_run
+        ConanOutput().writeln(f"{self.display_name}: RUN: {command if not quiet else '*hidden*'}")
+        retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
 
         if not ignore_errors and retcode != 0:
-            raise ConanException("Error %d while executing %s" % (retcode, command))
+            raise ConanException("Error %d while executing" % retcode)
 
         return retcode
 

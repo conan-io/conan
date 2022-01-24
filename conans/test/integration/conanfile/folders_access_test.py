@@ -40,13 +40,8 @@ class AConan(ConanFile):
     requires = "parent/1.0@conan/stable"
     running_local_command = %(local_command)s
 
-    def assert_in_local_cache(self):
-        if self.running_local_command:
-            assert(self.in_local_cache == False)
-
     def source(self):
         assert(self.source_folder == os.getcwd())
-        self.assert_in_local_cache()
 
         # Prevented to use them, it's dangerous, because the source is run only for the first
         # config, so only the first build_folder/package_folder would be modified
@@ -59,9 +54,7 @@ class AConan(ConanFile):
     def build(self):
         assert(self.build_folder == os.getcwd())
 
-        self.assert_in_local_cache()
-
-        if self.no_copy_source and self.in_local_cache:
+        if self.no_copy_source:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
             assert(self.install_folder == self.build_folder)
         else:
@@ -74,12 +67,8 @@ class AConan(ConanFile):
     def package(self):
         assert(self.install_folder is not None)
         assert(self.build_folder == os.getcwd())
-        self.assert_in_local_cache()
 
-        if self.in_local_cache:
-            assert(self.copy_build_folder == self.build_folder)
-
-        if self.no_copy_source and self.in_local_cache:
+        if self.no_copy_source:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
         else:
             assert(self.source_folder == self.build_folder)
@@ -88,7 +77,6 @@ class AConan(ConanFile):
 
     def package_info(self):
         assert(self.package_folder == os.getcwd())
-        assert(self.in_local_cache == True)
 
         assert(self.source_folder is None)
         assert(self.build_folder is None)
@@ -105,7 +93,7 @@ class AConan(ConanFile):
 class TestFoldersAccess(unittest.TestCase):
     """"Tests the presence of self.source_folder, self.build_folder, self.package_folder
     in the conanfile methods. Also the availability of the self.deps_cpp_info, self.deps_user_info
-    and self.deps_env_info. Also the 'in_local_cache' variable. """
+    and self.deps_env_info."""
 
     def setUp(self):
         self.client = TestClient()
@@ -123,50 +111,33 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("source .")
 
-    def test_build_local_command(self):
-
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("build .", assert_error=True)
-
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("build . --build missing")
-
-        c1 = conanfile % {"no_copy_source": True, "source_with_infos": False,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("build . --build missing")
-
     def test_deploy(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . user/testing --build missing")
+        self.client.run("create . --user=user --channel=testing --build missing")
         self.client.run("install --reference=lib/1.0@user/testing")  # Checks deploy
 
     def test_full_install(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . conan/stable --build")
+        self.client.run("create . --user=conan --channel=stable --build")
 
         c1 = conanfile % {"no_copy_source": True, "source_with_infos": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . conan/stable --build")
+        self.client.run("create . --user=conan --channel=stable --build")
 
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . conan/stable --build")
+        self.client.run("create . --user=conan --channel=stable --build")
 
         c1 = conanfile % {"no_copy_source": True, "source_with_infos": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . conan/stable --build")
+        self.client.run("create . --user=conan --channel=stable --build")
 
 
 class RecipeFolderTest(unittest.TestCase):

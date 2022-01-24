@@ -35,6 +35,12 @@ class RecipeReference:
             result += "#{}".format(self.revision)
         return result
 
+    def repr_reduced(self):
+        result = self.__str__()
+        if self.revision is not None:
+            result += "#{}".format(self.revision[0:4])
+        return result
+
     def repr_humantime(self):
         result = self.repr_notime()
         assert self.timestamp

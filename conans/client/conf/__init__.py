@@ -46,6 +46,8 @@ os:
     Neutrino:
         version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
     baremetal:
+    VxWorks:
+        version: ["7"]
 arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
 compiler:
     sun-cc:
@@ -147,17 +149,9 @@ _t_default_client_conf = textwrap.dedent("""
 
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
 
-    # cpu_count = 1             # environment CONAN_CPU_COUNT
-
     # Change the default location for building test packages to a temporary folder
     # which is deleted after the test.
     # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
-
-    [storage]
-    # This is the default path, but you can write your own. It must be an absolute path or a
-    # path beginning with "~" (if the environment var CONAN_HOME is specified, this directory, even
-    # with "~/", will be relative to the conan user home, not to the system user home)
-    path = ./data
     """)
 
 

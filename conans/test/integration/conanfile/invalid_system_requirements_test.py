@@ -15,10 +15,9 @@ class MyPkg(ConanFile):
 
     def build_requirements(self):
         raise ConanInvalidSystemRequirements("Some package missed")
-
 """})
 
-        error = self.client.run("create . name/ver@jgsogo/test", assert_error=True)
+        error = self.client.run("create . --name=name --version=ver", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_SYSTEM_REQUIREMENTS)
         self.assertIn("Invalid system requirements: Some package missed", self.client.out)
 

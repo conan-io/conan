@@ -1,5 +1,4 @@
 import os
-import re
 import textwrap
 import unittest
 
@@ -51,8 +50,8 @@ class TestConan(ConanFile):
         self.copy("*")
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing --build=missing")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing --build=missing")
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.md' file: LICENSE.md",
                       client.out)
         pref = client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@user/testing"),
@@ -145,7 +144,7 @@ libc/0.1@lasote/testing
                      "a.dll": "",
                      "Foo/b.dll": "",
                      "Baz/b.dll": ""})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
 
         consumer = textwrap.dedent("""
             [requires]
@@ -215,7 +214,7 @@ libc/0.1@lasote/testing
             """)
         client = TestClient()
         client.save({"conanfile.py": pkg_conanfile})
-        client.run("create . pkg/0.1@")
+        client.run("create . --name=pkg --version=0.1")
         consumer_conanfile = textwrap.dedent(r"""
             from conans import ConanFile
             import platform

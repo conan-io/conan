@@ -1,14 +1,68 @@
 from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
-from conans.cli.output import ConanOutput
+from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
+from conans.client.graph.profile_node_definer import initialize_conanfile_profile, virtual_definer
 from conans.errors import ConanException
+from conans.model.recipe_ref import RecipeReference
 
 
 class GraphAPI:
 
     def __init__(self, conan_api):
         self.conan_api = conan_api
+
+    @api_method
+    def load_root_test_conanfile(self, path, tested_reference, profile_host, profile_build,
+                                 update=None, remote=None, require_overrides=None, lockfile=None):
+        """
+        create and initialize a root node from a test_package/conanfile.py consumer
+        @param lockfile: Might be good to lock python-requires, build-requires
+        @param path: The full path to the test_package/conanfile.py being used
+        @param tested_reference: The full RecipeReference of the tested package
+        @param profile_host:
+        @param profile_build:
+        @param update:
+        @param remote:
+        @param require_overrides:
+        @return: a graph Node, recipe=RECIPE_CONSUMER
+        """
+
+        app = ConanApp(self.conan_api.cache_folder)
+        # necessary for correct resolution and update of remote python_requires
+        remote = [remote] if remote is not None else None
+        app.load_remotes(remote, update=update)
+
+        loader = app.loader
+        profile_host.dev_reference = tested_reference  # Make sure the created one has develop=True
+        profile_host.options.scope(tested_reference.name)
+
+        # do not try apply lock_python_requires for test_package/conanfile.py consumer
+        conanfile = loader.load_consumer(path, user=tested_reference.user,
+                                         channel=tested_reference.channel,
+                                         require_overrides=require_overrides,
+                                         graph_lock=lockfile)
+        initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST, False)
+        conanfile.display_name = "%s (test package)" % str(tested_reference)
+        conanfile.output.scope = conanfile.display_name
+        conanfile.tested_reference_str = repr(tested_reference)
+
+        ref = RecipeReference(conanfile.name, conanfile.version, tested_reference.user,
+                              tested_reference.channel)
+        root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
+        return root_node
+
+    @api_method
+    def load_root_virtual_conanfile(self, ref, profile_host, is_build_require=False,
+                                    require_overrides=None):
+        app = ConanApp(self.conan_api.cache_folder)
+        profile_host.options.scope(ref.name)
+        profile_host.dev_reference = ref
+        conanfile = app.loader.load_virtual([ref],  is_build_require=is_build_require,
+                                            require_overrides=require_overrides)
+        virtual_definer(conanfile, profile_host)
+        root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
+        return root_node
 
     @api_method
     def load_root_node(self, reference, path, profile_host, profile_build, lockfile, root_ref,

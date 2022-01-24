@@ -580,7 +580,7 @@ class HelloConan(ConanFile):
         conanfile = self.conanfile.format(svn_folder="", svn_url=self.repo_url,
                                           file_path="file.h")
         client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
 
     def test_clone_subfolder(self):
         tmp_folder = self.gimme_tmp()
@@ -593,4 +593,4 @@ class HelloConan(ConanFile):
         conanfile = self.conanfile.format(svn_folder="\"src\"", svn_url=self.repo_url,
                                           file_path="src/file.h")
         client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")

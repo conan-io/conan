@@ -19,8 +19,9 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         self.client = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm -r default")
+
+        self.client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        self.client.run("upload * --confirm -r default")
         # Check files are uploded in this order: conan_package.tgz, conaninfo.txt, conanmanifest.txt
         order1 = str(self.client.out).find("Uploading conan_package.tgz")
         order2 = str(self.client.out).find("Uploading conaninfo.txt", order1)
@@ -55,8 +56,9 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn(f"pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing",
                       self.client.out)
         # Try upload of fresh package
-        self.client.run("create . pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm -r default")
+
+        self.client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        self.client.run("upload * --confirm -r default")
         self._assert_all_package_files_in_server()
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
@@ -71,8 +73,9 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("ERROR: Binary package not found", self.client.out)
         self.assertIn(NO_SETTINGS_PACKAGE_ID, self.client.out)
         # Try upload of fresh package
-        self.client.run("create . pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm -r default")
+
+        self.client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        self.client.run("upload * --confirm -r default")
         self._assert_all_package_files_in_server()
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
@@ -88,8 +91,9 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn(f"pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
-        self.client.run("create . pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm -r default")
+
+        self.client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        self.client.run("upload * --confirm -r default")
         self.assertIn("Uploading conan_package.tgz", self.client.out)
         self.assertIn("Uploading conaninfo.txt", self.client.out)
         self._assert_all_package_files_in_server()
@@ -104,10 +108,10 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn("ERROR: Binary package not found", self.client.out)
         # Try upload of fresh package
-        self.client.run("create . pkg/0.1@user/testing")
+        self.client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         # We need the --force to actually fix a broken package
         # TODO: If the server reported missing package, or whatever, it wouldn't be necessary
-        self.client.run("upload * --all --confirm -r default --force")
+        self.client.run("upload * --confirm -r default --force")
         self.assertIn("Uploading conan_package.tgz", self.client.out)
         self._assert_all_package_files_in_server()
 
@@ -123,8 +127,8 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn("ERROR: Binary package not found", self.client.out)
         # Try upload of fresh package
-        self.client.run("create . pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm -r default")
+        self.client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        self.client.run("upload * --confirm -r default")
         self._assert_all_package_files_in_server()
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
@@ -141,6 +145,6 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("install --reference=pkg/0.1@user/testing", assert_error=True)
         self.assertIn(f"pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
-        self.client.run("create . pkg/0.1@user/testing")
-        self.client.run("upload * --all --confirm -r default")
+        self.client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        self.client.run("upload * --confirm -r default")
         self._assert_all_package_files_in_server()

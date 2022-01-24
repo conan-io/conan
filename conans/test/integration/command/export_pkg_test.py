@@ -42,14 +42,14 @@ class ExportPkgTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/3367
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
-        client.run("create . pkgc/0.1@user/testing")
+        client.run("create . --name=pkgc --version=0.1 --user=user --channel=testing")
         conanfile = """from conans import ConanFile
 class PkgB(ConanFile):
     settings = "arch"
     requires = "pkgc/0.1@user/testing"
 """
         client.save({CONANFILE: conanfile})
-        client.run("create . pkgb/0.1@user/testing")
+        client.run("create . --name=pkgb --version=0.1 --user=user --channel=testing")
         conanfile = """from conans import ConanFile
 class PkgA(ConanFile):
     requires = "pkgb/0.1@user/testing"
@@ -278,7 +278,7 @@ class TestConan(ConanFile):
     def test_with_deps(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . hello/0.1@lasote/stable")
+        client.run("create . --name=hello --version=0.1 --user=lasote --channel=stable")
         conanfile = GenConanfile().with_name("hello1").with_version("0.1")\
                                   .with_import("from conans import tools")\
                                   .with_require("hello/0.1@lasote/stable")
@@ -433,33 +433,6 @@ class TestConan(ConanFile):
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
-    @pytest.mark.xfail(reason="cache2.0: we can't test this now, revisit when we move the uuid "
-                              "folders to a temporal location")
-    def test_export_pkg_clean_dirty(self):
-        # https://github.com/conan-io/conan/issues/6449
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                def build(self):
-                    if self.in_local_cache:
-                        raise Exception("Can't build while installing")
-            """)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@", assert_error=True)
-        self.assertIn("Can't build while installing", client.out)
-        ref = RecipeReference.loads("pkg/0.1")
-        pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
-        layout = client.get_latest_pkg_layout(pref)
-        build_folder = layout.build()
-        self.assertTrue(is_dirty(build_folder))
-        self.assertTrue(layout.package_is_dirty())
-
-        client.run("export-pkg . pkg/0.1@")
-        self.assertFalse(layout.package_is_dirty())
-        client.run("install --reference=pkg/0.1@")
-        self.assertIn("pkg/0.1: Already installed!", client.out)
-
 
 def test_build_policy_never():
     client = TestClient()
@@ -477,7 +450,7 @@ def test_build_policy_never():
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
 
     client.run("install --reference=pkg/1.0@ --build")
-    assert "pkg/1.0:{} - Cache".format(NO_SETTINGS_PACKAGE_ID) in client.out
+    client.assert_listed_require({"pkg/1.0": "Cache"})
     assert "pkg/1.0: Calling build()" not in client.out
 
 

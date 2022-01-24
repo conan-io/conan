@@ -9,9 +9,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 from conans.util.env import environment_update
 
-default_client_conf = '''[storage]
-path: ~/.conan/data
-
+default_client_conf = '''
 [log]
 trace_file = "Path/with/quotes"
 
@@ -31,8 +29,7 @@ os=Linux
 '''
 
 
-default_client_conf_log = '''[storage]
-path: ~/.conan/data
+default_client_conf_log = '''
 
 [log]
 trace_file = "foo/bar/quotes"

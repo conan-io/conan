@@ -6,6 +6,7 @@ import pytest
 
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import mkdir
 
@@ -151,8 +152,8 @@ class AConan(ConanFile):
     pass
 """
         client.save({CONANFILE: conanfile_dep})
-        client.run("create . Hello.pkg/0.1@lasote/testing")
-        client.run("create . Hello-Tools/0.1@lasote/testing")
+        client.run("create . --name=Hello.pkg --version=0.1 --user=lasote --channel=testing")
+        client.run("create . --name=Hello-Tools --version=0.1 --user=lasote --channel=testing")
         conanfile_scope_env = """
 from conans import ConanFile
 
@@ -206,41 +207,18 @@ class AConan(ConanFile):
 
     def test_build_single_full_reference(self):
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
-
-class FooConan(ConanFile):
-    name = "foo"
-    version = "1.0"
-"""
-        client.save({CONANFILE: conanfile})
-        client.run("create --build foo/1.0@user/stable . user/stable")
-        self.assertIn("foo/1.0@user/stable: Forced build from source", client.out)
+        client.save({CONANFILE: GenConanfile("foo", "1.0")})
+        client.run("create . --build")
+        self.assertIn("foo/1.0: Forced build from source", client.out)
 
     def test_build_multiple_full_reference(self):
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
-
-class FooConan(ConanFile):
-    name = "foo"
-    version = "1.0"
-"""
-        client.save({CONANFILE: conanfile})
-        client.run("create . user/stable")
-
-        conanfile = """
-from conans import ConanFile
-
-class BarConan(ConanFile):
-    name = "bar"
-    version = "1.0"
-    requires = "foo/1.0@user/stable"
-"""
-        client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("create --build foo/1.0@user/stable --build bar/1.0@user/testing . user/testing")
-        self.assertIn("foo/1.0@user/stable: Forced build from source", client.out)
-        self.assertIn("bar/1.0@user/testing: Forced build from source", client.out)
+        client.save({CONANFILE: GenConanfile("foo", "1.0")})
+        client.run("create .")
+        client.save({CONANFILE: GenConanfile("bar", "1.0").with_requires("foo/1.0")})
+        client.run("create --build foo/1.0@ --build bar/1.0@ .")
+        self.assertIn("foo/1.0: Forced build from source", client.out)
+        self.assertIn("bar/1.0: Forced build from source", client.out)
 
     def test_debug_build_release_deps(self):
         # https://github.com/conan-io/conan/issues/2899
@@ -259,7 +237,7 @@ class BarConan(ConanFile):
                                      % (self.name, self.settings.build_type))
             """)
         client.save({CONANFILE: conanfile.format(name="dep", requires="")})
-        client.run("create . dep/0.1@user/testing -s build_type=Release")
+        client.run("create . --name=dep --version=0.1 --user=user --channel=testing -s build_type=Release")
         client.save({CONANFILE: conanfile.format(name="mypkg",
                                                  requires="requires = 'dep/0.1@user/testing'")})
         client.run("build . -s mypkg:build_type=Debug -s build_type=Release")

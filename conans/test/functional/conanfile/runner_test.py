@@ -2,11 +2,8 @@ import os
 import platform
 import textwrap
 import unittest
-from io import StringIO
 
-import pytest
 
-from conans.client.runner import ConanRunner
 from conans.util.env import environment_update
 from conans.test.utils.tools import TestClient
 
@@ -34,191 +31,6 @@ class Pkg(ConanFile):
         client.run("source .")
         self.assertIn("RETCODE True", client.out)
 
-    def test_basic(self):
-        conanfile = '''
-from conans import ConanFile
-from conans.client.runner import ConanRunner
-import platform
-
-class ConanFileToolsTest(ConanFile):
-
-    def build(self):
-        self._runner = ConanRunner()
-        self.run("mkdir test_folder")
-    '''
-        client = TestClient()
-        self._install_and_build(client, conanfile)
-        test_folder = os.path.join(client.current_folder, "test_folder")
-        self.assertTrue(os.path.exists(test_folder))
-
-    def test_write_to_stringio(self):
-        runner = ConanRunner(print_commands_to_output=True,
-                             generate_run_log_file=True,
-                             log_run_to_output=True)
-
-        out = StringIO()
-        runner("python --version", output=out)
-        self.assertIn("""---Running------
-> python --version
------------------""", out.getvalue())
-
-    @pytest.mark.tool_cmake
-    def test_log(self):
-        conanfile = '''
-from conans import ConanFile
-
-class ConanFileToolsTest(ConanFile):
-    def build(self):
-        self.run("cmake --version")
-'''
-        # A runner logging everything
-        client = TestClient()
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [log]
-                            print_run_commands=True
-                            run_to_file=True
-                            run_to_output=True
-                        """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-        self._install_and_build(client, conanfile)
-        self.assertIn("--Running---", client.out)
-        self.assertIn("> cmake --version", client.out)
-        self.assertIn("cmake version", client.out)
-        self.assertIn("Logging command output to file ", client.out)
-
-        # A runner logging everything
-        client = TestClient()
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [log]
-                            print_run_commands=True
-                            run_to_file=False
-                            run_to_output=True
-                        """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-
-        self._install_and_build(client, conanfile)
-        self.assertIn("--Running---", client.out)
-        self.assertIn("> cmake --version", client.out)
-        self.assertIn("cmake version", client.out)
-        self.assertNotIn("Logging command output to file ", client.out)
-
-        client = TestClient()
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [log]
-                            print_run_commands=False
-                            run_to_file=True
-                            run_to_output=True
-                        """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-
-        self._install_and_build(client, conanfile)
-        self.assertNotIn("--Running---", client.out)
-        self.assertNotIn("> cmake --version", client.out)
-        self.assertIn("cmake version", client.out)
-        self.assertIn("Logging command output to file ", client.out)
-
-        client = TestClient()
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [log]
-                            print_run_commands=False
-                            run_to_file=False
-                            run_to_output=True
-                        """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-
-        self._install_and_build(client, conanfile)
-        self.assertNotIn("--Running---", client.out)
-        self.assertNotIn("> cmake --version", client.out)
-        self.assertIn("cmake version", client.out)
-        self.assertNotIn("Logging command output to file ", client.out)
-
-        client = TestClient()
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [log]
-                            print_run_commands=False
-                            run_to_file=False
-                            run_to_output=False
-                        """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-
-        self._install_and_build(client, conanfile)
-        self.assertNotIn("--Running---", client.out)
-        self.assertNotIn("> cmake --version", client.out)
-        self.assertNotIn("cmake version", client.out)
-        self.assertNotIn("Logging command output to file ", client.out)
-
-        client = TestClient()
-        conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
-                            [log]
-                            print_run_commands=False
-                            run_to_file=True
-                            run_to_output=False
-                        """)
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
-        self._install_and_build(client, conanfile)
-        self.assertNotIn("--Running---", client.out)
-        self.assertNotIn("> cmake --version", client.out)
-        self.assertNotIn("cmake version", client.out)
-        self.assertIn("Logging command output to file ", client.out)
-
-    def test_cwd(self):
-        conanfile = '''
-from conans import ConanFile
-from conans.client.runner import ConanRunner
-import platform
-
-class ConanFileToolsTest(ConanFile):
-
-    def build(self):
-        self._runner = ConanRunner()
-        self.run("mkdir test_folder", cwd="child_folder")
-    '''
-        files = {"conanfile.py": conanfile}
-
-        client = TestClient()
-        os.makedirs(os.path.join(client.current_folder, "child_folder"))
-        test_folder = os.path.join(client.current_folder, "child_folder", "test_folder")
-        self.assertFalse(os.path.exists(test_folder))
-        client.save(files)
-        client.run("install .")
-        client.run("build .")
-        self.assertTrue(os.path.exists(test_folder))
-
-    def test_cwd_error(self):
-        conanfile = '''
-from conans import ConanFile
-from conans.client.runner import ConanRunner
-import platform
-
-class ConanFileToolsTest(ConanFile):
-
-    def build(self):
-        self._runner = ConanRunner()
-        self.run("mkdir test_folder", cwd="non_existing_folder")
-    '''
-        files = {"conanfile.py": conanfile}
-
-        client = TestClient()
-        test_folder = os.path.join(client.current_folder, "child_folder", "test_folder")
-        self.assertFalse(os.path.exists(test_folder))
-        client.save(files)
-        client.run("install .")
-        client.run("build .", assert_error=True)
-        self.assertIn("Error while executing 'mkdir test_folder'", client.out)
-        self.assertFalse(os.path.exists(test_folder))
-
     def test_runner_capture_output(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -234,24 +46,18 @@ class ConanFileToolsTest(ConanFile):
     def test_custom_stream_error(self):
         # https://github.com/conan-io/conan/issues/7888
         conanfile = textwrap.dedent("""
+            from io import StringIO
             from conans import ConanFile
             class Pkg(ConanFile):
                 def source(self):
-                    class Buf:
-                        def __init__(self):
-                            self.buf = []
-
-                        def write(self, data):
-                            self.buf.append(data)
-
-                    my_buf = Buf()
-                    self.run('echo "Hello"', output=my_buf)
-                    self.output.info("Buffer got msgs {}".format(len(my_buf.buf)))
+                    my_buf = StringIO()
+                    self.run('echo Hello', stdout=my_buf)
+                    self.output.info("Buffer got msgs {}".format(my_buf.getvalue()))
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        self.assertIn("Buffer got msgs 1", client.out)
+        self.assertIn('conanfile.py: Buffer got msgs Hello', client.out)
 
     def test_credentials_removed(self):
         conanfile = textwrap.dedent("""

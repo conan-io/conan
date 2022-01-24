@@ -83,7 +83,7 @@ class FileUploader(object):
         post_description = "Uploaded {}".format(
             file_name) if not display_name else "Uploaded {} -> {}".format(file_name, display_name)
 
-        self._output.info(description)
+        # self._output.info(description)
         with open(abs_path, mode='rb') as file_handler:
             try:
                 response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,

@@ -45,8 +45,9 @@ class RequestHeadersTestCase(unittest.TestCase):
         t = TestClient(servers=self.servers, inputs=["user", "mypass"])
         t.save({'conanfile.py': self.conanfile,
                 'profile': self.profile})
-        t.run('create conanfile.py name/version@user/channel --profile:host=profile')
-        t.run('upload name/version@user/channel --all -r default')
+        t.run('create file.py --name=name --version=version --user=user --channel=channel '
+              '--profile:host=profile')
+        t.run('upload name/version@user/channel -r default')
 
     def _get_header(self, requester, header_name):
         hits = sum([header_name in headers for _, headers in requester.requests])

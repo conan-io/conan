@@ -8,11 +8,7 @@ from conans.cli.api.subapi import api_method
 from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.cmd.build import cmd_build
-from conans.client.cmd.create import create
 from conans.client.cmd.download import download
-from conans.client.cmd.export import cmd_export
-from conans.client.cmd.test import install_build_and_test
-from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.importer import run_imports, undo_imports
 from conans.client.manager import deps_install
@@ -139,79 +135,6 @@ class ConanAPIV1(object):
             except AttributeError:
                 result[attribute] = ''
         return result
-
-    @api_method
-    def test(self, path, reference, profile_names=None, settings=None, options=None, env=None,
-             remote_name=None, update=False, build_modes=None, cwd=None, test_build_folder=None,
-             lockfile=None, profile_build=None, conf=None):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)], update=update)
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
-
-        conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-        profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
-                                                                           profile_build, cwd,
-                                                                           app.cache,
-                                                                           lockfile=lockfile)
-        ref = RecipeReference.loads(reference)
-        install_build_and_test(app, conanfile_path, ref, profile_host,
-                               profile_build, graph_lock, root_ref,
-                               build_modes=build_modes, test_build_folder=test_build_folder)
-
-    @api_method
-    def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
-               profile_names=None, settings=None,
-               options=None, env=None, test_folder=None,
-               build_modes=None, remote_name=None, update=False, cwd=None, test_build_folder=None,
-               lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
-               is_build_require=False, conf=None, require_overrides=None):
-        """
-        API method to create a conan package
-
-        test_folder default None   - looks for default 'test' or 'test_package' folder),
-                                    string - test_folder path
-                                    False  - disabling tests
-        """
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)], update=update)
-
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env, conf=conf)
-        cwd = cwd or os.getcwd()
-
-        try:
-            conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
-            lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-            profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
-                                                                               profile_build, cwd,
-                                                                               app.cache,
-                                                                               lockfile=lockfile)
-            new_ref = cmd_export(app, conanfile_path, name, version, user, channel,
-                                 graph_lock=graph_lock,
-                                 ignore_dirty=ignore_dirty)
-
-            profile_host.options.scope(new_ref.name)
-
-            if build_modes is None:  # Not specified, force build the tested library
-                build_modes = [new_ref.name]
-
-            # FIXME: Dirty hack: remove the root for the test_package/conanfile.py consumer
-            root_ref = RecipeReference(None, None, None, None)
-            create(app, new_ref, profile_host, profile_build,
-                   graph_lock, root_ref, build_modes,
-                   test_build_folder, test_folder, conanfile_path,
-                   is_build_require=is_build_require, require_overrides=require_overrides)
-
-            if lockfile_out:
-                lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock.save(lockfile_out)
-        except ConanException as exc:
-            raise
 
     @api_method
     def download(self, reference, remote_name=None, packages=None, recipe=False):
@@ -351,20 +274,6 @@ class ConanAPIV1(object):
         undo_imports(manifest_path)
 
     @api_method
-    def upload(self, pattern, remote_name=None, all_packages=False, confirm=False,
-               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None,
-               parallel_upload=False):
-        """ Uploads a package recipe and the generated binary packages to a specified remote
-        """
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-        uploader = CmdUpload(app)
-        uploader.upload(pattern, all_packages, confirm,
-                        retry, retry_wait, integrity_check, policy, query=query,
-                        parallel_upload=parallel_upload)
-
-    @api_method
     def remove_system_reqs(self, reference):
         try:
             app = ConanApp(self.cache_folder)
@@ -428,35 +337,6 @@ class ConanAPIV1(object):
                 return app.remote_manager.get_package_file(pref, path, remote), path
             else:
                 return app.remote_manager.get_recipe_file(ref, path, remote), path
-
-    @api_method
-    def editable_add(self, path, reference, cwd):
-        app = ConanApp(self.cache_folder)
-        # Retrieve conanfile.py from target_path
-        target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
-
-        # Check the conanfile is there, and name/version matches
-        ref = RecipeReference.loads(reference)
-        target_conanfile = app.loader.load_basic(target_path)
-        if (target_conanfile.name and target_conanfile.name != ref.name) or \
-                (target_conanfile.version and target_conanfile.version != ref.version):
-            raise ConanException("Name and version from reference ({}) and target "
-                                 "conanfile.py ({}/{}) must match".
-                                 format(ref, target_conanfile.name, target_conanfile.version))
-
-        app.cache.editable_packages.add(ref, target_path)
-
-    @api_method
-    def editable_remove(self, reference):
-        app = ConanApp(self.cache_folder)
-        # TODO: Validate the input reference
-        ref = RecipeReference.loads(reference)
-        return app.cache.editable_packages.remove(ref)
-
-    @api_method
-    def editable_list(self):
-        app = ConanApp(self.cache_folder)
-        return {str(k): v for k, v in app.cache.editable_packages.edited_refs.items()}
 
 
 def get_graph_info(profile_host, profile_build, cwd, cache,

@@ -16,7 +16,6 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.errors import ConanInvalidSystemRequirements
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.ref import get_reference_fields, check_valid_ref
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
@@ -99,179 +98,6 @@ class Command(object):
         assert isinstance(conan_api, ConanAPIV1)
         self._conan_api = conan_api
         self._out = ConanOutput()
-
-    def inspect(self, *args):
-        """
-        Displays conanfile attributes, like name, version, and options. Works locally,
-        in local cache and remote.
-        """
-        parser = argparse.ArgumentParser(description=self.inspect.__doc__,
-                                         prog="conan inspect",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
-                            " (conanfile.py) or to a recipe file. e.g., "
-                            "./my_project/conanfile.py. It could also be a reference")
-        parser.add_argument("-a", "--attribute", help='The attribute to be displayed, e.g "name"',
-                            nargs="?", action=Extender)
-        parser.add_argument("-r", "--remote", help='look in the specified remote server',
-                            action=OnceArgument)
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='json output file')
-        parser.add_argument('--raw', default=None, action=OnceArgument,
-                            help='Print just the value of the requested attribute')
-
-        args = parser.parse_args(*args)
-
-        if args.raw and args.attribute:
-            raise ConanException("Argument '--raw' is incompatible with '-a'")
-
-        if args.raw and args.json:
-            raise ConanException("Argument '--raw' is incompatible with '--json'")
-
-        attributes = [args.raw, ] if args.raw else args.attribute
-        quiet = bool(args.raw)
-
-        result = self._conan_api.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
-        for k, v in result.items():
-            if args.raw:
-                self._out.write(str(v))
-            else:
-                if isinstance(v, dict):
-                    self._out.writeln("%s:" % k)
-                    for ok, ov in sorted(v.items()):
-                        self._out.writeln("    %s: %s" % (ok, ov))
-                else:
-                    self._out.writeln("%s: %s" % (k, str(v)))
-
-        if args.json:
-            def dump_custom_types(obj):
-                if isinstance(obj, set):
-                    return sorted(list(obj))
-                raise TypeError
-
-            json_output = json.dumps(result, default=dump_custom_types)
-            if not os.path.isabs(args.json):
-                json_output_file = os.path.join(os.getcwd(), args.json)
-            else:
-                json_output_file = args.json
-            save(json_output_file, json_output)
-
-    def test(self, *args):
-        """
-        Tests a package consuming it from a conanfile.py with a test() method.
-
-        This command installs the conanfile dependencies (including the tested
-        package), calls a 'conan build' to build test apps and finally executes
-        the test() method. The testing recipe does not require name or version,
-        neither definition of package() or package_info() methods. The package
-        to be tested must exist in the local cache or any configured remote.
-        """
-        parser = argparse.ArgumentParser(description=self.test.__doc__,
-                                         prog="conan test",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
-                            ' to a recipe file with test() method'
-                            ' e.g. conan test_package/conanfile.py pkg/version@user/channel')
-        parser.add_argument("reference",
-                            help='pkg/version@user/channel of the package to be tested')
-        parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
-                            help="Working directory of the build process.")
-
-        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        args = parser.parse_args(*args)
-
-        self._warn_python_version()
-
-        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build,
-                                    conf=args.conf_build)
-        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
-
-        return self._conan_api.test(args.path, args.reference,
-                                args.profile_host, args.settings_host, args.options_host,
-                                args.env_host, conf=args.conf_host, remote_name=args.remote,
-                                update=args.update, build_modes=args.build,
-                                test_build_folder=args.test_build_folder,
-                                lockfile=args.lockfile, profile_build=profile_build)
-
-    def create(self, *args):
-        """
-        Builds a binary package for a recipe (conanfile.py).
-
-        Uses the specified configuration in a profile or in -s settings, -o
-        options, etc. If a 'test_package' folder (the name can be configured
-        with -tf) is found, the command will run the consumer project to ensure
-        that the package has been created correctly. Check 'conan test' command
-        to know more about 'test_folder' project.
-        """
-        parser = argparse.ArgumentParser(description=self.create.__doc__,
-                                         prog="conan create",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference", nargs='?', default=None,
-                            help='user/channel, version@user/channel or pkg/version@user/channel '
-                            '(if name or version declared in conanfile.py, they should match)')
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='json file path where the install information will be written to')
-        parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
-                            help='Working directory for the build of the test project.')
-        parser.add_argument("-tf", "--test-folder", action=OnceArgument,
-                            help='Alternative test folder name. By default it is "test_package". '
-                                 'Use "None" to skip the test stage')
-        parser.add_argument("--ignore-dirty", default=False, action='store_true',
-                            help='When using the "scm" feature with "auto" values, capture the'
-                                 ' revision and url even if there are uncommitted changes')
-        parser.add_argument("--build-require", action='store_true', default=False,
-                            help='The provided reference is a build-require')
-        parser.add_argument("--require-override", action="append",
-                            help="Define a requirement override")
-
-        _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
-
-        args = parser.parse_args(*args)
-        self._warn_python_version()
-
-        name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                               user_channel_input=True)
-
-        if any([user, channel]) and not all([user, channel]):
-            # Or user/channel or nothing, but not partial
-            raise ConanException("Invalid parameter '%s', "
-                                 "specify the full reference or user/channel" % args.reference)
-
-        if args.test_folder == "None":
-            # Now if parameter --test-folder=None (string None) we have to skip tests
-            args.test_folder = False
-
-        cwd = os.getcwd()
-
-        info = None
-        try:
-            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build,
-                                        conf=args.conf_build)
-            # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
-            #       to the API
-
-            info = self._conan_api.create(args.path, name=name, version=version, user=user,
-                                          channel=channel, profile_names=args.profile_host,
-                                          settings=args.settings_host, conf=args.conf_host,
-                                          options=args.options_host, env=args.env_host,
-                                          test_folder=args.test_folder,
-                                          build_modes=args.build,
-                                          remote_name=args.remote, update=args.update,
-                                          test_build_folder=args.test_build_folder,
-                                          lockfile=args.lockfile,
-                                          lockfile_out=args.lockfile_out,
-                                          ignore_dirty=args.ignore_dirty,
-                                          profile_build=profile_build,
-                                          is_build_require=args.build_require,
-                                          require_overrides=args.require_override)
-        except ConanException as exc:
-            raise
-        finally:
-            if args.json and info:
-                CommandOutputer().json_output(info, args.json, cwd)
 
     def download(self, *args):
         """
@@ -392,13 +218,8 @@ class Command(object):
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
-        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
-                            help='Path to a json file where the install information will be '
-                                 'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        parser.add_argument("--lockfile-node-id", action=OnceArgument,
-                            help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
 
@@ -431,9 +252,6 @@ class Command(object):
         except ConanException as exc:
             info = exc.info
             raise
-        finally:
-            if args.json and info:
-                CommandOutputer().json_output(info, args.json, os.getcwd())
 
     def imports(self, *args):
         """
@@ -559,93 +377,6 @@ class Command(object):
         finally:
             if args.json and info:
                 CommandOutputer().json_output(info, args.json, os.getcwd())
-
-    def get(self, *args):
-        """
-        Gets a file or list a directory of a given reference or package.
-        """
-        parser = argparse.ArgumentParser(description=self.get.__doc__,
-                                         prog="conan get",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument('reference', help=_REF_OR_PREF_HELP)
-        parser.add_argument('path',
-                            help='Path to the file or directory. If not specified will get the '
-                                 'conanfile if only a reference is specified and a conaninfo.txt '
-                                 'file contents if the package is also specified',
-                            default=None, nargs="?")
-        parser.add_argument("-p", "--package", default=None,
-                            help="Package ID [DEPRECATED: use full reference instead]",
-                            action=OnceArgument)
-        parser.add_argument("-r", "--remote", action=OnceArgument,
-                            help='Get from this specific remote')
-        parser.add_argument("-raw", "--raw", action='store_true', default=False,
-                            help='Do not decorate the text')
-        args = parser.parse_args(*args)
-
-        try:
-            pref = PkgReference.loads(args.reference)
-        except ConanException:
-            reference = args.reference
-            package_id = args.package
-
-            if package_id:
-                self._out.warning("Usage of `--package` argument is deprecated."
-                               " Use a full reference instead: "
-                               "`conan get [...] {}:{}`".format(reference, package_id))
-        else:
-            reference = repr(pref.ref)
-            package_id = pref.package_id
-            if args.package:
-                raise ConanException("Use a full package reference (preferred) or the `--package`"
-                                     " command argument, but not both.")
-
-        ret, path = self._conan_api.get_path(reference, package_id, args.path, args.remote)
-        if isinstance(ret, list):
-            CommandOutputer().print_dir_list(ret, path, args.raw)
-        else:
-            CommandOutputer().print_file_contents(ret, path, args.raw)
-
-    def editable(self, *args):
-        """
-        Manages editable packages (packages that reside in the user workspace, but
-        are consumed as if they were in the cache).
-
-        Use the subcommands 'add', 'remove' and 'list' to create, remove or list
-        packages currently installed in this mode.
-        """
-        parser = argparse.ArgumentParser(description=self.editable.__doc__,
-                                         prog="conan editable",
-                                         formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
-        add_parser.add_argument('path', help='Path to the package folder in the user workspace')
-        add_parser.add_argument('reference', help='Package reference e.g.: mylib/1.X@user/channel')
-
-        remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
-        remove_parser.add_argument('reference',
-                                   help='Package reference e.g.: mylib/1.X@user/channel')
-
-        subparsers.add_parser('list', help='List packages in editable mode')
-
-        args = parser.parse_args(*args)
-        self._warn_python_version()
-
-        if args.subcommand == "add":
-            self._conan_api.editable_add(args.path, args.reference, cwd=os.getcwd())
-            self._out.success("Reference '{}' in editable mode".format(args.reference))
-        elif args.subcommand == "remove":
-            ret = self._conan_api.editable_remove(args.reference)
-            if ret:
-                self._out.success("Removed editable mode for reference '{}'".format(args.reference))
-            else:
-                self._out.warning("Reference '{}' was not installed "
-                               "as editable".format(args.reference))
-        elif args.subcommand == "list":
-            for k, v in self._conan_api.editable_list().items():
-                self._out.info("%s" % k)
-                self._out.info("    Path: %s" % v["path"])
 
     def _commands(self):
         """ Returns a list of available commands.

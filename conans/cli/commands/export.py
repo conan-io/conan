@@ -6,11 +6,7 @@ from conans.cli.commands.install import _get_conanfile_path
 from conans.cli.common import get_lockfile
 
 
-@conan_command(group=COMMAND_GROUPS['creator'])
-def export(conan_api, parser, *args, **kwargs):
-    """
-    Export recipe to the Conan package cache
-    """
+def common_args_export(parser):
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
 
     parser.add_argument("--name", action=OnceArgument,
@@ -28,6 +24,14 @@ def export(conan_api, parser, *args, **kwargs):
     parser.add_argument("--ignore-dirty", default=False, action='store_true',
                         help='When using the "scm" feature with "auto" values, capture the'
                              ' revision and url even if there are uncommitted changes')
+
+
+@conan_command(group=COMMAND_GROUPS['creator'])
+def export(conan_api, parser, *args, **kwargs):
+    """
+    Export recipe to the Conan package cache
+    """
+    common_args_export(parser)
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()

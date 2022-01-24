@@ -12,19 +12,19 @@ from conans import __version__ as client_version
 from conans.cli.api.conan_api import ConanAPIV2, ConanAPI
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
-    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_INVALID_SYSTEM_REQUIREMENTS
 from conans.cli.output import ConanOutput, cli_out_write, Color
 from conans.client.command import Command
 from conans.client.conan_api import ConanAPIV1
+from conans.errors import ConanInvalidSystemRequirements
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
 
 
 CLI_V1_COMMANDS = [
-    'get', 'create', 'upload',
-    'test', 'source', 'build', 'editable', 'imports', 'alias',
-    'download', 'inspect'
+    'source', 'build', 'imports',
+    'download'
 ]
 
 
@@ -161,6 +161,9 @@ class Cli:
             exit_error = exc.code
         except ConanInvalidConfiguration as exc:
             exit_error = ERROR_INVALID_CONFIGURATION
+            output.error(exc)
+        except ConanInvalidSystemRequirements as exc:
+            exit_error = ERROR_INVALID_SYSTEM_REQUIREMENTS
             output.error(exc)
         except ConanException as exc:
             exit_error = ERROR_GENERAL
