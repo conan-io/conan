@@ -154,7 +154,7 @@ class MesonToolchain(object):
             return
 
         # SDK path is mandatory for cross-building
-        sdk_path = conanfile.conf["tools.meson.mesontoolchain:sdk_path"]
+        sdk_path = conanfile.conf["tools.apple:sdk_path"]
         if not sdk_path and self.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
