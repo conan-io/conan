@@ -147,7 +147,7 @@ buildsystem_autotools_tpl = textwrap.dedent("""
     This package provides one *pkg-config* file ``{{ pkgconfig_variables.pkg_name }}.pc`` with
     all the information from the library
     {% if requirement.cpp_info.components is iterable and requirement.cpp_info.components %}
-    and another file for each of its components:
+    and, if you want to use the components of the library separately, one `.pc` file per component:
     {% for component_name, component in requirement.cpp_info.components.items() %}
     {%- if component_name %}
     ``{{ pkgconfig_variables.component_alias[component_name] }}.pc``{% if not loop.last %},{% endif %}
