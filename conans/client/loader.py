@@ -19,8 +19,7 @@ from conans.util.files import load
 
 class ConanFileLoader:
 
-    def __init__(self, runner, pyreq_loader=None, requester=None):
-        self._runner = runner
+    def __init__(self, pyreq_loader=None, requester=None):
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
         self._requester = requester
@@ -36,7 +35,7 @@ class ConanFileLoader:
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached:
-            conanfile = cached[0](self._runner, display)
+            conanfile = cached[0](display)
             conanfile._conan_requester = self._requester
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(conanfile, "init"):
@@ -65,7 +64,7 @@ class ConanFileLoader:
                     conanfile.scm.update(scm_data)
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, module)
-            result = conanfile(self._runner, display)
+            result = conanfile(display)
 
             result._conan_requester = self._requester
             if hasattr(result, "init") and callable(result.init):
@@ -216,7 +215,7 @@ class ConanFileLoader:
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name):
-        conanfile = ConanFile(self._runner, display_name)
+        conanfile = ConanFile(display_name)
 
         try:
             parser = ConanFileTextLoader(contents)
@@ -243,7 +242,7 @@ class ConanFileLoader:
     def load_virtual(self, references, is_build_require=False, require_overrides=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(self._runner, display_name="virtual")
+        conanfile = ConanFile(display_name="virtual")
 
         if is_build_require:
             for reference in references:

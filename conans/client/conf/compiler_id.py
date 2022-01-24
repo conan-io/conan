@@ -2,7 +2,6 @@ import os
 import tempfile
 from io import StringIO
 
-from conans.client.runner import ConanRunner
 from conans.model.version import Version
 
 
@@ -178,7 +177,6 @@ def _parse_compiler_version(defines):
 
 
 def detect_compiler_id(executable, runner=None):
-    runner = runner or ConanRunner()
     # use a temporary file, as /dev/null might not be available on all platforms
     tmpdir = tempfile.mkdtemp()
     tmpname = os.path.join(tmpdir, "temp.c")

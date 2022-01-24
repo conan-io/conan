@@ -31,12 +31,8 @@ class RunnerMock(object):
         self.return_ok = return_ok
         self.output = output
 
-    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
+    def __call__(self, command):  # @UnusedVariable
         self.command_called = command
-        self.win_bash = win_bash
-        self.subsystem = subsystem
-        if self.output and output and hasattr(output, "write"):
-            output.write(self.output)
         return 0 if self.return_ok else 1
 
 

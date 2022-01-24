@@ -11,7 +11,6 @@ from conans.client.remote_manager import RemoteManager
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
-from conans.client.runner import ConanRunner
 from conans.errors import ConanException
 from conans.tools import set_global_instances
 from conans.util.log import configure_logger
@@ -44,15 +43,11 @@ class ConanApp(object):
         # Adjust global tool variables
         set_global_instances(self.requester, self.config)
 
-        self.runner = ConanRunner(self.config.print_commands_to_output,
-                                  self.config.generate_run_log_file,
-                                  self.config.log_run_to_output)
-
         self.proxy = ConanProxy(self)
         self.range_resolver = RangeResolver(self)
 
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.pyreq_loader, self.requester)
+        self.loader = ConanFileLoader(self.pyreq_loader, self.requester)
         self.binaries_analyzer = GraphBinariesAnalyzer(self)
         self.graph_manager = GraphManager(self)
 
