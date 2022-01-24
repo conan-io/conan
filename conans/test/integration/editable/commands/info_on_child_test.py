@@ -72,10 +72,3 @@ class InfoCommandTest(unittest.TestCase):
                              sorted(["lib/version@user/name",
                                      "parent/version@user/name",
                                      str(project_name)]))
-
-    @parameterized.expand([(True,), (False,)])
-    def test_paths(self, use_local_path):
-        args = "." if use_local_path else self.ref_child
-        self.t.run('info {} --paths'.format(args), assert_error=True)
-        self.assertIn("ERROR: Operation not allowed on a package installed as editable", self.t.out)
-        # TODO: Cannot show paths for a linked/editable package... what to do here?

@@ -109,8 +109,7 @@ class ConanRequester(object):
                 " ".join([platform.system(), platform.release()]),
                 "Python "+platform.python_version(),
                 platform.machine()])
-            user_agent = "Conan/%s (%s) %s" % (client_version, platform_info,
-                                               requests.utils.default_user_agent())
+            user_agent = "Conan/%s (%s)" % (client_version, platform_info)
             kwargs["headers"]["User-Agent"] = user_agent
 
         return kwargs

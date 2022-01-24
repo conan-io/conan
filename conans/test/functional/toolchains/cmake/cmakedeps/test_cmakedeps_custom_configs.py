@@ -24,7 +24,6 @@ class CustomConfigurationTest(unittest.TestCase):
 
             def generate(self):
                 cmake = CMakeDeps(self)
-                cmake.configurations.append("ReleaseShared")
                 if self.options["hello"].shared:
                     cmake.configuration = "ReleaseShared"
                 cmake.generate()

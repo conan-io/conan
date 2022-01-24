@@ -24,7 +24,6 @@ class CMakeDeps(object):
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
 
-        self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
         # Activate the build config files for the specified libraries
         self.build_context_activated = []
         # By default, the build modules are generated for host context only
@@ -81,7 +80,7 @@ class CMakeDeps(object):
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            cmake_find_mode = dep.cpp_info.get_property("cmake_find_mode", "CMakeDeps")
+            cmake_find_mode = dep.cpp_info.get_property("cmake_find_mode")
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
             # Skip from the requirement

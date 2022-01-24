@@ -67,8 +67,8 @@ Cflags: -I${includedir}
 """
 
 
-@pytest.mark.skipif(platform.system() == "Windows", reason=".pc files not in Win")
 @pytest.mark.tool_pkg_config
+@pytest.mark.tool_mingw32
 class PkgConfigTest(unittest.TestCase):
     """
     Test WITHOUT a build helper nor a generator, explicitly defining pkg-config in the
@@ -96,7 +96,10 @@ class PkgConfigTest(unittest.TestCase):
                     tools.replace_prefix_in_pc_file("libB.pc", lib_b_path)
 
                     with tools.environment_append({"PKG_CONFIG_PATH": os.getcwd()}):
-                       self.run('g++ main.cpp $(pkg-config libB --libs --cflags) -o main')
+                        # Windows is not able to catch the output, "$()" does not exist in cmd
+                        self.run("pkg-config libB --libs --cflags > output.txt")
+                        with open("output.txt") as f:
+                            self.run('g++ main.cpp %s -o main' % f.readline().strip())
             """)
 
         self._run_reuse(libb_conanfile, liba_conanfile)
@@ -121,7 +124,10 @@ class PkgConfigTest(unittest.TestCase):
                             'PKG_CONFIG_PATH': "%s" % self.deps_cpp_info["libB"].rootpath}
 
                     with tools.environment_append(vars):
-                       self.run('g++ main.cpp $(pkg-config %s libB --libs --cflags) -o main' % args)
+                        # Windows is not able to catch the output, "$()" does not exist in cmd
+                        self.run("pkg-config %s libB --libs --cflags > output.txt" % args)
+                        with open("output.txt") as f:
+                            self.run('g++ main.cpp %s -o main' % f.readline().strip())
 
             """)
         libb = libb_conanfile + """
@@ -142,5 +148,5 @@ class PkgConfigTest(unittest.TestCase):
 
         client.run("install .")
         client.run("build .")
-        client.run_command("./main")
+        client.run_command("main" if platform.system() == "Windows" else "./main")
         self.assertIn("Hello World!", client.out)

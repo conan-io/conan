@@ -1,10 +1,12 @@
+import textwrap
+
 import six
 from parameterized import parameterized
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
-from conans.test.utils.tools import GenConanfile
+from conans.test.utils.tools import GenConanfile, TestClient
 
 
 class BuildRequiresGraphTest(GraphManagerTest):
@@ -399,3 +401,63 @@ class BuildRequiresGraphTest(GraphManagerTest):
                          dependents=[], closure=[gazelle, grass])
         self.assertListEqual(list(cheetah.conanfile.deps_cpp_info.libs),
                              ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
+
+    def test_test_require(self):
+        # app -(tr)-> gtest/0.1
+        # This test should survive in 2.0
+        tool_ref = ConanFileReference.loads("gtest/0.1")
+        self._cache_recipe(tool_ref, GenConanfile("gtest", "0.1"))
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                def build_requirements(self):
+                    self.test_requires("gtest/0.1")
+            """)
+        deps_graph = self.build_graph(conanfile)
+
+        # Build requires always apply to the consumer
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        tool = app.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[], build_deps=[tool], dependents=[],
+                         closure=[tool])
+        self._check_node(tool, "gtest/0.1#123", deps=[], build_deps=[],
+                         dependents=[app], closure=[])
+
+
+def test_tool_requires():
+    """Testing temporary tool_requires attribute being "an alias" of build_require and
+    introduced to provide a compatible recipe with 2.0. At 2.0, the meaning of a build require being
+    a 'tool' will be a tool_require."""
+
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . tool1/1.0@")
+    client.run("create . tool2/1.0@")
+    client.run("create . tool3/1.0@")
+    client.run("create . tool4/1.0@")
+
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            tool_requires = "tool2/1.0"
+            build_requires = "tool3/1.0"
+
+            def build_requirements(self):
+                self.tool_requires("tool1/1.0")
+                self.build_requires("tool4/1.0")
+
+            def generate(self):
+                assert len(self.dependencies.build.values()) == 4
+    """)
+    client.save({"conanfile.py": consumer})
+    client.run("create . consumer/1.0@")
+    assert """Build requirements
+    tool1/1.0 from local cache - Cache
+    tool2/1.0 from local cache - Cache
+    tool3/1.0 from local cache - Cache
+    tool4/1.0 from local cache - Cache""" in client.out

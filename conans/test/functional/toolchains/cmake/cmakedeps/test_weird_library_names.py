@@ -14,8 +14,7 @@ def client_weird_lib_name():
     conanfile = textwrap.dedent("""
         import os, platform
         from conans import ConanFile
-        from conan.tools.cmake import CMake
-        from conan.tools.layout import cmake_layout
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             exports_sources = "CMakeLists.txt", "src/*"

@@ -33,7 +33,7 @@ class VirtualBuildEnv:
         of build_requires defining information for consumers
         """
         # FIXME: Cache value?
-        build_env = Environment(self._conanfile)
+        build_env = Environment()
 
         # Top priority: profile
         profile_env = self._conanfile.buildenv
@@ -64,7 +64,10 @@ class VirtualBuildEnv:
 
         return build_env
 
-    def generate(self, group="build"):
+    def vars(self, scope="build"):
+        return self.environment().vars(self._conanfile, scope=scope)
+
+    def generate(self, scope="build"):
         build_env = self.environment()
         if build_env:  # Only if there is something defined
-            build_env.save_script(self._filename, group=group)
+            build_env.vars(self._conanfile, scope=scope).save_script(self._filename)

@@ -218,52 +218,28 @@ class _CppInfo(object):
     #  Use get_property for 2.0
     def get_name(self, generator, default_name=True):
         property_name = None
-        if "cmake" in generator:
-            property_name = "cmake_target_name"
-        elif "pkg_config" in generator:
+        if "pkg_config" in generator:
             property_name = "pkg_config_name"
-        return self.get_property(property_name, generator) \
+        return self.get_property(property_name) \
                or self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
     def get_filename(self, generator, default_name=True):
-        result = self.get_property("cmake_file_name", generator) or self.filenames.get(generator)
-        if result:
-            return result
-        return self.get_name(generator, default_name=default_name)
+        # Default to the legacy "names"
+        return self.filenames.get(generator) or self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self):
         if self._build_modules is None:  # Not cached yet
-            try:
-                default_build_modules_value = self._generator_properties[None]["cmake_build_modules"]
-            except KeyError:
-                ret_dict = {}
-            else:
-                ret_dict = {"cmake_find_package": default_build_modules_value,
-                            "cmake_find_package_multi": default_build_modules_value,
-                            "cmake": default_build_modules_value,
-                            "cmake_multi": default_build_modules_value}
-
-            for generator, values in self._generator_properties.items():
-                if generator:
-                    v = values.get("cmake_build_modules")
-                    if v:
-                        ret_dict[generator] = v
-            self._build_modules = ret_dict if ret_dict else self.build_modules
+            self._build_modules = self.build_modules
         return self._build_modules
 
-    def set_property(self, property_name, value, generator=None):
-        self._generator_properties.setdefault(generator, {})[property_name] = value
+    def set_property(self, property_name, value):
+        self._generator_properties[property_name] = value
 
-    def get_property(self, property_name, generator=None):
-        if generator:
-            try:
-                return self._generator_properties[generator][property_name]
-            except KeyError:
-                pass
+    def get_property(self, property_name):
         try:
-            return self._generator_properties[None][property_name]
+            return self._generator_properties[property_name]
         except KeyError:
             pass
 
@@ -352,9 +328,10 @@ class CppInfo(_CppInfo):
     def get_name(self, generator, default_name=True):
         name = super(CppInfo, self).get_name(generator, default_name=default_name)
 
-        # Legacy logic for pkg_config generator
+        # Legacy logic for pkg_config generator, do not enter this logic if the properties model
+        # is used: https://github.com/conan-io/conan/issues/10309
         from conans.client.generators.pkg_config import PkgConfigGenerator
-        if generator == PkgConfigGenerator.name:
+        if generator == PkgConfigGenerator.name and self.get_property("pkg_config_name") is None:
             fallback = self._name.lower() if self._name != self._ref_name else self._ref_name
             if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
                 conan_v2_error("Generated file and name for {gen} generator will change in"

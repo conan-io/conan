@@ -13,7 +13,7 @@ class PremakeDeps(object):
                                     for p in deps_cpp_info.bin_paths)
         self.libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.libs)
         self.system_libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.system_libs)
-        self.defines = ", ".join('"%s"' % p for p in deps_cpp_info.defines)
+        self.defines = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.defines)
         self.cxxflags = ", ".join('"%s"' % p for p in deps_cpp_info.cxxflags)
         self.cflags = ", ".join('"%s"' % p for p in deps_cpp_info.cflags)
         self.sharedlinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.sharedlinkflags)

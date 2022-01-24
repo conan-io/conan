@@ -151,17 +151,12 @@ def test_system_libs():
         if build_type == "Release":
             assert "System libs release: %s" % library_name in client.out
             assert "Libraries to Link release: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>")
+            target_libs = "$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
         else:
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Debug>:CONAN_LIB::Test_lib1_DEBUG;sys1d;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>;>")
+            target_libs = "$<$<CONFIG:Debug>:CONAN_LIB::Test_lib1_DEBUG;sys1d;"
+
         assert "Target libs: %s" % target_libs in client.out
 
 
@@ -344,4 +339,4 @@ def test_private_transitive():
     client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release")
     assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip" in client.out
     data_cmake = client.load("pkg-release-x86_64-data.cmake")
-    assert "set(pkg_FIND_DEPENDENCY_NAMES ${pkg_FIND_DEPENDENCY_NAMES} )" in data_cmake
+    assert 'set(pkg_FIND_DEPENDENCY_NAMES "")' in data_cmake

@@ -1,7 +1,8 @@
 import os
+
+from conan.tools.build import build_jobs
 from conan.tools.files import load_toolchain_args
-from conan.tools.gnu.make import make_jobs_cmd_line_arg
-from conan.tools.microsoft import unix_path
+from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
 from conans.client.build import join_arguments
 
 
@@ -20,16 +21,13 @@ class Autotools(object):
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         """
-        # FIXME: Conan 2.0 Are we keeping the "should_XXX" properties???
-        if not self._conanfile.should_configure:
-            return
-
         source = self._conanfile.source_folder
         if build_script_folder:
             source = os.path.join(self._conanfile.source_folder, build_script_folder)
 
         configure_cmd = "{}/configure".format(source)
-        configure_cmd = unix_path(self._conanfile, configure_cmd)
+        subsystem = deduce_subsystem(self._conanfile, scope="build")
+        configure_cmd = subsystem_path(subsystem, configure_cmd)
         cmd = "{} {}".format(configure_cmd, self._configure_args)
         self._conanfile.output.info("Calling:\n > %s" % cmd)
         self._conanfile.run(cmd)
@@ -42,13 +40,13 @@ class Autotools(object):
         str_args = self._make_args
         jobs = ""
         if "-j" not in str_args and "nmake" not in make_program.lower():
-            jobs = make_jobs_cmd_line_arg(self._conanfile) or ""
+            njobs = build_jobs(self._conanfile)
+            if njobs:
+                jobs = "-j{}".format(njobs)
         command = join_arguments([make_program, target, str_args, jobs])
         self._conanfile.run(command)
 
     def install(self):
-        if not self._conanfile.should_install:
-            return
         self.make(target="install")
 
     def _use_win_mingw(self):

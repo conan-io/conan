@@ -6,7 +6,6 @@ import pytest
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 
 
@@ -105,11 +104,11 @@ def editable_cmake_exe(generator):
 
     def run_pkg(msg):
         # FIXME: This only works with ``--install-folder``, layout() will break this
-        cmd_release = environment_wrap_command(ConanFileMock(), "conanrunenv-release-x86_64",
+        cmd_release = environment_wrap_command("conanrunenv-release-x86_64",
                                                "dep_app", cwd=c.current_folder)
         c.run_command(cmd_release)
         assert "{}: Release!".format(msg) in c.out
-        cmd_release = environment_wrap_command(ConanFileMock(), "conanrunenv-debug-x86_64",
+        cmd_release = environment_wrap_command("conanrunenv-debug-x86_64",
                                                "dep_app", cwd=c.current_folder)
         c.run_command(cmd_release)
         assert "{}: Debug!".format(msg) in c.out

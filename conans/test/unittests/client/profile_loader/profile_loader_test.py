@@ -462,7 +462,8 @@ def test_profile_buildenv():
         """)
     profile, _ = get_profile(tmp, txt)
     buildenv = profile.buildenv
-    env = buildenv.get_env(ConanFileMock(), None)
-    assert env.get("MyVar1") == "My Value; 11 MyValue12"
-
-    assert env.get("MyPath1") == "/some/path11{}/other path/path12".format(os.pathsep)
+    env = buildenv.get_profile_env(None)
+    conanfile = ConanFileMock()
+    env_vars = env.vars(conanfile)
+    assert env_vars.get("MyVar1") == "My Value; 11 MyValue12"
+    assert env_vars.get("MyPath1") == "/some/path11{}/other path/path12".format(os.pathsep)

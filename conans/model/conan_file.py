@@ -5,8 +5,7 @@ from contextlib import contextmanager
 import six
 from six import string_types
 
-from conan.tools.env import Environment
-from conan.tools.env.environment import environment_wrap_command
+
 from conans.client import tools
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
@@ -16,7 +15,7 @@ from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
-from conans.model.layout import Folders, Patterns, Infos
+from conans.model.layout import Folders, Infos
 from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
@@ -155,9 +154,9 @@ class ConanFile(object):
         self.compatible_packages = []
         self._conan_using_build_profile = False
         self._conan_requester = None
-
-        self.buildenv_info = Environment(self)
-        self.runenv_info = Environment(self)
+        from conan.tools.env import Environment
+        self.buildenv_info = Environment()
+        self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
@@ -169,16 +168,7 @@ class ConanFile(object):
 
         # layout() method related variables:
         self.folders = Folders()
-        self.patterns = Patterns()
         self.cpp = Infos()
-
-        self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.source.lib = []
-        self.patterns.source.bin = []
-
-        self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
-        self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
-        self.patterns.build.bin = ["*.exe", "*.dll"]
 
         self.cpp.package.includedirs = ["include"]
         self.cpp.package.libdirs = ["lib"]
@@ -209,10 +199,11 @@ class ConanFile(object):
     @property
     def buildenv(self):
         # Lazy computation of the package buildenv based on the profileone
+        from conan.tools.env import Environment
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
         return self._conan_buildenv
 
     def initialize(self, settings, env, buildenv=None):
@@ -256,41 +247,25 @@ class ConanFile(object):
     def new_cpp_info(self):
         if not self._conan_new_cpp_info:
             self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
+            self._conan_new_cpp_info.set_relative_base_folder(self.package_folder)
         return self._conan_new_cpp_info
 
     @property
     def source_folder(self):
         return self.folders.source_folder
 
-    @source_folder.setter
-    def source_folder(self, folder):
-        self.folders.set_base_source(folder)
-
     @property
     def build_folder(self):
         return self.folders.build_folder
 
-    @build_folder.setter
-    def build_folder(self, folder):
-        self.folders.set_base_build(folder)
-
     @property
     def package_folder(self):
-        return self.folders.package_folder
-
-    @package_folder.setter
-    def package_folder(self, folder):
-        self.folders.set_base_package(folder)
+        return self.folders.base_package
 
     @property
     def install_folder(self):
         # FIXME: Remove in 2.0, no self.install_folder
         return self.folders.base_install
-
-    @install_folder.setter
-    def install_folder(self, folder):
-        # FIXME: Remove in 2.0, no self.install_folder
-        self.folders.set_base_install(folder)
 
     @property
     def generators_folder(self):
@@ -300,10 +275,6 @@ class ConanFile(object):
     @property
     def imports_folder(self):
         return self.folders.imports_folder
-
-    @imports_folder.setter
-    def imports_folder(self, folder):
-        self.folders.set_base_imports(folder)
 
     @property
     def env(self):
@@ -407,7 +378,8 @@ class ConanFile(object):
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
             if _env is None:
                 _env = "conanbuild"
-            wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
+            from conan.tools.env.environment import environment_wrap_command
+            wrapped_cmd = environment_wrap_command(_env, cmd, cwd=self.generators_folder)
             return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:

@@ -9,13 +9,6 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
         return '/verbosity:{}'.format(verbosity)
 
 
-def msbuild_max_cpu_count_cmd_line_arg(conanfile):
-    max_cpu_count = conanfile.conf["tools.microsoft.msbuild:max_cpu_count"] or \
-                    conanfile.conf["tools.build:processes"]
-    if max_cpu_count:
-        return "/m:{}".format(max_cpu_count)
-
-
 def msbuild_arch(arch):
     return {'x86': 'x86',
             'x86_64': 'x64',
@@ -43,9 +36,9 @@ class MSBuild(object):
         if verbosity:
             cmd += " {}".format(verbosity)
 
-        max_cpu_count = msbuild_max_cpu_count_cmd_line_arg(self._conanfile)
-        if max_cpu_count:
-            cmd += " {}".format(max_cpu_count)
+        maxcpucount = self._conanfile.conf["tools.microsoft.msbuild:max_cpu_count"]
+        if maxcpucount:
+            cmd += " /m:{}".format(maxcpucount)
 
         return cmd
 

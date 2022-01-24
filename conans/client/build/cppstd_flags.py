@@ -126,13 +126,13 @@ def _cppstd_msvc(visual_version, cppstd):
     v20 = None
     v23 = None
 
-    if Version(visual_version) >= "19.0":
+    if Version(visual_version) >= "190":
         v14 = "c++14"
         v17 = "c++latest"
-    if Version(visual_version) >= "19.1":
+    if Version(visual_version) >= "191":
         v17 = "c++17"
         v20 = "c++latest"
-    if Version(visual_version) >= "19.3":
+    if Version(visual_version) >= "193":
         v20 = "c++20"
         v23 = "c++latest"
 

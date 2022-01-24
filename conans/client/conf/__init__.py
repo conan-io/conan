@@ -14,7 +14,7 @@ from conans.util.files import load
 
 _t_default_settings_yml = Template(textwrap.dedent("""
     # Only for cross building, 'os_build/arch_build' is the system that runs Conan
-    os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
+    os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX, VxWorks]
     arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
 
     # Only for building cross compilation tools, 'os_target/arch_target' is the system for
@@ -35,19 +35,25 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             version: ["5.0", "6.0", "7.0", "8.0"]
         Linux:
         Macos:
-            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "13.0"]
+            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
             sdk: [None, "macosx"]
             subsystem: [None, catalyst]
         Android:
             api_level: ANY
         iOS:
-            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6"]
+            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3",
+                      "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
+                      "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6", "13.7",
+                      "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", "14.8", "15.0", "15.1"]
             sdk: [None, "iphoneos", "iphonesimulator"]
         watchOS:
-            version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1"]
+            version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
+                      "7.0", "7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.0", "8.1"]
             sdk: [None, "watchos", "watchsimulator"]
         tvOS:
-            version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0"]
+            version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
+                      "13.0", "13.2", "13.3", "13.4", "14.0", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7",
+                      "15.0", "15.1"]
             sdk: [None, "appletvos", "appletvsimulator"]
         FreeBSD:
         SunOS:
@@ -57,6 +63,9 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         Emscripten:
         Neutrino:
             version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
+        baremetal:
+        VxWorks:
+            version: ["7"]
     arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106]
     compiler:
         sun-cc:
@@ -71,10 +80,10 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       "8", "8.1", "8.2", "8.3", "8.4",
                       "9", "9.1", "9.2", "9.3",
                       "10", "10.1", "10.2", "10.3",
-                      "11", "11.1"]
+                      "11", "11.1", "11.2"]
             libcxx: [libstdc++, libstdc++11]
-            threads: [None, posix, win32] #  Windows MinGW
-            exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+            threads: [None, posix, win32]  # Windows MinGW
+            exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         Visual Studio: &visual_studio
             runtime: [MD, MT, MTd, MDd]
@@ -84,19 +93,17 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                       LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
                       llvm, ClangCL, v143]
-            cppstd: [None, 14, 17, 20]
+            cppstd: [None, 14, 17, 20, 23]
         msvc:
-            version: ["19.0",
-                      "19.1", "19.10", "19.11", "19.12", "19.13", "19.14", "19.15", "19.16",
-                      "19.2", "19.20", "19.21", "19.22", "19.23", "19.24", "19.25", "19.26", "19.27", "19.28", "19.29",
-                      "19.3", "19.30"]
+            version: [190, 191, 192, 193]
+            update: [None, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             runtime: [static, dynamic]
             runtime_type: [Debug, Release]
             cppstd: [14, 17, 20, 23]
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
-                      "8", "9", "10", "11", "12", "13"]
+                      "8", "9", "10", "11", "12", "13", "14"]
             libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
             runtime: [None, MD, MT, MTd, MDd]

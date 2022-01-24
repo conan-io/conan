@@ -57,7 +57,7 @@ def runv1():
 def runv2():
     output = ConanOutput(sys.stdout, sys.stderr, True)
     parser = argparse.ArgumentParser(
-        description="Generates build info build info from lockfiles information",
+        description="Generates build info from lockfiles information",
         prog="conan_build_info")
     subparsers = parser.add_subparsers(dest="subcommand", help="sub-command help")
 

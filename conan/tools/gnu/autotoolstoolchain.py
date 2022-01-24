@@ -1,5 +1,6 @@
 from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag
+from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag, \
+    build_type_link_flags
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
 from conan.tools.cross_building import cross_building, get_cross_building_settings
@@ -38,6 +39,7 @@ class AutotoolsToolchain:
         self.arch_flag = architecture_flag(self._conanfile.settings)
         # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
         self.build_type_flags = build_type_flags(self._conanfile.settings)
+        self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
 
         # Cross build
         self._host = None
@@ -49,8 +51,9 @@ class AutotoolsToolchain:
         self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
-            self._host = _get_gnu_triplet(os_host, arch_host)
-            self._build = _get_gnu_triplet(os_build, arch_build)
+            compiler = self._conanfile.settings.get_safe("compiler")
+            self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+            self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
             # Apple Stuff
             if os_build == "Macos":
@@ -72,9 +75,11 @@ class AutotoolsToolchain:
             return
 
         compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-        if compiler == "gcc":
+        if compiler in ['clang', 'apple-clang', 'gcc']:
             if libcxx == 'libstdc++':
                 return '_GLIBCXX_USE_CXX11_ABI=0'
+            elif libcxx == "libstdc++11" and self._conanfile.conf["tools.gnu:define_libcxx11_abi"]:
+                return '_GLIBCXX_USE_CXX11_ABI=1'
 
     def _libcxx(self):
         settings = self._conanfile.settings
@@ -98,7 +103,7 @@ class AutotoolsToolchain:
             return "-Y _%s" % str(libcxx)
 
     def environment(self):
-        env = Environment(conanfile=self._conanfile)
+        env = Environment()
         # defines
         if self.ndebug:
             self.defines.append(self.ndebug)
@@ -120,6 +125,9 @@ class AutotoolsToolchain:
             self.cxxflags.extend(self.build_type_flags)
             self.cflags.extend(self.build_type_flags)
 
+        if self.build_type_link_flags:
+            self.ldflags.extend(self.build_type_link_flags)
+
         if self.fpic:
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
@@ -139,9 +147,13 @@ class AutotoolsToolchain:
         env.append("LDFLAGS", self.ldflags)
         return env
 
-    def generate(self, env=None, group="build"):
+    def vars(self):
+        return self.environment().vars(self._conanfile, scope="build")
+
+    def generate(self, env=None, scope="build"):
         env = env or self.environment()
-        env.save_script("conanautotoolstoolchain", group=group)
+        env = env.vars(self._conanfile, scope=scope)
+        env.save_script("conanautotoolstoolchain")
         self.generate_args()
 
     def generate_args(self):

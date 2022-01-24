@@ -2,20 +2,18 @@
     This is a helper class which offers a lot of useful methods and attributes
 """
 # FIXME: only for tools.gnu? perhaps it should be a global module
-import platform
-
-from conan.tools.microsoft import unix_path
+from conan.tools.microsoft.subsystems import subsystem_path, deduce_subsystem
 
 
 class GnuDepsFlags(object):
 
     def __init__(self, conanfile, cpp_info):
         self._conanfile = conanfile
+        self._subsystem = deduce_subsystem(conanfile, scope="build")
 
         # From cppinfo, calculated flags
         self.include_paths = self._format_include_paths(cpp_info.includedirs)
         self.lib_paths = self._format_library_paths(cpp_info.libdirs)
-        self.rpath_flags = self._rpath_flags(cpp_info.libdirs)
         self.defines = self._format_defines(cpp_info.defines)
         self.libs = self._format_libraries(cpp_info.libs)
         self.frameworks = self._format_frameworks(cpp_info.frameworks)
@@ -36,16 +34,8 @@ class GnuDepsFlags(object):
 
     _GCC_LIKE = ['clang', 'apple-clang', 'gcc']
 
-    def _rpath_flags(self, lib_paths):
-        if not lib_paths:
-            return []
-        if self._base_compiler in self._GCC_LIKE:
-            rpath_separator = ","
-            return ['-Wl,-rpath%s"%s"' % (rpath_separator, self._adjust_path(x))
-                    for x in lib_paths if x]
-        return []
-
-    def _format_defines(self, defines):
+    @staticmethod
+    def _format_defines(defines):
         return ["-D%s" % define for define in defines] if defines else []
 
     def _format_frameworks(self, frameworks):
@@ -120,7 +110,7 @@ class GnuDepsFlags(object):
         else:
             path = path.replace('\\', '/')
 
-        path = unix_path(self._conanfile, path)
+        path = subsystem_path(self._subsystem, path)
         return '"%s"' % path if ' ' in path else path
 
     @property

@@ -56,21 +56,39 @@ def architecture_flag(settings):
     return ""
 
 
+def build_type_link_flags(settings):
+    """
+    returns link flags specific to the build type (Debug, Release, etc.)
+    [-debug]
+    """
+    compiler = settings.get_safe("compiler")
+    build_type = settings.get_safe("build_type")
+    if not compiler or not build_type:
+        return []
+
+    # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
+    # Modules/Platform/Windows-MSVC.cmake
+    if compiler in ["msvc", "Visual Studio"]:
+        if build_type in ("Debug", "RelWithDebInfo"):
+            return ["-debug"]
+
+    return []
+
+
 def build_type_flags(settings):
     """
     returns flags specific to the build type (Debug, Release, etc.)
     (-s, -g, /Zi, etc.)
     """
     compiler = settings.get_safe("compiler.base") or settings.get_safe("compiler")
-
     build_type = settings.get_safe("build_type")
     vs_toolset = settings.get_safe("compiler.toolset")
     if not compiler or not build_type:
-        return ""
+        return []
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
-    if str(compiler) == 'Visual Studio':
+    if str(compiler) in ['Visual Studio', 'msvc']:
         if vs_toolset and "clang" in str(vs_toolset):
             flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
                      "Release": ["-O2"],
@@ -182,13 +200,13 @@ def _cppstd_msvc(visual_version, cppstd):
     v20 = None
     v23 = None
 
-    if Version(visual_version) >= "19.0":
+    if Version(visual_version) >= "190":
         v14 = "c++14"
         v17 = "c++latest"
-    if Version(visual_version) >= "19.1":
+    if Version(visual_version) >= "191":
         v17 = "c++17"
         v20 = "c++latest"
-    if Version(visual_version) >= "19.3":
+    if Version(visual_version) >= "193":
         v20 = "c++20"
         v23 = "c++latest"
 

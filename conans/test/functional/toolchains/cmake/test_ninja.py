@@ -123,7 +123,7 @@ def test_locally_build_msvc_toolset(client):
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.0
+        compiler.version=190
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release
@@ -144,7 +144,7 @@ def test_locally_build_msvc_toolset(client):
     client.run_command("myapp.exe")
 
     # Checking that compiler is indeed version 19.0, not 19.1-default of VS15
-    check_exe_run(client.out, ["main", "hello"], "msvc", "19.0", "Release", "x86_64", cppstd="14")
+    check_exe_run(client.out, ["main", "hello"], "msvc", "190", "Release", "x86_64", cppstd="14")
     check_vs_runtime("myapp.exe", client, msvc_version, "Release", architecture="amd64")
     check_vs_runtime("mylibrary.lib", client, msvc_version, "Release", architecture="amd64")
 
@@ -203,7 +203,7 @@ def test_ninja_conf():
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.1
+        compiler.version=191
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release

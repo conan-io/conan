@@ -3,30 +3,11 @@ import textwrap
 from xml.dom import minidom
 
 from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools.intel import IntelCC
+from conan.tools.build import build_jobs
+from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars
 from conans.errors import ConanException
 from conans.util.files import save, load
-
-
-def vs_ide_version(conanfile):
-    compiler = conanfile.settings.get_safe("compiler")
-    compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
-                        conanfile.settings.get_safe("compiler.version"))
-    if compiler == "msvc":
-        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
-        if toolset_override:
-            visual_version = toolset_override
-        else:
-            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
-            _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
-                        '19.1': '15',
-                        '19.2': '16',
-                        '19.3': '17'}
-            visual_version = _visuals[version]
-    else:
-        visual_version = compiler_version
-    return visual_version
 
 
 class MSBuildToolchain(object):
@@ -69,12 +50,11 @@ class MSBuildToolchain(object):
         compiler = settings.get_safe("compiler")
         compiler_version = settings.get_safe("compiler.version")
         if compiler == "msvc":
-            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
-            toolsets = {'19.0': 'v140',  # TODO: This is common to CMake, refactor
-                        '19.1': 'v141',
-                        '19.2': 'v142',
-                        "19.3": 'v143'}
-            return toolsets[version]
+            toolsets = {'190': 'v140',  # TODO: This is common to CMake, refactor
+                        '191': 'v141',
+                        '192': 'v142',
+                        "193": 'v143'}
+            return toolsets[compiler_version]
         if compiler == "intel":
             compiler_version = compiler_version if "." in compiler_version else \
                 "%s.0" % compiler_version
@@ -129,8 +109,13 @@ class MSBuildToolchain(object):
                      {};%(PreprocessorDefinitions)
                   </PreprocessorDefinitions>
                   <RuntimeLibrary>{}</RuntimeLibrary>
-                  <LanguageStandard>{}</LanguageStandard>{}
+                  <LanguageStandard>{}</LanguageStandard>{}{}
                 </ClCompile>
+                <ResourceCompile>
+                  <PreprocessorDefinitions>
+                     {};%(PreprocessorDefinitions)
+                  </PreprocessorDefinitions>
+                </ResourceCompile>
               </ItemDefinitionGroup>
               <PropertyGroup Label="Configuration">
                 <PlatformToolset>{}</PlatformToolset>
@@ -147,10 +132,17 @@ class MSBuildToolchain(object):
         if compile_options is not None:
             compile_options = eval(compile_options)
             self.compile_options.update(compile_options)
+        parallel = ""
+        njobs = build_jobs(self._conanfile)
+        if njobs:
+            parallel = "".join(
+                ["\n      <MultiProcessorCompilation>True</MultiProcessorCompilation>",
+                 "\n      <ProcessorNumber>{}</ProcessorNumber>".format(njobs)])
         compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
                                   for k, v in self.compile_options.items())
         config_props = toolchain_file.format(preprocessor_definitions, runtime_library, cppstd,
-                                             compile_options, toolset)
+                                             parallel, compile_options, preprocessor_definitions,
+                                             toolset)
         config_filepath = os.path.join(self._conanfile.generators_folder, config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)

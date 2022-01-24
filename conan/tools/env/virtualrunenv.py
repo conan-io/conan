@@ -6,10 +6,12 @@ from conan.tools.env import Environment
 def runenv_from_cpp_info(conanfile, dep, os_name):
     """ return an Environment deducing the runtime information from a cpp_info
     """
-    cpp_info = dep.cpp_info
-    cpp_info.aggregate_components()
+    # FIXME: Remove conanfile arg
+    dyn_runenv = Environment()
+
+    cpp_info = dep.cpp_info.aggregated_components()
     pkg_folder = dep.package_folder
-    dyn_runenv = Environment(conanfile)
+    # FIXME: This code is dead, cpp_info cannot be None
     if cpp_info is None:  # This happens when the dependency is a private one = BINARY_SKIP
         return dyn_runenv
 
@@ -63,7 +65,7 @@ class VirtualRunEnv:
         """ collects the runtime information from dependencies. For normal libraries should be
         very occasional
         """
-        runenv = Environment(self._conanfile)
+        runenv = Environment()
         # FIXME: Missing profile info
         # FIXME: Cache value?
 
@@ -77,7 +79,10 @@ class VirtualRunEnv:
 
         return runenv
 
-    def generate(self, group="run"):
+    def vars(self, scope="build"):
+        return self.environment().vars(self._conanfile, scope=scope)
+
+    def generate(self, scope="run"):
         run_env = self.environment()
         if run_env:
-            run_env.save_script(self._filename, group)
+            run_env.vars(self._conanfile, scope=scope).save_script(self._filename)

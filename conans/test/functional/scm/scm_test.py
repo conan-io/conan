@@ -627,6 +627,10 @@ class ConanLib(ConanFile):
         content = load(exported_conanfile)
         self.assertIn(commit, content)
 
+    def test_git_version(self):
+        git = Git()
+        self.assertNotIn("Error retrieving git", git.version)
+
 
 @pytest.mark.tool_svn
 class SVNSCMTest(SVNLocalRepoTestCase):

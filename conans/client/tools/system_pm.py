@@ -5,7 +5,7 @@ import six
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
 from conans.client.tools.files import which
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidSystemRequirements
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
 
@@ -116,7 +116,7 @@ class SystemPackageTool(object):
             if mode == "verify" and not self._installed(packages):
                 self._output.error("The following packages need to be installed:\n %s"
                                    % "\n".join(packages))
-                raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
+                raise ConanInvalidSystemRequirements("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
                                      "Some system packages need to be installed" % mode)
 
         if not force and self._installed(packages):
@@ -172,7 +172,7 @@ class SystemPackageTool(object):
             if mode == "verify" and not self._installed(packages):
                 self._output.error("The following packages need to be installed:\n %s"
                                    % "\n".join(packages))
-                raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
+                raise ConanInvalidSystemRequirements("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
                                      "Some system packages need to be installed" % mode)
 
         packages = packages if force else self._to_be_installed(packages)

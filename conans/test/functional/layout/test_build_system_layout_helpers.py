@@ -1,10 +1,13 @@
 import os
+import platform
+import textwrap
 
 import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
+from conans.util.files import save
 
 
 @pytest.fixture
@@ -12,7 +15,8 @@ def conanfile():
     conanfile = str(GenConanfile().with_import("from conans import tools")
                     .with_import("import os")
                     .with_setting("build_type").with_setting("arch")
-                    .with_import("from conan.tools.layout import {ly}, LayoutPackager"))
+                    .with_import("from conan.tools.layout import {ly}")
+                    .with_import("from conan.tools.files import AutoPackager"))
 
     conanfile += """
     def source(self):
@@ -23,10 +27,9 @@ def conanfile():
 
     def layout(self):
         {ly}(self)
-        self.folders.package = "my_package"
 
     def package(self):
-        LayoutPackager(self).package()
+        AutoPackager(self).run()
     """
     return conanfile
 
@@ -94,6 +97,52 @@ def test_layout_with_local_methods(conanfile, layout_helper_name, build_type, ar
         assert os.path.exists(path)
 
     # Check the package
-    client.run("package .")
-    assert os.path.exists(os.path.join(client.current_folder, "my_package", "lib", "mylib.lib"))
+    client.run("package .", assert_error=True)
+    assert "The usage of the 'conan package' local method is disabled when using layout()" \
+           "" in client.out
 
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Removing msvc compiler")
+def test_error_no_msvc():
+    # https://github.com/conan-io/conan/issues/9953
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def layout(self):
+                cmake_layout(self)
+        """)
+    settings_yml = textwrap.dedent("""
+        os: [Windows]
+        os_build: [Windows]
+        arch_build: [x86_64]
+        compiler:
+            gcc:
+                version: ["8"]
+        build_type: [Release]
+        arch: [x86_64]
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    save(client.cache.settings_path, settings_yml)
+    client.run('install . -s os=Windows -s build_type=Release -s arch=x86_64 '
+               '-s compiler=gcc -s compiler.version=8')
+    assert "Installing" in client.out
+
+
+def test_error_no_build_type():
+    # https://github.com/conan-io/conan/issues/9953
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch"
+            def layout(self):
+                cmake_layout(self)
+        """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run('install .',  assert_error=True)
+    assert " 'build_type' setting not defined, it is necessary for cmake_layout()" in client.out

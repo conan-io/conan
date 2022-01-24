@@ -174,8 +174,8 @@ class Base(unittest.TestCase):
 class WinTest(Base):
     @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
                            ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False),
-                           ("msvc", "Debug", "static", "19.1", "14", "x86", None, True),
-                           ("msvc", "Release", "dynamic", "19.1", "17", "x86_64", None, False)]
+                           ("msvc", "Debug", "static", "191", "14", "x86", None, True),
+                           ("msvc", "Release", "dynamic", "191", "17", "x86_64", None, False)]
                           )
     def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
                            shared):
@@ -188,8 +188,7 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.cache.new_config_path,
-             "tools.cmake.cmaketoolchain:msvc_parallel_compile=1")
+        save(self.client.cache.new_config_path, "tools.build:jobs=1")
         install_out = self._run_build(settings, options)
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
@@ -244,7 +243,7 @@ class WinTest(Base):
         if compiler == "msvc":
             visual_version = version
         else:
-            visual_version = "19.0" if toolset == "v140" else "19.1"
+            visual_version = "190" if toolset == "v140" else "191"
         check_exe_run(self.client.out, "main", "msvc", visual_version, "Release", arch, cppstd,
                       {"MYVAR": "MYVAR_VALUE",
                        "MYVAR_CONFIG": "MYVAR_RELEASE",
@@ -352,10 +351,9 @@ class LinuxTest(Base):
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
-        pic_str = "" if shared else "ON"
         arch_str = "-m32" if arch == "x86" else "-m64"
-        cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
-        defines = '_GLIBCXX_USE_CXX11_ABI=%s;MYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
+        cxx11_abi_str = "_GLIBCXX_USE_CXX11_ABI=0;" if libcxx == "libstdc++" else ""
+        defines = '%sMYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
                   'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",$<IF:$<CONFIG:release>,'\
                   '"MYDEF_RELEASE","">>;MYDEFINEINT_CONFIG=$<IF:$<CONFIG:debug>,421,'\
                   '$<IF:$<CONFIG:release>,422,"">>' % cxx11_abi_str
@@ -371,7 +369,7 @@ class LinuxTest(Base):
                 "CMAKE_SHARED_LINKER_FLAGS": arch_str,
                 "CMAKE_EXE_LINKER_FLAGS": arch_str,
                 "COMPILE_DEFINITIONS": defines,
-                "CMAKE_POSITION_INDEPENDENT_CODE": pic_str
+                "CMAKE_POSITION_INDEPENDENT_CODE": "ON"
                 }
 
         def _verify_out(marker=">>"):
@@ -449,8 +447,8 @@ class AppleTest(Base):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.parametrize("version, vs_version",
-                         [("19.0", "15"),
-                          ("19.1", "15")])
+                         [("190", "15"),
+                          ("191", "15")])
 def test_msvc_vs_versiontoolset(version, vs_version):
     settings = {"compiler": "msvc",
                 "compiler.version": version,

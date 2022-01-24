@@ -13,16 +13,15 @@ class AutotoolsDeps:
     def _get_cpp_info(self):
         ret = NewCppInfo()
         for dep in self._conanfile.dependencies.host.values():
-            dep_cppinfo = dep.cpp_info.copy()
-            dep_cppinfo.set_relative_base_folder(dep.package_folder)
+            dep_cppinfo = dep.cpp_info.aggregated_components()
             # In case we have components, aggregate them, we do not support isolated
             # "targets" with autotools
-            dep_cppinfo.aggregate_components()
             ret.merge(dep_cppinfo)
         return ret
 
     @property
     def environment(self):
+        # TODO: Seems we want to make this uniform, equal to other generators
         if self._environment is None:
             flags = GnuDepsFlags(self._conanfile, self._get_cpp_info())
 
@@ -37,8 +36,6 @@ class AutotoolsDeps:
             ldflags.extend(flags.frameworks)
             ldflags.extend(flags.framework_paths)
             ldflags.extend(flags.lib_paths)
-            # FIXME: Previously we had an argument "include_rpath_flags" defaulted to False
-            ldflags.extend(flags.rpath_flags)
 
             # cflags
             cflags = flags.cflags
@@ -50,7 +47,7 @@ class AutotoolsDeps:
                 cxxflags.append(srf)
                 ldflags.append(srf)
 
-            env = Environment(self._conanfile)
+            env = Environment()
             env.append("CPPFLAGS", cpp_flags)
             env.append("LIBS", flags.libs)
             env.append("LDFLAGS", ldflags)
@@ -59,5 +56,8 @@ class AutotoolsDeps:
             self._environment = env
         return self._environment
 
-    def generate(self,  group="build"):
-        self.environment.save_script("conanautotoolsdeps", group=group)
+    def vars(self, scope="build"):
+        return self.environment.vars(self._conanfile, scope=scope)
+
+    def generate(self,  scope="build"):
+        self.vars(scope).save_script("conanautotoolsdeps")

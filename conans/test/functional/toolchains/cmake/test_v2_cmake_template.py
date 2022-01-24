@@ -11,8 +11,6 @@ def test_cmake_lib_template():
     # Local flow works
     client.run("install . -if=install")
     client.run("build . -if=install")
-    client.run("package . -if=install")
-    assert os.path.exists(os.path.join(client.current_folder, "package", "include", "hello.h"))
 
     client.run("export-pkg . hello/0.1@ -if=install")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
