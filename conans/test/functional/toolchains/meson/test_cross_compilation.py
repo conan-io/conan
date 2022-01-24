@@ -75,7 +75,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, sdk):
     compiler.libcxx = libc++
 
     [conf]
-    tools.meson.mesontoolchain:sdk_path={sdk_path}
+    tools.apple:sdk_path={sdk_path}
     """)
 
     xcrun = XCRun(None, sdk)
