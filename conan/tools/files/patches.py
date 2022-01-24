@@ -50,13 +50,17 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
     patchlog.addHandler(PatchLogHandler(conanfile, patch_file))
 
     if patch_file:
-        patchset = patch_ng.fromfile(patch_file)
+        # trick *1: patch_file path could be absolute (e.g. conanfile.build_folder), in that case
+        # the join does nothing and works.
+        patch_path = os.path.join(conanfile.source_folder, patch_file)
+        patchset = patch_ng.fromfile(patch_path)
     else:
         patchset = patch_ng.fromstring(patch_string.encode())
 
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
+    # trick *1
     root = os.path.join(conanfile.source_folder, base_path) if base_path else conanfile.source_folder
     if not patchset.apply(strip=strip, root=root, fuzz=fuzz):
         raise ConanException("Failed to apply patch: %s" % patch_file)
