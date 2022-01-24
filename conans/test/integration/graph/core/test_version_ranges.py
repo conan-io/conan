@@ -351,19 +351,19 @@ def test_mixed_user_channel():
     # https://github.com/conan-io/conan/issues/7846
     t = TestClient(default_server_user=True)
     t.save({"conanfile.py": GenConanfile()})
-    t.run("create . pkg/1.0@")
-    t.run("create . pkg/1.1@")
-    t.run("create . pkg/2.0@")
-    t.run("create . pkg/1.0@user/testing")
-    t.run("create . pkg/1.1@user/testing")
-    t.run("create . pkg/2.0@user/testing")
-    t.run("upload * --all --confirm -r default")
+    t.run("create . --name=pkg --version=1.0")
+    t.run("create . --name=pkg --version=1.1")
+    t.run("create . --name=pkg --version=2.0")
+    t.run("create . --name=pkg --version=1.0 --user=user --channel=testing")
+    t.run("create . --name=pkg --version=1.1 --user=user --channel=testing")
+    t.run("create . --name=pkg --version=2.0 --user=user --channel=testing")
+    t.run("upload * --confirm -r default")
     t.run("remove * -f")
 
     t.run('install --reference="pkg/[>0 <2]@"')
-    assert "pkg/1.1 from 'default' - Downloaded" in t.out
+    t.assert_listed_require({"pkg/1.1": "Downloaded (default)"})
     t.run('install --reference="pkg/[>0 <2]@user/testing"')
-    assert "pkg/1.1@user/testing from 'default' - Downloaded" in t.out
+    t.assert_listed_require({"pkg/1.1@user/testing": "Downloaded (default)"})
 
 
 def test_remote_version_ranges():
@@ -372,8 +372,8 @@ def test_remote_version_ranges():
     save(t.cache.settings_path, "")
     t.save({"conanfile.py": GenConanfile()})
     for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
-        t.run(f"create . dep/{v}@")
-    t.run("upload * --all --confirm -r default")
+        t.run(f"create . --name=dep --version={v}")
+    t.run("upload * --confirm -r default")
     # TODO: Deprecate the comma separator for expressions
     for expr, solution in [(">0.0", "2.2.1"),
                            (">0.1 <1", "0.3"),
@@ -389,7 +389,8 @@ def test_remote_version_ranges():
         t.save({"conanfile.py": GenConanfile().with_requires(f"dep/[{expr}]")})
         t.run("install .")
         assert str(t.out).count("Not found in local cache, looking in remotes") == 1
-        assert f"dep/{solution}:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Download" in t.out
+        t.assert_listed_binary({f"dep/{solution}": ("357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                                                    "Download (default)")})
 
 
 @pytest.mark.skip(reason="TODO: Test that the server is only hit once for dep/*@user/channel")
@@ -408,10 +409,10 @@ def test_different_user_channel_resolved_correctly():
     save(client.cache.default_profile_path, "")
     save(client.cache.settings_path, "")
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . lib/1.0@conan/stable")
-    client.run("create . lib/1.0@conan/testing")
-    client.run("upload lib/1.0@conan/stable -r=server1 --all")
-    client.run("upload lib/1.0@conan/testing -r=server2 --all")
+    client.run("create . --name=lib --version=1.0 --user=conan --channel=stable")
+    client.run("create . --name=lib --version=1.0 --user=conan --channel=testing")
+    client.run("upload lib/1.0@conan/stable -r=server1")
+    client.run("upload lib/1.0@conan/testing -r=server2")
 
     client2 = TestClient(servers=servers)
     client2.run("install --reference=lib/[>=1.0]@conan/testing")

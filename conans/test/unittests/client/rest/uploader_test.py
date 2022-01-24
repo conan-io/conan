@@ -28,7 +28,7 @@ class MockRequester(object):
 
 class UploaderUnitTest(unittest.TestCase):
     def setUp(self):
-        self.f = tempfile.mktemp()
+        _, self.f = tempfile.mkstemp()
         save(self.f, "some contents")
 
     def test_401_raises_unauthoirzed_exception(self):
@@ -55,7 +55,7 @@ class UploaderUnitTest(unittest.TestCase):
 
     def test_500_raises_internal_error(self):
         uploader = FileUploader(MockRequester(500), verify=False, config=_ConfigMock())
-        f = tempfile.mktemp()
+        _, f = tempfile.mkstemp()
         save(f, "some contents")
         with self.assertRaisesRegex(InternalErrorException, "tururu"):
             uploader.upload("fake_url", self.f, dedup=True)

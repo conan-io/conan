@@ -464,6 +464,8 @@ class BinaryInstaller(object):
 
                 conanfile.package_info()
 
+                conanfile.cpp.package.set_relative_base_folder(package_folder)
+
                 if hasattr(conanfile, "layout") and is_editable:
                     # Adjust the folders of the layout to consolidate the rootfolder of the
                     # cppinfos inside
@@ -473,11 +475,11 @@ class BinaryInstaller(object):
 
                     # convert directory entries to be relative to the declared folders.build
                     build_cppinfo = conanfile.cpp.build.copy()
-                    build_cppinfo.set_relative_base_folder(conanfile.folders.build)
+                    build_cppinfo.set_relative_base_folder(conanfile.build_folder)
 
                     # convert directory entries to be relative to the declared folders.source
                     source_cppinfo = conanfile.cpp.source.copy()
-                    source_cppinfo.set_relative_base_folder(conanfile.folders.source)
+                    source_cppinfo.set_relative_base_folder(conanfile.source_folder)
 
                     full_editable_cppinfo = CppInfo()
                     full_editable_cppinfo.merge(source_cppinfo)

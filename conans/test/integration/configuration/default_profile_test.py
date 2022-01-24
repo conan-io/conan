@@ -22,7 +22,7 @@ class DefaultProfileTest(unittest.TestCase):
         save(client.cache.default_profile_path, "[env]\nValue1=A")
 
         client.save({CONANFILE: conanfile})
-        client.run("create . pkg/0.1@lasote/stable")
+        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=stable")
         self.assertIn("pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
@@ -50,14 +50,6 @@ class MyConanfile(ConanFile):
         save(default_profile_path, "[buildenv]\nValue1=A")
         client = TestClient()
         save(client.cache.new_config_path, "core:default_profile={}".format(default_profile_path))
-
-        conan_conf = textwrap.dedent("""
-                [storage]
-                path = ./data
-                [general]
-                default_profile={}
-        """.format(default_profile_path))
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
 
         client.save({CONANFILE: br})
         client.run("export . --user=lasote --channel=stable")
@@ -174,7 +166,7 @@ class MyConanfile(ConanFile):
         # Test with the 'default' profile
         env_variable = "env_variable=profile_default"
         save(client.cache.default_profile_path, "[buildenv]\n" + env_variable)
-        client.run("create . name/version@user/channel")
+        client.run("create . --name=name --version=version --user=user --channel=channel")
         self.assertIn(">>> " + env_variable, client.out)
 
         # Test with a profile set using and environment variable
@@ -183,7 +175,7 @@ class MyConanfile(ConanFile):
         default_profile_path = os.path.join(tmp, 'env_profile')
         save(default_profile_path, "[buildenv]\n" + env_variable)
         with environment_update({'CONAN_DEFAULT_PROFILE': default_profile_path}):
-            client.run("create . name/version@user/channel")
+            client.run("create . --name=name --version=version --user=user --channel=channel")
             self.assertIn(">>> " + env_variable, client.out)
 
         # Use relative path defined in environment variable
@@ -194,15 +186,16 @@ class MyConanfile(ConanFile):
                                             PROFILES_FOLDER, rel_path)
         save(default_profile_path, "[buildenv]\n" + env_variable)
         with environment_update({'CONAN_DEFAULT_PROFILE': rel_path}):
-            client.run("create . name/version@user/channel")
+            client.run("create . --name=name --version=version --user=user --channel=channel")
             self.assertIn(">>> " + env_variable, client.out)
 
         # Use non existing path
         profile_path = os.path.join(tmp, "this", "is", "a", "path")
         self.assertTrue(os.path.isabs(profile_path))
         with environment_update({'CONAN_DEFAULT_PROFILE': profile_path}):
-            client.run("create . name/version@user/channel", assert_error=True)
-            self.assertIn("The default profile file doesn't exist", client.out)
+            client.run("create . --name=name --version=version --user=user --channel=channel",
+                       assert_error=True)
+            self.assertIn("You need to create a default profile", client.out)
 
 
 def test_conf_default_two_profiles():

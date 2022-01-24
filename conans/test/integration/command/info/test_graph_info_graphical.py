@@ -109,8 +109,8 @@ class InfoTest(unittest.TestCase):
     def test_info_build_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . tool/0.1@user/channel")
-        client.run("create . dep/0.1@user/channel")
+        client.run("create . --name=tool --version=0.1 --user=user --channel=channel")
+        client.run("create . --name=dep --version=0.1 --user=user --channel=channel")
         conanfile = GenConanfile().with_require("dep/0.1@user/channel")
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=0.1 --user=user --channel=channel")

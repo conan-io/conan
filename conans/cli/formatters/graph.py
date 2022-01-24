@@ -21,15 +21,15 @@ def print_graph_basic(graph):
     python_requires = {}
     deprecated = {}
     for node in graph.nodes:
+        if hasattr(node.conanfile, "python_requires"):
+            for r in node.conanfile.python_requires._pyrequires.values():  # TODO: improve interface
+                python_requires[r.ref] = r.recipe, r.remote
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         if node.context == CONTEXT_BUILD:
             build_requires[node.ref] = node.recipe, node.remote
         else:
             requires[node.ref] = node.recipe, node.remote
-        if hasattr(node.conanfile, "python_requires"):
-            for r in node.conanfile.python_requires._pyrequires.values():  # TODO: improve interface
-                python_requires[r.ref] = r.recipe, r.remote
         if node.conanfile.deprecated:
             deprecated[node.ref] = node.conanfile.deprecated
 
@@ -63,7 +63,7 @@ def print_graph_basic(graph):
     if deprecated:
         output.info("Deprecated", Color.BRIGHT_YELLOW)
         for d, reason in deprecated.items():
-            reason = reason if isinstance(reason, str) else ""
+            reason = f": {reason}" if reason else ""
             output.info("    {}{}".format(d, reason), Color.BRIGHT_CYAN)
 
 

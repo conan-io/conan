@@ -41,14 +41,14 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "base.MyConanfileBase"
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
-        client.run("upload * --all --confirm -r default")
+        client.run("upload * --confirm -r default")
         client.run("remove * -f")
         client.run("install --reference=pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
@@ -73,22 +73,22 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "my.base.MyConanfileBase"
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
 
     def test_with_alias(self):
         client = TestClient()
         self._define_base(client)
-        client.run("alias base/LATEST@user/testing base/1.1@user/testing")
+        client.alias("base/latest@user/testing",  "base/1.1@user/testing")
 
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class PkgTest(ConanFile):
-                python_requires = "base/LATEST@user/testing"
+                python_requires = "base/(latest)@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
@@ -106,9 +106,8 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing")
-        self.assertIn("Python requires", str(client.out).splitlines())
-        self.assertIn("    base/1.1@user/testing", str(client.out).splitlines())
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        client.assert_listed_require({"base/1.1@user/testing": "Cache"}, python=True)
         self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
@@ -145,7 +144,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "sourcebuild.SourceBuild", "packageinfo.PackageInfo"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
@@ -173,7 +172,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.python_requires["base"]
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/channel")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel")
         assert "pkg/0.1@user/channel: Created package" in client.out
 
         conanfile = textwrap.dedent("""
@@ -183,7 +182,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "base.HelloConan"
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/channel")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel")
         assert "pkg/0.1@user/channel: Created package" in client.out
 
     def test_multiple_requires_error(self):
@@ -225,7 +224,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PKG2F : %s" % self.python_requires["pkg2"].module.myfunct())
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . consumer/0.1@user/testing")
+        client.run("create . --name=consumer --version=0.1 --user=user --channel=testing")
         self.assertIn("consumer/0.1@user/testing: PKG1 N: pkg1", client.out)
         self.assertIn("consumer/0.1@user/testing: PKG1 V: 1.0", client.out)
         self.assertIn("consumer/0.1@user/testing: PKG1 U: user", client.out)
@@ -268,14 +267,14 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing")
-        package_id = re.search(r"pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        package_id = client.created_package_id("pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
-        client.run("upload * --all --confirm -r default")
+        client.run("upload * --confirm -r default")
         client.run("remove * -f")
         client.run("install --reference=pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
@@ -317,7 +316,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": reuse,
                      "header.h": "pkg new header contents",
                      "other.txt": "text"})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: Exports sources! *.h", client.out)
         self.assertIn("pkg/0.1@user/testing exports: Copied 1 '.txt' file: other.txt",
                       client.out)
@@ -349,7 +348,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires_extend = "base.MyConanfileBase"
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: My system_requirements pkg being called!", client.out)
 
     def test_overwrite_class_members(self):
@@ -385,7 +384,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                                                           self.settings.arch))
             """)
         client.save({"conanfile.py": reuse})
-        client.run("create . pkg/0.1@user/testing -s os=Windows -s arch=armv7")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Windows -s arch=armv7")
         self.assertIn("pkg/0.1@user/testing: License! MyLicense", client.out)
         self.assertIn("pkg/0.1@user/testing: Author! frodo", client.out)
         self.assertIn("pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
@@ -420,9 +419,9 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.options.update(base.options, base.default_options)
                 """)
         client.save({"conanfile.py": derived})
-        client.run("create . pkg/0.1@ -o base_option=True -o derived_option=True")
+        client.run("create . --name=pkg --version=0.1 -o base_option=True -o derived_option=True")
         self.assertIn("pkg/0.1: Created package", client.out)
-        client.run("create . pkg/0.1@ -o whatever=True", assert_error=True)
+        client.run("create . --name=pkg --version=0.1 -o whatever=True", assert_error=True)
         assert "Possible options are ['derived_option', 'base_option']" in client.out
 
     def test_transitive_imports_conflicts(self):
@@ -456,13 +455,13 @@ class PyRequiresExtendTest(unittest.TestCase):
         # This should work, even if there is a local "myhelper.py" file, which could be
         # accidentaly imported (and it was, it was a bug)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: MyHelperOutput!", client.out)
         self.assertIn("pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
 
         # Now, the same, but with "clean_first=True", should keep working
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: MyHelperOutput!", client.out)
         self.assertIn("pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
 
@@ -555,7 +554,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "pyreq/1.0@user/channel", "pyreq/2.0@user/channel"
         """)
         t.save({"conanfile.py": conanfile})
-        t.run("create . name/version@user/channel", assert_error=True)
+        t.run("create . --name=name --version=version --user=user --channel=channel", assert_error=True)
         self.assertIn("ERROR: Error loading conanfile", t.out)
         self.assertIn("The python_require 'pyreq' already exists", t.out)
 
@@ -638,8 +637,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires0::build")
                     """)})
         client.run("export . --name=python_requires0 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires0/latest@user/test python_requires0/1.0@user/test")
-        client.run("alias python_requires0/latest2@user/test python_requires0/latest@user/test")
+        client.alias("python_requires0/latest@user/test",  "python_requires0/1.0@user/test")
+        client.alias("python_requires0/latest2@user/test",  "python_requires0/latest@user/test")
 
         # Create python requires, that require the previous one
         client.save({CONANFILE: textwrap.dedent("""
@@ -652,8 +651,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires1::build")
             """).format(v=version_str)})
         client.run("export . --name=python_requires1 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires1/latest@user/test python_requires1/1.0@user/test")
-        client.run("alias python_requires1/latest2@user/test python_requires1/latest@user/test")
+        client.alias("python_requires1/latest@user/test",  "python_requires1/1.0@user/test")
+        client.alias("python_requires1/latest2@user/test",  "python_requires1/latest@user/test")
 
         # Create python requires
         client.save({CONANFILE: textwrap.dedent("""
@@ -664,8 +663,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires11::build")
                     """)})
         client.run("export . --name=python_requires11 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires11/latest@user/test python_requires11/1.0@user/test")
-        client.run("alias python_requires11/latest2@user/test python_requires11/latest@user/test")
+        client.alias("python_requires11/latest@user/test",  "python_requires11/1.0@user/test")
+        client.alias("python_requires11/latest2@user/test",  "python_requires11/latest@user/test")
 
         # Create python requires, that require the previous one
         client.save({CONANFILE: textwrap.dedent("""
@@ -678,8 +677,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires22::build")
                     """).format(v=version_str)})
         client.run("export . --name=python_requires22 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires22/latest@user/test python_requires22/1.0@user/test")
-        client.run("alias python_requires22/latest2@user/test python_requires22/latest@user/test")
+        client.alias("python_requires22/latest@user/test",  "python_requires22/1.0@user/test")
+        client.alias("python_requires22/latest2@user/test",  "python_requires22/latest@user/test")
 
         # Another python_requires, that requires the previous python requires
         client.save({CONANFILE: textwrap.dedent("""
@@ -693,8 +692,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("PythonRequires2::build")
                     """).format(v=version_str)})
         client.run("export . --name=python_requires2 --version=1.0 --user=user --channel=test")
-        client.run("alias python_requires2/latest@user/test python_requires2/1.0@user/test")
-        client.run("alias python_requires2/latest2@user/test python_requires2/latest@user/test")
+        client.alias("python_requires2/latest@user/test",  "python_requires2/1.0@user/test")
+        client.alias("python_requires2/latest2@user/test",  "python_requires2/latest@user/test")
 
         # My project, will consume the latest python requires
         client.save({CONANFILE: textwrap.dedent("""
@@ -708,7 +707,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.output.info("Project::build")
                     """).format(v=version_str)})
 
-        client.run("create . project/1.0@user/test --build=missing")
+        client.run("create . --name=project --version=1.0 --user=user --channel=test --build=missing")
 
         # Check that everything is being built
         self.assertIn("project/1.0@user/test: PythonRequires11::build", client.out)
@@ -720,16 +719,16 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Check that all the graph is printed properly
         #   - requirements
-        self.assertIn("    project/1.0@user/test from local cache - Cache", client.out)
+        client.assert_listed_require({"project/1.0@user/test": "Cache"})
         #   - python requires
-        self.assertIn("    python_requires11/1.0@user/test", client.out)
-        self.assertIn("    python_requires0/1.0@user/test", client.out)
-        self.assertIn("    python_requires22/1.0@user/test", client.out)
-        self.assertIn("    python_requires1/1.0@user/test", client.out)
-        self.assertIn("    python_requires2/1.0@user/test", client.out)
+        client.assert_listed_require({"python_requires11/1.0@user/test": "Cache",
+                                      "python_requires0/1.0@user/test": "Cache",
+                                      "python_requires22/1.0@user/test": "Cache",
+                                      "python_requires1/1.0@user/test": "Cache",
+                                      "python_requires2/1.0@user/test": "Cache"}, python=True)
         #   - packages
-        self.assertIn("    project/1.0@user/test:f9d5c46e6766f3cad7ae39c013485379b7b62e68 - Build",
-                      client.out)
+        client.assert_listed_binary({"project/1.0@user/test":
+                                     ("f9d5c46e6766f3cad7ae39c013485379b7b62e68", "Build")})
 
         #   - no mention to alias
         self.assertNotIn("alias", client.out)
@@ -775,7 +774,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                      "version.txt": "MyVersion"})
         client.run("export . --name=pkg --version=1.0 --user=user --channel=channel")
         self.assertIn("pkg/1.0@user/channel: A new conanfile.py version was exported", client.out)
-        client.run("create . pkg/1.0@user/channel")
+        client.run("create . --name=pkg --version=1.0 --user=user --channel=channel")
         self.assertIn("pkg/1.0@user/channel: Source: tool header: myheader", client.out)
         self.assertIn("pkg/1.0@user/channel: Source: tool other: otherheader", client.out)
         self.assertIn("pkg/1.0@user/channel: Build: tool header: myheader", client.out)
@@ -850,7 +849,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     pass
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("create . pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("pkg/0.1@user/testing: My cool package!", client.out)
@@ -896,7 +895,7 @@ def test_transitive_python_requires():
             python_requires_extend = "base-class.BaseClass"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . @user/channel")
+    client.run("create . --user=user --channel=channel")
     assert "consumer/1.0@user/channel: Calling build()\nconsumer/1.0@user/channel: 123, 234" in \
            client.out
 
@@ -966,7 +965,7 @@ def test_transitive_diamond_python_requires():
             python_requires_extend = "base-class.BaseClass", "base-class2.BaseClass2"
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . @user/channel")
+    client.run("create . --user=user --channel=channel")
     assert "consumer/1.0@user/channel: Calling build()\nconsumer/1.0@user/channel: 123, 2222" in \
            client.out
     assert "consumer/1.0@user/channel: Calling package()\nconsumer/1.0@user/channel: 222, 234" in \

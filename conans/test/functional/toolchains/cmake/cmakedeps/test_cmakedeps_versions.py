@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 @pytest.fixture(scope="module")
 def hello_client():
     client = TestClient()
-    client.run("new hello/1.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=1.1")
     client.run("create . -tf=None")
     return client
 

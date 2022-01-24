@@ -19,8 +19,6 @@ class DeployImportFilePermissionTest(unittest.TestCase):
         client = TestClient()
         if ro_cache:
             conan_conf = textwrap.dedent("""
-                                        [storage]
-                                        path = ./data
                                         [general]
                                         read_only_cache=True
                                     """)
@@ -38,7 +36,7 @@ class MyPkg(ConanFile):
             client.save({"conanfile.py": conanfile,
                          self.file_name: "my header"})
             os.chmod(os.path.join(client.current_folder, self.file_name), 0o444 if ro_file else 0o644)
-            client.run("create . pkg/0.1@lasote/channel")
+            client.run("create . --name=pkg --version=0.1 --user=lasote --channel=channel")
         return client
 
     def _import(self, client):

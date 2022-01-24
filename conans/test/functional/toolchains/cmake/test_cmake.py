@@ -108,8 +108,8 @@ class Base(unittest.TestCase):
                          % self.settings.build_type)
             """)
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . hello/0.1@ -s build_type=Debug")
-        self.client.run("create . hello/0.1@ -s build_type=Release")
+        self.client.run("create . --name=hello --version=0.1 -s build_type=Debug")
+        self.client.run("create . --name=hello --version=0.1 -s build_type=Release")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
@@ -482,7 +482,7 @@ def test_msvc_vs_versiontoolset(version, vs_version):
                  "app.cpp": main,
                  })
     settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
-    client.run("create . app/1.0@ {}".format(settings))
+    client.run("create . --name=app --version=1.0 {}".format(settings))
     assert '-G "Visual Studio 15 2017"' in client.out
 
     check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
@@ -535,7 +535,7 @@ class CMakeInstallTest(unittest.TestCase):
                                                     "include", "header.h")))"""
 
         # The create flow must work
-        client.run("create . pkg/0.1@")
+        client.run("create . --name=pkg --version=0.1")
         self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
         ref = RecipeReference.loads("pkg/0.1")
         pref = client.get_latest_package_reference(ref)

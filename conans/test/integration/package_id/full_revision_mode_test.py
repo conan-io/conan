@@ -27,12 +27,12 @@ class FullRevisionModeTest(unittest.TestCase):
                          str(uuid.uuid1()))
             """)
         clienta.save({"conanfile.py": conanfilea})
-        clienta.run("create . liba/0.1@user/testing")
+        clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
 
         clientb = TestClient(cache_folder=clienta.cache_folder)
         clientb.save({"conanfile.py": GenConanfile().with_name("libb").with_version("0.1")
                                                     .with_require(liba_ref)})
-        clientb.run("create . user/testing")
+        clientb.run("create . --user=user --channel=testing")
 
         clientc = TestClient(cache_folder=clienta.cache_folder)
         clientc.save({"conanfile.py": GenConanfile().with_name("libc").with_version("0.1")
@@ -41,7 +41,7 @@ class FullRevisionModeTest(unittest.TestCase):
 
         # Do a minor change to the recipe, it will change the recipe revision
         clienta.save({"conanfile.py": conanfilea + "# comment"})
-        clienta.run("create . liba/0.1@user/testing")
+        clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
 
         clientc.run("install . --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
@@ -49,14 +49,14 @@ class FullRevisionModeTest(unittest.TestCase):
         clientc.run("install . --user=user --channel=testing --build=libb")
 
         # Now change only the package revision of liba
-        clienta.run("create . liba/0.1@user/testing")
+        clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
         clientc.run("install . --user=user --channel=testing")
         save(clientc.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         clientc.run("install . --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
         clientc.run("install . --user=user --channel=testing --build=libb")
 
-        clienta.run("create . liba/0.1@user/testing")
+        clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
         clientc.run("install . --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
 
@@ -74,17 +74,17 @@ class FullRevisionModeTest(unittest.TestCase):
                          str(uuid.uuid1()))
             """)
         clienta.save({"conanfile.py": conanfile % ""})
-        clienta.run("create . liba/0.1@user/testing")
+        clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
 
         clientb = TestClient(cache_folder=clienta.cache_folder)
         clientb.save({"conanfile.py": conanfile % "requires = 'liba/0.1@user/testing'"})
         save(clientb.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
-        clientb.run("create . libb/0.1@user/testing")
+        clientb.run("create . --name=libb --version=0.1 --user=user --channel=testing")
 
         clientc = TestClient(cache_folder=clienta.cache_folder)
         clientc.save({"conanfile.py": conanfile % "requires = 'libb/0.1@user/testing'"})
         save(clientc.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
-        clientc.run("create . libc/0.1@user/testing")
+        clientc.run("create . --name=libc --version=0.1 --user=user --channel=testing")
 
         clientd = TestClient(cache_folder=clienta.cache_folder)
         save(clientd.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
@@ -92,7 +92,7 @@ class FullRevisionModeTest(unittest.TestCase):
         clientd.run("install . --name=libd --version=0.1 --user=user --channel=testing")
 
         # Change A PREV
-        clienta.run("create . liba/0.1@user/testing")
+        clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
         clientd.run("install . --name=libd --version=0.1 --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientd.out)
         clientd.run("install . --name=libd --version=0.1 --user=user --channel=testing --build=missing")
@@ -109,7 +109,7 @@ class FullRevisionModeTest(unittest.TestCase):
                                                     .with_package_info(cpp_info={"libs":
                                                                                  ["tool.lib"]},
                                                                        env_info={})})
-        clienta.run("create . user/testing")
+        clienta.run("create . --user=user --channel=testing")
         save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfile = dedent("""
             from conans import ConanFile
@@ -123,17 +123,17 @@ class FullRevisionModeTest(unittest.TestCase):
                          str(uuid.uuid1()))
             """)
         clienta.save({"conanfile.py": conanfile % ""})
-        clienta.run("create . liba/0.1@user/testing")
+        clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
 
         clientb = TestClient(cache_folder=clienta.cache_folder)
         clientb.save({"conanfile.py": conanfile % "requires = 'liba/0.1@user/testing'"})
         save(clientb.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
-        clientb.run("create . libb/0.1@user/testing")
+        clientb.run("create . --name=libb --version=0.1 --user=user --channel=testing")
 
         clientc = TestClient(cache_folder=clienta.cache_folder)
         clientc.save({"conanfile.py": conanfile % "requires = 'libb/0.1@user/testing'"})
         save(clientc.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
-        clientc.run("create . libc/0.1@user/testing")
+        clientc.run("create . --name=libc --version=0.1 --user=user --channel=testing")
 
         clientd = TestClient(cache_folder=clienta.cache_folder)
         save(clientd.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
@@ -141,7 +141,7 @@ class FullRevisionModeTest(unittest.TestCase):
         clientd.run("install . --name=libd --version=0.1@ --user=user --channel=testing")
 
         # Change A PREV
-        clienta.run("create . liba/0.1@user/testing")
+        clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
         clientd.run("install . --name=libd --version=0.1@ --user=user --channel=testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientd.out)
         clientd.run("install . --name=libd --version=0.1@ --user=user --channel=testing --build=missing")
@@ -158,13 +158,13 @@ class FullRevisionModeTest(unittest.TestCase):
         client = TestClient()
         save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . liba/0.1@user/testing")
+        client.run("create . --name=liba --version=0.1 --user=user --channel=testing")
 
         client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
-        client.run("create . libb/0.1@user/testing")
+        client.run("create . --name=libb --version=0.1 --user=user --channel=testing")
 
         client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
-        client.run("create . libc/0.1@user/testing")
+        client.run("create . --name=libc --version=0.1 --user=user --channel=testing")
 
         client.save({"conanfile.py": GenConanfile().with_require('libc/0.1@user/testing')})
         # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
@@ -182,19 +182,18 @@ class FullRevisionModeTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         save(client.cache.new_config_path, "core.package_id:default_mode=package_revision_mode")
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . liba/0.1@user/testing")
-        self.assertIn(f"liba/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Build",
-                      client.out)
+        client.run("create . --name=liba --version=0.1 --user=user --channel=testing")
+        client.assert_listed_binary({"liba/0.1@user/testing": (NO_SETTINGS_PACKAGE_ID, "Build")})
         prev = "a397cb03d51fb3b129c78d2968e2676f"
         self.assertIn(f"liba/0.1@user/testing: Created package revision {prev}", client.out)
         client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
-        client.run("create . libb/0.1@user/testing")
+        client.run("create . --name=libb --version=0.1 --user=user --channel=testing")
         libb_pkgid = "af0c44b853e4651ccafc636d601d9c65d3fa44a8"
-        self.assertIn(f"libb/0.1@user/testing:{libb_pkgid} - Build", client.out)
+        client.assert_listed_binary({"libb/0.1@user/testing": (libb_pkgid, "Build")})
 
         client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
-        client.run("create . libc/0.1@user/testing")
-        client.run("upload * --all -c -r default")
+        client.run("create . --name=libc --version=0.1 --user=user --channel=testing")
+        client.run("upload * -c -r default")
         client.run("remove * -f")
 
         client.save({"conanfile.py": GenConanfile().with_require('libc/0.1@user/testing')})
@@ -330,8 +329,8 @@ def test_package_revision_mode_full_transitive_package_id():
                  "profile": profile})
     client.run("export tool --name=tool --version=0.1")
     client.run("export pkga --name=pkga --version=0.1")
-    client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
-    assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
+    client.run("create pkgb --name=pkgb --version=0.1 -pr=profile --build=missing")
+    client.assert_listed_binary({"pkgb/0.1": ("Package_ID_unknown", "Unknown")})
     assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
     pkg_id = "fbdb93dfebd237827767fd6bc7b235c1af5012dd"
     assert f"pkgb/0.1: Package '{pkg_id}' created" in client.out

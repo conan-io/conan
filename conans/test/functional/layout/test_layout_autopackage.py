@@ -90,8 +90,8 @@ def test_auto_package_no_components():
         packager.run()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+    client.run("create . --name=lib --version=1.0")
+    package_id = client.created_package_id("lib/1.0")
 
     ref = RecipeReference.loads("lib/1.0@")
     prev = get_latest_package_reference(client.cache, ref, package_id)
@@ -183,8 +183,8 @@ def test_auto_package_with_components():
         packager.run()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+    client.run("create . --name=lib --version=1.0")
+    package_id = client.created_package_id("lib/1.0")
 
     ref = RecipeReference.loads("lib/1.0@")
     pref = get_latest_package_reference(client.cache, ref, package_id)
@@ -238,7 +238,7 @@ def test_auto_package_with_components_declared_badly():
     """
 
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@", assert_error=True)
+    client.run("create . --name=lib --version=1.0", assert_error=True)
     assert "There are components declared in cpp.source.components or in " \
            "cpp.build.components that are not declared in " \
            "cpp.package.components" in client.out
@@ -281,8 +281,8 @@ def test_auto_package_default_patterns():
         AutoPackager(self).run()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
+    client.run("create . --name=lib --version=1.0")
+    package_id = client.created_package_id("lib/1.0")
     ref = RecipeReference.loads("lib/1.0@")
     pref = get_latest_package_reference(client.cache, ref, package_id)
     p_folder = client.cache.pkg_layout(pref).package()
@@ -322,7 +322,7 @@ def test_auto_package_default_folders_with_components():
         AutoPackager(self).run()
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
+    client.run("create . --name=lib --version=1.0")
 
 
 def test_auto_package_with_custom_package_too():
@@ -355,7 +355,7 @@ def test_auto_package_with_custom_package_too():
 
     """
     client.save({"conanfile.py": conan_file})
-    client.run("create . lib/1.0@")
+    client.run("create . --name=lib --version=1.0")
     assert "Package method called!" in client.out
 
 
@@ -395,6 +395,6 @@ def test_auto_package_only_one_destination():
     for dirs in ["includedirs", "builddirs", "bindirs", "srcdirs", "frameworkdirs", "libdirs",
                  "resdirs"]:
         client.save({"conanfile.py": conan_file.format(dirs)})
-        client.run("create . lib/1.0@", assert_error=True)
+        client.run("create . --name=lib --version=1.0", assert_error=True)
         assert "The package has more than 1 cpp_info.{}, " \
                "cannot package automatically".format(dirs) in client.out

@@ -222,7 +222,6 @@ class DepsGraphBuilder(object):
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock)
 
         if recipe_status == RECIPE_EDITABLE:
-            dep_conanfile.in_local_cache = False
             dep_conanfile.develop = True
 
         return new_ref, dep_conanfile, recipe_status, remote

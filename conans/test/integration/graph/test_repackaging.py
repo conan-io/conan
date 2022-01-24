@@ -15,10 +15,10 @@ def test_repackage():
     save(client.cache.default_profile_path, "")
     client.save({"conanfile.py": GenConanfile().with_shared_option(True).
                 with_settings("os", "arch", "build_type").with_package_file("liba.txt", "HelloA!")})
-    client.run("create . liba/1.0@ -s os=Linux -s arch=x86 -s build_type=RelWithDebInfo")
+    client.run("create . --name=liba --version=1.0 -s os=Linux -s arch=x86 -s build_type=RelWithDebInfo")
     client.save({"conanfile.py": GenConanfile().with_shared_option(False).
                 with_settings("os", "arch", "build_type").with_package_file("libb.txt", "HelloB!")})
-    client.run("create . libb/1.0@ -s os=Linux -s arch=x86 -s build_type=RelWithDebInfo")
+    client.run("create . --name=libb --version=1.0 -s os=Linux -s arch=x86 -s build_type=RelWithDebInfo")
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -40,7 +40,7 @@ def test_repackage():
                 pass
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . repackager/1.0@ -s os=Linux -s arch=x86 -s build_type=RelWithDebInfo")
+    client.run("create . --name=repackager --version=1.0 -s os=Linux -s arch=x86 -s build_type=RelWithDebInfo")
 
     client.save({"conanfile.py": GenConanfile().with_requires("repackager/1.0")}, clean_first=True)
     client.run("install . -s os=Linux")

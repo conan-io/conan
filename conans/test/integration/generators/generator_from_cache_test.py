@@ -48,7 +48,7 @@ class GeneratorFromCacheTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile()})
         # Test the install using a reference
-        client.run("create . hello/0.1@lasote/testing")
+        client.run("create . --name=hello --version=0.1 --user=lasote --channel=testing")
         client.run("install --reference=hello/0.1@lasote/testing -g user_defined")
 
         data = client.load("userdefined.json")
@@ -98,7 +98,7 @@ class GeneratorFromCacheTest(unittest.TestCase):
         self.assertEqual(data, "user_defined contents")
 
         # Test the install using a conanfile
-        client.run("create . hello/0.1@lasote/testing")
+        client.run("create . --name=hello --version=0.1 --user=lasote --channel=testing")
         self.assertIn("Generator user_defined created userdefined.txt", client.out)
         self.assertIn("create_conanfile_test: user_defined contents", client.out)
 

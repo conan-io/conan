@@ -75,8 +75,8 @@ class Base(unittest.TestCase):
                          % self.settings.build_type)
             """)
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . hello/0.1@ -s build_type=Debug")
-        self.client.run("create . hello/0.1@ -s build_type=Release")
+        self.client.run("create . --name=hello --version=0.1 -s build_type=Debug")
+        self.client.run("create . --name=hello --version=0.1 -s build_type=Release")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,

@@ -31,12 +31,8 @@ class RunnerMock(object):
         self.return_ok = return_ok
         self.output = output
 
-    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
+    def __call__(self, command):  # @UnusedVariable
         self.command_called = command
-        self.win_bash = win_bash
-        self.subsystem = subsystem
-        if self.output and output and hasattr(output, "write"):
-            output.write(self.output)
         return 0 if self.return_ok else 1
 
 
@@ -261,10 +257,8 @@ class ToolsTest(unittest.TestCase):
         original_temp = temp_folder()
         patched_temp = os.path.join(original_temp, "dir with spaces")
         payload = "hello world"
-        with patch("tempfile.mktemp") as mktemp:
-            mktemp.return_value = patched_temp
-            output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
-            self.assertIn(payload, str(output))
+        output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
+        self.assertIn(payload, str(output))
 
 
 class CollectLibTestCase(unittest.TestCase):

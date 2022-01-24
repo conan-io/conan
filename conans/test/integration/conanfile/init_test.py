@@ -15,7 +15,7 @@ class InitTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("inspect .", assert_error=True)
+        client.run("export .", assert_error=True)
         self.assertIn("Error in init() method, line 5", client.out)
         self.assertIn("name 'random_error' is not defined", client.out)
 
@@ -32,17 +32,20 @@ class InitTest(unittest.TestCase):
                     d = json.loads(data)
                     self.license = d["license"]
                     self.description = d["description"]
+                def export(self):
+                    self.output.info("description: %s" % self.description)
+                    self.output.info("license: %s" % self.license)
                 def build(self):
-                    self.output.info("LICENSE: %s" % self.license)
+                    self.output.info("description: %s" % self.description)
+                    self.output.info("license: %s" % self.license)
             """)
         data = '{"license": "MIT", "description": "MyDescription"}'
         client.save({"conanfile.py": conanfile,
                      "data.json": data})
 
-        client.run("inspect .")
+        client.run("export . --name=pkg --version=version")
         self.assertIn("description: MyDescription", client.out)
         self.assertIn("license: MIT", client.out)
-        client.run("create . pkg/0.1@user/testing")
-        client.run("inspect pkg/0.1@user/testing")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("description: MyDescription", client.out)
         self.assertIn("license: MIT", client.out)

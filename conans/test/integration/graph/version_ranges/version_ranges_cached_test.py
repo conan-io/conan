@@ -42,12 +42,12 @@ class TestVersionRangesCache:
         for minor in range(2):
             client.save({"conanfile.py": GenConanfile("liba", f"1.{minor}.0")})
             client.run("create .")
-            client.run(f"upload liba/1.{minor}.0 -r server0 --all -c")
+            client.run(f"upload liba/1.{minor}.0 -r server0 -c")
 
         for minor in range(2):
             client.save({"conanfile.py": GenConanfile("liba", f"2.{minor}.0")})
             client.run("create .")
-            client.run(f"upload liba/2.{minor}.0 -r server1 --all -c")
+            client.run(f"upload liba/2.{minor}.0 -r server1 -c")
 
         client.run("remove * -f")
 

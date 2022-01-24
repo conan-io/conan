@@ -52,8 +52,8 @@ class PropagateSpecificComponents(unittest.TestCase):
             'middle.py': self.middle,
             'app.py': self.app
         })
-        client.run('create top.py top/version@')
-        client.run('create middle.py middle/version@')
+        client.run('create top.py --name=top --version=version')
+        client.run('create middle.py --name=middle --version=version')
         self.cache_folder = client.cache_folder
 
     def test_cmakedeps_app(self):
@@ -69,8 +69,7 @@ class PropagateSpecificComponents(unittest.TestCase):
         t.run('install --reference=middle/version@ -g CMakeDeps')
 
         content = t.load('middle-release-x86_64-data.cmake')
-        self.assertIn("set(middle_FIND_DEPENDENCY_NAMES ${middle_FIND_DEPENDENCY_NAMES} top)",
-                      content)
+        self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
 
         content = t.load('middle-config.cmake')
         self.assertIn("find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)", content)
@@ -113,8 +112,8 @@ def test_wrong_component(top_conanfile, from_component):
 
     t = TestClient()
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py top/version@')
-    t.run('create consumer.py wrong/version@')
+    t.run('create top.py --name=top --version=version')
+    t.run('create consumer.py --name=wrong --version=version')
 
     t.run('install --reference=wrong/version@ -g CMakeDeps', assert_error=True)
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
@@ -135,8 +134,8 @@ def test_unused_requirement(top_conanfile):
     """)
     t = TestClient()
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py top/version@')
-    t.run('create consumer.py wrong/version@', assert_error=True)
+    t.run('create top.py --name=top --version=version')
+    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
     assert "wrong/version package_info(): Package require 'top' not used in components " \
            "requires" in t.out
 
@@ -156,8 +155,8 @@ def test_wrong_requirement(top_conanfile):
     """)
     t = TestClient()
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py top/version@')
-    t.run('create consumer.py wrong/version@', assert_error=True)
+    t.run('create top.py --name=top --version=version')
+    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
     assert "wrong/version package_info(): Package require 'other' declared in " \
            "components requires but not defined as a recipe requirement" in t.out
 

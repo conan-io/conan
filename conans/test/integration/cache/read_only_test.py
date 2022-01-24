@@ -18,8 +18,6 @@ class ReadOnlyTest(unittest.TestCase):
         self.client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
         self.client.run("--version")
         conan_conf = textwrap.dedent("""
-                            [storage]
-                            path = ./data
                             [general]
                             read_only_cache=True
                         """)
@@ -32,7 +30,7 @@ class MyPkg(ConanFile):
 """
         self.client.save({"conanfile.py": conanfile,
                           "myheader.h": "my header"})
-        self.client.run("create . pkg/0.1@lasote/channel")
+        self.client.run("create . --name=pkg --version=0.1 --user=lasote --channel=channel")
 
     def test_basic(self):
         pref = self.client.get_latest_package_reference(RecipeReference.loads("pkg/0.1@lasote/channel"),
@@ -51,13 +49,13 @@ class MyPkg(ConanFile):
         self.assertNotIn("pkg/0.1@lasote/channel", self.client.out)
 
     def test_upload(self):
-        self.client.run("upload * --all --confirm -r default")
+        self.client.run("upload * --confirm -r default")
         self.client.run("remove pkg* -f")
         self.client.run("install --reference=pkg/0.1@lasote/channel")
         self.test_basic()
 
     def test_upload_change(self):
-        self.client.run("upload * --all --confirm -r default")
+        self.client.run("upload * --confirm -r default")
         client = TestClient(servers={"default": self.test_server}, inputs=["admin", "password"])
 
         client.run("install --reference=pkg/0.1@lasote/channel")

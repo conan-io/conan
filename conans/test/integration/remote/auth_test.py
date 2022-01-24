@@ -47,7 +47,7 @@ class AuthorizeTest(unittest.TestCase):
                                                               "nacho@gmail.com", "nachopass"])
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export . --user=lasote --channel=testing")
-        errors = self.conan.run("upload %s -r default" % str(self.ref))
+        errors = self.conan.run("upload %s -r default --only-recipe" % str(self.ref))
         # Check that return was  ok
         self.assertFalse(errors)
         # Check that upload was granted
@@ -66,7 +66,7 @@ class AuthorizeTest(unittest.TestCase):
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
             cli.run("export . --user=lasote --channel=testing")
             with environment_update(credentials):
-                cli.run("upload %s -r default" % str(self.ref))
+                cli.run("upload %s -r default --only-recipe" % str(self.ref))
             return cli
 
         # Try with remote name in credentials
@@ -100,7 +100,7 @@ class AuthorizeTest(unittest.TestCase):
                                                           "baduser3", "badpass3"])
         save(os.path.join(client.current_folder, CONANFILE), conan_content)
         client.run("export . --user=lasote --channel=testing")
-        errors = client.run("upload %s -r default" % str(self.ref), assert_error=True)
+        errors = client.run("upload %s -r default --only-recipe" % str(self.ref), assert_error=True)
         # Check that return was not ok
         self.assertTrue(errors)
         # Check that upload was not granted
@@ -120,7 +120,7 @@ class AuthorizeTest(unittest.TestCase):
 
         save(os.path.join(client.current_folder, CONANFILE), conan_content)
         client.run("export . --user=lasote --channel=testing")
-        client.run("upload %s -r default" % str(self.ref))
+        client.run("upload %s -r default --only-recipe" % str(self.ref))
 
         # Check that upload was granted
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
@@ -195,8 +195,8 @@ def test_token_expired():
 
     c = TestClient(servers={"default": server}, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile()})
-    c.run("create . pkg/0.1@user/stable")
-    c.run("upload * -r=default --all -c")
+    c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
+    c.run("upload * -r=default -c")
     user, token, _ = c.cache.localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is not None

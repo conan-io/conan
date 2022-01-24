@@ -33,7 +33,7 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
         self.assertIn("*+Running system requirements+*", client.out)
         client.run("install --reference=Test/0.1@user/channel")
         self.assertNotIn("*+Running system requirements+*", client.out)
@@ -174,12 +174,12 @@ class SystemReqsTest(unittest.TestCase):
 
         # create package to populate system_reqs folder
         self.assertFalse(os.path.exists(system_reqs_path))
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
         self.assertIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(system_reqs_path))
 
         # a new build must not remove or re-run
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
         self.assertNotIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(system_reqs_path))
 
@@ -190,7 +190,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertFalse(os.path.exists(system_reqs_path))
 
         # re-create system_reqs folder
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
         self.assertIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(system_reqs_path))
 
@@ -199,7 +199,7 @@ class SystemReqsTest(unittest.TestCase):
         pref_other = client.get_latest_package_reference(ref_other)
         system_reqs_path_other = os.path.dirname(client.get_latest_pkg_layout(pref_other).system_reqs())
 
-        client.run("create . user/channel_other")
+        client.run("create . --user=user --channel=channel_other")
         client.run("remove --system-reqs '*'")
         self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
                       client.out)
@@ -209,7 +209,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertFalse(os.path.exists(system_reqs_path_other))
 
         # Check that wildcard isn't triggered randomly
-        client.run("create . user/channel_other")
+        client.run("create . --user=user --channel=channel_other")
         client.run("remove --system-reqs Test/0.1@user/channel")
         self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
                       client.out)
@@ -219,7 +219,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(system_reqs_path_other))
 
         # Check partial wildcard
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
         client.run("remove --system-reqs Test/0.1@user/channel_*")
         self.assertNotIn("Cache system_reqs from Test/0.1@user/channel has been removed",
                          client.out)
@@ -256,7 +256,7 @@ class SystemReqsTest(unittest.TestCase):
 
         # create package to populate system_reqs folder
         self.assertFalse(os.path.exists(system_reqs_path))
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
         self.assertIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(system_reqs_path))
 
@@ -282,12 +282,12 @@ class SystemReqsTest(unittest.TestCase):
 
         # create package to populate system_reqs folder
         self.assertFalse(os.path.exists(system_reqs_path))
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
         self.assertIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(system_reqs_path))
 
         # a new build must not remove or re-run
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
         self.assertNotIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(system_reqs_path))
 
@@ -304,6 +304,6 @@ class SystemReqsTest(unittest.TestCase):
         self.assertFalse(os.path.exists(system_reqs_path))
 
         # re-create system_reqs folder
-        client.run("create . user/channel")
+        client.run("create . --user=user --channel=channel")
         self.assertIn("*+Running system requirements+*", client.out)
         self.assertTrue(os.path.exists(system_reqs_path))

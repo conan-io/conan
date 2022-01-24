@@ -23,6 +23,7 @@ def test_ios():
         include(default)
         [settings]
         os=iOS
+        os.sdk=iphoneos
         os.version=12.0
         arch=armv8
         [env]
@@ -35,7 +36,7 @@ def test_ios():
 
     client = TestClient(path_with_spaces=False)
     client.save({"m1": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . --profile:build=default --profile:host=m1 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
