@@ -486,7 +486,7 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
                                  'files. e.g., conaninfo/conanbuildinfo.txt')
-        parser.add_argument("-bf", "--build-folder", help='The root build folder')
+        parser.add_argument("-of", "--output-folder", help='The root build folder')
         parser.add_argument("-sf", "--source-folder", help='The root source folder')
         _add_manifests_arguments(parser)
 
@@ -536,7 +536,7 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
                                            source_folder=args.source_folder,
-                                           build_folder=args.build_folder,
+                                           output_folder=args.output_folder,
                                            lockfile=args.lockfile,
                                            lockfile_out=args.lockfile_out,
                                            require_overrides=args.require_override)
@@ -1896,7 +1896,7 @@ class Command(object):
                                 help='Relative or absolute path to a file containing the layout.'
                                 ' Relative paths will be resolved first relative to current dir, '
                                 'then to local cache "layouts" folder')
-        add_parser.add_argument("-bf", "--build-folder", help='The root build folder')
+        add_parser.add_argument("-of", "--output-folder", help='The root build folder')
         add_parser.add_argument("-sf", "--source-folder", help='The root source folder')
 
         remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
@@ -1910,7 +1910,7 @@ class Command(object):
 
         if args.subcommand == "add":
             self._conan.editable_add(args.path, args.reference, args.layout, args.source_folder,
-                                     args.build_folder, cwd=os.getcwd())
+                                     args.output_folder, cwd=os.getcwd())
             self._out.success("Reference '{}' in editable mode".format(args.reference))
         elif args.subcommand == "remove":
             ret = self._conan.editable_remove(args.reference)

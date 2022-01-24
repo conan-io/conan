@@ -461,12 +461,12 @@ class BinaryInstaller(object):
         base_path = package_layout.base_folder()
 
         if hasattr(conanfile, "layout"):
-            conanfile.folders.set_base_package(package_layout.build_folder or base_path)
+            conanfile.folders.set_base_package(package_layout.output_folder or base_path)
             conanfile.folders.set_base_source(package_layout.source_folder or base_path)
-            conanfile.folders.set_base_build(package_layout.build_folder or base_path)
-            conanfile.folders.set_base_generators(package_layout.build_folder or base_path)
+            conanfile.folders.set_base_build(package_layout.output_folder or base_path)
+            conanfile.folders.set_base_generators(package_layout.output_folder or base_path)
             conanfile.folders.set_base_install(base_path)
-            conanfile.folders.set_base_imports(package_layout.build_folder or base_path)
+            conanfile.folders.set_base_imports(package_layout.output_folder or base_path)
         else:
             conanfile.folders.set_base_package(base_path)
             conanfile.folders.set_base_source(None)
