@@ -3,7 +3,7 @@ def is_apple_os(os_):
     return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
 
 
-def to_apple_arch(arch):
+def to_apple_arch(arch, default=None):
     """converts conan-style architecture into Apple-style arch"""
     return {'x86': 'i386',
             'x86_64': 'x86_64',
@@ -12,12 +12,12 @@ def to_apple_arch(arch):
             'armv8_32': 'arm64_32',
             'armv8.3': 'arm64e',
             'armv7s': 'armv7s',
-            'armv7k': 'armv7k'}.get(str(arch))
+            'armv7k': 'armv7k'}.get(arch, default)
 
 
 def apple_min_version_flag(os_version, os_sdk, subsystem):
     """compiler flag name which controls deployment target"""
-    if not os_version:
+    if not os_version or not os_sdk:
         return ''
 
     # FIXME: This guess seems wrong, nothing has to be guessed, but explicit

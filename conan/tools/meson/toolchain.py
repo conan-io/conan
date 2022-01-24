@@ -158,14 +158,13 @@ class MesonToolchain(object):
         if not sdk_path and self.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
-        # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
-        os_sdk = conanfile.settings.get_safe('os.sdk')
-        if not os_sdk and os_ != "Macos":
-            raise ConanException("Please, specify a suitable value for os.sdk.")
-
+        os_sdk = conanfile.settings.get_safe("os.sdk", "macosx")
         arch = to_apple_arch(conanfile.settings.get_safe("arch"))
+        os_version = conanfile.settings.get_safe("os.version")
+        subsystem = conanfile.settings.get_safe("os.subsystem")
+
         # Calculating the main Apple flags
-        deployment_target_flag = apple_min_version_flag(conanfile)
+        deployment_target_flag = apple_min_version_flag(os_version, os_sdk, subsystem)
         sysroot_flag = "-isysroot " + sdk_path if sdk_path else ""
         arch_flag = "-arch " + arch if arch else ""
 
