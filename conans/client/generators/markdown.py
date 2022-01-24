@@ -58,7 +58,7 @@ buildsystem_cmake_tpl = textwrap.dedent("""
     together with other necessary `.cmake` files like version, flags, and directory data
     or configuration.
 
-    Add these lines to your `CMakeLists.txt`:
+    If you use it together with the `CMakeToolchain`, these `xxx-config.cmake` files will be found when you run a `find_package()` in your `CMakeLists.txt` file:
 
     ```
     find_package({{ cmake_variables.file_name }})
