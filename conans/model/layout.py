@@ -102,8 +102,11 @@ class Folders(object):
 
     @property
     def package_folder(self):
-        """For the cache, the package folder is only the base"""
-        return self._base_package
+        if self._base_package is None:
+            return None
+        if not self.package:
+            return self._base_package
+        return os.path.join(self._base_package, self.package)
 
     @property
     def generators_folder(self):

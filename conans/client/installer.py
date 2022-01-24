@@ -570,6 +570,7 @@ class BinaryInstaller(object):
                                                    % (str(pref), package_folder))
             # Call the info method
             conanfile.folders.set_base_package(package_folder)
+            conanfile.folders.package = None
             conanfile.folders.set_base_source(None)
             conanfile.folders.set_base_build(None)
             conanfile.folders.set_base_install(None)
