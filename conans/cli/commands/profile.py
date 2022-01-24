@@ -62,18 +62,21 @@ def profile_detect(conan_api, parser, subparser, *args):
     Detect default profile
     """
     subparser.add_argument("--name", help="Profile name, 'default' if not specified")
-    subparser.add_argument("--force", action='store_true', help="Overwrite if exists")
+    subparser.add_argument("-f", "--force", action='store_true', help="Overwrite if exists")
     args = parser.parse_args(*args)
 
     profile_name = args.name or "default"
     profile_pathname = conan_api.profiles.get_path(profile_name, os.getcwd(), exists=False)
     if not args.force and os.path.exists(profile_pathname):
-        raise ConanException(f"Profile '{profile_pathname} already exists")
+        raise ConanException(f"Profile '{profile_pathname}' already exists")
 
     detected_profile = conan_api.profiles.detect()
     detected_profile_cli_output(detected_profile)
     contents = detected_profile.dumps()
-    ConanOutput().info(f"Saving detected profile to {profile_pathname}")
+    ConanOutput().warning("This profile is a guess of your environment, please check it.")
+    ConanOutput().warning("The output of this command is not guaranteed to be stable and can "
+                          "change in future Conan versions")
+    ConanOutput().success(f"Saving detected profile to {profile_pathname}")
     save(profile_pathname, contents)
 
 
