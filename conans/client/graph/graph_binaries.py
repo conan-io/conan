@@ -47,26 +47,12 @@ class GraphBinariesAnalyzer(object):
                 package_layout.package_remove()
                 return
 
-    # if we have a remote.selected then do not search in other remotes
-    # and error if it's not in the selected
-    # otherwise if we did not pin a remote:
+    # check through all the selected remotes:
     # - if not --update: get the first package found
     # - if --update: get the latest remote searching in all of them
     def _get_package_from_remotes(self, node, pref):
-        remote = self._app.selected_remote
-        if remote:
-            try:
-                info = node.conanfile.info
-                pref_rev = self._remote_manager.get_latest_package_reference(pref, remote, info=info)
-                pref.revision = pref_rev.revision
-                pref.timestamp = pref_rev.timestamp
-                return remote
-            except Exception:
-                node.conanfile.output.error("Error downloading binary package: '{}'".format(pref))
-                raise
-
         results = []
-        for r in self._app.enabled_remotes:
+        for r in self._app.selected_remotes:
             try:
                 latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
                 results.append({'pref': latest_pref, 'remote': r})

@@ -93,11 +93,11 @@ class ConanProxy(object):
             status = RECIPE_INCACHE
             return conanfile_path, status, None, ref
 
-    def _find_newest_recipe_in_remotes(self, reference):
+    def _find_newest_recipe_in_remotes(self, reference, remotes):
         scoped_output = ScopedOutput(str(reference), ConanOutput())
 
         results = []
-        for remote in self._conan_app.enabled_remotes:
+        for remote in remotes:
             scoped_output.info(f"Checking remote: {remote.name}")
             if not reference.revision:
                 try:
@@ -135,24 +135,12 @@ class ConanProxy(object):
             scoped_output.info("Downloaded recipe revision %s" % reference.revision)
             return reference
 
-        if self._conan_app.selected_remote:
-            remote = self._conan_app.selected_remote
-            scoped_output.info("Retrieving from server '%s' " % remote.name)
-            try:
-                new_ref = _retrieve_from_remote(remote, ref)
-                return remote, new_ref
-            except NotFoundException:
-                msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
-                raise NotFoundException(msg)
-            except RequestException as exc:
-                raise exc
-
         scoped_output.info("Not found in local cache, looking in remotes...")
-        remotes = self._conan_app.enabled_remotes
+        remotes = self._conan_app.selected_remotes
         if not remotes:
             raise ConanException("No remote defined")
 
-        remote, latest_rref = self._find_newest_recipe_in_remotes(ref)
+        remote, latest_rref = self._find_newest_recipe_in_remotes(ref, remotes)
 
         if not latest_rref:
             msg = "Unable to find '%s' in remotes" % repr(ref)

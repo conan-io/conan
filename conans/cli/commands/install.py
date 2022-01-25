@@ -54,7 +54,7 @@ def graph_compute(args, conan_api, strict_lockfile=True):
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
 
     # Basic collaborators, remotes, lockfile, profiles
-    remote = conan_api.remotes.get(args.remote) if args.remote else None
+    remotes = conan_api.remotes.get(args.remote)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=strict_lockfile)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
     root_ref = RecipeReference(name=args.name, version=args.version,
@@ -74,7 +74,7 @@ def graph_compute(args, conan_api, strict_lockfile=True):
                                                create_reference=None,
                                                is_build_require=args.build_require,
                                                require_overrides=args.require_override,
-                                               remote=remote,
+                                               remotes=remotes,
                                                update=args.update)
 
     out.highlight("-------- Computing dependency graph ----------")
@@ -82,12 +82,12 @@ def graph_compute(args, conan_api, strict_lockfile=True):
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
-                                            remote=remote,
+                                            remotes=remotes,
                                             update=args.update,
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
     out.highlight("\n-------- Computing necessary packages ----------")
-    conan_api.graph.analyze_binaries(deps_graph, args.build, remote=remote, update=args.update)
+    conan_api.graph.analyze_binaries(deps_graph, remotes, args.build, update=args.update)
     print_graph_packages(deps_graph)
 
     return deps_graph, lockfile
@@ -153,7 +153,8 @@ def install(conan_api, parser, *args):
     path = _get_conanfile_path(args.path, cwd, py=None) if args.path else None
     conanfile_folder = os.path.dirname(path) if path else None
     reference = RecipeReference.loads(args.reference) if args.reference else None
-    remote = conan_api.remotes.get(args.remote) if args.remote else None
+
+    remote = conan_api.remotes.get(args.remote)
 
     deps_graph, lockfile = graph_compute(args, conan_api)
 

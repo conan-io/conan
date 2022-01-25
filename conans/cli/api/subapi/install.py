@@ -13,18 +13,15 @@ class InstallAPI:
         self.conan_api = conan_api
 
     @api_method
-    def install_binaries(self, deps_graph, build_modes=None, remote=None, update=False):
+    def install_binaries(self, deps_graph, remotes, build_modes=None, update=False):
         """ Install binaries for dependency graph
         @param deps_graph: Dependency graph to intall packages for
         @param build_modes:
-        @param remote:
+        @param remotes:
         @param update:
         """
         app = ConanApp(self.conan_api.cache_folder)
-        # TODO: check if this makes sense... now we always pass a list of remotes and passing None
-        #  would mean no remote, not all remotes
-        if remote:
-            app.load_remotes(remote, update=update)
+        app.load_remotes(remotes, update=update)
         installer = BinaryInstaller(app)
         # TODO: Extract this from the GraphManager, reuse same object, check args earlier
         build_modes = BuildMode(build_modes)

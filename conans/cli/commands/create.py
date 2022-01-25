@@ -38,7 +38,7 @@ def create(conan_api, parser, *args):
     path = _get_conanfile_path(args.path, cwd, py=True)
     lockfile_path = make_abs_path(args.lockfile, cwd)
     lockfile = get_lockfile(lockfile=lockfile_path, strict=False)  # Create is NOT strict!
-    remotes = conan_api.remotes.get(args.remote) if args.remote else None
+    remotes = conan_api.remotes.get(args.remote)
     profile_host, profile_build = get_profiles_from_args(conan_api, args)
 
     out = ConanOutput()
@@ -79,7 +79,7 @@ def create(conan_api, parser, *args):
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
-                                            remote=remotes,
+                                            remotes=remotes,
                                             update=args.update,
                                             check_update=check_updates)
     print_graph_basic(deps_graph)
@@ -88,12 +88,12 @@ def create(conan_api, parser, *args):
         build_modes = [ref.name]
     else:
         build_modes = args.build
-    conan_api.graph.analyze_binaries(deps_graph, build_modes, remote=remotes, update=args.update)
+    conan_api.graph.analyze_binaries(deps_graph, remotes, build_modes, update=args.update)
     print_graph_packages(deps_graph)
 
     out.highlight("\n-------- Installing packages ----------")
     conan_api.install.install_binaries(deps_graph=deps_graph, build_modes=args.build,
-                                       remote=remotes, update=args.update)
+                                       remotes=remotes, update=args.update)
 
     if args.lockfile_out:
         lockfile_out = make_abs_path(args.lockfile_out, cwd)

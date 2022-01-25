@@ -63,18 +63,18 @@ class ConanApp(object):
     def selected_remotes(self, remotes):
         self._selected_remotes = remotes
 
-    # TODO: if we are using several remotes this should return the remotes ordered
-    #  by precedence in the registry
-    def load_remotes(self, remotes=None, update=False, check_updates=False):
+    def load_remotes(self, remotes, update=False, check_updates=False):
+        assert remotes is not None
         self.all_remotes = self.cache.remotes_registry.list()
         self.enabled_remotes = [r for r in self.all_remotes if not r.disabled]
         self.update = update
         self.check_updates = check_updates
         self.selected_remotes = []
-        if remotes:
-            for r in remotes:
-                if r.name is not None:  # FIXME: Remove this when we pass always remote objects
-                    tmp = self.cache.remotes_registry.read(r.name)
-                    if tmp.disabled:
-                        raise ConanException("Remote '{}' is disabled".format(tmp.name))
-                    self.selected_remotes.append(tmp)
+        for r in remotes:
+            if r.name is not None:  # FIXME: Remove this when we pass always remote objects
+                tmp = self.cache.remotes_registry.read(r.name)
+                if tmp.disabled:
+                    raise ConanException("Remote '{}' is disabled".format(tmp.name))
+                self.selected_remotes.append(tmp)
+        # sort the list based on the index preference in the remotes list
+        self.selected_remotes.sort(key=lambda remote: self.cache.remotes_registry.get_remote_index(remote))
