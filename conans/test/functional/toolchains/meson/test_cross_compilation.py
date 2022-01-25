@@ -7,7 +7,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.client.tools.apple import XCRun, to_apple_arch
+from conan.tools.apple.apple import XCRun, to_apple_arch
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
@@ -54,21 +54,21 @@ option('STRING_DEFINITION', type : 'string', description : 'a string option')
 @pytest.mark.tool_meson
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
-@pytest.mark.parametrize("arch, os_, os_version, sdk", [
+@pytest.mark.parametrize("arch, os_, os_version, os_sdk", [
     ('armv8', 'iOS', '10.0', 'iphoneos'),
     ('armv7', 'iOS', '10.0', 'iphoneos'),
     ('x86', 'iOS', '10.0', 'iphonesimulator'),
     ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
     ('armv8', 'Macos', None, None)  # MacOS M1
 ])
-def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, sdk):
+def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     profile = textwrap.dedent("""
     include(default)
 
     [settings]
     os = {os}
     os.version = {os_version}
-    os.sdk = {os_sdk}
+    {os_sdk}
     arch = {arch}
     compiler = apple-clang
     compiler.version = 12.0
@@ -78,7 +78,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, sdk):
     tools.apple:sdk_path={sdk_path}
     """)
 
-    xcrun = XCRun(None, sdk)
+    xcrun = XCRun(None, os_sdk)
     sdk_path = xcrun.sdk_path
 
     hello_h = gen_function_h(name="hello")
@@ -87,7 +87,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, sdk):
     profile = profile.format(
         os=os_,
         os_version=os_version,
-        os_sdk=sdk,
+        os_sdk="os.sdk = " + os_sdk if os_sdk else "",
         arch=arch,
         sdk_path=sdk_path)
 
