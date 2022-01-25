@@ -12,7 +12,6 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.errors import ConanException
-from conans.tools import set_global_instances
 from conans.util.log import configure_logger
 
 
@@ -39,9 +38,6 @@ class ConanApp(object):
         auth_manager = ConanApiAuthManager(rest_client_factory, self.cache)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, self.hook_manager)
-
-        # Adjust global tool variables
-        set_global_instances(self.requester, self.config)
 
         self.proxy = ConanProxy(self)
         self.range_resolver = RangeResolver(self)
