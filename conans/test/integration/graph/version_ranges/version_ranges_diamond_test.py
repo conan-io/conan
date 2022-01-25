@@ -26,7 +26,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         client.run("create . --name=boost --version=1.68.0 --user=lasote --channel=stable")
         client.run("create . --name=boost --version=1.69.0 --user=lasote --channel=stable")
         client.run("create . --name=boost --version=1.70.0 --user=lasote --channel=stable")
-        client.run("upload * -r=default --all --confirm")
+        client.run("upload * -r=default --confirm")
         client.run("remove * -f")
         conanfile = textwrap.dedent("""
             [requires]
@@ -56,7 +56,7 @@ class VersionRangesUpdatingTest(unittest.TestCase):
         client.save({"pkg.py": GenConanfile()})
         client.run("create pkg.py --name=pkg --veersion=1.1 --user=lasote --channel=testing")
         client.run("create pkg.py --name=pkg --veersion=1.2 --user=lasote --channel=testing")
-        client.run("upload Pkg* -r=default --all --confirm")
+        client.run("upload pkg* -r=default --confirm")
         client.run("remove pkg/1.2@lasote/testing -f")
 
         client.save({"consumer.py": GenConanfile().with_requirement("pkg/[~1]@lasote/testing")})
@@ -97,7 +97,7 @@ class HelloReuseConan(ConanFile):
         client.run("create . --name=pkg --version=1.1 --user=lasote --channel=testing")
         client.save({"conanfile.py": conanfile.format("1.2")})
         client.run("create . --name=pkg --version=1.2 --user=lasote --channel=testing")
-        client.run("upload Pkg* -r=default --all --confirm")
+        client.run("upload pkg* -r=default --confirm")
         consumer = """from conans import ConanFile
 class HelloReuseConan(ConanFile):
     requires = "pkg/[~1]@lasote/testing"
@@ -120,7 +120,7 @@ class HelloReuseConan(ConanFile):
                                        "pkg/1.2@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
                                        1)
 
-        client2.run("upload Pkg* -r=default --all --confirm")
+        client2.run("upload pkg* -r=default --confirm")
 
         client.run("install .")
         # Resolves to local package
@@ -159,7 +159,8 @@ class HelloReuseConan(ConanFile):
         if export:
             self.client.run("export . --user=lasote --channel=stable")
             if upload:
-                self.client.run("upload %s/%s@lasote/stable -r=%s" % (name, version, remote))
+                self.client.run("upload %s/%s@lasote/stable -r=%s --only-recipe" % (name, version,
+                                                                                    remote))
 
     def test_resolve_from_remotes(self):
         self._export("hello0", "0.1")
@@ -201,7 +202,8 @@ class HelloReuseConan(ConanFile):
         if export:
             self.client.run("export . --user=lasote --channel=stable")
             if upload:
-                self.client.run("upload %s/%s@lasote/stable -r default" % (name, version))
+                self.client.run("upload %s/%s@lasote/stable -r default --only-recipe" % (name,
+                                                                                         version))
 
     def test_local_then_remote(self):
         self._export("hello0", "0.1")

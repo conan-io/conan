@@ -186,7 +186,7 @@ def test_toolset(conanfile_msvc):
 
 @pytest.fixture
 def conanfile_linux():
-    c = ConanFile(Mock(), None)
+    c = ConanFile()
     c.settings = Settings({"os": ["Linux"],
                            "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
                            "build_type": ["Release"],
@@ -214,7 +214,7 @@ def test_no_fpic_when_not_an_option(conanfile_linux):
 
 @pytest.fixture
 def conanfile_linux_shared():
-    c = ConanFile(Mock(), None)
+    c = ConanFile()
     c.options = Options({"fPIC": [True, False],
                          "shared": [True, False]},
                         {"fPIC": False, "shared": True, })
@@ -255,7 +255,7 @@ def test_fpic_when_not_shared(conanfile_linux_shared):
 
 @pytest.fixture
 def conanfile_windows_fpic():
-    c = ConanFile(Mock(), None)
+    c = ConanFile()
     c.settings = "os", "compiler", "build_type", "arch"
     c.options = Options({"fPIC": [True, False]},
                         {"fPIC": True})
@@ -285,7 +285,7 @@ def test_no_fpic_on_windows(conanfile_windows_fpic):
 
 @pytest.fixture
 def conanfile_linux_fpic():
-    c = ConanFile(Mock(), None)
+    c = ConanFile()
     c.settings = "os", "compiler", "build_type", "arch"
     c.options = Options({"fPIC": [True, False]},
                         {"fPIC": False,})
@@ -323,7 +323,7 @@ def test_fpic_enabled(conanfile_linux_fpic):
 
 
 def test_libcxx_abi_flag():
-    c = ConanFile(Mock(), None)
+    c = ConanFile()
     c.settings = "os", "compiler", "build_type", "arch"
     c.settings = Settings.loads(get_default_settings_yml())
     c.settings.build_type = "Release"
@@ -371,7 +371,7 @@ def test_apple_cmake_osx_sysroot(os, os_sdk, arch, expected_sdk):
     Testing if CMAKE_OSX_SYSROOT is correctly set.
     Issue related: https://github.com/conan-io/conan/issues/10275
     """
-    c = ConanFile(Mock(), None)
+    c = ConanFile()
     c.settings = "os", "compiler", "build_type", "arch"
     c.settings = Settings.loads(get_default_settings_yml())
     c.settings.os = os
@@ -404,7 +404,7 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, os_sdk, arch, expected_sdk):
     Testing if CMAKE_OSX_SYSROOT is correctly set.
     Issue related: https://github.com/conan-io/conan/issues/10275
     """
-    c = ConanFile(Mock(), None)
+    c = ConanFile()
     c.settings = "os", "compiler", "build_type", "arch"
     c.settings = Settings.loads(get_default_settings_yml())
     c.settings.os = os

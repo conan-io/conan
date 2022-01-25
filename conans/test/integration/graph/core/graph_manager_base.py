@@ -56,7 +56,7 @@ class GraphManagerTest(unittest.TestCase):
         app.range_resolver = RangeResolver(app)
         app.proxy = ConanProxy(app)
         pyreq_loader = PyRequireLoader(app.proxy, app.range_resolver)
-        app.loader = ConanFileLoader(None, pyreq_loader=pyreq_loader)
+        app.loader = ConanFileLoader(pyreq_loader=pyreq_loader)
         app.binaries_analyzer = GraphBinariesAnalyzer(app)
         app.graph_manager = GraphManager(app)
         app.hook_manager = Mock()

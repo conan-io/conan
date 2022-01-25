@@ -10,7 +10,7 @@ from conans.test.functional.toolchains.meson._base import TestMesonBase
 @pytest.mark.tool_pkg_config
 class MesonPkgConfigTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, tools
+    from conan import ConanFile
     from conan.tools.meson import Meson, MesonToolchain
 
 
@@ -18,6 +18,9 @@ class MesonPkgConfigTest(TestMesonBase):
         settings = "os", "arch", "compiler", "build_type"
         generators = "PkgConfigDeps"
         requires = "hello/0.1"
+
+        def layout(self):
+            self.folders.build = "build"
 
         def generate(self):
             tc = MesonToolchain(self)
@@ -40,7 +43,6 @@ class MesonPkgConfigTest(TestMesonBase):
         self.t.run("create . -tf=None")
 
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
-
         # Prepare the actual consumer package
         self.t.save({"conanfile.py": self._conanfile_py,
                      "meson.build": self._meson_build,
@@ -48,8 +50,6 @@ class MesonPkgConfigTest(TestMesonBase):
                     clean_first=True)
 
         # Build in the cache
-        self.t.run("install .")
-
         self.t.run("build .")
         self.t.run_command(os.path.join("build", "demo"))
 

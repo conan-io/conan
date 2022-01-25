@@ -12,7 +12,7 @@ from conans.model.settings import Settings
 
 
 def test_cpp_info_name_cmakedeps():
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile()
     conanfile._conan_node = Mock()
     conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"

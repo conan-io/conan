@@ -9,7 +9,6 @@ from conans.cli.conan_app import ConanApp
 from conans.cli.output import ConanOutput
 from conans.client.cmd.build import cmd_build
 from conans.client.cmd.download import download
-from conans.client.cmd.uploader import CmdUpload
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.importer import run_imports, undo_imports
 from conans.client.manager import deps_install
@@ -273,20 +272,6 @@ class ConanAPIV1(object):
         cwd = os.getcwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
         undo_imports(manifest_path)
-
-    @api_method
-    def upload(self, pattern, remote, all_packages=False, confirm=False,
-               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None,
-               parallel_upload=False):
-        """ Uploads a package recipe and the generated binary packages to a specified remote
-        """
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes(remote)
-        uploader = CmdUpload(app)
-        uploader.upload(pattern, all_packages, confirm,
-                        retry, retry_wait, integrity_check, policy, query=query,
-                        parallel_upload=parallel_upload)
 
     @api_method
     def remove_system_reqs(self, reference):

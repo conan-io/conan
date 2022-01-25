@@ -42,7 +42,7 @@ def test_package_python_files():
     assert "myfile.pyo" in manifest
     assert ".DS_Store" not in manifest
 
-    client.run("upload * --all -r=default --confirm")
+    client.run("upload * -r=default --confirm")
     client.run("remove * -f")
     client.run("download pkg/0.1@")
 

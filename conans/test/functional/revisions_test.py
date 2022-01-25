@@ -991,14 +991,14 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.upload_all(self.ref)
 
         # Delete the package revisions (all of them have the same ref#rev and id)
-        command = "remove {}:{}#{{}} -r default -f".format(repr(pref3.ref), pref3.package_id)
+        command = "remove {}:{}#{{}} -r default -f".format(pref3.ref.repr_notime(), pref3.package_id)
         self.c_v2.run(command.format(pref3.revision))
         self.c_v2.run(command.format(pref2.revision))
         self.c_v2.run(command.format(pref1.revision))
 
         with environment_update({"MY_VAR": "4"}):
             pref4 = self.c_v2.create(self.ref, conanfile=conanfile)
-        self.c_v2.upload_all(self.ref)
+        self.c_v2.run("upload {} -r default -c".format(pref4.repr_notime()))
 
         pref = copy.copy(pref1)
         pref.revision = None
@@ -1014,7 +1014,7 @@ def test_touching_other_server():
     c = TestClient(servers=servers, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
     c.run("create . --name=pkg --version=0.1 --user=conan --channel=channel -s os=Windows")
-    c.run("upload * --all -c -r=remote1")
+    c.run("upload * -c -r=remote1")
     c.run("remove * -f")
 
     # This is OK, binary found
