@@ -605,3 +605,21 @@ class WinTest(unittest.TestCase):
             else:
                 self.assertNotIn("hello.dll", client.out)
             self.assertIn("KERNEL32.dll", client.out)
+
+
+def test_msvc_runtime_flag_common_usage():
+    """The msvc_runtime_flag must not break when expecting a string
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+       from conans import ConanFile
+       from conan.tools.microsoft import msvc_runtime_flag
+       class App(ConanFile):
+           settings = "os", "arch", "compiler", "build_type"
+
+           def validate(self):
+               if "MT" in msvc_runtime_flag(self):
+                   pass
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run('info .')

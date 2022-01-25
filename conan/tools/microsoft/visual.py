@@ -80,6 +80,7 @@ def msvc_runtime_flag(conanfile):
         if runtime_type == "Debug":
             runtime = "{}d".format(runtime)
         return runtime
+    return ""
 
 
 def vcvars_command(version, architecture=None, platform_type=None, winsdk_version=None,
