@@ -174,10 +174,6 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_build(node, build_mode):
             return
 
-        if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_INVALID:
-            node.binary = BINARY_INVALID
-            return
-
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE  # TODO: PREV?
             return
@@ -228,6 +224,12 @@ class GraphBinariesAnalyzer(object):
                 node.binary_remote = None
                 node.prev = cache_latest_prev.revision
                 assert node.prev, "PREV for %s is None" % str(pref)
+
+        # The INVALID should only prevail if a compatible package, due to removal of
+        # settings in package_id() was not found
+        if node.binary in (BINARY_MISSING, BINARY_BUILD):
+            if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_INVALID:
+                node.binary = BINARY_INVALID
 
     def _evaluate_package_id(self, node):
         compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()
