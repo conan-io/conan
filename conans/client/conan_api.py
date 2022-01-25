@@ -275,14 +275,14 @@ class ConanAPIV1(object):
         undo_imports(manifest_path)
 
     @api_method
-    def upload(self, pattern, remote_name=None, all_packages=False, confirm=False,
+    def upload(self, pattern, remote, all_packages=False, confirm=False,
                retry=None, retry_wait=None, integrity_check=False, policy=None, query=None,
                parallel_upload=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         app = ConanApp(self.cache_folder)
         # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
+        app.load_remotes(remote)
         uploader = CmdUpload(app)
         uploader.upload(pattern, all_packages, confirm,
                         retry, retry_wait, integrity_check, policy, query=query,

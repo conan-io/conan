@@ -21,8 +21,10 @@ class InstallAPI:
         @param update:
         """
         app = ConanApp(self.conan_api.cache_folder)
-        remote = [remote] if remote is not None else None
-        app.load_remotes(remote, update=update)
+        # TODO: check if this makes sense... now we always pass a list of remotes and passing None
+        #  would mean no remote, not all remotes
+        if remote:
+            app.load_remotes(remote, update=update)
         installer = BinaryInstaller(app)
         # TODO: Extract this from the GraphManager, reuse same object, check args earlier
         build_modes = BuildMode(build_modes)

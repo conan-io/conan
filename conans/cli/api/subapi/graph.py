@@ -30,8 +30,10 @@ class GraphAPI:
 
         app = ConanApp(self.conan_api.cache_folder)
         # necessary for correct resolution and update of remote python_requires
-        remote = [remote] if remote is not None else None
-        app.load_remotes(remote, update=update)
+        # TODO: check if this makes sense... now we always pass a list of remotes and passing None
+        #  would mean no remote, not all remotes
+        if remote:
+            app.load_remotes(remote, update=update)
 
         loader = app.loader
         profile_host.dev_reference = tested_reference  # Make sure the created one has develop=True
@@ -80,8 +82,10 @@ class GraphAPI:
 
         app = ConanApp(self.conan_api.cache_folder)
         # necessary for correct resolution and update of remote python_requires
-        remote = [remote] if remote is not None else None
-        app.load_remotes(remote, update=update)
+        # TODO: check if this makes sense... now we always pass a list of remotes and passing None
+        #  would mean no remote, not all remotes
+        if remote:
+            app.load_remotes(remote, update=update)
 
         graph_manager, cache = app.graph_manager, app.cache
         reference = reference or path
@@ -112,8 +116,10 @@ class GraphAPI:
         """
         app = ConanApp(self.conan_api.cache_folder)
 
-        remote = [remote] if remote is not None else None
-        app.load_remotes(remote, update=update, check_updates=check_update)
+        # TODO: check if this makes sense... now we always pass a list of remotes and passing None
+        #  would mean no remote, not all remotes
+        if remote:
+            app.load_remotes(remote, update=update, check_updates=check_update)
 
         assert profile_host is not None
         assert profile_build is not None
@@ -138,7 +144,9 @@ class GraphAPI:
                        already existing recipes in the Conan cache
         """
         conan_app = ConanApp(self.conan_api.cache_folder)
-        remote = [remote] if remote is not None else None
-        conan_app.load_remotes(remote, update=update)
+        # TODO: check if this makes sense... now we always pass a list of remotes and passing None
+        #  would mean no remote, not all remotes
+        if remote:
+            conan_app.load_remotes(remote, update=update)
         graph.report_graph_error()
         conan_app.binaries_analyzer.evaluate_graph(graph, build_mode)

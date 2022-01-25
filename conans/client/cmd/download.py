@@ -13,6 +13,7 @@ def download(app, ref, package_ids, recipe):
     hook_manager = app.hook_manager
     assert(isinstance(ref, RecipeReference))
     scoped_output = ScopedOutput(str(ref), ConanOutput())
+    # TODO: for download we should only accept one remote ?
     remote = app.selected_remote
     if not remote:
         # FIXME: Probably this shouldn't be done, the "default" remote concept when no remote is

@@ -382,7 +382,8 @@ class CmdUpload(object):
                policy=None, query=None, parallel_upload=False):
         t1 = time.time()
 
-        remote = self._app.selected_remote
+        assert len(self._app.selected_remotes) == 1, "Conan can upload to just one remote at a time"
+        remote = self._app.selected_remotes[0]
         collecter = _UploadCollecter(self._cache)
         upload_data = collecter.collect(reference_or_pattern, confirm, all_packages)
 

@@ -57,23 +57,23 @@ class ConanApp(object):
         self.graph_manager = GraphManager(self)
 
         # Remotes
-        self.selected_remotes = []
+        self._selected_remotes = []
         self.enabled_remotes = []
         self.all_remotes = []
         self.update = False
         self.check_updates = False
 
+    # TODO: may remove later
     @property
-    def selected_remote(self):
-        # FIXME: To ease the migration to N selected remotes
-        if len(self.selected_remotes) == 0:
-            return None
-        if len(self.selected_remotes) == 1:
-            return self.selected_remotes[0]
-        else:
-            assert False, "It makes no sense to obtain the selected remote when there are several " \
-                          "selected remotes"
+    def selected_remotes(self):
+        return self._selected_remotes
 
+    @selected_remotes.setter
+    def selected_remotes(self, remotes):
+        self._selected_remotes = remotes
+
+    # TODO: if we are using several remotes this should return the remotes ordered
+    #  by precedence in the registry
     def load_remotes(self, remotes=None, update=False, check_updates=False):
         self.all_remotes = self.cache.remotes_registry.list()
         self.enabled_remotes = [r for r in self.all_remotes if not r.disabled]

@@ -31,9 +31,12 @@ class RemotesAPI:
         return remotes
 
     @api_method
-    def get(self, remote_name):
+    def get(self, remote_names):
         app = ConanApp(self.conan_api.cache_folder)
-        return app.cache.remotes_registry.read(remote_name)
+        if remote_names:
+            return [app.cache.remotes_registry.read(remote_name) for remote_name in remote_names]
+        else:
+            return app.cache.remotes_registry.list()
 
     @api_method
     def add(self, remote: Remote):

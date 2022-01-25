@@ -1,13 +1,9 @@
-import copy
 from collections import OrderedDict
 
 import pytest
-from mock import patch
 
-from conans.model.recipe_ref import RecipeReference
-from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class TestSelectedRemotesInstall:
@@ -17,14 +13,20 @@ class TestSelectedRemotesInstall:
         for index in range(3):
             servers[f"server{index}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                                    users={"user": "password"})
-        self.client = TestClient(servers=servers, inputs=3*["user", "password"])
+        self.client = TestClient(servers=servers, inputs=3 * ["user", "password"])
 
-    def test_revision_fixed_version(self):
+    # remotes have to be reordered like the order in the registry
+    def test_selected_remotes_install(self):
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0").with_build_msg("OLDREV")})
-        self.client.run("create .")
+        self.client.run("create . -r server0 -r server1")
         self.client.run("upload liba -r server0 -c")
-        self.client.save({"conanfile.py": GenConanfile("liba", "1.0").with_build_msg("NEWER_REV")})
-        self.client.run("create .")
-        self.client.run("upload liba -r server1 -c")
-        self.client.run("install --reference=liba/1.0 -r server0 -r server1")
-        print(self.client.out)
+        # self.client.save({"conanfile.py": GenConanfile("liba", "1.0").with_build_msg("NEWER_REV")})
+        # self.client.run("create .")
+        # self.client.run("upload liba -r server1 -c")
+        # self.client.run("install --reference=liba/1.0 -r server0 -r server1")
+        # print(self.client.out)
+
+    # check multiple remotes is not allowed for several commands like upload, ...
+    def test_upload_raise_multiple_remotes(self):
+        self.client.run("upload liba -r server0 -r server1 -c", assert_error=True)
+        assert "conan upload: error: -r can only be specified once" in self.client.out
