@@ -34,7 +34,6 @@ class ConanApiAuthManager(object):
         """Handles AuthenticationException and request user to input a user and a password"""
         user, token, refresh_token = self._localdb.get_login(remote.url)
         rest_client = self._get_rest_client(remote)
-
         if method_name == "authenticate":
             return self._authenticate(remote, *args, **kwargs)
 

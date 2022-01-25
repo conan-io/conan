@@ -82,6 +82,7 @@ class ConanOutput(object):
 
         if newline:
             data = "%s\n" % data
+
         self.stream.write(data)
         self.stream.flush()
 

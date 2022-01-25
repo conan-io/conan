@@ -124,10 +124,17 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_sources_download(ref, duration, remote.name, zipped_files)
 
-        tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
+        tgz_file = zipped_files.pop(EXPORT_SOURCES_TGZ_NAME, None)
         check_compressed_files(EXPORT_SOURCES_TGZ_NAME, zipped_files)
-        uncompress_file(tgz_file, export_sources_folder)
-        touch_folder(export_sources_folder)
+        if tgz_file:
+            uncompress_file(tgz_file, export_sources_folder)
+            touch_folder(export_sources_folder)
+
+        # In case there are files not compressed (git remote conan)
+        mkdir(export_sources_folder)
+        for file_name, file_path in zipped_files.items():  # copy other exports sources
+            mkdir(os.path.join(export_sources_folder, os.path.dirname(file_name)))
+            shutil.move(file_path, os.path.join(export_sources_folder, file_name))
 
     def get_package(self, conanfile, pref, remote):
         ref_layout = self._cache.ref_layout(pref.ref)
