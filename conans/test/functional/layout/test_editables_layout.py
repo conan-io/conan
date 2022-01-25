@@ -86,7 +86,7 @@ def test_cpp_info_editable():
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**includedirs:['package_include']**" in out
     assert "**libdirs:['lib']**" in out
-    assert "**builddirs:['']**" in out
+    assert "**builddirs:[]**" in out
     assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in out
     assert "**libs:['lib_when_package', 'lib_when_package2']**" in out
     assert "**objects:['myobject.o']**" in out
