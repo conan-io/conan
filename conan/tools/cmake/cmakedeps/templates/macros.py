@@ -28,7 +28,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
         return textwrap.dedent("""
         function(conan_message MESSAGE_TYPE MESSAGE_CONTENT)
             if(NOT CONAN_CMAKE_SILENT_OUTPUT)
-                message(${MESSAGE_TYPE} ${MESSAGE_CONTENT})
+                message(${MESSAGE_TYPE} "${MESSAGE_CONTENT}")
             endif()
         endfunction()
 
@@ -39,9 +39,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAMES ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS} CMAKE_FIND_ROOT_PATH_BOTH)
                    if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                        list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
-                       message("Framework found! ${FRAMEWORKS_FOUND}")
+                       conan_message(DEBUG "Framework found! ${FRAMEWORKS_FOUND}")
                    else()
-                       message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
+                       conan_message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
                    endif()
                endforeach()
            endif()
