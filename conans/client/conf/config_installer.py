@@ -3,12 +3,9 @@ import os
 import shutil
 
 from datetime import datetime
-from urllib.parse import urlsplit
-
 from dateutil.tz import gettz
-
 from contextlib import contextmanager
-from six.moves.urllib.parse import urlparse
+from six.moves.urllib.parse import urlparse, urlsplit
 
 from conans import load
 from conans.client import tools
