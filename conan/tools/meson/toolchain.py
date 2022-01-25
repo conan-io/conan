@@ -3,7 +3,8 @@ import textwrap
 from jinja2 import Template
 
 from conan.tools.build.cross_building import cross_building
-from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
+from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
+    get_apple_sdk_name
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
@@ -158,7 +159,7 @@ class MesonToolchain(object):
         if not sdk_path and self.cross_build:
             raise ConanException("You must provide a valid SDK path for cross-compilation.")
 
-        os_sdk = conanfile.settings.get_safe("os.sdk", "macosx")
+        os_sdk = get_apple_sdk_name(conanfile)
         arch = to_apple_arch(conanfile.settings.get_safe("arch"))
         os_version = conanfile.settings.get_safe("os.version")
         subsystem = conanfile.settings.get_safe("os.subsystem")
