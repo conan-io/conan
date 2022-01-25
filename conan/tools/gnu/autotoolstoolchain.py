@@ -47,7 +47,7 @@ class AutotoolsToolchain:
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
 
-        os_sdk = get_apple_sdk_name(conanfile.settings)
+        os_sdk = get_apple_sdk_name(conanfile)
         os_version = conanfile.settings.get_safe("os.version")
         subsystem = conanfile.settings.get_safe("os.subsystem")
 
