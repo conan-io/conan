@@ -330,7 +330,7 @@ class AppleSystemBlock(Block):
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device can be generated
         # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        host_architecture = to_apple_arch(arch)
+        host_architecture = to_apple_arch(arch, default=arch)
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = get_apple_sdk_name(self._conanfile)
 
