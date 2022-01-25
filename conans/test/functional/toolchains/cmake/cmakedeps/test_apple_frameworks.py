@@ -3,9 +3,9 @@ import textwrap
 
 import pytest
 
-
-from conan.tools.apple.apple import XCRun, to_apple_arch
+from conan.tools.apple.apple import to_apple_arch
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 

@@ -1,12 +1,13 @@
 import os
-import textwrap
 import platform
+import textwrap
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch, XCRun
+from conan.tools.apple.apple import to_apple_arch
 from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
+from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 makefile = gen_makefile(apps=["app"], libs=["hello"])

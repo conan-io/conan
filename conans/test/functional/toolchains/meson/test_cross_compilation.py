@@ -7,8 +7,9 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conan.tools.apple.apple import XCRun, to_apple_arch
+from conan.tools.apple.apple import to_apple_arch
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 _conanfile_py = textwrap.dedent("""

@@ -7,8 +7,9 @@ import unittest
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch, XCRun, apple_min_version_flag, \
+from conan.tools.apple.apple import to_apple_arch, apple_min_version_flag, \
     is_apple_os
+from conans.test.utils.apple import XCRun
 
 
 class FakeSettings(object):
