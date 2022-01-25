@@ -18,15 +18,15 @@ def to_apple_arch(arch, default=None):
             'armv7k': 'armv7k'}.get(arch, default)
 
 
-def get_apple_sdk_name(conanfile):
+def get_apple_sdk_name(settings):
     """
     Returns the 'os.sdk' (SDK name) field value. Every user should specify it because
     there could be several ones depending on the OS architecture.
 
     Note: In case of MacOS it'll be the same for all the architectures.
     """
-    os_ = conanfile.settings.get_safe('os')
-    os_sdk = conanfile.settings.get_safe('os.sdk')
+    os_ = settings.get_safe('os')
+    os_sdk = settings.get_safe('os.sdk')
     if os_sdk:
         return os_sdk
     elif os_ == "Macos":  # it has only a single value for all the architectures
@@ -54,13 +54,6 @@ def apple_min_version_flag(os_version, os_sdk, subsystem):
     if not flag:
         return ''
     return "%s=%s" % (flag, os_version)
-
-
-def apple_sdk_path(conanfile):
-    sdk_path = conanfile.conf["tools.apple:sdk_path"]
-    if not sdk_path:
-        sdk_path = XCRun(conanfile.settings).sdk_path
-    return sdk_path
 
 
 class XCRun(object):

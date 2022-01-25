@@ -272,6 +272,7 @@ def test_apple_arch_flag():
         {"build_type": "Debug",
          "os": "iOS",
          "os.version": "14",
+         "os.sdk": "iphoneos",
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
     expected = "-arch arm64"
@@ -324,6 +325,7 @@ def test_apple_isysrootflag():
     conanfile.settings = MockSettings(
         {"build_type": "Debug",
          "os": "iOS",
+         "os.sdk": "iphoneos",
          "os.version": "14",
          "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
@@ -357,6 +359,7 @@ def test_custom_defines():
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
+         "os.sdk": "iphoneos",
          "os.version": "14",
          "arch": "armv8"})
     conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
@@ -374,6 +377,7 @@ def test_custom_cxxflags():
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
+         "os.sdk": "iphoneos",
          "os.version": "14",
          "arch": "armv8"})
     conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
@@ -394,6 +398,7 @@ def test_custom_cflags():
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
+         "os.sdk": "iphoneos",
          "os.version": "14",
          "arch": "armv8"})
     conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
@@ -414,6 +419,7 @@ def test_custom_ldflags():
     conanfile.settings = MockSettings(
         {"build_type": "RelWithDebInfo",
          "os": "iOS",
+         "os.sdk": "iphoneos",
          "os.version": "14",
          "arch": "armv8"})
     conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
