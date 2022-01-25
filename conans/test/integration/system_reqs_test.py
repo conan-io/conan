@@ -86,65 +86,6 @@ class SystemReqsTest(unittest.TestCase):
         pkg_layout = client.get_latest_pkg_layout(pref)
         pkg_layout2 = client.get_latest_pkg_layout(pref2)
         self.assertIn("*+Running system requirements+*", client.out)
-        self.assertFalse(os.path.exists(pkg_layout.system_reqs()))
-        load_file = load(pkg_layout2.system_reqs_package())
-        self.assertIn("Installed my stuff", load_file)
-
-        # remove packages
-        client.run("remove Test* -f -p 544")
-        layout1 = client.get_latest_pkg_layout(pref)
-        layout2 = client.get_latest_pkg_layout(pref2)
-        self.assertTrue(os.path.exists(layout1.system_reqs_package()))
-        client.run(f"remove Test* -f -p {package_id}")
-        self.assertFalse(os.path.exists(layout1.system_reqs_package()))
-        self.assertTrue(os.path.exists(layout2.system_reqs_package()))
-        client.run("remove Test* -f -p %s" % NO_SETTINGS_PACKAGE_ID)
-        self.assertFalse(os.path.exists(layout1.system_reqs_package()))
-        self.assertFalse(os.path.exists(layout2.system_reqs_package()))
-
-    def test_global(self):
-        client = TestClient()
-        files = {
-            'conanfile.py': base_conanfile.replace("%GLOBAL%",
-                                                   "self.global_system_requirements=True")
-        }
-        client.save(files)
-        client.run("export . --user=user --channel=testing")
-        client.run("install --reference=Test/0.1@user/testing --build missing")
-        self.assertIn("*+Running system requirements+*", client.out)
-        ref = RecipeReference.loads("Test/0.1@user/testing")
-        pref = PkgReference(ref, "a527106fd9f2e3738a55b02087c20c0a63afce9d")
-        pkg_layout = client.get_latest_pkg_layout(pref)
-        self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
-        load_file = load(pkg_layout.system_reqs())
-        self.assertIn("Installed my stuff", load_file)
-
-        # Run again
-        client.run("install --reference=Test/0.1@user/testing --build missing")
-        self.assertNotIn("*+Running system requirements+*", client.out)
-        pkg_layout = client.get_latest_pkg_layout(pref)
-        self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
-        load_file = load(pkg_layout.system_reqs())
-        self.assertIn("Installed my stuff", load_file)
-
-        # Run with different option
-        client.run("install --reference=Test/0.1@user/testing -o myopt=False --build missing")
-        self.assertNotIn("*+Running system requirements+*", client.out)
-        pref2 = PkgReference(ref, "54c9626b48cefa3b819e64316b49d3b1e1a78c26")
-        pkg_layout = client.get_latest_pkg_layout(pref)
-        pkg_layout2 = client.get_latest_pkg_layout(pref2)
-        self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
-        self.assertFalse(os.path.exists(pkg_layout2.system_reqs_package()))
-        load_file = load(pkg_layout.system_reqs())
-        self.assertIn("Installed my stuff", load_file)
-
-        # remove packages
-        client.run("remove Test* -f -p")
-        pkg_layout = client.get_latest_pkg_layout(pref)
-        pkg_layout2 = client.get_latest_pkg_layout(pref2)
-        self.assertFalse(os.path.exists(pkg_layout.system_reqs_package()))
-        self.assertFalse(os.path.exists(pkg_layout2.system_reqs_package()))
-        self.assertFalse(os.path.exists(pkg_layout.system_reqs()))
 
     def test_wrong_output(self):
         client = TestClient()

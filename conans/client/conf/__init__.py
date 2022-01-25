@@ -135,23 +135,8 @@ def get_default_settings_yml():
 
 _t_default_client_conf = textwrap.dedent("""
     [log]
-    run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
-    run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
     level = critical            # environment CONAN_LOGGING_LEVEL
     # trace_file =              # environment CONAN_TRACE_FILE
-    print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
-
-    [general]
-    sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
-
-    # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
-    # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
-
-    # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
-
-    # Change the default location for building test packages to a temporary folder
-    # which is deleted after the test.
-    # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
     """)
 
 
@@ -236,36 +221,6 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def logging_file(self):
         return get_env('CONAN_LOGGING_FILE', None)
-
-    @property
-    def print_commands_to_output(self):
-        try:
-            print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS")
-            if print_commands_to_output is None:
-                print_commands_to_output = self.get_item("log.print_run_commands")
-            return print_commands_to_output.lower() in ("1", "true")
-        except ConanException:
-            return False
-
-    @property
-    def generate_run_log_file(self):
-        try:
-            generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE")
-            if generate_run_log_file is None:
-                generate_run_log_file = self.get_item("log.run_to_file")
-            return generate_run_log_file.lower() in ("1", "true")
-        except ConanException:
-            return False
-
-    @property
-    def log_run_to_output(self):
-        try:
-            log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT")
-            if log_run_to_output is None:
-                log_run_to_output = self.get_item("log.run_to_output")
-            return log_run_to_output.lower() in ("1", "true")
-        except ConanException:
-            return True
 
     @staticmethod
     def get_log_level_by_name(level_name):
