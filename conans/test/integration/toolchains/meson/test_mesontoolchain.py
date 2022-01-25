@@ -77,7 +77,7 @@ def test_apple_meson_keep_user_flags(build_env, expected_args):
     {build_env}
 
     [conf]
-    tools.meson.mesontoolchain:sdk_path=/my/sdk/path
+    tools.apple:sdk_path=/my/sdk/path
     """.format(build_env=build_env))
 
     _conanfile_py = textwrap.dedent("""

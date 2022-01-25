@@ -433,33 +433,6 @@ class TestConan(ConanFile):
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
-    @pytest.mark.xfail(reason="cache2.0: we can't test this now, revisit when we move the uuid "
-                              "folders to a temporal location")
-    def test_export_pkg_clean_dirty(self):
-        # https://github.com/conan-io/conan/issues/6449
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                def build(self):
-                    if self.in_local_cache:
-                        raise Exception("Can't build while installing")
-            """)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . --name=pkg --version=0.1", assert_error=True)
-        self.assertIn("Can't build while installing", client.out)
-        ref = RecipeReference.loads("pkg/0.1")
-        pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
-        layout = client.get_latest_pkg_layout(pref)
-        build_folder = layout.build()
-        self.assertTrue(is_dirty(build_folder))
-        self.assertTrue(layout.package_is_dirty())
-
-        client.run("export-pkg . pkg/0.1@")
-        self.assertFalse(layout.package_is_dirty())
-        client.run("install --reference=pkg/0.1@")
-        self.assertIn("pkg/0.1: Already installed!", client.out)
-
 
 def test_build_policy_never():
     client = TestClient()

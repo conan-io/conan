@@ -98,7 +98,6 @@ class ConanFileMock(ConanFile):
         self.settings = None
         self.settings_build = MockSettings({})
         self.options = Options()
-        self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
         self.generators = []
