@@ -486,7 +486,8 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
                                  'files. e.g., conaninfo/conanbuildinfo.txt')
-        parser.add_argument("-of", "--output-folder", help='The root build folder')
+        parser.add_argument("-of", "--output-folder",
+                            help='The root output folder for generated and build files')
         parser.add_argument("-sf", "--source-folder", help='The root source folder')
         _add_manifests_arguments(parser)
 
@@ -1896,7 +1897,8 @@ class Command(object):
                                 help='Relative or absolute path to a file containing the layout.'
                                 ' Relative paths will be resolved first relative to current dir, '
                                 'then to local cache "layouts" folder')
-        add_parser.add_argument("-of", "--output-folder", help='The root build folder')
+        add_parser.add_argument("-of", "--output-folder",
+                                help='The root output folder for generated and build files')
         add_parser.add_argument("-sf", "--source-folder", help='The root source folder')
 
         remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
