@@ -7,6 +7,7 @@ from conan.tools.cross_building import cross_building, get_cross_building_settin
 from conan.tools.env import Environment
 from conan.tools.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
+from conan.tools.microsoft import VCVars, is_msvc
 from conans.tools import args_to_string
 
 
@@ -132,6 +133,10 @@ class AutotoolsToolchain:
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
 
+        if is_msvc(self._conanfile):
+            env.define("CXX", "cl")
+            env.define("CC", "cl")
+
         # FIXME: Previously these flags where checked if already present at env 'CFLAGS', 'CXXFLAGS'
         #        and 'self.cxxflags', 'self.cflags' before adding them
         for f in list(filter(bool, [self.apple_isysroot_flag,
@@ -155,6 +160,7 @@ class AutotoolsToolchain:
         env = env.vars(self._conanfile, scope=scope)
         env.save_script("conanautotoolstoolchain")
         self.generate_args()
+        VCVars(self._conanfile).generate()
 
     def generate_args(self):
         configure_args = []
