@@ -184,12 +184,8 @@ def is_msvc(conanfile):
 
 
 def is_msvc_static_runtime(conanfile):
-    """ Validate when building with Visual Studio or msvc, and self.option.shared and MT on runtime
+    """ Validate when building with Visual Studio or msvc and MT on runtime
     :param conanfile: ConanFile instance
-    :return: True, if msvc + shared option + runtime MT. Otherwise, False
+    :return: True, if msvc + runtime MT. Otherwise, False
     """
-    shared = conanfile.options.get_safe("shared")
-    msvc = is_msvc(conanfile)
-    runtime = msvc_runtime_flag(conanfile)
-    result = msvc and shared and "MT" in runtime
-    return result
+    return is_msvc(conanfile) and "MT" in msvc_runtime_flag(conanfile)
