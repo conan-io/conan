@@ -21,6 +21,8 @@ def download(app, ref, package_ids, recipe):
         #        specify is confusing. Probably it should be: Or I specify one or Conan iterates
         try:
             remote = app.enabled_remotes[0]
+            # FIXME: when we port download this won't be necessary
+            app.selected_remotes = [remote]
         except IndexError:
             raise ConanException("No active remotes configured")
 

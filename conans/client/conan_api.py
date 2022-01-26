@@ -150,7 +150,8 @@ class ConanAPIV1(object):
                         raise ConanException("It is needed to specify the recipe revision if you "
                                              "specify a package revision")
             # FIXME: remote_name should be remote
-            app.load_remotes([Remote(remote_name, None)])
+            remotes = [Remote(remote_name, None)] if remote_name else None
+            app.load_remotes(remotes)
             download(app, ref, packages, recipe)
         else:
             raise ConanException("Provide a valid full reference without wildcards.")
