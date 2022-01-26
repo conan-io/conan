@@ -416,7 +416,8 @@ class GenConanfile(object):
     def __repr__(self):
         ret = []
         ret.extend(self._imports)
-        ret.append(self._required_conan_version_render)
+        if self._required_conan_version is not None:
+            ret.append(self._required_conan_version_render)
         ret.append("class HelloConan(ConanFile):")
 
         # FIXME: This is all a mess. Replace with Jinja2
