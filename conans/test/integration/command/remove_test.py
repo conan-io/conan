@@ -99,7 +99,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
 
 class RemovePackageRevisionsTest(unittest.TestCase):
 
-    NO_SETTINGS_RREF = "f3367e0e7d170aa12abccb175fee5f97"
+    NO_SETTINGS_RREF = "4d670581ccb765839f2239cc8dff8fbd"
 
     def setUp(self):
         self.test_server = TestServer(users={"user": "password"},
@@ -170,8 +170,8 @@ class RemovePackageRevisionsTest(unittest.TestCase):
 
 
 # populated packages of bar
-bar_rrev = "bar/1.1#54ebd2321a1375c524eb7174c272927b"
-bar_rrev2 = "bar/1.1#b305dca03567ef3ebaeddc22f7f45376"
+bar_rrev = "bar/1.1#78b42a981b29d2cb00fda10b72f1e72a"
+bar_rrev2 = "bar/1.1#78b42a981b29d2cb00fda10b72f1e72a"
 bar_rrev2_debug = '{}:040ce2bd0189e377b2d15eb7246a4274d1c63317'.format(bar_rrev2)
 bar_rrev2_release = '{}:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b'.format(bar_rrev2)
 
