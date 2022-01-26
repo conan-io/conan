@@ -33,7 +33,8 @@ class ConanApp(object):
         self.requester = ConanRequester(self.cache.new_config)
         # To handle remote connections
         artifacts_properties = self.cache.read_artifacts_properties()
-        rest_client_factory = RestApiClientFactory(self.requester, self.cache.new_config,
+        rest_client_factory = RestApiClientFactory(self.requester,
+                                                   self.cache.new_config,
                                                    artifacts_properties=artifacts_properties)
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(rest_client_factory, self.cache)

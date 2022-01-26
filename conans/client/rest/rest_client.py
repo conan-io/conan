@@ -1,5 +1,5 @@
 from conans import CHECKSUM_DEPLOY, REVISIONS, OAUTH_TOKEN, MATRIX_PARAMS
-from conans.client.git_conan_remote import GitRepoRemote
+from conans.client.local_tree_remote import LocalTreeApiClient
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import AuthenticationException, ConanException
 from conans.util.log import logger
@@ -14,87 +14,14 @@ class RestApiClientFactory(object):
         self._cached_capabilities = {}
 
     def new(self, remote, token, refresh_token, custom_headers):
-        if remote.url.startswith("/"):  # FIXME: remote type
-            tmp = GitRepoClient(remote, self._config)
+        if remote.url.startswith("file://"):  # FIXME: remote type
+            tmp = LocalTreeApiClient(remote, self._config)
         else:
             tmp = RestApiClient(remote, token, refresh_token, custom_headers,
                                 self._requester, self._config,
                                 self._cached_capabilities,
                                 self._artifacts_properties)
         return tmp
-
-
-class GitRepoClient(object):
-    def __init__(self, remote, config):
-        self._remote = remote
-        self._config = config
-        self.repo = GitRepoRemote(self._remote, config)
-
-    def get_recipe(self, ref, dest_folder):
-        return self.repo.get_recipe(ref, dest_folder)
-
-    def get_recipe_snapshot(self, ref):
-        return self.repo.get_recipe_snapshot(ref)
-
-    def get_recipe_sources(self, ref, dest_folder):
-        return self.repo.get_recipe_sources(ref, dest_folder)
-
-    def get_package(self, pref, dest_folder):
-        raise ConanException
-
-    def get_recipe_file(self, ref, path):
-        return self.repo.get_recipe_file(ref, path)
-
-    def get_package_file(self, pref, path):
-        return self.repo.get_package_file(pref, path)
-
-    def upload_recipe(self, ref, files_to_upload, deleted):
-        raise self.repo.upload_recipe(ref, files_to_upload, deleted)
-
-    def upload_package(self, pref, files_to_upload):
-        raise self.repo.upload_package(pref, files_to_upload)
-
-    def authenticate(self, user, password):
-        return self.repo.authenticate(user, password)
-
-    def check_credentials(self):
-        return self.repo.check_credentials()
-
-    def search(self, pattern=None, ignorecase=True):
-        return self.repo.search(pattern, ignorecase)
-
-    def search_packages(self, reference):
-        return self.repo.search_packages(reference)
-
-    def remove_recipe(self, ref):
-        return self.repo.remove_recipe(ref)
-
-    def remove_all_packages(self, ref):
-        return self.repo.remove_all_packages(ref)
-
-    def remove_packages(self, prefs):
-        return self.repo.remove_packages(prefs)
-
-    def server_capabilities(self):
-        return self.repo.server_capabilities()
-
-    def get_recipe_revisions_references(self, ref):
-        return self.repo.get_recipe_revisions_references(ref)
-
-    def get_package_revisions_references(self, pref, headers=None):
-        return self.repo.get_package_revisions_references(pref, headers)
-
-    def get_latest_recipe_reference(self, ref):
-        return self.repo.get_latest_recipe_reference(ref)
-
-    def get_latest_package_reference(self, pref, headers):
-        return self.repo.get_latest_package_reference(pref, headers)
-
-    def get_recipe_revision_reference(self, ref):
-        return self.repo.get_recipe_revision_reference(ref)
-
-    def get_package_revision_reference(self, pref):
-        return self.get_package_revision_reference(pref)
 
 
 class RestApiClient(object):

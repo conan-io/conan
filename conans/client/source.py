@@ -115,9 +115,6 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
                 # Now move the export-sources to the right location
                 merge_directories(export_source_folder, conanfile.folders.base_source)
 
-                print("MERGEO DE {} y {} A: {}".format(export_folder, export_source_folder,
-                                                       conanfile.folders.base_source))
-
             _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                         get_sources_from_exports=get_sources_from_exports)
 
