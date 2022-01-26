@@ -90,53 +90,6 @@ class ConanAPIV1(object):
         check_required_conan_version(self.cache_folder)
 
     @api_method
-    def inspect(self, path, attributes, remote_name=None):
-        app = ConanApp(self.cache_folder)
-        # FIXME: remote_name should be remote
-        app.load_remotes([Remote(remote_name, None)])
-        try:
-            ref = RecipeReference.loads(path)
-        except ConanException:
-            conanfile_path = _get_conanfile_path(path, os.getcwd(), py=True)
-            conanfile = app.loader.load_named(conanfile_path, None, None, None, None)
-        else:
-            if app.selected_remote:
-                try:
-                    if not ref.revision:
-                        ref = app.remote_manager.get_latest_recipe_reference(ref, app.selected_remote)
-                except NotFoundException:
-                    raise RecipeNotFoundException(ref)
-                else:
-                    if not app.cache.exists_rrev(ref):
-                        app.remote_manager.get_recipe(ref, app.selected_remote)
-
-            result = app.proxy.get_recipe(ref)
-            conanfile_path, _, _, ref = result
-            conanfile = app.loader.load_basic(conanfile_path)
-            conanfile.name = ref.name
-            # FIXME: Conan 2.0, this should be a string, not a Version object
-            conanfile.version = ref.version
-
-        result = OrderedDict()
-        if not attributes:
-            attributes = ['name', 'version', 'url', 'homepage', 'license', 'author',
-                          'description', 'topics', 'generators', 'exports', 'exports_sources',
-                          'short_paths', 'build_policy', 'revision_mode', 'settings',
-                          'options', 'default_options', 'deprecated']
-        # TODO: Change this in Conan 2.0, cli stdout should display only fields with values,
-        # json should contain all values for easy automation
-        for attribute in attributes:
-            try:
-                attr = getattr(conanfile, attribute)
-                if attribute == "options":
-                    result[attribute] = attr.possible_values
-                else:
-                    result[attribute] = attr
-            except AttributeError:
-                result[attribute] = ''
-        return result
-
-    @api_method
     def download(self, reference, remote_name=None, packages=None, recipe=False):
         app = ConanApp(self.cache_folder)
         if packages and recipe:
@@ -272,71 +225,6 @@ class ConanAPIV1(object):
         cwd = os.getcwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
         undo_imports(manifest_path)
-
-    @api_method
-    def remove_system_reqs(self, reference):
-        try:
-            app = ConanApp(self.cache_folder)
-            ref = RecipeReference.loads(reference)
-            app.cache.get_pkg_layout(ref).remove_system_reqs()
-            ConanOutput().info("Cache system_reqs from %s has been removed" % repr(ref))
-        except Exception as error:
-            raise ConanException("Unable to remove system_reqs: %s" % error)
-
-    @api_method
-    def remove_system_reqs_by_pattern(self, pattern):
-        app = ConanApp(self.cache_folder)
-        for ref in search_recipes(app.cache, pattern=pattern):
-            self.remove_system_reqs(repr(ref))
-
-    @api_method
-    def get_path(self, reference, package_id=None, path=None, remote_name=None):
-        app = ConanApp(self.cache_folder)
-        def get_path(cache, ref, path, package_id):
-            """ Return the contents for the given `path` inside current layout, it can
-                be a single file or the list of files in a directory
-
-                :param package_id: will retrieve the contents from the package directory
-                :param path: path relative to the cache reference or package folder
-            """
-            assert not os.path.isabs(path)
-
-            latest_rrev = cache.get_latest_recipe_reference(ref)
-
-            if package_id is None:  # Get the file in the exported files
-                folder = cache.ref_layout(latest_rrev).export()
-            else:
-                latest_pref = cache.get_latest_package_reference(PkgReference(latest_rrev, package_id))
-                folder = cache.get_pkg_layout(latest_pref).package()
-
-            abs_path = os.path.join(folder, path)
-
-            if not os.path.exists(abs_path):
-                raise NotFoundException("The specified path doesn't exist")
-
-            if os.path.isdir(abs_path):
-                return sorted([path_ for path_ in os.listdir(abs_path)
-                               if not discarded_file(path)])
-            else:
-                return load(abs_path)
-
-        ref = RecipeReference.loads(reference)
-        if not path:
-            path = "conanfile.py" if not package_id else "conaninfo.txt"
-
-        if not remote_name:
-            return get_path(app.cache, ref, path, package_id), path
-        else:
-            remote = app.cache.remotes_registry.read(remote_name)
-            if not ref.revision:
-                ref = app.remote_manager.get_latest_recipe_reference(ref, remote)
-            if package_id:
-                pref = PkgReference(ref, package_id)
-                if not pref.revision:
-                    pref = app.remote_manager.get_latest_package_reference(pref, remote)
-                return app.remote_manager.get_package_file(pref, path, remote), path
-            else:
-                return app.remote_manager.get_recipe_file(ref, path, remote), path
 
 
 def get_graph_info(profile_host, profile_build, cwd, cache,

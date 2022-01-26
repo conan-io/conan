@@ -244,16 +244,7 @@ def _handle_system_requirements(install_node, package_layout):
     # Instead of calling empty methods
     if type(conanfile).system_requirements == ConanFile.system_requirements:
         return
-
-    system_reqs_path = package_layout.system_reqs()
-    system_reqs_package_path = package_layout.system_reqs_package()
-
-    ret = call_system_requirements(conanfile)
-    ret = str(ret or "")
-    if getattr(conanfile, "global_system_requirements", None):
-        save(system_reqs_path, ret)
-    else:
-        save(system_reqs_package_path, ret)
+    call_system_requirements(conanfile)
 
 
 def call_system_requirements(conanfile):
