@@ -19,11 +19,11 @@ class FullRevisionModeTest(unittest.TestCase):
         save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfilea = dedent("""
             from conan import ConanFile
-            from conans.tools import save
+            from conan.tools.files import save
             import uuid, os
             class Pkg(ConanFile):
                 def package(self):
-                    save(os.path.join(self.package_folder, "file.txt"),
+                    save(self, os.path.join(self.package_folder, "file.txt"),
                          str(uuid.uuid1()))
             """)
         clienta.save({"conanfile.py": conanfilea})
@@ -65,12 +65,12 @@ class FullRevisionModeTest(unittest.TestCase):
         save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfile = dedent("""
             from conan import ConanFile
-            from conans.tools import save
+            from conan.tools.files import save
             import uuid, os
             class Pkg(ConanFile):
                 %s
                 def package(self):
-                    save(os.path.join(self.package_folder, "file.txt"),
+                    save(self, os.path.join(self.package_folder, "file.txt"),
                          str(uuid.uuid1()))
             """)
         clienta.save({"conanfile.py": conanfile % ""})
@@ -113,13 +113,13 @@ class FullRevisionModeTest(unittest.TestCase):
         save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfile = dedent("""
             from conan import ConanFile
-            from conans.tools import save
+            from conan.tools.files import save
             import uuid, os
             class Pkg(ConanFile):
                 build_requires = "tool/0.1@user/testing"
                 %s
                 def package(self):
-                    save(os.path.join(self.package_folder, "file.txt"),
+                    save(self, os.path.join(self.package_folder, "file.txt"),
                          str(uuid.uuid1()))
             """)
         clienta.save({"conanfile.py": conanfile % ""})
@@ -188,7 +188,7 @@ class FullRevisionModeTest(unittest.TestCase):
         self.assertIn(f"liba/0.1@user/testing: Created package revision {prev}", client.out)
         client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
         client.run("create . --name=libb --version=0.1 --user=user --channel=testing")
-        libb_pkgid = "af0c44b853e4651ccafc636d601d9c65d3fa44a8"
+        libb_pkgid = "4458680d2f0ae5194864f19e71a3652e1bdbd80a"
         client.assert_listed_binary({"libb/0.1@user/testing": (libb_pkgid, "Build")})
 
         client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
@@ -236,9 +236,9 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install invent.py --build missing")
-        mcapi_pkg_id = "6b115bc2428b925e8ee4fdb91c700520592e3b29"
+        mcapi_pkg_id = "5d58e2d0315f4ede84dd9b24686ba76f84c20c94"
         self.assertIn(f"mccapi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
-        util_pkg_id = "88d63d5c29a361250e6eba12aae6037b5a4d1e15"
+        util_pkg_id = "ae15be16de6922c7659f28c24c3543acf22b83db"
         self.assertIn(f"util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
 
     def test_triangle_dependency_graph(self):
@@ -251,9 +251,9 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install genericsu.py --build missing")
-        mcapi_pkg_id = "6b115bc2428b925e8ee4fdb91c700520592e3b29"
+        mcapi_pkg_id = "5d58e2d0315f4ede84dd9b24686ba76f84c20c94"
         self.assertIn(f"mccapi/3.0.9: Package '{mcapi_pkg_id}' created", self.client.out)
-        util_pkg_id = "88d63d5c29a361250e6eba12aae6037b5a4d1e15"
+        util_pkg_id = "ae15be16de6922c7659f28c24c3543acf22b83db"
         self.assertIn(f"util/0.3.5: Package '{util_pkg_id}' created", self.client.out)
 
     def test_diamond_dependency_graph(self):
@@ -266,7 +266,7 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install genericsu.py --build missing")
-        pkg_id = "6b115bc2428b925e8ee4fdb91c700520592e3b29"
+        pkg_id = "5d58e2d0315f4ede84dd9b24686ba76f84c20c94"
         self.assertIn(f"mccapi/3.0.9: Package '{pkg_id}' created", self.client.out)
         self.assertIn(f"util/0.3.5: Package '{pkg_id}' created", self.client.out)
 
@@ -332,5 +332,5 @@ def test_package_revision_mode_full_transitive_package_id():
     client.run("create pkgb --name=pkgb --version=0.1 -pr=profile --build=missing")
     client.assert_listed_binary({"pkgb/0.1": ("Package_ID_unknown", "Unknown")})
     assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
-    pkg_id = "fbdb93dfebd237827767fd6bc7b235c1af5012dd"
+    pkg_id = "3c9baa7e402a01e5397053ccb518d391065c1ec1"
     assert f"pkgb/0.1: Package '{pkg_id}' created" in client.out
