@@ -174,7 +174,7 @@ class TestConan(ConanFile):
         conanfile = load(os.path.join(export_path, "conanfile.py"))
         self.assertIn("name = 'hello'", conanfile)
         manifest = load(os.path.join(export_path, "conanmanifest.txt"))
-        self.assertIn('conanfile.py: c827eb50b27ef2bf3107bf4bf1e1896b', manifest)
+        self.assertIn('conanfile.py: 5dc49e518e15f3889cb2e097ce4d1dff', manifest)
 
     def test_exclude_basic(self):
         client = TestClient()
@@ -251,7 +251,7 @@ class ExportTest(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(reg_path, name)))
 
         expected_sums = {'CMakeLists.txt': '3cf710785270c7e98a30d4a90ea66492',
-                         'conanfile.py': '9a48d65e46c7a8f70604faf0be4d3359',
+                         'conanfile.py': '5dbbe4328efa3342baba2a7ca961ede1',
                          'executable': 'db299d5f0d82f113fad627a21f175e59',
                          'main.cpp': 'd9c03c934a4b3b1670775c17c26f39e9'}
         self.assertEqual(expected_sums, manif.file_sums)
@@ -401,7 +401,7 @@ class ExportMetadataTest(unittest.TestCase):
             revision_mode = "{revision_mode}"
         """)
 
-    summary_hash = "bfe8b4a6a2a74966c0c4e0b34705004a"
+    summary_hash = "e87f5e4174765cc6e0cc6f24109d65ef"
 
     def test_revision_mode_hash(self):
         t = TestClient()

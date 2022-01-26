@@ -225,13 +225,14 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/7377
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conan import ConanFile, tools
+            from conan import ConanFile
+            from conan.tools.files import load
 
             class MethodConan(ConanFile):
                 def export_sources(self):
                     self.copy("*")
                 def build(self):
-                    self.output.info("CONTENT: %s" % tools.load("myfile.txt"))
+                    self.output.info("CONTENT: %s" % load(self, "myfile.txt"))
             """)
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "mycontent"})

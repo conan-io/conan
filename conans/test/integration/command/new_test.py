@@ -108,7 +108,6 @@ class TestNewErrors:
     def test_template_errors(self):
         client = TestClient()
         client.run("new mytemplate", assert_error=True)
-        print(client.out)
         assert "ERROR: Template doesn't exist" in client.out
 
     def test_forced(self):

@@ -468,5 +468,4 @@ def test_build_policy_never_missing():
     assert "ERROR: Missing binary: pkg/1.0" in client.out
 
     client.run("install --reference=pkg/1.0@ --build=missing", assert_error=True)
-    print(client.out)
     assert "ERROR: Missing binary: pkg/1.0" in client.out

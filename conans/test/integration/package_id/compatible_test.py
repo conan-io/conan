@@ -76,7 +76,7 @@ class CompatibleIDsTest(unittest.TestCase):
                      "myprofile": profile})
         # Create package with gcc 4.8
         client.run("export . --name=pkg --version=0.1 --user=user --channel=stable")
-        self.assertIn("pkg/0.1@user/stable: Exported revision: b27c975bb0d9e40c328bd02bc529b6f8",
+        self.assertIn("pkg/0.1@user/stable: Exported revision: aa6c81a7746c85101bc5c8d9f870660b",
                       client.out)
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
@@ -377,7 +377,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
         client.save({"conanfile.py": c2})
         client.run("create .")
-        package_id = "f29e72f904368de60f68e77dc245fcb37b2af6af"
+        package_id = "e0acd34bb765800a963d2a0ba7d9aba33823be74"
         self.assertIn(f"Package '{package_id}' created", client.out)
 
         # Back to semver mode
@@ -424,7 +424,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.8!", client.out)
         client.assert_listed_binary({"pkg/0.1@user/stable": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        consumer_id = "fdd83a0f601bb72cc84b64ca6451f18b158b1100"
+        consumer_id = "59a709644ae98b2ab3f16264e16351d155122697"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 
@@ -441,7 +441,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.assert_listed_binary({"pkg/0.1@user/stable":
                                          ("c6715d73365c2dd62f68836b2dee8359a312ff12", "Cache")})
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        consumer_id = "8ad16e61b38b9b8ea3c4059d391d0c3267607f59"
+        consumer_id = "f701bd4dcfc2b6225a3e95cfbcfb3848ca7896f5"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
         self.assertIn(f"consumer/0.1@user/stable: Package '{consumer_id}' created", client.out)
 

@@ -141,11 +141,11 @@ class TestAdvancedCliOutput:
         client.save({"conanfile.py": conanfile})
 
         client.run("graph info .")
-        assert "python_requires: ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']" in client.out
+        assert "python_requires: ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']" in client.out
 
         client.run("graph info . --format=json")
         info = json.loads(client.stdout)
-        assert info["nodes"][0]["python_requires"] == ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']
+        assert info["nodes"][0]["python_requires"] == ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']
 
     def test_build_id_info(self):
         client = TestClient()

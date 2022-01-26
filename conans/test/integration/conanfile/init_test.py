@@ -22,13 +22,14 @@ class InitTest(unittest.TestCase):
     def test_init(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conan import ConanFile, load
+            from conan import ConanFile
+            from conan.tools.files import load
             import os
             import json
             class Lib(ConanFile):
                 exports = "data.json"
                 def init(self):
-                    data = load(os.path.join(self.recipe_folder, "data.json"))
+                    data = load(self, os.path.join(self.recipe_folder, "data.json"))
                     d = json.loads(data)
                     self.license = d["license"]
                     self.description = d["description"]

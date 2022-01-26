@@ -313,7 +313,6 @@ class UploadTest(unittest.TestCase):
 
         # first client tries to upload again
         client.run("upload hello0/1.2.1@frodo/stable -r default")
-        print(client.out)
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertIn(f"hello0/1.2.1@frodo/stable#{rrev} "
                       "already in server, skipping upload", client.out)

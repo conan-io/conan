@@ -168,7 +168,6 @@ class MyPkg(ConanFile):
                      "test_package/conanfile.py":
                          GenConanfile().with_test('self.output.info("TESTING!!!")')})
         client.run("create . --user=lasote --channel=testing")
-        print(client.out)
         self.assertIn("pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
 

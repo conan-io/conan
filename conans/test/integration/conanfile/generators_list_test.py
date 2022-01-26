@@ -29,7 +29,6 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
         t = TestClient()
         t.save({'conanfile.py': conanfile})
         t.run("install conanfile.py")
-        print(t.out)
         self.assertEqual(str(t.out).count("Generator 'CMakeDeps' calling 'generate()'"), 1)
 
     def test_python_requires_inheritance(self):

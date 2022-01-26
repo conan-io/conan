@@ -151,7 +151,7 @@ def test_install_cwd(client):
     client.save({"conanfile.txt": "[requires]\nhello/0.1@lasote/stable"}, clean_first=True)
 
     client.run("install . --build=missing -s os_build=Windows --install-folder=win_dir")
-    assert "hello/0.1@lasote/stable#a44254cfa891c2fe4d98ee6aff203222 - Cache" in client.out
+    assert "hello/0.1@lasote/stable#a20db3358243e96aa07f654eaada1564 - Cache" in client.out
 
 
 def test_install_with_profile(client):
