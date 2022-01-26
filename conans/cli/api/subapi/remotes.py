@@ -35,8 +35,8 @@ class RemotesAPI:
         app = ConanApp(self.conan_api.cache_folder)
         if remote_names:
             return [app.cache.remotes_registry.read(remote_name) for remote_name in remote_names]
-        else:
-            return app.cache.remotes_registry.list()
+        else:  # if we don't pass any remotes we want to retrieve only the enabled ones
+            return app.cache.remotes_registry.list(filter_disabled=True)
 
     @api_method
     def add(self, remote: Remote):
