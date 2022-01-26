@@ -11,7 +11,7 @@ class NoCopySourceTest(unittest.TestCase):
 
     def test_basic(self):
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save, load
 import os
 
@@ -51,7 +51,7 @@ class ConanFileToolsTest(ConanFile):
     @pytest.mark.xfail(reason="cache2.0 create --build not considered yet")
     def test_source_folder(self):
         conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save, load
 import os
 

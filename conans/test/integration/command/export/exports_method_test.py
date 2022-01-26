@@ -13,7 +13,7 @@ class ExportsMethodTest(unittest.TestCase):
     def test_export_method(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MethodConan(ConanFile):
                 exports = "file.txt"
@@ -38,7 +38,7 @@ class ExportsMethodTest(unittest.TestCase):
         save_files(folder, {"subdir/subdir2/file2.txt": "", "subdir/file1.txt": ""})
         client = TestClient(current_folder=os.path.join(folder, "recipe"))
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MethodConan(ConanFile):
                 def export(self):
@@ -59,7 +59,7 @@ class ExportsMethodTest(unittest.TestCase):
     def test_export_no_settings_options_method(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MethodConan(ConanFile):
                 settings = "os"
@@ -72,7 +72,7 @@ class ExportsMethodTest(unittest.TestCase):
         self.assertIn("ERROR: pkg/0.1: Error in export() method, line 7", client.out)
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MethodConan(ConanFile):
                 options = {"myopt": ["myval", "other"]}
@@ -86,7 +86,7 @@ class ExportsMethodTest(unittest.TestCase):
         self.assertIn("ERROR: pkg/0.1: Error in export() method, line 8", client.out)
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MethodConan(ConanFile):
                 options = {"myopt": ["myval"]}
@@ -105,7 +105,7 @@ class ExportsMethodTest(unittest.TestCase):
     def test_export_folders(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            from conans.tools import save, load
            import os
 
@@ -128,7 +128,7 @@ class ExportsMethodTest(unittest.TestCase):
     def test_export_attribute_error(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MethodConan(ConanFile):
                 export = "file.txt"
             """)
@@ -139,7 +139,7 @@ class ExportsMethodTest(unittest.TestCase):
     def test_exports_method_error(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MethodConan(ConanFile):
                 def exports(self):
                     pass
@@ -155,7 +155,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
     def test_export_sources_method(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MethodConan(ConanFile):
                 exports_sources = "file.txt"
@@ -177,7 +177,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
     def test_export_source_folders(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            from conans.tools import save, load
            import os
 
@@ -200,7 +200,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
     def test_export_sources_attribute_error(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MethodConan(ConanFile):
                 export_sources = "file.txt"
             """)
@@ -211,7 +211,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
     def test_exports_sources_method_error(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MethodConan(ConanFile):
                 def exports_sources(self):
                     pass
@@ -225,7 +225,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/7377
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, tools
+            from conan import ConanFile, tools
 
             class MethodConan(ConanFile):
                 def export_sources(self):

@@ -10,7 +10,7 @@ class TestBasicCliOutput:
     def test_info_settings(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyTest(ConanFile):
                 name = "pkg"
@@ -104,7 +104,7 @@ class TestAdvancedCliOutput:
     def test_scm_info(self):
         # https://github.com/conan-io/conan/issues/8377
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class pkg(ConanFile):
                 scm = {"type": "git",
                        "url": "some-url/path",
@@ -177,7 +177,7 @@ class TestEditables:
         # https://github.com/conan-io/conan/issues/7054
         c = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 def layout(self):
                     self.folders.source = "."

@@ -25,7 +25,7 @@ class HeaderOnlyLibTestClient(TestClient):
 
     conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class Pkg(ConanFile):
     name = "MyLib"
@@ -88,7 +88,7 @@ class SettingsAndOptionsTest(unittest.TestCase):
         client = TestClient(cache_folder=cache_folder)
         conanfile_txt = """
 import os
-from conans import ConanFile, CMake
+from conan import ConanFile, CMake
 
 class TestConan(ConanFile):
     name = "pkg"

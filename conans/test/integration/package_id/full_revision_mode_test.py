@@ -18,7 +18,7 @@ class FullRevisionModeTest(unittest.TestCase):
         clienta = TestClient()
         save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfilea = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import save
             import uuid, os
             class Pkg(ConanFile):
@@ -64,7 +64,7 @@ class FullRevisionModeTest(unittest.TestCase):
         clienta = TestClient()
         save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import save
             import uuid, os
             class Pkg(ConanFile):
@@ -112,7 +112,7 @@ class FullRevisionModeTest(unittest.TestCase):
         clienta.run("create . --user=user --channel=testing")
         save(clienta.cache.new_config_path, "core.package_id:default_mode=recipe_revision_mode")
         conanfile = dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import save
             import uuid, os
             class Pkg(ConanFile):

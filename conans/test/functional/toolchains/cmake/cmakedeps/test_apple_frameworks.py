@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 @pytest.fixture
 def client():
     lib_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class FooLib(ConanFile):
             name = "foolib"
@@ -29,7 +29,7 @@ def client():
 
 
 app_conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.cmake import CMake
 
     class App(ConanFile):
@@ -64,7 +64,7 @@ def test_apple_framework_xcode(client):
 
 
 conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans import tools
             from conan.tools.cmake import CMake, CMakeToolchain
 
@@ -212,7 +212,7 @@ def test_apple_own_framework_cross_build(settings):
 
     test_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile, tools
+        from conan import ConanFile, tools
         from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
         from conan.tools.build import cross_building
 
@@ -277,7 +277,7 @@ def test_apple_own_framework_cmake_deps():
 
     test_conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class TestPkg(ConanFile):
@@ -352,7 +352,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     """)
 
     test_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
         class TestPkg(ConanFile):
             generators = "CMakeDeps", "CMakeToolchain"
@@ -384,7 +384,7 @@ def test_apple_own_framework_cmake_find_package_multi():
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 from conan.tools.cmake import CMake
 
 
@@ -446,7 +446,7 @@ install(TARGETS ${PROJECT_NAME}
         """)
     test_conanfile_py = textwrap.dedent("""
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 from conan.tools.build import cross_building
 
@@ -546,7 +546,7 @@ def test_m1():
     """)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class TestConan(ConanFile):

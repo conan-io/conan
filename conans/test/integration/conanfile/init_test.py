@@ -8,7 +8,7 @@ class InitTest(unittest.TestCase):
     def test_wrong_init(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Lib(ConanFile):
                 def init(self):
                     random_error
@@ -22,7 +22,7 @@ class InitTest(unittest.TestCase):
     def test_init(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
+            from conan import ConanFile, load
             import os
             import json
             class Lib(ConanFile):

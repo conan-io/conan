@@ -8,7 +8,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 def test_double_package_id_call():
     # https://github.com/conan-io/conan/issues/3085
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             settings = "os", "arch"
 
@@ -25,7 +25,7 @@ def test_double_package_id_call():
 def test_remove_option_setting():
     # https://github.com/conan-io/conan/issues/2826
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class TestConan(ConanFile):
             settings = "os"
@@ -51,7 +51,7 @@ def test_remove_option_setting():
 def test_value_parse():
     # https://github.com/conan-io/conan/issues/2816
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class TestConan(ConanFile):
             name = "test"
@@ -83,7 +83,7 @@ def test_value_parse():
 def test_option_in():
     # https://github.com/conan-io/conan/issues/7299
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class TestConan(ConanFile):
             options = {"fpic": [True, False]}
@@ -122,7 +122,7 @@ def test_build_type_remove_windows():
     # https://github.com/conan-io/conan/issues/7603
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             def package_id(self):

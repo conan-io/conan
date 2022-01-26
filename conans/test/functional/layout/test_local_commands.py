@@ -340,7 +340,7 @@ def test_start_dir_failure():
 def test_importdir_failure():
     c = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import save
         class Cosumer(ConanFile):
             requires = "dep/0.1"

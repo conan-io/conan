@@ -14,7 +14,7 @@ from conans.client.tools.files import replace_in_file, replace_path_in_file
 
 
 base_conanfile = '''
-from conans import ConanFile
+from conan import ConanFile
 from conans.tools import patch, replace_in_file
 import os
 
@@ -29,7 +29,7 @@ class ConanfileToolsTest(unittest.TestCase):
     def test_save_append(self):
         # https://github.com/conan-io/conan/issues/2841 (regression)
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 from conans.tools import save
 class Pkg(ConanFile):
     def source(self):

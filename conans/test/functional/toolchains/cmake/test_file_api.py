@@ -25,7 +25,7 @@ def test_file_api():
     client = TestClient()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeFileAPI
         from conan.tools.files import CppPackage
 
@@ -92,7 +92,7 @@ def test_file_api():
     client.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeFileAPI
         from conan.tools.files import CppPackage
 

@@ -16,7 +16,7 @@ class TestWorkflow(object):
 
     conanfile_base = textwrap.dedent("""\
         import os
-        from conans import ConanFile, tools
+        from conan import ConanFile, tools
 
         {extra_header}
 

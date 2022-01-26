@@ -196,7 +196,7 @@ def test_cross_build_conf():
 def test_find_builddirs():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
 
@@ -207,7 +207,7 @@ def test_find_builddirs():
     client.run("create . --name=dep --version=1.0")
 
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMakeToolchain
 
             class Conan(ConanFile):

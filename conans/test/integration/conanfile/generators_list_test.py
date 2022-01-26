@@ -20,7 +20,7 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
 
     def test_conanfile_py(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 settings = "build_type"
@@ -34,7 +34,7 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
 
     def test_python_requires_inheritance(self):
         pyreq = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 pass
@@ -43,7 +43,7 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
                 generators = "CMakeDeps",
         """)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Recipe(ConanFile):
                 settings = "build_type"

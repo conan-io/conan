@@ -37,7 +37,7 @@ class ExportSettingsTest(unittest.TestCase):
     def test_export_read_only(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class TestConan(ConanFile):
                 name = "hello"
                 version = "1.2"
@@ -101,7 +101,7 @@ class ExportSettingsTest(unittest.TestCase):
     def test_code_parent(self):
         # when referencing the parent, the relative folder "sibling" will be kept
         base = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
@@ -123,7 +123,7 @@ class TestConan(ConanFile):
         # if provided a path with slash, it will use as a export base
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
@@ -144,7 +144,7 @@ class TestConan(ConanFile):
         # if provided a path with slash, it will use as a export base
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class TestConan(ConanFile):
                 name = "hello"
                 version = "1.2"
@@ -179,7 +179,7 @@ class TestConan(ConanFile):
     def test_exclude_basic(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
@@ -205,7 +205,7 @@ class TestConan(ConanFile):
     def test_exclude_folders(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "1.2"
@@ -271,7 +271,7 @@ class ExportTest(unittest.TestCase):
         self.assertEqual(sorted(os.listdir(reg_path)), [CONANFILE, CONAN_MANIFEST])
 
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class OpenSSLConan(ConanFile):
     name = "openssl"
@@ -286,7 +286,7 @@ class OpenSSLConan(ConanFile):
 
         # Now exports being a list instead a tuple
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class OpenSSLConan(ConanFile):
     name = "openssl"
@@ -395,7 +395,7 @@ class OpenSSLConan(ConanFile):
 
 class ExportMetadataTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Lib(ConanFile):
             revision_mode = "{revision_mode}"
@@ -460,7 +460,7 @@ def test_export_casing():
     # https://github.com/conan-io/conan/issues/8583
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             exports = "file1", "FILE1"
             exports_sources = "test", "TEST"

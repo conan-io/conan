@@ -4,7 +4,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 consumer = textwrap.dedent("""
-from conans import ConanFile
+from conan import ConanFile
 from conan.tools.cmake import CMake
 
 class Consumer(ConanFile):
@@ -25,7 +25,7 @@ class Consumer(ConanFile):
 @pytest.mark.tool_cmake
 def test_global_alias():
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
 
     class Hello(ConanFile):
         name = "hello"
@@ -58,7 +58,7 @@ def test_global_alias():
 @pytest.mark.tool_cmake
 def test_component_alias():
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
 
     class Hello(ConanFile):
         name = "hello"
@@ -91,7 +91,7 @@ def test_component_alias():
 @pytest.mark.tool_cmake
 def test_custom_name():
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
 
     class Hello(ConanFile):
         name = "hello"
@@ -124,7 +124,7 @@ def test_custom_name():
 @pytest.mark.tool_cmake
 def test_collide_global_alias():
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
 
     class Hello(ConanFile):
         name = "hello"
@@ -154,7 +154,7 @@ def test_collide_global_alias():
 @pytest.mark.tool_cmake
 def test_collide_component_alias():
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
 
     class Hello(ConanFile):
         name = "hello"

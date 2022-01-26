@@ -17,7 +17,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     @staticmethod
     def _define_base(client):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 def source(self):
                     self.output.info("My cool source!")
@@ -35,7 +35,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         self._define_base(client)
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
@@ -59,7 +59,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_reuse_dot(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 def build(self):
                     self.output.info("My cool build!")
@@ -67,7 +67,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=my.base --version=1.1 --user=user --channel=testing")
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "my.base/1.1@user/testing"
                 python_requires_extend = "my.base.MyConanfileBase"
@@ -82,7 +82,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.alias("base/latest@user/testing",  "base/1.1@user/testing")
 
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "base/(latest)@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
@@ -99,7 +99,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self._define_base(client)
 
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "base/[>1.0,<1.2]@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
@@ -116,7 +116,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_multiple_reuse(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class SourceBuild(ConanFile):
                 def source(self):
                     self.output.info("My cool source!")
@@ -127,7 +127,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=sourcebuild --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PackageInfo(ConanFile):
                 def package(self):
                     self.output.info("My cool package!")
@@ -138,7 +138,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=packageinfo --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 python_requires = "sourcebuild/1.0@user/channel", "packageinfo/1.0@user/channel"
                 python_requires_extend = "sourcebuild.SourceBuild", "packageinfo.PackageInfo"
@@ -157,7 +157,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=base --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Helper(ConanFile):
                 python_requires = "base/1.0@user/channel"
             """)
@@ -165,7 +165,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=helper --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 python_requires = "helper/1.0@user/channel"
                 def build(self):
@@ -176,7 +176,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         assert "pkg/0.1@user/channel: Created package" in client.out
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 python_requires = "helper/1.0@user/channel"
                 python_requires_extend = "base.HelloConan"
@@ -188,7 +188,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_multiple_requires_error(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             myvar = 123
             def myfunct():
                 return 123
@@ -199,7 +199,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=pkg1 --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             myvar = 234
             def myfunct():
                 return 234
@@ -210,7 +210,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=pkg2 --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 python_requires = "pkg1/1.0@user/channel", "pkg2/1.0@user/channel"
                 def build(self):
@@ -237,7 +237,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_local_import(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             import mydata
             class MyConanfileBase(ConanFile):
                 exports = "*.py"
@@ -260,7 +260,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                      "mydata.py": mydata})
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
@@ -285,7 +285,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_reuse_class_members(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 license = "MyLicense"
                 author = "author@company.com"
@@ -299,7 +299,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
 
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import load
             import os
             class PkgTest(ConanFile):
@@ -334,7 +334,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/7718
         client = TestClient()
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            class MyConanfileBase(ConanFile):
                def system_requirements(self):
                    self.output.info("My system_requirements %s being called!" % self.name)
@@ -342,7 +342,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
@@ -354,7 +354,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_overwrite_class_members(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 license = "MyLicense"
                 author = "author@company.com"
@@ -364,7 +364,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
 
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 license = "MIT"
                 author = "frodo"
@@ -392,7 +392,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_failure_init_method(self):
         client = TestClient()
         base = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyBase(object):
                 settings = "os", "build_type", "arch"
                 options = {"base_option": [True, False]}
@@ -404,7 +404,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": base})
         client.run("export . --name=base --version=1.0")
         derived = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class DerivedConan(ConanFile):
                 settings = "os", "build_type", "arch"
 
@@ -428,7 +428,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/3874
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             import myhelper
             class SourceBuild(ConanFile):
                 exports = "*.py"
@@ -444,7 +444,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . --name=base2 --version=1.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyConanfileBase(ConanFile):
                 python_requires = "base2/1.0@user/channel", "base1/1.0@user/channel"
@@ -468,7 +468,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_update(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             somevar = 42
             class MyConanfileBase(ConanFile):
                 pass
@@ -479,7 +479,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         client2 = TestClient(servers=client.servers, inputs=["user", "password"])
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
@@ -505,7 +505,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/4650#issuecomment-497464305
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             somevar = 42
             class MyConanfileBase(ConanFile):
                 pass
@@ -516,7 +516,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         client2 = TestClient(servers=client.servers, inputs=["user", "password"])
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "base/[>1.0]@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
@@ -540,7 +540,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_duplicate_pyreq(self):
         t = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PyReq(ConanFile):
                 pass
         """)
@@ -549,7 +549,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         t.run("export . --name=pyreq --version=2.0 --user=user --channel=channel")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Lib(ConanFile):
                 python_requires = "pyreq/1.0@user/channel", "pyreq/2.0@user/channel"
         """)
@@ -563,7 +563,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": "var=42\n"+str(GenConanfile())})
         client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 python_requires = "tool/0.1@user/channel"
                 def source(self):
@@ -584,7 +584,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_reuse_name_version(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import load
             import os
 
@@ -601,7 +601,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 python_requires = "tool/0.1@user/channel"
                 python_requires_extend = "tool.Source"
@@ -630,7 +630,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Create python_requires
         client.save({CONANFILE: textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PythonRequires0(ConanFile):
                 def build(self):
                     super(PythonRequires0, self).build()
@@ -642,7 +642,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Create python requires, that require the previous one
         client.save({CONANFILE: textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PythonRequires1(ConanFile):
                 python_requires = "python_requires0/{v}@user/test"
                 python_requires_extend = "python_requires0.PythonRequires0"
@@ -656,7 +656,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Create python requires
         client.save({CONANFILE: textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PythonRequires11(ConanFile):
                 def build(self):
                     super(PythonRequires11, self).build()
@@ -668,7 +668,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Create python requires, that require the previous one
         client.save({CONANFILE: textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PythonRequires22(ConanFile):
                 python_requires = "python_requires0/{v}@user/test"
                 python_requires_extend = "python_requires0.PythonRequires0"
@@ -682,7 +682,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # Another python_requires, that requires the previous python requires
         client.save({CONANFILE: textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PythonRequires2(ConanFile):
                 python_requires = "python_requires1/{v}@user/test", "python_requires11/{v}@user/test"
                 python_requires_extend = ("python_requires1.PythonRequires1",
@@ -697,7 +697,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         # My project, will consume the latest python requires
         client.save({CONANFILE: textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Project(ConanFile):
                 python_requires = "python_requires2/{v}@user/test", "python_requires22/{v}@user/test"
                 python_requires_extend = ("python_requires2.PythonRequires2",
@@ -737,7 +737,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_reuse_export_sources(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 exports = "*"
             """)
@@ -746,7 +746,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                      "folder/other.h": "otherheader"})
         client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
+            from conan import ConanFile, load
             import os
             class MyConanfileBase(ConanFile):
                 python_requires = "tool/0.1@user/channel"
@@ -795,7 +795,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_reuse_exports(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyConanfileBase(ConanFile):
                 exports = "*"
             """)
@@ -805,7 +805,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("editable add . tool/0.1@user/channel")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
+            from conan import ConanFile, load
             import os
             class MyConanfileBase(ConanFile):
                 python_requires = "tool/0.1@user/channel"
@@ -841,7 +841,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client = TestClient(default_server_user=True)
         self._define_base(client)
         reuse = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class PkgTest(ConanFile):
                 python_requires = "base/1.1@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
@@ -860,7 +860,7 @@ def test_transitive_python_requires():
     # https://github.com/conan-io/conan/issues/8546
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         myvar = 123
         def myfunct():
             return 234
@@ -872,7 +872,7 @@ def test_transitive_python_requires():
     client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class BaseClass(ConanFile):
             name = "base-class"
             version = "1.0"
@@ -887,7 +887,7 @@ def test_transitive_python_requires():
     client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Consumer(ConanFile):
             name = "consumer"
             version = "1.0"
@@ -903,7 +903,7 @@ def test_transitive_python_requires():
 def test_transitive_diamond_python_requires():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         myvar = 123
         def myfunct():
             return 234
@@ -915,7 +915,7 @@ def test_transitive_diamond_python_requires():
     client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         myvar = 222
         def myfunct():
             return 2222
@@ -927,7 +927,7 @@ def test_transitive_diamond_python_requires():
     client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class BaseClass(ConanFile):
             name = "base-class"
             version = "1.0"
@@ -942,7 +942,7 @@ def test_transitive_diamond_python_requires():
     client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class BaseClass2(ConanFile):
             name = "base-class2"
             version = "1.0"
@@ -957,7 +957,7 @@ def test_transitive_diamond_python_requires():
     client.run("export . --user=user --channel=channel")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Consumer(ConanFile):
             name = "consumer"
             version = "1.0"

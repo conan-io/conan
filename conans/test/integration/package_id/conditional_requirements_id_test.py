@@ -15,7 +15,7 @@ class ConditionalRequirementsIdTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=optional --version=0.1 --user=user --channel=testing")
-        conanfile = '''from conans import ConanFile
+        conanfile = '''from conan import ConanFile
 class ConanLib(ConanFile):
     options = {"use_lib": [True, False]}
     default_options= {"use_lib": False}

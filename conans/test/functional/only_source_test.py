@@ -54,7 +54,7 @@ class OnlySourceTest(unittest.TestCase):
     def test_build_policies_update(self):
         client = TestClient(default_server_user=True)
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class MyPackage(ConanFile):
     name = "test"

@@ -3,7 +3,7 @@ from mock import Mock
 import re
 
 from conan.tools.google import BazelDeps
-from conans import ConanFile
+from conan import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo

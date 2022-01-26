@@ -17,7 +17,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
 conanfile_scope_env = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     name = "hello0"
@@ -258,7 +258,7 @@ class ProfileTest(unittest.TestCase):
     def test_install_profile_package_settings(self):
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class HelloConan(ConanFile):
                 name = 'hello0'
                 version = '0.1'
@@ -305,7 +305,7 @@ class ProfileTest(unittest.TestCase):
 
     def test_package_settings_no_user_channel(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os"
                 def build(self):

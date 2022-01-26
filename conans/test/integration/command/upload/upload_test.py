@@ -21,7 +21,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.env import environment_update
 from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
 
-conanfile = """from conans import ConanFile
+conanfile = """from conan import ConanFile
 class MyPkg(ConanFile):
     name = "hello0"
     version = "1.2.1"
@@ -144,7 +144,7 @@ class UploadTest(unittest.TestCase):
     def test_query_upload(self):
         client = TestClient(default_server_user=True)
         conanfile_upload_query = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class MyPkg(ConanFile):
                 name = "hello1"
                 version = "1.2.1"

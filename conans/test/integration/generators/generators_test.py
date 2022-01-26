@@ -25,7 +25,7 @@ unknown
     @pytest.mark.xfail(reason="Generator qmake generator to be revisited")
     def test_srcdirs(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 from conans.tools import save
 import os
 class TestConan(ConanFile):

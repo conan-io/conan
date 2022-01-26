@@ -12,7 +12,7 @@ from conans.util.files import save
 
 
 conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.files import download
 
     class Pkg(ConanFile):

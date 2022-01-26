@@ -14,7 +14,7 @@ class OptimizeConanFileLoadTest(unittest.TestCase):
         conanfile.py and the test_package/conanfile.py
         """
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 mycounter = 0
 class Pkg(ConanFile):
     mycounter2 = 0

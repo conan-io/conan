@@ -8,12 +8,12 @@ def test_transitive_py_requires():
     # https://github.com/conan-io/conan/issues/5529
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class PackageInfo(ConanFile):
             python_requires = "dep/[>0.0]@user/channel"
         """)
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class MyConanfileBase(ConanFile):
             python_requires = "pkg/0.1@user/channel"
         """)
@@ -39,12 +39,12 @@ def test_transitive_py_requires():
 def test_transitive_matching_ranges():
     client = TestClient()
     tool = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class PackageInfo(ConanFile):
             python_requires = "dep/{}"
         """)
     pkg = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class MyConanfileBase(ConanFile):
             python_requires = "tool/{}"
             def configure(self):

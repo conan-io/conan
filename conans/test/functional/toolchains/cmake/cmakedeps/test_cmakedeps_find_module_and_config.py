@@ -16,7 +16,7 @@ def client():
     cmake = gen_cmakelists(libname="mydep", libsources=["mydep.cpp"])
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Conan(ConanFile):

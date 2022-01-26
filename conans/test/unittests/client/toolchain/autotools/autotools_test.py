@@ -3,7 +3,7 @@ import os
 
 from conan.tools.files import save_toolchain_args
 from conan.tools.gnu import Autotools
-from conans import ConanFile
+from conan import ConanFile
 from conans.model.conf import Conf
 from conans.test.unittests.util.tools_test import RunnerMock
 from conans.test.utils.mocks import MockSettings

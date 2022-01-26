@@ -14,7 +14,7 @@ class SetVersionNameTest(unittest.TestCase):
     def test_set_version_name(self, user_channel):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Lib(ConanFile):
                 def set_name(self):
                     self.name = "pkg"
@@ -42,7 +42,7 @@ class SetVersionNameTest(unittest.TestCase):
     def test_set_version_name_file(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
+            from conan import ConanFile, load
             class Lib(ConanFile):
                 def set_name(self):
                     self.name = load("name.txt")
@@ -65,7 +65,7 @@ class SetVersionNameTest(unittest.TestCase):
     def test_set_version_name_errors(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Lib(ConanFile):
                 def set_name(self):
                     self.name = "pkg"
@@ -88,7 +88,7 @@ class SetVersionNameTest(unittest.TestCase):
     def test_set_version_name_only_not_cli(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Lib(ConanFile):
                 def set_name(self):
                     self.name = self.name or "pkg"
@@ -112,7 +112,7 @@ class SetVersionNameTest(unittest.TestCase):
     def test_set_version_name_crash(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Lib(ConanFile):
                 def set_name(self):
                     self.name = error
@@ -122,7 +122,7 @@ class SetVersionNameTest(unittest.TestCase):
         self.assertIn("ERROR: conanfile.py: Error in set_name() method, line 5", client.out)
         self.assertIn("name 'error' is not defined", client.out)
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
            class Lib(ConanFile):
                def set_version(self):
                    self.version = error
@@ -136,7 +136,7 @@ class SetVersionNameTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, load
+            from conan import ConanFile, load
             class Lib(ConanFile):
                 name = "pkg"
                 def set_version(self):

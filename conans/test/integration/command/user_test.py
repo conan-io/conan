@@ -110,7 +110,7 @@ class UserTest(unittest.TestCase):
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
         base = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"

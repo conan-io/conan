@@ -13,7 +13,7 @@ from conans.util.files import load
 def test_verify_ssl_none_string():
     client = TestClient()
     client.save({'conanfile.py': textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             scm = {"type": "git", "url": "https://github.com/repo/library.git",
@@ -31,7 +31,7 @@ def test_verify_ssl_none_string():
                       {"verify_ssl": 'None'}])  # Explicit 'None' written in the recipe
 class GitVerifySSLTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Lib(ConanFile):
             scm = {{"type": "git", "url": "auto", "revision": "auto", {verify_ssl_attrib} }}

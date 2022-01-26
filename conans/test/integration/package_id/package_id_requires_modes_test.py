@@ -339,7 +339,7 @@ class PackageIDErrorTest(unittest.TestCase):
         client.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Consumer(ConanFile):
                 requires = "dep2/1.0@user/testing"
                 def package_id(self):
@@ -367,7 +367,7 @@ class PackageIDErrorTest(unittest.TestCase):
         client.run("export . --name=dep2 --version=1.0 --user=user --channel=testing")
 
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Consumer(ConanFile):
                 requires = "dep2/1.0@user/testing"
                 build_requires = "tool/1.0@user/testing"
@@ -404,7 +404,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
             'package1.py': GenConanfile("pkg1"),
             'package2.py': GenConanfile("pkg2").with_require("pkg1/1.0"),
             'package3.py': textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
                 class Recipe(ConanFile):
                     requires = "pkg2/1.0"
                     def package_id(self):
@@ -432,7 +432,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         t.save({
             'package1.py': GenConanfile("pkg1"),
             'package2.py':  textwrap.dedent("""
-                from conans import ConanFile
+                from conan import ConanFile
                 class Recipe(ConanFile):
                     requires = "pkg1/1.0"
                     def package_id(self):

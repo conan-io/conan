@@ -12,7 +12,7 @@ class UserInfoTestCase(unittest.TestCase):
     """
 
     library = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Library(ConanFile):
             name = "library"
@@ -23,7 +23,7 @@ class UserInfoTestCase(unittest.TestCase):
     """)
 
     br = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class BuildRequires(ConanFile):
             settings = "os"
@@ -36,7 +36,7 @@ class UserInfoTestCase(unittest.TestCase):
 
     # FIXME: Commented build_requires, interface not defined yet
     app = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Library(ConanFile):
             name = "app"

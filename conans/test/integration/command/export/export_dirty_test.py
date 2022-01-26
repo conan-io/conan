@@ -17,7 +17,7 @@ class SourceDirtyTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/4025
         client = TestClient()
         conanfile = textwrap.dedent("""\
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.tools import save
             class Pkg(ConanFile):
                 def source(self):

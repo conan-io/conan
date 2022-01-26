@@ -18,7 +18,7 @@ class RemoveOutdatedTest(unittest.TestCase):
         test_server = TestServer(users={"admin": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Test(ConanFile):
     settings = "os"
     """

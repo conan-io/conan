@@ -6,7 +6,7 @@ import mock
 from mock import Mock
 
 from conan.tools.gnu import AutotoolsDeps
-from conans import ConanFile
+from conan import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.build_info import CppInfo

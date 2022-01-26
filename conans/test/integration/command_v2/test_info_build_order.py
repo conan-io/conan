@@ -266,7 +266,7 @@ def test_info_build_order_merge_multi_product():
 def test_info_build_order_merge_conditionals():
     c = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):

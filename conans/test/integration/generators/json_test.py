@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 class JsonTest(unittest.TestCase):
 
     def test_generate_json_info(self):
-        conanfile_py = """from conans import ConanFile
+        conanfile_py = """from conan import ConanFile
 
 class HelloConan(ConanFile):
     exports_sources = "*.h"
@@ -39,7 +39,7 @@ class HelloConan(ConanFile):
         self.assertTrue(os.path.exists(include_path))
 
     def test_generate_json_info_settings(self):
-        conanfile_py = """from conans import ConanFile
+        conanfile_py = """from conan import ConanFile
 
 class HelloConan(ConanFile):
     exports_sources = "*.h"
@@ -66,7 +66,7 @@ class HelloConan(ConanFile):
 
     def test_multiconfig(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 settings = "os", "arch"
@@ -121,7 +121,7 @@ class HelloConan(ConanFile):
 
     def test_system_libs(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 settings = "os", "arch"
@@ -144,7 +144,7 @@ class HelloConan(ConanFile):
 
     def test_generate_json_filenames(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class HelloConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.filenames['cmake_find_package'] = 'FooBar'

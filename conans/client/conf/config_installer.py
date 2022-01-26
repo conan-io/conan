@@ -3,7 +3,7 @@ import shutil
 from contextlib import contextmanager
 from urllib.parse import urlparse
 
-from conans import load
+
 from conans.cli.output import ConanOutput
 from conans.client import tools
 from conans.client.cache.remote_registry import load_registry_txt
@@ -11,7 +11,7 @@ from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove
+from conans.util.files import mkdir, rmdir, remove, load
 
 
 def _hide_password(resource):

@@ -7,7 +7,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 conanfile = textwrap.dedent("""
-    from conans import ConanFile, load
+    from conan import ConanFile, load
     import os
     class Pkg(ConanFile):
         settings = "os"

@@ -25,7 +25,7 @@ def test_toolchain_win(compiler, version, runtime):
     settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuildToolchain
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"

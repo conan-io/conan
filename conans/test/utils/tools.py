@@ -24,7 +24,7 @@ from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
 from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
-from conans import load, REVISIONS
+from conans import REVISIONS
 from conans.cli.api.conan_api import ConanAPIV2
 from conans.cli.api.model import Remote
 from conans.cli.cli import Cli, CLI_V1_COMMANDS
@@ -50,7 +50,7 @@ from conans.test.utils.scm import create_local_git_repo, create_local_svn_checko
 from conans.test.utils.server_launcher import (TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import get_env
-from conans.util.files import mkdir, save_files, save
+from conans.util.files import mkdir, save_files, save, load
 
 NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
 

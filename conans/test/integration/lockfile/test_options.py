@@ -11,7 +11,7 @@ def test_options():
     """
     client = TestClient()
     ffmpeg = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class FfmpegConan(ConanFile):
             options = {"variation": ["standard", "nano"]}
             default_options = {"variation": "standard"}
@@ -21,7 +21,7 @@ def test_options():
         """)
 
     variant = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Meta(ConanFile):
             requires = "ffmpeg/1.0"
             default_options = {"ffmpeg:variation": "nano"}

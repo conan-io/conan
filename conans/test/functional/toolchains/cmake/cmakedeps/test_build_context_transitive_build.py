@@ -17,7 +17,7 @@ but neither will be included as find_dependencies()
 def client():
     c = TestClient()
     zlib_conanfile = textwrap.dedent('''
-    from conans import ConanFile
+    from conan import ConanFile
 
     class Zlib(ConanFile):
         name = "zlib"
@@ -31,7 +31,7 @@ def client():
     c.run("create . ")
 
     doxygen_conanfile = textwrap.dedent('''
-    from conans import ConanFile
+    from conan import ConanFile
     from conans.tools import save, chdir
     import os
 
@@ -54,7 +54,7 @@ def test_zlib_not_included(client):
     cmake = gen_cmakelists(find_package=["doxygen"], appsources=["main.cpp"], appname="main")
 
     conanfile_consumer = textwrap.dedent('''
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeDeps
 
         class Consumer(ConanFile):

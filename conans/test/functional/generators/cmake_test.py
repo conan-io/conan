@@ -17,7 +17,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def test_no_check_compiler(self):
         # https://github.com/conan-io/conan/issues/4268
         file_content = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class ConanFileToolsTest(ConanFile):
                 generators = "cmake"
@@ -48,7 +48,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_skip_check_if_toolset(self):
         file_content = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class ConanFileToolsTest(ConanFile):
                 generators = "cmake"
@@ -85,7 +85,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         Issue related: https://github.com/conan-io/conan/issues/10185
         """
         file_content = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class ConanFileMSVCTest(ConanFile):
                 generators = "cmake"
@@ -145,7 +145,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def test_system_libs(self):
         mylib = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyLib(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
@@ -160,7 +160,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                 """)
         consumer = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Consumer(ConanFile):
                 requires = "mylib/1.0@us/ch"
@@ -217,7 +217,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
         consumer = textwrap.dedent("""
             import os
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class Consumer(ConanFile):
                 requires = "myotherlib/1.0@us/ch"
@@ -306,7 +306,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def test_user_appended_libs(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class MyLib(ConanFile):
                 name = "mylib"
@@ -323,7 +323,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                 """)
         consumer = textwrap.dedent("""
             import os
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class Consumer(ConanFile):
                 name = "consumer"
@@ -357,7 +357,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def test_conan_get_policy(self):
         # https://github.com/conan-io/conan/issues/6974
         file_content = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class ConanFileToolsTest(ConanFile):
                 name = "consumer"
@@ -394,7 +394,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class Conan(ConanFile):
                 name = "hello"
@@ -418,7 +418,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("create .")
 
         consumer = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class Conan(ConanFile):
                 name = "consumer"

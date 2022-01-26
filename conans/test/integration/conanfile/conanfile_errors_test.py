@@ -9,7 +9,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_copy_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -29,7 +29,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_copy_error2(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -50,7 +50,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_package_info_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -70,7 +70,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_config_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -92,7 +92,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_source_error(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -124,7 +124,7 @@ class ConanfileErrorsTest(unittest.TestCase):
     def test_duplicate_requires_py(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hello"
@@ -140,7 +140,7 @@ class ConanfileErrorsTest(unittest.TestCase):
 def test_notduplicate_requires_py():
     client = TestClient()
     conanfile = textwrap.dedent('''
-        from conans import ConanFile
+        from conan import ConanFile
 
         class HelloConan(ConanFile):
             name = "hello"

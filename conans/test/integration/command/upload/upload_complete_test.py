@@ -236,7 +236,7 @@ class UploadTest(unittest.TestCase):
                               "upgraded")
     def test_upload_json(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class TestConan(ConanFile):
                 name = "test"

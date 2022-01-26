@@ -46,7 +46,7 @@ class CreateTest(unittest.TestCase):
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
+        client.save({"conanfile.py": """from conan import ConanFile
 class MyPkg(ConanFile):
     def source(self):
         assert(self.version=="0.1")
@@ -89,7 +89,7 @@ class MyPkg(ConanFile):
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_name_command_line(self):
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
+        client.save({"conanfile.py": """from conan import ConanFile
 class MyPkg(ConanFile):
     name = "Pkg"
     def source(self):
@@ -190,7 +190,7 @@ class MyPkg(ConanFile):
         client.run("create . --name=other --version=1.0 --user=user --channel=channel")
 
         conanfile = GenConanfile().with_require("dep/0.1@user/channel")
-        test_conanfile = """from conans import ConanFile
+        test_conanfile = """from conan import ConanFile
 class MyPkg(ConanFile):
     requires = "other/1.0@user/channel"
     def requirements(self):
@@ -280,7 +280,7 @@ class MyPkg(ConanFile):
         """
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyPkg(ConanFile):
 
@@ -316,7 +316,7 @@ class MyPkg(ConanFile):
     def test_requires_without_user_channel(self):
         client = TestClient()
         conanfile = textwrap.dedent('''
-            from conans import ConanFile
+            from conan import ConanFile
 
             class HelloConan(ConanFile):
                 name = "hellobar"
@@ -360,7 +360,7 @@ class MyPkg(ConanFile):
     def test_compoents_json_output(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyTest(ConanFile):
                 name = "pkg"

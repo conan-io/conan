@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 def client():
     openssl = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -28,7 +28,7 @@ def client():
 
     cmake = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -48,7 +48,7 @@ def client():
 
     gtest = textwrap.dedent(r"""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
@@ -86,7 +86,7 @@ def test_complete(client, gtest_run_true):
     accessed"""
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
             requires = "openssl/1.0"
@@ -134,7 +134,7 @@ def test_profile_included_multiple():
     client = TestClient()
     conanfile = textwrap.dedent("""\
         import os, platform
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             def generate(self):
                 buildenv = self.buildenv.vars(self)
@@ -175,7 +175,7 @@ def test_profile_buildenv():
     client = TestClient()
     conanfile = textwrap.dedent("""\
         import os, platform
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             def generate(self):
                 self.buildenv.vars(self).save_script("pkgenv")
@@ -229,13 +229,13 @@ def test_transitive_order():
     #      \--------(br)-> gcc
     #       \---------------------> openssl
     gcc = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             def package_info(self):
                 self.runenv_info.append("MYVAR", "MyGCCValue")
         """)
     openssl = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             tool_requires = "gcc/1.0"
@@ -244,7 +244,7 @@ def test_transitive_order():
                 self.runenv_info.append("MYVAR", "MyOpenSSL{}Value".format(self.settings.os))
         """)
     cmake = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "openssl/1.0"
             tool_requires = "gcc/1.0"
@@ -262,7 +262,7 @@ def test_transitive_order():
     client.run("export cmake --name=cmake --version=1.0")
 
     consumer = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
         class Pkg(ConanFile):
             requires = "openssl/1.0"
@@ -288,7 +288,7 @@ def test_transitive_order():
 
 def test_buildenv_from_requires():
     openssl = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def package_info(self):
@@ -296,7 +296,7 @@ def test_buildenv_from_requires():
                                           "MyOpenSSL{}Value".format(self.settings.os))
         """)
     poco = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "openssl/1.0"
             settings = "os"
@@ -311,7 +311,7 @@ def test_buildenv_from_requires():
     client.run("export poco --name=poco --version=1.0")
 
     consumer = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.env import VirtualBuildEnv
         class Pkg(ConanFile):
             requires = "poco/1.0"
@@ -329,7 +329,7 @@ def test_buildenv_from_requires():
 @pytest.mark.xfail(reason="The VirtualEnv generator is not fully complete")
 def test_diamond_repeated():
     pkga = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             def package_info(self):
                 self.runenv_info.define("MYVAR1", "PkgAValue1")
@@ -338,7 +338,7 @@ def test_diamond_repeated():
                 self.runenv_info.prepend("MYVAR4", "PkgAValue4")
         """)
     pkgb = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "pkga/1.0"
             def package_info(self):
@@ -348,7 +348,7 @@ def test_diamond_repeated():
                 self.runenv_info.prepend("MYVAR4", "PkgBValue4")
         """)
     pkgc = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             requires = "pkga/1.0"
             def package_info(self):
@@ -358,7 +358,7 @@ def test_diamond_repeated():
                 self.runenv_info.prepend("MYVAR4", "PkgCValue4")
         """)
     pkgd = textwrap.dedent(r"""
-       from conans import ConanFile
+       from conan import ConanFile
        class Pkg(ConanFile):
            requires = "pkgb/1.0", "pkgc/1.0"
            def package_info(self):
@@ -368,7 +368,7 @@ def test_diamond_repeated():
                self.runenv_info.define("MYVAR4", "PkgDValue4")
        """)
     pkge = textwrap.dedent(r"""
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.env import VirtualRunEnv
        class Pkg(ConanFile):
            requires = "pkgd/1.0"
@@ -404,7 +404,7 @@ def test_environment_scripts_generated_envvars(require_run):
     """If the regular require doesn't declare the 'run' trait, the conanrunenv won't be there,
     unless for example, the require_pkg has the pkg_type to Application"""
     consumer_pkg = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
         class Pkg(ConanFile):
             settings = "os"
@@ -479,7 +479,7 @@ def test_environment_scripts_generated_envvars(require_run):
 
 def test_multiple_deactivate():
     conanfile = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.env import Environment
         class Pkg(ConanFile):
             def generate(self):

@@ -19,7 +19,7 @@ class OutputTest(unittest.TestCase):
         conanfile = """
 # -*- coding: utf-8 -*-
 
-from conans import ConanFile
+from conan import ConanFile
 from conans.errors import ConanException
 
 class PkgConan(ConanFile):

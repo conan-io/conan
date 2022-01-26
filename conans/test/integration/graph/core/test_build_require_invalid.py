@@ -11,7 +11,7 @@ class TestInvalidConfiguration:
     ConanInvalidConfiguration without a binary fall backs, result in errors
     """
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.errors import ConanInvalidConfiguration
 
         class Conan(ConanFile):
@@ -72,7 +72,7 @@ class TestErrorConfiguration(TestInvalidConfiguration):
     A configuration error is unsolvable, even if a binary exists
     """
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.errors import ConanErrorConfiguration
 
         class Conan(ConanFile):
@@ -94,7 +94,7 @@ class TestErrorConfigurationCompatible(TestInvalidConfiguration):
     A configuration error is unsolvable, even if a binary exists
     """
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.errors import ConanErrorConfiguration
 
         class Conan(ConanFile):
@@ -119,7 +119,7 @@ class TestInvalidBuildPackageID:
     ConanInvalidBuildConfiguration will not block if setting is removed from package_id
     """
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        from conans.errors import ConanInvalidConfiguration
 
        class Conan(ConanFile):
@@ -177,7 +177,7 @@ class TestInvalidBuildCompatible(TestInvalidBuildPackageID):
     ConanInvalidBuildConfiguration will not block if compatible_packages fallback
     """
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
+       from conan import ConanFile
        from conans.errors import ConanInvalidConfiguration
 
        class Conan(ConanFile):

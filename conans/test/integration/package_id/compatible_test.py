@@ -14,7 +14,7 @@ class CompatibleIDsTest(unittest.TestCase):
     def test_compatible_setting(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Pkg(ConanFile):
                 settings = "os", "compiler"
@@ -51,7 +51,7 @@ class CompatibleIDsTest(unittest.TestCase):
     def test_compatible_setting_no_binary(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-           from conans import ConanFile
+           from conan import ConanFile
 
            class Pkg(ConanFile):
                settings = "os", "compiler"
@@ -90,7 +90,7 @@ class CompatibleIDsTest(unittest.TestCase):
     def test_compatible_setting_no_user_channel(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Pkg(ConanFile):
                 settings = "os", "compiler"
@@ -123,7 +123,7 @@ class CompatibleIDsTest(unittest.TestCase):
     def test_compatible_option(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Pkg(ConanFile):
                 options = {"optimized": [1, 2, 3]}
@@ -164,7 +164,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client = TestClient()
         ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             settings = "compiler"
@@ -206,7 +206,7 @@ class CompatibleIDsTest(unittest.TestCase):
     def test_wrong_base_compatible(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             settings = "compiler"
@@ -232,7 +232,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client = TestClient()
         ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             settings = "compiler"
@@ -275,7 +275,7 @@ class CompatibleIDsTest(unittest.TestCase):
     def test_no_valid_compiler_keyword_base(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Conan(ConanFile):
             settings = "compiler"
@@ -306,7 +306,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client = TestClient()
         ref = RecipeReference.loads("bye/0.1@us/ch")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Conan(ConanFile):
                 settings = "compiler"
@@ -390,7 +390,7 @@ class CompatibleIDsTest(unittest.TestCase):
         # the current package should have a different binary package ID too.
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler"
                 def package_id(self):
@@ -449,7 +449,7 @@ class CompatibleIDsTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/6133
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Conan(ConanFile):
                 settings = "os"
@@ -475,7 +475,7 @@ class CompatibleIDsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=tool --version=0.1")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Conan(ConanFile):
                 settings = "os"
@@ -501,7 +501,7 @@ class CompatibleIDsTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/9002
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os"
                 def package_id(self):

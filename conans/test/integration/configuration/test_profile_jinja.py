@@ -60,7 +60,7 @@ def test_profile_template_profile_dir():
         tools.toolchain:mydir = {{ os.path.join(profile_dir, "toolchain.cmake") }}
         """)
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, load
+        from conan import ConanFile, load
         class Pkg(ConanFile):
             def generate(self):
                 content = load(self.conf["tools.toolchain:mydir"])

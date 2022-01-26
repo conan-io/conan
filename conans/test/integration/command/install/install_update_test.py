@@ -11,7 +11,7 @@ from conans.util.files import load
 def test_update_binaries():
     client = TestClient(default_server_user=True)
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conans.tools import save
         import os, random
         class Pkg(ConanFile):

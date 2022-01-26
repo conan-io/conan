@@ -61,7 +61,7 @@ def test_cpp_info_editable():
     conan_consumer = textwrap.dedent("""
     import os
 
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
 
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
@@ -186,7 +186,7 @@ def test_cpp_info_components_editable():
     conan_consumer = textwrap.dedent("""
     import os
 
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
 
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"

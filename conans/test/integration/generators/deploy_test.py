@@ -228,7 +228,7 @@ class DeployGeneratorSymbolicLinkFolderTest(unittest.TestCase):
     def setUp(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, tools
+            from conan import ConanFile, tools
 
             class TestConan(ConanFile):
 

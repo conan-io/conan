@@ -31,7 +31,7 @@ class SettingsTest(unittest.TestCase):
         client = TestClient()
         save(client.cache.settings_path, settings)
         save(client.cache.default_profile_path, "")
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     settings = "os", "compiler"
 """
@@ -54,7 +54,7 @@ compiler=mycomp
 compiler.version=2.3
 cppstd=11
 """)
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     settings = "compiler", "cppstd"
 """
@@ -122,7 +122,7 @@ cppstd=11""", client.out)
 
     def test_settings_constraint_error_type(self):
         # https://github.com/conan-io/conan/issues/3022
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Test(ConanFile):
     settings = "os"
     def build(self):
@@ -135,7 +135,7 @@ class Test(ConanFile):
 
     def test_settings_as_a_str(self):
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"
@@ -158,7 +158,7 @@ class SayConan(ConanFile):
     def test_settings_as_a_list_conanfile(self):
         # Now with conanfile as a list
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"
@@ -176,7 +176,7 @@ class SayConan(ConanFile):
         # Now with conanfile as a dict
         # XXX: this test only works on machines w default arch "x86", "x86_64", "sparc" or "sparcv9"
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"
@@ -195,7 +195,7 @@ class SayConan(ConanFile):
 
         # Test wrong settings in conanfile
         content = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class SayConan(ConanFile):
                 settings = "invalid"
@@ -208,7 +208,7 @@ class SayConan(ConanFile):
         # Test wrong values in conanfile
     def test_invalid_settings4(self):
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"
@@ -235,7 +235,7 @@ class SayConan(ConanFile):
 
         # Settings is None
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"
@@ -251,7 +251,7 @@ class SayConan(ConanFile):
 
         # Settings is {}
         content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class SayConan(ConanFile):
     name = "say"

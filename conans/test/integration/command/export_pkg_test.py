@@ -43,14 +43,14 @@ class ExportPkgTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
         client.run("create . --name=pkgc --version=0.1 --user=user --channel=testing")
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class PkgB(ConanFile):
     settings = "arch"
     requires = "pkgc/0.1@user/testing"
 """
         client.save({CONANFILE: conanfile})
         client.run("create . --name=pkgb --version=0.1 --user=user --channel=testing")
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class PkgA(ConanFile):
     requires = "pkgb/0.1@user/testing"
     def build(self):
@@ -74,7 +74,7 @@ class PkgA(ConanFile):
 
     def test_develop(self):
         # https://github.com/conan-io/conan/issues/2513
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class helloPythonConan(ConanFile):
     def package(self):
         self.output.info("DEVELOP IS: %s!" % self.develop)
@@ -87,7 +87,7 @@ class helloPythonConan(ConanFile):
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class helloPythonConan(ConanFile):
     name = "hello"
     options = { "optionOne": [True, False, 123] }
@@ -115,7 +115,7 @@ class helloPythonConan(ConanFile):
         # https://github.com/conan-io/conan/issues/4832
         conanfile = dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.env import VirtualBuildEnv
             class helloPythonConan(ConanFile):
                 def package(self):
@@ -136,7 +136,7 @@ class helloPythonConan(ConanFile):
 
     def _consume(self, client, install_args):
         consumer = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     requires = "hello/0.1@lasote/stable"
     settings = "os", "build_type"
@@ -148,7 +148,7 @@ class TestConan(ConanFile):
     def test_build_folders(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "0.1"
@@ -178,7 +178,7 @@ class TestConan(ConanFile):
 
     def test_default_source_folder(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class TestConan(ConanFile):
 
     def package(self):
@@ -203,7 +203,7 @@ class TestConan(ConanFile):
 
     def test_build_source_folders(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class TestConan(ConanFile):
     settings = "os"
     name = "hello"
@@ -239,7 +239,7 @@ class TestConan(ConanFile):
     def test_partial_references(self):
         client = TestClient()
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "0.1"
@@ -262,7 +262,7 @@ class TestConan(ConanFile):
         self.assertIn("ERROR: Package recipe with version 1.1!=0.1", client.out)
 
         conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     settings = "os"
 
@@ -299,7 +299,7 @@ class TestConan(ConanFile):
 
         # consumer
         consumer = """
-from conans import ConanFile
+from conan import ConanFile
 class TestConan(ConanFile):
     requires = "hello1/0.1@lasote/stable"
     settings = "os", "build_type"
@@ -342,7 +342,7 @@ class TestConan(ConanFile):
                                  NO_SETTINGS_PACKAGE_ID)
                 self.assertTrue(output["installed"][0]["packages"][0]["exported"])
 
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class MyConan(ConanFile):
     name = "mypackage"
     version = "0.1.0"
@@ -396,7 +396,7 @@ class MyConan(ConanFile):
                 self.assertEqual(str(tmp), "pkg1/1.0@danimtb/testing")
                 self.assertTrue(output["installed"][1]["recipe"]["dependency"])
 
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class MyConan(ConanFile):
     pass
 """
@@ -416,7 +416,7 @@ class MyConan(ConanFile):
 
     def test_export_pkg_no_ref(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class TestConan(ConanFile):
     name = "hello"
     version = "0.1"
@@ -437,7 +437,7 @@ class TestConan(ConanFile):
 def test_build_policy_never():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             build_policy = "never"
 

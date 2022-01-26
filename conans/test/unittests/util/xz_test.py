@@ -34,7 +34,7 @@ class XZTest(TestCase):
         client = TestClient(servers={"default": server})
         server.server_store.update_last_revision(ref)
         export = server.server_store.export(ref)
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     exports_sources = "*"
 """
@@ -52,7 +52,7 @@ class Pkg(ConanFile):
         client = TestClient(servers={"default": server})
         server.server_store.update_last_revision(ref)
         export = server.server_store.export(ref)  # *1 the path can't be known before upload a revision
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     exports_sources = "*"
 """

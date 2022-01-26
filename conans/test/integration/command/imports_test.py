@@ -11,7 +11,7 @@ from conans.test.utils.tools import TestClient
 
 
 conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save
 
 class HelloConan(ConanFile):
@@ -36,7 +36,7 @@ hello/0.1@lasote/stable
 """
 
 test2 = """
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save
 
 class HelloReuseConan(ConanFile):
@@ -47,7 +47,7 @@ class HelloReuseConan(ConanFile):
 """
 
 test3 = """
-from conans import ConanFile
+from conan import ConanFile
 from conans.util.files import save
 
 class HelloReuseConan(ConanFile):
@@ -71,7 +71,7 @@ class ImportsTest(unittest.TestCase):
         """
         dst_global_folder = temp_folder().replace("\\", "/")
         conanfile2 = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "say"
@@ -93,7 +93,7 @@ class ConanLib(ConanFile):
     @pytest.mark.xfail(reason="new Environment need global env arguments")
     def test_imports_env_var(self):
         conanfile2 = '''
-from conans import ConanFile
+from conan import ConanFile
 import os
 
 class ConanLib(ConanFile):
@@ -194,7 +194,7 @@ class SymbolicImportsTest(unittest.TestCase):
     """
     def setUp(self):
         pkg = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
@@ -211,7 +211,7 @@ class SymbolicImportsTest(unittest.TestCase):
                           "myfile.lib": "bye world",
                           "myfile.a": "bye moon"})
         consumer = textwrap.dedent("""
-            from conans import ConanFile, load
+            from conan import ConanFile, load
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def build(self):
@@ -233,7 +233,7 @@ class SymbolicImportsTest(unittest.TestCase):
     def test_error_unknown(self):
         self.client.run("create . --name=pkg --version=0.1")
         consumer = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def imports(self):
@@ -259,7 +259,7 @@ class SymbolicImportsComponentTest(unittest.TestCase):
     """
     def setUp(self):
         pkg = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 exports = "*"
                 def package(self):
@@ -280,7 +280,7 @@ class SymbolicImportsComponentTest(unittest.TestCase):
                           "myfileA.lib": "bye world",
                           "myfileB.lib": "bye moon"})
         consumer = textwrap.dedent("""
-            from conans import ConanFile, load
+            from conan import ConanFile, load
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def build(self):

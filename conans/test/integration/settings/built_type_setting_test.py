@@ -8,13 +8,13 @@ class BuildTypeSettingTest(unittest.TestCase):
     def test_build_type(self):
         # https://github.com/conan-io/conan/issues/2500
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     settings = "build_type"
     def build(self):
         self.output.info("BUILD TYPE: %s" % (self.settings.build_type or "Not defined"))
 """
-        test_conanfile = """from conans import ConanFile
+        test_conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     settings = "build_type"
     def requirements(self):

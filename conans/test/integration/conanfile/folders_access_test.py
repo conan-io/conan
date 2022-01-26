@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 conanfile_parent = """
-from conans import ConanFile
+from conan import ConanFile
 
 class parentLib(ConanFile):
     name = "parent"
@@ -23,7 +23,7 @@ class parentLib(ConanFile):
 
 conanfile = """
 import os
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     name = "lib"
@@ -142,7 +142,7 @@ class TestFoldersAccess(unittest.TestCase):
 
 class RecipeFolderTest(unittest.TestCase):
     recipe_conanfile = textwrap.dedent("""
-        from conans import ConanFile, load
+        from conan import ConanFile, load
         import os
         class Pkg(ConanFile):
             exports = "file.txt"

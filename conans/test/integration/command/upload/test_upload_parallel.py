@@ -73,7 +73,7 @@ def test_upload_parallel_fail_on_interaction():
 def test_beat_character_long_upload():
     client = TestClient(default_server_user=True)
     slow_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class MyPkg(ConanFile):
             exports = "*"
             def package(self):

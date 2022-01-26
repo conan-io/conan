@@ -5,7 +5,7 @@ class TestLoadRequirementsTextFileTest:
 
     def test_load_reqs_from_text_file(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile, load
+        conanfile = """from conan import ConanFile, load
 def reqs():
     try:
         content = load("reqs.txt")

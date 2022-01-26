@@ -37,7 +37,7 @@ class DownloadTest(unittest.TestCase):
         servers["other"] = TestServer()
 
         client = TestClient(servers=servers, inputs=["admin", "password"])
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
     version = "0.1"
@@ -74,7 +74,7 @@ class Pkg(ConanFile):
 
     def test_download_reference_with_packages(self):
         client = TurboTestClient(default_server_user=True)
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
     version = "0.1"

@@ -18,7 +18,7 @@ from conans.test.utils.tools import TestClient, TestServer
 
 base = '''
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 def get_svn_remote(path_from_conanfile):
     from conans.errors import ConanException
@@ -71,7 +71,7 @@ class GitSCMTest(unittest.TestCase):
 
     def test_scm_other_type_ignored(self):
         conanfile = '''
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -85,7 +85,7 @@ class ConanLib(ConanFile):
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -177,7 +177,7 @@ class ConanLib(ConanFile):
         # https://github.com/conan-io/conan/issues/6070
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, tools
+            from conan import ConanFile, tools
 
             class ConanLib(ConanFile):
                 name = "lib"
@@ -351,7 +351,7 @@ class ConanLib(ConanFile):
         # Use explicit URL to avoid local optimization (scm_folder.txt)
         conanfile = '''
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -385,7 +385,7 @@ class ConanLib(ConanFile):
 
     def test_source_removed_in_local_cache(self):
         conanfile = textwrap.dedent('''
-            from conans import ConanFile, tools
+            from conan import ConanFile, tools
 
             class ConanLib(ConanFile):
                 scm = {
@@ -420,7 +420,7 @@ class ConanLib(ConanFile):
 
         # Check old (default) behaviour
         tmp = '''
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -443,7 +443,7 @@ class ConanLib(ConanFile):
 
         # Check invalid value
         tmp = '''
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -495,7 +495,7 @@ class ConanLib(ConanFile):
 
         conanfile = '''
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -518,7 +518,7 @@ class ConanLib(ConanFile):
 
         conanfile = '''
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -562,7 +562,7 @@ class ConanLib(ConanFile):
     def test_git_delegated_function(self):
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conans.client.tools.scm import Git
 
             def get_revision():
@@ -602,7 +602,7 @@ class SVNSCMTest(SVNLocalRepoTestCase):
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -803,7 +803,7 @@ class ConanLib(ConanFile):
 
     def test_source_removed_in_local_cache(self):
         conanfile = '''
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     scm = {
@@ -841,7 +841,7 @@ class ConanLib(ConanFile):
 
         conanfile = '''
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -978,7 +978,7 @@ class SCMBlockUploadTest(unittest.TestCase):
     def test_export_blocking_type_none(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class ConanLib(ConanFile):
                 scm = {
                     "type": None,
@@ -994,7 +994,7 @@ class SCMBlockUploadTest(unittest.TestCase):
         # If URL is None, it cannot create locally, as it will try to clone it
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class ConanLib(ConanFile):
                 scm = {
                     "type": "git",
@@ -1010,7 +1010,7 @@ class SCMBlockUploadTest(unittest.TestCase):
         # if the revision is auto and the url is None, it can be created locally, but not uploaded
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class ConanLib(ConanFile):
                 scm = {
                     "type": "git",
@@ -1033,7 +1033,7 @@ class SCMUpload(unittest.TestCase):
     def test_scm_sources(self):
         """ Test conan_sources.tgz is deleted in server when removing 'exports_sources' and using
         'scm'"""
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 class TestConan(ConanFile):
     name = "test"
     version = "1.0"
