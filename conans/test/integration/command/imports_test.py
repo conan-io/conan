@@ -211,11 +211,12 @@ class SymbolicImportsTest(unittest.TestCase):
                           "myfile.lib": "bye world",
                           "myfile.a": "bye moon"})
         consumer = textwrap.dedent("""
-            from conan import ConanFile, load
+            from conan import ConanFile
+            from conan.tools.files import load
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def build(self):
-                    self.output.info("MSG: %s" % load("myfile.txt"))
+                    self.output.info("MSG: %s" % load(self, "myfile.txt"))
                 def imports(self):
                     self.copy("*", src="@bindirs", dst="bin")
                     self.copy("*", src="@libdirs", dst="lib")
@@ -280,11 +281,12 @@ class SymbolicImportsComponentTest(unittest.TestCase):
                           "myfileA.lib": "bye world",
                           "myfileB.lib": "bye moon"})
         consumer = textwrap.dedent("""
-            from conan import ConanFile, load
+            from conan import ConanFile
+            from conan.tools.files import load
             class Pkg(ConanFile):
                 requires = "pkg/0.1"
                 def build(self):
-                    self.output.info("MSG: %s" % load("myfile.txt"))
+                    self.output.info("MSG: %s" % load(self, "myfile.txt"))
                 def imports(self):
                     self.copy("*", src="@bindirs", dst="bin")
                     self.copy("*", src="@libdirs", dst="lib")

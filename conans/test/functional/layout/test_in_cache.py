@@ -238,7 +238,7 @@ def test_cpp_package():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . --name=hello --version=1.0")
-    rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+    rrev = client.exported_recipe_revision()
     ref = RecipeReference.loads("hello/1.0")
     ref.revision = rrev
     pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)

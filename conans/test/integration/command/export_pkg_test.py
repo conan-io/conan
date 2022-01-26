@@ -165,7 +165,7 @@ class TestConan(ConanFile):
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
         client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
-        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+        rrev = client.exported_recipe_revision()
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
         pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
@@ -191,7 +191,7 @@ class TestConan(ConanFile):
                      "build/lib/hello.lib": "My Lib"})
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable "
                    "-s os=Windows")
-        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+        rrev = client.exported_recipe_revision()
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
         pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
@@ -226,7 +226,7 @@ class TestConan(ConanFile):
                      "build/lib/hello.lib": "My Lib",
                      "build/lib/bye.txt": ""})
         client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
-        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+        rrev = client.exported_recipe_revision()
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
         pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
@@ -429,7 +429,7 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
-        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+        rrev = client.exported_recipe_revision()
         prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
         pref = PkgReference.loads(f"hello/0.1#{rrev}:{NO_SETTINGS_PACKAGE_ID}#{prev}")
         package_folder = client.cache.pkg_layout(pref).package()

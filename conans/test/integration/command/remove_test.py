@@ -170,7 +170,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
 
 
 # populated packages of bar
-bar_rrev = "bar/1.1#78b42a981b29d2cb00fda10b72f1e72a"
+bar_rrev = "bar/1.1#7db54b020cc95b8bdce49cd6aa5623c0"
 bar_rrev2 = "bar/1.1#78b42a981b29d2cb00fda10b72f1e72a"
 bar_rrev2_debug = '{}:040ce2bd0189e377b2d15eb7246a4274d1c63317'.format(bar_rrev2)
 bar_rrev2_release = '{}:e53d55fd33066c49eb97a4ede6cb50cd8036fe8b'.format(bar_rrev2)
@@ -263,12 +263,11 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
 @pytest.mark.parametrize("data", [
     {"remove": "bar/*#*", "rrevs": []},
     {"remove": "bar/1.1#z*", "rrevs": [bar_rrev, bar_rrev2]},
-    {"remove": "bar/1.1#*3*", "rrevs": []},
-    {"remove": "bar/1.1#*76", "rrevs": [bar_rrev]},
+    {"remove": "bar/1.1#*9*", "rrevs": []},
+    {"remove": "bar/1.1#*2a", "rrevs": [bar_rrev]},
     {"remove": "bar*#*50", "error": True, "error_msg": "Invalid expression, specify version"},
 ])
 def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, data):
-
     with populated_client.mocked_servers():
         r = "-r default" if with_remote else ""
         error = data.get("error", False)

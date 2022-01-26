@@ -264,7 +264,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": "int i=0"})
         client.run("export . --user=frodo --channel=stable")
-        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+        rrev = client.exported_recipe_revision()
         client.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertIn("Uploading conanmanifest.txt", client.out)
         assert "Uploading hello0/1.2.1@frodo/stable" in client.out
@@ -293,7 +293,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
-        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+        rrev = client.exported_recipe_revision()
         client.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertIn("Uploading conanmanifest.txt", client.out)
         assert "Uploading hello0/1.2.1@frodo/stable" in client.out
@@ -324,7 +324,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
         client.run("create . --user=frodo --channel=stable")
-        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+        rrev = client.exported_recipe_revision()
         client.run("upload hello0/1.2.1@frodo/stable -r default")
 
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
@@ -367,7 +367,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile_new,
                      "hello.h": ""})
         client.run("create . --user=frodo --channel=stable")
-        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+        rrev = client.exported_recipe_revision()
         # First time upload
         client.run("upload hello/1.0@frodo/stable -r default")
         self.assertNotIn("Forbidden overwrite", client.out)
@@ -535,7 +535,7 @@ class UploadTest(unittest.TestCase):
 
         ref = RecipeReference.loads("lib/1.0@conan/testing")
         client.create(ref)
-        rrev = re.search(r"Exported revision: (\S+)", str(client.out)).group(1)
+        rrev = client.exported_recipe_revision()
         client.upload_all(ref)
         # Upload same with client2
         client2.create(ref)

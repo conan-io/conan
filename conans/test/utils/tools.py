@@ -740,6 +740,9 @@ class TestClient(object):
         package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)), str(self.out)).group(1)
         return package_id
 
+    def exported_recipe_revision(self):
+        return re.search(r"Exported revision: (\S+)", str(self.out)).group(1)
+
 
 class TurboTestClient(TestClient):
 
