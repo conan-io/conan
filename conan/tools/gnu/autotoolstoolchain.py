@@ -160,7 +160,7 @@ class AutotoolsToolchain:
         env = env.vars(self._conanfile, scope=scope)
         env.save_script("conanautotoolstoolchain")
         self.generate_args()
-        VCVars(self._conanfile).generate()
+        VCVars(self._conanfile).generate(scope=scope)
 
     def generate_args(self):
         configure_args = []
