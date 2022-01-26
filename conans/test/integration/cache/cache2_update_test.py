@@ -165,7 +165,7 @@ class TestUpdateFlows:
         # we will check all the remotes, find the latest revision
         # this revision will be oldest than the one in the cache
         # --> result: don't install anything
-        self.client.assert_listed_require({"liba/1.0.0": "Newer"})
+        self.client.assert_listed_require({"liba/1.0.0": "Newer (server2)"})
         assert "liba/1.0.0: Already installed!" in self.client.out
 
         # create newer revisions in servers so that the ones from the clients are older
