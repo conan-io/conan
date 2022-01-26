@@ -53,7 +53,7 @@ class ConanProxy(object):
 
         if self._conan_app.check_updates or self._conan_app.update:
 
-            remote, remote_ref = self._find_newest_recipe_in_remotes(reference)
+            remote, remote_ref = self._find_newest_recipe_in_remotes(reference, selected_remotes)
             if remote_ref:
                 # check if we already have the latest in local cache
                 # TODO: cache2.0 here if we already have a revision in the cache but we add the
