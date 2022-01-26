@@ -311,6 +311,9 @@ class AppleSystemBlock(Block):
         {% if CMAKE_SYSTEM_VERSION is defined %}
         set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
         {% endif %}
+        {% if CMAKE_SYSTEM_PROCESSOR is defined %}
+        set(CMAKE_SYSTEM_PROCESSOR {{ CMAKE_SYSTEM_PROCESSOR }})
+        {% endif %}
         # Set the architectures for which to build.
         set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }} CACHE STRING "" FORCE)
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
@@ -340,6 +343,7 @@ class AppleSystemBlock(Block):
             ctxt_toolchain["CMAKE_OSX_SYSROOT"] = host_sdk_name
         if host_architecture:
             ctxt_toolchain["CMAKE_OSX_ARCHITECTURES"] = host_architecture
+            ctxt_toolchain["CMAKE_SYSTEM_PROCESSOR"] = host_architecture
 
         if os_ in ('iOS', "watchOS", "tvOS"):
             ctxt_toolchain["CMAKE_SYSTEM_NAME"] = os_
