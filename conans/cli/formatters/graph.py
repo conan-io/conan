@@ -42,9 +42,6 @@ def print_graph_basic(graph):
             return
         output.info(title, Color.BRIGHT_YELLOW)
         for ref, (recipe, remote) in sorted(reqs_to_print.items()):
-            if type(remote) is list:
-                jander = "sdadsa"
-                print(jander)
             if remote is not None:
                 recipe = "{} ({})".format(recipe, remote.name)
             output.info("    {} - {}".format(ref.repr_notime(), recipe), Color.BRIGHT_CYAN)
