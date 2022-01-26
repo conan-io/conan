@@ -147,6 +147,7 @@ class ConanCenterIndexLayout:
     def get_recipes_references(self):
         recipes_dir = os.path.join(self._base_folder, "recipes")
         recipes = os.listdir(recipes_dir)
+        recipes.sort()
         ret = []
         for r in recipes:
             for v in self.get_versions(r):

@@ -53,11 +53,17 @@ def test_basic(c3i_folder):
     client.run("remote add repo-sources 'file://{}'".format(c3i_folder))
 
     client.run("search '*'")
-    assert 'repo-sources:\n  ' \
-           'libcurl\n    libcurl/1.0\n  ' \
-           'zlib\n    zlib/1.2.8\n    zlib/1.2.11\n  ' \
-           'openssl\n    openssl/1.0\n    openssl/1.1\n    ' \
-           'openssl/2.0\n' in client.out
+    assert  """repo-sources:
+  libcurl
+    libcurl/1.0
+  openssl
+    openssl/1.0
+    openssl/1.1
+    openssl/2.0
+  zlib
+    zlib/1.2.8
+    zlib/1.2.11
+""" in client.out
 
     client.run("install --reference libcurl/1.0 --build missing")
     client.run("list recipes '*'")
