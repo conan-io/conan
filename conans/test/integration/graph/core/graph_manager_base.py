@@ -50,7 +50,7 @@ class GraphManagerTest(unittest.TestCase):
         app.cache = cache
         app.remote_manager = self.remote_manager
         app.enabled_remotes = []
-        app.selected_remote = None
+        app.selected_remotes = []
         app.check_updates = False
         app.update = False
         app.range_resolver = RangeResolver(app)
