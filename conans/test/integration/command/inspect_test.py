@@ -3,6 +3,7 @@ import os
 import textwrap
 import unittest
 
+from conans import __version__ as client_version
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
@@ -526,3 +527,19 @@ class InspectRawTest(unittest.TestCase):
         client.run("inspect pkg/latest@ -a alias --json=myinspect")
         myinspect = json.loads(client.load("myinspect"))
         assert myinspect["alias"] == "pkg/0.1"
+
+    def test_inspect_required_conan_version_evaluated(self):
+        expected_version = ">={}".format(client_version)
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile().with_required_conan_version(expected_version)})
+        client.run("export . foobar/0.1@user/testing")
+        client.run("inspect foobar/0.1@user/testing")
+        assert 'required_conan_version: {}'.format(expected_version) in client.out
+
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("inspect .")
+        assert 'required_conan_version: None' in client.out
+
+        client.save({"conanfile.py": GenConanfile().with_name("foo")})
+        client.run("inspect . -a name")
+        assert 'required_conan_version' not in client.out

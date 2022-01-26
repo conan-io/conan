@@ -457,3 +457,22 @@ def _parse_conanfile(conan_file_path):
         sys.path.pop(0)
 
     return loaded, module_id
+
+
+def load_required_conan_version(conanfile_path):
+    """
+        Load conanfile.py and read required_conan_version variable
+        :param conanfile_path: conanfile.py absolute path
+        :return: required_conan_version's value. Otherwise, None.
+    """
+    module_id = str(uuid.uuid1())
+    loaded = None
+    try:
+        from importlib.machinery import SourceFileLoader
+        loaded = SourceFileLoader(module_id, conanfile_path).load_module()
+    except ImportError:
+        old_dont_write_bytecode = sys.dont_write_bytecode
+        sys.dont_write_bytecode = True
+        loaded = imp.load_source(module_id, conanfile_path)
+        sys.dont_write_bytecode = old_dont_write_bytecode
+    return getattr(loaded, "required_conan_version", None)

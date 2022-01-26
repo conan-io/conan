@@ -45,6 +45,7 @@ class GenConanfile(object):
         self._exports = None
         self._cmake_build = False
         self._class_attributes = None
+        self._required_conan_version = None
 
     def with_short_paths(self, value):
         self._short_paths = value
@@ -207,6 +208,10 @@ class GenConanfile(object):
         """.with_class_attribute("no_copy_sources=True") """
         self._class_attributes = self._class_attributes or []
         self._class_attributes.append(attr)
+        return self
+
+    def with_required_conan_version(self, version):
+        self._required_conan_version = version
         return self
 
     @property
@@ -402,9 +407,16 @@ class GenConanfile(object):
         self._class_attributes = self._class_attributes or []
         return ["    {}".format(a) for a in self._class_attributes]
 
+    @property
+    def _required_conan_version_render(self):
+        if self._required_conan_version is None:
+            return ""
+        return 'required_conan_version = "{}"'.format(self._required_conan_version)
+
     def __repr__(self):
         ret = []
         ret.extend(self._imports)
+        ret.append(self._required_conan_version_render)
         ret.append("class HelloConan(ConanFile):")
 
         # FIXME: This is all a mess. Replace with Jinja2

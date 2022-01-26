@@ -33,7 +33,7 @@ from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import BinaryInstaller
-from conans.client.loader import ConanFileLoader
+from conans.client.loader import ConanFileLoader, load_required_conan_version
 from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, colorama_initialize
@@ -292,6 +292,7 @@ class ConanAPIV1(object):
 
             result = self.app.proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
             conanfile_path, _, _, ref = result
+
             conanfile = self.app.loader.load_basic(conanfile_path)
             conanfile.name = ref.name
             # FIXME: Conan 2.0, this should be a string, not a Version object
@@ -299,7 +300,7 @@ class ConanAPIV1(object):
 
         result = OrderedDict()
         if not attributes:
-            attributes = ['name', 'version', 'url', 'homepage', 'license', 'author',
+            attributes = ['required_conan_version', 'name', 'version', 'url', 'homepage', 'license', 'author',
                           'description', 'topics', 'generators', 'exports', 'exports_sources',
                           'short_paths', 'apply_env', 'build_policy', 'revision_mode', 'settings',
                           'options', 'default_options', 'deprecated']
@@ -311,6 +312,9 @@ class ConanAPIV1(object):
                 result[attribute] = attr
             except AttributeError:
                 result[attribute] = ''
+        if 'required_conan_version' in attributes:
+            version = load_required_conan_version(conanfile_path)
+            result['required_conan_version'] = version or "None"
         return result
 
     @api_method
