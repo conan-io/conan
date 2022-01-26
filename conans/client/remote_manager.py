@@ -249,9 +249,6 @@ class RemoteManager(object):
         return self._call_remote(remote, "get_package_revision_reference", pref)
 
     def _call_remote(self, remote, method, *args, **kwargs):
-        if not isinstance(remote, Remote):
-            jander = "dasdasd"
-            print(jander)
         assert (isinstance(remote, Remote))
         if remote.disabled:
             raise ConanException("Remote '%s' is disabled" % remote.name)

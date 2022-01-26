@@ -27,6 +27,7 @@ class ConanProxy(object):
 
         return conanfile_path, status, remote, new_ref
 
+    # return the remote where the recipe was found or None if the recipe was not found
     def _get_recipe(self, reference):
         scoped_output = ScopedOutput(str(reference), ConanOutput())
 
@@ -87,7 +88,7 @@ class ConanProxy(object):
                 return conanfile_path, status, remote, ref
             else:
                 status = RECIPE_NOT_IN_REMOTE
-                return conanfile_path, status, selected_remotes, ref
+                return conanfile_path, status, None, ref
         else:
             status = RECIPE_INCACHE
             return conanfile_path, status, None, ref
