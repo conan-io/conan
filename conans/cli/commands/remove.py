@@ -31,7 +31,8 @@ def remove(conan_api: ConanAPIV2, parser, *args):
     args = parser.parse_args(*args)
 
     ui = UserInput(conan_api.config.get("core:non_interactive"))
-    remote = conan_api.remotes.get(args.remote) if args.remote else None
+    # in this case None means that we will remove in the local cache
+    remote = conan_api.remotes.get([args.remote])[0] if args.remote else None
     remove_all_packages = args.package_query is None
     query = args.package_query if args.package_query != _not_specified_ else None
 

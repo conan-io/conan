@@ -43,7 +43,7 @@ def print_graph_basic(graph):
         output.info(title, Color.BRIGHT_YELLOW)
         for ref, (recipe, remote) in sorted(reqs_to_print.items()):
             if type(remote) is list:
-                jander = "dasdasdas"
+                jander = "sdadsa"
                 print(jander)
             if remote is not None:
                 recipe = "{} ({})".format(recipe, remote.name)

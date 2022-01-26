@@ -202,7 +202,7 @@ def _get_tool(name, version):
             return None, None
 
         exe = tool.get("exe", name)
-        version = version or tool.get("default")
+        version = version or tool.get(["default"])[0]
         tool_version = tool.get(version)
         if tool_version is not None:
             assert isinstance(tool_version, dict)

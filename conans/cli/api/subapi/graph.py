@@ -13,8 +13,8 @@ class GraphAPI:
         self.conan_api = conan_api
 
     @api_method
-    def load_root_test_conanfile(self, path, tested_reference, profile_host, profile_build,
-                                 update=None, remote=None, require_overrides=None, lockfile=None):
+    def load_root_test_conanfile(self, path, tested_reference, profile_host, profile_build, remotes,
+                                 update=None, require_overrides=None, lockfile=None):
         """
         create and initialize a root node from a test_package/conanfile.py consumer
         @param lockfile: Might be good to lock python-requires, build-requires
@@ -22,18 +22,15 @@ class GraphAPI:
         @param tested_reference: The full RecipeReference of the tested package
         @param profile_host:
         @param profile_build:
+        @param remotes:
         @param update:
-        @param remote:
         @param require_overrides:
         @return: a graph Node, recipe=RECIPE_CONSUMER
         """
 
         app = ConanApp(self.conan_api.cache_folder)
         # necessary for correct resolution and update of remote python_requires
-        # TODO: check if this makes sense... now we always pass a list of remotes and passing None
-        #  would mean no remote, not all remotes
-        if remote:
-            app.load_remotes(remote, update=update)
+        app.load_remotes(remotes, update=update)
 
         loader = app.loader
         profile_host.dev_reference = tested_reference  # Make sure the created one has develop=True
@@ -127,7 +124,7 @@ class GraphAPI:
         return deps_graph
 
     @api_method
-    def analyze_binaries(self, graph, remotes, build_mode=None, update=None):
+    def analyze_binaries(self, graph, remotes=None, build_mode=None, update=None):
         """ Given a dependency graph, will compute the package_ids of all recipes in the graph, and
         evaluate if they should be built from sources, downloaded from a remote server, of if the
         packages are already in the local Conan cache

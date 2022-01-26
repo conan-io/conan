@@ -355,7 +355,7 @@ def test_new_remove_package_revisions_expressions(populated_client, with_remote,
 
 def _get_all_recipes(client, with_remote):
     api = ConanAPIV2(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
+    remote = api.remotes.get(["default"])[0] if with_remote else None
     with client.mocked_servers():
         return set([r.repr_notime() for r in api.search.recipes("*", remote=remote)])
 
@@ -363,7 +363,7 @@ def _get_all_recipes(client, with_remote):
 def _get_all_packages(client, ref, with_remote):
     ref = RecipeReference.loads(ref)
     api = ConanAPIV2(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
+    remote = api.remotes.get(["default"])[0] if with_remote else None
     with client.mocked_servers():
         try:
             return set([r.repr_notime() for r in api.list.packages_configurations(ref, remote=remote)])
@@ -374,7 +374,7 @@ def _get_all_packages(client, ref, with_remote):
 def _get_revisions_recipes(client, ref, with_remote):
     ref = RecipeReference.loads(ref)
     api = ConanAPIV2(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
+    remote = api.remotes.get(["default"])[0] if with_remote else None
     with client.mocked_servers():
         try:
             return set([r.repr_notime() for r in api.list.recipe_revisions(ref, remote=remote)])
@@ -385,7 +385,7 @@ def _get_revisions_recipes(client, ref, with_remote):
 def _get_revisions_packages(client, pref, with_remote):
     pref = PkgReference.loads(pref)
     api = ConanAPIV2(client.cache_folder)
-    remote = api.remotes.get("default") if with_remote else None
+    remote = api.remotes.get(["default"])[0] if with_remote else None
     with client.mocked_servers():
         try:
             return set([r.repr_notime() for r in api.list.package_revisions(pref, remote=remote)])

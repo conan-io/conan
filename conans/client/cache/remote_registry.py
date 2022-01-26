@@ -178,7 +178,10 @@ class RemoteRegistry(object):
         return ret
 
     def get_remote_index(self, remote: Remote):
-        return self.list().index(remote)
+        try:
+            return self.list().index(remote)
+        except ValueError:
+            raise ConanException("No remote: '{}' found".format(remote.name))
 
     def add(self, remote: Remote):
         self._validate_url(remote.url)

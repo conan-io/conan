@@ -32,6 +32,10 @@ class RemotesAPI:
 
     @api_method
     def get(self, remote_names):
+        if remote_names is not None and type(remote_names) is not list:
+            raise Exception
+            jander = "dasdasda"
+            print(jander)
         app = ConanApp(self.conan_api.cache_folder)
         if remote_names:
             return [app.cache.remotes_registry.read(remote_name) for remote_name in remote_names]

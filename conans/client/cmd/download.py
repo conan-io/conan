@@ -14,8 +14,9 @@ def download(app, ref, package_ids, recipe):
     assert(isinstance(ref, RecipeReference))
     scoped_output = ScopedOutput(str(ref), ConanOutput())
     # TODO: for download we should only accept one remote ?
-    remote = app.selected_remote
-    if not remote:
+    try:
+        remote = app.selected_remotes[0]
+    except IndexError:
         # FIXME: Probably this shouldn't be done, the "default" remote concept when no remote is
         #        specify is confusing. Probably it should be: Or I specify one or Conan iterates
         try:

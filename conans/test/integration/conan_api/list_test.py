@@ -39,7 +39,7 @@ def test_get_recipe_revisions():
 
     # Check the revisions in the remote
     with client.mocked_servers():
-        sot = api.list.recipe_revisions(ref, api.remotes.get("default"))
+        sot = api.list.recipe_revisions(ref, api.remotes.get(["default"])[0])
         assert sot == [pref3.ref, pref2.ref, pref1.ref]
 
 
@@ -69,5 +69,5 @@ def test_get_package_revisions():
 
     # Check the revisions in the remote
     with client.mocked_servers():
-        sot = api.list.package_revisions(_pref, api.remotes.get("default"))
+        sot = api.list.package_revisions(_pref, api.remotes.get(["default"])[0])
         assert sot == [pref3, pref2, pref1]

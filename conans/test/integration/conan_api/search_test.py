@@ -24,7 +24,7 @@ def test_search_recipes():
 
     # Search all the recipes locally and in the remote
     api = ConanAPIV2(client.cache_folder)
-    for remote in [None, api.remotes.get("default")]:
+    for remote in [None, api.remotes.get(["default"])[0]]:
         with client.mocked_servers():
             sot = api.search.recipes(query="f*", remote=remote)
             assert set(sot) == {RecipeReference.loads("foo/1.0"),
@@ -59,7 +59,7 @@ def test_resolve_recipe_revisions(mode_remote):
     client.run("upload '*' -c -r default")
 
     api = ConanAPIV2(client.cache_folder)
-    remote = api.remotes.get("default") if mode_remote else None
+    remote = api.remotes.get(["default"])[0] if mode_remote else None
 
     with client.mocked_servers():
         sot = api.search.recipe_revisions("foo/1.0", remote)
@@ -122,7 +122,7 @@ def test_resolve_package_revisions(mode_remote):
     client.run("upload '*' -c -r default")
 
     api = ConanAPIV2(client.cache_folder)
-    remote = api.remotes.get("default") if mode_remote else None
+    remote = api.remotes.get(["default"])[0] if mode_remote else None
 
     with client.mocked_servers():
         with pytest.raises(ConanException) as e:

@@ -82,10 +82,9 @@ class ConanProxy(object):
                     if cache_time >= remote_ref.timestamp:
                         status = RECIPE_INCACHE
                     else:
-                        selected_remotes = remote
                         self._cache.update_recipe_timestamp(remote_ref)
                         status = RECIPE_INCACHE_DATE_UPDATED
-                return conanfile_path, status, selected_remotes, ref
+                return conanfile_path, status, remote, ref
             else:
                 status = RECIPE_NOT_IN_REMOTE
                 return conanfile_path, status, selected_remotes, ref
